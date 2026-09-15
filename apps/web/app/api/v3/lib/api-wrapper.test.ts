@@ -1,0 +1,633 @@
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { z } from "zod";
+import { TooManyRequestsError } from "@formbricks/types/errors";
+import { DEFAULT_REQUEST_BODY_LIMIT_BYTES } from "@/app/lib/api/request-body";
+import { withV3ApiWrapper } from "./api-wrapper";
+
+const { mockAuthenticateRequest, mockGetSession } = vi.hoisted(() => ({
+  mockAuthenticateRequest: vi.fn(),
+  mockGetSession: vi.fn(),
+}));
+
+const { mockQueueAuditEvent, mockBuildAuditLogBaseObject } = vi.hoisted(() => ({
+  mockQueueAuditEvent: vi.fn().mockImplementation(async () => undefined),
+  mockBuildAuditLogBaseObject: vi.fn((action: string, targetType: string, apiUrl: string) => ({
+    action,
+    targetType,
+    userId: "unknown",
+    targetId: "unknown",
+    organizationId: "unknown",
+    status: "failure",
+    oldObject: undefined,
+    newObject: undefined,
+    userType: "api",
+    apiUrl,
+  })),
+}));
+
+const { mockLoggerWarn, mockLoggerError } = vi.hoisted(() => ({
+  mockLoggerWarn: vi.fn(),
+  mockLoggerError: vi.fn(),
+}));
+
+vi.mock("@/modules/auth/lib/session", () => ({
+  getSession: mockGetSession,
+}));
+
+vi.mock("@/app/api/v1/auth", () => ({
+  authenticateRequest: mockAuthenticateRequest,
+}));
+
+vi.mock("@/modules/core/rate-limit/helpers", () => ({
+  applyRateLimit: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+  queueAuditEvent: mockQueueAuditEvent,
+}));
+
+vi.mock("@/app/lib/api/with-api-logging", () => ({
+  buildAuditLogBaseObject: mockBuildAuditLogBaseObject,
+}));
+
+vi.mock("@formbricks/logger", () => ({
+  logger: {
+    withContext: vi.fn(() => ({
+      error: mockLoggerError,
+      warn: mockLoggerWarn,
+    })),
+  },
+}));
+
+describe("withV3ApiWrapper", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockGetSession.mockResolvedValue(null);
+    mockAuthenticateRequest.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("passes an audit log to the handler and queues success after the response", async () => {
+    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1", name: "Test", email: "t@example.com" },
+      expires: "2026-01-01",
+    });
+
+    const handler = vi.fn(async ({ auditLog }) => {
+      expect(auditLog).toEqual(
+        expect.objectContaining({
+          action: "deleted",
+          targetType: "survey",
+          userId: "user_1",
+          userType: "user",
+          status: "failure",
+        })
+      );
+
+      if (auditLog) {
+        auditLog.targetId = "survey_1";
+        auditLog.organizationId = "org_1";
+        auditLog.oldObject = { id: "survey_1" };
+      }
+
+      return Response.json({ ok: true });
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      action: "deleted",
+      targetType: "survey",
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys/survey_1", {
+        method: "DELETE",
+        headers: { "x-request-id": "req-audit" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(queueAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "deleted",
+        targetType: "survey",
+        targetId: "survey_1",
+        organizationId: "org_1",
+        userId: "user_1",
+        userType: "user",
+        status: "success",
+        oldObject: { id: "survey_1" },
+      })
+    );
+  });
+
+  test("queues a failure audit log when the handler returns a non-ok response", async () => {
+    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+
+    mockAuthenticateRequest.mockResolvedValue({
+      type: "apiKey",
+      apiKeyId: "key_1",
+      organizationId: "org_1",
+      organizationAccess: { accessControl: { read: true, write: true } },
+      workspacePermissions: [],
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      action: "deleted",
+      targetType: "survey",
+      handler: async ({ auditLog }) => {
+        if (auditLog) {
+          auditLog.targetId = "survey_2";
+        }
+
+        return new Response("forbidden", { status: 403 });
+      },
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys/survey_2", {
+        method: "DELETE",
+        headers: {
+          "x-request-id": "req-failure-audit",
+          "x-api-key": "fbk_test",
+        },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(403);
+    expect(queueAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "deleted",
+        targetType: "survey",
+        targetId: "survey_2",
+        organizationId: "org_1",
+        userId: "key_1",
+        userType: "api",
+        status: "failure",
+        eventId: "req-failure-audit",
+      })
+    );
+  });
+
+  test("uses session auth first in both mode and injects request id into plain responses", async () => {
+    const { applyRateLimit } = await import("@/modules/core/rate-limit/helpers");
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1", name: "Test", email: "t@example.com" },
+      expires: "2026-01-01",
+    });
+
+    const handler = vi.fn(async ({ authentication, requestId, instance }) => {
+      expect(authentication).toMatchObject({ user: { id: "user_1" } });
+      expect(requestId).toBe("req-1");
+      expect(instance).toBe("/api/v3/surveys");
+      return Response.json({ ok: true });
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys?limit=10", {
+        headers: { "x-request-id": "req-1" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Request-Id")).toBe("req-1");
+    expect(handler).toHaveBeenCalledOnce();
+    expect(vi.mocked(applyRateLimit)).toHaveBeenCalledWith(
+      expect.objectContaining({ namespace: "api:v3" }),
+      "user_1"
+    );
+    expect(mockAuthenticateRequest).not.toHaveBeenCalled();
+  });
+
+  test("falls back to api key auth in both mode", async () => {
+    const { applyRateLimit } = await import("@/modules/core/rate-limit/helpers");
+    mockAuthenticateRequest.mockResolvedValue({
+      type: "apiKey",
+      apiKeyId: "key_1",
+      organizationId: "org_1",
+      organizationAccess: { accessControl: { read: true, write: false } },
+      workspacePermissions: [],
+    });
+
+    const handler = vi.fn(async ({ authentication }) => {
+      expect(authentication).toMatchObject({ apiKeyId: "key_1" });
+      return Response.json({ ok: true });
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        headers: { "x-api-key": "fbk_test" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(applyRateLimit)).toHaveBeenCalledWith(
+      expect.objectContaining({ namespace: "api:v3" }),
+      "key_1"
+    );
+    expect(mockGetSession).not.toHaveBeenCalled();
+  });
+
+  test("uses bearer API keys before session auth in both mode", async () => {
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1", name: "Test", email: "t@example.com" },
+      expires: "2026-01-01",
+    });
+    mockAuthenticateRequest.mockResolvedValue({
+      type: "apiKey",
+      apiKeyId: "key_2",
+      organizationId: "org_1",
+      organizationAccess: { accessControl: { read: true, write: true } },
+      workspacePermissions: [],
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler: async ({ authentication }) => {
+        expect(authentication).toMatchObject({ apiKeyId: "key_2" });
+        return Response.json({ ok: true });
+      },
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        headers: { authorization: "Bearer fbk_test" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockAuthenticateRequest).toHaveBeenCalledOnce();
+    expect(mockGetSession).not.toHaveBeenCalled();
+  });
+
+  test("returns 401 problem response when authentication is required but missing", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler,
+    });
+
+    const response = await wrapped(new NextRequest("http://localhost/api/v3/surveys"), {} as never);
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 401,
+        detail: "Not authenticated",
+      }),
+      "V3 API authentication failed"
+    );
+  });
+
+  test("returns 400 problem response for invalid query input", async () => {
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1" },
+      expires: "2026-01-01",
+    });
+
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      schemas: {
+        query: z.object({
+          limit: z.coerce.number().int().positive(),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys?limit=oops", {
+        headers: { "x-request-id": "req-invalid" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.invalid_params).toEqual(expect.arrayContaining([expect.objectContaining({ name: "limit" })]));
+    expect(body.requestId).toBe("req-invalid");
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 400,
+        detail: "Invalid query parameters",
+        invalidParams: expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
+      }),
+      "V3 API request validation failed"
+    );
+  });
+
+  test("parses body, repeated query params, and async route params", async () => {
+    const handler = vi.fn(async ({ parsedInput }) => {
+      expect(parsedInput).toEqual({
+        body: { name: "Survey API" },
+        query: { tag: ["a", "b"] },
+        params: { workspaceId: "ws_123" },
+      });
+
+      return Response.json(
+        { ok: true },
+        {
+          headers: {
+            "X-Request-Id": "handler-request-id",
+          },
+        }
+      );
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "none",
+      schemas: {
+        body: z.object({
+          name: z.string(),
+        }),
+        query: z.object({
+          tag: z.array(z.string()),
+        }),
+        params: z.object({
+          workspaceId: z.string(),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys?tag=a&tag=b", {
+        method: "POST",
+        body: JSON.stringify({ name: "Survey API" }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      {
+        params: Promise.resolve({
+          workspaceId: "ws_123",
+        }),
+      } as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Request-Id")).toBe("handler-request-id");
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  test("returns 400 problem response for malformed JSON input", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "none",
+      schemas: {
+        body: z.object({
+          name: z.string(),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        method: "POST",
+        body: "{",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.invalid_params).toEqual([
+      {
+        name: "body",
+        reason: "Malformed JSON input, please check your request body",
+      },
+    ]);
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 400,
+        detail: "Invalid request body",
+        invalidParams: [
+          {
+            name: "body",
+            reason: "Malformed JSON input, please check your request body",
+          },
+        ],
+      }),
+      "V3 API request validation failed"
+    );
+  });
+
+  test("returns 413 problem response for oversized JSON input", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "none",
+      schemas: {
+        body: z.object({
+          name: z.string(),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        method: "POST",
+        body: "{}",
+        headers: {
+          "Content-Length": String(DEFAULT_REQUEST_BODY_LIMIT_BYTES + 1),
+          "Content-Type": "application/json",
+          "x-request-id": "req-payload-too-large",
+        },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(413);
+    expect(handler).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        code: "payload_too_large",
+        detail: `Request body must not exceed ${DEFAULT_REQUEST_BODY_LIMIT_BYTES} bytes`,
+        requestId: "req-payload-too-large",
+        status: 413,
+        title: "Payload Too Large",
+      })
+    );
+  });
+
+  test("returns 400 problem response for invalid route params", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "none",
+      schemas: {
+        params: z.object({
+          workspaceId: z.string().min(3),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(new NextRequest("http://localhost/api/v3/surveys"), {
+      params: Promise.resolve({
+        workspaceId: "x",
+      }),
+    } as never);
+
+    expect(response.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.invalid_params).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "workspaceId" })])
+    );
+  });
+
+  test("preserves machine-readable validation metadata from Zod issues", async () => {
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "none",
+      schemas: {
+        body: z.unknown().superRefine((_value, ctx) => {
+          ctx.addIssue({
+            code: "custom",
+            message: "Unsupported field 'extra'",
+            path: ["extra"],
+            params: { code: "unsupported_field" },
+          });
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        method: "POST",
+        body: JSON.stringify({ extra: true }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(400);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.invalid_params).toEqual([
+      {
+        name: "extra",
+        reason: "Unsupported field 'extra'",
+        code: "unsupported_field",
+      },
+    ]);
+  });
+
+  test("returns 429 problem response when rate limited", async () => {
+    const { applyRateLimit } = await import("@/modules/core/rate-limit/helpers");
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1" },
+      expires: "2026-01-01",
+    });
+    vi.mocked(applyRateLimit).mockRejectedValueOnce(new TooManyRequestsError("Too many requests", 60));
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler: async () => Response.json({ ok: true }),
+    });
+
+    const response = await wrapped(new NextRequest("http://localhost/api/v3/surveys"), {} as never);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    const body = await response.json();
+    expect(body.code).toBe("too_many_requests");
+  });
+
+  test("applies rate limiting before parsing request bodies", async () => {
+    const { applyRateLimit } = await import("@/modules/core/rate-limit/helpers");
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1" },
+      expires: "2026-01-01",
+    });
+    vi.mocked(applyRateLimit).mockRejectedValueOnce(new TooManyRequestsError("Too many requests", 60));
+
+    const handler = vi.fn(async () => Response.json({ ok: true }));
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      schemas: {
+        body: z.object({
+          name: z.string(),
+        }),
+      },
+      handler,
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        method: "POST",
+        body: "{",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(429);
+    expect(handler).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.code).toBe("too_many_requests");
+  });
+
+  test("returns 500 problem response when the handler throws unexpectedly", async () => {
+    mockGetSession.mockResolvedValue({
+      user: { id: "user_1" },
+      expires: "2026-01-01",
+    });
+
+    const wrapped = withV3ApiWrapper({
+      auth: "both",
+      handler: async () => {
+        throw new Error("boom");
+      },
+    });
+
+    const response = await wrapped(
+      new NextRequest("http://localhost/api/v3/surveys", {
+        headers: { "x-request-id": "req-boom" },
+      }),
+      {} as never
+    );
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.code).toBe("internal_server_error");
+    expect(body.requestId).toBe("req-boom");
+  });
+});

@@ -1,0 +1,43 @@
+import { DatabaseError } from "@formbricks/types/errors";
+import { responses } from "@/app/lib/api/response";
+import { withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getContacts } from "./lib/contacts";
+
+export const GET = withV1ApiWrapper({
+  handler: async ({ authentication }) => {
+    if (!authentication || !("apiKeyId" in authentication)) {
+      return { response: responses.notAuthenticatedResponse() };
+    }
+
+    try {
+      const isContactsEnabled = await getIsContactsEnabled(authentication.organizationId);
+      if (!isContactsEnabled) {
+        return {
+          response: responses.forbiddenResponse(
+            "Contacts are only enabled for Enterprise Edition, please upgrade."
+          ),
+        };
+      }
+
+      const workspaceIds = [
+        ...new Set(authentication.workspacePermissions.map((permission) => permission.workspaceId)),
+      ];
+
+      const contacts = await getContacts(workspaceIds);
+
+      return {
+        response: responses.successResponse(contacts),
+      };
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        return {
+          response: responses.badRequestResponse(error.message),
+        };
+      }
+      throw error;
+    }
+  },
+});
+
+// Please use the client API to create a new contact
