@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "version": "1.0.0",
-  "description": "Js core for Forma that contains the logic for executing the @formbricks/js library and is loaded asynchronously over the Forma API.",
+  "description": "Js core for Forma that contains the logic for executing the @forma/js library and is loaded asynchronously over the Forma API.",
   "homepage": "https://forma.ylam.ai",
   "repository": {
     "type": "git",

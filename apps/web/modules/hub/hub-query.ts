@@ -1,7 +1,7 @@
 /**
  * Query-string serialization for the Hub client.
  *
- * `@formbricks/hub` serializes array query params comma-joined — `qs.stringify(query, { arrayFormat:
+ * `@forma/hub` serializes array query params comma-joined — `qs.stringify(query, { arrayFormat:
  * "comma" })` in its `internal/utils/query` — so `{ source_type: ["survey", "review"] }` goes out as
  * `?source_type=survey%2Creview`. The Hub declares every repeatable filter `style: form, explode: true`
  * and its spec states outright that comma-separated values are NOT split, so it reads that as one literal

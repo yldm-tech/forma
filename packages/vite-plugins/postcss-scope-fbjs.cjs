@@ -12,7 +12,7 @@
 // Each leaks into the host page and breaks host Tailwind utilities (shadows,
 // rings, transforms, gradients, theme variables).
 //
-// See: https://github.com/formbricks/js/issues/46
+// See: https://github.com/yldm-tech/js/issues/46
 
 // Strips the `@layer properties { ... }` block that Tailwind v4 emits as a
 // browser-compatibility fallback for `@property` declarations.

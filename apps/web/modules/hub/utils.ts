@@ -45,7 +45,7 @@ export const getErrorMessage = (err: unknown): string => {
 };
 
 // Duck-typed: `instanceof` against the SDK error class breaks under Next dev/Turbopack
-// when @formbricks/hub is loaded into more than one module scope.
+// when @forma/hub is loaded into more than one module scope.
 export const getErrorStatus = (err: unknown): number =>
   err && typeof err === "object" && typeof (err as { status?: unknown }).status === "number"
     ? (err as { status: number }).status
@@ -57,7 +57,7 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
 /**
  * Reads the RFC 9457 problem members off a Hub SDK error (which exposes the parsed JSON body as
  * `error`). Duck-typed for the same reason as `getErrorStatus`: `instanceof` against the SDK error
- * class breaks when @formbricks/hub is loaded into more than one module scope under Next dev/Turbopack.
+ * class breaks when @forma/hub is loaded into more than one module scope under Next dev/Turbopack.
  */
 export const getErrorProblem = (err: unknown): Pick<HubError, "code" | "problemDetail" | "invalidParams"> => {
   const body = asRecord(asRecord(err)?.error);

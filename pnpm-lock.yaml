@@ -391,12 +391,18 @@ importers:
       '@forma/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@forma/hub':
+        specifier: npm:@formbricks/hub@0.12.0
+        version: '@formbricks/hub@0.12.0'
       '@forma/i18n-utils':
         specifier: workspace:*
         version: link:../../packages/i18n-utils
       '@forma/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@forma/js':
+        specifier: npm:@formbricks/js@5.0.0
+        version: '@formbricks/js@5.0.0'
       '@forma/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
@@ -418,12 +424,6 @@ importers:
       '@forma/workflows':
         specifier: workspace:*
         version: link:../../packages/workflows
-      '@formbricks/hub':
-        specifier: 0.12.0
-        version: 0.12.0
-      '@formbricks/js':
-        specifier: 5.0.0
-        version: 5.0.0
       '@formkit/auto-animate':
         specifier: 'catalog:'
         version: 0.9.0

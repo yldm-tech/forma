@@ -1,6 +1,6 @@
 # Forma Browser JS Library
 
-[![npm package](https://img.shields.io/npm/v/@formbricks/js?style=flat-square)](https://www.npmjs.com/package/@formbricks/js)
+[![npm package](https://img.shields.io/npm/v/@forma/js?style=flat-square)](https://www.npmjs.com/package/@forma/js)
 [![MIT License](https://img.shields.io/badge/License-MIT-red.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 Please see [Forma Docs](https://forma.ylam.ai/docs).
@@ -15,13 +15,13 @@ Forma is your go-to solution for in-product micro-surveys that will supercharge 
 1. Install the Forma package inside your project using npm:
 
 ```bash
-npm install -s @formbricks/js
+npm install -s @forma/js
 ```
 
 2. Import Forma and initialize the widget in your main component (e.g., App.tsx or App.js):
 
 ```javascript
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({

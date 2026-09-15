@@ -1,8 +1,8 @@
 "use client";
 
-import forma from "@formbricks/js";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import forma from "@forma/js";
 
 export const CHURN_SURVEY_PENDING_KEY = "churnSurveyPending";
 

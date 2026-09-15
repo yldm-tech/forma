@@ -1,9 +1,9 @@
-import FormaHub from "@formbricks/hub";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import FormaHub from "@forma/hub";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/hub", () => {
+vi.mock("@forma/hub", () => {
   // Must use `function` (not arrow) so it's valid as a `new` target.
   const MockFormaHub = vi.fn(function () {});
   return { default: MockFormaHub };

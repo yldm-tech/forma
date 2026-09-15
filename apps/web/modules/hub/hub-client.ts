@@ -1,5 +1,5 @@
 import "server-only";
-import FormaHub from "@formbricks/hub";
+import FormaHub from "@forma/hub";
 import { env } from "@/lib/env";
 import { serializeHubQuery } from "./hub-query";
 
@@ -169,7 +169,7 @@ export const assertRepeatedArrayParams = (client: FormaHub): void => {
 
   if (values.length !== 2 || values[0] !== "a" || values[1] !== "b") {
     throw new Error(
-      "@formbricks/hub no longer routes query serialization through stringifyQuery, so array filters " +
+      "@forma/hub no longer routes query serialization through stringifyQuery, so array filters " +
         `would be sent comma-joined and silently match nothing (probe produced "${probe.search}"). ` +
         "See modules/hub/hub-query.ts."
     );

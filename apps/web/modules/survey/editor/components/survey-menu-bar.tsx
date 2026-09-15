@@ -1,6 +1,5 @@
 "use client";
 
-import forma from "@formbricks/js";
 import { ArrowLeftIcon, SettingsIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +7,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Workspace } from "@forma/database/prisma-browser";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
+import forma from "@forma/js";
 import { TSegment } from "@forma/types/segment";
 import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import {

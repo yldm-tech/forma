@@ -92,22 +92,22 @@ Install the Forma SDK using one of the following package managers: `npm`, `pnpm`
 Note that **`zod`** is required as a peer dependency and must also be installed in your app.
 
 ```javascript npm
-npm install @formbricks/js zod
+npm install @forma/js zod
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js zod
+pnpm add @forma/js zod
 ```
 
 ```bash yarn
-yarn add @formbricks/js zod
+yarn add @forma/js zod
 ```
 
 Update your `App.js/ts` file to initialize Forma.
 
 ```javascript src/App.js
 // other imports
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({
@@ -143,15 +143,15 @@ Next.js apps use either the **App Directory** or the **Pages Directory**. Since 
 Code snippets for the integration for both conventions are provided to further assist you.
 
 ```bash npm
-npm install @formbricks/js zod
+npm install @forma/js zod
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js zod
+pnpm add @forma/js zod
 ```
 
 ```bash yarn
-yarn add @formbricks/js zod
+yarn add @forma/js zod
 ```
 
 ### App directory
@@ -161,7 +161,7 @@ yarn add @formbricks/js zod
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 export default function FormaProvider() {
   const pathname = usePathname();
@@ -209,7 +209,7 @@ export default function RootLayout({
 // other import
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({
@@ -250,19 +250,19 @@ Next, go to the [**Validate Your Setup**](#validate-your-setup) section to verif
 Integrating the Forma SDK with Vue.js is easy. We'll ensure the SDK is only loaded and used on the client side, as it's not meant for server-side use.
 
 ```bash npm
-npm install @formbricks/js
+npm install @forma/js
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js
+pnpm add @forma/js
 ```
 
 ```bash yarn
-yarn add @formbricks/js
+yarn add @forma/js
 ```
 
 ```javascript src/forma.js
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({
@@ -378,7 +378,7 @@ Install the Forma iOS SDK using the following steps:
 **Swift Package Manager**
 
 1. In Xcode choose **File → Add Packages…**
-2. Enter your repo URL (e.g. `https://github.com/formbricks/ios.git`)
+2. Enter your repo URL (e.g. `https://github.com/yldm-tech/ios.git`)
 3. Choose version rule (e.g. "Up to Next Major" starting at `2.1.0`).
 4. Import in your code:
 

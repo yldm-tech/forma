@@ -48,22 +48,22 @@ Paste this snippet into your <head> on every page:
   <!-- END Forma Surveys -->
 
 ## React.js
-1. Install: npm install @formbricks/js zod
+1. Install: npm install @forma/js zod
 2. In src/App.js (or App.tsx), add at the top level:
 
-  import forma from "@formbricks/js";
+  import forma from "@forma/js";
   if (typeof window !== "undefined") {
     forma.setup({ workspaceId: "${workspace.id}", appUrl: "${WEBAPP_URL}" });
   }
 
 ## Next.js — App Router
-1. Install: npm install @formbricks/js zod
+1. Install: npm install @forma/js zod
 2. Create app/forma.tsx:
 
   "use client";
   import { usePathname, useSearchParams } from "next/navigation";
   import { useEffect } from "react";
-  import forma from "@formbricks/js";
+  import forma from "@forma/js";
 
   export default function FormaProvider() {
     const pathname = usePathname();
@@ -83,12 +83,12 @@ Paste this snippet into your <head> on every page:
   <Suspense><FormaProvider /></Suspense>
 
 ## Next.js — Pages Router
-1. Install: npm install @formbricks/js zod
+1. Install: npm install @forma/js zod
 2. In src/pages/_app.tsx:
 
   import { useRouter } from "next/router";
   import { useEffect } from "react";
-  import forma from "@formbricks/js";
+  import forma from "@forma/js";
 
   if (typeof window !== "undefined") {
     forma.setup({ workspaceId: "${workspace.id}", appUrl: "${WEBAPP_URL}" });
@@ -104,10 +104,10 @@ Paste this snippet into your <head> on every page:
   }
 
 ## Vue.js
-1. Install: npm install @formbricks/js
+1. Install: npm install @forma/js
 2. Create src/forma.js:
 
-  import forma from "@formbricks/js";
+  import forma from "@forma/js";
   if (typeof window !== "undefined") {
     forma.setup({ workspaceId: "${workspace.id}", appUrl: "${WEBAPP_URL}" });
   }
@@ -136,7 +136,7 @@ Paste this snippet into your <head> on every page:
 3. Drive it via static API: await Forma.track("event"), Forma.setUserId("uid"), etc.
 
 ## iOS (Swift)
-1. Add via Swift Package Manager: https://github.com/formbricks/ios.git
+1. Add via Swift Package Manager: https://github.com/yldm-tech/ios.git
 2. Initialize on app launch:
 
   import FormaSDK
@@ -183,7 +183,7 @@ var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import forma from "@formbricks/js";
+import forma from "@forma/js";
 
 export default function FormaProvider() {
   const pathname = usePathname();
@@ -200,7 +200,7 @@ export default function FormaProvider() {
   return null;
 }`;
 
-  const reactSnippet = `import forma from "@formbricks/js";
+  const reactSnippet = `import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({
@@ -209,7 +209,7 @@ if (typeof window !== "undefined") {
   });
 }`;
 
-  const vueSnippet = `import forma from "@formbricks/js";
+  const vueSnippet = `import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
   forma.setup({

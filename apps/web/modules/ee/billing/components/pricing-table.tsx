@@ -1,6 +1,5 @@
 "use client";
 
-import forma from "@formbricks/js";
 import { type Stripe as StripeJs, loadStripe } from "@stripe/stripe-js";
 import type { TFunction } from "i18next";
 import { CheckIcon } from "lucide-react";
@@ -10,6 +9,7 @@ import posthog from "posthog-js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
+import forma from "@forma/js";
 import {
   type TCloudBillingInterval,
   type TOrganization,

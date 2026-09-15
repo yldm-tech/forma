@@ -422,9 +422,10 @@ minimumReleaseAge: 4320
 # pinned explicitly so a future default flip can't silently weaken the cooldown).
 trustLockfile: false
 minimumReleaseAgeExclude:
-  # First-party SDK (published by Forma' own CI) — exempt all versions from the release-age gate so
-  # a fresh hub bump isn't blocked. Version-pinned scoped entries (e.g. '@formbricks/hub@0.9.0') are not
-  # reliably matched by the exclude, so match by name.
+  # The Hub SDK, consumed through the `@forma/hub` alias — exempt all versions from the release-age
+  # gate so a fresh hub bump isn't blocked. Matched by the registry name rather than the alias,
+  # because that is what pnpm resolves; version-pinned scoped entries (e.g. '@formbricks/hub@0.9.0')
+  # are not reliably matched by the exclude, so match by name.
   - "@formbricks/hub"
 
 # ENG-2772 / better-auth#10887: oauth-provider eagerly seeds persisted resources while building its

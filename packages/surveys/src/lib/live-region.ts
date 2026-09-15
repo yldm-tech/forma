@@ -1,6 +1,6 @@
 /**
  * The persistent, visually hidden status region that survey opens are announced into. The
- * @formbricks/js SDK mounts it at setup time (packages/js-core/src/lib/survey/widget.ts,
+ * @forma/js SDK mounts it at setup time (packages/js-core/src/lib/survey/widget.ts,
  * `addLiveRegionContainer`) so assistive tech has registered the region long before the first
  * message lands — screen readers only reliably announce changes made to a live region that
  * already existed, not a region inserted together with its content.

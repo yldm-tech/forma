@@ -1,6 +1,5 @@
 "use client";
 
-import forma from "@formbricks/js";
 import {
   ArrowUpRightIcon,
   ChevronRightIcon,
@@ -12,6 +11,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import forma from "@forma/js";
 import type { TUser } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";

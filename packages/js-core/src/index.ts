@@ -179,7 +179,7 @@ const forma = {
   off,
 };
 
-// Explicitly assign to globalThis so the wrapper SDK (@formbricks/js) can
+// Explicitly assign to globalThis so the wrapper SDK (@forma/js) can
 // find us even when the UMD environment detection is fooled by a leaked
 // `exports` or `module` global on the page (e.g. from another UMD bundle,
 // a tag manager, or a browser extension).  This runs inside the UMD factory,

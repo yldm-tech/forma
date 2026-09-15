@@ -1,6 +1,6 @@
-import FormaHub from "@formbricks/hub";
 import { describe, expect, test, vi } from "vitest";
 import { createCacheKey } from "@forma/cache";
+import FormaHub from "@forma/hub";
 import { logger } from "@forma/logger";
 import {
   countFeedbackRecords,
@@ -31,7 +31,7 @@ vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock("@formbricks/hub", () => ({
+vi.mock("@forma/hub", () => ({
   default: {
     APIError: class APIError extends Error {
       status: number;
@@ -200,7 +200,7 @@ describe("hub service", () => {
       const list = vi.fn();
       vi.mocked(getHubClient).mockReturnValue({ feedbackRecords: { list } } as any);
       vi.mocked(assertRepeatedArrayParams).mockImplementation(() => {
-        throw new Error("@formbricks/hub no longer routes query serialization through stringifyQuery");
+        throw new Error("@forma/hub no longer routes query serialization through stringifyQuery");
       });
 
       const result = await listFeedbackRecords({ tenant_id: "env-1" });
@@ -322,7 +322,7 @@ describe("hub service", () => {
       const count = vi.fn();
       vi.mocked(getHubClient).mockReturnValue({ feedbackRecords: { count } } as any);
       vi.mocked(assertRepeatedArrayParams).mockImplementation(() => {
-        throw new Error("@formbricks/hub no longer routes query serialization through stringifyQuery");
+        throw new Error("@forma/hub no longer routes query serialization through stringifyQuery");
       });
 
       const result = await countFeedbackRecords({ tenant_id: "env-1" });

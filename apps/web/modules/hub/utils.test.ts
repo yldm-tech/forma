@@ -91,7 +91,7 @@ describe("isHubNotConfigured", () => {
   });
 });
 
-// The fixtures below mirror the chain the real @formbricks/hub SDK produces, captured by driving it
+// The fixtures below mirror the chain the real @forma/hub SDK produces, captured by driving it
 // against a closed port: APIConnectionError (message "Connection error.", no code) wrapping
 // TypeError "fetch failed" wrapping the Node error that actually carries the errno. When the Hub
 // host resolves to more than one address, Node inserts an AggregateError and the errno lives in

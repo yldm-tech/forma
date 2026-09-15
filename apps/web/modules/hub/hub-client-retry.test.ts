@@ -4,7 +4,7 @@ import type { FeedbackRecordCreateParams } from "@/modules/hub/types";
 /**
  * The retry narrowing, driven through the real SDK.
  *
- * `hub-client.test.ts` mocks `@formbricks/hub`, which is the right shape for the `getHubClient`
+ * `hub-client.test.ts` mocks `@forma/hub`, which is the right shape for the `getHubClient`
  * caching tests but replaces the very thing this behaviour depends on: that the SDK's request loop
  * calls `shouldRetry` and honours a `false`. `shouldRetry` is `private` in the SDK's types, so the
  * override is installed on the prototype — nothing in the type system says it is still wired up.
