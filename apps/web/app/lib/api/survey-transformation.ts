@@ -1,18 +1,14 @@
 import { createId } from "@paralleldrive/cuid2";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { InvalidInputError } from "@forma/types/errors";
 import {
   type TSurveyBlock,
   type TSurveyBlockLogic,
   type TSurveyBlockLogicAction,
-} from "@formbricks/types/surveys/blocks";
-import { type TConditionGroup, type TSingleCondition } from "@formbricks/types/surveys/logic";
-import {
-  type TSurveyEnding,
-  TSurveyLogicAction,
-  type TSurveyQuestion,
-} from "@formbricks/types/surveys/types";
-import { isConditionGroup, isSingleCondition } from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/blocks";
+import { type TConditionGroup, type TSingleCondition } from "@forma/types/surveys/logic";
+import { type TSurveyEnding, TSurveyLogicAction, type TSurveyQuestion } from "@forma/types/surveys/types";
+import { isConditionGroup, isSingleCondition } from "@forma/types/surveys/validation";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 
 type Condition = TSingleCondition | TConditionGroup;

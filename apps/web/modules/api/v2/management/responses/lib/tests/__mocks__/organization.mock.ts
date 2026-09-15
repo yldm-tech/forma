@@ -1,4 +1,4 @@
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { TOrganizationBilling } from "@forma/types/organizations";
 
 export const organizationId = "zo6u7apbattt8dquvzbgjjwb";
 export const workspaceId = "oh5cq6yu418itha55vsuj47e";

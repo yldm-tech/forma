@@ -4,14 +4,14 @@ import { RocketIcon } from "lucide-react";
 import Link from "next/link";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
-import { TOrganization } from "@formbricks/types/organizations";
+import { TOrganization } from "@forma/types/organizations";
 import { TrialAlert } from "@/modules/ee/billing/components/trial-alert";
 import { TRIAL_BASE_RESPONSE_LIMIT, TrialBannerNew } from "@/modules/ee/billing/components/trial-banner-new";
 
 interface MainNavigationNoticesProps {
   isCollapsed: boolean;
   isOwnerOrManager: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isDevelopment: boolean;
   latestVersion: string;
   // Whole days left in the trial, or null when there is no trial to count down. Derived by the
@@ -34,7 +34,7 @@ interface MainNavigationNoticesProps {
 export const MainNavigationNotices = ({
   isCollapsed,
   isOwnerOrManager,
-  isFormbricksCloud,
+  isFormaCloud,
   isDevelopment,
   latestVersion,
   trialDaysRemaining,
@@ -49,14 +49,14 @@ export const MainNavigationNotices = ({
     return null;
   }
 
-  const showUpdateNotice = Boolean(latestVersion) && !isFormbricksCloud && !isDevelopment;
+  const showUpdateNotice = Boolean(latestVersion) && !isFormaCloud && !isDevelopment;
   const billingHref = `/organizations/${organization.id}/settings/billing`;
 
   return (
     <>
       {showUpdateNotice && (
         <Link
-          href="https://github.com/formbricks/formbricks/releases"
+          href="https://github.com/yldm-tech/forma/releases"
           target="_blank"
           className="m-2 flex items-center gap-x-4 rounded-lg border border-slate-200 bg-slate-100 p-2 text-sm text-slate-800 hover:border-slate-300 hover:bg-slate-200">
           <p className="flex items-center justify-center gap-x-2 text-xs">
@@ -67,7 +67,7 @@ export const MainNavigationNotices = ({
       )}
 
       {/* Condition kept inline so `trialDaysRemaining` narrows to a number for the two cards. */}
-      {isFormbricksCloud &&
+      {isFormaCloud &&
         trialDaysRemaining !== null &&
         (newTrialBannerVariant === "test" ? (
           <TrialBannerNew

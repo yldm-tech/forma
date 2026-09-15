@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { FORMBRICKS_ENVIRONMENT_ID_LS, FORMBRICKS_WORKSPACE_ID_LS } from "@/lib/localStorage";
+import { logger } from "@forma/logger";
+import { FORMA_ENVIRONMENT_ID_LS, FORMA_WORKSPACE_ID_LS } from "@/lib/localStorage";
 import { logSignOutAction } from "@/modules/auth/actions/sign-out";
 import { authClient } from "@/modules/auth/lib/auth-client";
 
@@ -48,8 +48,8 @@ export const useSignOut = (sessionUser?: SessionUser | null) => {
     }
 
     if (options?.clearWorkspaceId) {
-      localStorage.removeItem(FORMBRICKS_WORKSPACE_ID_LS);
-      localStorage.removeItem(FORMBRICKS_ENVIRONMENT_ID_LS);
+      localStorage.removeItem(FORMA_WORKSPACE_ID_LS);
+      localStorage.removeItem(FORMA_ENVIRONMENT_ID_LS);
     }
 
     // Better Auth sign-out clears the BA session; the redirect is manual (BA's signOut doesn't take

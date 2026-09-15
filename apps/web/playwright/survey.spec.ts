@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 // The rendered alt is the human-readable form of the file name (decoded, no
-// extension or separator noise) — see getImageAltFromUrl in @formbricks/surveys.
+// extension or separator noise) — see getImageAltFromUrl in @forma/surveys.
 const firstPictureChoiceAlt = "logo transparent";
 const secondPictureChoiceAlt = "android chrome 192x192";
 

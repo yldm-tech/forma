@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma, Webhook } from "@formbricks/database/prisma";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, Webhook } from "@forma/database/prisma";
+import { ZId } from "@forma/types/common";
+import { DatabaseError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 
 export const getWebhookCountBySource = async (

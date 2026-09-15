@@ -15,7 +15,7 @@ import { describe, expect, test } from "vitest";
  *
  * This class of drift nearly shipped. `jwks.alg` and `jwks.crv` arrived with the 1.7 line and our model
  * did not have them, and NOTHING in the suite noticed, because nothing here writes a real row to these
- * tables: the unit suites mock `@formbricks/database` wholesale, the MCP DCR harness runs on
+ * tables: the unit suites mock `@forma/database` wholesale, the MCP DCR harness runs on
  * `memoryAdapter` (which does not enforce columns), and no integration test mints a JWK. It surfaces
  * only against a real database — for `jwks`, on the first key mint of a deployment that has yet to make
  * one, which takes JWT signing and the whole MCP OAuth flow down with it.

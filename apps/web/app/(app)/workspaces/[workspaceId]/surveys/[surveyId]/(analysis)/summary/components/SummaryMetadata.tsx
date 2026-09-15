@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TSurveySummary } from "@formbricks/types/surveys/types";
+import { TSurveySummary } from "@forma/types/surveys/types";
 import { InteractiveCard } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/interactive-card";
 import { StatCard } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/stat-card";
 import { cn } from "@/modules/ui/lib/utils";

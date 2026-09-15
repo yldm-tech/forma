@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
 import { buildCommonFilterQuery } from "./utils";
 
 describe("buildCommonFilterQuery", () => {

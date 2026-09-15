@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionClass } from "@formbricks/database/prisma-browser";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { ActionClass } from "@forma/database/prisma-browser";
+import { TSurvey } from "@forma/types/surveys/types";
 import { CreateNewActionTab } from "@/modules/survey/editor/components/create-new-action-tab";
 import { SavedActionsTab } from "@/modules/survey/editor/components/saved-actions-tab";
 import {

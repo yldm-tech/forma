@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 import { paginateByIdCursor } from "./cursor-pagination";
 
 const item = (id: string) => ({ id });

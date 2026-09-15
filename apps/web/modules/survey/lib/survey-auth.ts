@@ -1,10 +1,10 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { getSession } from "@/modules/auth/lib/session";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";

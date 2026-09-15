@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   getAutoProgressElement,
   isSingleSelectOtherSelected,

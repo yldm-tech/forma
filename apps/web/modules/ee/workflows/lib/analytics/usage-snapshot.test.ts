@@ -5,7 +5,7 @@ import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
 import { collectOrganizationWorkflowUsage, emitWorkflowUsageSnapshots } from "./usage-snapshot";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/constants", () => ({ IS_FORMBRICKS_CLOUD: true }));
+vi.mock("@/lib/constants", () => ({ IS_FORMA_CLOUD: true }));
 vi.mock("@/lib/posthog", () => ({ capturePostHogEvent: vi.fn(), groupIdentifyPostHog: vi.fn() }));
 vi.mock("@/modules/ee/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
 

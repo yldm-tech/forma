@@ -7,7 +7,7 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { TUser, TUserUpdateInput, ZUser, ZUserEmail } from "@formbricks/types/user";
+import { TUser, TUserUpdateInput, ZUser, ZUserEmail } from "@forma/types/user";
 import { PasswordConfirmationModal } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/password-confirmation-modal";
 import { appLanguages, sortedAppLanguages } from "@/lib/i18n/utils";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";

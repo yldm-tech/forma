@@ -83,7 +83,7 @@ describe("survey/action.ts", () => {
       const result = await trackAction("testAction");
 
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith('Formbricks: Action "testAction" tracked');
+      expect(mockLogger.debug).toHaveBeenCalledWith('Forma: Action "testAction" tracked');
     });
 
     test("logs debug message with alias if provided", async () => {
@@ -92,7 +92,7 @@ describe("survey/action.ts", () => {
       const result = await trackAction("testAction", "aliasName");
 
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith('Formbricks: Action "aliasName" tracked');
+      expect(mockLogger.debug).toHaveBeenCalledWith('Forma: Action "aliasName" tracked');
     });
 
     test("triggers survey if action matches survey trigger", async () => {
@@ -106,7 +106,7 @@ describe("survey/action.ts", () => {
       expect(triggerSurvey).toHaveBeenCalledWith(mockSurvey, "testAction", undefined);
     });
 
-    test("emits formbricks_action_tracked for every tracked action, even without a matching survey", async () => {
+    test("emits forma_action_tracked for every tracked action, even without a matching survey", async () => {
       // ENG-1846: funnel analytics wants the misses too — the emit sits on the shared trackAction
       // path, above the survey-matching loop.
       delete (window as { dataLayer?: unknown }).dataLayer;
@@ -117,8 +117,8 @@ describe("survey/action.ts", () => {
       expect(result.ok).toBe(true);
       expect(window.dataLayer).toEqual([
         {
-          event: "formbricks_action_tracked",
-          formbricks: {
+          event: "forma_action_tracked",
+          forma: {
             workspaceId: null,
             surveyId: null,
             responseId: null,
@@ -204,7 +204,7 @@ describe("survey/action.ts", () => {
       const result = await trackCodeAction("valid_code");
 
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith('Formbricks: Action "valid_code" tracked');
+      expect(mockLogger.debug).toHaveBeenCalledWith('Forma: Action "valid_code" tracked');
     });
   });
 
@@ -215,7 +215,7 @@ describe("survey/action.ts", () => {
       const result = await trackNoCodeAction("noCodeAction");
 
       expect(result.ok).toBe(true);
-      expect(mockLogger.debug).toHaveBeenCalledWith('Formbricks: Action "noCodeAction" tracked');
+      expect(mockLogger.debug).toHaveBeenCalledWith('Forma: Action "noCodeAction" tracked');
     });
   });
 });

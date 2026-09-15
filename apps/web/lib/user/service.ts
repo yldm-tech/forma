@@ -1,12 +1,12 @@
 import "server-only";
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TUser, TUserLocale, TUserUpdateInput, ZUserUpdateInput } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { TUser, TUserLocale, TUserUpdateInput, ZUserUpdateInput } from "@forma/types/user";
 import { deleteUserOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { deleteUserTeamRelationships } from "@/lib/authzed/team-workspace";

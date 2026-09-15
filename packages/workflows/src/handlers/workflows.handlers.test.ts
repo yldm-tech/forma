@@ -87,7 +87,7 @@ const authorized: AuthorizedWorkspace = { workspaceId, organizationId: "cm9zr5or
 const makeCtx = (overrides: Partial<WorkflowApiContext> = {}): WorkflowApiContext => ({
   userId: "cm9zr52kh000508l8e3q7bw9j",
   requestId: "req_1",
-  instance: "https://app.formbricks.com",
+  instance: "https://app.forma.ylam.ai",
   logger,
   authorize: authorizeAllow,
   verifyTriggerSurvey,

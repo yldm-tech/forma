@@ -1,4 +1,4 @@
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
 import {
   RESERVED_FIELD_CATALOG,
   type TEmbeddedValueResponse,
@@ -9,7 +9,7 @@ import {
   getSurveyEmbeddedFields,
   listShadowingNames,
   projectReservedValues,
-} from "@formbricks/types/embedded-data-resolver";
+} from "@forma/types/embedded-data-resolver";
 import {
   TResponse,
   TResponseDataValue,
@@ -18,16 +18,16 @@ import {
   TResponseWithQuotas,
   TSurveyContactAttributes,
   TSurveyMetaFieldFilter,
-} from "@formbricks/types/responses";
-import { formatFieldNameToTitleCase } from "@formbricks/types/safe-identifier";
+} from "@forma/types/responses";
+import { formatFieldNameToTitleCase } from "@forma/types/safe-identifier";
 import {
   TSurveyElement,
   TSurveyMultipleChoiceElement,
   TSurveyPictureSelectionElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
@@ -321,7 +321,7 @@ export const getResponsesJson = (
       Timestamp: getFormattedDateTimeString(response.createdAt, timeZone),
       Finished: response.finished ? "Yes" : "No",
       "Survey ID": response.surveyId,
-      "Formbricks ID (internal)": response.contact?.id || "",
+      "Forma ID (internal)": response.contact?.id || "",
       "User ID": response.contact?.userId || "",
       Tags: response.tags.map((tag) => tag.name).join(", "),
     });

@@ -3,7 +3,7 @@
 # V3 API — surveys, workflows, action classes, contact attribute keys, tags and feedback records (hand-maintained source; not produced by generate-api-specs).
 openapi: 3.1.1
 info:
-  title: Formbricks API v3
+  title: Forma API v3
   description: |
     **Surveys**: **GET /api/v3/surveys**, **POST /api/v3/surveys**, **POST /api/v3/surveys/generate**, **POST /api/v3/surveys/validate**, **GET /api/v3/surveys/{surveyId}**, **PATCH /api/v3/surveys/{surveyId}**, and **DELETE /api/v3/surveys/{surveyId}**.
 
@@ -48,7 +48,7 @@ info:
     `POST /api/v3/surveys/generate` returns a draft `POST /api/v3/surveys` payload plus validation metadata. It does not create a survey. It generates survey content for both `link` and `app` surveys; for `app` it seeds a default `distribution` (display once, no triggers, no targeting) that you finish configuring before publishing.
     Prompt text is sent to the configured AI provider for generation, but it is not stored by this endpoint, not logged by default, and not included in audit data.
 
-    **Feedback Records** `/api/v3/feedbackRecords` is served by the **API gateway** (Envoy on Formbricks Cloud, Traefik in the one-click Docker install), which authorizes each call against the dataset and forwards it to the feedback store — not by the application routes that serve the rest of v3. Three consequences: the payload is the store's own, so members and filters are **`snake_case`** (`tenant_id`, `value_text`) rather than v3's camelCase; the dataset is named **`tenant_id`** on the wire and is required on every collection operation (it is the feedback dataset id, which the MCP `list_feedback_datasets` tool reports as `dataset_id`); and errors come in two shapes — gateway refusals (**400**, **401**, **403**, **413**, **503**) are `text/plain`, while the store's own problems are `application/problem+json` with a stable `code`. These eight operations are the whole of the gateway-served surface; any other path it receives under the prefix answers **400**. Authenticate with **`x-api-key`**: the key needs a permission on a workspace the dataset is assigned to — `read` to list, get and search, `write` to create and update, `manage` to delete — and may update or delete only in a dataset assigned to exactly one workspace.
+    **Feedback Records** `/api/v3/feedbackRecords` is served by the **API gateway** (Envoy on Forma Cloud, Traefik in the one-click Docker install), which authorizes each call against the dataset and forwards it to the feedback store — not by the application routes that serve the rest of v3. Three consequences: the payload is the store's own, so members and filters are **`snake_case`** (`tenant_id`, `value_text`) rather than v3's camelCase; the dataset is named **`tenant_id`** on the wire and is required on every collection operation (it is the feedback dataset id, which the MCP `list_feedback_datasets` tool reports as `dataset_id`); and errors come in two shapes — gateway refusals (**400**, **401**, **403**, **413**, **503**) are `text/plain`, while the store's own problems are `application/problem+json` with a stable `code`. These eight operations are the whole of the gateway-served surface; any other path it receives under the prefix answers **400**. Authenticate with **`x-api-key`**: the key needs a permission on a workspace the dataset is assigned to — `read` to list, get and search, `write` to create and update, `manage` to delete — and may update or delete only in a dataset assigned to exactly one workspace.
     **OpenAPI**
     This spec is **not** produced by `pnpm generate-api-specs` (that script only builds v2 → `docs/api-v2-reference/openapi.yml`). When the route contract changes, edit the files under `docs/api-v3-reference/src/`, then run `pnpm api:v3:bundle` to regenerate the committed single-file bundle. `pnpm api:v3:lint` lints the source tree; `pnpm api:v3:check` (CI) fails when the bundle is stale.
 
@@ -81,8 +81,8 @@ info:
     pagination-model: cursor
     cursor-pagination: supported
 servers:
-  - url: https://app.formbricks.com
-    description: Formbricks Cloud. Paths in this spec already include the `/api/v3` prefix; self-hosted instances substitute their own origin.
+  - url: https://app.forma.ylam.ai
+    description: Forma Cloud. Paths in this spec already include the `/api/v3` prefix; self-hosted instances substitute their own origin.
 paths:
   /api/v3/surveys:
     get:
@@ -236,7 +236,7 @@ paths:
       summary: Create a survey
       description: |
         Creates a block-based survey template from one strict survey document. The endpoint accepts
-        multilingual authoring maps keyed by real locale codes and converts them to Formbricks'
+        multilingual authoring maps keyed by real locale codes and converts them to Forma'
         internal default-language representation. Non-default locale keys in translated content
         must be declared in `languages`; undeclared locale keys return `unsupported_locale` in
         `invalid_params` instead of silently mutating workspace languages.
@@ -683,7 +683,7 @@ paths:
                     code: bad_gateway
                     requestId: req_123
         '503':
-          description: AI is not configured on this Formbricks instance
+          description: AI is not configured on this Forma instance
           content:
             application/problem+json:
               schema:
@@ -694,7 +694,7 @@ paths:
                   value:
                     title: AI Unavailable
                     status: 503
-                    detail: AI is not configured for this Formbricks instance.
+                    detail: AI is not configured for this Forma instance.
                     code: ai_instance_not_configured
                     requestId: req_123
       security:
@@ -850,7 +850,7 @@ paths:
             Comma-separated language selector filter for translatable fields, for example `?lang=de-DE,pt-PT`.
             The response shape stays stable: translatable fields are always maps, never strings, and response
             keys match the emitted `languages[].code` values for this survey.
-            For compatibility with existing Formbricks surveys, GET accepts language tags such as `de`,
+            For compatibility with existing Forma surveys, GET accepts language tags such as `de`,
             `de-DE`, `zh-Hans`, and `zh-Hans-CN`, accepts `_` or `-` separators, is case-insensitive, and
             accepts configured workspace aliases such as `english`. Bare language selectors are resolved
             against the survey's configured languages and return `400` if ambiguous, for example if both
@@ -3112,7 +3112,7 @@ paths:
         Returns the action classes (user actions that can trigger an app survey) for a workspace. Use
         the returned ids as `distribution.triggers[].actionClassId` when creating or updating app
         surveys. Read-only: this v3 endpoint lists action classes but does not create them — action
-        classes are managed in the Formbricks app (Actions settings) or via the v1/v2 management API.
+        classes are managed in the Forma app (Actions settings) or via the v1/v2 management API.
 
         An empty `data` array means the workspace has no action classes yet. Triggers are optional, so
         you can still create an app survey with `distribution.triggers: []` (or omit `distribution`
@@ -3285,7 +3285,7 @@ paths:
       description: |
         Returns a workspace's response tags, each with the number of responses currently carrying it.
 
-        Session cookie only. Tags are managed from the Formbricks app (Workspace settings → Tags); these
+        Session cookie only. Tags are managed from the Forma app (Workspace settings → Tags); these
         endpoints back that screen, so they do not accept `x-api-key`.
       tags:
         - V3 Tags
@@ -9066,7 +9066,7 @@ components:
             invertedRange:
               summary: Feedback store — a range filter supplied backwards
               value:
-                type: https://hub.formbricks.com/problems/validation
+                type: https://hub.forma.ylam.ai/problems/validation
                 title: Validation Failed
                 status: 400
                 code: validation
@@ -9112,7 +9112,7 @@ components:
           schema:
             $ref: '#/components/schemas/HubProblem'
     FeedbackRecordsPayloadTooLarge:
-      description: Payload Too Large. The gateway buffers the request body in order to authorize it, and the proxy in front of it stops reading at 1 MiB — Envoy's `maxRequestBytes` on Formbricks Cloud, Traefik's `maxbodysize` in the Docker install. The refusal is therefore generated by that proxy rather than by the application, so neither its media type nor its body is part of this contract; branch on the status alone.
+      description: Payload Too Large. The gateway buffers the request body in order to authorize it, and the proxy in front of it stops reading at 1 MiB — Envoy's `maxRequestBytes` on Forma Cloud, Traefik's `maxbodysize` in the Docker install. The refusal is therefore generated by that proxy rather than by the application, so neither its media type nor its body is part of this contract; branch on the status alone.
     FeedbackRecordsWriteConflict:
       description: 'Conflict (`application/problem+json`, `code: tenant_write_conflict`). The dataset is being **purged** while you write to it. Transient: retry the request unchanged once the purge completes. Only creates can conflict on a duplicate, so this operation never answers `code: conflict`.'
       content:

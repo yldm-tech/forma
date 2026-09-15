@@ -1,12 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import {
-  type TEmbeddedValueResponse,
-  deriveLegacyEmbeddedData,
-} from "@formbricks/types/embedded-data-resolver";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { Prisma } from "@forma/database/prisma";
+import { type TEmbeddedValueResponse, deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { TResponse } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import {
   calculateTtcTotal,
   extractChoiceIdsFromResponse,
@@ -1492,7 +1489,7 @@ describe("Response Utils", () => {
           data: {},
           meta: {
             userAgent: { browser: "Chrome", device: "desktop" },
-            url: "https://formbricks.com/dashboard",
+            url: "https://forma.ylam.ai/dashboard",
             country: "US",
           },
         },
@@ -1501,7 +1498,7 @@ describe("Response Utils", () => {
           data: {},
           meta: {
             userAgent: { browser: "Safari", device: "mobile" },
-            url: "https://formbricks.com/surveys/123",
+            url: "https://forma.ylam.ai/surveys/123",
             country: "UK",
           },
         },

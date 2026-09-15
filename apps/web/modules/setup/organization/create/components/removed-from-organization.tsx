@@ -2,20 +2,20 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TUser } from "@formbricks/types/user";
+import { TUser } from "@forma/types/user";
 import { DeleteAccountModal } from "@/modules/account/components/DeleteAccountModal";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
 
 interface RemovedFromOrganizationProps {
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   requiresPasswordConfirmation: boolean;
   user: TUser;
 }
 
 export const RemovedFromOrganization = ({
   user,
-  isFormbricksCloud,
+  isFormaCloud,
   requiresPasswordConfirmation,
 }: Readonly<RemovedFromOrganizationProps>) => {
   const { t } = useTranslation();
@@ -33,7 +33,7 @@ export const RemovedFromOrganization = ({
         open={isModalOpen}
         setOpen={setIsModalOpen}
         user={user}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
         organizationsWithSingleOwner={[]}
       />
       <Button

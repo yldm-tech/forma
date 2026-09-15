@@ -1,13 +1,13 @@
-# @formbricks/survey-ui
+# @forma/survey-ui
 
 React UI components for building surveys and forms. Includes NPS, rating scales, multi-select, file upload, and more.
 
-![Survey UI Preview](https://cdn.jsdelivr.net/gh/formbricks/formbricks@main/packages/survey-ui/images/survey-preview.png)
+![Survey UI Preview](https://cdn.jsdelivr.net/gh/forma/forma@main/packages/survey-ui/images/survey-preview.png)
 
 ## Installation
 
 ```bash
-npm install @formbricks/survey-ui
+npm install @forma/survey-ui
 ```
 
 **Requirements:** React 19 (`react@^19.0.0`)
@@ -15,8 +15,8 @@ npm install @formbricks/survey-ui
 ## Quick Start
 
 ```tsx
-import { OpenText, Rating } from "@formbricks/survey-ui";
-import "@formbricks/survey-ui/styles";
+import { OpenText, Rating } from "@forma/survey-ui";
+import "@forma/survey-ui/styles";
 
 function Survey() {
   return (
@@ -217,9 +217,9 @@ import {
   SingleSelect,
   type SingleSelectOption,
   type SingleSelectProps,
-} from "@formbricks/survey-ui";
+} from "@forma/survey-ui";
 ```
 
 ## License
 
-MIT — [Formbricks](https://formbricks.com)
+MIT — [Forma](https://forma.ylam.ai)

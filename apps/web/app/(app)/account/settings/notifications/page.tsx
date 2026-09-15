@@ -1,6 +1,6 @@
-import { prisma } from "@formbricks/database";
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TUserNotificationSettings } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
+import { TUserNotificationSettings } from "@forma/types/user";
 import { EditAlerts } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/components/EditAlerts";
 import { IntegrationsTip } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/components/IntegrationsTip";
 import type { Membership } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/types";

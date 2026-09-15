@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import type { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@formbricks/types/js-constants";
+import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
 import { getSurveyDisplayName, getSurveyPagePosition, hasSurveyInstructions } from "./survey-page";
 
 const block = (id: string) => ({ id, name: id, elements: [] });

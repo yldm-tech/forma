@@ -5,19 +5,19 @@ icon: "user"
 ---
 
 <Note>
-  User identification is part of the Formbricks [Enterprise Edition](/self-hosting/advanced/license). 
+  User identification is part of the Forma [Enterprise Edition](/self-hosting/advanced/license). 
 </Note>
 
 ### Understanding Identified vs Unidentified Users
 
-In Formbricks, understanding the difference between identified and unidentified users is crucial for effective survey segmentation and targeted feedback collection.
+In Forma, understanding the difference between identified and unidentified users is crucial for effective survey segmentation and targeted feedback collection.
 
 | Feature                                                  | Unidentified Users | Identified Users |
 | -------------------------------------------------------- | ------------------ | ---------------- |
 | Show surveys based on **trigger** actions                | ✅                 | ✅               |
 | Set **recontact details** to avoid survey fatique        | ✅                 | ✅               |
 | Target a subset of users using **attributes & segments** | ❌                 | ✅               |
-| Collect **user information** in Formbricks               | ❌                 | ✅               |
+| Collect **user information** in Forma               | ❌                 | ✅               |
 | Track **custom attributes**                              | ❌                 | ✅               |
 | Counts towards your **monthly tacked user (MTU)** limit  | ❌                 | ✅               |
 | Recommended for **public-facing websites**               | ✅                 | ❌               |
@@ -25,16 +25,16 @@ In Formbricks, understanding the difference between identified and unidentified 
 
 ## Identified Users
 
-Identified users are those for whom specific information has been set, notably the userId. This identification allows for more precise targeting of surveys and a deeper understanding of the feedback provided. When enabled, all information specified by you and all actions are sent to Formbricks.
+Identified users are those for whom specific information has been set, notably the userId. This identification allows for more precise targeting of surveys and a deeper understanding of the feedback provided. When enabled, all information specified by you and all actions are sent to Forma.
 
 This method is recommended for applications where users are required to log in and will often return.
 
 ### Setting User ID
 
-To enable user identification, call the `setUserId` function of Formbricks and pass the user id. The user will show up in the Formbricks dashboard. Use a unique string, like a database ID or a unique email address. You can also anonymize the identifier, as long as it is unique for each user.
+To enable user identification, call the `setUserId` function of Forma and pass the user id. The user will show up in the Forma dashboard. Use a unique string, like a database ID or a unique email address. You can also anonymize the identifier, as long as it is unique for each user.
 
 ```javascript
-formbricks.setUserId("<user-id>");
+forma.setUserId("<user-id>");
 ```
 
 ### Setting User Email
@@ -42,25 +42,25 @@ formbricks.setUserId("<user-id>");
 Use the `setEmail` function to store the user's email address on the contact. Email is one of the built-in contact attributes, so it gets its own column in the Contacts table and is never removed by an attribute update that omits it.
 
 ```javascript Setting User Email
-formbricks.setEmail("hola@formbricks.com");
+forma.setEmail("hola@forma.ylam.ai");
 ```
 
 `setEmail` is a shorthand, not a separate identity mechanism. It writes the `email` attribute exactly as `setAttributes` would, so these two calls are equivalent:
 
 ```javascript setEmail vs setAttributes
-formbricks.setEmail("hola@formbricks.com");
-formbricks.setAttributes({ email: "hola@formbricks.com" });
+forma.setEmail("hola@forma.ylam.ai");
+forma.setAttributes({ email: "hola@forma.ylam.ai" });
 ```
 
-Order matters: call `setUserId` before `setEmail`. Attributes are only stored for identified users, so if no user ID has been set yet, Formbricks drops the email and logs an error to the console:
+Order matters: call `setUserId` before `setEmail`. Attributes are only stored for identified users, so if no user ID has been set yet, Forma drops the email and logs an error to the console:
 
 ```text
-🧱 Formbricks - <timestamp> [ERROR] - Formbricks can't set attributes without a userId! Please set a userId first with the setUserId function
+🧱 Forma - <timestamp> [ERROR] - Forma can't set attributes without a userId! Please set a userId first with the setUserId function
 ```
 
 <Note>
   **Note**: an email address can belong to only one contact per workspace. If another contact already
-  has the address you pass, Formbricks keeps that contact's email and silently skips the update. The SDK
+  has the address you pass, Forma keeps that contact's email and silently skips the update. The SDK
   reports this only in [debug mode](/surveys/website-app-surveys/framework-guides#activate-debug-mode),
   as _"The email already exists for this environment and was not updated."_ The value must be a valid
   email address of at most 255 characters.
@@ -71,19 +71,19 @@ Order matters: call `setUserId` before `setEmail`. Attributes are only stored fo
 Use the `setAttribute` function to set custom attributes for the user (e.g., name, plan).
 
 ```javascript Setting Custom Attributes
-formbricks.setAttribute("Plan", "free");
+forma.setAttribute("Plan", "free");
 ```
 
 The `setAttribute` function works like this:
 
 ```javascript Setting Custom Attributes
-formbricks.setAttribute("attribute_key", "attribute_value");
+forma.setAttribute("attribute_key", "attribute_value");
 ```
 
 You can also set multiple attributes at once by passing an object to the `setAttributes` function:
 
 ```javascript Setting Multiple Custom Attributes
-formbricks.setAttributes({
+forma.setAttributes({
   attribute_key_1: "attribute_value_1",
   attribute_key_2: "attribute_value_2",
 });
@@ -99,13 +99,13 @@ formbricks.setAttributes({
 Use the `setLanguage` function to set the user's preferred language for surveys. This allows you to display surveys in the user's language when multi-language surveys are enabled. You can pass either the ISO language code (e.g., "de", "fr", "es") or the language alias you configured in **Settings → Workspace → Survey Languages**.
 
 ```javascript Setting User Language
-formbricks.setLanguage("de"); // ISO identifier or Alias set when creating language
+forma.setLanguage("de"); // ISO identifier or Alias set when creating language
 ```
 
 ### Logging Out Users
 
-When a user logs out of your webpage, also log them out of Formbricks to prevent activity from being linked to the wrong user. Use the logout function:
+When a user logs out of your webpage, also log them out of Forma to prevent activity from being linked to the wrong user. Use the logout function:
 
 ```javascript Logging out User
-formbricks.logout();
+forma.logout();
 ```

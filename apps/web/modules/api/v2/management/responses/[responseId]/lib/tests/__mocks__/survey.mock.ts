@@ -1,6 +1,6 @@
-import { Survey } from "@formbricks/database/prisma";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+import { Survey } from "@forma/database/prisma";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 
 export const survey: Pick<Survey, "id" | "questions" | "blocks"> = {
   id: "rp2di001zicbm3mk8je1ue9u",

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TSurveyElementTypeEnum } from "./surveys/constants";
 
 // Feedback source type enum
-export const ZFeedbackSourceType = z.enum(["formbricks_survey", "csv"]);
+export const ZFeedbackSourceType = z.enum(["forma_survey", "csv"]);
 export type TFeedbackSourceType = z.infer<typeof ZFeedbackSourceType>;
 
 // Feedback source status enum
@@ -10,7 +10,7 @@ export const ZFeedbackSourceStatus = z.enum(["active", "paused", "error"]);
 export type TFeedbackSourceStatus = z.infer<typeof ZFeedbackSourceStatus>;
 
 /**
- * Which survey responses a Formbricks feedback source imports into Hub.
+ * Which survey responses a Forma feedback source imports into Hub.
  *
  * `completedOnly` matches the live ingestion path, which only runs on `responseFinished`.
  * `all` additionally imports partial responses — answers a respondent typed but never submitted —
@@ -20,7 +20,7 @@ export const ZFeedbackSourceImportMode = z.enum(["completedOnly", "all"]);
 export type TFeedbackSourceImportMode = z.infer<typeof ZFeedbackSourceImportMode>;
 
 /**
- * Whether a formbricks_survey source tracks every supported element of the surveys it maps, or an
+ * Whether a forma_survey source tracks every supported element of the surveys it maps, or an
  * explicit subset. Always derived server-side from the submitted selection — never accepted from a
  * client — so the scope can never disagree with the mapping rows it describes.
  *
@@ -107,8 +107,8 @@ export const ZFeedbackSource = z.object({
 });
 export type TFeedbackSource = z.infer<typeof ZFeedbackSource>;
 
-// Formbricks element mapping
-export const ZFeedbackSourceFormbricksMapping = z.object({
+// Forma element mapping
+export const ZFeedbackSourceFormaMapping = z.object({
   id: z.cuid2(),
   createdAt: z.date(),
   feedbackSourceId: z.cuid2(),
@@ -118,7 +118,7 @@ export const ZFeedbackSourceFormbricksMapping = z.object({
   hubFieldType: ZHubFieldType,
   customFieldLabel: z.string().nullable(),
 });
-export type TFeedbackSourceFormbricksMapping = z.infer<typeof ZFeedbackSourceFormbricksMapping>;
+export type TFeedbackSourceFormaMapping = z.infer<typeof ZFeedbackSourceFormaMapping>;
 
 export const ZFeedbackSourceFieldMapping = z.object({
   id: z.cuid2(),
@@ -132,7 +132,7 @@ export const ZFeedbackSourceFieldMapping = z.object({
 export type TFeedbackSourceFieldMapping = z.infer<typeof ZFeedbackSourceFieldMapping>;
 
 export const ZFeedbackSourceWithMappings = ZFeedbackSource.extend({
-  formbricksMappings: z.array(ZFeedbackSourceFormbricksMapping),
+  formaMappings: z.array(ZFeedbackSourceFormaMapping),
   fieldMappings: z.array(ZFeedbackSourceFieldMapping),
   creatorName: z.string().nullable().optional(),
 });
@@ -149,16 +149,14 @@ export const ZFeedbackSourceCreateInput = z.object({
 });
 export type TFeedbackSourceCreateInput = z.infer<typeof ZFeedbackSourceCreateInput>;
 
-// Create Formbricks mapping input
-export const ZFeedbackSourceFormbricksMappingCreateInput = z.object({
+// Create Forma mapping input
+export const ZFeedbackSourceFormaMappingCreateInput = z.object({
   surveyId: z.cuid2(),
   elementId: z.string(),
   hubFieldType: ZHubFieldType,
   customFieldLabel: z.string().optional(),
 });
-export type TFeedbackSourceFormbricksMappingCreateInput = z.infer<
-  typeof ZFeedbackSourceFormbricksMappingCreateInput
->;
+export type TFeedbackSourceFormaMappingCreateInput = z.infer<typeof ZFeedbackSourceFormaMappingCreateInput>;
 
 // Create field mapping input
 export const ZFeedbackSourceFieldMappingCreateInput = z.object({

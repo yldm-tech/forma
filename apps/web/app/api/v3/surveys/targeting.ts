@@ -1,14 +1,14 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import type {
   TSegmentAttributeFilter,
   TSegmentDeviceFilter,
   TSegmentPersonFilter,
   TSegmentSegmentFilter,
   TSegmentSurveyInteractionFilter,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getContactAttributeKeys } from "@/modules/ee/contacts/lib/contact-attribute-keys";

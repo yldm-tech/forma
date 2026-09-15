@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { deriveLegacyEmbeddedData } from "@formbricks/types/embedded-data-resolver";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TResponseFilterCriteria } from "@formbricks/types/responses";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveySummary } from "@formbricks/types/surveys/types";
-import { TLanguage } from "@formbricks/types/workspace";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { TResponseFilterCriteria } from "@forma/types/responses";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
+import { TLanguage } from "@forma/types/workspace";
 import { getQuotasSummary } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/survey";
 import { getDisplayCountBySurveyId } from "@/lib/display/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
@@ -49,7 +49,7 @@ vi.mock("@/lib/surveyLogic/utils", () => ({
 vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
 }));
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       findMany: vi.fn(),

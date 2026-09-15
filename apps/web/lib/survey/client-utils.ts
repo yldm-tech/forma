@@ -1,5 +1,5 @@
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurvey } from "@forma/types/surveys/types";
 
 /**
  * Adapts a full management-side `TSurvey` into the minimal

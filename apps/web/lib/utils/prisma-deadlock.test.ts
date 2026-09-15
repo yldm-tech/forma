@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
 import { isDeadlockError, retryOnDeadlock } from "./prisma-deadlock";
 
 const context = { operation: "test.operation" };

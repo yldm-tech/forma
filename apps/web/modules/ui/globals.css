@@ -26,8 +26,8 @@
   --color-ai-strong: var(--color-indigo-700); /* filled AI button — white on it is 8.02:1 */
   --color-ai-subtle: var(--color-indigo-100); /* soft AI button — ai-dark on it is 6.57:1 */
 
-  --color-focus: var(--formbricks-focus, #1982fc);
-  --color-brandnew: var(--formbricks-brand, #038178);
+  --color-focus: var(--forma-focus, #1982fc);
+  --color-brandnew: var(--forma-brand, #038178);
 
   --color-primary: #0f172a;
   --color-primary-foreground: #fefefe;
@@ -331,50 +331,50 @@
 @layer utilities {
   :root {
     /* Brand Colors */
-    --formbricks-brand: #038178;
+    --forma-brand: #038178;
 
     /* Fill Colors */
-    --formbricks-fill-primary: #fefefe;
-    --formbricks-fill-secondary: #0f172a;
-    --formbricks-fill-disabled: #e0e0e0;
+    --forma-fill-primary: #fefefe;
+    --forma-fill-secondary: #0f172a;
+    --forma-fill-disabled: #e0e0e0;
 
     /* Label Colors */
-    --formbricks-label-primary: #0f172a;
-    --formbricks-label-secondary: #384258;
-    --formbricks-label-disabled: #bdbdbd;
+    --forma-label-primary: #0f172a;
+    --forma-label-secondary: #384258;
+    --forma-label-disabled: #bdbdbd;
 
     /* Border Colors */
-    --formbricks-border-primary: #e0e0e0;
-    --formbricks-border-secondary: #0f172a;
-    --formbricks-border-disabled: #ececec;
+    --forma-border-primary: #e0e0e0;
+    --forma-border-secondary: #0f172a;
+    --forma-border-disabled: #ececec;
 
     /* Functional Colors */
-    --formbricks-focus: #1982fc;
-    --formbricks-error: #d13a3a;
+    --forma-focus: #1982fc;
+    --forma-error: #d13a3a;
   }
 
   .dark {
     /* Brand Colors */
-    --formbricks-brand: #038178;
+    --forma-brand: #038178;
 
     /* Fill Colors */
-    --formbricks-fill-primary: #0f172a;
-    --formbricks-fill-secondary: #e0e0e0;
-    --formbricks-fill-disabled: #394258;
+    --forma-fill-primary: #0f172a;
+    --forma-fill-secondary: #e0e0e0;
+    --forma-fill-disabled: #394258;
 
     /* Label Colors */
-    --formbricks-label-primary: #fefefe;
-    --formbricks-label-secondary: #f2f2f2;
-    --formbricks-label-disabled: #bdbdbd;
+    --forma-label-primary: #fefefe;
+    --forma-label-secondary: #f2f2f2;
+    --forma-label-disabled: #bdbdbd;
 
     /* Border Colors */
-    --formbricks-border-primary: #394258;
-    --formbricks-border-secondary: #e0e0e0;
-    --formbricks-border-disabled: #394258;
+    --forma-border-primary: #394258;
+    --forma-border-secondary: #e0e0e0;
+    --forma-border-disabled: #394258;
 
     /* Functional Colors */
-    --formbricks-focus: #1982fc;
-    --formbricks-error: #d13a3a;
+    --forma-focus: #1982fc;
+    --forma-error: #d13a3a;
   }
 }
 

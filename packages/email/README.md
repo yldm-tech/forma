@@ -1,6 +1,6 @@
-# @formbricks/emails
+# @forma/emails
 
-Email templates for Formbricks with React Email preview server.
+Email templates for Forma with React Email preview server.
 
 ## Purpose
 
@@ -17,7 +17,7 @@ This package provides email templates for visual QA and preview. It includes:
 This package is **not built**. It has no bundler, no `dist/`, and deliberately no `build` script:
 
 - `main` and `types` both point at `src/index.ts`.
-- `apps/web` imports `@formbricks/email` as TypeScript source and transpiles it in its own Next.js build.
+- `apps/web` imports `@forma/email` as TypeScript source and transpiles it in its own Next.js build.
 - The `email dev` preview server also runs straight off the source files.
 
 Two consequences worth remembering when editing this package:
@@ -26,7 +26,7 @@ Two consequences worth remembering when editing this package:
   our source also has to resolve everything that source imports. `clsx` and `tailwind-merge` are runtime
   dependencies for exactly this reason (`src/lib/cn.ts`).
 - **Type errors are caught by `pnpm typecheck`, not by a build.** The turbo `typecheck` task covers this
-  package; there is no `@formbricks/email#build` entry in `turbo.json` for other tasks to wait on.
+  package; there is no `@forma/email#build` entry in `turbo.json` for other tasks to wait on.
 
 ## Development
 
@@ -74,7 +74,7 @@ import { mockT } from "@/src/lib/mock-translate";
 The web app imports render helper functions from this package:
 
 ```typescript
-import { renderVerificationEmail } from "@formbricks/email";
+import { renderVerificationEmail } from "@forma/email";
 
 // Pass real translation function and data
 const html = await renderVerificationEmail({
@@ -87,7 +87,7 @@ const html = await renderVerificationEmail({
 For complex emails with pre-processing:
 
 ```typescript
-import { renderResponseFinishedEmail } from "@formbricks/email";
+import { renderResponseFinishedEmail } from "@forma/email";
 import { getElementResponseMapping } from "@/lib/responses";
 
 // Pre-process data before rendering

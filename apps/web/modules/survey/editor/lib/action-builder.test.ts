@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import { TActionClassInput } from "@formbricks/types/action-classes";
+import { TActionClassInput } from "@forma/types/action-classes";
 import { buildActionObject, buildCodeAction, buildNoCodeAction } from "./action-builder";
 
 const mockT = vi.fn((key: string) => {

@@ -195,7 +195,7 @@ export const isExpectedError = (error: Error): boolean => EXPECTED_ERROR_NAMES.h
 export const RESPONSE_ALREADY_FINISHED_ERROR_CODE = "response_already_finished";
 
 /**
- * Stable, locale-independent marker used when a Formbricks Cloud sign-up is rejected because the
+ * Stable, locale-independent marker used when a Forma Cloud sign-up is rejected because the
  * email uses a personal/free/disposable domain. Reused as the sign-up action's `serverError`
  * sentinel and as the `?error=` code on the SSO rejection redirect, so the client can map it to a
  * localized message without depending on the (server-only) blocklist utility.

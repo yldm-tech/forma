@@ -1,4 +1,4 @@
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey } from "@forma/types/surveys/types";
 import type { TV3SurveyDistribution, TV3SurveyTargeting } from "./schemas";
 
 const responseLimitOrNull = (value: number | null): number | null =>

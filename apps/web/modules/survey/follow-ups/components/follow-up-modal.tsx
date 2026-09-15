@@ -15,10 +15,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyFollowUpAction, TSurveyFollowUpTrigger } from "@formbricks/types/surveys/follow-up";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TUserLocale } from "@formbricks/types/user";
+import { TSurveyFollowUpAction, TSurveyFollowUpTrigger } from "@forma/types/surveys/follow-up";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TUserLocale } from "@forma/types/user";
 import { recallToHeadline } from "@/lib/utils/recall";
 import {
   TCreateSurveyFollowUpForm,

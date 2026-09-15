@@ -88,7 +88,7 @@ describe("[...all] Better Auth route (ENG-1054 cutover)", () => {
 
 // ENG-2259: the Sentry capture in better-auth-observability.ts reads this context, so if the route
 // stops opening it the fault reports with no endpoint again — exactly the state that left
-// FORMBRICKS-183 untriageable at ~242 events.
+// FORMA-183 untriageable at ~242 events.
 describe("[...all] Better Auth route — observability context (ENG-2259)", () => {
   beforeEach(() => {
     handlerMock.mockClear();

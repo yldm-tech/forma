@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { isExpectedError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { isExpectedError } from "@forma/types/errors";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 import { deleteWorkspaceWithConfirmation, getWorkspaceIdForLogging } from "./lib/delete-workspace";

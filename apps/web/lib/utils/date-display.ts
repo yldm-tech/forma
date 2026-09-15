@@ -1,4 +1,4 @@
-import type { TSurveyDateElement, TSurveyElement } from "@formbricks/types/surveys/elements";
+import type { TSurveyDateElement, TSurveyElement } from "@forma/types/surveys/elements";
 import { formatDateWithOrdinal } from "./datetime";
 
 export type TSurveyDateFormatMap = Partial<Record<string, TSurveyDateElement["format"]>>;

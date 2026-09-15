@@ -1,8 +1,8 @@
 import "server-only";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { deleteUserOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { deleteUserTeamRelationships } from "@/lib/authzed/team-workspace";
@@ -17,7 +17,7 @@ import { queueAccountDeletionAuditEvent } from "./account-deletion-audit";
 type DeleteUserConfig = NonNullable<NonNullable<BetterAuthOptions["user"]>["deleteUser"]>;
 
 /**
- * Better Auth `user.deleteUser` config (ENG-1054, design doc §14) — re-expresses Formbricks' account
+ * Better Auth `user.deleteUser` config (ENG-1054, design doc §14) — re-expresses Forma' account
  * deletion on Better Auth's native flow, replacing the prior bespoke SSO IdP re-authentication.
  *
  * The confirmation friction is asymmetric and lives at the edges (Phase 6, not here): credential users

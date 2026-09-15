@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { AuthorizationError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { AuthorizationError } from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
 import { assertFeedbackSourceDirectoryAccess } from "@/lib/feedback-source/access";
 import { importCsvFile } from "@/lib/feedback-source/csv-file-import";
@@ -9,7 +9,7 @@ import { getUser } from "@/lib/user/service";
 import { getSession } from "@/modules/auth/lib/session";
 import { POST } from "./route";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn() },
 }));
 vi.mock("@/lib/feedback-source/access", () => ({

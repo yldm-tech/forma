@@ -28,7 +28,7 @@ const writeResult = (result: object): void => {
 };
 
 const closeDatabase = async (): Promise<void> => {
-  const { prisma } = await import("@formbricks/database");
+  const { prisma } = await import("@forma/database");
 
   await prisma.$disconnect();
 };

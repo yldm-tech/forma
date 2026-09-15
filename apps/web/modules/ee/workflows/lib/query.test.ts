@@ -1,6 +1,6 @@
 import type { InfiniteData } from "@tanstack/react-query";
 import { describe, expect, test } from "vitest";
-import type { TWorkflowListItem, TWorkflowRunListItem } from "@formbricks/workflows";
+import type { TWorkflowListItem, TWorkflowRunListItem } from "@forma/workflows";
 import type { TWorkflowListPage, TWorkflowRunListPage } from "./api-client";
 import {
   flattenWorkflowPages,

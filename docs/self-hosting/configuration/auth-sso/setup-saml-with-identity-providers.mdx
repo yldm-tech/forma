@@ -1,20 +1,20 @@
 ---
 title: "SAML with Identity Providers"
-description: "This guide explains the settings you need to use to configure SAML with your Identity Provider. Once configured, obtain an XML metadata file and use it to configure SAML in Formbricks."
+description: "This guide explains the settings you need to use to configure SAML with your Identity Provider. Once configured, obtain an XML metadata file and use it to configure SAML in Forma."
 icon: "building-lock"
 ---
 
 ## SAML registration with identity providers
 
-This guide explains the settings you need to use to configure SAML with your Identity Provider. Once configured, obtain an XML metadata file and use it to configure SAML in Formbricks.
+This guide explains the settings you need to use to configure SAML with your Identity Provider. Once configured, obtain an XML metadata file and use it to configure SAML in Forma.
 
 > **Note:** Please do not add a trailing slash at the end of the URLs. Create them exactly as shown below.
 
-**Assertion consumer service URL / Single Sign-On URL / Destination URL:** [https://app.formbricks.com/api/auth/saml/callback](https://app.formbricks.com/api/auth/saml/callback)
+**Assertion consumer service URL / Single Sign-On URL / Destination URL:** [https://app.forma.ylam.ai/api/auth/saml/callback](https://app.forma.ylam.ai/api/auth/saml/callback)
 
-**Entity ID / Identifier / Audience URI / Audience Restriction:** [https://saml.formbricks.com](https://saml.formbricks.com)
+**Entity ID / Identifier / Audience URI / Audience Restriction:** [https://saml.forma.ylam.ai](https://saml.forma.ylam.ai)
 
-> **Note:** [https://saml.formbricks.com](https://saml.formbricks.com) is hardcoded in Formbricks — do not replace it with your instance URL. It is the fixed SP Entity ID and must match exactly as shown in SAML assertions.
+> **Note:** [https://saml.forma.ylam.ai](https://saml.forma.ylam.ai) is hardcoded in Forma — do not replace it with your instance URL. It is the fixed SP Entity ID and must match exactly as shown in SAML assertions.
 
 **Response:** Signed
 
@@ -79,8 +79,8 @@ This guide explains the settings you need to use to configure SAML with your Ide
     <img src="/images/self-hosting/configuration/auth-sso/okta/general-settings.webp" />
   </Step>
   <Step title="Enter the SAML Integration Settings as shown and click Next">
-    - **Single Sign-On URL**: `https://<your-formbricks-instance>/api/auth/saml/callback` or `http://localhost:3000/api/auth/saml/callback` (if you are running Formbricks locally)
-    - **Audience URI (SP Entity ID)**: `https://saml.formbricks.com` (hardcoded; do not replace with your instance URL)
+    - **Single Sign-On URL**: `https://<your-forma-instance>/api/auth/saml/callback` or `http://localhost:3000/api/auth/saml/callback` (if you are running Forma locally)
+    - **Audience URI (SP Entity ID)**: `https://saml.forma.ylam.ai` (hardcoded; do not replace with your instance URL)
     <img src="/images/self-hosting/configuration/auth-sso/okta/saml-integration-settings.webp" />
   </Step>
   <Step title="Fill the fields mapping as shown and click Next">
@@ -107,7 +107,7 @@ This guide explains the settings you need to use to configure SAML with your Ide
   <Step title="Scroll to the bottom and copy the IDP metadata">
     <img src="/images/self-hosting/configuration/auth-sso/okta/idp-metadata.webp" />
   </Step>
-  <Step title="Copy the IDP metadata and paste it in the `connection.xml` file in the `formbricks/saml-connection` (use `formbricks/apps/web/saml-connection` for development) directory" />
+  <Step title="Copy the IDP metadata and paste it in the `connection.xml` file in the `forma/saml-connection` (use `forma/apps/web/saml-connection` for development) directory" />
 </Steps>
 
 That's it. Now when you try to login with SSO, your application on Okta will handle the authentication.

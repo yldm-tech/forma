@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --config.platform=linux --config.architecture=x64
 
-      # apps/web's typegen and @formbricks/database's build (both in the
+      # apps/web's typegen and @forma/database's build (both in the
       # typecheck task graph) read variables from the root .env.
       - name: Create .env
         run: pnpm dev:setup

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { can } from "@/lib/authorization";
 import { lookupAuthorizedWorkspaceIds } from "@/lib/authorization/resource-list";
 import type { authenticatedApiClient } from "@/modules/api/v2/auth/authenticated-api-client";
@@ -10,7 +10,7 @@ const { mockAuthenticatedApiClient, mockHandleApiError, mockSuccessResponse } = 
   mockSuccessResponse: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { workspace: { findMany: vi.fn() } },
 }));
 vi.mock("@/lib/authorization", () => ({ can: vi.fn() }));

@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { TSurveyStatus } from "@formbricks/types/surveys/types";
+import { TSurveyStatus } from "@forma/types/surveys/types";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { SettingsTable, type TSettingsTableColumn } from "@/modules/ui/components/settings-table";
 

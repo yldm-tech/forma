@@ -1,14 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
-import {
-  type TEmbeddedValueResponse,
-  deriveLegacyEmbeddedData,
-} from "@formbricks/types/embedded-data-resolver";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TResponseData, TResponseVariables } from "@formbricks/types/responses";
-import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@formbricks/types/surveys/blocks";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TConditionGroup, TSingleCondition } from "@formbricks/types/surveys/logic";
-import { TSurveyLogicAction } from "@formbricks/types/surveys/types";
+import { type TEmbeddedValueResponse, deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TResponseData, TResponseVariables } from "@forma/types/responses";
+import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TConditionGroup, TSingleCondition } from "@forma/types/surveys/logic";
+import { TSurveyLogicAction } from "@forma/types/surveys/types";
 import {
   addConditionBelow,
   buildServerEmbeddedValues,
@@ -80,7 +77,7 @@ describe("surveyLogic", () => {
         subheader: {
           default: "We appreciate your feedback.‌‌‍‍‌‍‍‍‌‌‌‍‍‌‍‌‌‌‌‌‌‌‍‌‍‌‌",
         },
-        buttonLink: "https://formbricks.com",
+        buttonLink: "https://forma.ylam.ai",
         buttonLabel: {
           default: "Create your own Survey‌‌‍‍‌‍‍‍‌‌‌‍‍‌‍‌‍‌‌‌‌‌‍‌‍‌‌",
         },

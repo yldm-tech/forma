@@ -1,14 +1,14 @@
 import "server-only";
-import { Prisma } from "@formbricks/database/prisma";
-import { TEmbeddedDataType } from "@formbricks/types/embedded-data";
+import { Prisma } from "@forma/database/prisma";
+import { TEmbeddedDataType } from "@forma/types/embedded-data";
 import {
   RESERVED_FIELD_CATALOG,
   getComputedEmbeddedFields,
   getSurveyEmbeddedFields,
   listShadowingNames,
-} from "@formbricks/types/embedded-data-resolver";
-import { TResponseFilterCriteria } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+} from "@forma/types/embedded-data-resolver";
+import { TResponseFilterCriteria } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { generateAllPermutationsOfSubsets } from "./utils";
 

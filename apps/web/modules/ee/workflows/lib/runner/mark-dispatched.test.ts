@@ -4,8 +4,8 @@ import { markWorkflowRunDispatched } from "./mark-dispatched";
 const { updateMany } = vi.hoisted(() => ({ updateMany: vi.fn() }));
 const { error } = vi.hoisted(() => ({ error: vi.fn() }));
 
-vi.mock("@formbricks/database", () => ({ prisma: { workflowRun: { updateMany } } }));
-vi.mock("@formbricks/logger", () => ({ logger: { error } }));
+vi.mock("@forma/database", () => ({ prisma: { workflowRun: { updateMany } } }));
+vi.mock("@forma/logger", () => ({ logger: { error } }));
 
 const AT = new Date("2026-07-01T12:00:00.000Z");
 

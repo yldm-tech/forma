@@ -1,8 +1,8 @@
 import { type TFunction } from "i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import type { TSurveyMultipleChoiceElement, TSurveyRankingElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import type { TSurveyMultipleChoiceElement, TSurveyRankingElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { isI18nObject } from "@/lib/i18n/utils";
 import type { TranslatableString, TranslationProgress } from "./types";
 

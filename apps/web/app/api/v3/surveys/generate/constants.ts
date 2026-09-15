@@ -1,4 +1,4 @@
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 
 export const V3_SURVEY_GENERATE_PROMPT_MIN_LENGTH = 4;
 export const V3_SURVEY_GENERATE_PROMPT_DETAIL_MIN_LENGTH = 24;

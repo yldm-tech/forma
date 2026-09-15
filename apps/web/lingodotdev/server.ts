@@ -2,7 +2,7 @@ import { createInstance } from "i18next";
 import ICU from "i18next-icu";
 import resourcesToBackend from "i18next-resources-to-backend";
 import { initReactI18next } from "react-i18next/initReactI18next";
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { DEFAULT_LOCALE } from "@/lib/constants";
 import { getLocale } from "@/lingodotdev/language";
 

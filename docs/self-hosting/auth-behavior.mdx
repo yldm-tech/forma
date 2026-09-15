@@ -1,12 +1,12 @@
 ---
 title: "Authentication Behavior"
-description: "Learn how authentication and user invitation work in self-hosted Formbricks deployments."
+description: "Learn how authentication and user invitation work in self-hosted Forma deployments."
 icon: "user"
 ---
 
 ## Overview
 
-In self-hosted Formbricks, user management and authentication can be customized using environment variables. By default, self-hosted instances have user signup disabled, and only organization owners or admins can invite new users. The behavior of the authentication and invitation flow can be further controlled using the following environment variables:
+In self-hosted Forma, user management and authentication can be customized using environment variables. By default, self-hosted instances have user signup disabled, and only organization owners or admins can invite new users. The behavior of the authentication and invitation flow can be further controlled using the following environment variables:
 
 - `AUTH_SKIP_INVITE_FOR_SSO`
 - `AUTH_SSO_DEFAULT_TEAM_ID`
@@ -14,7 +14,7 @@ In self-hosted Formbricks, user management and authentication can be customized 
 ## License Requirement for Role Management and SSO Behavior
 
 <Note>
-  To control advanced role management features and environment-based SSO behavior, your self-hosted Formbricks
+  To control advanced role management features and environment-based SSO behavior, your self-hosted Forma
   instance must have a valid enterprise license.
 </Note>
 
@@ -28,7 +28,7 @@ In self-hosted Formbricks, user management and authentication can be customized 
   - When set to `1`, users who sign up via SSO (Single Sign-On) providers (such as Google, Azure AD, SAML, or OIDC) can create an account without requiring an invitation.
   - When set to `0` (default), all users—including those signing up via SSO—must be invited by an organization owner or admin before they can create an account.
 - **Use case:**
-  - Set this to `1` if you want to allow anyone with access to your SSO provider to join your Formbricks instance without a manual invite.
+  - Set this to `1` if you want to allow anyone with access to your SSO provider to join your Forma instance without a manual invite.
   - Keep it at `0` for stricter access control, where only invited users can join, regardless of SSO.
 
 ### `AUTH_SSO_DEFAULT_TEAM_ID`
@@ -65,5 +65,5 @@ For more information on SSO setup, see:
 - [SAML SSO](./configuration/auth-sso/saml-sso)
 
 <Note>
-  Formbricks does not support special characters, such as Cyrillic, in account email addresses to avoid technical, compatibility, and security issues. Additionally, universal support for such addresses is still limited. 
+  Forma does not support special characters, such as Cyrillic, in account email addresses to avoid technical, compatibility, and security issues. Additionally, universal support for such addresses is still limited. 
 </Note>

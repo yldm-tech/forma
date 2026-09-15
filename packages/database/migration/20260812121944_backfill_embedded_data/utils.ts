@@ -1,5 +1,5 @@
-import { toDesiredEmbeddedFields } from "@formbricks/types/embedded-data-mapping";
-import type { TSurveyHiddenFields, TSurveyVariables } from "@formbricks/types/surveys/types";
+import { toDesiredEmbeddedFields } from "@forma/types/embedded-data-mapping";
+import type { TSurveyHiddenFields, TSurveyVariables } from "@forma/types/surveys/types";
 
 /**
  * One survey's legacy declarations as they come off the database: raw JSON.

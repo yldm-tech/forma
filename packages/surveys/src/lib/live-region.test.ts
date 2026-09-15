@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { ensureLiveRegion } from "./live-region";
 
-const LIVE_REGION_ID = "formbricks-live-region";
+const LIVE_REGION_ID = "forma-live-region";
 
 describe("ensureLiveRegion", () => {
   beforeEach(() => {

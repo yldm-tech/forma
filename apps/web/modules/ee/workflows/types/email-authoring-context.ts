@@ -1,5 +1,5 @@
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import type { TUserLocale } from "@formbricks/types/user";
+import type { TSurvey } from "@forma/types/surveys/types";
+import type { TUserLocale } from "@forma/types/user";
 import type { TFollowUpEmailToUser } from "@/modules/survey/editor/types/survey-follow-up";
 
 /**

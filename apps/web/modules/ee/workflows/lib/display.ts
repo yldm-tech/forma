@@ -6,7 +6,7 @@ import {
   type TWorkflowStatus,
   type TWorkflowTriggerType,
   getBlankSendEmailContentFields,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { getNodeRegistryEntry } from "@/modules/ee/workflows/lib/node-registry";
 import {
   type TWorkflowNodeFieldFocusRequest,

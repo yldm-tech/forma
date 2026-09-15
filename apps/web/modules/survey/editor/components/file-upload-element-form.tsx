@@ -6,10 +6,10 @@ import Link from "next/link";
 import { type JSX, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import type { TSurveyElement, TSurveyFileUploadElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { Workspace } from "@forma/database/prisma-browser";
+import type { TSurveyElement, TSurveyFileUploadElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "@/lib/i18n/utils";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";
 import { ValidationRulesEditor } from "@/modules/survey/editor/components/validation-rules-editor";
@@ -25,7 +25,7 @@ interface FileUploadFormProps {
   elementIdx: number;
   updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
   isInvalid: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   locale: TUserLocale;
   isStorageConfigured: boolean;
   isExternalUrlsAllowed?: boolean;
@@ -38,7 +38,7 @@ export const FileUploadElementForm = ({
   updateElement,
   isInvalid,
   workspace,
-  isFormbricksCloud,
+  isFormaCloud,
   locale,
   isStorageConfigured = true,
   isExternalUrlsAllowed,
@@ -70,7 +70,7 @@ export const FileUploadElementForm = ({
   }, [billingInfo, billingInfoError, billingInfoLoading]);
 
   const handleMaxSizeInMBToggle = (checked: boolean) => {
-    const defaultMaxSizeInMB = isFormbricksCloud ? maxSizeInMBLimit : 1024;
+    const defaultMaxSizeInMB = isFormaCloud ? maxSizeInMBLimit : 1024;
 
     updateElement(elementIdx, { maxSizeInMB: checked ? defaultMaxSizeInMB : undefined });
   };
@@ -160,7 +160,7 @@ export const FileUploadElementForm = ({
                       onChange={(e) => {
                         const parsedValue = Number.parseInt(e.target.value, 10);
 
-                        if (isFormbricksCloud && parsedValue > maxSizeInMBLimit) {
+                        if (isFormaCloud && parsedValue > maxSizeInMBLimit) {
                           toast.error(
                             t("workspace.surveys.edit.max_file_size_limit_is_mb", {
                               maxSize: maxSizeInMBLimit,

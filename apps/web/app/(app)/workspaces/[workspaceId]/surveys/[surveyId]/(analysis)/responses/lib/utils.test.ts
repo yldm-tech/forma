@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import { RESERVED_FIELD_CATALOG } from "@formbricks/types/embedded-data-resolver";
-import { TResponse } from "@formbricks/types/responses";
+import { RESERVED_FIELD_CATALOG } from "@forma/types/embedded-data-resolver";
+import { TResponse } from "@forma/types/responses";
 import {
   RESERVED_COLUMN_ENTRIES,
   getAddressFieldLabel,

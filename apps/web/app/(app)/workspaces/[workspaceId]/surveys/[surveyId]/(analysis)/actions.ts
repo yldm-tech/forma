@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ZResponseFilterCriteria } from "@formbricks/types/responses";
+import { ZId } from "@forma/types/common";
+import { ZResponseFilterCriteria } from "@forma/types/responses";
 import { assertCan } from "@/lib/authorization";
 import { getDisplaysBySurveyIdWithContact } from "@/lib/display/service";
 import { getResponseCountBySurveyId, getResponses } from "@/lib/response/service";

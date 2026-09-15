@@ -11,13 +11,9 @@ import {
   generateText,
   isAiConfigured,
   streamObject,
-} from "@formbricks/ai";
-import { logger } from "@formbricks/logger";
-import {
-  OperationNotAllowedError,
-  ResourceNotFoundError,
-  TooManyRequestsError,
-} from "@formbricks/types/errors";
+} from "@forma/ai";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError, ResourceNotFoundError, TooManyRequestsError } from "@forma/types/errors";
 import { env } from "@/lib/env";
 import { getOrganization } from "@/lib/organization/service";
 import { type AITracingContext, wrapAiModelWithTracing } from "@/lib/posthog/ai-tracing";

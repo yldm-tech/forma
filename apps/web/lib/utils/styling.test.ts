@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TJsWorkspaceStateSurvey, TJsWorkspaceStateWorkspaceSetting } from "@formbricks/types/js";
+import { TJsWorkspaceStateSurvey, TJsWorkspaceStateWorkspaceSetting } from "@forma/types/js";
 import { getStyling } from "./styling";
 
 describe("Styling Utilities", () => {

@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ZIntegrationInput } from "@formbricks/types/integration";
+import { ZId } from "@forma/types/common";
+import { ZIntegrationInput } from "@forma/types/integration";
 import { assertCan } from "@/lib/authorization";
 import { withStoredIntegrationKey } from "@/lib/integration/redact-credentials";
 import {

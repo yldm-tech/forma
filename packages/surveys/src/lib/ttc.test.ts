@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, renderHook } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TResponseTtc } from "@formbricks/types/responses";
+import type { TResponseTtc } from "@forma/types/responses";
 import { getUpdatedTtc, useTtc } from "./ttc";
 
 describe("getUpdatedTtc", () => {

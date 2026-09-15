@@ -1,7 +1,7 @@
 // Imported from the dependency-free constants module rather than from `./js`: a value import of
-// `@formbricks/types/js` pulls its zod schema graph into the widget bundle (+94 kB on the UMD build).
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@formbricks/types/js-constants";
+// `@forma/types/js` pulls its zod schema graph into the widget bundle (+94 kB on the UMD build).
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
 
 /** Id of the visually-hidden region holding the survey's persistent instructions. */
 export const SURVEY_INSTRUCTIONS_ID = "fb__survey-instructions";

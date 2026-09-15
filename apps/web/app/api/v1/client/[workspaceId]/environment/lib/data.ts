@@ -1,16 +1,16 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TJsWorkspaceStateActionClass,
   TJsWorkspaceStateSurvey,
   TJsWorkspaceStateWorkspaceSetting,
-} from "@formbricks/types/js";
-import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@formbricks/types/js-constants";
-import { type TBaseFilters, buildSurveyInteractionRefreshMap } from "@formbricks/types/segment";
+} from "@forma/types/js";
+import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
+import { type TBaseFilters, buildSurveyInteractionRefreshMap } from "@forma/types/segment";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
 import { toLegacyLanguageCodes } from "@/lib/i18n/utils";
 import { validateInputs } from "@/lib/utils/validate";

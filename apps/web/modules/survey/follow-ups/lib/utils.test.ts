@@ -7,7 +7,7 @@ vi.mock("@/lib/constants", async () => {
   const actual = (await vi.importActual("@/lib/constants")) as any;
   return {
     ...actual,
-    IS_FORMBRICKS_CLOUD: true,
+    IS_FORMA_CLOUD: true,
   };
 });
 
@@ -17,7 +17,7 @@ vi.mock("@/modules/billing/lib/feature-access", () => ({
 
 describe("getSurveyFollowUpsPermission", () => {
   beforeEach(() => {
-    vi.spyOn(constants, "IS_FORMBRICKS_CLOUD", "get").mockReturnValue(true);
+    vi.spyOn(constants, "IS_FORMA_CLOUD", "get").mockReturnValue(true);
     vi.mocked(hasCloudEntitlementWithLicenseGuard).mockResolvedValue(false);
   });
 
@@ -38,8 +38,8 @@ describe("getSurveyFollowUpsPermission", () => {
     expect(result).toBe(false);
   });
 
-  test("should return true for any plan when not on Formbricks Cloud", async () => {
-    vi.spyOn(constants, "IS_FORMBRICKS_CLOUD", "get").mockReturnValue(false);
+  test("should return true for any plan when not on Forma Cloud", async () => {
+    vi.spyOn(constants, "IS_FORMA_CLOUD", "get").mockReturnValue(false);
     const result = await getSurveyFollowUpsPermission("org_123");
     expect(result).toBe(true);
     expect(hasCloudEntitlementWithLicenseGuard).not.toHaveBeenCalled();

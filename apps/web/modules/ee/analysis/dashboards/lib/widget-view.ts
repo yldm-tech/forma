@@ -12,7 +12,7 @@ export type TWidgetView = (typeof WIDGET_VIEWS)[number];
 
 export const DEFAULT_WIDGET_VIEW: TWidgetView = "chart";
 
-const STORAGE_KEY_PREFIX = "formbricks-widget-view";
+const STORAGE_KEY_PREFIX = "forma-widget-view";
 
 export const getWidgetViewStorageKey = (widgetId: string): string => `${STORAGE_KEY_PREFIX}-${widgetId}`;
 

@@ -1,5 +1,5 @@
-import { prisma } from "@formbricks/database";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { readAttributeValue } from "@/modules/ee/contacts/lib/attribute-storage";
 import { TContactCreateRequest, TContactResponse } from "@/modules/ee/contacts/types/contact";

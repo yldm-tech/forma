@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { SURVEY_RUNTIME_LANGUAGE_CODES } from "@formbricks/i18n-utils/survey-runtime-languages";
+import { SURVEY_RUNTIME_LANGUAGE_CODES } from "@forma/i18n-utils/survey-runtime-languages";
 import i18n, { resolveFallbackBundles } from "./i18n.config";
 
 // Locks down the locale-to-bundle fallback contract (ENG-1067). Bundles are keyed by each language's

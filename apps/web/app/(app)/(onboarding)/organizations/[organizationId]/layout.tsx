@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AuthenticationError, AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthenticationError, AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { canUserAccessOrganization } from "@/lib/organization/auth";
 import { getOrganization } from "@/lib/organization/service";

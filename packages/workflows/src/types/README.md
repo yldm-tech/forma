@@ -1,6 +1,6 @@
 # Workflow Types And Data Model
 
-This folder defines the public workflow contracts for `@formbricks/workflows`. The schemas are Zod
+This folder defines the public workflow contracts for `@forma/workflows`. The schemas are Zod
 validators, and the exported TypeScript types are inferred from them. The main idea is simple:
 
 - A workflow has one trigger.

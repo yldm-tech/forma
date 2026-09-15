@@ -8,7 +8,7 @@ globalThis.console = { ...globalThis.console, error: vi.fn() };
 vi.mock("../../../ee/license-check/lib/utils", () => ({
   getIsAuditLogsEnabled: vi.fn(),
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { audit: vi.fn(), error: vi.fn() },
 }));
 
@@ -28,7 +28,7 @@ describe("logAuditEvent", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     getIsAuditLogsEnabled = (await import("@/modules/ee/license-check/lib/utils")).getIsAuditLogsEnabled;
-    logger = (await import("@formbricks/logger")).logger;
+    logger = (await import("@forma/logger")).logger;
   });
 
   test("logs event if access is granted and event is valid", async () => {

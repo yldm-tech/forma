@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
-import { type TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { type TSurvey, type TSurveyStyling } from "@formbricks/types/surveys/types";
+import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { type TSurvey, type TSurveyStyling } from "@forma/types/surveys/types";
 import {
   buildBlock,
   buildCTAElement,
@@ -26,7 +26,7 @@ export const EMBED_SURVEY_PREVIEW_CHOICE_IDS = {
 
 export const EMBED_SURVEY_PREVIEW_HEADLINE = "Which fruits do you like";
 export const EMBED_SURVEY_PREVIEW_CHOICES = ["Apples", "Bananas", "Pineapples"] as const;
-export const EMBED_SURVEY_PREVIEW_SURVEY_URL = "https://app.formbricks.com/s/embed-survey-preview";
+export const EMBED_SURVEY_PREVIEW_SURVEY_URL = "https://app.forma.ylam.ai/s/embed-survey-preview";
 export const EMBED_SURVEY_PREVIEW_LOCALE = "en-US";
 export const EMBED_SURVEY_PREVIEW_OPEN_TEXT_PLACEHOLDER = "Share your thoughts";
 export const EMBED_SURVEY_PREVIEW_ADDRESS_PLACEHOLDERS = {
@@ -42,10 +42,10 @@ export const EMBED_SURVEY_PREVIEW_CONTACT_PLACEHOLDERS = {
 export const EMBED_SURVEY_PREVIEW_MATRIX_ROWS = ["Product quality", "Ease of use"] as const;
 export const EMBED_SURVEY_PREVIEW_MATRIX_COLUMNS = ["Poor", "Great"] as const;
 export const EMBED_SURVEY_PREVIEW_PICTURE_CHOICES = [
-  "https://app.formbricks.com/static/media/powered-by-formbricks.7aec4b1c.svg",
-  "https://app.formbricks.com/static/media/powered-by-formbricks.7aec4b1c.svg?variant=2",
+  "https://app.forma.ylam.ai/static/media/powered-by-forma.7aec4b1c.svg",
+  "https://app.forma.ylam.ai/static/media/powered-by-forma.7aec4b1c.svg?variant=2",
 ] as const;
-export const EMBED_SURVEY_PREVIEW_CTA_URL = "https://formbricks.com/docs";
+export const EMBED_SURVEY_PREVIEW_CTA_URL = "https://forma.ylam.ai/docs";
 
 export const EMBED_SURVEY_PREVIEW_STYLING: TSurveyStyling = {
   brandColor: { light: "#22c55e" },
@@ -144,7 +144,7 @@ const createPreviewElementByType = (type: TSurveyElementTypeEnum): TSurveyElemen
       return buildCTAElement({
         id: EMBED_SURVEY_PREVIEW_QUESTION_ID,
         headline: EMBED_SURVEY_PREVIEW_HEADLINE,
-        subheader: "Read more about Formbricks",
+        subheader: "Read more about Forma",
         buttonExternal: true,
         ctaButtonLabel: "Open the docs",
         buttonUrl: EMBED_SURVEY_PREVIEW_CTA_URL,

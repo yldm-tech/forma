@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { CacheKey } from "@/types/keys";
 import { makeCacheKey } from "./key";
 
-describe("@formbricks/cache utils/key", () => {
+describe("@forma/cache utils/key", () => {
   describe("makeCacheKey helper", () => {
     test("should create cache key with automatic fb prefix", () => {
       const key: CacheKey = makeCacheKey("env", "123", "state");

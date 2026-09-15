@@ -3,14 +3,14 @@
 import { BarChart, BarChartHorizontal } from "lucide-react";
 import { type JSX, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyElementSummaryCes,
   TSurveyElementSummaryCsat,
   TSurveyElementSummaryRating,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import { convertFloatToNDecimal } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/utils";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { ProgressBar } from "@/modules/ui/components/progress-bar";

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { createCacheKey } from "@formbricks/cache";
-import FormbricksHub from "@formbricks/hub";
-import { logger } from "@formbricks/logger";
+import { createCacheKey } from "@forma/cache";
+import FormaHub from "@forma/hub";
+import { logger } from "@forma/logger";
 import {
   countFeedbackRecords,
   createFeedbackRecord,
@@ -27,11 +27,11 @@ import {
 } from "./service";
 import type { FeedbackRecordCreateParams } from "./types";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock("@formbricks/hub", () => ({
+vi.mock("@forma/hub", () => ({
   default: {
     APIError: class APIError extends Error {
       status: number;
@@ -61,7 +61,7 @@ const { cache } = await import("@/lib/cache");
 const sampleInput: FeedbackRecordCreateParams = {
   field_id: "el-1",
   field_type: "rating",
-  source_type: "formbricks_survey",
+  source_type: "forma_survey",
   source_id: "survey-1",
   source_name: "Test Survey",
   field_label: "Question?",
@@ -73,7 +73,7 @@ const sampleInput: FeedbackRecordCreateParams = {
 
 const taxonomyScope = {
   tenant_id: "tenant-1",
-  source_type: "formbricks_survey",
+  source_type: "forma_survey",
   source_id: "survey-1",
   field_id: "question-1",
 };
@@ -126,7 +126,7 @@ describe("hub service", () => {
 
     test("reads status from a foreign error class (simulates dual module scope)", async () => {
       // Simulates the SDK being loaded into a different module scope under Next dev/Turbopack:
-      // the thrown error is NOT instanceof the FormbricksHub.APIError reference captured in service.ts.
+      // the thrown error is NOT instanceof the FormaHub.APIError reference captured in service.ts.
       class ForeignConflictError extends Error {
         readonly status = 409;
       }
@@ -200,7 +200,7 @@ describe("hub service", () => {
       const list = vi.fn();
       vi.mocked(getHubClient).mockReturnValue({ feedbackRecords: { list } } as any);
       vi.mocked(assertRepeatedArrayParams).mockImplementation(() => {
-        throw new Error("@formbricks/hub no longer routes query serialization through stringifyQuery");
+        throw new Error("@forma/hub no longer routes query serialization through stringifyQuery");
       });
 
       const result = await listFeedbackRecords({ tenant_id: "env-1" });
@@ -294,7 +294,7 @@ describe("hub service", () => {
     });
 
     test("returns a relayable error when the Hub rejects the filters", async () => {
-      const apiError = Object.assign(new (FormbricksHub.APIError as any)("400 Bad Request", 400), {
+      const apiError = Object.assign(new (FormaHub.APIError as any)("400 Bad Request", 400), {
         error: { code: "validation", detail: "since must be a valid timestamp" },
       });
       vi.mocked(getHubClient).mockReturnValue({
@@ -322,7 +322,7 @@ describe("hub service", () => {
       const count = vi.fn();
       vi.mocked(getHubClient).mockReturnValue({ feedbackRecords: { count } } as any);
       vi.mocked(assertRepeatedArrayParams).mockImplementation(() => {
-        throw new Error("@formbricks/hub no longer routes query serialization through stringifyQuery");
+        throw new Error("@forma/hub no longer routes query serialization through stringifyQuery");
       });
 
       const result = await countFeedbackRecords({ tenant_id: "env-1" });
@@ -380,7 +380,7 @@ describe("hub service", () => {
     });
 
     test("returns error with status when client.search.performSemanticSearch throws APIError", async () => {
-      const apiError = new (FormbricksHub.APIError as any)("Embeddings are not configured", 503);
+      const apiError = new (FormaHub.APIError as any)("Embeddings are not configured", 503);
       vi.mocked(getHubClient).mockReturnValue({
         feedbackRecords: {
           search: { performSemanticSearch: vi.fn().mockRejectedValue(apiError) },
@@ -418,7 +418,7 @@ describe("hub service", () => {
     // Callers map the Hub's problem members to their own response (an actionable message for the 503,
     // relayed field errors on a 4xx). A hand-built error object would drop them and degrade to generic text.
     test("preserves the Hub's RFC 9457 problem members", async () => {
-      const apiError = Object.assign(new (FormbricksHub.APIError as any)("503 unavailable", 503), {
+      const apiError = Object.assign(new (FormaHub.APIError as any)("503 unavailable", 503), {
         error: { code: "service_unavailable", detail: "embeddings are not configured" },
       });
       vi.mocked(getHubClient).mockReturnValue({
@@ -471,7 +471,7 @@ describe("hub service", () => {
     // exists, so it must arrive with its status intact rather than as a generic failure. It is also an
     // expected state, so it must not be logged as a fault — a warning per call would carry a stack trace.
     test("surfaces a 404 with its status, logged as debug rather than a warning", async () => {
-      const apiError = new (FormbricksHub.APIError as any)("embedding not found", 404);
+      const apiError = new (FormaHub.APIError as any)("embedding not found", 404);
       vi.mocked(getHubClient).mockReturnValue({
         feedbackRecords: { retrieveSimilar: vi.fn().mockRejectedValue(apiError) },
       } as any);
@@ -540,7 +540,7 @@ describe("hub service", () => {
     });
 
     test("returns error when client.delete throws APIError", async () => {
-      const apiError = new (FormbricksHub as any).APIError("Forbidden", 403);
+      const apiError = new (FormaHub as any).APIError("Forbidden", 403);
       vi.mocked(getHubClient).mockReturnValue({
         feedbackRecords: { delete: vi.fn().mockRejectedValue(apiError) },
       } as any);
@@ -565,7 +565,7 @@ describe("hub service", () => {
     // A tenant purge in progress is reported as a 409 with a detail the caller relays as retryable; that
     // detail only survives if the error goes through the shared problem-parsing helper.
     test("preserves the Hub's RFC 9457 problem members on a conflict", async () => {
-      const apiError = Object.assign(new (FormbricksHub.APIError as any)("409 Conflict", 409), {
+      const apiError = Object.assign(new (FormaHub.APIError as any)("409 Conflict", 409), {
         error: { code: "tenant_write_conflict", detail: "tenant data deletion in progress" },
       });
       vi.mocked(getHubClient).mockReturnValue({

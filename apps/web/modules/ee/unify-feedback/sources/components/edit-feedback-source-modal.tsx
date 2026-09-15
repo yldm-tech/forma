@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TFeedbackSourceImportMode, TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceImportMode, TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
 import { Button } from "@/modules/ui/components/button";
 import {
   Dialog,
@@ -37,10 +37,10 @@ import {
   CSV_PROTECTED_TARGET_IDS,
   SAMPLE_CSV_COLUMNS,
   TFieldMapping,
-  TFormbricksFeedbackSourceForm,
+  TFormaFeedbackSourceForm,
   TSourceField,
   TUnifySurvey,
-  ZFormbricksFeedbackSourceForm,
+  ZFormaFeedbackSourceForm,
   getTranslatedFeedbackSourceError,
 } from "../types";
 import {
@@ -50,7 +50,7 @@ import {
   toggleQuestionId,
 } from "../utils";
 import { getFeedbackSourceIcon, getFeedbackSourceTypeLabelKey } from "./feedback-source-display";
-import { FormbricksQuestionList } from "./formbricks-question-list";
+import { FormaQuestionList } from "./forma-question-list";
 import { MappingUI } from "./mapping-ui";
 
 interface EditFeedbackSourceModalProps {
@@ -85,8 +85,8 @@ export const EditFeedbackSourceModal = ({
   const [sourceFields, setSourceFields] = useState<TSourceField[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const formbricksForm = useForm<TFormbricksFeedbackSourceForm>({
-    resolver: zodResolver(ZFormbricksFeedbackSourceForm),
+  const formaForm = useForm<TFormaFeedbackSourceForm>({
+    resolver: zodResolver(ZFormaFeedbackSourceForm),
     defaultValues: {
       sourceName: "",
       surveyId: "",
@@ -97,9 +97,9 @@ export const EditFeedbackSourceModal = ({
     mode: "onChange",
   });
 
-  const formbricksValues = formbricksForm.watch();
-  const selectedSurveyId = formbricksValues.surveyId;
-  const selectedQuestionIds = formbricksValues.selectedQuestionIds ?? [];
+  const formaValues = formaForm.watch();
+  const selectedSurveyId = formaValues.surveyId;
+  const selectedQuestionIds = formaValues.selectedQuestionIds ?? [];
   const selectedSurvey = useMemo(
     () => surveys.find((survey) => survey.id === selectedSurveyId) ?? null,
     [surveys, selectedSurveyId]
@@ -111,17 +111,17 @@ export const EditFeedbackSourceModal = ({
   // with no Hub field — it deletes the rows and flags the source `error`. Without this the survey
   // picker would be empty AND disabled, so `error` would be terminal and the source unrepairable.
   const canChooseSurvey =
-    feedbackSource?.type === "formbricks_survey" && feedbackSource.formbricksMappings.length === 0;
+    feedbackSource?.type === "forma_survey" && feedbackSource.formaMappings.length === 0;
 
   useEffect(() => {
     if (feedbackSource) {
-      if (feedbackSource.type === "formbricks_survey") {
-        const mappedSurveyId = feedbackSource.formbricksMappings[0]?.surveyId ?? "";
-        const mappedQuestionIds = feedbackSource.formbricksMappings
+      if (feedbackSource.type === "forma_survey") {
+        const mappedSurveyId = feedbackSource.formaMappings[0]?.surveyId ?? "";
+        const mappedQuestionIds = feedbackSource.formaMappings
           .filter((mapping) => mapping.surveyId === mappedSurveyId)
           .map((mapping) => mapping.elementId);
 
-        formbricksForm.reset({
+        formaForm.reset({
           sourceName: feedbackSource.name,
           surveyId: mappedSurveyId,
           selectedQuestionIds: mappedQuestionIds,
@@ -151,7 +151,7 @@ export const EditFeedbackSourceModal = ({
             staticValue: m.staticValue ?? undefined,
           }))
         );
-        formbricksForm.reset({
+        formaForm.reset({
           sourceName: "",
           surveyId: "",
           selectedQuestionIds: [],
@@ -162,7 +162,7 @@ export const EditFeedbackSourceModal = ({
         setCsvFeedbackSourceName("");
         setSourceFields([]);
         setMappings([]);
-        formbricksForm.reset({
+        formaForm.reset({
           sourceName: "",
           surveyId: "",
           selectedQuestionIds: [],
@@ -171,13 +171,13 @@ export const EditFeedbackSourceModal = ({
         });
       }
     }
-  }, [feedbackSource, formbricksForm]);
+  }, [feedbackSource, formaForm]);
 
   const resetForm = () => {
     setCsvFeedbackSourceName("");
     setMappings([]);
     setSourceFields([]);
-    formbricksForm.reset({
+    formaForm.reset({
       sourceName: "",
       surveyId: "",
       selectedQuestionIds: [],
@@ -194,8 +194,8 @@ export const EditFeedbackSourceModal = ({
     onOpenChange(newOpen);
   };
 
-  const handleUpdateFormbricksFeedbackSource = async (values: TFormbricksFeedbackSourceForm) => {
-    if (feedbackSource?.type !== "formbricks_survey") return;
+  const handleUpdateFormaFeedbackSource = async (values: TFormaFeedbackSourceForm) => {
+    if (feedbackSource?.type !== "forma_survey") return;
     setIsUpdating(true);
     const success = await onUpdateFeedbackSource({
       feedbackSourceId: feedbackSource.id,
@@ -241,9 +241,9 @@ export const EditFeedbackSourceModal = ({
     }
   };
 
-  const handleFormbricksQuestionToggle = (questionId: string) => {
-    const nextSelection = toggleQuestionId(formbricksForm.getValues("selectedQuestionIds"), questionId);
-    formbricksForm.setValue("selectedQuestionIds", nextSelection, {
+  const handleFormaQuestionToggle = (questionId: string) => {
+    const nextSelection = toggleQuestionId(formaForm.getValues("selectedQuestionIds"), questionId);
+    formaForm.setValue("selectedQuestionIds", nextSelection, {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -253,11 +253,11 @@ export const EditFeedbackSourceModal = ({
     if (!feedbackSource) return true;
     if (isUpdating) return true;
 
-    if (feedbackSource.type === "formbricks_survey") {
+    if (feedbackSource.type === "forma_survey") {
       return (
-        !isFeedbackSourceNameValid(formbricksValues.sourceName ?? "") ||
-        !formbricksValues.surveyId ||
-        !formbricksValues.selectedQuestionIds?.length
+        !isFeedbackSourceNameValid(formaValues.sourceName ?? "") ||
+        !formaValues.surveyId ||
+        !formaValues.selectedQuestionIds?.length
       );
     }
 
@@ -268,7 +268,7 @@ export const EditFeedbackSourceModal = ({
     }
 
     return true;
-  }, [feedbackSource, csvFeedbackSourceName, formbricksValues, isUpdating, mappings]);
+  }, [feedbackSource, csvFeedbackSourceName, formaValues, isUpdating, mappings]);
 
   if (!feedbackSource) return null;
 
@@ -281,13 +281,11 @@ export const EditFeedbackSourceModal = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {feedbackSource.type === "formbricks_survey" ? (
-            <FormProvider {...formbricksForm}>
-              <form
-                className="space-y-4"
-                onSubmit={formbricksForm.handleSubmit(handleUpdateFormbricksFeedbackSource)}>
+          {feedbackSource.type === "forma_survey" ? (
+            <FormProvider {...formaForm}>
+              <form className="space-y-4" onSubmit={formaForm.handleSubmit(handleUpdateFormaFeedbackSource)}>
                 <FormField
-                  control={formbricksForm.control}
+                  control={formaForm.control}
                   name="sourceName"
                   render={({ field, fieldState: { error } }) => (
                     <FormItem>
@@ -308,7 +306,7 @@ export const EditFeedbackSourceModal = ({
                 />
 
                 <FormField
-                  control={formbricksForm.control}
+                  control={formaForm.control}
                   name="surveyId"
                   render={({ field, fieldState: { error } }) => (
                     <FormItem>
@@ -347,17 +345,17 @@ export const EditFeedbackSourceModal = ({
                 />
 
                 <FormField
-                  control={formbricksForm.control}
+                  control={formaForm.control}
                   name="selectedQuestionIds"
                   render={({ fieldState: { error } }) => (
                     <FormItem>
                       <FormLabel>{t("workspace.unify.select_questions")}</FormLabel>
                       <FormControl>
                         <fieldset className={isReadOnly ? "opacity-70" : undefined} disabled={isReadOnly}>
-                          <FormbricksQuestionList
+                          <FormaQuestionList
                             survey={selectedSurvey}
                             selectedQuestionIds={selectedQuestionIds}
-                            onQuestionToggle={handleFormbricksQuestionToggle}
+                            onQuestionToggle={handleFormaQuestionToggle}
                           />
                         </fieldset>
                       </FormControl>
@@ -430,8 +428,8 @@ export const EditFeedbackSourceModal = ({
               )}
               <Button
                 onClick={
-                  feedbackSource.type === "formbricks_survey"
-                    ? () => void formbricksForm.handleSubmit(handleUpdateFormbricksFeedbackSource)()
+                  feedbackSource.type === "forma_survey"
+                    ? () => void formaForm.handleSubmit(handleUpdateFormaFeedbackSource)()
                     : handleUpdateCsvFeedbackSource
                 }
                 disabled={saveChangesDisabled}>

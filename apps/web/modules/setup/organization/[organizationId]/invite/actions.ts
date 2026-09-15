@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { AuthenticationError } from "@formbricks/types/errors";
-import { ZUserEmail, ZUserName } from "@formbricks/types/user";
+import { ZId } from "@forma/types/common";
+import { AuthenticationError } from "@forma/types/errors";
+import { ZUserEmail, ZUserName } from "@forma/types/user";
 import { INVITE_DISABLED } from "@/lib/constants";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";

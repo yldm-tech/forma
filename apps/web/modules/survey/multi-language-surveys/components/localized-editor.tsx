@@ -2,8 +2,8 @@
 
 import { useMemo, useTransition } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { TI18nString } from "@formbricks/types/i18n";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TI18nString } from "@forma/types/i18n";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { md } from "@/lib/markdownIt";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { Editor } from "@/modules/ui/components/editor";

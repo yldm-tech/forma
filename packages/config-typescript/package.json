@@ -1,5 +1,5 @@
 {
-  "name": "@formbricks/config-typescript",
+  "name": "@forma/config-typescript",
   "version": "1.0.0",
   "private": true,
   "sideEffects": false,

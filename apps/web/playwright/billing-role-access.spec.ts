@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import type { UsersFixture } from "./fixtures/users";
 import { test } from "./lib/fixtures";
 

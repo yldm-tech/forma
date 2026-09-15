@@ -2,8 +2,8 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { TMember, TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization } from "@formbricks/types/organizations";
+import { TMember, TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization } from "@forma/types/organizations";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { formatDateWithOrdinal } from "@/lib/utils/datetime";
 import { EditMembershipRole } from "@/modules/ee/role-management/components/edit-membership-role";
@@ -100,7 +100,7 @@ const getMemberColumns = ({
   currentUserRole,
   currentUserId,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   isUserManagementDisabledFromUi,
   isOwnerOrManager,
   isManager,
@@ -112,7 +112,7 @@ const getMemberColumns = ({
   currentUserRole: TOrganizationRole;
   currentUserId: string;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isUserManagementDisabledFromUi: boolean;
   isOwnerOrManager: boolean;
   isManager: boolean;
@@ -152,7 +152,7 @@ const getMemberColumns = ({
           memberAccepted={!isInvitee(member) ? member.accepted : undefined}
           inviteId={isInvitee(member) ? member.id : ""}
           doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
-          isFormbricksCloud={isFormbricksCloud}
+          isFormaCloud={isFormaCloud}
           isUserManagementDisabledFromUi={isUserManagementDisabledFromUi}
         />
       ),
@@ -205,7 +205,7 @@ interface MembersInfoProps {
   currentUserRole: TOrganizationRole;
   currentUserId: string;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isUserManagementDisabledFromUi: boolean;
 }
 
@@ -216,7 +216,7 @@ export const MembersInfo = ({
   members,
   currentUserId,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   isUserManagementDisabledFromUi,
 }: Readonly<MembersInfoProps>) => {
   const { t, i18n } = useTranslation();
@@ -238,7 +238,7 @@ export const MembersInfo = ({
         currentUserRole,
         currentUserId,
         isAccessControlAllowed,
-        isFormbricksCloud,
+        isFormaCloud,
         isUserManagementDisabledFromUi,
         isOwnerOrManager,
         isManager,

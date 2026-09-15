@@ -21,7 +21,7 @@ vi.mock("@sentry/nextjs", () => ({
   withScope: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: loggerMocks.withContext,
     error: loggerMocks.rootError,

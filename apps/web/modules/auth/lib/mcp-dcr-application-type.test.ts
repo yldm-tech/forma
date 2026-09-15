@@ -5,7 +5,7 @@ import {
   withInferredApplicationType,
 } from "./mcp-dcr-application-type";
 
-const BASE = "https://app.formbricks.test";
+const BASE = "https://app.forma.test";
 const REGISTER = `${BASE}/api/auth/oauth2/register`;
 
 /**

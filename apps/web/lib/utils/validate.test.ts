@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { ValidationError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { ValidationError } from "@forma/types/errors";
 import { validateInputs } from "./validate";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

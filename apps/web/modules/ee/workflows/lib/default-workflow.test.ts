@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ZCreateWorkflowInput, ZWorkflowDefinition } from "@formbricks/workflows";
+import { ZCreateWorkflowInput, ZWorkflowDefinition } from "@forma/workflows";
 import { createEmptyWorkflowDefinition } from "./default-workflow";
 
 describe("createEmptyWorkflowDefinition", () => {

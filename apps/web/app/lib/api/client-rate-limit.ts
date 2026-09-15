@@ -1,4 +1,4 @@
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { reportApiError } from "@/app/lib/api/api-error-reporter";
 import { responses } from "@/app/lib/api/response";
 

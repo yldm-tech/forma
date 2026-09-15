@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ValidationError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { TWorkspaceUpdateBrandingInput } from "../types/workspace";
 import { updateWorkspaceBranding } from "./workspace";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       update: vi.fn(),

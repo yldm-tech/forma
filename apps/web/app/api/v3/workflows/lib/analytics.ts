@@ -1,6 +1,6 @@
 import "server-only";
-import { joinWorkflowActionTypes } from "@formbricks/workflows";
-import type { WorkflowAnalyticsDetail, WorkflowApiContext } from "@formbricks/workflows/server";
+import { joinWorkflowActionTypes } from "@forma/workflows";
+import type { WorkflowAnalyticsDetail, WorkflowApiContext } from "@forma/workflows/server";
 import type { TV3Authentication } from "@/app/api/v3/lib/types";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";

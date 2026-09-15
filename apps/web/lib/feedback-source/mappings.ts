@@ -1,7 +1,7 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { THubFieldType } from "@formbricks/types/feedback-source";
+import { logger } from "@forma/logger";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
+import { THubFieldType } from "@forma/types/feedback-source";
 import { getSurvey } from "@/lib/survey/service";
 import type { TMappingsInput } from "./service";
 import { indexSurveyElements } from "./survey-elements";
@@ -59,7 +59,7 @@ const resolveSurveyMappings = async (
 };
 
 /**
- * Builds the Formbricks-survey mapping input for a feedback source, and is the single place that
+ * Builds the Forma-survey mapping input for a feedback source, and is the single place that
  * binds the mapped surveys to the workspace the caller was authorized on. Every survey must live in
  * `workspaceId`; unknown elements and element types with no Hub field are skipped with a warning.
  *
@@ -67,7 +67,7 @@ const resolveSurveyMappings = async (
  * to one of these surveys should be mapped automatically. It is derived here rather than accepted from
  * the caller so it can never disagree with the mapping rows it describes.
  */
-export const resolveFormbricksMappingsInput = async (
+export const resolveFormaMappingsInput = async (
   entries: { surveyId: string; elementIds: string[] }[],
   workspaceId: string
 ): Promise<TMappingsInput> => {
@@ -86,5 +86,5 @@ export const resolveFormbricksMappingsInput = async (
     ? "all"
     : "specific";
 
-  return { type: "formbricks_survey", mappings: flattenedMappings, elementScope };
+  return { type: "forma_survey", mappings: flattenedMappings, elementScope };
 };

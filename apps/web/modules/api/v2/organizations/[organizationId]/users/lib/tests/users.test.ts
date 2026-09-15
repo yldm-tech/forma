@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, type Team, type WorkspaceTeam } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
+import { prisma } from "@forma/database";
+import { Prisma, type Team, type WorkspaceTeam } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { TGetUsersFilter } from "@/modules/api/v2/organizations/[organizationId]/users/types/users";
@@ -32,7 +32,7 @@ type TExistingTeam = Pick<Team, "id" | "name"> & {
 // React's cache(); mocked to identity so repeated calls across tests re-hit the prisma mock below.
 vi.mock("react", () => ({ cache: (fn: Function) => fn }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findMany: vi.fn(),

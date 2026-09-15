@@ -48,7 +48,7 @@ vi.mock("@/lib/utils/action-client", () => ({
 
 vi.mock("@/modules/core/rate-limit/helpers", () => ({ applyRateLimit: mocks.applyRateLimit }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),
@@ -89,7 +89,7 @@ vi.mock("@/lib/feedback-source/service", () => ({
 // stub server-only modules pulled in by resolveOptionGrouping helpers
 vi.mock("@/lib/survey/service", () => ({ getSurvey: mocks.getSurvey }));
 vi.mock("@/lib/survey/utils", () => ({ getElementsFromBlocks: mocks.getElementsFromBlocks }));
-vi.mock("@formbricks/types/surveys/validation", () => ({ getTextContent: (s: string) => s }));
+vi.mock("@forma/types/surveys/validation", () => ({ getTextContent: (s: string) => s }));
 vi.mock("@/lib/i18n/utils", () => ({
   getLocalizedValue: (obj: Record<string, string>, lang: string) => obj[lang] ?? obj["default"] ?? "",
 }));
@@ -293,7 +293,7 @@ describe("chart Cube actions", () => {
     // Wire up feedbackSources -> survey -> MultipleChoiceMulti element.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-multi", surveyId: "survey-multi" }],
+        formaMappings: [{ elementId: "field-multi", surveyId: "survey-multi" }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-multi", blocks: [] });
@@ -343,7 +343,7 @@ describe("chart Cube actions", () => {
     // A non-choice element type — OpenText — must not be touched.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-open", surveyId: "survey-open" }],
+        formaMappings: [{ elementId: "field-open", surveyId: "survey-open" }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-open", blocks: [] });
@@ -376,7 +376,7 @@ describe("chart Cube actions", () => {
     // The mapping has no customFieldLabel, so the effective label comes from the element headline.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-sc", surveyId: "survey-sc", customFieldLabel: null }],
+        formaMappings: [{ elementId: "field-sc", surveyId: "survey-sc", customFieldLabel: null }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-sc", blocks: [] });
@@ -427,7 +427,7 @@ describe("chart Cube actions", () => {
   test("executeQueryAction returns optionLabels for a multi-select element matched by fieldLabel (no rewrite/split)", async () => {
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-mc", surveyId: "survey-mc", customFieldLabel: null }],
+        formaMappings: [{ elementId: "field-mc", surveyId: "survey-mc", customFieldLabel: null }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-mc", blocks: [] });
@@ -477,7 +477,7 @@ describe("chart Cube actions", () => {
     // Two different mappings share the same effective label — must not guess.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [
+        formaMappings: [
           { elementId: "field-a", surveyId: "survey-a", customFieldLabel: null },
           { elementId: "field-b", surveyId: "survey-b", customFieldLabel: null },
         ],
@@ -553,7 +553,7 @@ describe("chart Cube actions", () => {
     // User selected "Value (Option)" directly from the picker — dimension is already valueId.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-sc3", surveyId: "survey-sc3" }],
+        formaMappings: [{ elementId: "field-sc3", surveyId: "survey-sc3" }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-sc3", blocks: [] });
@@ -604,7 +604,7 @@ describe("chart Cube actions", () => {
     // to Value (Text). Multi-select stores one record per option with its own value_id now.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-mc2", surveyId: "survey-mc2" }],
+        formaMappings: [{ elementId: "field-mc2", surveyId: "survey-mc2" }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-mc2", blocks: [] });
@@ -654,7 +654,7 @@ describe("chart Cube actions", () => {
     // fieldId should take precedence; fieldLabel is ignored.
     mocks.getFeedbackSourcesWithMappings.mockResolvedValue([
       {
-        formbricksMappings: [{ elementId: "field-sc2", surveyId: "survey-sc2", customFieldLabel: null }],
+        formaMappings: [{ elementId: "field-sc2", surveyId: "survey-sc2", customFieldLabel: null }],
       },
     ]);
     mocks.getSurvey.mockResolvedValue({ id: "survey-sc2", blocks: [] });

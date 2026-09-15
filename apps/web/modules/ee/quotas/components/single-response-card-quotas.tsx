@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { TResponseWithQuotas } from "@formbricks/types/responses";
+import { TResponseWithQuotas } from "@forma/types/responses";
 import { ResponseBadges } from "@/modules/ui/components/response-badges";
 
 interface ResponseCardQuotasProps {

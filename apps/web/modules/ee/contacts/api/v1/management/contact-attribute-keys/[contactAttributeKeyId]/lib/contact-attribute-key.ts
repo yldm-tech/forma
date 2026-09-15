@@ -1,9 +1,9 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZId } from "@formbricks/types/common";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { DatabaseError, InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { ZId } from "@forma/types/common";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { DatabaseError, InvalidInputError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import {
   getReservedFutureDefaultAttributeKeyIssue,

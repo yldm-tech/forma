@@ -1,6 +1,6 @@
 import "server-only";
 import disposableEmailDomains from "disposable-email-domains/index.json";
-import { IS_FORMBRICKS_CLOUD, SIGNUP_DOMAIN_CHECK_ON_INVITES } from "@/lib/constants";
+import { IS_FORMA_CLOUD, SIGNUP_DOMAIN_CHECK_ON_INVITES } from "@/lib/constants";
 import { PERSONAL_EMAIL_DOMAINS } from "./personal-email-domains";
 
 /**
@@ -47,7 +47,7 @@ export const isBlockedEmailDomain = (email: string): boolean => {
 /**
  * Sign-up policy: should this email be blocked from creating a new account?
  *
- * - Enforced only on Formbricks Cloud (`IS_FORMBRICKS_CLOUD`); self-hosted is never affected.
+ * - Enforced only on Forma Cloud (`IS_FORMA_CLOUD`); self-hosted is never affected.
  * - Invited users are exempt unless the `SIGNUP_DOMAIN_CHECK_ON_INVITES` kill-switch is enabled.
  *   The exemption is decided by a caller-supplied check (a validated invite token whose email
  *   matches the address), invoked lazily so the token/DB work only runs when the domain is
@@ -60,7 +60,7 @@ export const isSignupEmailDomainBlocked = async (
   email: string,
   hasValidMatchingInvite: () => Promise<boolean>
 ): Promise<boolean> => {
-  if (!IS_FORMBRICKS_CLOUD) return false;
+  if (!IS_FORMA_CLOUD) return false;
   if (!isBlockedEmailDomain(email)) return false;
   if (!SIGNUP_DOMAIN_CHECK_ON_INVITES && (await hasValidMatchingInvite())) return false;
   return true;

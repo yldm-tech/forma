@@ -1,6 +1,6 @@
 import { mockSurvey } from "@/app/api/(internal)/pipeline/lib/__mocks__/survey-follow-up.mock";
 import { describe, expect, test } from "vitest";
-import { ZSurvey } from "@formbricks/types/surveys/types";
+import { ZSurvey } from "@forma/types/surveys/types";
 
 /**
  * ENG-1834: new declared field names must satisfy `isSafeIdentifier`, but the survey schemas on the

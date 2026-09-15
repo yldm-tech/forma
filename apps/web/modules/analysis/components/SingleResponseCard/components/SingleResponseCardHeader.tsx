@@ -3,9 +3,9 @@
 import { TrashIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUser, TUserLocale } from "@formbricks/types/user";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUser, TUserLocale } from "@forma/types/user";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { timeSince } from "@/lib/time";
 import { getContactIdentifier } from "@/lib/utils/contact";

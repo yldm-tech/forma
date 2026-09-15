@@ -1,26 +1,26 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { logger } from "@formbricks/logger";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { logger } from "@forma/logger";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TOrganization,
   TOrganizationBilling,
   TOrganizationCreateInput,
   TOrganizationUpdateInput,
   ZOrganizationCreateInput,
-} from "@formbricks/types/organizations";
-import { TUserNotificationSettings } from "@formbricks/types/user";
+} from "@forma/types/organizations";
+import { TUserNotificationSettings } from "@forma/types/user";
 import { lookupAuthorizedOrganizationIds } from "@/lib/authorization/resource-list";
 import { reconcileApiKeyRelationships } from "@/lib/authzed/api-key";
 import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import { deleteOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
-import { IS_FORMBRICKS_CLOUD, ITEMS_PER_PAGE } from "@/lib/constants";
+import { IS_FORMA_CLOUD, ITEMS_PER_PAGE } from "@/lib/constants";
 import { updateUser } from "@/lib/user/service";
 import { getBillingUsageCycleWindow } from "@/lib/utils/billing";
 import { getWorkspaces } from "@/lib/workspace/service";
@@ -50,9 +50,9 @@ type TOrganizationWithBilling = Prisma.OrganizationGetPayload<{ select: typeof s
 
 const getDefaultOrganizationBilling = (): TOrganizationBilling => ({
   limits: {
-    workspaces: IS_FORMBRICKS_CLOUD ? 1 : 3,
+    workspaces: IS_FORMA_CLOUD ? 1 : 3,
     monthly: {
-      responses: IS_FORMBRICKS_CLOUD ? 250 : 1500,
+      responses: IS_FORMA_CLOUD ? 250 : 1500,
       // No included workflow runs by default (ENG-1936); the Scale entitlement grants the volume.
       workflowRuns: null,
     },
@@ -348,7 +348,7 @@ export const deleteOrganization = async (organizationId: string) => {
     );
 
     const stripeCustomerId = deletedOrganization.billing?.stripeCustomerId;
-    if (IS_FORMBRICKS_CLOUD && stripeCustomerId) {
+    if (IS_FORMA_CLOUD && stripeCustomerId) {
       await cleanupStripeCustomer(stripeCustomerId);
     }
 

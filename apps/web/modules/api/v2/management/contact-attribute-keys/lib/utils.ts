@@ -1,4 +1,4 @@
-import { Prisma } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
 import { TGetContactAttributeKeysFilter } from "@/modules/api/v2/management/contact-attribute-keys/types/contact-attribute-keys";
 import { buildCommonFilterQuery, pickCommonFilter } from "@/modules/api/v2/management/lib/utils";
 

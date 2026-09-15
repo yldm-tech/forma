@@ -9,7 +9,7 @@ production SLO.
 > **Historical benchmark context:** This report predates the approved direct-cutover contract. The release path
 > no longer uses per-surface enforcement cohorts or shadow comparison. The direct-authority artifact uses
 > `fully_consistent`; ENG-2453 must revalidate latency, concurrency, and 2x headroom in production-like staging
-> before cutover. See the [direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
+> before cutover. See the [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
 
 ## Summary
 
@@ -154,7 +154,7 @@ This is backed by a request-scoped counter
 (`apps/web/lib/authorization/context.ts:recordAuthorizationCheckIssued`), incremented once
 inside `can()` itself — the one point every `can()`/`assertCan()` call passes through
 regardless of caller — and reported in production as
-`formbricks_authzed_authorization_checks_per_request`, a histogram tagged by surface. It counts central
+`forma_authzed_authorization_checks_per_request`, a histogram tagged by surface. It counts central
 authorization operations: scalar `can()`/`assertCan()` decisions and authoritative list operations each
 contribute one, independent of row count. That metric
 is the thing to watch on a real dashboard for the general "no page regresses into an N+1"
@@ -185,7 +185,7 @@ tests across the three files in one run.
   practice, a benchmark on shared/noisy hardware without measuring its own variance first
   is a signal, not an SLO — these numbers should inform a budget discussion, not become one
   by default.
-- **Local SpiceDB, no real network hop.** `formbricks-spicedb-1` runs in the same Docker
+- **Local SpiceDB, no real network hop.** `forma-spicedb-1` runs in the same Docker
   network as Postgres on the same machine as the client. Staging/production numbers will
   differ, likely upward, once a real network path is in the loop.
 - **`large` scale (500k responses, per the ticket's response-heavy analytics mention) was
@@ -245,5 +245,5 @@ pnpm authzed:perf clean
 - Run the `large` scale profile (500k responses) at least once to confirm nothing changes
   qualitatively — response volume shouldn't move the authorization graph, but that's an
   assumption this report states, not one it tested.
-- Add a `formbricks_authzed_authorization_checks_per_request` alert threshold once real production
+- Add a `forma_authzed_authorization_checks_per_request` alert threshold once real production
   values establish a baseline (this report has no basis for picking a number).

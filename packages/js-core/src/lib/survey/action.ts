@@ -1,5 +1,5 @@
 import { Config } from "@/lib/common/config";
-import { FORMBRICKS_EVENTS, emitFormbricksEvent } from "@/lib/common/events";
+import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { triggerSurvey } from "@/lib/survey/widget";
 import { type InvalidCodeError, type NetworkError, type Result, err, okVoid } from "@/types/error";
@@ -22,11 +22,11 @@ export const trackAction = async (
 
   const aliasName = alias ?? name;
 
-  logger.debug(`Formbricks: Action "${aliasName}" tracked`);
+  logger.debug(`Forma: Action "${aliasName}" tracked`);
 
   // The shared path under both code and no-code actions, so every tracked action reaches the host
   // exactly once — whether or not it triggers a survey (funnel analytics wants the misses too).
-  emitFormbricksEvent(FORMBRICKS_EVENTS.actionTracked, { action: aliasName });
+  emitFormaEvent(FORMA_EVENTS.actionTracked, { action: aliasName });
 
   // get a list of surveys that are collecting insights
   const activeSurveys = appConfig.get().filteredSurveys;
@@ -70,7 +70,7 @@ export const trackCodeAction = async (
   if (!actionClass) {
     return err({
       code: "invalid_code",
-      message: `Action with identifier '${code}' is unknown. Please add this action in Formbricks in order to use it via the SDK action tracking.`,
+      message: `Action with identifier '${code}' is unknown. Please add this action in Forma in order to use it via the SDK action tracking.`,
     });
   }
 

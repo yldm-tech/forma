@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import type { TChartConfig } from "@formbricks/types/analysis";
+import type { TChartConfig } from "@forma/types/analysis";
 import {
   type TAreaDisplay,
   type TBarOrientation,

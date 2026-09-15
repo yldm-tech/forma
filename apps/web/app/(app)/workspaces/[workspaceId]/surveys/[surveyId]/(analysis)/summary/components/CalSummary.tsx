@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyElementSummaryCal } from "@formbricks/types/surveys/types";
+import { TSurvey, TSurveyElementSummaryCal } from "@forma/types/surveys/types";
 import { convertFloatToNDecimal } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/utils";
 import { ProgressBar } from "@/modules/ui/components/progress-bar";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";

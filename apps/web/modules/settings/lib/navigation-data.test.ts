@@ -25,7 +25,7 @@ vi.mock("next/headers", () => ({
 vi.mock("@/modules/auth/lib/session", () => ({
   getSession: (...args: unknown[]) => mocks.getSession(...args),
 }));
-vi.mock("@/lib/constants", () => ({ IS_FORMBRICKS_CLOUD: true, IS_DEVELOPMENT: false }));
+vi.mock("@/lib/constants", () => ({ IS_FORMA_CLOUD: true, IS_DEVELOPMENT: false }));
 vi.mock("@/lib/getPublicUrl", () => ({ getPublicDomain: () => mocks.getPublicDomain() }));
 vi.mock("@/app/(app)/workspaces/[workspaceId]/lib/organization", () => ({
   getOrganizationsByUserId: (...a: unknown[]) => mocks.getOrganizationsByUserId(...a),
@@ -61,7 +61,7 @@ const seedSuccess = () => {
   mocks.getEnterpriseLicense.mockResolvedValue({ features: { isMultiOrgEnabled: true } });
   mocks.getOrganizationWorkspacesLimit.mockResolvedValue(3);
   mocks.getMonthlyOrganizationResponseCount.mockResolvedValue(42);
-  mocks.getPublicDomain.mockReturnValue("https://app.formbricks.com");
+  mocks.getPublicDomain.mockReturnValue("https://app.forma.ylam.ai");
   // No active-workspace cookie by default.
   mocks.cookieGet.mockReturnValue(undefined);
 };

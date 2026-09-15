@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Formbricks API
-  description: Manage Formbricks ressources programmatically.
+  title: Forma API
+  description: Manage Forma ressources programmatically.
   version: 2.0.0
 servers:
-  - url: https://app.formbricks.com/api
-    description: Formbricks Cloud
+  - url: https://app.forma.ylam.ai/api
+    description: Forma Cloud
 tags:
   - name: responses
     description: Operations for managing responses.

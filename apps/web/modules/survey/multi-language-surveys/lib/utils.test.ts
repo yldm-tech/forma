@@ -1,7 +1,7 @@
 import { type TFunction } from "i18next";
 import { describe, expect, test } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { computeTranslationProgress, extractTranslatableStrings, setTranslationAtPathMutable } from "./utils";
 
 const t = ((key: string, options?: Record<string, unknown>) => {

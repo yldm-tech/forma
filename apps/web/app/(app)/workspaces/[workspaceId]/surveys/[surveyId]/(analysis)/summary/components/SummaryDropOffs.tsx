@@ -2,8 +2,8 @@
 
 import { TimerIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveySummary } from "@formbricks/types/surveys/types";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
 import { recallToHeadline } from "@/lib/utils/recall";
 import { formatTextWithSlashes } from "@/modules/survey/editor/lib/utils";
 import { getElementIcon } from "@/modules/survey/lib/elements";

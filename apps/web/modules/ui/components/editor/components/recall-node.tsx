@@ -3,7 +3,7 @@
 import type { DOMConversionMap, DOMConversionOutput, DOMExportOutput, NodeKey, Spread } from "lexical";
 import { $applyNodeReplacement, DecoratorNode } from "lexical";
 import { ReactNode } from "react";
-import { TSurveyRecallItem } from "@formbricks/types/surveys/types";
+import { TSurveyRecallItem } from "@forma/types/surveys/types";
 import { getTextContentWithRecallTruncated } from "@/lib/utils/recall";
 
 export interface RecallPayload {

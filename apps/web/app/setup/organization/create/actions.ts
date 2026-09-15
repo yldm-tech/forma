@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError } from "@forma/types/errors";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getHasNoOrganizations } from "@/lib/instance/service";
 import { createMembership } from "@/lib/membership/service";
 import { createOrganization } from "@/lib/organization/service";
@@ -40,7 +40,7 @@ export const createOrganizationAction = authenticatedActionClient
       });
 
       // Stripe setup must run AFTER membership is created so the owner email is available
-      if (IS_FORMBRICKS_CLOUD) {
+      if (IS_FORMA_CLOUD) {
         ensureCloudStripeSetupForOrganization(newOrganization.id).catch((error) => {
           logger.error(
             { error, organizationId: newOrganization.id },

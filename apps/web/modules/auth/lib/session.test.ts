@@ -10,7 +10,7 @@ vi.mock("@/modules/auth/lib/auth", () => ({
   auth: { api: { getSession: getSessionMock } },
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { user: { findUnique: findUniqueMock } },
 }));
 

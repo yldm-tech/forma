@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
+import { ZId } from "@forma/types/common";
 import { assertCan } from "@/lib/authorization";
 import { getSlackChannels } from "@/lib/slack/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";

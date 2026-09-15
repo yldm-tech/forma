@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TChartConfig } from "@formbricks/types/analysis";
+import type { TChartConfig } from "@forma/types/analysis";
 import { isDeepEqual } from "@/lib/utils/object";
 import type { AnalyticsResponse } from "@/modules/ee/analysis/types/analysis";
 import { useBeforeUnloadPrompt } from "@/modules/ui/hooks/use-before-unload-prompt";

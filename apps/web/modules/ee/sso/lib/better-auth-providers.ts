@@ -1,7 +1,7 @@
 import "server-only";
 import type { BetterAuthOptions } from "better-auth";
 import type { GenericOAuthConfig, GenericOAuthUserInfo } from "better-auth/plugins";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   AZUREAD_CLIENT_ID,
   AZUREAD_CLIENT_SECRET,
@@ -44,7 +44,7 @@ type GoogleProfile = Parameters<NonNullable<SocialConfig<"google">["mapProfileTo
  *
  * Without it Better Auth writes the profile once, at account creation, and never looks again
  * (`handleOAuthUserInfo` only calls `updateUser` under this flag) — so a directory rename never
- * reaches Formbricks. Named per-provider rather than set once because the two plugin families spell
+ * reaches Forma. Named per-provider rather than set once because the two plugin families spell
  * it differently: `overrideUserInfo` on a `GenericOAuthConfig`, `overrideUserInfoOnSignIn` on a
  * built-in social provider's options. Both land on the same `opts.overrideUserInfo` branch.
  *
@@ -53,7 +53,7 @@ type GoogleProfile = Parameters<NonNullable<SocialConfig<"google">["mapProfileTo
  * email sibling has always had. Editing it there would only survive until the next sign-in.
  *
  * ⚠ This flag alone is NOT safe, and the unsafe half is invisible here. Better Auth writes
- * `{ name, image, email, emailVerified }` in one `updateUser` call, which for Formbricks means a
+ * `{ name, image, email, emailVerified }` in one `updateUser` call, which for Forma means a
  * write to a column that does not exist (`User` has no `image`) and an unverified rewrite of the
  * account's email. `ssoProfileSyncUpdateBefore` in ./better-auth-hooks.ts narrows that write back
  * down to the display name; the two are a pair, and neither works alone.

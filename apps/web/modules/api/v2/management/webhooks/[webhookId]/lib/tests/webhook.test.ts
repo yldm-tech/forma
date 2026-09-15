@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { InvalidInputError } from "@forma/types/errors";
 import { validateWebhookUrl } from "@/lib/utils/validate-webhook-url";
 import {
   mockedPrismaWebhookUpdateReturn,
@@ -10,7 +10,7 @@ import {
 import { ZWebhookUpdateSchema } from "@/modules/api/v2/management/webhooks/[webhookId]/types/webhooks";
 import { deleteWebhook, getWebhook, updateWebhook } from "../webhook";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     webhook: {
       findUnique: vi.fn(),

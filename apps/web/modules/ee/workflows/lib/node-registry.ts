@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { ComponentType } from "react";
-import { type TWorkflowNode, WORKFLOW_ACTIONS, WORKFLOW_TRIGGERS } from "@formbricks/workflows";
+import { type TWorkflowNode, WORKFLOW_ACTIONS, WORKFLOW_TRIGGERS } from "@forma/workflows";
 import { WorkflowEmailActionForm } from "@/modules/ee/workflows/components/inspector/workflow-email-action-form";
 import { WorkflowTriggerForm } from "@/modules/ee/workflows/components/inspector/workflow-trigger-form";
 import type { TWorkflowNodeCategory, TWorkflowNodeIcon } from "@/modules/ee/workflows/state/editor";

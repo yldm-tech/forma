@@ -8,7 +8,7 @@ vi.mock("@/lib/ai/service", () => ({
   generateOrganizationAIObject: (...args: unknown[]) => mockGenerateOrganizationAIObject(...args),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 

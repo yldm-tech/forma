@@ -1,6 +1,6 @@
 ---
 title: "Reserved Fields"
-description: "The system fields Formbricks captures on every response without you declaring anything: page, campaign, device, timing and request context."
+description: "The system fields Forma captures on every response without you declaring anything: page, campaign, device, timing and request context."
 icon: "list-check"
 ---
 
@@ -13,7 +13,7 @@ Reserved fields are the auto-captured half of [Embedded Data](/surveys/embedded-
 **Captured by** says where the value comes from, and that decides whether a running survey can use it:
 
 - **Browser** — read in the page when the survey is displayed, then frozen. Usable in recall and logic *while the respondent is answering*.
-- **Server** — derived from the request or from the stored response when it reaches Formbricks. Available on the response, in filters and in exports, but not offered to a running survey, because mid-survey the answer does not exist yet.
+- **Server** — derived from the request or from the stored response when it reaches Forma. Available on the response, in filters and in exports, but not offered to a running survey, because mid-survey the answer does not exist yet.
 
 | Field             | Type      | Captured by     | What it holds                                                                 |
 | ----------------- | --------- | --------------- | ----------------------------------------------------------------------------- |
@@ -34,7 +34,7 @@ Reserved fields are the auto-captured half of [Embedded Data](/surveys/embedded-
 | `timezone`        | `string`  | Browser         | The respondent's IANA time zone, e.g. `Europe/Berlin`                         |
 | `locale`          | `string`  | Browser         | How the device is configured, e.g. `de-AT`, from `navigator.language`         |
 | `language`        | `string`  | Browser, Server | The language the respondent is **answering in**                               |
-| `country`         | `string`  | Server          | Country from the CDN request header. Formbricks runs no GeoIP lookup          |
+| `country`         | `string`  | Server          | Country from the CDN request header. Forma runs no GeoIP lookup          |
 | `browser`         | `string`  | Server          | Parsed from the `user-agent` request header                                   |
 | `os`              | `string`  | Server          | Parsed from the `user-agent` request header                                   |
 | `deviceType`      | `string`  | Server          | Parsed from the `user-agent` request header                                   |
@@ -60,13 +60,13 @@ Reserved fields are the auto-captured half of [Embedded Data](/surveys/embedded-
 
 ### What Link, Web and Mobile Each Capture
 
-Link surveys and website & app surveys render through the same component, so both capture the full browser set. What those fields *describe* differs: on a link survey `url`, `pagePath`, `pageReferrer` and `utm*` are about the Formbricks-hosted survey page and how the respondent reached it; on an app survey they are about the host page the survey was triggered on.
+Link surveys and website & app surveys render through the same component, so both capture the full browser set. What those fields *describe* differs: on a link survey `url`, `pagePath`, `pageReferrer` and `utm*` are about the Forma-hosted survey page and how the respondent reached it; on an app survey they are about the host page the survey was triggered on.
 
 Mobile SDKs render the survey in a WebView with no host page, so the page and campaign fields are absent there while the device fields (`screenWidth`, `screenHeight`, `viewportWidth`, `viewportHeight`, `timezone`, `locale`) and every server-derived field are captured normally.
 
 <Note>
   `screenWidth` and `screenHeight` are orientation-invariant on iOS and rotate with the device on Android.
-  That is browser behavior rather than a Formbricks decision, so compare `viewportWidth` against a breakpoint
+  That is browser behavior rather than a Forma decision, so compare `viewportWidth` against a breakpoint
   if you want to know how wide the survey actually rendered.
 </Note>
 

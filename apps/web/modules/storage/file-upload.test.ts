@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { STORAGE_ERROR_CODES } from "@formbricks/types/storage";
+import { STORAGE_ERROR_CODES } from "@forma/types/storage";
 import * as fileUploadModule from "./file-upload";
 
 // Mock global fetch

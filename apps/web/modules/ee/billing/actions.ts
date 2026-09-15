@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZCloudBillingInterval } from "@formbricks/types/organizations";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { ZCloudBillingInterval } from "@forma/types/organizations";
 import { assertCan } from "@/lib/authorization";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";

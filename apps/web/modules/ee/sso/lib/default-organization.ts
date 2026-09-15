@@ -1,8 +1,8 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
-import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_ROLE, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import type { TOrganizationRole } from "@forma/types/memberships";
+import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_ROLE, IS_FORMA_CLOUD } from "@/lib/constants";
 import { createOrganization } from "@/lib/organization/service";
 import { DEFAULT_WORKSPACE_NAME } from "@/lib/workspace/constants";
 import { ensureCloudStripeSetupForOrganization } from "@/modules/ee/billing/lib/organization-billing";
@@ -70,7 +70,7 @@ export const ensureDefaultOrganization = async (
     });
     createdOrganizationId = organization.id;
 
-    if (IS_FORMBRICKS_CLOUD) {
+    if (IS_FORMA_CLOUD) {
       ensureCloudStripeSetupForOrganization(organization.id).catch((error) => {
         logger.error(
           { error, organizationId: organization.id },

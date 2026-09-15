@@ -4,7 +4,7 @@ import type {
   TWorkflowRunListItem,
   TWorkflowSortBy,
   TWorkflowStatus,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import type { TWorkflowListPage, TWorkflowRunListFilters, TWorkflowRunListPage } from "./api-client";
 
 export interface TWorkflowListKeyInput {

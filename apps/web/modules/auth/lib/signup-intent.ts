@@ -49,11 +49,11 @@ const SIGNUP_INTENT_KIND = "signup_intent";
 const SIGNING_SECRET = BETTER_AUTH_SECRET ?? NEXTAUTH_SECRET;
 
 /**
- * Better Auth is configured with `cookiePrefix: "formbricks"` and adds `__Secure-` under
+ * Better Auth is configured with `cookiePrefix: "forma"` and adds `__Secure-` under
  * `useSecureCookies`, so this mirrors both. The `signup_intent` suffix is not a name Better Auth mints,
  * so the two namespaces cannot collide.
  */
-export const SIGNUP_INTENT_COOKIE_NAME = `${USE_SECURE_COOKIES ? "__Secure-" : ""}formbricks.signup_intent`;
+export const SIGNUP_INTENT_COOKIE_NAME = `${USE_SECURE_COOKIES ? "__Secure-" : ""}forma.signup_intent`;
 
 /** Cookie attributes, matching Better Auth's `advanced.defaultCookieAttributes`, with one exception. */
 export const SIGNUP_INTENT_COOKIE_OPTIONS = {

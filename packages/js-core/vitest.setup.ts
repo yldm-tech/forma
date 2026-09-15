@@ -24,9 +24,9 @@ const windowMock = {
     key: vi.fn(),
   },
   location: {
-    search: "formbricksDebug=true",
+    search: "formaDebug=true",
     protocol: "https:",
-    host: "formbricks.com",
+    host: "forma.ylam.ai",
     pathname: "/",
   },
   setInterval: vi.fn(),

@@ -1,9 +1,9 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { TTag } from "@formbricks/types/tags";
+import { prisma } from "@forma/database";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { TTag } from "@forma/types/tags";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { TagError } from "../../modules/workspaces/settings/types/tag";
 import { ITEMS_PER_PAGE } from "../constants";

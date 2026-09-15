@@ -16,13 +16,13 @@ response per invitation, without asking anyone to log in.
   **Looking for responses tied to a specific person? Use
   [Personal Links](/surveys/link-surveys/personal-links) instead.**
 
-  Single-use links are anonymous. Formbricks limits each link to one response but does not know who
+  Single-use links are anonymous. Forma limits each link to one response but does not know who
   is behind it, so it is on you to track which link you sent to whom (a custom single-use ID makes
   that easier).
 
   Personal links are generated for contacts in a segment. Each response is automatically attributed
   to that contact, links can be given an expiry date, and the CSV export maps every link to a name
-  and email. Formbricks also blocks a second response from the same contact on its own, so you get
+  and email. Forma also blocks a second response from the same contact on its own, so you get
   the one-response-per-person guarantee whether or not single-use links are switched on.
 </Note>
 
@@ -32,19 +32,19 @@ Every single-use link is your normal survey link plus a **single-use ID** (`suId
 on the mode — a **signature** (`suToken`):
 
 ```
-https://app.formbricks.com/s/<surveyId>?suId=<single-use-id>&suToken=<signature>
+https://app.forma.ylam.ai/s/<surveyId>?suId=<single-use-id>&suToken=<signature>
 ```
 
-When someone opens the link, Formbricks:
+When someone opens the link, Forma:
 
 <Steps>
   <Step title="Validates the suId">
-    The `suId` must be one Formbricks issued for this survey. If it is missing, malformed, or
+    The `suId` must be one Forma issued for this survey. If it is missing, malformed, or
     tampered with, the respondent sees a *"This survey can only be taken by invitation"* page and
     cannot answer.
   </Step>
   <Step title="Looks for an existing response">
-    Formbricks checks whether a response with this `suId` already exists for the survey.
+    Forma checks whether a response with this `suId` already exists for the survey.
   </Step>
   <Step title="Serves, resumes, or blocks">
     No response yet → the survey opens. An unfinished response → it resumes where the respondent
@@ -70,7 +70,7 @@ Both are equally tamper-proof. The difference is who chooses the ID and whether 
 |---|---|---|
 | What `suId` looks like | An AES-encrypted, URL-encoded blob | Whatever you choose, e.g. `?suId=CUSTOMER-4711` |
 | `suToken` in the URL | Not used | Required. An HMAC signature over the survey ID and `suId` |
-| Who creates the ID | Formbricks (UI or API) | You |
+| Who creates the ID | Forma (UI or API) | You |
 | Best for | Bulk invites where the ID carries no meaning | Mapping responses back to a record in your own system |
 
 <Warning>
@@ -108,7 +108,7 @@ Both are equally tamper-proof. The difference is who chooses the ID and whether 
 </Steps>
 
 <Warning>
-  Formbricks does not store the generated links. Save the CSV — links cannot be re-downloaded, and
+  Forma does not store the generated links. Save the CSV — links cannot be re-downloaded, and
   regenerating creates a different set of IDs.
 </Warning>
 
@@ -119,15 +119,15 @@ Management API:
 
 ```bash
 curl -X GET \
-  'https://app.formbricks.com/api/v1/management/surveys/<surveyId>/singleUseIds?limit=100' \
+  'https://app.forma.ylam.ai/api/v1/management/surveys/<surveyId>/singleUseIds?limit=100' \
   -H 'x-api-key: <your-api-key>'
 ```
 
 ```json
 {
   "data": [
-    "https://app.formbricks.com/s/clzqym2l3...?suId=ohkj3qx6d0wdo9r3nfpm3bgj&suToken=9f2b...",
-    "https://app.formbricks.com/s/clzqym2l3...?suId=ci6la2lzj63pvsp6x3eqbhff&suToken=41ce..."
+    "https://app.forma.ylam.ai/s/clzqym2l3...?suId=ohkj3qx6d0wdo9r3nfpm3bgj&suToken=9f2b...",
+    "https://app.forma.ylam.ai/s/clzqym2l3...?suId=ci6la2lzj63pvsp6x3eqbhff&suToken=41ce..."
   ]
 }
 ```
@@ -164,7 +164,7 @@ requires two things in the request:
 - `singleUseId` in the request body
 - `meta.url` set to the full link the respondent opened, including its `suId` and `suToken`
 
-Formbricks re-validates the URL and rejects the response if the two do not match.
+Forma re-validates the URL and rejects the response if the two do not match.
 
 <Note>
   With URL encryption on, the `suId` in the URL is encrypted while the API expects the decrypted
@@ -176,7 +176,7 @@ Formbricks re-validates the URL and rejects the response if the two do not match
 
 - **Self-hosting**: single-use links require `ENCRYPTION_KEY` to be set. Rotating that key
   invalidates every single-use link that was already handed out.
-- **Since Formbricks 5.0**, unencrypted single-use links must carry a valid `suToken`. Links
+- **Since Forma 5.0**, unencrypted single-use links must carry a valid `suToken`. Links
   generated before 5.0 without a token are rejected — regenerate them.
 - The *"already answered"* screen can be customized via the `singleUse.heading` and
   `singleUse.subheading` fields on the survey in the Management API.

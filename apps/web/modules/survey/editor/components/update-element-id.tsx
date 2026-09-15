@@ -3,9 +3,9 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { validateId } from "@formbricks/types/surveys/validation";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { validateId } from "@forma/types/surveys/validation";
 import { getValidateIdErrorMessage } from "@/modules/survey/editor/lib/validation";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { Button } from "@/modules/ui/components/button";

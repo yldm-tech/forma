@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
+import { OperationNotAllowedError } from "@forma/types/errors";
 import type { TV3SurveyGenerateBody } from "@/app/api/v3/surveys/generate/schemas";
 import { streamV3SurveyGeneration } from "./operations";
 

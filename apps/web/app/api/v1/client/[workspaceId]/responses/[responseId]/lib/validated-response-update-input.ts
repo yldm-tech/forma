@@ -1,4 +1,4 @@
-import { TResponseUpdateInput, ZResponseUpdateInput } from "@formbricks/types/responses";
+import { TResponseUpdateInput, ZResponseUpdateInput } from "@forma/types/responses";
 import {
   TParseAndValidateJsonBodyResult,
   parseAndValidateJsonBody,

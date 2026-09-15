@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { ZId } from "@formbricks/types/common";
-import { ZContactAttributesInput } from "@formbricks/types/contact-attribute";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ZId } from "@forma/types/common";
+import { ZContactAttributesInput } from "@forma/types/contact-attribute";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { authenticatedActionClient } from "@/lib/utils/action-client";

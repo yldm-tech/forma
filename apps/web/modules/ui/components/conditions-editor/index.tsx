@@ -4,7 +4,7 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { CopyIcon, EllipsisVerticalIcon, PlusIcon, TrashIcon, WorkflowIcon } from "lucide-react";
 import { FieldErrors } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { TSurveyQuotaInput } from "@formbricks/types/quota";
+import { TSurveyQuotaInput } from "@forma/types/quota";
 import { Button } from "@/modules/ui/components/button";
 import { isConditionGroup } from "@/modules/ui/components/conditions-editor/lib/utils";
 import {

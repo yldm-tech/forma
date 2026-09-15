@@ -35,7 +35,7 @@ import {
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() })) },
 }));
 

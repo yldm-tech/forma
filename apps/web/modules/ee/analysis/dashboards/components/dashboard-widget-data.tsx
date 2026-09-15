@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useTranslation } from "react-i18next";
-import { TChartConfig, TChartQuery } from "@formbricks/types/analysis";
+import { TChartConfig, TChartQuery } from "@forma/types/analysis";
 import { ChartRenderer } from "@/modules/ee/analysis/charts/components/chart-renderer";
 import { DataViewer } from "@/modules/ee/analysis/charts/components/data-viewer";
 import { DEFAULT_WIDGET_VIEW, type TWidgetView } from "@/modules/ee/analysis/dashboards/lib/widget-view";

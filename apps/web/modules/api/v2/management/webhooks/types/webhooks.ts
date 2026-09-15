@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZWebhook } from "@formbricks/database/zod/webhooks";
+import { ZWebhook } from "@forma/database/zod/webhooks";
 import { ZGetFilter } from "@/modules/api/v2/types/api-filter";
 
 export const ZGetWebhooksFilter = ZGetFilter.extend({

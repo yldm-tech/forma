@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import type { TJsWorkspaceStateSurvey } from "../../../types/js";
 import { type TAllowedFileExtension, mimeTypes } from "../../../types/storage";
 import type { TSurveyLanguage } from "../../../types/surveys/types";

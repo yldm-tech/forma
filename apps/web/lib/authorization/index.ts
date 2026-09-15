@@ -1,19 +1,19 @@
 import "server-only";
-import { AuthorizationError } from "@formbricks/types/errors";
+import { AuthorizationError } from "@forma/types/errors";
 import { recordAuthorizationCheckIssued } from "./context";
 import type { TAuthorizationAction, TAuthorizationActor, TAuthorizationResourceForAction } from "./contract";
 import { authorizationCoordinator } from "./coordinator";
 import type { AuthorizationEvaluator } from "./evaluator";
 
 /**
- * The single, engine-independent authorization interface for Formbricks (Phase 0
+ * The single, engine-independent authorization interface for Forma (Phase 0
  * of the Authorization & Access Refinement project).
  *
  * `can` returns a boolean decision; `assertCan` throws an `AuthorizationError`
  * on denial. Both evaluate today's authorization rules and change nothing about
  * who can access what — they only funnel scattered checks through one boundary.
  * SpiceDB is the sole evaluator. Product call sites stay independent of its SDK
- * and receive only Formbricks-owned decisions and typed operational failures.
+ * and receive only Forma-owned decisions and typed operational failures.
  */
 
 const evaluator: AuthorizationEvaluator = authorizationCoordinator;

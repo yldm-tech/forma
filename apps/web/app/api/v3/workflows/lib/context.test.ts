@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
 import { capturePostHogEvent } from "@/lib/posthog";
@@ -9,10 +9,10 @@ import { getIsWorkflowsEnabled } from "@/modules/ee/license-check/lib/utils";
 import { buildWorkflowApiContext } from "./context";
 
 const { surveyFindUnique } = vi.hoisted(() => ({ surveyFindUnique: vi.fn() }));
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { workflow: {}, survey: { findUnique: surveyFindUnique } },
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ warn: vi.fn(), error: vi.fn() })) },
 }));
 vi.mock("@/app/api/v3/lib/auth", () => ({ requireV3WorkspaceAccess: vi.fn() }));
@@ -31,7 +31,7 @@ const baseAuditLog = (): TV3AuditLog => ({
   oldObject: undefined,
   newObject: undefined,
   userType: "api",
-  apiUrl: "https://app.formbricks.com/api/v3/workflows/wf_1",
+  apiUrl: "https://app.forma.ylam.ai/api/v3/workflows/wf_1",
 });
 
 const sessionAuth = {
@@ -54,7 +54,7 @@ beforeEach(() => {
 
 describe("buildWorkflowApiContext", () => {
   test("derives userId from a session", () => {
-    const ctx = buildWorkflowApiContext(sessionAuth, "req_1", "https://app.formbricks.com");
+    const ctx = buildWorkflowApiContext(sessionAuth, "req_1", "https://app.forma.ylam.ai");
     expect(ctx.userId).toBe("cm9zr52kh000508l8e3q7bw9j");
   });
 
@@ -70,7 +70,7 @@ describe("buildWorkflowApiContext", () => {
     const resolved = { workspaceId: "ws_1", organizationId: "org_1" };
     vi.mocked(requireV3WorkspaceAccess).mockResolvedValue(resolved);
 
-    const ctx = buildWorkflowApiContext(apiKeyAuth, "req_1", "https://app.formbricks.com");
+    const ctx = buildWorkflowApiContext(apiKeyAuth, "req_1", "https://app.forma.ylam.ai");
     const result = await ctx.authorize("ws_1", "readWrite");
 
     expect(requireV3WorkspaceAccess).toHaveBeenCalledWith(
@@ -78,7 +78,7 @@ describe("buildWorkflowApiContext", () => {
       "ws_1",
       "readWrite",
       "req_1",
-      "https://app.formbricks.com"
+      "https://app.forma.ylam.ai"
     );
     // The entitlement is checked against the organization resolved by workspace access.
     expect(getIsWorkflowsEnabled).toHaveBeenCalledWith("org_1");
@@ -89,7 +89,7 @@ describe("buildWorkflowApiContext", () => {
     vi.mocked(requireV3WorkspaceAccess).mockResolvedValue({ workspaceId: "ws_1", organizationId: "org_1" });
     vi.mocked(getIsWorkflowsEnabled).mockResolvedValue(false);
 
-    const ctx = buildWorkflowApiContext(apiKeyAuth, "req_1", "https://app.formbricks.com");
+    const ctx = buildWorkflowApiContext(apiKeyAuth, "req_1", "https://app.forma.ylam.ai");
     const result = await ctx.authorize("ws_1", "read");
 
     expect(result).toBeInstanceOf(Response);
@@ -133,7 +133,7 @@ describe("recordAnalytics (product-analytics sink, ENG-2851)", () => {
 
   test("is always bound, even without an audit log, and captures under the acting user", async () => {
     vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue("org_1");
-    const ctx = buildWorkflowApiContext(sessionAuth, "req_1", "https://app.formbricks.com/api/v3/workflows");
+    const ctx = buildWorkflowApiContext(sessionAuth, "req_1", "https://app.forma.ylam.ai/api/v3/workflows");
 
     expect(ctx.recordAudit).toBeUndefined();
     await ctx.recordAnalytics?.(detail);

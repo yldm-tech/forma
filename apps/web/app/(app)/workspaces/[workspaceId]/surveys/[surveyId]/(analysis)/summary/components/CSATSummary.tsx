@@ -3,9 +3,9 @@
 import { CircleSlash2, SmileIcon, StarIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyElementSummaryCsat } from "@formbricks/types/surveys/types";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyElementSummaryCsat } from "@forma/types/surveys/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";
 import { RatingLikeSummary } from "./RatingLikeSummary";
 import { SatisfactionIndicator } from "./SatisfactionIndicator";

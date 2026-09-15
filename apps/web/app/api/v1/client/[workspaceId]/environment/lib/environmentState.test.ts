@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { TActionClass } from "@formbricks/types/action-classes";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { TJsWorkspaceStateWorkspaceSetting } from "@formbricks/types/js";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { TActionClass } from "@forma/types/action-classes";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { TJsWorkspaceStateWorkspaceSetting } from "@forma/types/js";
+import { TSurvey } from "@forma/types/surveys/types";
 import { cache } from "@/lib/cache";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
@@ -24,7 +24,7 @@ vi.mock("@/lib/cache", () => ({
   },
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       update: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock("@formbricks/database", () => ({
     },
   },
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },
@@ -59,7 +59,7 @@ vi.mock("@/lib/utils/validate", () => ({ validateInputs: vi.fn() }));
 vi.mock("@/modules/storage/utils", () => ({ resolveStorageUrlsInObject: vi.fn((o: unknown) => o) }));
 vi.mock("@/modules/survey/lib/utils", () => ({ transformPrismaSurvey: vi.fn((s: unknown) => s) }));
 vi.mock("@/lib/constants", () => ({
-  IS_FORMBRICKS_CLOUD: true,
+  IS_FORMA_CLOUD: true,
   RECAPTCHA_SITE_KEY: "mock_recaptcha_site_key",
   RECAPTCHA_SECRET_KEY: "mock_recaptcha_secret_key",
   IS_RECAPTCHA_CONFIGURED: true,
@@ -76,8 +76,8 @@ vi.mock("@/lib/utils/helper", () => ({
   getOrganizationIdFromWorkspaceId: vi.fn().mockResolvedValue("mock-org-id"),
 }));
 
-// Mock @formbricks/cache
-vi.mock("@formbricks/cache", () => ({
+// Mock @forma/cache
+vi.mock("@forma/cache", () => ({
   createCacheKey: {
     workspace: {
       state: vi.fn((workspaceId: string) => `fb:env:${workspaceId}:state`),

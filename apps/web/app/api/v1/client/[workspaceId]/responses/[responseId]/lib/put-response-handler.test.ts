@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { MAX_INGESTED_VALUE_BYTES } from "@formbricks/types/embedded-data-ingest";
+import { MAX_INGESTED_VALUE_BYTES } from "@forma/types/embedded-data-ingest";
 import {
   DatabaseError,
   InvalidInputError,
   RESPONSE_ALREADY_FINISHED_ERROR_CODE,
   ResourceNotFoundError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { responses } from "@/app/lib/api/response";
 import { putResponseHandler } from "./put-response-handler";
 

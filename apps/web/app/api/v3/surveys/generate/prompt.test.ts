@@ -13,7 +13,7 @@ describe("v3 survey generation prompt", () => {
   test("keeps the system prompt provider neutral and bounded to supported survey capabilities", () => {
     const system = buildV3SurveyGenerationSystemPrompt(V3_SURVEY_GENERATE_ALLOWED_LOCALES, "link");
 
-    expect(system).toContain("Formbricks survey drafts");
+    expect(system).toContain("Forma survey drafts");
     expect(system).toContain(`Use only these question types: ${GENERATED_SURVEY_ELEMENT_TYPES.join(", ")}`);
     expect(system).toContain("csat");
     expect(system).toContain("ces");

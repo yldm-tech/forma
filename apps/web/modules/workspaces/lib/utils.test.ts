@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthenticationError, AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
-import type { TMembership, TOrganizationRole } from "@formbricks/types/memberships";
+import { AuthenticationError, AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
+import type { TMembership, TOrganizationRole } from "@forma/types/memberships";
 import { can } from "@/lib/authorization";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
@@ -15,7 +15,7 @@ import { getAccessControlPermission } from "@/modules/ee/license-check/lib/utils
 import { getWorkspacePermissionByUserId } from "@/modules/ee/teams/lib/roles";
 import { getWorkspaceAuth, getWorkspaceLayoutData, workspaceIdLayoutChecks } from "./utils";
 
-const mocks = vi.hoisted(() => ({ isFormbricksCloud: false, workspaceFindUnique: vi.fn() }));
+const mocks = vi.hoisted(() => ({ isFormaCloud: false, workspaceFindUnique: vi.fn() }));
 
 // Real getAccessFlags and getTeamPermissionFlags are used on purpose so the tests exercise the
 // actual role -> isBilling mapping (the redirect branch) and the permission -> isReadOnly mapping.
@@ -24,12 +24,12 @@ const mocks = vi.hoisted(() => ({ isFormbricksCloud: false, workspaceFindUnique:
 vi.mock("react", () => ({ cache: (fn: (...args: unknown[]) => unknown) => fn }));
 vi.mock("@/lib/constants", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/constants")>()),
-  IS_FORMBRICKS_CLOUD: mocks.isFormbricksCloud,
+  IS_FORMA_CLOUD: mocks.isFormaCloud,
 }));
 vi.mock("@/lib/workspace/service", () => ({ getWorkspace: vi.fn() }));
 vi.mock("@/lib/authorization", () => ({ can: vi.fn() }));
 vi.mock("@/lib/workspace/auth", () => ({ canUserNavigateWorkspace: vi.fn() }));
-vi.mock("@formbricks/database", () => ({ prisma: { workspace: { findUnique: mocks.workspaceFindUnique } } }));
+vi.mock("@forma/database", () => ({ prisma: { workspace: { findUnique: mocks.workspaceFindUnique } } }));
 vi.mock("@/lib/user/service", () => ({ getUser: vi.fn() }));
 vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getAccessControlPermission: vi.fn() }));
 vi.mock("@/modules/ee/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
@@ -80,7 +80,7 @@ describe("getWorkspaceAuth billing gate (ENG-1763)", () => {
 
     await getWorkspaceAuth(workspaceId);
 
-    expect(getBillingFallbackPath).toHaveBeenCalledWith(organizationId, mocks.isFormbricksCloud);
+    expect(getBillingFallbackPath).toHaveBeenCalledWith(organizationId, mocks.isFormaCloud);
     expect(redirect).toHaveBeenCalledWith(billingFallbackPath);
   });
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZTeam } from "@formbricks/database/zod/teams";
+import { ZTeam } from "@forma/database/zod/teams";
 
 export const ZTeamIdSchema = z
   .cuid2()

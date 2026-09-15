@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { extractFallbackValue, extractId, extractRecallInfo } from "@/lib/utils/recall";
 import { parseV3ApiError } from "@/modules/api/lib/v3-client";
 import { initialFilters } from "@/modules/survey/list/lib/constants";

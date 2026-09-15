@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { getLanguageLabel } from "@formbricks/i18n-utils/utils";
-import formbricks from "@formbricks/js";
-import { TSegment } from "@formbricks/types/segment";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+import { Workspace } from "@forma/database/prisma-browser";
+import { getLanguageLabel } from "@forma/i18n-utils/utils";
+import forma from "@forma/js";
+import { TSegment } from "@forma/types/segment";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import {
   TSurvey,
   TSurveyEditorTabs,
@@ -17,7 +17,7 @@ import {
   ZSurvey,
   ZSurveyEndScreenCard,
   ZSurveyRedirectUrlCard,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { isDeepEqual } from "@/lib/utils/object";
@@ -565,10 +565,10 @@ export const SurveyMenuBar = ({
       setIsSurveyPublishing(false);
 
       // When the user publishes their second survey, fire an in-app code action so a
-      // Formbricks survey can be triggered from the dashboard. The flag is computed
+      // Forma survey can be triggered from the dashboard. The flag is computed
       // server-side in updateSurveyAction, so there's no extra round-trip here.
       if (publishResult.data.isSecondPublish) {
-        formbricks.track("second_survey_published").catch(() => undefined);
+        forma.track("second_survey_published").catch(() => undefined);
       }
 
       // Set flag to prevent beforeunload warning during navigation
@@ -669,7 +669,7 @@ export const SurveyMenuBar = ({
               <AlertButton className="flex items-center justify-center">
                 <a
                   className="flex h-full w-full items-center justify-center bg-white!"
-                  href="https://formbricks.com/docs/self-hosting/configuration/file-uploads"
+                  href="https://forma.ylam.ai/docs/self-hosting/configuration/file-uploads"
                   target="_blank"
                   rel="noopener noreferrer">
                   <span>{t("common.learn_more")}</span>

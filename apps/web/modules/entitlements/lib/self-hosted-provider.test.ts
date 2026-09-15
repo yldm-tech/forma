@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import type { TOrganization } from "@formbricks/types/organizations";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import type { TOrganization } from "@forma/types/organizations";
 import { getOrganization } from "@/lib/organization/service";
 import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
 import { TEnterpriseLicenseFeatures } from "@/modules/ee/license-check/types/enterprise-license";

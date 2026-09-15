@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@formbricks/database";
-import { OrganizationAccessType } from "@formbricks/types/api-key";
+import { prisma } from "@forma/database";
+import { OrganizationAccessType } from "@forma/types/api-key";
 import { can } from "@/lib/authorization";
 import { getOrganizationAuthorizationActionForAccessType } from "@/lib/authorization/permission-action";
 import { lookupAuthorizedWorkspaceIds } from "@/lib/authorization/resource-list";

@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import { TAuthenticationApiKey } from "@forma/types/auth";
 import { parseApiKeyV2 } from "@/lib/crypto";
 import { getApiKeyWithPermissions } from "@/modules/organization/settings/api-keys/lib/api-key";
 

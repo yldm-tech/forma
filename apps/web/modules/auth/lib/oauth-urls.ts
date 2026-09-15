@@ -63,7 +63,7 @@ export const getMcpOrigin = (): string => new URL(getMcpResourceUrl()).origin;
  *
  * The oauth-provider treats UserInfo as an implicit resource: when `openid` is in scope it appends
  * this identifier to the audience alongside the resource the client actually requested. It is the
- * only audience besides the MCP resource URL that a Formbricks-issued MCP token may carry, so the
+ * only audience besides the MCP resource URL that a Forma-issued MCP token may carry, so the
  * resource server allow-lists exactly these two and rejects anything else (see
  * `hasAcceptedMcpAudience` in modules/mcp/auth.ts).
  *

@@ -1,14 +1,14 @@
 ---
 title: "Kubernetes Deployment"
-description: "Deploy Formbricks on Kubernetes with the current OCI Helm chart."
+description: "Deploy Forma on Kubernetes with the current OCI Helm chart."
 icon: "circle-nodes"
 ---
 
-Deploy Formbricks on Kubernetes using the current OCI Helm chart published from the `charts/formbricks`
-directory in the Formbricks repository.
+Deploy Forma on Kubernetes using the current OCI Helm chart published from the `charts/forma`
+directory in the Forma repository.
 
 <Info>
-  Formbricks v5 self-hosting expects Hub to be part of the runtime. The chart handles that by default. Use the
+  Forma v5 self-hosting expects Hub to be part of the runtime. The chart handles that by default. Use the
   [migration guide](/self-hosting/advanced/migration#v5) before upgrading an existing 4.x deployment.
 </Info>
 
@@ -18,7 +18,7 @@ Ensure you have the following before proceeding:
 
 - a running Kubernetes cluster
 - Helm 3 installed locally
-- a public hostname for `formbricks.webappUrl`
+- a public hostname for `forma.webappUrl`
 - a plan for PostgreSQL and Redis/Valkey, either in-cluster or managed externally
 - an edge rate-limiting plan for the v5-covered routes: the chart's Envoy bundle or an equivalent external edge
   solution
@@ -29,7 +29,7 @@ Ensure you have the following before proceeding:
   <Step title="Create A Minimal values.yaml">
 
 ```yaml
-formbricks:
+forma:
   webappUrl: https://surveys.example.com
 ```
 
@@ -37,19 +37,19 @@ formbricks:
 
   </Step>
 
-  <Step title="Install Formbricks">
+  <Step title="Install Forma">
 
 ```sh
-helm install formbricks oci://ghcr.io/formbricks/helm-charts/formbricks \
-  -n formbricks \
+helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+  -n forma \
   --create-namespace \
   -f values.yaml
 ```
 
     By default, the chart deploys:
 
-    - the Formbricks application
-    - Formbricks Hub
+    - the Forma application
+    - Forma Hub
     - Cube
     - PostgreSQL
     - Redis
@@ -94,7 +94,7 @@ For production workloads, many teams prefer managed services:
 ```yaml
 postgresql:
   enabled: false
-  externalDatabaseUrl: "postgresql://user:password@your-postgres-host:5432/formbricks"
+  externalDatabaseUrl: "postgresql://user:password@your-postgres-host:5432/forma"
 
 redis:
   enabled: false
@@ -109,7 +109,7 @@ SecretStore. Ensure the resulting app secret exposes the values your deployment 
 
 ### AuthZed / SpiceDB
 
-Formbricks v6 uses AuthZed as its authorization engine. Fresh chart installations enable a private,
+Forma v6 uses AuthZed as its authorization engine. Fresh chart installations enable a private,
 two-replica SpiceDB cluster and `fully_consistent` decisions by default. If the cluster already has a compatible
 SpiceDB operator, keep the authorization runtime enabled but disable this release's operator installation:
 
@@ -129,9 +129,9 @@ strong API token in a Kubernetes Secret using the keys `datastore_uri` and `pres
 authzed:
   enabled: true
   auth:
-    existingSecret: formbricks-authzed
+    existingSecret: forma-authzed
   datastore:
-    existingSecret: formbricks-authzed
+    existingSecret: forma-authzed
 ```
 
 Use `authzed.mode: external`, `authzed.operator.install: false`, `authzed.endpoint: <host>:<port>`, and
@@ -141,17 +141,17 @@ sent on every authenticated request. The application endpoint remains internal a
 default when the chart owns SpiceDB.
 
 Helm prints release-specific commands that execute the release-matched operator CLI
-inside a Formbricks pod. Start with:
+inside a Forma pod. Start with:
 
 ```bash
-kubectl exec -n <namespace> deployment/<release-name> -- formbricks-authzed health
-kubectl exec -n <namespace> deployment/<release-name> -- formbricks-authzed schema check
-kubectl exec -n <namespace> deployment/<release-name> -- formbricks-authzed upgrade check
+kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed health
+kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed schema check
+kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed upgrade check
 ```
 
 A fresh install runs an idempotent initialization Job, but application startup and probes remain independent
 from it. Upgrades never run relationship preparation automatically. Before the first v6 upgrade, run
-`formbricks-authzed upgrade prepare`, require `upgrade check` to exit `0`, and then set
+`forma-authzed upgrade prepare`, require `upgrade check` to exit `0`, and then set
 `authzed.migrationAcknowledged: true`. The chart refuses an unacknowledged upgrade, disabled AuthZed, or weaker
 consistency. Follow [AuthZed Operations](/self-hosting/advanced/authzed-operations) and do not expose SpiceDB
 through an Ingress.
@@ -160,7 +160,7 @@ through an Ingress.
 
 ### Hub Is Mandatory
 
-Formbricks v5 does not support `hub.enabled=false`. Keep the default `hub.enabled=true` behavior in place.
+Forma v5 does not support `hub.enabled=false`. Keep the default `hub.enabled=true` behavior in place.
 
 Use `hub.image.tag`, `hub.resources`, and `hub.existingSecret` only when you need to pin or customize the Hub
 deployment details.
@@ -190,9 +190,9 @@ This keeps Envoy rate-limiting state separate from the application's own Redis t
 
 The example installs the bundled controller. If your cluster already provides a compatible Envoy Gateway
 controller, set `envoy.controller.enabled: false`. In either mode, configure
-`envoy.formbricks.ingress` or your platform ingress/load balancer so public traffic reaches the Envoy-managed
+`envoy.forma.ingress` or your platform ingress/load balancer so public traffic reaches the Envoy-managed
 routes. If you use an equivalent external edge solution instead, verify that it covers every route in the
-[rate-limiting guide](/self-hosting/advanced/rate-limiting) before exposing Formbricks.
+[rate-limiting guide](/self-hosting/advanced/rate-limiting) before exposing Forma.
 
 ### Production Replicas And Disruption Budgets
 
@@ -224,7 +224,7 @@ Two autoscaling defaults are easy to miss:
 
 ### Cube
 
-Cube is part of the baseline Formbricks v5 stack and is bundled with the chart by default
+Cube is part of the baseline Forma v5 stack and is bundled with the chart by default
 (`cube.enabled: true`). To run an external Cube cluster instead:
 
 - set `cube.enabled: false` to skip the bundled Cube deployment
@@ -234,10 +234,10 @@ Cube is part of the baseline Formbricks v5 stack and is bundled with the chart b
 
 ### Optional Bundled Qwen/vLLM For AI
 
-The Helm chart can optionally deploy a Formbricks-provided Qwen runtime through vLLM. This is disabled by
+The Helm chart can optionally deploy a Forma-provided Qwen runtime through vLLM. This is disabled by
 default and requires GPU-capable Kubernetes nodes.
 
-To deploy Qwen/vLLM and automatically point the Formbricks app at the in-cluster OpenAI-compatible endpoint:
+To deploy Qwen/vLLM and automatically point the Forma app at the in-cluster OpenAI-compatible endpoint:
 
 ```yaml
 llm:
@@ -247,7 +247,7 @@ llm:
 With `llm.enabled: true`, the chart renders the vLLM router and Qwen serving engine, then injects the required
 `AI_PROVIDER=openai-compatible` app environment variables unless you override them in `deployment.env`.
 
-If you want to deploy the bundled Qwen runtime without changing the Formbricks app AI configuration:
+If you want to deploy the bundled Qwen runtime without changing the Forma app AI configuration:
 
 ```yaml
 llm:
@@ -300,7 +300,7 @@ taxonomy:
     provider: vertex-gemini
     model: gemini-2.5-flash
     vertex:
-      project: formbricks-cloud
+      project: forma-cloud
       location: europe-west3
       existingSecret: taxonomy-vertex-secret
 ```
@@ -311,7 +311,7 @@ project and location.
 After startup, run the authenticated preflight check from inside the taxonomy pod:
 
 ```sh
-kubectl exec -n formbricks deploy/formbricks-taxonomy -- \
+kubectl exec -n forma deploy/forma-taxonomy -- \
   python -c 'import os, urllib.request; req = urllib.request.Request("http://127.0.0.1:8000/v1/preflight", headers={"Authorization": "Bearer " + os.environ["TAXONOMY_SERVICE_TOKEN"]}); print(urllib.request.urlopen(req, timeout=10).read().decode())'
 ```
 
@@ -323,12 +323,12 @@ operator validation and requires the internal taxonomy bearer token.
 For normal chart upgrades:
 
 ```sh
-helm upgrade formbricks oci://ghcr.io/formbricks/helm-charts/formbricks \
-  -n formbricks \
+helm upgrade forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+  -n forma \
   -f values.yaml
 ```
 
-For a Formbricks 4.x to 5.0 migration, confirm the following before running the upgrade:
+For a Forma 4.x to 5.0 migration, confirm the following before running the upgrade:
 
 - Hub remains enabled
 - `HUB_API_KEY` is present
@@ -341,32 +341,32 @@ For a Formbricks 4.x to 5.0 migration, confirm the following before running the 
 
 | Field                            | Description                                                    |
 | -------------------------------- | -------------------------------------------------------------- |
-| `formbricks.webappUrl`           | Public base URL for the Formbricks app                         |
-| `deployment.image.tag`           | Formbricks image tag override                                  |
-| `hub.enabled`                    | Must stay `true` in Formbricks v5                              |
+| `forma.webappUrl`           | Public base URL for the Forma app                         |
+| `deployment.image.tag`           | Forma image tag override                                  |
+| `hub.enabled`                    | Must stay `true` in Forma v5                              |
 | `hub.image.tag`                  | Hub image tag override                                         |
 | `envoy.enabled`                  | Enables chart-managed Envoy Gateway resources                  |
 | `envoy.controller.enabled`       | Installs the bundled Envoy controller when `true`              |
 | `envoyRedis.enabled`             | Deploys a dedicated Redis backend for Envoy rate limiting      |
 | `llm.enabled`                    | Deploys the optional bundled Qwen/vLLM runtime                 |
-| `llm.autoConfigureApp`           | Injects Formbricks OpenAI-compatible env vars for bundled Qwen |
+| `llm.autoConfigureApp`           | Injects Forma OpenAI-compatible env vars for bundled Qwen |
 | `taxonomy.enabled`               | Deploys the optional standalone AI taxonomy service            |
 | `postgresql.externalDatabaseUrl` | Uses an external PostgreSQL service instead of in-cluster      |
 | `redis.externalRedisUrl`         | Uses an external Redis/Valkey service instead of in-cluster    |
 
 For the complete values surface, refer to the chart README in the repository:
-[charts/formbricks/README.md](https://github.com/formbricks/formbricks/tree/main/charts/formbricks).
+[charts/forma/README.md](https://github.com/yldm-tech/forma/tree/main/charts/forma).
 
 ## 6. Uninstalling The Deployment
 
 To remove the deployment:
 
 ```sh
-helm uninstall formbricks -n formbricks
+helm uninstall forma -n forma
 ```
 
 If you also want to remove in-cluster persistent volumes:
 
 ```sh
-kubectl delete pvc --all -n formbricks
+kubectl delete pvc --all -n forma
 ```

@@ -1,43 +1,43 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
-  FORMBRICKS_EVENTS,
-  emitFormbricksEvent,
-  offFormbricksEvent,
-  onFormbricksEvent,
-  resetFormbricksEventSubscribers,
+  FORMA_EVENTS,
+  emitFormaEvent,
+  offFormaEvent,
+  onFormaEvent,
+  resetFormaEventSubscribers,
 } from "@/lib/common/events";
 
-describe("emitFormbricksEvent", () => {
+describe("emitFormaEvent", () => {
   beforeEach(() => {
     // The emitter creates `window.dataLayer` when absent; start every test from that state, and
     // from a subscriber-free registry.
     delete (window as { dataLayer?: unknown }).dataLayer;
-    resetFormbricksEventSubscribers();
+    resetFormaEventSubscribers();
   });
 
-  test("every event name carries the formbricks_ namespace — the string GTM triggers and on() match", () => {
-    for (const name of Object.values(FORMBRICKS_EVENTS)) {
-      expect(name).toMatch(/^formbricks_/);
+  test("every event name carries the forma_ namespace — the string GTM triggers and on() match", () => {
+    for (const name of Object.values(FORMA_EVENTS)) {
+      expect(name).toMatch(/^forma_/);
     }
   });
 
   test("creates window.dataLayer when absent and pushes the nested envelope", () => {
     expect(window.dataLayer).toBeUndefined();
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, {
+    emitFormaEvent(FORMA_EVENTS.responseSubmitted, {
       surveyId: "survey_1",
       responseId: "response_1",
       finished: true,
     });
 
-    // Nested under `formbricks`, never spread flat: GTM merges pushes, so a flat `finished` or
+    // Nested under `forma`, never spread flat: GTM merges pushes, so a flat `finished` or
     // `action` would collide with the host's own dataLayer keys. And the FULL key set every time,
     // nulls included: GTM merges recursively, so an omitted key would leave a previous event's
     // value readable under this event's trigger.
     expect(window.dataLayer).toEqual([
       {
-        event: "formbricks_response_submitted",
-        formbricks: {
+        event: "forma_response_submitted",
+        forma: {
           workspaceId: null,
           action: null,
           surveyId: "survey_1",
@@ -52,13 +52,13 @@ describe("emitFormbricksEvent", () => {
     const hostEntry = { event: "host_event", cart: "abc" };
     window.dataLayer = [hostEntry];
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.actionTracked, { action: "clicked_demo" });
+    emitFormaEvent(FORMA_EVENTS.actionTracked, { action: "clicked_demo" });
 
     expect(window.dataLayer[0]).toBe(hostEntry);
     expect(window.dataLayer).toHaveLength(2);
     expect(window.dataLayer[1]).toEqual({
-      event: "formbricks_action_tracked",
-      formbricks: {
+      event: "forma_action_tracked",
+      forma: {
         workspaceId: null,
         surveyId: null,
         responseId: null,
@@ -72,15 +72,15 @@ describe("emitFormbricksEvent", () => {
     // `responseId` is typed optional by the widened callbacks, so an emit can carry it as an
     // explicit undefined. If that survived the merge it would replace the null sentinel — and GTM's
     // recursive merge would keep an EARLIER event's responseId readable under this event's trigger.
-    emitFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, {
+    emitFormaEvent(FORMA_EVENTS.responseSubmitted, {
       surveyId: "survey_1",
       responseId: undefined,
       finished: true,
     });
 
     expect(window.dataLayer?.[0]).toEqual({
-      event: "formbricks_response_submitted",
-      formbricks: {
+      event: "forma_response_submitted",
+      forma: {
         workspaceId: null,
         action: null,
         surveyId: "survey_1",
@@ -94,7 +94,7 @@ describe("emitFormbricksEvent", () => {
     (window as { dataLayer?: unknown }).dataLayer = {};
 
     expect(() => {
-      emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+      emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
     }).not.toThrow();
 
     expect(Array.isArray(window.dataLayer)).toBe(true);
@@ -109,10 +109,10 @@ describe("emitFormbricksEvent", () => {
     window.dataLayer = poisoned;
 
     const handler = vi.fn();
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+    onFormaEvent(FORMA_EVENTS.surveyShown, handler);
 
     expect(() => {
-      emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+      emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
     }).not.toThrow();
 
     // The subscription surface still fired: the two are isolated separately.
@@ -123,7 +123,7 @@ describe("emitFormbricksEvent", () => {
 describe("on() / off() subscriptions", () => {
   beforeEach(() => {
     delete (window as { dataLayer?: unknown }).dataLayer;
-    resetFormbricksEventSubscribers();
+    resetFormaEventSubscribers();
     vi.restoreAllMocks();
   });
 
@@ -132,11 +132,11 @@ describe("on() / off() subscriptions", () => {
     const second = vi.fn();
     const other = vi.fn();
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, first);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, second);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyClosed, other);
+    onFormaEvent(FORMA_EVENTS.surveyShown, first);
+    onFormaEvent(FORMA_EVENTS.surveyShown, second);
+    onFormaEvent(FORMA_EVENTS.surveyClosed, other);
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
 
     expect(first).toHaveBeenCalledWith({ surveyId: "survey_1" });
     expect(second).toHaveBeenCalledWith({ surveyId: "survey_1" });
@@ -146,10 +146,10 @@ describe("on() / off() subscriptions", () => {
   test("registering the same handler twice notifies it once", () => {
     const handler = vi.fn();
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, handler);
-    onFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, handler);
+    onFormaEvent(FORMA_EVENTS.responseSubmitted, handler);
+    onFormaEvent(FORMA_EVENTS.responseSubmitted, handler);
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, { surveyId: "survey_1", finished: false });
+    emitFormaEvent(FORMA_EVENTS.responseSubmitted, { surveyId: "survey_1", finished: false });
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -159,13 +159,13 @@ describe("on() / off() subscriptions", () => {
     const viaOff = vi.fn();
     const kept = vi.fn();
 
-    const unsubscribe = onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, viaReturn);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, viaOff);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, kept);
+    const unsubscribe = onFormaEvent(FORMA_EVENTS.surveyShown, viaReturn);
+    onFormaEvent(FORMA_EVENTS.surveyShown, viaOff);
+    onFormaEvent(FORMA_EVENTS.surveyShown, kept);
 
     unsubscribe();
-    offFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, viaOff);
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+    offFormaEvent(FORMA_EVENTS.surveyShown, viaOff);
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
 
     expect(viaReturn).not.toHaveBeenCalled();
     expect(viaOff).not.toHaveBeenCalled();
@@ -176,29 +176,29 @@ describe("on() / off() subscriptions", () => {
     const handler = vi.fn();
 
     expect(() => {
-      offFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+      offFormaEvent(FORMA_EVENTS.surveyShown, handler);
     }).not.toThrow();
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
-    offFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, vi.fn());
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+    onFormaEvent(FORMA_EVENTS.surveyShown, handler);
+    offFormaEvent(FORMA_EVENTS.surveyShown, vi.fn());
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
   test("a handler that unsubscribes itself still receives the event it is handling", () => {
     const handler = vi.fn(() => {
-      offFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+      offFormaEvent(FORMA_EVENTS.surveyShown, handler);
     });
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+    onFormaEvent(FORMA_EVENTS.surveyShown, handler);
 
     expect(() => {
-      emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+      emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
     }).not.toThrow();
     expect(handler).toHaveBeenCalledTimes(1);
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_2" });
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_2" });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -213,19 +213,19 @@ describe("on() / off() subscriptions", () => {
     const handler = (): void => {
       calls += 1;
       if (calls > 2) throw new Error("re-arm re-entered the dispatch in flight");
-      offFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
-      onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+      offFormaEvent(FORMA_EVENTS.surveyShown, handler);
+      onFormaEvent(FORMA_EVENTS.surveyShown, handler);
     };
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, other);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, handler);
+    onFormaEvent(FORMA_EVENTS.surveyShown, other);
+    onFormaEvent(FORMA_EVENTS.surveyShown, handler);
 
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_1" });
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_1" });
     expect(calls).toBe(1);
     expect(errorSpy).not.toHaveBeenCalled();
 
     // Still subscribed for the next emit — re-arming is the point.
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: "survey_2" });
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: "survey_2" });
     expect(calls).toBe(2);
   });
 
@@ -236,11 +236,11 @@ describe("on() / off() subscriptions", () => {
     });
     const healthy = vi.fn();
 
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyClosed, throwing);
-    onFormbricksEvent(FORMBRICKS_EVENTS.surveyClosed, healthy);
+    onFormaEvent(FORMA_EVENTS.surveyClosed, throwing);
+    onFormaEvent(FORMA_EVENTS.surveyClosed, healthy);
 
     expect(() => {
-      emitFormbricksEvent(FORMBRICKS_EVENTS.surveyClosed, { surveyId: "survey_1" });
+      emitFormaEvent(FORMA_EVENTS.surveyClosed, { surveyId: "survey_1" });
     }).not.toThrow();
 
     expect(healthy).toHaveBeenCalledTimes(1);
@@ -250,7 +250,7 @@ describe("on() / off() subscriptions", () => {
 
   test("emitting with no subscribers still pushes to the dataLayer", () => {
     expect(() => {
-      emitFormbricksEvent(FORMBRICKS_EVENTS.setupSuccessful, { workspaceId: "ws_1" });
+      emitFormaEvent(FORMA_EVENTS.setupSuccessful, { workspaceId: "ws_1" });
     }).not.toThrow();
     expect(window.dataLayer).toHaveLength(1);
   });

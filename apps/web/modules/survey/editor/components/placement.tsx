@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TOverlay, TPlacement } from "@formbricks/types/common";
+import { TOverlay, TPlacement } from "@forma/types/common";
 import { cn } from "@/lib/cn";
 import { Label } from "@/modules/ui/components/label";
 import { getPlacementStyle } from "@/modules/ui/components/preview-survey/lib/utils";

@@ -1,11 +1,11 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { BlockCard } from "@/modules/survey/editor/components/block-card";
 
 interface BlocksDroppableProps {
@@ -28,7 +28,7 @@ interface BlocksDroppableProps {
   setActiveElementId: (elementId: string | null) => void;
   invalidElements: string[] | null;
   addElement: (element: any, index?: number) => void;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isCxMode: boolean;
   locale: TUserLocale;
   responseCount: number;
@@ -58,7 +58,7 @@ export const BlocksDroppable = ({
   updateBlockName,
   updateBlockButtonLabel,
   addElement,
-  isFormbricksCloud,
+  isFormaCloud,
   isCxMode,
   locale,
   responseCount,
@@ -103,7 +103,7 @@ export const BlocksDroppable = ({
               lastElementIndex={lastElementIndex}
               invalidElements={invalidElements ?? undefined}
               addElement={addElement}
-              isFormbricksCloud={isFormbricksCloud}
+              isFormaCloud={isFormaCloud}
               isCxMode={isCxMode}
               locale={locale}
               responseCount={responseCount}

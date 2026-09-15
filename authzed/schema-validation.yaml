@@ -1,4 +1,4 @@
-# Validation suite for the canonical Formbricks authorization schema.
+# Validation suite for the canonical Forma authorization schema.
 #
 # Run with `pnpm authzed:validate` (offline; uses `zed validate`, which shares
 # its parser and evaluator with SpiceDB — no running server required).

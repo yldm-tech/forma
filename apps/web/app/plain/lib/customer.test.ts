@@ -4,11 +4,11 @@ import { getIsActiveCustomer } from "./customer";
 
 // A getter lets each test flip the deployment flag at runtime — the helper reads it through a live
 // import binding at call time. Cloud is the default since that is where the label is used.
-const constantsOverrides = vi.hoisted(() => ({ IS_FORMBRICKS_CLOUD: true }));
+const constantsOverrides = vi.hoisted(() => ({ IS_FORMA_CLOUD: true }));
 
 vi.mock("@/lib/constants", () => ({
-  get IS_FORMBRICKS_CLOUD() {
-    return constantsOverrides.IS_FORMBRICKS_CLOUD;
+  get IS_FORMA_CLOUD() {
+    return constantsOverrides.IS_FORMA_CLOUD;
   },
 }));
 
@@ -29,7 +29,7 @@ const mockOrgs = (orgs: unknown[]) =>
 describe("getIsActiveCustomer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    constantsOverrides.IS_FORMBRICKS_CLOUD = true;
+    constantsOverrides.IS_FORMA_CLOUD = true;
   });
 
   test("returns true for a paid plan with an active subscription", async () => {
@@ -73,7 +73,7 @@ describe("getIsActiveCustomer", () => {
   });
 
   test("returns false on self-hosted instances without querying organizations", async () => {
-    constantsOverrides.IS_FORMBRICKS_CLOUD = false;
+    constantsOverrides.IS_FORMA_CLOUD = false;
     mockOrgs([orgWith("scale", "active")]);
     await expect(getIsActiveCustomer("user-1")).resolves.toBe(false);
     expect(getOrganizationsByUserId).not.toHaveBeenCalled();

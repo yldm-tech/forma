@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { mergeReservedValues } from "@formbricks/types/embedded-data-resolver";
-import { TResponseData, TResponseVariables } from "@formbricks/types/responses";
-import { TSurvey, TSurveyRecallItem } from "@formbricks/types/surveys/types";
+import { mergeReservedValues } from "@forma/types/embedded-data-resolver";
+import { TResponseData, TResponseVariables } from "@forma/types/responses";
+import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import {
   checkForEmptyFallBackValue,
@@ -531,7 +531,7 @@ describe("recall utility functions", () => {
   describe("the grandfather rule at value-resolution time (ENG-1840)", () => {
     // These exercise `mergeReservedValues` — the one expression the guarantee rests on. Flip the two
     // spreads there and the second test goes red:
-    //   pnpm --filter=@formbricks/web test lib/utils/recall.test.ts
+    //   pnpm --filter=@forma/web test lib/utils/recall.test.ts
     const reserved = { country: "DE", url: "https://app.test/s/abc" };
 
     test("a reserved token resolves from the projected value", () => {

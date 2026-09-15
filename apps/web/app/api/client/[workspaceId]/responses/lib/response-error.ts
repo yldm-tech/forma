@@ -1,6 +1,6 @@
-import { Prisma } from "@formbricks/database/prisma";
-import type { PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@formbricks/types/errors";
+import { Prisma } from "@forma/database/prisma";
+import type { PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@forma/types/errors";
 import { getUniqueConstraintFields, isUniqueConstraintError } from "@/lib/utils/prisma-constraint";
 
 export const isPrismaKnownRequestError = (error: unknown): error is PrismaClientKnownRequestError =>

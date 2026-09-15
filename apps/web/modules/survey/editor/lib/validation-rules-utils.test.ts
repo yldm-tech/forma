@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   MAX_RELATIVE_DATE_AMOUNT,
   TValidationRule,
   ZRelativeDateBound,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import {
   clampRelativeAmount,
   createRelativeDateParams,

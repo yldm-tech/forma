@@ -22,7 +22,7 @@ const runEntrypoint = (
       ...process.env,
       AUTHZED_ENABLED: "true",
       AUTHZED_ENDPOINT: "invalid-endpoint",
-      AUTHZED_SYSTEM_KEY: "formbricks",
+      AUTHZED_SYSTEM_KEY: "forma",
       AUTHZED_TOKEN: "test-token",
       LOG_LEVEL: "fatal",
       NODE_OPTIONS: "--conditions=react-server",

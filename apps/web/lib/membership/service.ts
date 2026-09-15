@@ -1,11 +1,11 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma, PrismaClient } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZString } from "@formbricks/types/common";
-import { DatabaseError, UnknownError } from "@formbricks/types/errors";
-import { TMembership, ZMembership } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import { Prisma, PrismaClient } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZString } from "@forma/types/common";
+import { DatabaseError, UnknownError } from "@forma/types/errors";
+import { TMembership, ZMembership } from "@forma/types/memberships";
 import { reconcileOrganizationMembership } from "../authzed/organization-membership";
 import { validateInputs } from "../utils/validate";
 

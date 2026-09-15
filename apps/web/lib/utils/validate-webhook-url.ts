@@ -2,7 +2,7 @@ import "server-only";
 import dns from "node:dns";
 import net from "node:net";
 import { Agent } from "undici";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 import { DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS } from "../constants";
 
 const BLOCKED_HOSTNAMES = new Set([

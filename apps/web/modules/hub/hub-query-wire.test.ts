@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type FormbricksHub from "@formbricks/hub";
+import type FormaHub from "@forma/hub";
 
 /**
  * The wire-format contract between our Hub params and the URL the Hub actually receives.
@@ -16,7 +16,7 @@ import type FormbricksHub from "@formbricks/hub";
  * `hub-client`, the real `service`, and a stubbed global `fetch` to read the URL off. Only the ambient
  * concerns (env, logger, cache, server-only) are faked.
  *
- * Two SDK behaviours dictate the shape of the setup, both verified against @formbricks/hub@0.12.0:
+ * Two SDK behaviours dictate the shape of the setup, both verified against @forma/hub@0.12.0:
  *   - The client captures `this.fetch` from the global at CONSTRUCTION, so the stub has to be installed
  *     before `getHubClient()` builds the singleton — hence the cache reset in `beforeEach`.
  *   - It calls `fetch(url, init)` with `url` as a plain string, not a `Request`. (The sibling idiom in
@@ -32,7 +32,7 @@ vi.mock("@/lib/env", () => ({
   env: { HUB_API_KEY: "test-key", HUB_API_URL: "https://hub.test" },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     warn: vi.fn(),
     error: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock("@/lib/cache", () => ({
 }));
 
 const globalForHub = globalThis as unknown as {
-  formbricksHubClientRepeatArrays: FormbricksHub | undefined;
+  formaHubClientRepeatArrays: FormaHub | undefined;
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -67,12 +67,12 @@ beforeEach(() => {
   );
   // Installed before the client exists, because the SDK captures the global fetch at construction.
   vi.stubGlobal("fetch", fetchMock);
-  globalForHub.formbricksHubClientRepeatArrays = undefined;
+  globalForHub.formaHubClientRepeatArrays = undefined;
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  globalForHub.formbricksHubClientRepeatArrays = undefined;
+  globalForHub.formaHubClientRepeatArrays = undefined;
 });
 
 describe("feedback-record list query serialization", () => {

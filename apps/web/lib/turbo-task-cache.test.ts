@@ -53,7 +53,7 @@ const readTurboJson = (filePath: string): TurboJson =>
 // `inputs` can reach them ($TURBO_DEFAULT$ is package-relative). Without a globalDependencies entry
 // they are hashed by nothing and an edit replays a stale artifact:
 //
-//   prisma.config.mjs — drives `prisma generate` in @formbricks/database#build, whose
+//   prisma.config.mjs — drives `prisma generate` in @forma/database#build, whose
 //     `generated/prisma/**` is a declared build output. Repointing `schema`, the generator block or
 //     the datasource would otherwise reuse a client generated from the old config.
 //   .nvmrc           — the Node version CI and local builds resolve the whole toolchain from.

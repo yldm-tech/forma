@@ -1,5 +1,5 @@
-import { OperationNotAllowedError } from "@formbricks/types/errors";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { OperationNotAllowedError } from "@forma/types/errors";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
 import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
@@ -18,7 +18,7 @@ export const checkSpamProtectionPermission = async (organizationId: string): Pro
 };
 
 export const getExternalUrlsPermission = async (organizationId: string): Promise<boolean> => {
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     const [canUseCustomRedirectUrl, canUseCustomLinksInSurveys] = await Promise.all([
       hasCloudEntitlementWithLicenseGuard(
         organizationId,

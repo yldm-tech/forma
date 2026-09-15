@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import { authenticateRequest } from "@/app/api/v1/auth";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";

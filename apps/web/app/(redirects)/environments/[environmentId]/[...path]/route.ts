@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { AuthenticationError, AuthorizationError } from "@formbricks/types/errors";
+import { AuthenticationError, AuthorizationError } from "@forma/types/errors";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
 import { canUserNavigateWorkspace } from "@/lib/workspace/auth";
 import { getSession } from "@/modules/auth/lib/session";

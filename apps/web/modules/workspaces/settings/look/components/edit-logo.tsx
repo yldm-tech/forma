@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { TWorkspace } from "@forma/types/workspace";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { handleFileUpload } from "@/modules/storage/file-upload";

@@ -3,8 +3,8 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { TWorkflowDefinition, TWorkflowNode, TWorkflowResource } from "@formbricks/workflows";
-import { getWorkflowNodeConcreteType } from "@formbricks/workflows";
+import type { TWorkflowDefinition, TWorkflowNode, TWorkflowResource } from "@forma/workflows";
+import { getWorkflowNodeConcreteType } from "@forma/workflows";
 import { trackWorkflowEvent } from "@/modules/ee/workflows/lib/analytics";
 import { WORKFLOW_CLIENT_EVENTS } from "@/modules/ee/workflows/lib/analytics-events";
 import { getNodeRegistryEntry } from "@/modules/ee/workflows/lib/node-registry";

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import type { TAuthzedSourceRef } from "./backfill-diff";
 import {
   findMismatchedParentEdges,
@@ -14,7 +14,7 @@ import { getFeedbackDirectoryAssignmentObjectId } from "./feedback-directory-ass
 
 vi.mock("node:crypto", async (importOriginal) => importOriginal());
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     apiKey: { findMany: vi.fn() },
     apiKeyWorkspace: { findMany: vi.fn() },

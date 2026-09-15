@@ -1,6 +1,6 @@
 "use client";
 
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { WorkspaceAndOrgSwitch } from "@/app/(app)/workspaces/[workspaceId]/components/workspace-and-org-switch";
 import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 
@@ -8,7 +8,7 @@ interface TopControlBarProps {
   currentOrganizationId: string;
   isMultiOrgEnabled: boolean;
   organizationWorkspacesLimit: number;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isLicenseActive: boolean;
   isOwnerOrManager: boolean;
   isAccessControlAllowed: boolean;
@@ -21,7 +21,7 @@ export const TopControlBar = ({
   currentOrganizationId,
   isMultiOrgEnabled,
   organizationWorkspacesLimit,
-  isFormbricksCloud,
+  isFormaCloud,
   isLicenseActive,
   isOwnerOrManager,
   isAccessControlAllowed,
@@ -40,7 +40,7 @@ export const TopControlBar = ({
         currentOrganizationId={currentOrganizationId}
         isMultiOrgEnabled={isMultiOrgEnabled}
         organizationWorkspacesLimit={organizationWorkspacesLimit}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
         isLicenseActive={isLicenseActive}
         isOwnerOrManager={isOwnerOrManager}
         isMembershipPending={isMembershipPending}

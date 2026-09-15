@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import type { Session } from "@formbricks/types/auth";
+import type { Session } from "@forma/types/auth";
 import { getOnboardingWorkspace } from "@/app/(app)/(onboarding)/lib/onboarding-workspace";
 import { getOnboardingRedirectPath } from "@/app/(app)/(onboarding)/lib/redirect-if-onboarding-complete";
 import ClientWorkspaceRedirect from "@/app/ClientWorkspaceRedirect";

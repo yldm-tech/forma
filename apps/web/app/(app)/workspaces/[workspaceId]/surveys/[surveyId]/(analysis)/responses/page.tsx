@@ -1,11 +1,11 @@
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
 import { SurveyAnalysisNavigation } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/SurveyAnalysisNavigation";
 import { ResponsePage } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/responses/components/ResponsePage";
 import { SurveyAnalysisCTA } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SurveyAnalysisCTA";
 import { getAISmartToolsUnavailableReason, getOrganizationAIConfig } from "@/lib/ai/service";
 import {
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
   RESPONSES_PER_PAGE,
 } from "@/lib/constants";
@@ -82,7 +82,7 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
             responseCount={responseCount}
             segments={segments}
             isContactsEnabled={isContactsEnabled}
-            isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+            isFormaCloud={IS_FORMA_CLOUD}
             isStorageConfigured={IS_STORAGE_CONFIGURED}
             enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
             aiUnavailableReason={aiUnavailableReason}

@@ -1,7 +1,7 @@
 import { useRef, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TSurveyLanguage } from "@forma/types/surveys/types";
 import { LanguageIcon } from "@/components/icons/language-icon";
 import { mixColor } from "@/lib/color";
 import { getI18nLanguage } from "@/lib/i18n-utils";

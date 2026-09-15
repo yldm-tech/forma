@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Invite, Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Invite, Prisma } from "@forma/database/prisma";
 import {
   DatabaseError,
   InvalidInputError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { TInvitee } from "../types/invites";
 import {
@@ -18,7 +18,7 @@ import {
   resendInvite,
 } from "./invite";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     invite: {
       findUnique: vi.fn(),

@@ -1,9 +1,9 @@
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { ZId, ZString } from "@formbricks/types/common";
-import { TContactAttributesInput, ZContactAttributesInput } from "@formbricks/types/contact-attribute";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { formatSnakeCaseToTitleCase, isSafeIdentifier } from "@formbricks/types/safe-identifier";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { ZId, ZString } from "@forma/types/common";
+import { TContactAttributesInput, ZContactAttributesInput } from "@forma/types/contact-attribute";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { formatSnakeCaseToTitleCase, isSafeIdentifier } from "@forma/types/safe-identifier";
 import { MAX_ATTRIBUTE_CLASSES_PER_ENVIRONMENT } from "@/lib/constants";
 import { retryOnDeadlock } from "@/lib/utils/prisma-deadlock";
 import { validateInputs } from "@/lib/utils/validate";

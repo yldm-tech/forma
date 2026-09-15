@@ -1,7 +1,7 @@
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { FeedbackDirectoryView } from "@/modules/ee/feedback-directory/components/feedback-directory-view";
 import { getIsFeedbackDirectoriesEnabled } from "@/modules/ee/license-check/lib/utils";
@@ -54,16 +54,16 @@ export const FeedbackDirectoriesPage = async (props: { params: Promise<{ organiz
             feature="feedback-directories"
             buttons={[
               {
-                text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: IS_FORMBRICKS_CLOUD
-                  ? getOrganizationBillingPath(params.organizationId, IS_FORMBRICKS_CLOUD)
+                text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                href: IS_FORMA_CLOUD
+                  ? getOrganizationBillingPath(params.organizationId, IS_FORMA_CLOUD)
                   : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
               },
               {
                 text: t("common.learn_more"),
-                href: IS_FORMBRICKS_CLOUD
-                  ? getOrganizationBillingPath(params.organizationId, IS_FORMBRICKS_CLOUD)
-                  : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_feedback_directory",
+                href: IS_FORMA_CLOUD
+                  ? getOrganizationBillingPath(params.organizationId, IS_FORMA_CLOUD)
+                  : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_feedback_directory",
               },
             ]}
           />

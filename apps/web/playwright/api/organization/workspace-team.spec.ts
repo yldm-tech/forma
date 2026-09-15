@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { ME_API_URL, TEAMS_API_URL, WORKSPACE_TEAMS_API_URL } from "@/playwright/api/constants";
 import { test } from "../../lib/fixtures";
 import { loginAndGetApiKey } from "../../lib/utils";

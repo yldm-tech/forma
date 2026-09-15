@@ -1,6 +1,6 @@
 // Shared PostCSS plugins that confine Tailwind v4's globally-scoped emissions
-// to the Formbricks survey container (#fbjs), preventing host-page CSS
-// pollution. Consumed by both @formbricks/surveys and @formbricks/survey-ui so
+// to the Forma survey container (#fbjs), preventing host-page CSS
+// pollution. Consumed by both @forma/surveys and @forma/survey-ui so
 // the scoping logic cannot drift between the two CSS bundles that ship together
 // in the injected <style> element (see packages/surveys/src/lib/styles.ts).
 //
@@ -12,18 +12,18 @@
 // Each leaks into the host page and breaks host Tailwind utilities (shadows,
 // rings, transforms, gradients, theme variables).
 //
-// See: https://github.com/formbricks/js/issues/46
+// See: https://github.com/yldm-tech/js/issues/46
 
 // Strips the `@layer properties { ... }` block that Tailwind v4 emits as a
 // browser-compatibility fallback for `@property` declarations.
 //
 // Problem: CSS `@layer` at-rules are globally scoped by spec — they cannot be
-// confined by a surrounding selector. Even though all other Formbricks survey
+// confined by a surrounding selector. Even though all other Forma survey
 // styles are correctly scoped to `#fbjs`, the `@layer properties` block
 // contains a bare `*, :before, :after, ::backdrop` selector that resets all
 // `--tw-*` CSS custom properties on every element of the host page. This
 // breaks shadows, rings, transforms, and other Tailwind utilities on any site
-// that uses Tailwind v4 alongside the Formbricks SDK.
+// that uses Tailwind v4 alongside the Forma SDK.
 //
 // The `@property` declarations already present in the same stylesheet cover
 // the same browser-compatibility need for all supporting browsers, so removing

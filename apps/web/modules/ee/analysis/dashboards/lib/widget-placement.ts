@@ -1,4 +1,4 @@
-import { TWidgetLayout, ZWidgetLayout } from "@formbricks/types/analysis";
+import { TWidgetLayout, ZWidgetLayout } from "@forma/types/analysis";
 
 /** Columns of the `lg` breakpoint, the one the stored layouts are expressed in. */
 export const GRID_COLUMNS = 12;

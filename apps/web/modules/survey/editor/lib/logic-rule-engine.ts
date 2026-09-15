@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { ZSurveyLogicConditionsOperator } from "@formbricks/types/surveys/logic";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { ZSurveyLogicConditionsOperator } from "@forma/types/surveys/logic";
 
 const OP = ZSurveyLogicConditionsOperator.enum;
 

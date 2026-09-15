@@ -1,5 +1,5 @@
-import { Response } from "@formbricks/database/prisma";
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { Response } from "@forma/database/prisma";
+import { TOrganizationBilling } from "@forma/types/organizations";
 import { TGetResponsesFilter } from "@/modules/api/v2/management/responses/types/responses";
 
 export const responseInput: Omit<Response, "id"> = {

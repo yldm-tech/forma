@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   LINK_SURVEY_SYSTEM_PARAM_KEYS,
   RESERVED_DECLARED_FIELD_NAMES,
-} from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/validation";
 import { getHiddenFieldsFromSearchParams, warnOnMissingIngestRows } from "./hidden-fields";
 
 describe("getHiddenFieldsFromSearchParams", () => {

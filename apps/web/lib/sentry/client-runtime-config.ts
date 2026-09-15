@@ -17,10 +17,10 @@ export interface TSentryClientRuntimeConfig {
 }
 
 /** Name of the `window` property carrying the config. Must match the `Window` augmentation below. */
-export const SENTRY_CLIENT_RUNTIME_CONFIG_KEY = "__formbricksSentryClientConfig";
+export const SENTRY_CLIENT_RUNTIME_CONFIG_KEY = "__formaSentryClientConfig";
 
 declare global {
   interface Window {
-    __formbricksSentryClientConfig?: TSentryClientRuntimeConfig;
+    __formaSentryClientConfig?: TSentryClientRuntimeConfig;
   }
 }

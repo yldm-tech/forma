@@ -1,10 +1,10 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId, ZString } from "@formbricks/types/common";
-import { DatabaseError, UnknownError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId, ZString } from "@forma/types/common";
+import { DatabaseError, UnknownError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { TTeamRole } from "@/modules/ee/teams/team-list/types/team";
 import { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";

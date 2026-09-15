@@ -1,14 +1,14 @@
 {
-  "name": "@formbricks/surveys",
+  "name": "@forma/surveys",
   "license": "MIT",
   "version": "1.0.0",
   "private": true,
-  "description": "Formbricks-surveys is a helper library to embed surveys into your application.",
-  "homepage": "https://formbricks.com",
+  "description": "Forma-surveys is a helper library to embed surveys into your application.",
+  "homepage": "https://forma.ylam.ai",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "sideEffects": false,
   "source": "./src/index.ts",
@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@calcom/embed-snippet": "1.3.3",
-    "@formbricks/survey-ui": "workspace:*",
+    "@forma/survey-ui": "workspace:*",
     "i18next": "catalog:",
     "i18next-icu": "catalog:",
     "isomorphic-dompurify": "catalog:",
@@ -55,10 +55,10 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
-    "@formbricks/i18n-utils": "workspace:*",
-    "@formbricks/types": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
+    "@forma/i18n-utils": "workspace:*",
+    "@forma/types": "workspace:*",
     "@preact/preset-vite": "2.10.5",
     "@tailwindcss/postcss": "catalog:",
     "@testing-library/preact": "3.2.4",

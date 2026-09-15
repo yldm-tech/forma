@@ -1,5 +1,5 @@
 import { TFunction } from "i18next";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getDefaultEndingCard, getDefaultWelcomeCard } from "@/app/lib/survey-builder";
 
 export const getMinimalSurvey = (t: TFunction): TSurvey => ({

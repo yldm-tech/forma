@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { TOrganization } from "@forma/types/organizations";
+import { TWorkspace } from "@forma/types/workspace";
 import type { TDeploymentInfo } from "@/lib/ai/availability";
 
 export interface WorkspaceContextType {

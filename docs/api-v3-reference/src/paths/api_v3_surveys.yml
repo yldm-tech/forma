@@ -176,7 +176,7 @@ post:
     endpoint accepts
 
     multilingual authoring maps keyed by real locale codes and converts them to
-    Formbricks'
+    Forma'
 
     internal default-language representation. Non-default locale keys in
     translated content

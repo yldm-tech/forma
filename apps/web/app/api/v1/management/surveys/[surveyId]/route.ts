@@ -1,7 +1,7 @@
-import { logger } from "@formbricks/logger";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZSurveyUpdateInput } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { TAuthenticationApiKey } from "@forma/types/auth";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { ZSurveyUpdateInput } from "@forma/types/surveys/types";
 import { handleErrorResponse } from "@/app/api/v1/auth";
 import { deleteSurvey } from "@/app/api/v1/management/surveys/[surveyId]/lib/surveys";
 import { checkFeaturePermissions } from "@/app/api/v1/management/surveys/lib/utils";

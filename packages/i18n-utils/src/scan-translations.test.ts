@@ -95,32 +95,32 @@ describe("Translation Scanner", () => {
 
     test("preserves URLs with // in them", () => {
       const content = `
-        const link = "https://formbricks.com";
+        const link = "https://forma.ylam.ai";
         const link2 = "http://example.com";
         const text = t("valid.key");
       `;
       const result = stripComments(content);
-      expect(result).toContain("https://formbricks.com");
+      expect(result).toContain("https://forma.ylam.ai");
       expect(result).toContain("http://example.com");
       expect(result).toContain('t("valid.key")');
     });
 
     test("preserves translation keys on same line as URLs", () => {
-      const content = `<Link href="https://formbricks.com">{t("s.create_your_own")}</Link>`;
+      const content = `<Link href="https://forma.ylam.ai">{t("s.create_your_own")}</Link>`;
       const result = stripComments(content);
       expect(result).toContain('t("s.create_your_own")');
-      expect(result).toContain("https://formbricks.com");
+      expect(result).toContain("https://forma.ylam.ai");
     });
 
     test("removes actual comments but preserves URLs", () => {
       const content = `
-        const url = "https://formbricks.com";
+        const url = "https://forma.ylam.ai";
         // This is a real comment with t("comment.key")
         const text = t("valid.key");
         const api = "http://api.example.com"; // Comment after URL
       `;
       const result = stripComments(content);
-      expect(result).toContain("https://formbricks.com");
+      expect(result).toContain("https://forma.ylam.ai");
       expect(result).toContain("http://api.example.com");
       expect(result).toContain('t("valid.key")');
       expect(result).not.toContain('t("comment.key")');
@@ -268,7 +268,7 @@ describe("Translation Scanner", () => {
     });
 
     test("extracts keys from lines containing URLs", () => {
-      const content = `<Link href="https://formbricks.com">{t("s.create_your_own")}</Link>`;
+      const content = `<Link href="https://forma.ylam.ai">{t("s.create_your_own")}</Link>`;
       const keys = extractKeysFromContent(content);
       expect(keys).toContain("s.create_your_own");
       expect(keys).toHaveLength(1);
@@ -616,7 +616,7 @@ describe("Translation Scanner", () => {
               <Trans i18nKey="page.footer" />
               <Trans i18nKey={'page.header'} />
               <Trans i18nKey={"page.sidebar"} />
-              <Link href="https://formbricks.com">{t("page.link")}</Link>
+              <Link href="https://forma.ylam.ai">{t("page.link")}</Link>
               {/* Inline comment t("inline.ignored") */}
             </div>
           );
@@ -683,15 +683,15 @@ describe("Translation Scanner", () => {
 
     test("object-hash vs plain md5 check", () => {
       // In Lingo.dev / object-hash:
-      // objectHash.MD5("Welcome to Formbricks") should match expected hash
-      const val = "Welcome to Formbricks";
+      // objectHash.MD5("Welcome to Forma") should match expected hash
+      const val = "Welcome to Forma";
       const expectedHash = objectHash.MD5(val);
       // To prevent regressions where someone might change objectHash.MD5 to standard crypto MD5
-      // crypto.createHash("md5").update("Welcome to Formbricks").digest("hex") would yield:
-      // "7c7a10271701e0004944fb7f0f6797a1"
-      // But objectHash.MD5 yields "7ce863429c5176739b8e0a1ea023f411"
-      expect(expectedHash).toBe("7ce863429c5176739b8e0a1ea023f411");
-      expect(expectedHash).not.toBe("7c7a10271701e0004944fb7f0f6797a1");
+      // crypto.createHash("md5").update("Welcome to Forma").digest("hex") would yield:
+      // "7b8a27713b25bd44354643ff45d649c6"
+      // But objectHash.MD5 yields "e7b146fde66bc2f363558d651aef0d90"
+      expect(expectedHash).toBe("e7b146fde66bc2f363558d651aef0d90");
+      expect(expectedHash).not.toBe("7b8a27713b25bd44354643ff45d649c6");
     });
 
     test("validateLockfile identifies missing, outOfSync, and extra keys", async () => {
@@ -703,7 +703,7 @@ describe("Translation Scanner", () => {
       // Write mock default locale JSON: default locale is en-US.json
       const localeData = {
         auth: {
-          login: "Welcome to Formbricks", // outOfSync because hash will differ
+          login: "Welcome to Forma", // outOfSync because hash will differ
           logout: "Sign out", // missing from lockfile
         },
         common: {

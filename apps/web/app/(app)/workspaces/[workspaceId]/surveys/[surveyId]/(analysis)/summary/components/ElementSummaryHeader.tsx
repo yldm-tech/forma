@@ -3,8 +3,8 @@
 import { InboxIcon } from "lucide-react";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyElementSummary } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+import { TSurvey, TSurveyElementSummary } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { recallToHeadline } from "@/lib/utils/recall";
 import { formatTextWithSlashes } from "@/modules/survey/editor/lib/utils";
 import { getElementTypes } from "@/modules/survey/lib/elements";

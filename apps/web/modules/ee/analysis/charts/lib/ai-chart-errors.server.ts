@@ -1,7 +1,7 @@
 import "server-only";
 import { NoObjectGeneratedError } from "ai";
-import { AIOutputTokenLimitError } from "@formbricks/ai";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { AIOutputTokenLimitError } from "@forma/ai";
+import { InvalidInputError } from "@forma/types/errors";
 import { AI_CHART_PROMPT_ERROR_CODE } from "./ai-chart-errors";
 
 /**

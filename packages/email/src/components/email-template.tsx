@@ -14,8 +14,8 @@ import {
 import { TEmailTemplateLegalProps } from "../types/email";
 import { TFunction } from "../types/translations";
 
-const fbLogoUrl = "https://app.formbricks.com/logo-transparent.png";
-const logoLink = "https://formbricks.com?utm_source=formbricks-app&utm_medium=email&utm_campaign=email_logo";
+const fbLogoUrl = "https://app.forma.ylam.ai/logo-transparent.png";
+const logoLink = "https://forma.ylam.ai?utm_source=forma-app&utm_medium=email&utm_campaign=email_logo";
 const FORCE_LIGHT_COLOR_SCHEME = "only light";
 /**
  * Widths are also emitted as `width` HTML attributes, in px, to match the `w-60` / `w-80` classes.
@@ -103,7 +103,7 @@ export function EmailTemplate({
           <Section className="mt-4 text-center text-sm">
             <Link
               className="m-0 text-sm font-normal text-slate-500"
-              href="https://formbricks.com/?utm_source=formbricks-app&utm_medium=email&utm_campaign=email_footer_text"
+              href="https://forma.ylam.ai/?utm_source=forma-app&utm_medium=email&utm_campaign=email_footer_text"
               target="_blank"
               rel="noopener noreferrer">
               {t("emails.email_template_text_1")}

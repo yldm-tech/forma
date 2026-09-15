@@ -1,6 +1,6 @@
 import { Config } from "@/lib/common/config";
 import { CONTAINER_ID, LIVE_REGION_ID } from "@/lib/common/constants";
-import { FORMBRICKS_EVENTS, emitFormbricksEvent } from "@/lib/common/events";
+import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { executeRecaptcha, loadRecaptchaScript } from "@/lib/common/recaptcha";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
@@ -18,7 +18,7 @@ import { type TTrackProperties } from "@/types/survey";
 
 let isSurveyRunning = false;
 
-// The surveys currently on screen, so each "formbricks_survey_closed" can name its own. A set
+// The surveys currently on screen, so each "forma_survey_closed" can name its own. A set
 // rather than a single id because a second survey can render over a live one: a fired TimeoutStack
 // entry is never pruned, so a later `checkPageUrl` releases `isSurveyRunning` while the first
 // survey is still up, and the renderer appends a second container instead of replacing the first.
@@ -148,9 +148,9 @@ export const renderWidget = async (
   const placement = workspaceOverwrites.placement ?? settings.placement;
   const isBrandingEnabled = settings.inAppSurveyBranding;
 
-  let formbricksSurveys: TFormbricksSurveys;
+  let formaSurveys: TFormaSurveys;
   try {
-    formbricksSurveys = await loadFormbricksSurveysExternally();
+    formaSurveys = await loadFormaSurveysExternally();
   } catch (error) {
     logger.error(`Failed to load surveys library: ${String(error)}`);
     setIsSurveyRunning(false);
@@ -171,15 +171,15 @@ export const renderWidget = async (
   const timeoutId = setTimeout(() => {
     openSurveyIds.add(survey.id);
 
-    // Render-gated, paired with "formbricks_survey_closed" off the same set so a host counting opens
+    // Render-gated, paired with "forma_survey_closed" off the same set so a host counting opens
     // against closes cannot drift. Deliberately not gated on the display POST: the renderer only
     // logs a failed one and leaves the survey on screen, so waiting for persistence would report a
     // close for a survey that never reported an open — and a slow POST against a quick dismissal
     // would deliver the two out of order. What was persisted is the dashboard's Displays count; this
     // event is what the respondent saw.
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyShown, { surveyId: survey.id });
+    emitFormaEvent(FORMA_EVENTS.surveyShown, { surveyId: survey.id });
 
-    formbricksSurveys.renderSurvey({
+    formaSurveys.renderSurvey({
       appUrl: config.get().appUrl,
       workspaceId: config.get().workspaceId,
       contactId: config.get().user.data.contactId ?? undefined,
@@ -258,7 +258,7 @@ export const renderWidget = async (
         // client-minted — it is what lets the host link a session replay to this response. Emitted
         // last for the same reason as in onDisplayCreated: this callback runs inside the response
         // queue's try block, and a host-page throw here would mark a persisted response as failed.
-        emitFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, {
+        emitFormaEvent(FORMA_EVENTS.responseSubmitted, {
           surveyId: survey.id,
           responseId,
           finished: false,
@@ -272,7 +272,7 @@ export const renderWidget = async (
         // "completed X → show Y" targeting would never fire until the person-state TTL expired.
         refreshSegmentsAfterInteraction(config.get().user.data.userId, survey, "onFinished");
 
-        emitFormbricksEvent(FORMBRICKS_EVENTS.responseSubmitted, {
+        emitFormaEvent(FORMA_EVENTS.responseSubmitted, {
           surveyId: survey.id,
           responseId,
           finished: true,
@@ -316,7 +316,7 @@ export const closeSurvey = (surveyId?: string): void => {
   // rendered survey.
   for (const closedSurveyId of surveyId === undefined ? [...openSurveyIds] : [surveyId]) {
     if (!openSurveyIds.delete(closedSurveyId)) continue;
-    emitFormbricksEvent(FORMBRICKS_EVENTS.surveyClosed, { surveyId: closedSurveyId });
+    emitFormaEvent(FORMA_EVENTS.surveyClosed, { surveyId: closedSurveyId });
   }
 };
 
@@ -357,26 +357,26 @@ export const removeWidgetContainer = (): void => {
 const SURVEYS_LOAD_TIMEOUT_MS = 10000;
 const SURVEYS_POLL_INTERVAL_MS = 200;
 
-type TFormbricksSurveys = NonNullable<typeof globalThis.window.formbricksSurveys>;
+type TFormaSurveys = NonNullable<typeof globalThis.window.formaSurveys>;
 
-let surveysLoadPromise: Promise<TFormbricksSurveys> | null = null;
+let surveysLoadPromise: Promise<TFormaSurveys> | null = null;
 
-const waitForSurveysGlobal = (): Promise<TFormbricksSurveys> => {
+const waitForSurveysGlobal = (): Promise<TFormaSurveys> => {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
     const check = (): void => {
-      if (globalThis.window.formbricksSurveys) {
-        const storedNonce = globalThis.window.__formbricksNonce;
+      if (globalThis.window.formaSurveys) {
+        const storedNonce = globalThis.window.__formaNonce;
         if (storedNonce) {
-          globalThis.window.formbricksSurveys.setNonce?.(storedNonce);
+          globalThis.window.formaSurveys.setNonce?.(storedNonce);
         }
-        resolve(globalThis.window.formbricksSurveys);
+        resolve(globalThis.window.formaSurveys);
         return;
       }
 
       if (Date.now() - startTime >= SURVEYS_LOAD_TIMEOUT_MS) {
-        reject(new Error("Formbricks Surveys library did not become available within timeout"));
+        reject(new Error("Forma Surveys library did not become available within timeout"));
         return;
       }
 
@@ -387,16 +387,16 @@ const waitForSurveysGlobal = (): Promise<TFormbricksSurveys> => {
   });
 };
 
-const loadFormbricksSurveysExternally = (): Promise<TFormbricksSurveys> => {
-  if (globalThis.window.formbricksSurveys) {
-    return Promise.resolve(globalThis.window.formbricksSurveys);
+const loadFormaSurveysExternally = (): Promise<TFormaSurveys> => {
+  if (globalThis.window.formaSurveys) {
+    return Promise.resolve(globalThis.window.formaSurveys);
   }
 
   if (surveysLoadPromise) {
     return surveysLoadPromise;
   }
 
-  surveysLoadPromise = new Promise<TFormbricksSurveys>((resolve, reject: (error: unknown) => void) => {
+  surveysLoadPromise = new Promise<TFormaSurveys>((resolve, reject: (error: unknown) => void) => {
     const config = Config.getInstance();
     const script = document.createElement("script");
     script.src = `${config.get().appUrl}/js/surveys.umd.cjs`;
@@ -406,14 +406,14 @@ const loadFormbricksSurveysExternally = (): Promise<TFormbricksSurveys> => {
         .then(resolve)
         .catch((error: unknown) => {
           surveysLoadPromise = null;
-          console.error("Failed to load Formbricks Surveys library:", error);
-          reject(new Error(`Failed to load Formbricks Surveys library`));
+          console.error("Failed to load Forma Surveys library:", error);
+          reject(new Error(`Failed to load Forma Surveys library`));
         });
     };
     script.onerror = (error) => {
       surveysLoadPromise = null;
-      console.error("Failed to load Formbricks Surveys library:", error);
-      reject(new Error(`Failed to load Formbricks Surveys library`));
+      console.error("Failed to load Forma Surveys library:", error);
+      reject(new Error(`Failed to load Forma Surveys library`));
     };
     document.head.appendChild(script);
   });
@@ -434,7 +434,7 @@ let isPrefetched = false;
  */
 export const prefetchSurveysScript = (appUrl: string): void => {
   // Don't prefetch if already loaded or already prefetching
-  if (globalThis.window.formbricksSurveys) return;
+  if (globalThis.window.formaSurveys) return;
   if (isPrefetched) return;
 
   isPrefetched = true;

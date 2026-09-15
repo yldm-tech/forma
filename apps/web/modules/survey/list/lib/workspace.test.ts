@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, ResourceNotFoundError, ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError, ResourceNotFoundError, ValidationError } from "@forma/types/errors";
 import {
   lookupAuthorizedOrganizationIds,
   lookupAuthorizedWorkspaceIds,
@@ -13,7 +13,7 @@ import { doesWorkspaceExist, getUserWorkspaces, getWorkspace, getWorkspaceWithLa
 
 vi.mock("@/lib/utils/validate");
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       findFirst: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("@/lib/authorization/resource-list", () => ({
   lookupAuthorizedWorkspaceIds: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

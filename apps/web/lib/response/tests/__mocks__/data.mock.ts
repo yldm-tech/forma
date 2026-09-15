@@ -1,10 +1,10 @@
 import { isAfter, isBefore, isSameDay } from "date-fns";
-import { Prisma } from "@formbricks/database/prisma";
-import { TDisplay } from "@formbricks/types/displays";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TResponse, TResponseFilterCriteria, TResponseUpdateInput } from "@formbricks/types/responses";
-import { TSurvey, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
+import { Prisma } from "@forma/database/prisma";
+import { TDisplay } from "@forma/types/displays";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TResponse, TResponseFilterCriteria, TResponseUpdateInput } from "@forma/types/responses";
+import { TSurvey, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
 import { mockWelcomeCard } from "@/lib/i18n/i18n.mock";
 import { responseSelection } from "../../service";
 import { constantsForTests } from "../constants";
@@ -512,7 +512,7 @@ export const mockSurvey: TSurvey = {
       subheader: {
         default: "We appreciate your feedback.",
       },
-      buttonLink: "https://formbricks.com",
+      buttonLink: "https://forma.ylam.ai",
       buttonLabel: { default: "Create your own Survey" },
     },
   ],

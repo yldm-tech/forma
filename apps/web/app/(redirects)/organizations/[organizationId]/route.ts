@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
-import { AuthenticationError, AuthorizationError } from "@formbricks/types/errors";
+import { AuthenticationError, AuthorizationError } from "@forma/types/errors";
 import { hasOrganizationAccess } from "@/lib/auth";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getUserWorkspaces } from "@/lib/workspace/service";
@@ -31,7 +31,7 @@ export const GET = async (_: Request, context: { params: Promise<{ organizationI
   const firstWorkspace = workspaces[0];
 
   if (isBilling) {
-    return redirect(getOrganizationBillingPath(organizationId, IS_FORMBRICKS_CLOUD));
+    return redirect(getOrganizationBillingPath(organizationId, IS_FORMA_CLOUD));
   }
 
   return redirect(`/workspaces/${firstWorkspace.id}/`);

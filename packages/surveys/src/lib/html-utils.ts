@@ -2,7 +2,7 @@ import DOMPurify from "isomorphic-dompurify";
 
 // Sanitization that has to stay identical between the SDK bundle and the React
 // components lives in survey-ui; re-exported here so callers keep one import.
-export { sanitizeSurveyHtml } from "@formbricks/survey-ui";
+export { sanitizeSurveyHtml } from "@forma/survey-ui";
 
 /**
  * Strip inline style attributes from HTML string to avoid CSP violations

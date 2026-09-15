@@ -1,12 +1,12 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { ApiKey, ApiKeyPermission, Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { TOrganizationAccess } from "@formbricks/types/api-key";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, OperationNotAllowedError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ApiKey, ApiKeyPermission, Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { TOrganizationAccess } from "@forma/types/api-key";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, OperationNotAllowedError } from "@forma/types/errors";
 import { reconcileApiKeyRelationships } from "@/lib/authzed/api-key";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { CONTROL_HASH } from "@/lib/constants";

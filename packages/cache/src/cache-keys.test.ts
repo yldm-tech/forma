@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { CacheKey } from "@/types/keys";
 import { createCacheKey } from "./cache-keys";
 
-describe("@formbricks/cache cacheKeys", () => {
+describe("@forma/cache cacheKeys", () => {
   describe("createCacheKey", () => {
     describe("environment namespace", () => {
       test("should create environment state key", () => {

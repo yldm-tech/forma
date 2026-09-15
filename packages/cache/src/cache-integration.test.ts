@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await -- async helpers mock cache interfaces that must return promises without awaiting anything */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { createCacheKey } from "./cache-keys";
 import { getCacheService } from "./client";
 import type { CacheService } from "./service";

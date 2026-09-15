@@ -5,8 +5,8 @@
    components and does not apply here. Scoped to the file because ESLint cannot tell a server
    component from a client one (ENG-2366). */
 import Link from "next/link";
-import { logger } from "@formbricks/logger";
-import { ZUserEmail } from "@formbricks/types/user";
+import { logger } from "@forma/logger";
+import { ZUserEmail } from "@forma/types/user";
 import { IS_SMTP_CONFIGURED, WEBAPP_URL } from "@/lib/constants";
 import { getEmailFromEmailToken } from "@/lib/jwt";
 import { getTranslate } from "@/lingodotdev/server";

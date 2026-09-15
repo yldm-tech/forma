@@ -1,6 +1,6 @@
 import "server-only";
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { TSurvey } from "@forma/types/surveys/types";
 
 /**
  * Resolves a `?lang=` value to one of the survey's own language codes, or "default".

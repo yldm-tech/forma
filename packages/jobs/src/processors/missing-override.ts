@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { JobHandler } from "@/src/contracts";
 
 /** Scalar identifiers safe to put in a log line. */

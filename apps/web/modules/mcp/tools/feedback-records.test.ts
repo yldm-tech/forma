@@ -1,7 +1,7 @@
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
+import { ApiKeyPermission } from "@forma/database/prisma";
 import {
   countV3FeedbackRecords,
   createV3FeedbackRecord,
@@ -50,7 +50,7 @@ vi.mock("@/app/api/v3/lib/audit", () => ({
   queueV3AuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn() })) },
 }));
 
@@ -71,7 +71,7 @@ const authInfo = {
   token: "key_1",
   clientId: "key_1",
   scopes: ["feedbackRecords:read", "feedbackRecords:write"],
-  extra: { formbricksAuthentication: apiKeyAuth, requestId: "req_tool" },
+  extra: { formaAuthentication: apiKeyAuth, requestId: "req_tool" },
 };
 
 const readOnlyAuthInfo = { ...authInfo, scopes: ["feedbackRecords:read"] };
@@ -223,7 +223,7 @@ describe("tool arguments are validated by the SDK (ENG-2256)", () => {
 
     const modern = era === "modern";
     const response = await handler.fetch(
-      new Request("https://formbricks.test/api/mcp", {
+      new Request("https://forma.test/api/mcp", {
         method: "POST",
         headers: {
           "content-type": "application/json",

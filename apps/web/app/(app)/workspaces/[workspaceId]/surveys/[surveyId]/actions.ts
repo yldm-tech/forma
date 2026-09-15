@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZResponseFilterCriteria } from "@formbricks/types/responses";
+import { ZId } from "@forma/types/common";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { ZResponseFilterCriteria } from "@forma/types/responses";
 import { assertCan } from "@/lib/authorization";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getResponseDownloadFile, getResponseFilteringValues } from "@/lib/response/service";

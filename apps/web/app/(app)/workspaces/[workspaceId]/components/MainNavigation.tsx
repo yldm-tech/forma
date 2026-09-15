@@ -16,9 +16,9 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TUser } from "@formbricks/types/user";
+import { TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization } from "@forma/types/organizations";
+import { TUser } from "@forma/types/user";
 import {
   getOrganizationsForSwitcherAction,
   getWorkspacesForSwitcherAction,
@@ -50,7 +50,7 @@ interface NavigationProps {
   user: TUser;
   organization: TOrganization;
   workspace: { id: string; name: string };
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isDevelopment: boolean;
   membershipRole?: TOrganizationRole;
   publicDomain: string;
@@ -59,7 +59,7 @@ interface NavigationProps {
   isAccessControlAllowed: boolean;
   responseCount: number;
   newTrialBannerVariant: string | boolean;
-  isFormbricksSurveysConfigured: boolean;
+  isFormaSurveysConfigured: boolean;
   // Whole days left in the trial, or null when there is no trial to count down. Computed by the
   // server layout: deriving it here would mean reading `Date.now()` during render, which diverges
   // between the server pass and hydration and then goes stale as the tab sits open (ENG-2366).
@@ -129,7 +129,7 @@ export const MainNavigation = ({
   user,
   workspace,
   membershipRole,
-  isFormbricksCloud,
+  isFormaCloud,
   isDevelopment,
   publicDomain,
   organizationWorkspacesLimit,
@@ -137,7 +137,7 @@ export const MainNavigation = ({
   isAccessControlAllowed,
   responseCount,
   newTrialBannerVariant,
-  isFormbricksSurveysConfigured,
+  isFormaSurveysConfigured,
   trialDaysRemaining,
 }: Readonly<NavigationProps>) => {
   const router = useRouter();
@@ -288,7 +288,7 @@ export const MainNavigation = ({
   }, [isOrganizationDropdownOpen, loadOrganizations]);
 
   const mainNavigationLink = isBilling
-    ? getBillingFallbackPath(organization.id, isFormbricksCloud)
+    ? getBillingFallbackPath(organization.id, isFormaCloud)
     : `/workspaces/${workspace.id}/surveys/`;
 
   const handleWorkspaceChange = (workspaceId: string) => {
@@ -325,7 +325,7 @@ export const MainNavigation = ({
   };
 
   const workspaceLimitModalButtons = (): [ModalButton, ModalButton] => {
-    if (isFormbricksCloud) {
+    if (isFormaCloud) {
       return [
         {
           text: t("workspace.settings.billing.upgrade"),
@@ -343,7 +343,7 @@ export const MainNavigation = ({
         text: t("workspace.settings.billing.upgrade"),
         href: isLicenseActive
           ? `/organizations/${organization.id}/settings/enterprise`
-          : "https://formbricks.com/upgrade-self-hosted-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=upgrade_prompt_nav",
+          : "https://forma.ylam.ai/upgrade-self-hosted-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=upgrade_prompt_nav",
       },
       {
         text: t("common.cancel"),
@@ -406,7 +406,7 @@ export const MainNavigation = ({
                 organizationId={organization.id}
                 organizationName={organization.name}
                 membershipRole={membershipRole}
-                isFormbricksCloud={isFormbricksCloud}
+                isFormaCloud={isFormaCloud}
                 isCollapsed={false}
                 isTextVisible={false}
                 workspaces={workspaceSwitcher.items}
@@ -494,7 +494,7 @@ export const MainNavigation = ({
               <MainNavigationNotices
                 isCollapsed={isCollapsed}
                 isOwnerOrManager={isOwnerOrManager}
-                isFormbricksCloud={isFormbricksCloud}
+                isFormaCloud={isFormaCloud}
                 isDevelopment={isDevelopment}
                 latestVersion={latestVersion}
                 trialDaysRemaining={trialDaysRemaining}
@@ -592,7 +592,7 @@ export const MainNavigation = ({
                 isCollapsed={isCollapsed}
                 isTextVisible={isTextVisible}
                 className="rounded-br-xl"
-                isFormbricksSurveysConfigured={isFormbricksSurveysConfigured}
+                isFormaSurveysConfigured={isFormaSurveysConfigured}
               />
             </div>
           </div>

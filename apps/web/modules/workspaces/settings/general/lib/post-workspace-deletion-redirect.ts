@@ -1,5 +1,5 @@
 import "server-only";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { TWorkspace } from "@forma/types/workspace";
 import { getOnboardingRedirectPath } from "@/app/(app)/(onboarding)/lib/redirect-if-onboarding-complete";
 
 export type TWorkspaceRedirectCandidate = Pick<TWorkspace, "id" | "organizationId" | "createdAt">;

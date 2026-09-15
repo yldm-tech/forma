@@ -26,7 +26,7 @@
  * No external services: prisma and nodemailer are mocked, so this runs in CI with no DB and no SMTP server.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TWorkflowRunJobData } from "@formbricks/jobs";
+import type { TWorkflowRunJobData } from "@forma/jobs";
 import { processWorkflowRunJob } from "./process-workflow-run-job";
 
 // ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ vi.mock("nodemailer", () => ({
   default: { createTransport: mockCreateTransport },
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workflowRun: {
       findFirst: mockWorkflowRunFindFirst,
@@ -125,7 +125,7 @@ vi.mock("@/lib/organization/service", () => ({
 }));
 vi.mock("@/lib/workspace/service", () => ({ getWorkspaceMemberEmails: mockGetWorkspaceMemberEmails }));
 
-vi.mock("@formbricks/logger", () => {
+vi.mock("@forma/logger", () => {
   const mockLogger = {
     debug: vi.fn(),
     error: mockLoggerError,
@@ -337,11 +337,11 @@ describe("processWorkflowRunJob — send_email Follow-Ups render parity (integra
       await processWorkflowRunJob(jobData, baseContext);
 
       const html = capturedMessage().html ?? "";
-      // Full HTML document (react-email <Html> root) with table layout + Formbricks branded footer.
+      // Full HTML document (react-email <Html> root) with table layout + Forma branded footer.
       expect(html).toMatch(/<!doctype html/i);
       expect(html).toMatch(/<html/i);
       expect(html).toMatch(/<table/i);
-      expect(html).toContain("This email was sent via Formbricks."); // branded footer (emails.email_template_text_1)
+      expect(html).toContain("This email was sent via Forma."); // branded footer (emails.email_template_text_1)
       // It is emphatically NOT just the raw body paragraph.
       expect(html).not.toBe(`<p>Hi ${RESPONDENT_NAME}, thanks!</p>`);
       expect(html.length).toBeGreaterThan(500);

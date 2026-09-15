@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import { TOrganization } from "@forma/types/organizations";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import {
   TSurvey,
   TSurveyCreateInputWithWorkspaceId,
   TSurveyQuestionTypeEnum,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import { responses } from "@/app/lib/api/response";
 import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";

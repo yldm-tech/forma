@@ -3,7 +3,7 @@ import {
   TContactAttributeDataType,
   TContactAttributeKey,
   ZContactAttributeDataType,
-} from "@formbricks/types/contact-attribute-key";
+} from "@forma/types/contact-attribute-key";
 
 export const ZContact = z.object({
   id: z.cuid2(),

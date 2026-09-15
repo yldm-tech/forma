@@ -62,12 +62,12 @@ vi.mock("@/lib/cache", () => ({
   cache: mockCache,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: mockLogger,
 }));
 
-// Mock @formbricks/cache
-vi.mock("@formbricks/cache", () => ({
+// Mock @forma/cache
+vi.mock("@forma/cache", () => ({
   createCacheKey: {
     custom: vi.fn((namespace: string, ...parts: string[]) => `${namespace}:${parts.join(":")}`),
     rateLimit: {
@@ -278,7 +278,7 @@ describe("Auth Utils", () => {
       });
 
       test("should create consistent cache keys with bucketed timestamps", async () => {
-        const { createCacheKey } = await import("@formbricks/cache");
+        const { createCacheKey } = await import("@forma/cache");
         const { createAuditIdentifier } = await import("./utils");
 
         mockCache.getRedisClient.mockResolvedValue(null);

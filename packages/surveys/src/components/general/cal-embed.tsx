@@ -1,7 +1,7 @@
 import snippet from "@calcom/embed-snippet";
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { type TSurveyCalElement } from "@formbricks/types/surveys/elements";
+import { type TSurveyCalElement } from "@forma/types/surveys/elements";
 import { cn } from "@/lib/utils";
 
 interface CalEmbedProps {

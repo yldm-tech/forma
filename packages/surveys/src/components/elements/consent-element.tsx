@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { Consent } from "@formbricks/survey-ui";
-import { type TResponseData, type TResponseTtc } from "@formbricks/types/responses";
-import type { TSurveyConsentElement } from "@formbricks/types/surveys/elements";
+import { Consent } from "@forma/survey-ui";
+import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
+import type { TSurveyConsentElement } from "@forma/types/surveys/elements";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 

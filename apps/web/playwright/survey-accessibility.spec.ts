@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect } from "@playwright/test";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { test } from "./lib/fixtures";
 import {
   A11Y_ANSWERED_STATES_SURVEY_NAME,
@@ -511,7 +511,7 @@ const openFirstQuestionCard = async (page: Page, surveyUrl: string): Promise<str
  * never injects its cross-origin iframe.
  *
  * This is what makes a `cal` card scannable unattended at all. Left unblocked, the card's
- * axe result would depend on external network and on markup Formbricks neither owns nor can
+ * axe result would depend on external network and on markup Forma neither owns nor can
  * fix — the reason the kitchen-sink fixture excludes the type outright. Blocked, what renders
  * is exactly the wrapper that IS ours: headline, subheader, and the embed container. The test
  * asserts the container stayed iframe-free, so the scan cannot silently grade Cal.com's DOM.

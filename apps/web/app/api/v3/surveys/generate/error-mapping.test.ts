@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AIOutputTokenLimitError } from "@formbricks/ai";
-import { logger } from "@formbricks/logger";
-import {
-  OperationNotAllowedError,
-  ResourceNotFoundError,
-  TooManyRequestsError,
-} from "@formbricks/types/errors";
+import { AIOutputTokenLimitError } from "@forma/ai";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError, ResourceNotFoundError, TooManyRequestsError } from "@forma/types/errors";
 import { mapV3SurveyGenerateError } from "./error-mapping";
 import { V3SurveyGeneratePromptError, V3SurveyGeneratedPayloadValidationError } from "./service";
 
@@ -22,7 +18,7 @@ vi.mock("@/lib/ai/service", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn() },
 }));
 

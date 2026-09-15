@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { describe, expect, test, vi } from "vitest";
 
-const BASE_URL = "https://app.formbricks.test";
+const BASE_URL = "https://app.forma.test";
 
 const createAuthInstance = (storeSessionInDatabase: boolean, preserveSessionInDatabase = false) => {
   const secondaryStorage = createSecondaryStorageMock();

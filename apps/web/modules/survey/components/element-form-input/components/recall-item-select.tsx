@@ -23,10 +23,10 @@ import {
   getDeclaredEmbeddedFields,
   listMidSurveyReservedEntries,
   listReadableFields,
-} from "@formbricks/types/embedded-data-resolver";
-import { TSurveyElement, TSurveyElementId, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyHiddenFields, TSurveyRecallItem } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/embedded-data-resolver";
+import { TSurveyElement, TSurveyElementId, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyHiddenFields, TSurveyRecallItem } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getTextContentWithRecallTruncated } from "@/lib/utils/recall";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import {

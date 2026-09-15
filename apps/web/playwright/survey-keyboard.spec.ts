@@ -1,9 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
 import { type Locator, type Page, expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TSurveyEnding } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TSurveyEnding } from "@forma/types/surveys/types";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { test } from "./lib/fixtures";
 
@@ -777,10 +777,10 @@ test.describe("Survey validation error announcement @slow", () => {
     // exists only in this branch of SurveyContainer.
     await page.goto(url);
     await expect(page.locator("#fbjs")).toBeVisible();
-    await expect.poll(() => page.evaluate(() => Boolean(window.formbricksSurveys))).toBe(true);
+    await expect.poll(() => page.evaluate(() => Boolean(window.formaSurveys))).toBe(true);
     await page.evaluate((survey) => {
-      document.getElementById("formbricks-survey-container")?.replaceChildren();
-      window.formbricksSurveys.renderSurvey({
+      document.getElementById("forma-survey-container")?.replaceChildren();
+      window.formaSurveys.renderSurvey({
         survey,
         styling: {},
         isBrandingEnabled: false,
@@ -790,7 +790,7 @@ test.describe("Survey validation error announcement @slow", () => {
       });
     }, modalSurvey);
 
-    const modalRoot = page.locator("#formbricks-modal-container #fbjs");
+    const modalRoot = page.locator("#forma-modal-container #fbjs");
     await expect(modalRoot.getByRole("dialog")).toBeVisible();
     // Proves the scoped selector can match a live region inside the modal, so the
     // zero-count assertion cannot pass on an empty or incorrectly rendered path.

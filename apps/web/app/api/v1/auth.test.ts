@@ -5,7 +5,7 @@ import {
   InvalidInputError,
   ResourceNotFoundError,
   UniqueConstraintError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { getApiKeyWithPermissions } from "@/modules/organization/settings/api-keys/lib/api-key";
 import { authenticateRequest, handleErrorResponse } from "./auth";
 

@@ -25,7 +25,7 @@ const getProductPlanMetadata = (
     return null;
   }
 
-  return product.metadata.formbricks_plan ?? null;
+  return product.metadata.forma_plan ?? null;
 };
 
 export const getCloudPlanFromProduct = (

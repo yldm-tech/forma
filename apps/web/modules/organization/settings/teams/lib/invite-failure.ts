@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { InvalidInputError, ValidationError } from "@formbricks/types/errors";
+import { InvalidInputError, ValidationError } from "@forma/types/errors";
 
 export type TBulkInviteFailureReason =
   | "invite_already_exists"

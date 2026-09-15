@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { TIntegrationAirtableTables } from "@formbricks/types/integration/airtable";
+import { logger } from "@forma/logger";
+import { TIntegrationAirtableTables } from "@forma/types/integration/airtable";
 
 export const fetchTables = async (workspaceId: string, baseId: string) => {
   const res = await fetch(`/api/v1/integrations/airtable/tables?baseId=${baseId}`, {

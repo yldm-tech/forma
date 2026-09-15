@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { describe, expect, test } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   Body,
   Head,
@@ -184,7 +184,7 @@ describe("legal footer", () => {
 });
 
 describe("custom branding", () => {
-  test("response-finished notification falls back to the Formbricks logo when no organization logo is set", async () => {
+  test("response-finished notification falls back to the Forma logo when no organization logo is set", async () => {
     const html = await renderResponseFinishedEmail({
       ...exampleData.responseFinishedEmail,
       elements: responseFinishedElements,

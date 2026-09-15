@@ -1,8 +1,8 @@
-import { matchDeclaredFieldName } from "@formbricks/types/safe-identifier";
+import { matchDeclaredFieldName } from "@forma/types/safe-identifier";
 import {
   LINK_SURVEY_SYSTEM_PARAM_KEYS,
   RESERVED_DECLARED_FIELD_NAMES,
-} from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/validation";
 
 type TSearchParamsWithKeys = Pick<URLSearchParams, "keys" | "get">;
 
@@ -40,14 +40,14 @@ const isBrowser = (): boolean => globalThis.window !== undefined;
  */
 const getRefusalReason = (declaredFieldId: string, paramKey: string): string | undefined => {
   if (LINK_SURVEY_SYSTEM_PARAM_KEYS.has(declaredFieldId)) {
-    return `Formbricks: "${declaredFieldId}" is a link survey URL parameter, so "?${paramKey}=" can never fill a hidden field of that name. Rename the field to collect this value.`;
+    return `Forma: "${declaredFieldId}" is a link survey URL parameter, so "?${paramKey}=" can never fill a hidden field of that name. Rename the field to collect this value.`;
   }
 
   if (paramKey === declaredFieldId || !RESERVED_DECLARED_FIELD_NAMES.has(paramKey.toLowerCase())) {
     return undefined;
   }
 
-  return `Formbricks: "?${paramKey}=" is reserved by the link survey URL contract, so it does not fill "${declaredFieldId}" through case-insensitive matching. Only the exact spelling "?${declaredFieldId}=" fills that field.`;
+  return `Forma: "?${paramKey}=" is reserved by the link survey URL contract, so it does not fill "${declaredFieldId}" through case-insensitive matching. Only the exact spelling "?${declaredFieldId}=" fills that field.`;
 };
 
 /**
@@ -105,7 +105,7 @@ export const getHiddenFieldsFromSearchParams = (
 export const warnOnMissingIngestRows = (ingestedStorageKeys: string[], legacyFieldIds: string[]): void => {
   if (isBrowser() && ingestedStorageKeys.length === 0 && legacyFieldIds.length > 0) {
     console.warn(
-      "Formbricks: this survey declares hidden fields but has no ingested Embedded Data rows, so no URL parameter can fill them."
+      "Forma: this survey declares hidden fields but has no ingested Embedded Data rows, so no URL parameter can fill them."
     );
   }
 };

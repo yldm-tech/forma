@@ -93,7 +93,7 @@ jobs:
         run: pnpm install --frozen-lockfile --config.platform=linux --config.architecture=x64
         shell: bash
 
-      # Must exist before the build: @formbricks/database's prisma.config.ts resolves DATABASE_URL at
+      # Must exist before the build: @forma/database's prisma.config.ts resolves DATABASE_URL at
       # config load, so `prisma generate` fails without it. Same order as e2e.yml.
       - name: Create .env
         if: steps.harness.outputs.present == 'true'
@@ -131,7 +131,7 @@ jobs:
           # reads this at build time — so setting it only in `.env` would let a cached non-E2E build
           # be replayed here. Same reason e2e.yml passes it twice.
           E2E_TESTING: "1"
-        run: pnpm build --filter=@formbricks/web...
+        run: pnpm build --filter=@forma/web...
         shell: bash
 
       # Keep the fixture offline during the build: a successful build still proves importing the
@@ -144,9 +144,9 @@ jobs:
 
       - name: Apply Prisma migrations
         if: steps.harness.outputs.present == 'true'
-        # @formbricks/database is already built by the build step, so run the migration runner
+        # @forma/database is already built by the build step, so run the migration runner
         # directly rather than db:migrate:dev, which would rebuild and re-generate the package.
-        run: pnpm --filter=@formbricks/database db:migrate:ci
+        run: pnpm --filter=@forma/database db:migrate:ci
         shell: bash
 
       - name: Seed the workspace and a throwaway API key
@@ -158,11 +158,11 @@ jobs:
           SEED_API_KEY="$(openssl rand -hex 32)"
           echo "::add-mask::${SEED_API_KEY}"
           echo "SEED_API_KEY=${SEED_API_KEY}" >> "$GITHUB_ENV"
-          SEED_API_KEY="${SEED_API_KEY}" pnpm --filter=@formbricks/database db:seed
+          SEED_API_KEY="${SEED_API_KEY}" pnpm --filter=@forma/database db:seed
 
       - name: Seed the contract fixtures
         if: steps.harness.outputs.present == 'true'
-        run: pnpm --filter=@formbricks/database db:seed:contract
+        run: pnpm --filter=@forma/database db:seed:contract
         shell: bash
 
       - name: Project seeded authorization relationships
@@ -182,7 +182,7 @@ jobs:
         if: steps.harness.outputs.present == 'true'
         shell: bash
         run: |
-          NODE_ENV=test pnpm start --filter=@formbricks/web > app.log 2>&1 &
+          NODE_ENV=test pnpm start --filter=@forma/web > app.log 2>&1 &
           for attempt in {1..20}; do
             if [ "$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000/health)" -eq 200 ]; then
               echo "Application is ready."

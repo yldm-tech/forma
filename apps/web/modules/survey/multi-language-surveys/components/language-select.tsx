@@ -3,10 +3,10 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Language } from "@formbricks/database/prisma-browser";
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { TIso639Language, supportedLanguages } from "@formbricks/i18n-utils/utils";
-import { TUserLocale } from "@formbricks/types/user";
+import { Language } from "@forma/database/prisma-browser";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { TIso639Language, supportedLanguages } from "@forma/i18n-utils/utils";
+import { TUserLocale } from "@forma/types/user";
 import { useClickOutside } from "@/lib/utils/hooks/useClickOutside";
 import { Button } from "@/modules/ui/components/button";
 import { Input } from "@/modules/ui/components/input";

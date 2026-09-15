@@ -5,7 +5,7 @@ import { recordAuthzedReconciliationAudit, recordAuthzedReconciliationRepair } f
 import { pruneAuthzedOutboxHistory, replayAuthzedOutboxDeadLetters } from "./outbox-repository";
 import { processAuthzedScheduledReconciliationJob } from "./scheduled-reconciliation";
 
-vi.mock("@formbricks/logger", () => ({ logger: { warn: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn() } }));
 vi.mock("./backfill", () => ({ runAuthzedBackfill: vi.fn() }));
 vi.mock("./backfill-apply", () => ({
   createAuthzedBackfillApply: vi.fn(() => ({ mode: "apply" })),

@@ -4,7 +4,7 @@ import {
   TCardArrangementOptions,
   TLinkSurveyCardWidthOptions,
   getLinkSurveyCardMaxWidth,
-} from "@formbricks/types/styling";
+} from "@forma/types/styling";
 
 interface StackedCardsContainerProps {
   children: React.ReactNode;

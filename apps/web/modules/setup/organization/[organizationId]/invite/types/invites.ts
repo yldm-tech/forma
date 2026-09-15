@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ZInvite } from "@formbricks/database/zod/invites";
-import { ZUserName } from "@formbricks/types/user";
+import { ZInvite } from "@forma/database/zod/invites";
+import { ZUserName } from "@forma/types/user";
 
 export const ZInvitee = ZInvite.pick({
   name: true,

@@ -1,4 +1,4 @@
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 
 export const TYPE_MAPPING = {
   [TSurveyElementTypeEnum.CTA]: ["checkbox"],

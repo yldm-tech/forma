@@ -1,6 +1,6 @@
 import reactRefresh from "eslint-plugin-react-refresh";
 import storybook from "eslint-plugin-storybook";
-import react from "@formbricks/config-eslint/react";
+import react from "@forma/config-eslint/react";
 
 /*
  * Storybook consumes the shared `react` tier like every other React workspace (ENG-2366). It used

@@ -7,7 +7,7 @@ const { TEST_SECRET, mockFindUnique } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     session: {
       findUnique: mockFindUnique,
@@ -44,13 +44,13 @@ describe("proxy-session", () => {
   });
 
   test("extracts the verified session token from a signed Better Auth cookie", () => {
-    const request = createRequest({ "__Secure-formbricks.session_token": sign("secure-token") });
+    const request = createRequest({ "__Secure-forma.session_token": sign("secure-token") });
     expect(getSessionTokenFromRequest(request)).toBe("secure-token");
   });
 
   test("rejects a tampered cookie signature without hitting the database", async () => {
     const request = createRequest({
-      "__Secure-formbricks.session_token": "valid-token.not-a-valid-signature",
+      "__Secure-forma.session_token": "valid-token.not-a-valid-signature",
     });
     expect(getSessionTokenFromRequest(request)).toBeNull();
     expect(await getProxySession(request)).toBeNull();
@@ -70,7 +70,7 @@ describe("proxy-session", () => {
       user: { isActive: true },
     });
 
-    const request = createRequest({ "formbricks.session_token": sign("expired-token") });
+    const request = createRequest({ "forma.session_token": sign("expired-token") });
     const session = await getProxySession(request);
 
     expect(session).toBeNull();
@@ -84,7 +84,7 @@ describe("proxy-session", () => {
       user: { isActive: false },
     });
 
-    const request = createRequest({ "formbricks.session_token": sign("inactive-user-token") });
+    const request = createRequest({ "forma.session_token": sign("inactive-user-token") });
     expect(await getProxySession(request)).toBeNull();
   });
 
@@ -96,7 +96,7 @@ describe("proxy-session", () => {
     };
     mockFindUnique.mockResolvedValue(validSession);
 
-    const request = createRequest({ "__Secure-formbricks.session_token": sign("valid-token") });
+    const request = createRequest({ "__Secure-forma.session_token": sign("valid-token") });
     const session = await getProxySession(request);
 
     expect(session).toEqual(validSession);

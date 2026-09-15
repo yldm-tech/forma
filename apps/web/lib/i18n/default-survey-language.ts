@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
 import {
   DEFAULT_SURVEY_LANGUAGE_CODE,
   isSurveyRuntimeLanguage,
-} from "@formbricks/i18n-utils/survey-runtime-languages";
-import { type TUserLocale, ZUserLocale } from "@formbricks/types/user";
-import type { TWorkspaceConfig } from "@formbricks/types/workspace";
+} from "@forma/i18n-utils/survey-runtime-languages";
+import { type TUserLocale, ZUserLocale } from "@forma/types/user";
+import type { TWorkspaceConfig } from "@forma/types/workspace";
 
 type TResolveDefaultSurveyLanguageInput = {
   /** `workspace.config.defaultSurveyLanguage` — the workspace-level setting, if one is set. */

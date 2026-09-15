@@ -22,11 +22,11 @@ const mockLogger = {
 };
 
 // Mock all dependencies before importing the module under test
-vi.mock("@formbricks/cache", () => ({
+vi.mock("@forma/cache", () => ({
   getCacheService: mockGetCacheService,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: mockLogger,
 }));
 

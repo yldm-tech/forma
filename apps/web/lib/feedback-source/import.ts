@@ -1,11 +1,8 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { InvalidInputError } from "@formbricks/types/errors";
-import {
-  TFeedbackSourceFormbricksMapping,
-  TFeedbackSourceWithMappings,
-} from "@formbricks/types/feedback-source";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { InvalidInputError } from "@forma/types/errors";
+import { TFeedbackSourceFormaMapping, TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getResponses } from "../response/service";
 import { reconcileFeedbackRecords } from "./reconcile";
 import { transformResponseToFeedbackRecords } from "./transform";
@@ -18,7 +15,7 @@ export type TImportResult = { successes: number; failures: number; skipped: numb
 const processBatch = async (
   responses: Awaited<ReturnType<typeof getResponses>>,
   survey: TSurvey,
-  mappings: TFeedbackSourceFormbricksMapping[],
+  mappings: TFeedbackSourceFormaMapping[],
   tenantId: string,
   snapshotAt: Date
 ): Promise<TImportResult> => {
@@ -73,8 +70,8 @@ export const importHistoricalResponses = async (
   feedbackSource: TFeedbackSourceWithMappings,
   survey: TSurvey
 ): Promise<TImportResult> => {
-  if (feedbackSource.type !== "formbricks_survey") {
-    throw new InvalidInputError("Historical import is only supported for Formbricks feedbackSources");
+  if (feedbackSource.type !== "forma_survey") {
+    throw new InvalidInputError("Historical import is only supported for Forma feedbackSources");
   }
 
   let successes = 0;
@@ -99,7 +96,7 @@ export const importHistoricalResponses = async (
     const batch = await processBatch(
       responses,
       survey,
-      feedbackSource.formbricksMappings,
+      feedbackSource.formaMappings,
       feedbackSource.feedbackDirectoryId,
       snapshotAt
     );

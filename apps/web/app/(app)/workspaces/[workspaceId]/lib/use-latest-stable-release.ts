@@ -6,7 +6,7 @@ import { getLatestStableFbReleaseAction } from "@/modules/workspaces/settings/(s
 import packageJson from "../../../../../package.json";
 
 /**
- * Tag of the latest stable Formbricks release, but only when it is newer than the running build.
+ * Tag of the latest stable Forma release, but only when it is newer than the running build.
  * Empty string means "nothing to advertise" — either the check hasn't resolved, it failed, or this
  * instance is already up to date.
  *

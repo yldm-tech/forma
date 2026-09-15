@@ -1,10 +1,10 @@
 // extend this object in order to add more validation rules
 import { TFunction } from "i18next";
 import { toast } from "react-hot-toast";
-import { ZEndingCardUrl } from "@formbricks/types/common";
-import { TI18nString } from "@formbricks/types/i18n";
-import { ZSegmentFilters } from "@formbricks/types/segment";
-import { TSurveyBlockLogic, ZSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
+import { ZEndingCardUrl } from "@forma/types/common";
+import { TI18nString } from "@forma/types/i18n";
+import { ZSegmentFilters } from "@forma/types/segment";
+import { TSurveyBlockLogic, ZSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import {
   TInputFieldConfig,
   TSurveyAddressElement,
@@ -16,7 +16,7 @@ import {
   TSurveyMultipleChoiceElement,
   TSurveyOpenTextElement,
   TSurveyPictureSelectionElement,
-} from "@formbricks/types/surveys/elements";
+} from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyEndScreenCard,
@@ -24,13 +24,13 @@ import {
   TSurveyRedirectUrlCard,
   TSurveyStatus,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import {
   TValidateIdError,
   TValidateIdErrorCode,
   findLanguageCodesForDuplicateLabels,
   getTextContent,
-} from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/validation";
 import { extractLanguageCodes, getLocalizedValue } from "@/lib/i18n/utils";
 import { checkForEmptyFallBackValue } from "@/lib/utils/recall";
 

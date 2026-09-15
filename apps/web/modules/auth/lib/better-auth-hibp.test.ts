@@ -1,13 +1,13 @@
 import { APIError } from "better-auth/api";
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 
 // Real SHA-1 (node:crypto) so prefix/suffix are the actual values the hook computes.
 const suffixOf = (password: string): string =>
   createHash("sha1").update(password).digest("hex").toUpperCase().substring(5);
 
-vi.mock("@formbricks/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 // Minimal constants mock so the heavy real module (and env) is not loaded; default: check enabled.
 vi.mock("@/lib/constants", () => ({ PASSWORD_HIBP_CHECK_DISABLED: false }));
 

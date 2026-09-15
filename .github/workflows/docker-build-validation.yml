@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
     env:
-      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/formbricks
+      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/forma
       POSTGRES_PASSWORD: build-time-placeholder
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       REDIS_URL: redis://127.0.0.1:6379
@@ -52,7 +52,7 @@ jobs:
         run: pnpm install --frozen-lockfile --config.platform=linux --config.architecture=x64
 
       - name: Build web workspace dependencies
-        run: pnpm build --filter=@formbricks/web^...
+        run: pnpm build --filter=@forma/web^...
 
       - name: Test AuthZed client and schema lifecycle
         run: pnpm --dir apps/web test lib/authzed
@@ -76,7 +76,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: formbricks
+          POSTGRES_DB: forma
         ports:
           - 5432:5432
         # Health check to ensure PostgreSQL is ready before using it
@@ -142,7 +142,7 @@ jobs:
           file: ./apps/web/Dockerfile
           push: false
           load: true
-          tags: formbricks-test:${{ env.GITHUB_SHA }}
+          tags: forma-test:${{ env.GITHUB_SHA }}
           secrets: |
             database_url=${{ secrets.DUMMY_DATABASE_URL }}
             encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY }}
@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker run --rm --entrypoint sh "formbricks-test:$GITHUB_SHA" -c '
+          docker run --rm --entrypoint sh "forma-test:$GITHUB_SHA" -c '
             set -eu
             test ! -d /usr/local/lib/node_modules/npm
             ! command -v npm >/dev/null 2>&1
@@ -173,17 +173,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          IMAGE="formbricks-test:$GITHUB_SHA"
+          IMAGE="forma-test:$GITHUB_SHA"
           docker run --rm --entrypoint sh "$IMAGE" -c '
             set -eu
             test "$(id -u)" != "0"
-            test -x /usr/local/bin/formbricks-authzed
+            test -x /usr/local/bin/forma-authzed
             test -r /home/nextjs/authzed-cli/index.mjs
             test -r /home/nextjs/authzed-cli/schema.zed
           '
 
           AUTHZED_CLI_ENV=(
-            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/formbricks"
+            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma"
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY"
             -e REDIS_URL="redis://192.0.2.1:6379"
             -e HUB_API_URL="http://192.0.2.1:4000"
@@ -195,7 +195,7 @@ jobs:
 
           set +e
           output="$(docker run --rm \
-            --entrypoint formbricks-authzed \
+            --entrypoint forma-authzed \
             "${AUTHZED_CLI_ENV[@]}" \
             "$IMAGE" health 2>&1)"
           status=$?
@@ -207,12 +207,12 @@ jobs:
           UNREACHABLE_TOKEN="authzed-cli-validation-secret"
           set +e
           unreachable_output="$(timeout 10s docker run --rm \
-            --entrypoint formbricks-authzed \
+            --entrypoint forma-authzed \
             "${AUTHZED_CLI_ENV[@]}" \
             -e AUTHZED_ENABLED="true" \
             -e AUTHZED_ENDPOINT="192.0.2.1:50051" \
             -e AUTHZED_INSECURE="true" \
-            -e AUTHZED_SYSTEM_KEY="formbricks" \
+            -e AUTHZED_SYSTEM_KEY="forma" \
             -e AUTHZED_TOKEN="$UNREACHABLE_TOKEN" \
             "$IMAGE" health 2>&1)"
           unreachable_status=$?
@@ -229,7 +229,7 @@ jobs:
 
           set +e
           upgrade_output="$(docker run --rm \
-            --entrypoint formbricks-authzed \
+            --entrypoint forma-authzed \
             "${AUTHZED_CLI_ENV[@]}" \
             "$IMAGE" upgrade check 2>&1)"
           upgrade_status=$?
@@ -246,9 +246,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          IMAGE="formbricks-test:$GITHUB_SHA"
+          IMAGE="forma-test:$GITHUB_SHA"
           COMMON_ENV=(
-            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/formbricks"
+            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma"
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY"
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY"
             -e REDIS_URL="redis://192.0.2.1:6379"
@@ -342,7 +342,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker tag "formbricks-test:$GITHUB_SHA" ghcr.io/formbricks/formbricks:latest
+          docker tag "forma-test:$GITHUB_SHA" ghcr.io/yldm-tech/forma:latest
           trap 'rm -f docker/.env' EXIT
           printf '%s\n' \
             'WEBAPP_URL=http://localhost:3000' \
@@ -358,7 +358,7 @@ jobs:
             > docker/.env
 
           set +e
-          output="$(docker compose -f docker/docker-compose.yml run --rm --no-deps formbricks-migrate 2>&1)"
+          output="$(docker compose -f docker/docker-compose.yml run --rm --no-deps forma-migrate 2>&1)"
           status=$?
           set -e
 
@@ -392,8 +392,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker run --name formbricks-skip-test \
-            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/formbricks" \
+          docker run --name forma-skip-test \
+            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma" \
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY" \
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY" \
             -e REDIS_URL="redis://192.0.2.1:6379" \
@@ -402,25 +402,25 @@ jobs:
             -e CUBEJS_API_URL="http://192.0.2.1:4000" \
             -e CUBEJS_API_SECRET="build-time-placeholder" \
             -e SKIP_STARTUP_MIGRATION="true" \
-            -d "formbricks-test:$GITHUB_SHA"
+            -d "forma-test:$GITHUB_SHA"
 
-          trap 'docker rm -f formbricks-skip-test >/dev/null 2>&1 || true' EXIT
+          trap 'docker rm -f forma-skip-test >/dev/null 2>&1 || true' EXIT
 
           for _ in $(seq 1 30); do
-            if docker logs formbricks-skip-test 2>&1 | grep -Fq "Starting Next.js server"; then
+            if docker logs forma-skip-test 2>&1 | grep -Fq "Starting Next.js server"; then
               break
             fi
 
-            if [ "$(docker inspect -f '{{.State.Running}}' formbricks-skip-test 2>/dev/null)" != "true" ]; then
+            if [ "$(docker inspect -f '{{.State.Running}}' forma-skip-test 2>/dev/null)" != "true" ]; then
               echo "Container exited before exercising the startup migration skip"
-              docker logs formbricks-skip-test
+              docker logs forma-skip-test
               exit 1
             fi
 
             sleep 1
           done
 
-          logs="$(docker logs formbricks-skip-test 2>&1)"
+          logs="$(docker logs forma-skip-test 2>&1)"
           grep -Fq "Environment variables validated successfully" <<<"$logs"
           grep -Fq "Skipping startup migrations" <<<"$logs"
           grep -Fq "Running SAML database setup" <<<"$logs"
@@ -440,16 +440,16 @@ jobs:
 
           # Test connection using psql with timeout and proper error handling
           echo "Testing PostgreSQL connection with 30 second timeout..."
-          if timeout 30 bash -c 'until PGPASSWORD=test psql -h localhost -U test -d formbricks -c "\dt" >/dev/null 2>&1; do
+          if timeout 30 bash -c 'until PGPASSWORD=test psql -h localhost -U test -d forma -c "\dt" >/dev/null 2>&1; do
             echo "Waiting for PostgreSQL to be ready..."
             sleep 2
           done'; then
             echo "✅ PostgreSQL connection successful"
-            PGPASSWORD=test psql -h localhost -U test -d formbricks -c "SELECT version();"
+            PGPASSWORD=test psql -h localhost -U test -d forma -c "SELECT version();"
 
             # Enable necessary extensions that might be required by migrations
             echo "Enabling required PostgreSQL extensions..."
-            PGPASSWORD=test psql -h localhost -U test -d formbricks -c "CREATE EXTENSION IF NOT EXISTS vector;" || echo "Vector extension already exists or not available"
+            PGPASSWORD=test psql -h localhost -U test -d forma -c "CREATE EXTENSION IF NOT EXISTS vector;" || echo "Vector extension already exists or not available"
 
           else
             echo "❌ PostgreSQL connection failed after 30 seconds"
@@ -495,10 +495,10 @@ jobs:
           DOCKER_RUN_ARGS="--add-host=host.docker.internal:host-gateway"
 
           # Start the container with host.docker.internal pointing to the host
-          docker run --name formbricks-test \
+          docker run --name forma-test \
             $DOCKER_RUN_ARGS \
             -p 3000:3000 \
-            -e DATABASE_URL="postgresql://test:test@host.docker.internal:5432/formbricks" \
+            -e DATABASE_URL="postgresql://test:test@host.docker.internal:5432/forma" \
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY" \
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY" \
             -e REDIS_URL="redis://host.docker.internal:6379" \
@@ -506,7 +506,7 @@ jobs:
             -e HUB_API_KEY="build-time-placeholder" \
             -e CUBEJS_API_URL="http://localhost:4000" \
             -e CUBEJS_API_SECRET="build-time-placeholder" \
-            -d "formbricks-test:$GITHUB_SHA"
+            -d "forma-test:$GITHUB_SHA"
 
           # Start health check polling immediately (every 5 seconds for up to 5 minutes)
           echo "🏥 Polling /health endpoint every 5 seconds for up to 5 minutes..."
@@ -520,10 +520,10 @@ jobs:
             RETRY_COUNT=$((RETRY_COUNT + 1))
 
             # Check if container is still running
-            if [ "$(docker inspect -f '{{.State.Running}}' formbricks-test 2>/dev/null)" != "true" ]; then
+            if [ "$(docker inspect -f '{{.State.Running}}' forma-test 2>/dev/null)" != "true" ]; then
               echo "❌ Container stopped running after $((RETRY_COUNT * 5)) seconds!"
               echo "📋 Container logs:"
-              docker logs formbricks-test
+              docker logs forma-test
               exit 1
             fi
 
@@ -531,7 +531,7 @@ jobs:
             if [ $((RETRY_COUNT % 12)) -eq 0 ] || [ $RETRY_COUNT -eq 1 ]; then
               echo "Health check attempt $RETRY_COUNT of $MAX_RETRIES ($(($RETRY_COUNT * 5)) seconds elapsed)..."
               echo "📋 Recent container logs:"
-              docker logs --tail 10 formbricks-test
+              docker logs --tail 10 forma-test
             fi
 
             # Try health endpoint with shorter timeout for faster polling
@@ -548,7 +548,7 @@ jobs:
 
           # Show full container logs for debugging and verify startup work ran exactly once
           echo "📋 Full container logs:"
-          CONTAINER_LOGS="$(docker logs formbricks-test 2>&1)"
+          CONTAINER_LOGS="$(docker logs forma-test 2>&1)"
           echo "$CONTAINER_LOGS"
 
           assert_log_once() {
@@ -567,7 +567,7 @@ jobs:
 
           # Clean up the container
           echo "🧹 Cleaning up..."
-          docker rm -f formbricks-test
+          docker rm -f forma-test
 
           # Exit with failure if health check did not succeed
           if [ "$HEALTH_CHECK_SUCCESS" != "true" ]; then

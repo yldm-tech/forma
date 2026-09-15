@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { verifySsoRelinkIntent } from "@/lib/jwt";
 import { getSession } from "@/modules/auth/lib/session";
 import {

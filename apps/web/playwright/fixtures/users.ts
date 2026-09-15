@@ -2,8 +2,8 @@ import { createLocalAccountIssuer } from "@better-auth/core/db";
 import bcrypt from "bcryptjs";
 import { Page } from "playwright";
 import { TestInfo } from "playwright/test";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 
 export const login = async (user: Prisma.UserGetPayload<{ include: { memberships: true } }>, page: Page) => {
   // Better Auth sign-in (replaces the NextAuth csrf + credentials-callback flow; ENG-1054). The

@@ -2,8 +2,8 @@ import { TopControlBar } from "@/app/(app)/workspaces/[workspaceId]/components/T
 import { WorkspaceContextWrapper } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import {
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMBRICKS_CLOUD,
-  IS_FORMBRICKS_SURVEYS_CONFIGURED,
+  IS_FORMA_CLOUD,
+  IS_FORMA_SURVEYS_CONFIGURED,
 } from "@/lib/constants";
 import { getPendingDowngradeSchedule } from "@/modules/ee/license-check/lib/license";
 import { SettingsNavigation } from "@/modules/settings/components/settings-navigation";
@@ -33,7 +33,7 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
 
   const shell = (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden">
-      {data.isFormbricksCloud && (
+      {data.isFormaCloud && (
         <LimitsReachedBanner organization={organization} responseCount={data.responseCount} />
       )}
 
@@ -54,9 +54,9 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
           organizationId={data.organization.id}
           organizationName={data.organization.name}
           membershipRole={data.membershipRole}
-          isFormbricksCloud={data.isFormbricksCloud}
+          isFormaCloud={data.isFormaCloud}
           publicDomain={data.publicDomain}
-          isFormbricksSurveysConfigured={IS_FORMBRICKS_SURVEYS_CONFIGURED}
+          isFormaSurveysConfigured={IS_FORMA_SURVEYS_CONFIGURED}
           backUrl={data.backUrl}
         />
         <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">
@@ -67,7 +67,7 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
               currentOrganizationId={data.organization.id}
               isMultiOrgEnabled={data.isMultiOrgEnabled}
               organizationWorkspacesLimit={data.organizationWorkspacesLimit}
-              isFormbricksCloud={data.isFormbricksCloud}
+              isFormaCloud={data.isFormaCloud}
               isLicenseActive={active}
               isOwnerOrManager={data.isOwnerOrManager}
               isAccessControlAllowed={data.isAccessControlAllowed}
@@ -91,7 +91,7 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
         workspace={data.currentWorkspace}
         organization={organization}
         deployment={{
-          isFormbricksCloud: IS_FORMBRICKS_CLOUD,
+          isFormaCloud: IS_FORMA_CLOUD,
           enterpriseLicenseRequestFormUrl: ENTERPRISE_LICENSE_REQUEST_FORM_URL,
         }}>
         {shell}

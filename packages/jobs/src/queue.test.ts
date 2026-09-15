@@ -82,7 +82,7 @@ const workflowRunJobData = {
   workspaceId: "cm8cmpnjj000108jfdr9wksp1",
 };
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mockLoggerError,
     info: vi.fn(),
@@ -112,7 +112,7 @@ vi.mock("bullmq", () => ({
   }),
 }));
 
-describe("@formbricks/jobs queue helpers", () => {
+describe("@forma/jobs queue helpers", () => {
   beforeEach(async () => {
     await resetJobsQueueFactory();
     vi.clearAllMocks();
@@ -138,7 +138,7 @@ describe("@formbricks/jobs queue helpers", () => {
   });
 
   test("uses a Redis Cluster hash-tagged prefix for BullMQ keys", () => {
-    expect(JOBS_PREFIX).toBe("{formbricks:jobs}");
+    expect(JOBS_PREFIX).toBe("{forma:jobs}");
   });
 
   // An unhandled 'error' event on the queue would otherwise take the process down.

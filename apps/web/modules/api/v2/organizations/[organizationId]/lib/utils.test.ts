@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { OrganizationAccessType } from "@formbricks/types/api-key";
+import { logger } from "@forma/logger";
+import { OrganizationAccessType } from "@forma/types/api-key";
 import { can } from "@/lib/authorization";
 import { hasOrganizationIdAndAccess } from "./utils";
 

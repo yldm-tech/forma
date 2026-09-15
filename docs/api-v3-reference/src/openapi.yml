@@ -4,7 +4,7 @@
 # Survey implementation: apps/web/app/api/v3/surveys/. Workflow contract: Scope 1 for ENG-1101.
 openapi: 3.1.1
 info:
-  title: Formbricks API v3
+  title: Forma API v3
   description: >
     **Surveys**: **GET /api/v3/surveys**, **POST /api/v3/surveys**, **POST
     /api/v3/surveys/generate**, **POST /api/v3/surveys/validate**, **GET
@@ -205,7 +205,7 @@ info:
 
 
     **Feedback Records**
-    `/api/v3/feedbackRecords` is served by the **API gateway** (Envoy on Formbricks Cloud, Traefik in
+    `/api/v3/feedbackRecords` is served by the **API gateway** (Envoy on Forma Cloud, Traefik in
     the one-click Docker install), which authorizes each call against the dataset and forwards it to
     the feedback store — not by the application routes that serve the rest of v3. Three consequences:
     the payload is the store's own, so members and filters are **`snake_case`** (`tenant_id`,
@@ -284,9 +284,9 @@ info:
     pagination-model: cursor
     cursor-pagination: supported
 servers:
-  - url: https://app.formbricks.com
+  - url: https://app.forma.ylam.ai
     description: >-
-      Formbricks Cloud. Paths in this spec already include the `/api/v3` prefix;
+      Forma Cloud. Paths in this spec already include the `/api/v3` prefix;
       self-hosted instances substitute their own origin.
 paths:
   /api/v3/surveys:

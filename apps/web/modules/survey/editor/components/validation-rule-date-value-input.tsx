@@ -5,7 +5,7 @@ import {
   TRelativeDateBound,
   TValidationRule,
   TValidationRuleType,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { formatLocalDay } from "@/lib/utils/datetime";
 import { DatePicker, DateRangePicker } from "@/modules/ui/components/date-picker";
 import {

@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 
 /**
- * Resolves external user identifiers (a feedback record's `user_id`) to Formbricks contact ids
+ * Resolves external user identifiers (a feedback record's `user_id`) to Forma contact ids
  * within a workspace. Runs a single deduped query — the `userId` contact attribute is unique per
  * workspace — so callers can resolve a whole page of records at once instead of per record.
  *

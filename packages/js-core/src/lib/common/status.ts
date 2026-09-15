@@ -18,7 +18,7 @@ export const checkSetup = (): Result<void, NotSetupError> => {
   if (!isSetup) {
     return err({
       code: "not_setup",
-      message: "Formbricks is not set up. Call setup() first.",
+      message: "Forma is not set up. Call setup() first.",
     });
   }
 

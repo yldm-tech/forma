@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZResponseFilterCriteria } from "@formbricks/types/responses";
+import { ZResponseFilterCriteria } from "@forma/types/responses";
 import { withV3ApiWrapper } from "@/app/api/v3/lib/api-wrapper";
 import {
   problemBadRequest,

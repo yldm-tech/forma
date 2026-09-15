@@ -28,17 +28,17 @@ describe("isExternalImageSrc", () => {
     expect(isExternalImageSrc("https://evil.example.com/x.png")).toBe(true);
     expect(isExternalImageSrc("http://random-host.test/logo.svg")).toBe(true);
     // Cloud-specific infra is not in the universal allowlist — treated as external.
-    expect(isExternalImageSrc("https://formbricks-cdn.s3.eu-central-1.amazonaws.com/x.png")).toBe(true);
+    expect(isExternalImageSrc("https://forma-cdn.s3.eu-central-1.amazonaws.com/x.png")).toBe(true);
   });
 
   test("treats an absolute URL to the deployment's own domain as external (relative is the supported first-party form)", () => {
     // The running domain is intentionally not in the allowlist; first-party images must be relative.
-    expect(isExternalImageSrc("https://app.formbricks.com/storage/ws/public/logo.png")).toBe(true);
+    expect(isExternalImageSrc("https://app.forma.ylam.ai/storage/ws/public/logo.png")).toBe(true);
     expect(isExternalImageSrc("https://survey.company.com/storage/ws/public/logo.png")).toBe(true);
   });
 
   test("does not include the deployment domain in the optimizable host allowlist", () => {
-    expect(OPTIMIZABLE_IMAGE_HOSTS).not.toContain("app.formbricks.com");
+    expect(OPTIMIZABLE_IMAGE_HOSTS).not.toContain("app.forma.ylam.ai");
   });
 
   test("treats an allowlisted public host over plain http as external (protocol mismatches remotePatterns' https)", () => {

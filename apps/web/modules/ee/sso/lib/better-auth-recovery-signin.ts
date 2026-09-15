@@ -3,8 +3,8 @@ import type { BetterAuthPlugin } from "better-auth";
 import { createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { WEBAPP_URL } from "@/lib/constants";
 import { verifyToken } from "@/lib/jwt";
 import { getValidatedCallbackUrl } from "@/lib/utils/url";
@@ -46,7 +46,7 @@ export const ssoRecoverySignInPlugin = {
           if (purpose !== "sso_recovery") {
             throw new Error("Token is not an SSO recovery token");
           }
-          // isActive is a Formbricks column, not a Better Auth field — check it directly.
+          // isActive is a Forma column, not a Better Auth field — check it directly.
           const dbUser = await prisma.user.findUnique({ where: { id }, select: { isActive: true } });
           if (!dbUser || dbUser.isActive === false) {
             throw new Error("User not found or inactive");

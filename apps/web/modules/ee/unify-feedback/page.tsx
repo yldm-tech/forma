@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { logger } from "@formbricks/logger";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { logger } from "@forma/logger";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getFeedbackSourcesWithMappings } from "@/lib/feedback-source/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getIsFeedbackDirectoriesEnabled } from "@/modules/ee/license-check/lib/utils";
@@ -54,14 +54,14 @@ export default async function UnifyFeedbackRecordsPage(
             feature="feedback-directories"
             buttons={[
               {
-                text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: IS_FORMBRICKS_CLOUD
+                text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                href: IS_FORMA_CLOUD
                   ? `/organizations/${organization.id}/settings/billing`
                   : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
               },
               {
                 text: t("common.learn_more"),
-                href: "https://formbricks.com/docs/unify-feedback/overview",
+                href: "https://forma.ylam.ai/docs/unify-feedback/overview",
               },
             ]}
           />

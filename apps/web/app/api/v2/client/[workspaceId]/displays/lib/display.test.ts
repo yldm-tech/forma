@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 import {
   DatabaseError,
   InvalidInputError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { TDisplayCreateInputV2 } from "../types/display";
 import { doesContactExistInWorkspace } from "./contact";
@@ -18,7 +18,7 @@ vi.mock("@/lib/utils/validate", () => ({
   ), // Pass through validation for testing
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     display: {
       create: vi.fn(),

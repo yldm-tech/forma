@@ -1,8 +1,8 @@
 import "server-only";
 import { createLocalAccountIssuer } from "@better-auth/core/db";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { InvalidInputError } from "@forma/types/errors";
 import { verifyPassword } from "@/modules/auth/lib/utils";
 
 /**

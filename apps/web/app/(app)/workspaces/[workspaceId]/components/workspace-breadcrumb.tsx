@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronRightIcon, FoldersIcon, Loader2, PlusIcon } fro
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { getWorkspacesForSwitcherAction } from "@/app/(app)/workspaces/[workspaceId]/actions";
 import { SwitcherDropdownBody } from "@/modules/settings/components/switcher-dropdown-body";
 import { useSwitcherData } from "@/modules/settings/hooks/use-switcher-data";
@@ -27,7 +27,7 @@ interface WorkspaceBreadcrumbProps {
   currentWorkspaceName?: string; // Optional: pass directly if context not available
   isOwnerOrManager: boolean;
   organizationWorkspacesLimit: number;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isLicenseActive: boolean;
   currentOrganizationId: string;
   isAccessControlAllowed: boolean;
@@ -40,7 +40,7 @@ export const WorkspaceBreadcrumb = ({
   currentWorkspaceName,
   isOwnerOrManager,
   organizationWorkspacesLimit,
-  isFormbricksCloud,
+  isFormaCloud,
   isLicenseActive,
   currentOrganizationId,
   isAccessControlAllowed,
@@ -106,7 +106,7 @@ export const WorkspaceBreadcrumb = ({
   };
 
   const getLimitModalButtons = (): [ModalButton, ModalButton] => {
-    if (isFormbricksCloud) {
+    if (isFormaCloud) {
       return [
         {
           text: t("workspace.settings.billing.upgrade"),
@@ -124,7 +124,7 @@ export const WorkspaceBreadcrumb = ({
         text: t("workspace.settings.billing.upgrade"),
         href: isLicenseActive
           ? `/organizations/${currentOrganizationId}/settings/enterprise`
-          : "https://formbricks.com/upgrade-self-hosted-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=upgrade_prompt_breadcrumb",
+          : "https://forma.ylam.ai/upgrade-self-hosted-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=upgrade_prompt_breadcrumb",
       },
       {
         text: t("common.cancel"),

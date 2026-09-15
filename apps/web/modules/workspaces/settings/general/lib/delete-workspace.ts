@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
-import { FORMBRICKS_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
+import { FORMA_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
 import { getWorkspace, getWorkspaces } from "@/lib/workspace/service";
 import { deleteWorkspaceIfNotLast } from "@/modules/workspaces/settings/lib/workspace";
 import {
@@ -74,14 +74,14 @@ const rememberActiveWorkspace = async (workspaceId: string | null) => {
   const cookieStore = await cookies();
 
   if (workspaceId) {
-    cookieStore.set(FORMBRICKS_WORKSPACE_ID_COOKIE, workspaceId, {
+    cookieStore.set(FORMA_WORKSPACE_ID_COOKIE, workspaceId, {
       path: "/",
       sameSite: "lax",
       httpOnly: true,
       maxAge: 60 * 60 * 24 * 365,
     });
   } else {
-    cookieStore.delete(FORMBRICKS_WORKSPACE_ID_COOKIE);
+    cookieStore.delete(FORMA_WORKSPACE_ID_COOKIE);
   }
 };
 

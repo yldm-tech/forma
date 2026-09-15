@@ -1,5 +1,5 @@
 import { ZodOpenApiOperationObject, ZodOpenApiPathsObject } from "zod-openapi";
-import { ZContactAttributeKey } from "@formbricks/database/zod/contact-attribute-keys";
+import { ZContactAttributeKey } from "@forma/database/zod/contact-attribute-keys";
 import {
   deleteContactAttributeKeyEndpoint,
   getContactAttributeKeyEndpoint,

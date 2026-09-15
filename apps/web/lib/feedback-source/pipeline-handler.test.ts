@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 
 vi.mock("server-only", () => ({}));
 
@@ -18,7 +18,7 @@ vi.mock("@/modules/hub", () => ({
   updateFeedbackRecord: (...args: unknown[]) => mockUpdateFeedbackRecord(...args),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: vi.fn(),
     info: vi.fn(),
@@ -54,14 +54,14 @@ const mockSurvey = {
 } as unknown as TSurvey;
 
 function createFeedbackSource(
-  overrides: Partial<Pick<TFeedbackSourceWithMappings, "id" | "formbricksMappings" | "importMode">> = {}
+  overrides: Partial<Pick<TFeedbackSourceWithMappings, "id" | "formaMappings" | "importMode">> = {}
 ): TFeedbackSourceWithMappings {
   return {
     id: "conn-1",
     createdAt: new Date(),
     updatedAt: new Date(),
     name: "Test FeedbackSource",
-    type: "formbricks_survey",
+    type: "forma_survey",
     status: "active",
     importMode: "completedOnly",
     elementScope: "specific" as const,
@@ -69,7 +69,7 @@ function createFeedbackSource(
     feedbackDirectoryId: "frd-1",
     lastSyncAt: null,
     createdBy: null,
-    formbricksMappings: [
+    formaMappings: [
       {
         id: "map-1",
         createdAt: new Date(),
@@ -90,7 +90,7 @@ const oneFeedbackRecord = [
   {
     field_id: "el-1",
     field_type: "rating" as const,
-    source_type: "formbricks_survey",
+    source_type: "forma_survey",
     source_id: "survey-1",
     source_name: "Test Survey",
     field_label: "Question?",
@@ -130,7 +130,7 @@ describe("handleFeedbackSourcePipeline", () => {
     expect(transformResponseToFeedbackRecords).toHaveBeenCalledWith(
       mockResponse,
       mockSurvey,
-      feedbackSource.formbricksMappings,
+      feedbackSource.formaMappings,
       "frd-1"
     );
     expect(mockCreateFeedbackRecordsBatch).not.toHaveBeenCalled();
@@ -250,7 +250,7 @@ describe("handleFeedbackSourcePipeline", () => {
     };
     vi.mocked(getFeedbackSourcesBySurveyId).mockResolvedValue([
       createFeedbackSource({
-        formbricksMappings: [
+        formaMappings: [
           { ...baseMapping, id: "m1", elementId: "el-1" },
           { ...baseMapping, id: "m2", elementId: "el-2" },
         ],

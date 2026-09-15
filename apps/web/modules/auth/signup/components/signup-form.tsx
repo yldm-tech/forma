@@ -13,8 +13,8 @@ import {
   INVITE_TOKEN_INVALID_ERROR_CODE,
   PASSWORD_COMPROMISED_ERROR_CODE,
   SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE,
-} from "@formbricks/types/errors";
-import { TUserLocale, ZUserName, ZUserPassword } from "@formbricks/types/user";
+} from "@forma/types/errors";
+import { TUserLocale, ZUserName, ZUserPassword } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { buildAttributionQuerySuffix } from "@/modules/auth/lib/attribution";
 import {
@@ -57,7 +57,7 @@ interface SignupFormProps {
   samlSsoEnabled: boolean;
   isTurnstileConfigured: boolean;
   turnstileSiteKey?: string;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
 }
 
 export const SignupForm = ({
@@ -77,7 +77,7 @@ export const SignupForm = ({
   samlSsoEnabled,
   isTurnstileConfigured,
   turnstileSiteKey,
-  isFormbricksCloud,
+  isFormaCloud,
 }: Readonly<SignupFormProps>) => {
   const [showLogin, setShowLogin] = useState(false);
   const searchParams = useSearchParams();
@@ -327,7 +327,7 @@ export const SignupForm = ({
             )}
 
             {showLogin &&
-              (isFormbricksCloud ? (
+              (isFormaCloud ? (
                 <label
                   htmlFor="product-updates"
                   className="my-4 flex cursor-pointer items-start gap-x-3 rounded-md border border-slate-200 bg-slate-100 p-3 text-left">

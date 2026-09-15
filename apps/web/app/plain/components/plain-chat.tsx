@@ -22,7 +22,7 @@ interface PlainChatProps {
 const PLAIN_SCRIPT_ID = "plain-chat-script";
 const PLAIN_SCRIPT_SRC = "https://chat.cdn-plain.com/index.js";
 
-// Formbricks brand teal — brands the chat panel accents.
+// Forma brand teal — brands the chat panel accents.
 const BRAND_COLOR = "#00C4B8";
 
 interface PlainCustomerDetails {

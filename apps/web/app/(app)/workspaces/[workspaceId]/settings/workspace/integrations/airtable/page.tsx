@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { logger } from "@formbricks/logger";
-import { TIntegrationItem } from "@formbricks/types/integration";
-import { TIntegrationAirtable } from "@formbricks/types/integration/airtable";
+import { logger } from "@forma/logger";
+import { TIntegrationItem } from "@forma/types/integration";
+import { TIntegrationAirtable } from "@forma/types/integration/airtable";
 import { AirtableWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/components/AirtableWrapper";
 import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
 import { getAirtableTables } from "@/lib/airtable/service";

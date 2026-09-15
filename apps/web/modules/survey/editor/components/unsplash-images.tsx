@@ -5,7 +5,7 @@ import UnsplashImage from "next/image";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyBackgroundBgType } from "@formbricks/types/surveys/types";
+import { TSurveyBackgroundBgType } from "@forma/types/surveys/types";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 import { debounce } from "@/lib/utils/debounce";
 import { Button } from "@/modules/ui/components/button";

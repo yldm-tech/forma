@@ -1,6 +1,6 @@
 import "server-only";
-import { createCacheKey } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
+import { createCacheKey } from "@forma/cache";
+import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
 import { executeTenantScopedQuery } from "@/modules/ee/analysis/api/lib/cube-client";
 import { type TAIDataProfile, buildDataProfileQueries, collectDataProfile } from "./ai-data-profile";

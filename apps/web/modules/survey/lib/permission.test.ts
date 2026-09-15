@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
+import { OperationNotAllowedError } from "@forma/types/errors";
 import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
 import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
 import { checkSpamProtectionPermission, getExternalUrlsPermission } from "./permission";
@@ -16,7 +16,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/constants")>();
   return {
     ...actual,
-    IS_FORMBRICKS_CLOUD: true,
+    IS_FORMA_CLOUD: true,
   };
 });
 
@@ -74,7 +74,7 @@ describe("getExternalUrlsPermission - self-hosted", () => {
       const actual = await importOriginal<typeof import("@/lib/constants")>();
       return {
         ...actual,
-        IS_FORMBRICKS_CLOUD: false,
+        IS_FORMA_CLOUD: false,
       };
     });
 

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import {
   addLegacyEnvironmentId,
   addLegacyEnvironmentIdBestEffort,
   addLegacyEnvironmentIdToList,
 } from "./legacy-environment-id";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       findMany: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn() },
 }));
 

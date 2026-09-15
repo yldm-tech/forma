@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Response, Workspace } from "@formbricks/database/prisma-browser";
-import { getLinkSurveyCardMaxWidth } from "@formbricks/types/styling";
-import { TSurvey, TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { Response, Workspace } from "@forma/database/prisma-browser";
+import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { TSurvey, TSurveyStyling } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { cn } from "@/lib/cn";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { validateSurveyPinAction } from "@/modules/survey/link/actions";
@@ -23,7 +23,7 @@ interface PinScreenProps {
   IMPRINT_URL?: string;
   PRIVACY_URL?: string;
   TERMS_URL?: string;
-  IS_FORMBRICKS_CLOUD: boolean;
+  IS_FORMA_CLOUD: boolean;
   verifiedEmail?: string;
   languageCode: string;
   /** Locale for the gate's own chrome, resolved server-side from `?lang=` or Accept-Language. */
@@ -48,7 +48,7 @@ export const PinScreen = (props: Readonly<PinScreenProps>) => {
     IMPRINT_URL,
     PRIVACY_URL,
     TERMS_URL,
-    IS_FORMBRICKS_CLOUD,
+    IS_FORMA_CLOUD,
     verifiedEmail,
     languageCode,
     locale,
@@ -160,7 +160,7 @@ export const PinScreen = (props: Readonly<PinScreenProps>) => {
       IMPRINT_URL={IMPRINT_URL}
       PRIVACY_URL={PRIVACY_URL}
       TERMS_URL={TERMS_URL}
-      IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+      IS_FORMA_CLOUD={IS_FORMA_CLOUD}
       pinAuthToken={pinAuthToken}
     />
   );

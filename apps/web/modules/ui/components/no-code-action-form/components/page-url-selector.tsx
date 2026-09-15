@@ -17,7 +17,7 @@ import {
   ACTION_CLASS_PAGE_URL_RULES,
   TActionClassInput,
   TActionClassPageUrlRule,
-} from "@formbricks/types/action-classes";
+} from "@forma/types/action-classes";
 import { cn } from "@/lib/cn";
 import { testURLmatch } from "@/lib/utils/url";
 import { Button } from "@/modules/ui/components/button";

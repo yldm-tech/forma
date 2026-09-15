@@ -4,7 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { ZCreateWorkflowInput } from "@formbricks/workflows";
+import { ZCreateWorkflowInput } from "@forma/workflows";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { Button } from "@/modules/ui/components/button";
 import { useCreateWorkflow } from "../hooks/use-create-workflow";

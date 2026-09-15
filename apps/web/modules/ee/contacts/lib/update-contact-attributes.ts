@@ -1,7 +1,7 @@
 import "server-only";
-import { TContactAttributes, TContactAttributesInput } from "@formbricks/types/contact-attribute";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { TContactAttributes, TContactAttributesInput } from "@forma/types/contact-attribute";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { TAttributeUpdateMessage, updateAttributes } from "./attributes";
 import { getContactAttributeKeys } from "./contact-attribute-keys";
 import { getContactAttributes } from "./contact-attributes";

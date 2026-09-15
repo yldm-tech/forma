@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { validateInputs } from "@/lib/utils/validate";
 import { createDefaultTeamMembership, getOrganizationByTeamId } from "../team";
@@ -14,7 +14,7 @@ import {
 // Setup all mocks
 const setupMocks = () => {
   // Mock dependencies
-  vi.mock("@formbricks/database", () => ({
+  vi.mock("@forma/database", () => ({
     prisma: {
       team: {
         findUnique: vi.fn(),
@@ -38,7 +38,7 @@ const setupMocks = () => {
     reconcileTeamWorkspaceRelationships: vi.fn(),
   }));
 
-  vi.mock("@formbricks/logger", () => ({
+  vi.mock("@forma/logger", () => ({
     logger: {
       error: vi.fn(),
     },

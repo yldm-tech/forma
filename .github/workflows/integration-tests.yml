@@ -1,14 +1,14 @@
 name: Integration Tests
 
 # Runs the Better Auth integration harness (apps/web/integration + the *.integration.test.ts files)
-# against a real Postgres + Valkey — the only runtime validation of the BA↔Formbricks boundary
-# (no DB mocks). The unit suite (`pnpm test`) mocks @formbricks/database, so these would otherwise
+# against a real Postgres + Valkey — the only runtime validation of the BA↔Forma boundary
+# (no DB mocks). The unit suite (`pnpm test`) mocks @forma/database, so these would otherwise
 # only run locally. Services + .env setup mirror e2e.yml.
 
 on:
   pull_request:
     # apps/web holds the auth code under test; packages/** because the harness transitively imports
-    # several workspace packages (@formbricks/logger, cache, types, email, database) whose changes
+    # several workspace packages (@forma/logger, cache, types, email, database) whose changes
     # can affect the BA boundary. The dependency/toolchain files are included because a lockfile-only
     # Better Auth/Prisma transitive bump, a workspace/root-manifest change, or an edit to the shared
     # checkout action can all alter this job's behavior without touching apps/web or packages/**.
@@ -100,7 +100,7 @@ jobs:
         run: pnpm install --frozen-lockfile --config.platform=linux --config.architecture=x64
         shell: bash
 
-      # The .env must exist before the package build: @formbricks/database's prisma.config.ts
+      # The .env must exist before the package build: @forma/database's prisma.config.ts
       # resolves DATABASE_URL at config load (dotenv from the repo root), so `prisma generate`
       # fails without it. Same order as e2e.yml.
       - name: Create .env
@@ -115,7 +115,7 @@ jobs:
         if: steps.harness.outputs.present == 'true'
         run: |
           sed -i "s|REDIS_URL=.*|REDIS_URL=redis://localhost:6379|" .env
-          sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql://postgres:postgres@localhost:5432/formbricks_ba_test?schema=public|" .env
+          sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql://postgres:postgres@localhost:5432/forma_ba_test?schema=public|" .env
           # The password-reset integration tests call Better Auth's native endpoints
           # directly, so the before-hook gate added in ENG-2105 would block them when
           # PASSWORD_RESET_DISABLED=1 (the .env.example default). Override to 0 so the
@@ -129,21 +129,21 @@ jobs:
         run: bash scripts/start-authzed-ci.sh
         shell: bash
 
-      # Build the workspace packages the tests import (@formbricks/logger, cache, types, email, …) so
+      # Build the workspace packages the tests import (@forma/logger, cache, types, email, …) so
       # vite can resolve their package.json `exports` → dist. Deps only (`^...`), not the Next app.
       - name: Build workspace package dependencies
         if: steps.harness.outputs.present == 'true'
-        run: pnpm build --filter=@formbricks/web^...
+        run: pnpm build --filter=@forma/web^...
         shell: bash
 
       - name: Create the test database
         if: steps.harness.outputs.present == 'true'
-        run: psql "postgresql://postgres:postgres@localhost:5432/postgres" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE formbricks_ba_test;'
+        run: psql "postgresql://postgres:postgres@localhost:5432/postgres" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE forma_ba_test;'
         shell: bash
 
       - name: Apply schema + data migrations to the test database
         if: steps.harness.outputs.present == 'true'
-        # @formbricks/database is already built by the "Build workspace package
+        # @forma/database is already built by the "Build workspace package
         # dependencies" step above, so run the migration runner directly instead
         # of db:migrate:dev (which would rebuild + re-generate the package).
         # db:migrate:ci was added in #8627; PR branches cut before it lack the
@@ -151,10 +151,10 @@ jobs:
         # so fall back to db:migrate:dev, which every older branch already has.
         run: |
           if node -e "process.exit(require('./packages/database/package.json').scripts['db:migrate:ci'] ? 0 : 1)"; then
-            pnpm --filter=@formbricks/database db:migrate:ci
+            pnpm --filter=@forma/database db:migrate:ci
           else
             echo "::warning::db:migrate:ci absent on this ref (predates #8627); falling back to db:migrate:dev"
-            pnpm --filter=@formbricks/database db:migrate:dev
+            pnpm --filter=@forma/database db:migrate:dev
           fi
         shell: bash
 
@@ -162,7 +162,7 @@ jobs:
       # CI and local provision an identical Better Auth schema shape.
       - name: Shape the schema for Better Auth (emailVerified boolean, Account.type nullable)
         if: steps.harness.outputs.present == 'true'
-        run: psql "postgresql://postgres:postgres@localhost:5432/formbricks_ba_test" -v ON_ERROR_STOP=1 -f apps/web/integration/ba-test-schema-shape.sql
+        run: psql "postgresql://postgres:postgres@localhost:5432/forma_ba_test" -v ON_ERROR_STOP=1 -f apps/web/integration/ba-test-schema-shape.sql
         shell: bash
 
       - name: Run Better Auth integration tests
@@ -175,5 +175,5 @@ jobs:
 
       - name: Output AuthZed logs
         if: failure() && steps.harness.outputs.present == 'true'
-        run: docker logs formbricks-authzed-ci 2>&1 || true
+        run: docker logs forma-authzed-ci 2>&1 || true
         shell: bash

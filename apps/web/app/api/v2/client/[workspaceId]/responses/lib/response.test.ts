@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { TContactAttributes } from "@forma/types/contact-attribute";
 import {
   DatabaseError,
   InvalidInputError,
   ResourceNotFoundError,
   UniqueConstraintError,
-} from "@formbricks/types/errors";
-import { TResponseWithQuotaFull, TSurveyQuota } from "@formbricks/types/quota";
-import { TResponse } from "@formbricks/types/responses";
-import { TTag } from "@formbricks/types/tags";
+} from "@forma/types/errors";
+import { TResponseWithQuotaFull, TSurveyQuota } from "@forma/types/quota";
+import { TResponse } from "@forma/types/responses";
+import { TTag } from "@forma/types/tags";
 import { TResponseInputV2 } from "@/app/api/v2/client/[workspaceId]/responses/types/response";
 import { getOrganization } from "@/lib/organization/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
@@ -20,11 +20,11 @@ import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-servi
 import { getContact } from "./contact";
 import { createResponse, createResponseWithQuotaEvaluation } from "./response";
 
-let mockIsFormbricksCloud = false;
+let mockIsFormaCloud = false;
 
 vi.mock("@/lib/constants", () => ({
-  get IS_FORMBRICKS_CLOUD() {
-    return mockIsFormbricksCloud;
+  get IS_FORMA_CLOUD() {
+    return mockIsFormaCloud;
   },
   IS_PRODUCTION: false,
   POSTHOG_KEY: undefined,
@@ -61,14 +61,14 @@ vi.mock("@/lib/response/utils", async (importOriginal) => ({
 vi.mock("@/lib/utils/helper");
 vi.mock("@/lib/utils/validate");
 vi.mock("@/modules/ee/quotas/lib/evaluation-service");
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       create: vi.fn(),
     },
   },
 }));
-vi.mock("@formbricks/logger");
+vi.mock("@forma/logger");
 vi.mock("./contact");
 
 const workspaceId = "test-workspace-id";
@@ -180,7 +180,7 @@ describe("createResponse V2", () => {
   });
 
   afterEach(() => {
-    mockIsFormbricksCloud = false;
+    mockIsFormaCloud = false;
   });
 
   test("should throw ResourceNotFoundError if organization not found", async () => {

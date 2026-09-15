@@ -14,20 +14,20 @@ vi.mock("./email-verification-request-context", () => ({
   getJustVerifiedUserId: mocks.getJustVerifiedUserId,
 }));
 vi.mock("./signup-intent", () => ({
-  SIGNUP_INTENT_COOKIE_NAME: "formbricks.signup_intent",
+  SIGNUP_INTENT_COOKIE_NAME: "forma.signup_intent",
   SIGNUP_INTENT_COOKIE_OPTIONS: { httpOnly: true, secure: false, path: "/", sameSite: "lax", maxAge: 3600 },
   classifySignupIntent: mocks.classifySignupIntent,
 }));
 vi.mock("./better-auth-observability", () => ({
   auditVerificationSessionWithheld: mocks.auditVerificationSessionWithheld,
 }));
-vi.mock("@/lib/constants", () => ({ WEBAPP_URL: "https://app.formbricks.com" }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@/lib/constants", () => ({ WEBAPP_URL: "https://app.forma.ylam.ai" }));
+vi.mock("@forma/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 /** What the handler redirects to whenever it withholds the session. */
-const LOGIN_VERIFIED = "https://app.formbricks.com/auth/login?verified=1";
+const LOGIN_VERIFIED = "https://app.forma.ylam.ai/auth/login?verified=1";
 
 const { verificationAutoSignInAfterHandler } = await import("./better-auth-verification-autosignin");
 
@@ -45,7 +45,7 @@ const buildCtx = (overrides: Record<string, unknown> = {}) => {
     redirect: vi.fn((url: string) => new Error(`REDIRECT:${url}`)),
     context: {
       internalAdapter: { findUserById, createSession },
-      authCookies: { sessionToken: { name: "formbricks.session_token" } },
+      authCookies: { sessionToken: { name: "forma.session_token" } },
       responseHeaders: new Headers(),
     },
     ...overrides,
@@ -79,7 +79,7 @@ describe("verificationAutoSignInAfterHandler", () => {
     await verificationAutoSignInAfterHandler(ctx);
 
     expect((ctx as unknown as { setCookie: ReturnType<typeof vi.fn> }).setCookie).toHaveBeenCalledWith(
-      "formbricks.signup_intent",
+      "forma.signup_intent",
       "",
       expect.objectContaining({ maxAge: 0 })
     );
@@ -154,7 +154,7 @@ describe("verificationAutoSignInAfterHandler", () => {
     const ctx = buildCtx();
     (ctx as unknown as { context: { responseHeaders: Headers } }).context.responseHeaders.set(
       "set-cookie",
-      "formbricks.session_token=abc; Path=/; HttpOnly"
+      "forma.session_token=abc; Path=/; HttpOnly"
     );
 
     await verificationAutoSignInAfterHandler(ctx);
@@ -175,7 +175,7 @@ describe("verificationAutoSignInAfterHandler", () => {
     mocks.getSessionFromCtx.mockImplementation(async () => {
       (ctx as unknown as { context: { responseHeaders: Headers } }).context.responseHeaders.append(
         "set-cookie",
-        "formbricks.session_token=refreshed; Path=/; HttpOnly"
+        "forma.session_token=refreshed; Path=/; HttpOnly"
       );
       return { user: { id: "someone_else" } };
     });

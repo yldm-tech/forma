@@ -4,7 +4,7 @@ import {
   OrganizationRole,
   TeamUserRole,
   WorkspaceTeamPermission,
-} from "@formbricks/database/prisma";
+} from "@forma/database/prisma";
 import {
   ORGANIZATION_ACCESS_RELATIONS,
   ORGANIZATION_RELATIONS,

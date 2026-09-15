@@ -4,7 +4,7 @@ import turbo from "eslint-config-turbo/flat";
 import tseslint from "typescript-eslint";
 
 /*
- * Shared plumbing for every Formbricks flat config:
+ * Shared plumbing for every Forma flat config:
  * - TypeScript parsing for .ts/.tsx files (for tiers that don't pull in typescript-eslint rules)
  * - Turborepo env-var checks
  * - Prettier compatibility (must stay last so it can disable conflicting stylistic rules)

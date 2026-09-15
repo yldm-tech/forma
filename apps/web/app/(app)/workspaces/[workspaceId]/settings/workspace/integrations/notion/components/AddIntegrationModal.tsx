@@ -6,17 +6,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { TIntegrationInput } from "@formbricks/types/integration";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TIntegrationInput } from "@forma/types/integration";
 import {
   TIntegrationNotion,
   TIntegrationNotionConfigData,
   TIntegrationNotionDatabase,
-} from "@formbricks/types/integration/notion";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/integration/notion";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
 import {
   MappingRow,
@@ -364,9 +364,7 @@ export const AddIntegrationModal = ({
                 </div>
                 {selectedDatabase && selectedSurvey && (
                   <div>
-                    <Label>
-                      {t("workspace.integrations.notion.map_formbricks_fields_to_notion_property")}
-                    </Label>
+                    <Label>{t("workspace.integrations.notion.map_forma_fields_to_notion_property")}</Label>
                     <div className="mt-1 space-y-2 overflow-y-auto">
                       {mapping.map((m, idx) => (
                         <MappingRow

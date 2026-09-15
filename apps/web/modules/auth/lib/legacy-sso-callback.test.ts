@@ -5,7 +5,7 @@ import {
   mapLegacySsoCallbackUrl,
 } from "./legacy-sso-callback";
 
-const BASE = "https://app.formbricks.test";
+const BASE = "https://app.forma.test";
 
 describe("mapLegacySsoCallbackUrl (ENG-2343)", () => {
   test.each(PINNED_SSO_PROVIDER_IDS)("maps the pinned legacy callback for %s", (providerId) => {

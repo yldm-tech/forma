@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import type { TAuthzedParentEdge, TAuthzedSourceRef } from "./backfill-diff";
 import type { TAuthzedRelationship } from "./client";
 import { AUTHZED_BACKFILL_ORGANIZATION_PAGE_SIZE, AUTHZED_TARGET_CHUNK_SIZE } from "./constants";
@@ -65,7 +65,7 @@ export type TAuthzedOrganizationSource = Readonly<{
   /**
    * Workspace-team grants whose team and workspace belong to different organizations.
    *
-   * Formbricks never creates one, and it would break the closed-unit invariant, so these are reported
+   * Forma never creates one, and it would break the closed-unit invariant, so these are reported
    * and then left strictly alone — neither projected nor pruned.
    */
   invalidWorkspaceTeamGrants: ReadonlyArray<TAuthzedWorkspaceTeamTarget>;

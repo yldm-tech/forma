@@ -8,7 +8,7 @@ interface LegalFooterProps {
   IMPRINT_URL?: string;
   PRIVACY_URL?: string;
   TERMS_URL?: string;
-  IS_FORMBRICKS_CLOUD: boolean;
+  IS_FORMA_CLOUD: boolean;
   surveyUrl: string;
   isInFlow?: boolean;
   /** Text color for the links, resolved for AA contrast against the survey background. */
@@ -21,14 +21,14 @@ export const LegalFooter = ({
   IMPRINT_URL,
   PRIVACY_URL,
   TERMS_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   surveyUrl,
   isInFlow = false,
   linkColor,
   backdropColor,
 }: Readonly<LegalFooterProps>) => {
   const { t } = useTranslation();
-  if (!IMPRINT_URL && !PRIVACY_URL && !TERMS_URL && !IS_FORMBRICKS_CLOUD) return null;
+  if (!IMPRINT_URL && !PRIVACY_URL && !TERMS_URL && !IS_FORMA_CLOUD) return null;
 
   return (
     <footer className={cn("z-1500 w-full", isInFlow ? "shrink-0 py-4" : "absolute bottom-0 h-10")}>
@@ -56,12 +56,10 @@ export const LegalFooter = ({
               {t("common.terms_of_service")}
             </Link>
           )}
-          {(IMPRINT_URL || PRIVACY_URL || TERMS_URL) && IS_FORMBRICKS_CLOUD && (
-            <span className="px-2">|</span>
-          )}
-          {IS_FORMBRICKS_CLOUD && (
+          {(IMPRINT_URL || PRIVACY_URL || TERMS_URL) && IS_FORMA_CLOUD && <span className="px-2">|</span>}
+          {IS_FORMA_CLOUD && (
             <Link
-              href={`https://app.formbricks.com/s/clxbivtla014iye2vfrn436xd?surveyUrl=${surveyUrl}`}
+              href={`https://app.forma.ylam.ai/s/clxbivtla014iye2vfrn436xd?surveyUrl=${surveyUrl}`}
               target="_blank"
               className="hover:underline">
               {t("common.report_survey")}

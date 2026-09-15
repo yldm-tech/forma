@@ -13,7 +13,7 @@ interface ProblemCtx {
 
 const makeCtx = (logger: WorkflowsLogger): ProblemCtx => ({
   requestId: "req_1",
-  instance: "https://app.formbricks.com",
+  instance: "https://app.forma.ylam.ai",
   logger,
 });
 

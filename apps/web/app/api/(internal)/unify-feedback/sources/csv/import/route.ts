@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   AuthenticationError,
   AuthorizationError,
   InvalidInputError,
   ResourceNotFoundError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
 import { assertFeedbackSourceDirectoryAccess } from "@/lib/feedback-source/access";
 import { CsvImportValidationError, importCsvFile } from "@/lib/feedback-source/csv-file-import";

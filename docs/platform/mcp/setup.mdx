@@ -1,10 +1,10 @@
 ---
 title: "Set Up Your MCP Client"
-description: "Connect Claude Code, the Claude apps, or Codex to the Formbricks MCP server over OAuth — plus how to manage and revoke access."
+description: "Connect Claude Code, the Claude apps, or Codex to the Forma MCP server over OAuth — plus how to manage and revoke access."
 icon: "plug"
 ---
 
-These guides connect your MCP client to Formbricks using OAuth (no API keys). They use the Formbricks Cloud URL `https://app.formbricks.com/api/mcp`; if you self-host, swap in your own `https://<your-formbricks-domain>/api/mcp`. For how the flow works and prerequisites, see [Connect AI agents (MCP)](/platform/mcp/overview).
+These guides connect your MCP client to Forma using OAuth (no API keys). They use the Forma Cloud URL `https://app.forma.ylam.ai/api/mcp`; if you self-host, swap in your own `https://<your-forma-domain>/api/mcp`. For how the flow works and prerequisites, see [Connect AI agents (MCP)](/platform/mcp/overview).
 
 ## Claude Code
 
@@ -13,21 +13,21 @@ Claude Code runs on your machine and performs the OAuth handshake itself.
 <Steps>
   <Step title="Add the server">
     ```bash
-    claude mcp add --transport http formbricks https://app.formbricks.com/api/mcp
+    claude mcp add --transport http forma https://app.forma.ylam.ai/api/mcp
     ```
   </Step>
   <Step title="Authenticate">
-    In a Claude Code session, run `/mcp`, select **formbricks**, and choose **Authenticate**. Your
-    browser opens to Formbricks; sign in if needed and **approve** the requested access on the consent
+    In a Claude Code session, run `/mcp`, select **forma**, and choose **Authenticate**. Your
+    browser opens to Forma; sign in if needed and **approve** the requested access on the consent
     screen. Claude Code registers itself automatically and stores the token — there's no scope to type
     in.
   </Step>
   <Step title="Verify">
     ```bash
     claude mcp list
-    claude mcp get formbricks
+    claude mcp get forma
     ```
-    Then ask Claude to use it, e.g. *"Use the formbricks MCP server to list my surveys."*
+    Then ask Claude to use it, e.g. *"Use the forma MCP server to list my surveys."*
   </Step>
 </Steps>
 
@@ -36,9 +36,9 @@ To share the server definition with a project (no credentials committed), add it
 ```json
 {
   "mcpServers": {
-    "formbricks": {
+    "forma": {
       "type": "http",
-      "url": "https://app.formbricks.com/api/mcp"
+      "url": "https://app.forma.ylam.ai/api/mcp"
     }
   }
 }
@@ -46,18 +46,18 @@ To share the server definition with a project (no credentials committed), add it
 
 ## Claude apps (custom connectors)
 
-Use this for **claude.ai** and **Claude Desktop**, where Formbricks is added as a custom connector.
+Use this for **claude.ai** and **Claude Desktop**, where Forma is added as a custom connector.
 
 <Steps>
   <Step title="Open the connectors settings">
     Go to **Settings → Connectors** (**Customize → Connectors**) and click **Add custom connector**.
   </Step>
   <Step title="Add the server URL">
-    Enter `https://app.formbricks.com/api/mcp` and confirm. Leave the optional OAuth client fields
-    blank — Formbricks registers the connector automatically.
+    Enter `https://app.forma.ylam.ai/api/mcp` and confirm. Leave the optional OAuth client fields
+    blank — Forma registers the connector automatically.
   </Step>
   <Step title="Approve access">
-    Claude opens Formbricks in your browser. Sign in and **approve** the requested access. The
+    Claude opens Forma in your browser. Sign in and **approve** the requested access. The
     connector then shows as connected, and you can enable it per chat from the **+** menu.
   </Step>
 </Steps>
@@ -70,7 +70,7 @@ Use this for **claude.ai** and **Claude Desktop**, where Formbricks is added as 
     **organization owner** must add the connector under **Organization settings → Connectors** first;
     members then connect to it individually.
   - **The connection runs from Anthropic's servers, not your machine.** A custom connector therefore
-    **cannot reach a `localhost` server** — the MCP URL must be a **public HTTPS** address. Formbricks
+    **cannot reach a `localhost` server** — the MCP URL must be a **public HTTPS** address. Forma
     Cloud works out of the box; if you self-host, expose your instance on a public HTTPS domain (a
     tunnel such as ngrok/cloudflared works for testing). To connect a local dev server, use **Claude
     Code** instead — it runs locally.
@@ -82,19 +82,19 @@ Use this for **claude.ai** and **Claude Desktop**, where Formbricks is added as 
   <Step title="Add the server">
     Include `--oauth-resource` so the access token is audience-bound to the MCP resource:
     ```bash
-    codex mcp add formbricks \
-      --url https://app.formbricks.com/api/mcp \
-      --oauth-resource https://app.formbricks.com/api/mcp
+    codex mcp add forma \
+      --url https://app.forma.ylam.ai/api/mcp \
+      --oauth-resource https://app.forma.ylam.ai/api/mcp
     ```
   </Step>
   <Step title="Authenticate">
     ```bash
-    codex mcp login formbricks
+    codex mcp login forma
     ```
-    Codex opens the browser to Formbricks, registers itself, and you **approve** on the consent
+    Codex opens the browser to Forma, registers itself, and you **approve** on the consent
     screen. For read-only access, restrict the scopes:
     ```bash
-    codex mcp login formbricks --scopes surveys:read,workflows:read,feedbackRecords:read,offline_access
+    codex mcp login forma --scopes surveys:read,workflows:read,feedbackRecords:read,offline_access
     ```
     Scope groups are independent — request only the ones you need (for example
     `feedbackRecords:read,offline_access` for feedback data alone).
@@ -102,7 +102,7 @@ Use this for **claude.ai** and **Claude Desktop**, where Formbricks is added as 
   <Step title="Verify">
     ```bash
     codex mcp list
-    codex mcp get formbricks
+    codex mcp get forma
     ```
   </Step>
 </Steps>
@@ -110,9 +110,9 @@ Use this for **claude.ai** and **Claude Desktop**, where Formbricks is added as 
 The equivalent `~/.codex/config.toml` entry:
 
 ```toml
-[mcp_servers.formbricks]
-url = "https://app.formbricks.com/api/mcp"
-oauth_resource = "https://app.formbricks.com/api/mcp"
+[mcp_servers.forma]
+url = "https://app.forma.ylam.ai/api/mcp"
+oauth_resource = "https://app.forma.ylam.ai/api/mcp"
 ```
 
 ## Manage and revoke access
@@ -132,13 +132,13 @@ revoke — the client re-runs the sign-in and consent flow. Approving the write 
 <AccordionGroup>
   <Accordion title="claude.ai says it couldn't register / connect">
     Custom connectors connect from Anthropic's cloud, which can't reach `localhost` or a private
-    network. Use a **public HTTPS** MCP URL (Formbricks Cloud, or a tunnel to a self-hosted instance),
+    network. Use a **public HTTPS** MCP URL (Forma Cloud, or a tunnel to a self-hosted instance),
     or connect a local server with **Claude Code** instead.
   </Accordion>
   <Accordion title="invalid_client or a stale-registration error after reconnecting">
     The client cached a registration that no longer exists on the server (e.g. the server data was
     reset). Clear the client's stored credentials for the server and re-authenticate — in Claude Code,
-    remove and re-add the server (`claude mcp remove formbricks` then `claude mcp add …`) and run
+    remove and re-add the server (`claude mcp remove forma` then `claude mcp add …`) and run
     `/mcp` again.
   </Accordion>
   <Accordion title="invalid_scope during sign-in">
@@ -147,7 +147,7 @@ revoke — the client re-runs the sign-in and consent flow. Approving the write 
     `workflows:write`, `feedbackRecords:read`, `feedbackRecords:write`, `offline_access`).
   </Accordion>
   <Accordion title="Stuck in a consent loop / keeps asking you to sign in">
-    Usually a cookie or stale-session issue. Make sure you're signed in to Formbricks in the same
+    Usually a cookie or stale-session issue. Make sure you're signed in to Forma in the same
     browser the client opens, and that third-party-cookie blocking or a private window isn't
     discarding the session. If it persists, revoke the app under **Settings → Account → Authorized
     Apps**, clear the client's stored credentials for the server, and reconnect. Self-hosters: an
@@ -161,17 +161,17 @@ revoke — the client re-runs the sign-in and consent flow. Approving the write 
     the matching `:read` scope; reconnect and approve write access.
   </Accordion>
   <Accordion title="Self-hosted: the browser can't complete sign-in / redirects fail">
-    OAuth discovery and redirects are built from your configured base URL. Serve Formbricks from a
+    OAuth discovery and redirects are built from your configured base URL. Serve Forma from a
     correct, public **HTTPS** origin and set `WEBAPP_URL` (and `BETTER_AUTH_URL`) to it. An
     `http://localhost` or mismatched origin breaks the flow for remote clients. See the
     [environment variables](/self-hosting/configuration/environment-variables) reference.
 
-    If the Formbricks container or pod cannot resolve that public origin when it verifies a token, set
+    If the Forma container or pod cannot resolve that public origin when it verifies a token, set
     `MCP_OAUTH_JWKS_URL` to the internal `/api/auth/jwks` endpoint. Keep `WEBAPP_URL`, `NEXTAUTH_URL`, and
     `BETTER_AUTH_URL` public: the internal override is only used for the server-side signing-key fetch.
-    `/api/auth/jwks` is correct only when no custom application subpath is configured. If Formbricks is
-    mounted at `/formbricks`, use the complete internal URL, such as
-    `http://formbricks:3000/formbricks/api/auth/jwks`.
+    `/api/auth/jwks` is correct only when no custom application subpath is configured. If Forma is
+    mounted at `/forma`, use the complete internal URL, such as
+    `http://forma:3000/forma/api/auth/jwks`.
   </Accordion>
 </AccordionGroup>
 

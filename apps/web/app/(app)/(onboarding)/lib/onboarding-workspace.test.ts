@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { getOrganization, updateOrganization } from "@/lib/organization/service";
 import { getUserWorkspaces, getWorkspaces } from "@/lib/workspace/service";

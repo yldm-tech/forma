@@ -8,7 +8,7 @@ vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
   queueAuditEvent: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },
@@ -100,7 +100,7 @@ describe("audit-logs lib", () => {
   test("swallows errors from queueAuditEvent and logs", async () => {
     const { getOrganizationIdFromWorkspaceId } = await import("@/lib/utils/helper");
     const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
-    const { logger } = await import("@formbricks/logger");
+    const { logger } = await import("@forma/logger");
     const { logFileDeletion } = await import("./audit-logs");
 
     vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org-3");

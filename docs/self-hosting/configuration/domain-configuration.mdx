@@ -1,23 +1,23 @@
 ---
 title: "Domain Configuration"
-description: "Configuring your domain for Formbricks."
+description: "Configuring your domain for Forma."
 icon: "globe"
 ---
 
-Formbricks supports both single domain and dual domain configurations with Public/Private Domain Split feature. This guide will help you set up your domains correctly for enhanced security and organization.
+Forma supports both single domain and dual domain configurations with Public/Private Domain Split feature. This guide will help you set up your domains correctly for enhanced security and organization.
 
 ## Single Domain Setup
 
 For a single domain setup, you need to configure two essential environment variables:
 
-1. `WEBAPP_URL`: The base URL of your Formbricks instance (serves both admin and public content)
+1. `WEBAPP_URL`: The base URL of your Forma instance (serves both admin and public content)
 2. `NEXTAUTH_URL`: The authentication URL (should be the same as WEBAPP_URL)
 
 ### Example Configuration
 
 ```bash
-WEBAPP_URL=https://formbricks.example.com
-NEXTAUTH_URL=https://formbricks.example.com
+WEBAPP_URL=https://forma.example.com
+NEXTAUTH_URL=https://forma.example.com
 ```
 
 ### Important Notes
@@ -29,7 +29,7 @@ NEXTAUTH_URL=https://formbricks.example.com
 
 ## Public / Private Domain Split
 
-Formbricks supports a powerful domain separation feature that allows you to serve public content (surveys, public APIs) from a different domain than your private admin interface. This provides enhanced security and better organization. It enables you to:
+Forma supports a powerful domain separation feature that allows you to serve public content (surveys, public APIs) from a different domain than your private admin interface. This provides enhanced security and better organization. It enables you to:
 
 - Serve public content (surveys, public APIs) from a different domain than your private admin interface
 - Restrict admin functionality to the private domain
@@ -51,17 +51,17 @@ To set up Public/Private Domain Split:
 1. **Private Domain (WEBAPP_URL)**: Your admin/management interface
 2. **Public Domain (PUBLIC_URL)**: For surveys and public-facing content
 
-**Important Security Note**: Formbricks handles application-level domain restrictions to ensure each domain
+**Important Security Note**: Forma handles application-level domain restrictions to ensure each domain
 can only access specific resources within the application. However, all domain configuration (DNS, SSL
 certificates, reverse proxy setup) and firewall configuration that comes with this feature to enhance
-security must be configured by you. Formbricks does not manage your infrastructure-level security settings.
+security must be configured by you. Forma does not manage your infrastructure-level security settings.
 
 ### Example Configuration
 
 ```bash
 # Private admin domain
-WEBAPP_URL=https://admin.formbricks.example.com
-NEXTAUTH_URL=https://admin.formbricks.example.com
+WEBAPP_URL=https://admin.forma.example.com
+NEXTAUTH_URL=https://admin.forma.example.com
 
 # Public domain for surveys
 PUBLIC_URL=https://surveys.example.com
@@ -129,7 +129,7 @@ All other routes are restricted to the private domain (`WEBAPP_URL`) for securit
 When using PUBLIC_URL (multi-domain setup), all SDK configurations must use the **public domain**:
 
 ```js
-Formbricks.setup({
+Forma.setup({
   workspaceId: "your-workspace-id",
   appUrl: "https://surveys.example.com", // Use PUBLIC_URL domain
 });
@@ -141,8 +141,8 @@ Please refer to the [Framework Guides](/surveys/website-app-surveys/framework-gu
 
 1. **Set up DNS records** for both domains
 2. **Configure SSL certificates** for both domains
-3. **Update your reverse proxy** (nginx, Apache, Cloudflare, etc.) to route both domains to your Formbricks instance
-4. **Firewall rules**: Ensure both domains can reach your Formbricks instance
+3. **Update your reverse proxy** (nginx, Apache, Cloudflare, etc.) to route both domains to your Forma instance
+4. **Firewall rules**: Ensure both domains can reach your Forma instance
 
 ### Fallback Behavior
 
@@ -159,6 +159,6 @@ While it's possible to revert to a Single Domain setup, please take into account
 2. Any survey link shared to with the Public Domain **will break.**
 3. API calls to the Public Domain **will break**, unless updated.
 
-As of now, Formbricks does not provide an automated migration between domain setups.
+As of now, Forma does not provide an automated migration between domain setups.
 
-If you have any questions or require help, feel free to reach out to us on [GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+If you have any questions or require help, feel free to reach out to us on [GitHub Discussions](https://github.com/yldm-tech/forma/discussions).

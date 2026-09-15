@@ -1,11 +1,11 @@
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma, Response } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { ValidationError } from "@formbricks/types/errors";
-import { TResponse } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { Prisma, Response } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { ValidationError } from "@forma/types/errors";
+import { TResponse } from "@forma/types/responses";
 import { getDisplayForResponseValidation } from "@/lib/display/service";
 import { normalizeResponseLanguage } from "@/lib/response/utils";
 import { deleteDisplay } from "@/modules/api/v2/management/responses/[responseId]/lib/display";

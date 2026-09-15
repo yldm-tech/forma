@@ -12,7 +12,7 @@ import {
   ZSegmentSurveyInteractionFilterValue,
   ZSegmentUpdateInput,
   buildSurveyInteractionRefreshMap,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 
 const surveyInteractionFilter = (value: unknown) => [
   {

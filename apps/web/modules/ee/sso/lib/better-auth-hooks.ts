@@ -2,10 +2,10 @@ import "server-only";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { cookies } from "next/headers";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@formbricks/types/errors";
-import { normalizeUserName } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@forma/types/errors";
+import { normalizeUserName } from "@forma/types/user";
 import { WEBAPP_URL } from "@/lib/constants";
 import { identifyPostHogPerson } from "@/lib/posthog";
 import { findMatchingLocale } from "@/lib/utils/locale";
@@ -142,7 +142,7 @@ const deriveNameFromEmail = (email: string): string =>
  *
  * The SSO providers set `overrideUserInfo`, which makes
  * `handleOAuthUserInfo` re-write the user row on every sign-in so a directory rename reaches
- * Formbricks. It writes the whole profile in one call — `{ name, image, email, emailVerified }` —
+ * Forma. It writes the whole profile in one call — `{ name, image, email, emailVerified }` —
  * and two of those are wrong here:
  *
  *  - **`image`** would break sign-in outright. `User` has no `image` column (parity with
@@ -193,7 +193,7 @@ export const ssoProfileSyncUpdateBefore = async (
 };
 
 /**
- * Better Auth `databaseHooks` re-expressing Formbricks' SSO sign-up flow (design doc §13), reusing
+ * Better Auth `databaseHooks` re-expressing Forma' SSO sign-up flow (design doc §13), reusing
  * the existing logic via `./sso-provisioning`:
  *  - `user.create.before` — gate the SSO sign-up (`gateSsoProvisioning`; a reject THROWS an APIError
  *    carrying the reason code, which aborts Better Auth's user+account transaction, so no orphan user
@@ -240,7 +240,7 @@ export const ssoDatabaseHooks: NonNullable<BetterAuthOptions["databaseHooks"]> =
           // caught there and turned into a generic `unable_to_create_user` redirect — so not a 500 —
           // but the catch logs it, and `betterAuthLogger` forwards a caught non-APIError to Sentry.
           // Every rejected SSO sign-up therefore reported an internal fault for what is an ordinary
-          // policy decision (FORMBRICKS-19M).
+          // policy decision (FORMA-19M).
           //
           // An APIError carrying a `code` is the shape the OAuth callback handles deliberately: it
           // catches one and turns it into a redirect naming that code (`api/routes/callback.mjs`),
@@ -372,7 +372,7 @@ export const ssoLicenseGateBefore = createAuthMiddleware(ssoLicenseGateBeforeHan
 
 /**
  * Request hook (`hooks.after`) that turns Better Auth's "account not linked" collision into
- * Formbricks' verify-before-link SSO recovery (design doc §13). With `accountLinking.enabled:false`,
+ * Forma' verify-before-link SSO recovery (design doc §13). With `accountLinking.enabled:false`,
  * an SSO sign-in whose email matches an existing account redirects to `?error=account_not_linked`.
  * We detect that on the callback, read the SSO identity captured in `mapProfileToUser`, and — if the
  * email maps to an existing user — start recovery (inbox-verification email + redirect to the

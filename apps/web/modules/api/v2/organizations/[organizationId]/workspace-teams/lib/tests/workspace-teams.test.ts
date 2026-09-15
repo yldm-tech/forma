@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TypeOf } from "zod";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import {
   TGetWorkspaceTeamsFilter,
@@ -14,7 +14,7 @@ import {
   updateWorkspaceTeam,
 } from "../workspace-teams";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspaceTeam: {
       findMany: vi.fn(),

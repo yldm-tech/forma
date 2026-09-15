@@ -1,6 +1,6 @@
 "use server";
 
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { logSignOut } from "@/modules/auth/lib/utils";
 
 /**

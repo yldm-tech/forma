@@ -1,5 +1,5 @@
 import { type Page, expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import type { UsersFixture } from "./fixtures/users";
 import { test } from "./lib/fixtures";
 
@@ -146,7 +146,7 @@ test.describe("Settings workspace breadcrumb (ENG-1705)", () => {
 
   // ENG-1700: the sidebar back arrow is a button that router.push-es the workspace the shell
   // resolved, so assert the resulting URL rather than an href. Visiting the second workspace first
-  // points the proxy's formbricks-workspace-id cookie at it, while the no-cookie fallback is the
+  // points the proxy's forma-workspace-id cookie at it, while the no-cookie fallback is the
   // first-created workspace — so landing back on the second one proves the cookie wins.
   test("the back arrow returns to the workspace you came from", async ({ page, users }) => {
     const { user, organizationId } = await createOwner(users);

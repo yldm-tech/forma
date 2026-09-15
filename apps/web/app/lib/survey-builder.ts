@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import type { TFunction } from "i18next";
-import type { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+import type { TSurveyBlock } from "@forma/types/surveys/blocks";
 import type {
   TSurveyEndScreenCard,
   TSurveyEnding,
@@ -8,8 +8,8 @@ import type {
   TSurveyLanguage,
   TSurveyLogic,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
-import type { TTemplate, TTemplateRole } from "@formbricks/types/templates";
+} from "@forma/types/surveys/types";
+import type { TTemplate, TTemplateRole } from "@forma/types/templates";
 import { createI18nString, extractLanguageCodes } from "@/lib/i18n/utils";
 
 // Helper function to create standard jump logic based on operator
@@ -85,7 +85,7 @@ export const getDefaultEndingCard = (languages: TSurveyLanguage[], t: TFunction)
     subheader: createI18nString(t("templates.default_ending_card_subheader"), languageCodes),
     buttonLabel: createI18nString(t("templates.default_ending_card_button_label"), languageCodes),
     buttonLink:
-      "https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=default_ending_cta",
+      "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
   };
 };
 

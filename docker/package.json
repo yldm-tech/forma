@@ -1,5 +1,5 @@
 {
-  "name": "@formbricks/docker",
+  "name": "@forma/docker",
   "private": true,
   "scripts": {
     "test": "vitest run",

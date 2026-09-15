@@ -1,4 +1,4 @@
-import { TSurveyCTAElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyCTAElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyCalQuestion,
@@ -13,7 +13,7 @@ import {
   TSurveyQuestionTypeEnum,
   TSurveyRatingQuestion,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import { mockSurveyLanguages } from "@/lib/survey/__mock__/survey.mock";
 
 export const mockWelcomeCard: TSurveyWelcomeCard = {
@@ -122,11 +122,11 @@ export const mockPictureSelectQuestion: TSurveyPictureSelectionQuestion = {
   choices: [
     {
       id: "bdz471uu4ut7ox38b5aprzkq",
-      imageUrl: "https://formbricks-cdn.s3.eu-central-1.amazonaws.com/puppy-1-small.jpg",
+      imageUrl: "https://forma-cdn.s3.eu-central-1.amazonaws.com/puppy-1-small.jpg",
     },
     {
       id: "t10v5rkqw32si3orlkt9mrdw",
-      imageUrl: "https://formbricks-cdn.s3.eu-central-1.amazonaws.com/puppy-2-small.jpg",
+      imageUrl: "https://forma-cdn.s3.eu-central-1.amazonaws.com/puppy-2-small.jpg",
     },
   ],
   id: "a8monbe8hq0mivh3irfhd3i5",
@@ -247,7 +247,7 @@ export const mockEndings = [
     subheader: {
       default: "We appreciate your feedback.",
     },
-    buttonLink: "https://formbricks.com",
+    buttonLink: "https://forma.ylam.ai",
     buttonLabel: { default: "Create your own Survey" },
   } as TSurveyEndScreenCard,
 ];
@@ -285,7 +285,7 @@ export const mockSurvey: TSurvey = {
       subheader: {
         default: "We appreciate your feedback.",
       },
-      buttonLink: "https://formbricks.com",
+      buttonLink: "https://forma.ylam.ai",
       buttonLabel: { default: "Create your own Survey" },
     },
   ],

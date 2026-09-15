@@ -3,8 +3,8 @@
 import { UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { TSegment, TSegmentWithSurveyRefs } from "@formbricks/types/segment";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { TSegment, TSegmentWithSurveyRefs } from "@forma/types/segment";
 import { timeSinceDate } from "@/lib/time";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { EditSegmentModal } from "./edit-segment-modal";

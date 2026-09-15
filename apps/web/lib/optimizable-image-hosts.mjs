@@ -7,7 +7,7 @@
  *
  * Two hard constraints shape this list:
  * - `next.config` (and therefore `remotePatterns`) is frozen into the build. The same Docker image
- *   serves multiple domains (app.formbricks.com, ksa.formbricks.com, and every self-hoster), so the
+ *   serves multiple domains (app.forma.ylam.ai, ksa.forma.ylam.ai, and every self-hoster), so the
  *   deployment's own domain can NOT be baked in here and is intentionally absent.
  * - First-party uploads are served from same-origin `/storage/...` (relative) paths, which Next
  *   treats as local images (default: optimize all) and never checks against `remotePatterns`.

@@ -1,4 +1,4 @@
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
@@ -22,14 +22,14 @@ export const WorkflowsUpgradePrompt = async ({ organizationId }: Readonly<Workfl
         feature="workflows"
         buttons={[
           {
-            text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-            href: IS_FORMBRICKS_CLOUD
+            text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+            href: IS_FORMA_CLOUD
               ? `/organizations/${organizationId}/settings/billing`
               : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
           },
           {
             text: t("common.learn_more"),
-            href: "https://formbricks.com/docs/workflows/overview",
+            href: "https://forma.ylam.ai/docs/workflows/overview",
           },
         ]}
       />

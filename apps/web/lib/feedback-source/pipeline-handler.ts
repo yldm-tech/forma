@@ -1,8 +1,8 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { type TReconcileFailure, reconcileFeedbackRecords } from "./reconcile";
 import { getFeedbackSourcesBySurveyId, updateFeedbackSource } from "./service";
 import { transformResponseToFeedbackRecords } from "./transform";
@@ -40,7 +40,7 @@ const processFeedbackSource = async (
   const feedbackRecords = transformResponseToFeedbackRecords(
     response,
     survey,
-    feedbackSource.formbricksMappings,
+    feedbackSource.formaMappings,
     feedbackSource.feedbackDirectoryId
   );
 

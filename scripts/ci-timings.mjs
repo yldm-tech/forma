@@ -15,10 +15,10 @@
 //
 // Env:
 //   GITHUB_TOKEN | GH_TOKEN  token with `actions: read` on the repo
-//   GITHUB_REPOSITORY        "owner/repo" (defaults to formbricks/formbricks)
+//   GITHUB_REPOSITORY        "owner/repo" (defaults to forma/forma)
 
 const API = "https://api.github.com";
-const REPO = process.env.GITHUB_REPOSITORY || "formbricks/formbricks";
+const REPO = process.env.GITHUB_REPOSITORY || "forma/forma";
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 // Steps slower than this in a healthy run are worth a look. Tuned to sit just above the

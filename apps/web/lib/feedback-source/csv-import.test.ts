@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { InvalidInputError } from "@formbricks/types/errors";
-import type { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
+import { InvalidInputError } from "@forma/types/errors";
+import type { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
 import { CSV_IMPORT_MISSING_COLUMNS_ERROR_CODE } from "@/modules/ee/unify-feedback/sources/types";
 import { importCsvData } from "./csv-import";
 
@@ -40,7 +40,7 @@ const makeFeedbackSource = (
   lastSyncAt: null,
   createdBy: null,
   creatorName: null,
-  formbricksMappings: [],
+  formaMappings: [],
   fieldMappings: [
     {
       id: "fm-1",
@@ -106,7 +106,7 @@ describe("importCsvData", () => {
   });
 
   test("throws InvalidInputError for non-csv feedbackSource", async () => {
-    const feedbackSource = makeFeedbackSource({ type: "formbricks_survey" });
+    const feedbackSource = makeFeedbackSource({ type: "forma_survey" });
     await expect(importCsvData(feedbackSource, [])).rejects.toThrow(InvalidInputError);
   });
 

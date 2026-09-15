@@ -6,4 +6,4 @@ export type {
   TWorkflowRunListItem,
   TWorkflowRunResource as TWorkflowRunDetail,
   TWorkflowRunSummary,
-} from "@formbricks/workflows";
+} from "@forma/workflows";

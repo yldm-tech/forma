@@ -1,10 +1,10 @@
-# @formbricks/database
+# @forma/database
 
-The database package for the Formbricks monorepo, providing centralized database schema management, migration handling, and type definitions for the entire platform.
+The database package for the Forma monorepo, providing centralized database schema management, migration handling, and type definitions for the entire platform.
 
 ## Overview
 
-This package serves as the central database layer for Formbricks, containing:
+This package serves as the central database layer for Forma, containing:
 
 - **Prisma Schema**: Complete database schema definition with PostgreSQL support
 - **Migration System**: Custom migration management for both schema and data migrations
@@ -98,7 +98,7 @@ Each subdirectory under `packages/database/migration` represents a single migrat
 
 ### Root Level Commands
 
-Run these commands from the root directory of the Formbricks monorepo:
+Run these commands from the root directory of the Forma monorepo:
 
 - **`pnpm fb-migrate-dev`**: Create and apply schema migrations
   - Prompts for migration name
@@ -175,7 +175,7 @@ fail-safe: still use a dedicated disposable database and never point this variab
 production database:
 
 ```bash
-SHADOW_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/formbricks_migration_shadow?schema=public" \
+SHADOW_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/forma_migration_shadow?schema=public" \
   pnpm check:migration-drift
 ```
 
@@ -220,8 +220,8 @@ The `pnpm db:seed` script:
 
 1. **Infrastructure**: Upserts a default organization and workspace.
 2. **Users**: Creates default users with the following credentials (passwords are hashed):
-   - **Admin**: `admin@formbricks.com` / `password123`
-   - **Manager**: `manager@formbricks.com` / `password123`
+   - **Admin**: `admin@forma.ylam.ai` / `password123`
+   - **Manager**: `manager@forma.ylam.ai` / `password123`
 3. **Surveys**: Creates complex sample surveys (Kitchen Sink, CSAT, Draft, etc.) in the **Production** workspace.
 4. **Responses**: Generates ~50 realistic responses and displays for each survey.
 
@@ -273,8 +273,8 @@ not mistake idempotency for shape validation.
 
 ```typescript
 import { createId } from "@paralleldrive/cuid2";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 
 export const myDataMigration: MigrationScript = {
@@ -378,4 +378,4 @@ When making changes to the database schema:
 4. Test migrations thoroughly in development before applying to production
 5. Document any breaking changes or special considerations
 
-For more information about the Formbricks project structure, see the main repository README.
+For more information about the Forma project structure, see the main repository README.

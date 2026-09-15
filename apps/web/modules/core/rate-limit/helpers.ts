@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { hashString } from "@/lib/hash-string";
 import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
 import { checkRateLimit, peekRateLimit } from "./rate-limit";

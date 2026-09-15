@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
 import {
   CSV_HIDDEN_STATIC_MAPPINGS,
   MAX_CSV_VALUES,
@@ -81,10 +81,10 @@ describe("getSuggestedSurveys", () => {
 });
 
 describe("getFeedbackSourceOptions", () => {
-  test("returns formbricks, csv, api ingestion, and mcp options", () => {
+  test("returns forma, csv, api ingestion, and mcp options", () => {
     const options = getFeedbackSourceOptions(mockT as never);
     expect(options).toHaveLength(4);
-    expect(options[0].id).toBe("formbricks_survey");
+    expect(options[0].id).toBe("forma_survey");
     expect(options[1].id).toBe("csv");
     expect(options[2].id).toBe("api_ingestion");
     expect(options[3].id).toBe("feedback_record_mcp");
@@ -92,8 +92,8 @@ describe("getFeedbackSourceOptions", () => {
 
   test("uses translation keys for name and description", () => {
     const options = getFeedbackSourceOptions(mockT as never);
-    expect(options[0].name).toBe("workspace.unify.formbricks_surveys");
-    expect(options[0].description).toBe("workspace.unify.source_connect_formbricks_description");
+    expect(options[0].name).toBe("workspace.unify.forma_surveys");
+    expect(options[0].description).toBe("workspace.unify.source_connect_forma_description");
     expect(options[1].name).toBe("workspace.unify.csv_import");
     expect(options[1].description).toBe("workspace.unify.source_connect_csv_description");
     expect(options[2].name).toBe("workspace.unify.api_ingestion");
@@ -633,19 +633,19 @@ describe("re-import historic data", () => {
   const buildSource = (overrides: Partial<TFeedbackSourceWithMappings> = {}): TFeedbackSourceWithMappings =>
     ({
       id: "fs1",
-      type: "formbricks_survey",
+      type: "forma_survey",
       status: "active",
-      formbricksMappings: [],
+      formaMappings: [],
       ...overrides,
     }) as TFeedbackSourceWithMappings;
 
   const mapping = (surveyId: string, elementId: string) =>
-    ({ surveyId, elementId }) as TFeedbackSourceWithMappings["formbricksMappings"][number];
+    ({ surveyId, elementId }) as TFeedbackSourceWithMappings["formaMappings"][number];
 
   describe("getMappedSurveyIds", () => {
     test("collapses the one-row-per-question mappings to a single survey", () => {
       const source = buildSource({
-        formbricksMappings: [mapping("survey1", "q1"), mapping("survey1", "q2"), mapping("survey1", "q3")],
+        formaMappings: [mapping("survey1", "q1"), mapping("survey1", "q2"), mapping("survey1", "q3")],
       });
 
       expect(getMappedSurveyIds(source)).toEqual(["survey1"]);
@@ -653,7 +653,7 @@ describe("re-import historic data", () => {
 
     test("returns every distinct survey rather than only the first", () => {
       const source = buildSource({
-        formbricksMappings: [mapping("survey1", "q1"), mapping("survey2", "q1"), mapping("survey1", "q2")],
+        formaMappings: [mapping("survey1", "q1"), mapping("survey2", "q1"), mapping("survey1", "q2")],
       });
 
       expect(getMappedSurveyIds(source)).toEqual(["survey1", "survey2"]);
@@ -665,30 +665,30 @@ describe("re-import historic data", () => {
   });
 
   describe("canReimportHistoricalData", () => {
-    test("applies to a Formbricks source with a mapped survey", () => {
-      expect(canReimportHistoricalData(buildSource({ formbricksMappings: [mapping("survey1", "q1")] }))).toBe(
+    test("applies to a Forma source with a mapped survey", () => {
+      expect(canReimportHistoricalData(buildSource({ formaMappings: [mapping("survey1", "q1")] }))).toBe(
         true
       );
     });
 
-    test("does not apply to a Formbricks source with nothing mapped", () => {
+    test("does not apply to a Forma source with nothing mapped", () => {
       expect(canReimportHistoricalData(buildSource())).toBe(false);
     });
 
     test("does not apply to a CSV source, which importHistoricalResponses rejects", () => {
-      const csvSource = buildSource({ type: "csv", formbricksMappings: [mapping("survey1", "q1")] });
+      const csvSource = buildSource({ type: "csv", formaMappings: [mapping("survey1", "q1")] });
 
       expect(canReimportHistoricalData(csvSource)).toBe(false);
     });
 
     test("does not apply to a paused source, whose owner switched off writes to the directory", () => {
-      const paused = buildSource({ status: "paused", formbricksMappings: [mapping("survey1", "q1")] });
+      const paused = buildSource({ status: "paused", formaMappings: [mapping("survey1", "q1")] });
 
       expect(canReimportHistoricalData(paused)).toBe(false);
     });
 
     test("does not apply to an errored source, which the live pipeline also skips", () => {
-      const errored = buildSource({ status: "error", formbricksMappings: [mapping("survey1", "q1")] });
+      const errored = buildSource({ status: "error", formaMappings: [mapping("survey1", "q1")] });
 
       expect(canReimportHistoricalData(errored)).toBe(false);
     });

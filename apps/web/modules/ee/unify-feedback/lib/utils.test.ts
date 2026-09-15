@@ -145,8 +145,8 @@ describe("isPresetSourceType", () => {
 
 describe("formatSourceType", () => {
   test("maps known source types", () => {
-    expect(formatSourceType("formbricks", t)).toBe("workspace.unify.formbricks_surveys");
-    expect(formatSourceType("formbricks_survey", t)).toBe("workspace.unify.formbricks_surveys");
+    expect(formatSourceType("forma", t)).toBe("workspace.unify.forma_surveys");
+    expect(formatSourceType("forma_survey", t)).toBe("workspace.unify.forma_surveys");
     expect(formatSourceType("csv", t)).toBe("workspace.unify.csv_import");
   });
 

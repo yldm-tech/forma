@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TSurveyEnding } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { type TSurveyEnding } from "@forma/types/surveys/types";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { type UsersFixture } from "../fixtures/users";
 
@@ -29,7 +29,7 @@ const i18nValue = (value: string): { default: string } => ({ default: value });
 
 export interface SeededAppSurvey {
   workspaceId: string;
-  /** `key` of the code action that triggers the survey — pass to `formbricks.track()`. */
+  /** `key` of the code action that triggers the survey — pass to `forma.track()`. */
   actionKey: string;
 }
 

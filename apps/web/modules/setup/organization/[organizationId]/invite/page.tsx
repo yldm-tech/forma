@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USER } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";

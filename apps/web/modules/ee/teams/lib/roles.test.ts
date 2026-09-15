@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, UnknownError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError, UnknownError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { getTeamRoleByTeamIdUserId, getTeamsWhereUserIsAdmin, getWorkspacePermissionByUserId } from "./roles";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspaceTeam: { findMany: vi.fn() },
     teamUser: { findUnique: vi.fn(), findMany: vi.fn() },
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("@/lib/utils/validate", () => ({ validateInputs: vi.fn() }));
 
 const mockUserId = "user-1";

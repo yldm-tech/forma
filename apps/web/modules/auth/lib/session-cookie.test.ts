@@ -8,8 +8,8 @@ const { mockEnv } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/env", () => ({ env: mockEnv }));
 
-const BA_COOKIE = "__Secure-formbricks.session_token";
-const DEV_COOKIE = "formbricks.session_token";
+const BA_COOKIE = "__Secure-forma.session_token";
+const DEV_COOKIE = "forma.session_token";
 
 // Mirror better-call's serializeSignedCookie: `${token}.${base64(HMAC-SHA256(token, secret))}`.
 const sign = (token: string, secret: string): string =>
@@ -56,7 +56,7 @@ describe("Better Auth session-cookie verification", () => {
   test("falls through a present-but-invalid cookie to a valid one under another name", () => {
     // Repro of the residual loop: a stale `__Secure-` cookie (signed with an old/default secret) sits
     // alongside a valid non-secure cookie. The proxy checks `__Secure-` first; it must skip the invalid
-    // one and accept the valid `formbricks.session_token` rather than wedge the session.
+    // one and accept the valid `forma.session_token` rather than wedge the session.
     mockEnv.BETTER_AUTH_SECRET = BA_SECRET;
     const stale = `${token}.${createHmac("sha256", "old-default-secret").update(token).digest("base64")}`;
     const valid = sign(token, BA_SECRET);
@@ -89,7 +89,7 @@ describe("Better Auth session-cookie verification", () => {
 
   test("Cookie header: falls through a present-but-invalid __Secure- cookie to a valid one", () => {
     // Same redirect-loop protection as the cookie-store path (above), but for the raw Cookie header
-    // parser: a stale `__Secure-` cookie alongside a valid `formbricks.session_token` must not wedge.
+    // parser: a stale `__Secure-` cookie alongside a valid `forma.session_token` must not wedge.
     mockEnv.BETTER_AUTH_SECRET = BA_SECRET;
     const stale = `${token}.${createHmac("sha256", "old-default-secret").update(token).digest("base64")}`;
     const valid = sign(token, BA_SECRET);

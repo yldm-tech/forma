@@ -1,4 +1,4 @@
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
+import { TContactAttributes } from "@forma/types/contact-attribute";
 import { TContactWithAttributes, TTransformPersonInput } from "@/modules/ee/contacts/types/contact";
 import { readAttributeValue } from "./attribute-storage";
 

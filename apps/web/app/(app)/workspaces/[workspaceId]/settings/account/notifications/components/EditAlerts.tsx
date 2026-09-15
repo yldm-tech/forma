@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { HelpCircleIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { TUser, TUserNotificationSettings } from "@formbricks/types/user";
+import { TUser, TUserNotificationSettings } from "@forma/types/user";
 import { organizationSettingsPath } from "@/modules/settings/lib/routes";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { SettingsTable, type TSettingsTableColumn } from "@/modules/ui/components/settings-table";

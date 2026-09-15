@@ -1,12 +1,12 @@
 ---
 title: "Monitoring"
-description: "Monitoring your Formbricks installation for optimal performance."
+description: "Monitoring your Forma installation for optimal performance."
 icon: "magnifying-glass-chart"
 ---
 
 ## Logging
 
-Formbricks follows Next.js best practices with all logs being written to stdout/stderr, making it easy to collect and forward logs to your preferred logging solution.
+Forma follows Next.js best practices with all logs being written to stdout/stderr, making it easy to collect and forward logs to your preferred logging solution.
 
 ### Log Levels
 
@@ -18,7 +18,7 @@ Formbricks follows Next.js best practices with all logs being written to stdout/
 
 ### Log Format
 
-Formbricks uses JSON format for logs, which is structured and easy to parse. Each log entry includes:
+Forma uses JSON format for logs, which is structured and easy to parse. Each log entry includes:
 
 - `level`: The log level (e.g., info, error).
 - `time`: Timestamp of the log entry in milliseconds since epoch.
@@ -57,7 +57,7 @@ LOG_LEVEL=debug
 
 ```bash
 # One-Click setup
-cd formbricks
+cd forma
 docker compose logs
 
 # Standard Docker commands
@@ -84,21 +84,21 @@ Since all logs are written to stdout/stderr, you can integrate with various logg
 
 ## OpenTelemetry Integration
 
-Formbricks offers two complementary observability approaches:
+Forma offers two complementary observability approaches:
 
 1. **Next.js OpenTelemetry** - For tracing and APM integration
 2. **Prometheus Integration** - For metrics collection and monitoring
 
 ### Next.js OpenTelemetry for Tracing
 
-Formbricks leverages Next.js's built-in OpenTelemetry instrumentation for tracing and APM integration. When enabled, it automatically instruments various aspects of your application, providing detailed insights into request flows and performance.
+Forma leverages Next.js's built-in OpenTelemetry instrumentation for tracing and APM integration. When enabled, it automatically instruments various aspects of your application, providing detailed insights into request flows and performance.
 
 To enable Next.js OpenTelemetry, set the following environment variables:
 
 ```env
 OTEL_ENABLED=true
 OTEL_ENDPOINT=<your-collector-endpoint> # e.g., http://localhost:4318/v1/traces for OTLP HTTP
-OTEL_SERVICE_NAME=formbricks
+OTEL_SERVICE_NAME=forma
 NEXT_OTEL_VERBOSE=1 # Optional: enables detailed tracing
 ```
 
@@ -134,7 +134,7 @@ OpenTelemetry trace data can be exported to various observability platforms:
 
 ## Prometheus Integration
 
-Formbricks implements a dedicated Prometheus metrics exporter using OpenTelemetry. This integration runs a metrics server on a separate port and exposes metrics in Prometheus format for scraping. It focuses specifically on host and runtime metrics rather than application-specific traces.
+Forma implements a dedicated Prometheus metrics exporter using OpenTelemetry. This integration runs a metrics server on a separate port and exposes metrics in Prometheus format for scraping. It focuses specifically on host and runtime metrics rather than application-specific traces.
 
 ### Configuration
 
@@ -175,9 +175,9 @@ You can scrape metrics from your Prometheus server by adding the following to yo
 
 ```yaml
 scrape_configs:
-  - job_name: "formbricks"
+  - job_name: "forma"
     static_configs:
-      - targets: ["your-formbricks-host:9464"]
+      - targets: ["your-forma-host:9464"]
 ```
 
 ### Resource Attributes
@@ -217,7 +217,7 @@ comparison metrics as a v6 rollout gate.
 For every release, also monitor SpiceDB pod availability, datastore migrations, PostgreSQL pool saturation,
 dispatch latency, and cache behavior.
 
-The general Formbricks `/health` endpoint intentionally stays independent from SpiceDB. Use the release-matched
-`formbricks-authzed health` command for authenticated authorization health checks. The
+The general Forma `/health` endpoint intentionally stays independent from SpiceDB. Use the release-matched
+`forma-authzed health` command for authenticated authorization health checks. The
 [AuthZed Operations guide](/self-hosting/advanced/authzed-operations) contains metric names, PromQL examples,
 starting alert thresholds, stable error codes, and the outage-repair runbook.

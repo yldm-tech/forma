@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { TBaseFilters, TSegmentWithSurveyRefs } from "@formbricks/types/segment";
+import { Prisma } from "@forma/database/prisma";
+import { TBaseFilters, TSegmentWithSurveyRefs } from "@forma/types/segment";
 import { getSegment } from "../segments";
 import { segmentFilterToPrismaQuery } from "./prisma-query";
 
 const mockQueryRawUnsafe = vi.fn();
 const mockFindFirst = vi.fn();
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     $queryRawUnsafe: (...args: unknown[]) => mockQueryRawUnsafe(...args),
     contactAttribute: {
@@ -259,7 +259,7 @@ describe("segmentFilterToPrismaQuery", () => {
             type: "attribute" as const,
             contactAttributeKey: "company",
           },
-          value: "Formbricks",
+          value: "Forma",
           qualifier: {
             operator: "equals",
           },
@@ -355,7 +355,7 @@ describe("segmentFilterToPrismaQuery", () => {
                 attributes: {
                   some: {
                     attributeKey: { key: "company" },
-                    value: { equals: "Formbricks", mode: "insensitive" },
+                    value: { equals: "Forma", mode: "insensitive" },
                   },
                 },
               },
@@ -415,7 +415,7 @@ describe("segmentFilterToPrismaQuery", () => {
             type: "attribute" as const,
             contactAttributeKey: "company",
           },
-          value: "Formbricks",
+          value: "Forma",
           qualifier: {
             operator: "equals",
           },
@@ -472,7 +472,7 @@ describe("segmentFilterToPrismaQuery", () => {
                     attributeKey: {
                       key: "company",
                     },
-                    value: { equals: "Formbricks", mode: "insensitive" },
+                    value: { equals: "Forma", mode: "insensitive" },
                   },
                 },
               },

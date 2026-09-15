@@ -1,5 +1,5 @@
 import "server-only";
-import { AuthenticationError, OperationNotAllowedError } from "@formbricks/types/errors";
+import { AuthenticationError, OperationNotAllowedError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 
 /**

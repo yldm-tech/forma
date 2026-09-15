@@ -1,4 +1,4 @@
-import { TIntegrationNotionConfig, TIntegrationNotionDatabase } from "@formbricks/types/integration/notion";
+import { TIntegrationNotionConfig, TIntegrationNotionDatabase } from "@forma/types/integration/notion";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 import { symmetricDecrypt } from "@/lib/crypto";
 import { getIntegrationByType } from "../integration/service";

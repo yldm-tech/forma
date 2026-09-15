@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TIntegrationSlack } from "@formbricks/types/integration/slack";
+import { TIntegrationSlack } from "@forma/types/integration/slack";
 import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
 import { SlackWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/slack/components/SlackWrapper";
 import { DEFAULT_LOCALE, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, WEBAPP_URL } from "@/lib/constants";

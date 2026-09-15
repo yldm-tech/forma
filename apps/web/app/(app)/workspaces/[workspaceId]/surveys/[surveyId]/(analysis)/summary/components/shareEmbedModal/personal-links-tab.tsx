@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSegment } from "@formbricks/types/segment";
+import { TSegment } from "@forma/types/segment";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { DocumentationLinks } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/documentation-links";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -34,7 +34,7 @@ interface PersonalLinksTabProps {
   surveyId: string;
   segments: TSegment[];
   isContactsEnabled: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   enterpriseLicenseRequestFormUrl: string;
 }
 
@@ -55,7 +55,7 @@ export const PersonalLinksTab = ({
   segments,
   surveyId,
   isContactsEnabled,
-  isFormbricksCloud,
+  isFormaCloud,
   enterpriseLicenseRequestFormUrl,
 }: PersonalLinksTabProps) => {
   const { t, i18n } = useTranslation();
@@ -149,16 +149,16 @@ export const PersonalLinksTab = ({
         feature="personal_links"
         buttons={[
           {
-            text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-            href: isFormbricksCloud
+            text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+            href: isFormaCloud
               ? `/organizations/${workspace?.organizationId}/settings/billing`
               : enterpriseLicenseRequestFormUrl,
           },
           {
             text: t("common.learn_more"),
-            href: isFormbricksCloud
+            href: isFormaCloud
               ? `/organizations/${workspace?.organizationId}/settings/billing`
-              : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_personal_links",
+              : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_personal_links",
           },
         ]}
       />
@@ -244,7 +244,7 @@ export const PersonalLinksTab = ({
         links={[
           {
             title: t("workspace.surveys.share.personal_links.work_with_segments"),
-            href: "https://formbricks.com/docs/surveys/website-app-surveys/advanced-targeting#segment-configuration",
+            href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/advanced-targeting#segment-configuration",
           },
         ]}
       />

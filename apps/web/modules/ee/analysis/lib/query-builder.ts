@@ -1,7 +1,7 @@
 /**
  * Query builder utility to construct Cube.js queries from chart builder state.
  */
-import { TChartQuery, TCubeFilter, TMemberFilter, TTimeDimension } from "@formbricks/types/analysis";
+import { TChartQuery, TCubeFilter, TMemberFilter, TTimeDimension } from "@forma/types/analysis";
 
 export type TFilterFieldType = "string" | "number" | "time";
 

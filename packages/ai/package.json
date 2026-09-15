@@ -1,19 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@formbricks/ai",
+  "name": "@forma/ai",
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "homepage": "https://formbricks.com",
-  "description": "Shared AI provider configuration and model resolution for Formbricks",
+  "homepage": "https://forma.ylam.ai",
+  "description": "Shared AI provider configuration and model resolution for Forma",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "keywords": [
-    "Formbricks",
+    "Forma",
     "ai",
     "llm",
     "providers"
@@ -37,20 +37,20 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
-  "author": "Formbricks <hola@formbricks.com>",
+  "author": "Forma <hola@forma.ylam.ai>",
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "4.0.104",
     "@ai-sdk/azure": "3.0.64",
     "@ai-sdk/google-vertex": "4.0.126",
     "@ai-sdk/openai-compatible": "2.0.48",
     "@aws-sdk/credential-providers": "3.1017.0",
-    "@formbricks/logger": "workspace:*",
-    "@formbricks/types": "workspace:*",
+    "@forma/logger": "workspace:*",
+    "@forma/types": "workspace:*",
     "ai": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",

@@ -11,7 +11,7 @@ export function buildV3SurveyGenerationSystemPrompt(
   surveyType: string
 ): string {
   return [
-    "You generate concise Formbricks survey drafts.",
+    "You generate concise Forma survey drafts.",
     "Return only data that matches the provided schema.",
     "Write all generated user-facing survey content in the same language as the user's request. " +
       "Detect the language from the request; if it clearly matches an allowed survey language, use that language. " +

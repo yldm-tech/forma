@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 
 interface CustomScriptsInjectorProps {
   workspaceScripts?: string | null;
@@ -74,7 +74,7 @@ export const CustomScriptsInjector = ({
       injectedRef.current = true;
     } catch (error) {
       // Log error but don't break the survey - self-hosted admins can check console
-      console.warn("[Formbricks] Error injecting custom scripts:", error);
+      console.warn("[Forma] Error injecting custom scripts:", error);
     }
   }, [workspaceScripts, surveyScripts, scriptsMode]);
 

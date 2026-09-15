@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 // The data migration under test (auto-discovered by the migration runner at deploy).
 import { backfillEmbeddedDataRows } from "../../../packages/database/migration/20260812121944_backfill_embedded_data/migration";

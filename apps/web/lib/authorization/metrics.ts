@@ -4,22 +4,19 @@ import type { TAuthzedErrorCode } from "@/lib/authzed/errors";
 import type { TAuthorizationSurface } from "./context";
 import type { TAuthorizationAction, TAuthorizationActor, TAuthorizationResourceType } from "./contract";
 
-const meter = metrics.getMeter("formbricks.authzed.authorization");
+const meter = metrics.getMeter("forma.authzed.authorization");
 
-const decisionsTotal = meter.createCounter("formbricks_authzed_authorization_decisions_total", {
+const decisionsTotal = meter.createCounter("forma_authzed_authorization_decisions_total", {
   description: "Authoritative SpiceDB authorization decisions by bounded outcome",
 });
 
-const authorizationDuration = meter.createHistogram(
-  "formbricks_authzed_authorization_decision_duration_seconds",
-  {
-    advice: {
-      explicitBucketBoundaries: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5],
-    },
-    description: "Duration of authoritative SpiceDB authorization operations",
-    unit: "s",
-  }
-);
+const authorizationDuration = meter.createHistogram("forma_authzed_authorization_decision_duration_seconds", {
+  advice: {
+    explicitBucketBoundaries: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5],
+  },
+  description: "Duration of authoritative SpiceDB authorization operations",
+  unit: "s",
+});
 
 export type TAuthorizationDecisionOutcome = "allow" | "deny" | "operational_error";
 
@@ -75,7 +72,7 @@ export const recordAuthorizationDecision = (metric: TAuthorizationDecisionMetric
  * 0.5 split the healthy single-check case is indistinguishable from "no authorization happened" on
  * the one histogram meant to make amplification visible.
  */
-const checksPerRequest = meter.createHistogram("formbricks_authzed_authorization_checks_per_request", {
+const checksPerRequest = meter.createHistogram("forma_authzed_authorization_checks_per_request", {
   advice: {
     explicitBucketBoundaries: [0.5, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 250, 350, 500, 750, 1000],
   },

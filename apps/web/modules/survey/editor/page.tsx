@@ -1,8 +1,8 @@
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import {
   DEFAULT_LOCALE,
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
   MAIL_FROM,
   SURVEY_BG_COLORS,
@@ -144,12 +144,12 @@ export const SurveyEditorPage = async (props: {
       isUserTargetingAllowed={isUserTargetingAllowed}
       isSpamProtectionAllowed={isSpamProtectionAllowed}
       workspaceLanguages={workspaceLanguages}
-      isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+      isFormaCloud={IS_FORMA_CLOUD}
       isUnsplashConfigured={!!UNSPLASH_ACCESS_KEY}
       isCxMode={isCxMode}
       surveySchedulingConfig={SURVEY_SCHEDULING_CONFIG}
       locale={locale ?? DEFAULT_LOCALE}
-      mailFrom={MAIL_FROM ?? "hola@formbricks.com"}
+      mailFrom={MAIL_FROM ?? "hola@forma.ylam.ai"}
       isSurveyFollowUpsAllowed={isSurveyFollowUpsAllowed}
       isWorkflowsAllowed={isWorkflowsAllowed}
       userEmail={userEmail}

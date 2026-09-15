@@ -3,10 +3,10 @@ import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resourc
 import type { AuthInfo, ServerContext } from "@modelcontextprotocol/server";
 import type { JWTPayload } from "jose";
 import type { NextRequest } from "next/server";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import type { Session, TAuthenticationApiKey } from "@formbricks/types/auth";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import type { Session, TAuthenticationApiKey } from "@forma/types/auth";
+import { TooManyRequestsError } from "@forma/types/errors";
 import {
   problemBadRequest,
   problemForbidden,
@@ -82,7 +82,7 @@ const getMcpOAuthFailureDetails = (error: unknown) => {
 
 export type TMcpAuthInfo = AuthInfo & {
   extra: {
-    formbricksAuthentication: TV3Authentication;
+    formaAuthentication: TV3Authentication;
     requestId: string;
     authMethod: "apiKey" | "oauth";
   };
@@ -146,7 +146,7 @@ function createApiKeyMcpAuthInfo(authentication: TAuthenticationApiKey, requestI
     clientId: authentication.apiKeyId,
     scopes: getMcpScopes(authentication),
     extra: {
-      formbricksAuthentication: authentication,
+      formaAuthentication: authentication,
       requestId,
       authMethod: "apiKey",
     },
@@ -180,7 +180,7 @@ function toAudienceList(aud: JWTPayload["aud"]): string[] {
  * granted scopes the authorization server treats its own UserInfo endpoint as an implicit second
  * resource and appends it to `aud` — that is current behaviour, not something the pending provider
  * upgrade introduces — so a perfectly ordinary MCP token is multi-valued. Those two identifiers are
- * the only ones a Formbricks-issued MCP token may carry; anything else means the token was minted
+ * the only ones a Forma-issued MCP token may carry; anything else means the token was minted
  * for somebody else and must not be honoured here.
  */
 function hasAcceptedMcpAudience(payload: JWTPayload): boolean {
@@ -237,7 +237,7 @@ function createOAuthMcpAuthInfo(payload: JWTPayload, requestId: string): TMcpAut
     clientId,
     scopes: getOAuthScopes(payload),
     extra: {
-      formbricksAuthentication: authentication,
+      formaAuthentication: authentication,
       requestId,
       authMethod: "oauth",
     },
@@ -273,7 +273,7 @@ export function getMcpToolAuthInfo(ctx: TMcpToolContext): AuthInfo | undefined {
 }
 
 export function getMcpAuthentication(authInfo?: AuthInfo): TV3Authentication {
-  const authentication = authInfo?.extra?.formbricksAuthentication;
+  const authentication = authInfo?.extra?.formaAuthentication;
   if (!authentication || typeof authentication !== "object") {
     return null;
   }
@@ -497,7 +497,7 @@ async function authenticateMcpOAuthBearer(
     });
   }
 
-  const sessionAuthentication = authInfo.extra.formbricksAuthentication as Session;
+  const sessionAuthentication = authInfo.extra.formaAuthentication as Session;
   if (!(await isOAuthUserActive(sessionAuthentication.user.id))) {
     return await rejectUnauthenticatedMcpRequest({
       requestId,

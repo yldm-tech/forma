@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { logger } from "@formbricks/logger";
-import { TWorkspace } from "@formbricks/types/workspace";
-import { FORMBRICKS_ENVIRONMENT_ID_LS, FORMBRICKS_WORKSPACE_ID_LS } from "@/lib/localStorage";
+import { logger } from "@forma/logger";
+import { TWorkspace } from "@forma/types/workspace";
+import { FORMA_ENVIRONMENT_ID_LS, FORMA_WORKSPACE_ID_LS } from "@/lib/localStorage";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { truncate } from "@/lib/utils/strings";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
@@ -65,12 +65,12 @@ export const DeleteWorkspaceRender = ({
           deleteWorkspaceResponse.data.destination;
 
         if (postDeletionWorkspaceId) {
-          localStorage.setItem(FORMBRICKS_WORKSPACE_ID_LS, postDeletionWorkspaceId);
+          localStorage.setItem(FORMA_WORKSPACE_ID_LS, postDeletionWorkspaceId);
           // Keep legacy environment ID in sync for backward compatibility with old SDK clients
-          localStorage.setItem(FORMBRICKS_ENVIRONMENT_ID_LS, postDeletionWorkspaceId);
+          localStorage.setItem(FORMA_ENVIRONMENT_ID_LS, postDeletionWorkspaceId);
         } else {
-          localStorage.removeItem(FORMBRICKS_WORKSPACE_ID_LS);
-          localStorage.removeItem(FORMBRICKS_ENVIRONMENT_ID_LS);
+          localStorage.removeItem(FORMA_WORKSPACE_ID_LS);
+          localStorage.removeItem(FORMA_ENVIRONMENT_ID_LS);
         }
 
         toast.success(t("workspace.general.workspace_deleted_successfully"));

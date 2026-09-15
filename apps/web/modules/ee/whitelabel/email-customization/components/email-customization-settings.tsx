@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TAllowedFileExtension } from "@formbricks/types/storage";
-import { TUser } from "@formbricks/types/user";
+import { TOrganization } from "@forma/types/organizations";
+import { TAllowedFileExtension } from "@forma/types/storage";
+import { TUser } from "@forma/types/user";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
 import { isExternalImageSrc } from "@/lib/image-hosts";
@@ -34,7 +34,7 @@ interface EmailCustomizationSettingsProps {
   hasWhiteLabelPermission: boolean;
   workspaceId: string;
   isReadOnly: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   user: TUser | null;
   fbLogoUrl: string;
   isStorageConfigured: boolean;
@@ -46,7 +46,7 @@ export const EmailCustomizationSettings = ({
   hasWhiteLabelPermission,
   workspaceId,
   isReadOnly,
-  isFormbricksCloud,
+  isFormaCloud,
   user,
   fbLogoUrl,
   isStorageConfigured,
@@ -185,16 +185,16 @@ export const EmailCustomizationSettings = ({
 
   const buttons: [ModalButton, ModalButton] = [
     {
-      text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-      href: isFormbricksCloud
+      text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+      href: isFormaCloud
         ? `/organizations/${organization.id}/settings/billing`
         : enterpriseLicenseRequestFormUrl,
     },
     {
       text: t("common.learn_more"),
-      href: isFormbricksCloud
+      href: isFormaCloud
         ? `/organizations/${organization.id}/settings/billing`
-        : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_email_whitelabel",
+        : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_email_whitelabel",
     },
   ];
 

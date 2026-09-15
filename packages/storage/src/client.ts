@@ -1,5 +1,5 @@
 import { S3Client, type S3ClientConfig } from "@aws-sdk/client-s3";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   S3_ACCESS_KEY,
   S3_BUCKET_NAME,

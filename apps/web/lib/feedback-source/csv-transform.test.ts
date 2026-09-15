@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { TFeedbackSourceFieldMapping } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceFieldMapping } from "@forma/types/feedback-source";
 import { transformCsvRowToFeedbackRecord, transformCsvRowsToFeedbackRecords } from "./csv-transform";
 
 const NOW = new Date("2026-02-25T10:00:00.000Z");

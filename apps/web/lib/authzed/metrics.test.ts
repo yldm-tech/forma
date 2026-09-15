@@ -67,9 +67,9 @@ describe("recordAuthzedProjection", () => {
       projection: "organization_membership",
       status,
     };
-    expect(counter("formbricks_authzed_projection_total").add).toHaveBeenCalledWith(1, attributes);
+    expect(counter("forma_authzed_projection_total").add).toHaveBeenCalledWith(1, attributes);
     // Seconds, per the OpenTelemetry duration convention.
-    expect(histogram("formbricks_authzed_projection_duration_seconds").record).toHaveBeenCalledWith(
+    expect(histogram("forma_authzed_projection_duration_seconds").record).toHaveBeenCalledWith(
       4.2,
       attributes
     );
@@ -83,8 +83,8 @@ describe("recordAuthzedProjection", () => {
       status: "disabled",
     });
 
-    expect(counter("formbricks_authzed_projection_total").add).toHaveBeenCalledOnce();
-    expect(histogram("formbricks_authzed_projection_duration_seconds").record).not.toHaveBeenCalled();
+    expect(counter("forma_authzed_projection_total").add).toHaveBeenCalledOnce();
+    expect(histogram("forma_authzed_projection_duration_seconds").record).not.toHaveBeenCalled();
   });
 
   test("names the duration instrument so both exporters produce the series the runbook queries", () => {
@@ -92,11 +92,11 @@ describe("recordAuthzedProjection", () => {
     // exporter appends only `_total` and emits the unit as a comment, while OTLP's translation appends
     // the unit unless the name already carries it. `_seconds` is the one spelling both agree on — and
     // the runbook's histogram_quantile query names exactly this series.
-    expect(histograms.has("formbricks_authzed_projection_duration_seconds")).toBe(true);
+    expect(histograms.has("forma_authzed_projection_duration_seconds")).toBe(true);
     // The unit-less name would export as `..._duration` on a scrape, matching nothing the runbook asks
     // for; `_ms` was the original defect.
-    expect(histograms.has("formbricks_authzed_projection_duration")).toBe(false);
-    expect(histograms.has("formbricks_authzed_projection_duration_ms")).toBe(false);
+    expect(histograms.has("forma_authzed_projection_duration")).toBe(false);
+    expect(histograms.has("forma_authzed_projection_duration_ms")).toBe(false);
   });
 });
 
@@ -108,7 +108,7 @@ describe("recordAuthzedRequestFailure", () => {
       retryable: true,
     });
 
-    expect(counter("formbricks_authzed_request_failures_total").add).toHaveBeenCalledWith(1, {
+    expect(counter("forma_authzed_request_failures_total").add).toHaveBeenCalledWith(1, {
       code: AUTHZED_ERROR_CODES.UNAVAILABLE,
       operation: "write_relationships",
       retryable: true,
@@ -125,11 +125,11 @@ describe("recordAuthzedRequestRetry", () => {
       operation: "read_relationships",
     });
 
-    expect(counter("formbricks_authzed_request_retries_total").add).toHaveBeenCalledWith(1, {
+    expect(counter("forma_authzed_request_retries_total").add).toHaveBeenCalledWith(1, {
       code: AUTHZED_ERROR_CODES.TIMEOUT,
       operation: "read_relationships",
     });
-    expect(counter("formbricks_authzed_request_failures_total").add).not.toHaveBeenCalled();
+    expect(counter("forma_authzed_request_failures_total").add).not.toHaveBeenCalled();
   });
 });
 
@@ -143,7 +143,7 @@ describe("recordAuthzedOutboxStatus", () => {
       revocationsPastWarning: 3,
     });
 
-    const status = gauges.get("formbricks_authzed_projection_outbox_status")!;
+    const status = gauges.get("forma_authzed_projection_outbox_status")!;
     expect(status.record.mock.calls).toEqual([
       [11, { state: "pending" }],
       [2, { state: "dead_lettered" }],
@@ -151,7 +151,7 @@ describe("recordAuthzedOutboxStatus", () => {
       [1, { state: "revocation_critical" }],
     ]);
     expect(
-      gauges.get("formbricks_authzed_projection_outbox_oldest_pending_age_seconds")!.record
+      gauges.get("forma_authzed_projection_outbox_oldest_pending_age_seconds")!.record
     ).toHaveBeenCalledWith(47);
   });
 });
@@ -161,26 +161,26 @@ describe("direct-authority recovery metrics", () => {
     recordAuthzedRevocationDelivery(12_500);
 
     expect(
-      histogram("formbricks_authzed_projection_revocation_delivery_duration_seconds").record
+      histogram("forma_authzed_projection_revocation_delivery_duration_seconds").record
     ).toHaveBeenCalledWith(12.5);
   });
 
   test("records repaired and failed relationship counts separately", () => {
     recordAuthzedReconciliationRepair({ failed: 2, repaired: 7 });
 
-    expect(counter("formbricks_authzed_reconciliation_repair_total").add.mock.calls).toEqual([
+    expect(counter("forma_authzed_reconciliation_repair_total").add.mock.calls).toEqual([
       [7, { status: "repaired" }],
       [2, { status: "failed" }],
     ]);
   });
 
   test("does not let exporter failures alter revocation delivery or repair", () => {
-    histogram(
-      "formbricks_authzed_projection_revocation_delivery_duration_seconds"
-    ).record.mockImplementationOnce(() => {
-      throw new Error("exporter unavailable");
-    });
-    counter("formbricks_authzed_reconciliation_repair_total").add.mockImplementationOnce(() => {
+    histogram("forma_authzed_projection_revocation_delivery_duration_seconds").record.mockImplementationOnce(
+      () => {
+        throw new Error("exporter unavailable");
+      }
+    );
+    counter("forma_authzed_reconciliation_repair_total").add.mockImplementationOnce(() => {
       throw new Error("exporter unavailable");
     });
 
@@ -189,13 +189,13 @@ describe("direct-authority recovery metrics", () => {
   });
 
   test("does not let exporter failures alter delivery, drain, or audit results", () => {
-    counter("formbricks_authzed_projection_outbox_delivery_total").add.mockImplementationOnce(() => {
+    counter("forma_authzed_projection_outbox_delivery_total").add.mockImplementationOnce(() => {
       throw new Error("exporter unavailable");
     });
-    gauges.get("formbricks_authzed_projection_outbox_status")!.record.mockImplementationOnce(() => {
+    gauges.get("forma_authzed_projection_outbox_status")!.record.mockImplementationOnce(() => {
       throw new Error("exporter unavailable");
     });
-    counter("formbricks_authzed_reconciliation_audit_total").add.mockImplementationOnce(() => {
+    counter("forma_authzed_reconciliation_audit_total").add.mockImplementationOnce(() => {
       throw new Error("exporter unavailable");
     });
 
@@ -242,10 +242,10 @@ describe("attribute cardinality", () => {
     recordAuthzedRevocationDelivery(1);
 
     const recordedAttributes = [
-      ...counter("formbricks_authzed_projection_total").add.mock.calls,
-      ...counter("formbricks_authzed_request_failures_total").add.mock.calls,
-      ...counter("formbricks_authzed_reconciliation_repair_total").add.mock.calls,
-      ...gauges.get("formbricks_authzed_projection_outbox_status")!.record.mock.calls,
+      ...counter("forma_authzed_projection_total").add.mock.calls,
+      ...counter("forma_authzed_request_failures_total").add.mock.calls,
+      ...counter("forma_authzed_reconciliation_repair_total").add.mock.calls,
+      ...gauges.get("forma_authzed_projection_outbox_status")!.record.mock.calls,
     ].flatMap(([, attributes]) => Object.keys(attributes as object));
 
     expect([...new Set(recordedAttributes)].sort()).toEqual([

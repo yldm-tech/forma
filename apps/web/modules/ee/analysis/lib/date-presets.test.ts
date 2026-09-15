@@ -1,6 +1,6 @@
 import { formatDate } from "date-fns";
 import { describe, expect, test } from "vitest";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { isSubDayDateRangePreset, resolveDateRangePresetBounds } from "@/lib/date-ranges";
 import { DASHBOARD_DATE_PRESETS, expandPresetDateRanges } from "./date-presets";
 

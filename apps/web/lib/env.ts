@@ -1,7 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
-import { AI_PROVIDERS } from "@formbricks/types/ai";
-import { isValidIanaTimeZone } from "@formbricks/types/common";
+import { AI_PROVIDERS } from "@forma/types/ai";
+import { isValidIanaTimeZone } from "@forma/types/common";
 import { throwEnvValidationError } from "./env-validation-error";
 
 const ZActiveAIProvider = z.enum(AI_PROVIDERS);
@@ -313,7 +313,7 @@ const parsedEnv = createEnv({
     DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS: z.enum(["1", "0"]).optional(),
     DEBUG_SHOW_RESET_LINK: z.enum(["1", "0"]).optional(),
     // DEBUG is a common ambient env var in CI/tooling, so we accept arbitrary strings here
-    // and only treat "1" as enabling Formbricks-specific debug behavior downstream.
+    // and only treat "1" as enabling Forma-specific debug behavior downstream.
     DEBUG: z.string().optional(),
     // cuid2 rather than a bare string so a typo'd or foreign id (a uuid, an uppercase value) fails
     // at boot instead of silently provisioning SSO users into no organization at all. Permissive
@@ -384,12 +384,12 @@ const parsedEnv = createEnv({
     PLAIN_APP_ID: z.string().optional(),
     PLAIN_CHAT_HMAC_SECRET: z.string().optional(),
     PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID: z.string().optional(),
-    // Formbricks-in-Formbricks: dogfood in-app surveys. Points at the Formbricks
-    // instance that hosts the surveys (defaults to Formbricks Cloud). When
-    // FORMBRICKS_WORKSPACE_ID is set, the survey widget is mounted in the app.
-    FORMBRICKS_WORKSPACE_ID: z.string().optional(),
-    FORMBRICKS_APP_URL: z.url().optional(),
-    IS_FORMBRICKS_CLOUD: z.enum(["1", "0"]).optional(),
+    // Forma-in-Forma: dogfood in-app surveys. Points at the Forma
+    // instance that hosts the surveys (defaults to Forma Cloud). When
+    // FORMA_WORKSPACE_ID is set, the survey widget is mounted in the app.
+    FORMA_WORKSPACE_ID: z.string().optional(),
+    FORMA_APP_URL: z.url().optional(),
+    IS_FORMA_CLOUD: z.enum(["1", "0"]).optional(),
     POSTHOG_KEY: z.string().optional(),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal"]).optional(),
     MAIL_FROM: z.email().optional(),
@@ -583,9 +583,9 @@ const parsedEnv = createEnv({
     PLAIN_APP_ID: process.env.PLAIN_APP_ID,
     PLAIN_CHAT_HMAC_SECRET: process.env.PLAIN_CHAT_HMAC_SECRET,
     PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID: process.env.PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID,
-    FORMBRICKS_WORKSPACE_ID: process.env.FORMBRICKS_WORKSPACE_ID,
-    FORMBRICKS_APP_URL: process.env.FORMBRICKS_APP_URL,
-    IS_FORMBRICKS_CLOUD: process.env.IS_FORMBRICKS_CLOUD,
+    FORMA_WORKSPACE_ID: process.env.FORMA_WORKSPACE_ID,
+    FORMA_APP_URL: process.env.FORMA_APP_URL,
+    IS_FORMA_CLOUD: process.env.IS_FORMA_CLOUD,
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     LOG_LEVEL: process.env.LOG_LEVEL,
     MAIL_FROM: process.env.MAIL_FROM,

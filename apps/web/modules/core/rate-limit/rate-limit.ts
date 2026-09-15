@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
-import { createCacheKey } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
-import { Result, ok } from "@formbricks/types/error-handlers";
+import { createCacheKey } from "@forma/cache";
+import { logger } from "@forma/logger";
+import { Result, ok } from "@forma/types/error-handlers";
 import { cache } from "@/lib/cache";
 import { RATE_LIMITING_DISABLED, SENTRY_DSN } from "@/lib/constants";
 import { TRateLimitConfig, type TRateLimitResponse } from "./types/rate-limit";

@@ -10,7 +10,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/constants")>();
   return {
     ...actual,
-    get IS_FORMBRICKS_CLOUD() {
+    get IS_FORMA_CLOUD() {
       return mocks.isCloud;
     },
   };
@@ -24,7 +24,7 @@ vi.mock("./stripe-client", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: mocks.loggerWarn },
 }));
 

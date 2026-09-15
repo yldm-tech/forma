@@ -1,5 +1,5 @@
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 
 /**
  * Records that a `WorkflowRun` was handed off to the task backend, as a durable DB fact (ENG-1658).

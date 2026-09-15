@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { ContactAttributeKey, Prisma } from "@formbricks/database/prisma";
-import { TContactAttributeKey, TContactAttributeKeyType } from "@formbricks/types/contact-attribute-key";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ContactAttributeKey, Prisma } from "@forma/database/prisma";
+import { TContactAttributeKey, TContactAttributeKeyType } from "@forma/types/contact-attribute-key";
+import { DatabaseError } from "@forma/types/errors";
 import { TContactAttributeKeyUpdateInput } from "../types/contact-attribute-keys";
 import {
   deleteContactAttributeKey,
@@ -11,7 +11,7 @@ import {
 } from "./contact-attribute-key";
 
 // Mock dependencies
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contactAttributeKey: {
       findUnique: vi.fn(),

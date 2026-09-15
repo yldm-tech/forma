@@ -3,8 +3,8 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly ENV_TEMPLATE_PATH="${FORMBRICKS_ENV_TEMPLATE_PATH:-${REPO_ROOT}/.env.example}"
-readonly ENV_PATH="${FORMBRICKS_ENV_PATH:-${REPO_ROOT}/.env}"
+readonly ENV_TEMPLATE_PATH="${FORMA_ENV_TEMPLATE_PATH:-${REPO_ROOT}/.env.example}"
+readonly ENV_PATH="${FORMA_ENV_PATH:-${REPO_ROOT}/.env}"
 readonly REQUIRED_GENERATED_KEYS=(
   "ENCRYPTION_KEY"
   "NEXTAUTH_SECRET"

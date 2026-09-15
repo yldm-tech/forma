@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { TResponse } from "@formbricks/types/responses";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TResponse } from "@forma/types/responses";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { sendResponseFinishedEmail } from "./index";
 
 const {
@@ -19,7 +19,7 @@ const {
   mockCreateTransport: vi.fn(() => ({ sendMail: vi.fn() })),
 }));
 
-vi.mock("@formbricks/email", () => ({
+vi.mock("@forma/email", () => ({
   renderResponseFinishedEmail: mockRenderResponseFinishedEmail,
 }));
 
@@ -59,7 +59,7 @@ describe("sendResponseFinishedEmail", () => {
 
   // This is the exact regression: the organization's whitelabel logo was fetched but never
   // threaded into the template, so the notification email always fell back to the hard-coded
-  // Formbricks logo regardless of what the organization had configured.
+  // Forma logo regardless of what the organization had configured.
   test("resolves the organization's whitelabel logo to an absolute URL", async () => {
     mockGetOrganizationByWorkspaceId.mockResolvedValue({
       id: "org1",
@@ -77,7 +77,7 @@ describe("sendResponseFinishedEmail", () => {
   test.each([
     ["no whitelabel object", undefined],
     ["a whitelabel object with no logo", {}],
-  ])("leaves the logo unset for %s, so the default Formbricks logo applies", async (_label, whitelabel) => {
+  ])("leaves the logo unset for %s, so the default Forma logo applies", async (_label, whitelabel) => {
     mockGetOrganizationByWorkspaceId.mockResolvedValue({ id: "org1", whitelabel });
 
     await sendResponseFinishedEmail("owner@example.com", "en-US", "workspace1", survey, response, 1);

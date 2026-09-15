@@ -8,16 +8,16 @@ import { PlusIcon } from "lucide-react";
 import { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { getLanguageLabel } from "@formbricks/i18n-utils/utils";
+import { getLanguageLabel } from "@forma/i18n-utils/utils";
 import {
   TMultipleChoiceOptionDisplayType,
   TSurveyElement,
   TSurveyElementChoice,
   TSurveyElementTypeEnum,
   TSurveyMultipleChoiceElement,
-} from "@formbricks/types/surveys/elements";
-import { TShuffleOption, TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/surveys/elements";
+import { TShuffleOption, TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "@/lib/i18n/utils";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";
 import { BulkEditOptionsModal } from "@/modules/survey/editor/components/bulk-edit-options-modal";

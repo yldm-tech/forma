@@ -2,7 +2,7 @@ import "server-only";
 import {
   AUDIT_LOG_ENABLED,
   CLOUD_HOBBY_WORKSPACE_LIMIT,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_RECAPTCHA_CONFIGURED,
 } from "@/lib/constants";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
@@ -18,7 +18,7 @@ const getFeaturePermission = async (
   organizationId: string,
   featureKey: keyof Pick<TEnterpriseLicenseFeatures, "removeBranding" | "whitelabel">
 ): Promise<boolean> => {
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     return hasOrganizationEntitlementWithLicenseGuard(
       organizationId,
       CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.HIDE_BRANDING
@@ -45,7 +45,7 @@ const getCustomPlanFeaturePermission = async (
     | "workflows"
   >
 ): Promise<boolean> => {
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     const featureLookupKeyMap: Record<string, string> = {
       accessControl: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.RBAC,
       quotas: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.QUOTA_MANAGEMENT,
@@ -94,7 +94,7 @@ export const getWhiteLabelPermission = async (organizationId: string): Promise<b
 export const getBiggerUploadFileSizePermission = async (organizationId: string): Promise<boolean> => {
   const entitlementsContext = await getOrganizationEntitlementsContext(organizationId);
 
-  if (!IS_FORMBRICKS_CLOUD) {
+  if (!IS_FORMA_CLOUD) {
     // Any active enterprise license grants the bigger upload size — there is no license feature for
     // it. `licenseActive` rather than the status string for the same reason as the workspace limit
     // below: in grace the cached license is still active while the status already reads
@@ -142,7 +142,7 @@ export const getIsAuditLogsEnabled = async (): Promise<boolean> => {
 };
 
 export const getIsSamlSsoEnabled = async (): Promise<boolean> => {
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     return false;
   }
   const licenseFeatures = await getLicenseFeatures();
@@ -153,7 +153,7 @@ export const getIsSamlSsoEnabled = async (): Promise<boolean> => {
 export const getIsSpamProtectionEnabled = async (organizationId: string): Promise<boolean> => {
   if (!IS_RECAPTCHA_CONFIGURED) return false;
 
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     return hasOrganizationEntitlementWithLicenseGuard(
       organizationId,
       CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.SPAM_PROTECTION
@@ -181,9 +181,9 @@ export const getIsWorkflowsEnabled = async (organizationId: string): Promise<boo
 };
 
 export const getBulkInvitePermission = async (organizationId: string): Promise<boolean> => {
-  // Bulk invite is gated only on Formbricks Cloud (anti-spam, multi-tenant concern). Self-hosted
+  // Bulk invite is gated only on Forma Cloud (anti-spam, multi-tenant concern). Self-hosted
   // keeps the original unrestricted behavior for every tier, including community.
-  if (!IS_FORMBRICKS_CLOUD) {
+  if (!IS_FORMA_CLOUD) {
     return true;
   }
 
@@ -196,7 +196,7 @@ export const getBulkInvitePermission = async (organizationId: string): Promise<b
 export const getOrganizationWorkspacesLimit = async (organizationId: string): Promise<number> => {
   const entitlementsContext = await getOrganizationEntitlementsContext(organizationId);
 
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     const cloudLicenseAllowsLimits =
       entitlementsContext.licenseStatus === "active" || entitlementsContext.licenseStatus === "no-license";
     if (!cloudLicenseAllowsLimits) return CLOUD_HOBBY_WORKSPACE_LIMIT;

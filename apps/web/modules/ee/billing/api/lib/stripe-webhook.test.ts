@@ -38,7 +38,7 @@ vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
   setOrganizationPaymentAttemptError: mocks.setOrganizationPaymentAttemptError,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mocks.loggerError,
     warn: mocks.loggerWarn,

@@ -5,9 +5,9 @@ import { FilesIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { ApiKeyPermission } from "@formbricks/database/prisma-browser";
-import { TOrganizationAccess } from "@formbricks/types/api-key";
-import { TUserLocale } from "@formbricks/types/user";
+import { ApiKeyPermission } from "@forma/database/prisma-browser";
+import { TOrganizationAccess } from "@forma/types/api-key";
+import { TUserLocale } from "@forma/types/user";
 import { timeSince } from "@/lib/time";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { ViewPermissionModal } from "@/modules/organization/settings/api-keys/components/view-permission-modal";
@@ -135,7 +135,7 @@ interface EditAPIKeysProps {
   apiKeys: TApiKeyWithEnvironmentPermission[];
   locale: TUserLocale;
   workspaces: TOrganizationWorkspace[];
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
 }
 
 export const EditAPIKeys = ({
@@ -143,7 +143,7 @@ export const EditAPIKeys = ({
   apiKeys,
   locale,
   workspaces,
-  isFormbricksCloud,
+  isFormaCloud,
 }: Readonly<EditAPIKeysProps>) => {
   const { t } = useTranslation();
   const [isAddAPIKeyModalOpen, setIsAddAPIKeyModalOpen] = useState(false);
@@ -275,7 +275,7 @@ export const EditAPIKeys = ({
         onSubmit={handleAddAPIKey}
         workspaces={workspaces}
         isCreatingAPIKey={isLoading}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
       />
       {activeKey && (
         <ViewPermissionModal

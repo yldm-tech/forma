@@ -29,7 +29,7 @@ export interface WorkflowInvalidParam {
 const PROBLEM_JSON = "application/problem+json";
 
 // Prisma's unique-constraint violation code, mirroring `PrismaErrorType.UniqueConstraintViolation` in
-// `@formbricks/database` — which this leaf package can't import without recreating a build cycle.
+// `@forma/database` — which this leaf package can't import without recreating a build cycle.
 const PRISMA_UNIQUE_CONSTRAINT_VIOLATION = "P2002";
 
 /**

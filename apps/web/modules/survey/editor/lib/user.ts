@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
-import { TUserLocale } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
+import { TUserLocale } from "@forma/types/user";
 
 export const getUserEmail = reactCache(async (userId: string): Promise<string | null> => {
   try {

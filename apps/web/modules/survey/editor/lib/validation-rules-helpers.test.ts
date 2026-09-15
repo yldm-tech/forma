@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type {
   TSurveyElement,
   TSurveyMultipleChoiceElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
-import type { TValidationRule } from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/elements";
+import type { TValidationRule } from "@forma/types/surveys/validation-rules";
 import { RULE_TYPE_CONFIG } from "./validation-rules-config";
 import {
   applyRuleDeletion,

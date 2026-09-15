@@ -1,10 +1,10 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import type { IdentityProvider } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@formbricks/types/errors";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
-import type { TUserNotificationSettings } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import type { IdentityProvider } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@forma/types/errors";
+import type { TOrganizationRole } from "@forma/types/memberships";
+import type { TUserNotificationSettings } from "@forma/types/user";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
@@ -96,7 +96,7 @@ export const gateSsoProvisioning = async ({
   email: string;
   callbackUrl: string;
 }): Promise<TSsoProvisioningDecision> => {
-  // Formbricks Cloud only: block SSO sign-ups from personal/free/disposable email domains, before any
+  // Forma Cloud only: block SSO sign-ups from personal/free/disposable email domains, before any
   // org resolution. Placed above the multi-org / fresh-instance bypass below (Cloud is multi-org, so
   // the bypass would otherwise let these through). Invited users — a valid token whose email matches —
   // are exempt unless SIGNUP_DOMAIN_CHECK_ON_INVITES is set; the exemption reuses the same invite

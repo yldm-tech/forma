@@ -1,14 +1,14 @@
 ---
 title: "Google Tag Manager"
-description: "Deploy Formbricks surveys through GTM without modifying your website code."
+description: "Deploy Forma surveys through GTM without modifying your website code."
 icon: "tags"
 ---
 
 ## Prerequisites
 
 - [Google Tag Manager](https://tagmanager.google.com/) installed on your website
-- Your Formbricks **Workspace ID** (Settings → Workspace → Web & Mobile SDK, on the **Workspace details** card)
-- Your **App URL**: `https://app.formbricks.com` (or your self-hosted URL)
+- Your Forma **Workspace ID** (Settings → Workspace → Web & Mobile SDK, on the **Workspace details** card)
+- Your **App URL**: `https://app.forma.ylam.ai` (or your self-hosted URL)
 
 <Note>
  Use PUBLIC_URL for multi-domain setups, WEBAPP_URL for single-domain setups.
@@ -18,7 +18,7 @@ icon: "tags"
 
 <Steps>
   <Step title="Create a Custom HTML tag in GTM">
-    1. Create a new tag with preferred name e.g. "Formbricks Intercept Surveys"
+    1. Create a new tag with preferred name e.g. "Forma Intercept Surveys"
     2. Tag Type: Custom HTML
     3. Paste the code from Step 2. Make sure to replace `<your-workspace-id>` and if you self-host, replace `<your-app-url>`
   </Step>
@@ -28,14 +28,14 @@ icon: "tags"
 ```html
 <script type="text/javascript">
 !function(){
-    var appUrl = "https://app.formbricks.com"; // REPLACE ONLY IF YOUR SELF-HOST
+    var appUrl = "https://app.forma.ylam.ai"; // REPLACE ONLY IF YOUR SELF-HOST
     var workspaceId = "<your-workspace-id>"; // REPLACE
     var t=document.createElement("script");
     t.type="text/javascript";
     t.async=!0;
-    t.src=appUrl+"/js/formbricks.umd.cjs";
+    t.src=appUrl+"/js/forma.umd.cjs";
     t.onload=function(){
-        window.formbricks && window.formbricks.setup({
+        window.forma && window.forma.setup({
             workspaceId: workspaceId,
             appUrl: appUrl
         });
@@ -60,42 +60,42 @@ icon: "tags"
   <Step title="Test">
     1. Use GTM Preview mode
     2. Verify the tag fires
-    3. Add `?formbricksDebug=true` to the URL to see test logs in browser console (see [Debugging Mode](/surveys/website-app-surveys/framework-guides#debugging-formbricks-integration) for more details)
+    3. Add `?formaDebug=true` to the URL to see test logs in browser console (see [Debugging Mode](/surveys/website-app-surveys/framework-guides#debugging-forma-integration) for more details)
   </Step>
 </Steps>
 
 
-## Formbricks Events in the Data Layer
+## Forma Events in the Data Layer
 
-The SDK pushes its own lifecycle events to `window.dataLayer`, so you can trigger GTM tags off what Formbricks actually did rather than guessing at timing.
+The SDK pushes its own lifecycle events to `window.dataLayer`, so you can trigger GTM tags off what Forma actually did rather than guessing at timing.
 
 | Event                           | Fires when                                                                | Payload                              |
 | ------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
-| `formbricks_setup_successful`   | `setup()` finished — the SDK is ready                                     | `{ workspaceId }`                    |
-| `formbricks_action_tracked`     | An action was tracked (code or no-code)                                   | `{ action }`                         |
-| `formbricks_survey_shown`       | A survey became visible (once per appearance)                             | `{ surveyId }`                       |
-| `formbricks_response_submitted` | The first answer is stored (`finished: false`) and again when it completes | `{ surveyId, responseId?, finished }` |
-| `formbricks_survey_closed`      | The survey was dismissed or finished (once per appearance)                | `{ surveyId }`                       |
+| `forma_setup_successful`   | `setup()` finished — the SDK is ready                                     | `{ workspaceId }`                    |
+| `forma_action_tracked`     | An action was tracked (code or no-code)                                   | `{ action }`                         |
+| `forma_survey_shown`       | A survey became visible (once per appearance)                             | `{ surveyId }`                       |
+| `forma_response_submitted` | The first answer is stored (`finished: false`) and again when it completes | `{ surveyId, responseId?, finished }` |
+| `forma_survey_closed`      | The survey was dismissed or finished (once per appearance)                | `{ surveyId }`                       |
 
-`formbricks_survey_shown` reports what the respondent saw, so every appearance is paired with a `formbricks_survey_closed`. The Displays number in your Formbricks dashboard counts what reached the server instead, so it can be lower if the network dropped — worth knowing before you reconcile a GTM-side count against the dashboard.
+`forma_survey_shown` reports what the respondent saw, so every appearance is paired with a `forma_survey_closed`. The Displays number in your Forma dashboard counts what reached the server instead, so it can be lower if the network dropped — worth knowing before you reconcile a GTM-side count against the dashboard.
 
 The push happens through the standard `window.dataLayer = window.dataLayer || []` idiom, so it survives load order: events emitted before GTM loads are still in the array when GTM drains it.
 
 <Steps>
   <Step title="Create a Custom Event trigger">
     1. Triggers → New → Trigger Type: **Custom Event**
-    2. Event name: the event you want, e.g. `formbricks_setup_successful`
+    2. Event name: the event you want, e.g. `forma_setup_successful`
     3. Save and publish
   </Step>
 
   <Step title="Read the payload with a Data Layer Variable">
-    The payload is nested under a `formbricks` key rather than spread flat, so it cannot collide with your
+    The payload is nested under a `forma` key rather than spread flat, so it cannot collide with your
     own data layer keys — `action` in particular is one of the most common keys in an ecommerce data layer.
 
     1. Variables → New User-defined Variable
     2. Variable Type: **Data Layer Variable**
-    3. Data Layer Variable Name: `formbricks.surveyId` (or `formbricks.responseId`, `formbricks.finished`,
-       `formbricks.action`, `formbricks.workspaceId`)
+    3. Data Layer Variable Name: `forma.surveyId` (or `forma.responseId`, `forma.finished`,
+       `forma.action`, `forma.workspaceId`)
     4. Save and publish
   </Step>
 </Steps>
@@ -103,8 +103,8 @@ The push happens through the standard `window.dataLayer = window.dataLayer || []
 <Note>
   Every push carries the full set of keys, with `null` for the ones that event does not set. That is
   deliberate: GTM merges pushes recursively, so a partial push would let survey A's `responseId` still resolve
-  under survey B's `formbricks_survey_shown`. Check for `null` rather than assuming a key is absent — and note
-  that `responseId` is optional on `formbricks_response_submitted` itself, so it reads `null` there too
+  under survey B's `forma_survey_shown`. Check for `null` rather than assuming a key is absent — and note
+  that `responseId` is optional on `forma_response_submitted` itself, so it reads `null` there too
   whenever the stored id is not available. A tag that needs the id has to tolerate that.
 </Note>
 
@@ -115,7 +115,7 @@ For the JavaScript equivalent of these events, see [Lifecycle Events](/surveys/w
 Identify users to enable targeting and attributes. Learn more about [user identification](/surveys/website-app-surveys/user-identification).
 
 <Note>
-  User identification is part of the Formbricks [Enterprise Edition](/self-hosting/advanced/license). 
+  User identification is part of the Forma [Enterprise Edition](/self-hosting/advanced/license). 
 </Note>
 
 <Steps>
@@ -132,20 +132,20 @@ Identify users to enable targeting and attributes. Learn more about [user identi
   </Step>
 
   <Step title="Create identification tag">
-    New Custom HTML tag named "Formbricks - User":
+    New Custom HTML tag named "Forma - User":
 
 ```html
 <script>
 (function() {
-    if (!window.formbricks) return;
+    if (!window.forma) return;
     var userId = {{User ID}};
     if (!userId) return;
-    window.formbricks.setUserId(userId);
+    window.forma.setUserId(userId);
     var attrs = {};
     if ({{User Email}}) attrs.email = {{User Email}};
     if ({{User Plan}}) attrs.plan = {{User Plan}};
     if (Object.keys(attrs).length) {
-        window.formbricks.setAttributes(attrs);
+        window.forma.setAttributes(attrs);
     }
 })();
 </script>
@@ -154,11 +154,11 @@ Identify users to enable targeting and attributes. Learn more about [user identi
   </Step>
 
   <Step title="Set triggers and push data">
-    Attach **two** Custom Event triggers to the "Formbricks - User" tag, so it runs whichever of the two
+    Attach **two** Custom Event triggers to the "Forma - User" tag, so it runs whichever of the two
     things happens last:
 
-    1. `user-login` — your own event, for a user who signs in after Formbricks is already running.
-    2. `formbricks_setup_successful` — the SDK's readiness event, for a user who was already signed in when
+    1. `user-login` — your own event, for a user who signs in after Forma is already running.
+    2. `forma_setup_successful` — the SDK's readiness event, for a user who was already signed in when
        the page loaded. GTM's data layer is a merged model, so `{{User ID}}` still resolves to what your
        earlier `user-login` push set.
 
@@ -180,22 +180,22 @@ window.dataLayer.push({
 </Steps>
 
 <Note>
-  Both guards in the tag are cheap and both matter: `window.formbricks` may not exist yet on the `user-login`
-  path, and `{{User ID}}` may not be set yet on the `formbricks_setup_successful` path. Whichever fires
+  Both guards in the tag are cheap and both matter: `window.forma` may not exist yet on the `user-login`
+  path, and `{{User ID}}` may not be set yet on the `forma_setup_successful` path. Whichever fires
   second does the work.
 </Note>
 
 <Tip>
-  Earlier versions of this guide polled for `window.formbricks` every 100 ms. Use the
-  `formbricks_setup_successful` trigger instead: it is exactly the signal the polling was approximating, it
+  Earlier versions of this guide polled for `window.forma` every 100 ms. Use the
+  `forma_setup_successful` trigger instead: it is exactly the signal the polling was approximating, it
   fires once, and it cannot time out on a slow connection.
 </Tip>
 
 ## Track Custom Events
 
 <Steps>
-  <Step title="Create code action in Formbricks">
-    Add code action via Formbricks UI
+  <Step title="Create code action in Forma">
+    Add code action via Forma UI
 
     ![Add a code action to open source in app survey](/images/surveys/website-app-surveys/actions/code-action.webp "Add a code action to open source in app survey")
   </Step>
@@ -217,8 +217,8 @@ window.dataLayer.push({
 
 ```html
 <script>
-if (window.formbricks && window.formbricks.track) {
-    window.formbricks.track({{Event Name}});
+if (window.forma && window.forma.track) {
+    window.forma.track({{Event Name}});
 }
 </script>
 ```
@@ -255,7 +255,7 @@ window.dataLayer.push({
 
 <Steps>
   <Step title="Declare the fields on the survey">
-    In the Formbricks editor, add a **Hidden Field** for every key you intend to push. A key no survey
+    In the Forma editor, add a **Hidden Field** for every key you intend to push. A key no survey
     declares is dropped and logged, never stored.
   </Step>
 
@@ -264,12 +264,12 @@ window.dataLayer.push({
   </Step>
 
   <Step title="Create the tag">
-    New Custom HTML tag named "Formbricks - Embedded Data":
+    New Custom HTML tag named "Forma - Embedded Data":
 
 ```html
 <script>
-if (window.formbricks) {
-    window.formbricks.setEmbeddedData({
+if (window.forma) {
+    window.forma.setEmbeddedData({
         pageType: {{Page Type}},
         plan: {{User Plan}}
     });
@@ -280,10 +280,10 @@ if (window.formbricks) {
   </Step>
 
   <Step title="Trigger it">
-    Attach **two** triggers: **All Pages**, and a Custom Event trigger on `formbricks_setup_successful`.
+    Attach **two** triggers: **All Pages**, and a Custom Event trigger on `forma_setup_successful`.
 
     Both are needed. The SDK script loads asynchronously, so on an ordinary page load the All Pages trigger
-    can run before `window.formbricks` exists — the tag returns having set nothing. The readiness trigger
+    can run before `window.forma` exists — the tag returns having set nothing. The readiness trigger
     covers that, and All Pages covers the pushes that happen once the SDK is already running. The tag is
     safe to fire more than once: each call merges into the bag rather than replacing it.
   </Step>
@@ -306,28 +306,28 @@ if (window.formbricks) {
 
 **Surveys not showing?**
 - Use GTM Preview mode to check tag firing
-- Add `?formbricksDebug=true` to your URL
+- Add `?formaDebug=true` to your URL
 - Check browser console for errors
 - Wait 1 minute for the Server Cache to refresh
 
 **User ID not working?**
 - Verify Data Layer push syntax
 - Check GTM variables are reading correct values
-- Make sure the tag is also triggered by `formbricks_setup_successful`, so it runs whichever of "user logged in" and "SDK ready" happens last
+- Make sure the tag is also triggered by `forma_setup_successful`, so it runs whichever of "user logged in" and "SDK ready" happens last
 
 **Events not tracking?**
-- Confirm `window.formbricks` exists before calling track
-- Match event names exactly with Formbricks action names
-- Check timing - Formbricks must be initialized first. Trigger on `formbricks_setup_successful` rather than polling for the global
+- Confirm `window.forma` exists before calling track
+- Match event names exactly with Forma action names
+- Check timing - Forma must be initialized first. Trigger on `forma_setup_successful` rather than polling for the global
 
 **Embedded Data not on the response?**
 - Confirm the survey declares a **Hidden Field** with exactly that name
-- Add `?formbricksDebug=true` to the URL: every `setEmbeddedData` call prints the keys it set and what the bag now holds
+- Add `?formaDebug=true` to the URL: every `setEmbeddedData` call prints the keys it set and what the bag now holds
 - Remember the bag is snapshotted when the survey is displayed, so a value pushed after that lands on the next response
 
 ## Need Help?
 
-- [GitHub Discussions](https://github.com/formbricks/formbricks/discussions)
+- [GitHub Discussions](https://github.com/yldm-tech/forma/discussions)
 - [Framework Guides](/surveys/website-app-surveys/framework-guides)
 - [Actions](/surveys/website-app-surveys/actions)
 - [User Identification](/surveys/website-app-surveys/user-identification)

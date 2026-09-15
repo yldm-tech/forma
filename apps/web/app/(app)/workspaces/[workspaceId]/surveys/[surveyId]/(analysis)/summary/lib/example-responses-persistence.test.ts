@@ -1,8 +1,8 @@
 import { createResponseWithQuotaEvaluation } from "./__mocks__/example-response-create.mock";
 import { prisma } from "@/lib/__mocks__/database";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TResponseWithQuotaFull } from "@formbricks/types/quota";
+import { Prisma } from "@forma/database/prisma";
+import { type TResponseWithQuotaFull } from "@forma/types/quota";
 import { EXAMPLE_AI_GENERATED_TAG_NAME, type TGeneratedExampleDataset } from "./example-responses";
 import { persistExampleResponseDataset } from "./example-responses-persistence";
 

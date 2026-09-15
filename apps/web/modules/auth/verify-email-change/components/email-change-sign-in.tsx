@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { authClient } from "@/modules/auth/lib/auth-client";
 import { verifyEmailChangeAction } from "@/modules/auth/verify-email-change/actions";
 

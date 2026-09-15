@@ -1,16 +1,16 @@
 import * as yaml from "yaml";
 import { createDocument } from "zod-openapi";
-import { ZApiKeyData } from "@formbricks/database/zod/api-keys";
-import { ZContact } from "@formbricks/database/zod/contact";
-import { ZContactAttributeKey } from "@formbricks/database/zod/contact-attribute-keys";
-import { ZContactAttribute } from "@formbricks/database/zod/contact-attributes";
-import { ZResponse } from "@formbricks/database/zod/responses";
-import { ZRoles } from "@formbricks/database/zod/roles";
-import { ZSurveyWithoutQuestionType } from "@formbricks/database/zod/surveys";
-import { ZTeam } from "@formbricks/database/zod/teams";
-import { ZUser } from "@formbricks/database/zod/users";
-import { ZWebhook, ZWebhookWithoutSecret } from "@formbricks/database/zod/webhooks";
-import { ZWorkspaceTeam } from "@formbricks/database/zod/workspace-teams";
+import { ZApiKeyData } from "@forma/database/zod/api-keys";
+import { ZContact } from "@forma/database/zod/contact";
+import { ZContactAttributeKey } from "@forma/database/zod/contact-attribute-keys";
+import { ZContactAttribute } from "@forma/database/zod/contact-attributes";
+import { ZResponse } from "@forma/database/zod/responses";
+import { ZRoles } from "@forma/database/zod/roles";
+import { ZSurveyWithoutQuestionType } from "@forma/database/zod/surveys";
+import { ZTeam } from "@forma/database/zod/teams";
+import { ZUser } from "@forma/database/zod/users";
+import { ZWebhook, ZWebhookWithoutSecret } from "@forma/database/zod/webhooks";
+import { ZWorkspaceTeam } from "@forma/database/zod/workspace-teams";
 import { healthPaths } from "@/modules/api/v2/health/lib/openapi";
 import { ZOverallHealthStatus } from "@/modules/api/v2/health/types/health-status";
 import { contactAttributeKeyPaths } from "@/modules/api/v2/management/contact-attribute-keys/lib/openapi";
@@ -29,8 +29,8 @@ import { contactPaths } from "@/modules/ee/contacts/api/v2/management/contacts/l
 const document = createDocument({
   openapi: "3.1.0",
   info: {
-    title: "Formbricks API",
-    description: "Manage Formbricks resources programmatically.",
+    title: "Forma API",
+    description: "Manage Forma resources programmatically.",
     version: "2.0.0",
   },
   paths: {
@@ -50,8 +50,8 @@ const document = createDocument({
   },
   servers: [
     {
-      url: "https://app.formbricks.com/api/v2",
-      description: "Formbricks Cloud",
+      url: "https://app.forma.ylam.ai/api/v2",
+      description: "Forma Cloud",
     },
   ],
   tags: [
@@ -114,7 +114,7 @@ const document = createDocument({
         type: "apiKey",
         in: "header",
         name: "x-api-key",
-        description: "Use your Formbricks x-api-key to authenticate.",
+        description: "Use your Forma x-api-key to authenticate.",
       },
     },
     schemas: {

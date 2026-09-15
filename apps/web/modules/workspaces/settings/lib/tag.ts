@@ -1,9 +1,9 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZId } from "@formbricks/types/common";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { TTag } from "@formbricks/types/tags";
+import { prisma } from "@forma/database";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZId } from "@forma/types/common";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { TTag } from "@forma/types/tags";
 import { isPrismaKnownRequestError, isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { validateInputs } from "@/lib/utils/validate";
 import { TagError } from "@/modules/workspaces/settings/types/tag";

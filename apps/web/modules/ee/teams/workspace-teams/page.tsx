@@ -1,4 +1,4 @@
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { getTranslate } from "@/lingodotdev/server";
 import { AccessView } from "@/modules/ee/teams/workspace-teams/components/access-view";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";

@@ -10,14 +10,14 @@ import {
 } from "lucide-react";
 import React, { type JSX, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeDataType, TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeDataType, TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import type {
   TBaseFilter,
   TSegment,
   TSegmentAttributeFilter,
   TSegmentPersonFilter,
   TSegmentSurveyInteractionFilter,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { cn } from "@/lib/cn";
 import { getContactAttributeDataTypeIcon } from "@/modules/ee/contacts/utils";
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/modules/ui/components/dialog";

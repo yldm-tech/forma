@@ -1,6 +1,6 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import type { OrganizationRole } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import type { OrganizationRole } from "@forma/database/prisma";
 import { type TAuthzedClient, type TAuthzedRelationshipUpdate, getAuthzedClient } from "./client";
 import {
   AUTHZED_MAX_RECONCILIATION_PASSES,

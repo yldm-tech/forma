@@ -11,10 +11,10 @@ const { warn, error, info, debug } = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { workflowRun: { findMany, updateMany } },
 }));
-vi.mock("@formbricks/logger", () => ({ logger: { warn, error, info, debug } }));
+vi.mock("@forma/logger", () => ({ logger: { warn, error, info, debug } }));
 vi.mock("./mark-dispatched", () => ({ markWorkflowRunDispatched: markDispatched }));
 
 const NOW = new Date("2026-07-01T12:00:00.000Z");

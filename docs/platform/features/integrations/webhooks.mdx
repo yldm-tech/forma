@@ -1,6 +1,6 @@
 ---
 title: "Webhooks"
-description: "With webhooks, you can receive real-time HTTP notifications when specific objects change in your Formbricks environment. This allows you to stay updated and trigger automated actions based on these events."
+description: "With webhooks, you can receive real-time HTTP notifications when specific objects change in your Forma environment. This allows you to stay updated and trigger automated actions based on these events."
 icon: "webhook"
 ---
 
@@ -18,11 +18,11 @@ Webhooks are configured to send notifications based on trigger events. The avail
 
 ## **Creating Webhooks**
 
-You can create webhooks either through the **Formbricks App UI** or programmatically via the **Webhook API**.
+You can create webhooks either through the **Forma App UI** or programmatically via the **Webhook API**.
 
 ## **Creating Webhooks via UI**
 
-- **Log in to Formbricks**
+- **Log in to Forma**
   and click on the `Configuration` tab in the left sidebar and then click on the `Integrations` tab.
 
 ![Step one](/images/platform/features/integrations/webhooks/integrations-tab.webp)
@@ -44,7 +44,7 @@ You can create webhooks either through the **Formbricks App UI** or programmatic
 
 ## **Creating Webhooks via API**
 
-Use our documented methods on the **Creation**, **List**, and **Deletion** endpoints of the Webhook API mentioned in our [API v2 playground](https://formbricks.com/docs/api-v2-reference/management-api-%3E-webhooks/get-webhooks).
+Use our documented methods on the **Creation**, **List**, and **Deletion** endpoints of the Webhook API mentioned in our [API v2 playground](https://forma.ylam.ai/docs/api-v2-reference/management-api-%3E-webhooks/get-webhooks).
 
 ## Testing Webhooks Locally
 
@@ -59,7 +59,7 @@ endpoint with [ngrok](https://ngrok.com/docs/universal-gateway/http).
     Create a public HTTPS URL for your local service, for example with `ngrok http http://localhost:3000`.
   </Step>
 
-  <Step title="Use the public URL in Formbricks">
+  <Step title="Use the public URL in Forma">
     Paste the ngrok URL into your webhook endpoint, click **Test Endpoint**, and then save the webhook once the
     endpoint is reachable.
   </Step>
@@ -72,7 +72,7 @@ endpoint with [ngrok](https://ngrok.com/docs/universal-gateway/http).
 
 ### Allowing Internal URLs (Self-Hosted Only)
 
-By default, Formbricks blocks webhook URLs that point to private or internal IP addresses (e.g. `localhost`, `192.168.x.x`, `10.x.x.x`) to prevent [SSRF attacks](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery). If you are self-hosting Formbricks and need to send webhooks to internal services, you can set the following environment variable:
+By default, Forma blocks webhook URLs that point to private or internal IP addresses (e.g. `localhost`, `192.168.x.x`, `10.x.x.x`) to prevent [SSRF attacks](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery). If you are self-hosting Forma and need to send webhooks to internal services, you can set the following environment variable:
 
 ```sh
 DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS=1
@@ -82,13 +82,13 @@ DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS=1
   Only enable this on trusted, self-hosted environments. Enabling this on a publicly accessible instance exposes your server to SSRF risks.
 </Warning>
 
-If you encounter any issues or need help setting up webhooks, feel free to reach out to us on [GitHub Discussions](https://github.com/formbricks/formbricks/discussions). 😃
+If you encounter any issues or need help setting up webhooks, feel free to reach out to us on [GitHub Discussions](https://github.com/yldm-tech/forma/discussions). 😃
 
 ---
 
 ## Webhook Security with Standard Webhooks
 
-Formbricks implements the [Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks) specification to ensure webhook requests can be verified as genuinely originating from Formbricks.
+Forma implements the [Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks) specification to ensure webhook requests can be verified as genuinely originating from Forma.
 
 ### Webhook Headers
 
@@ -102,7 +102,7 @@ Every webhook request includes the following headers:
 
 ### Signing Secret
 
-When you create a webhook (via the UI or API), Formbricks automatically generates a unique signing secret for that webhook. The secret follows the Standard Webhooks format: `whsec_` followed by a base64-encoded random value.
+When you create a webhook (via the UI or API), Forma automatically generates a unique signing secret for that webhook. The secret follows the Standard Webhooks format: `whsec_` followed by a base64-encoded random value.
 
 **Via UI:** After creating a webhook, the signing secret is displayed immediately. Copy and store it securely—you can also view it later in the webhook settings.
 
@@ -138,7 +138,7 @@ const crypto = require("crypto");
 const WEBHOOK_TOLERANCE_IN_SECONDS = 300; // 5 minutes
 
 /**
- * Decodes a Formbricks webhook secret (whsec_...) to raw bytes
+ * Decodes a Forma webhook secret (whsec_...) to raw bytes
  */
 function decodeSecret(secret) {
   const base64 = secret.startsWith("whsec_") ? secret.slice(6) : secret;
@@ -174,7 +174,7 @@ function computeSignature(webhookId, timestamp, body, secret) {
 }
 
 /**
- * Verifies a Formbricks webhook request
+ * Verifies a Forma webhook request
  * @param {string} body - Raw request body as string
  * @param {object} headers - Object containing webhook-id, webhook-timestamp, webhook-signature
  * @param {string} secret - Your webhook secret (whsec_...)
@@ -225,7 +225,7 @@ module.exports = { verifyWebhook, decodeSecret, computeSignature, verifyTimestam
 ```javascript
 // In your webhook handler, use the raw body (not parsed JSON)
 try {
-  verifyWebhook(rawBody, req.headers, process.env.FORMBRICKS_WEBHOOK_SECRET);
+  verifyWebhook(rawBody, req.headers, process.env.FORMA_WEBHOOK_SECRET);
   const payload = JSON.parse(rawBody);
   // Process verified webhook...
 } catch (error) {
@@ -273,7 +273,7 @@ Example of Response Created webhook payload:
     "language": "en",
     "meta": {
       "country": "DE",
-      "url": "https://app.formbricks.com/s/surveyId",
+      "url": "https://app.forma.ylam.ai/s/surveyId",
       "userAgent": {
         "browser": "Chrome",
         "device": "desktop",
@@ -322,7 +322,7 @@ Example of Response Updated webhook payload:
     "language": "en",
     "meta": {
       "country": "DE",
-      "url": "https://app.formbricks.com/s/surveyId",
+      "url": "https://app.forma.ylam.ai/s/surveyId",
       "userAgent": {
         "browser": "Chrome",
         "device": "desktop",
@@ -372,7 +372,7 @@ Example of Response Finished webhook payload:
     "language": "en",
     "meta": {
       "country": "DE",
-      "url": "https://app.formbricks.com/s/surveyId",
+      "url": "https://app.forma.ylam.ai/s/surveyId",
       "userAgent": {
         "browser": "Chrome",
         "device": "desktop",

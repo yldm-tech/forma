@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyElementSummaryMatrix } from "@formbricks/types/surveys/types";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyElementSummaryMatrix } from "@forma/types/surveys/types";
 import { TooltipRenderer } from "@/modules/ui/components/tooltip";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
 

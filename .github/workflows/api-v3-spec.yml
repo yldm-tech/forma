@@ -41,7 +41,7 @@ jobs:
       # Root importer only: installs the lockfile-pinned @redocly/cli (and other root devDeps)
       # without building the whole workspace. bundle.mjs falls back to pinned npx when absent.
       - name: Install spec tooling (root dev dependencies)
-        run: pnpm install --frozen-lockfile --ignore-scripts --filter formbricks
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter forma
 
       - name: Lint OpenAPI v3 source tree
         run: node docs/api-v3-reference/scripts/bundle.mjs --lint

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
+import type { TOrganizationRole } from "@forma/types/memberships";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { isRoleEditDisabled } from "@/modules/ee/role-management/lib/role-edit-rules";
@@ -29,7 +29,7 @@ interface Role {
   memberAccepted?: boolean;
   inviteId?: string;
   doesOrgHaveMoreThanOneOwner?: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isUserManagementDisabledFromUi: boolean;
 }
 
@@ -42,7 +42,7 @@ export function EditMembershipRole({
   memberAccepted,
   inviteId,
   doesOrgHaveMoreThanOneOwner,
-  isFormbricksCloud,
+  isFormaCloud,
   isUserManagementDisabledFromUi,
 }: Role) {
   const { t } = useTranslation();
@@ -101,7 +101,7 @@ export function EditMembershipRole({
     if (isOwner) {
       roles.push("manager", "owner");
 
-      if (isFormbricksCloud) {
+      if (isFormaCloud) {
         roles.push("billing");
       }
     }

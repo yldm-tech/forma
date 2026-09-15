@@ -1,7 +1,7 @@
 # Current Authorization Contract
 
 This server-only module defines the engine-independent actor, action, and
-resource vocabulary enforced by Formbricks today. Product authorization code
+resource vocabulary enforced by Forma today. Product authorization code
 depends on this contract; AuthZed/SpiceDB is the sole runtime evaluator of it.
 
 The contract deliberately contains no AuthZed SDK types, configuration,
@@ -14,7 +14,7 @@ responsibilities.
 Import the types from `@/lib/authorization`. Actions are namespaced by the
 application resource discriminant, for example `workspace.read` and
 `survey.response_export`. The `apiKey` discriminant matches the existing
-Formbricks authentication type; the downstream SpiceDB schema maps it to its
+Forma authentication type; the downstream SpiceDB schema maps it to its
 `api_key` definition.
 
 `TAuthorizationResourceForAction<TAction>` preserves the action/resource
@@ -107,7 +107,7 @@ signal to select the bridge evaluator.
 
 The immutable bridge and candidate artifacts, fail-closed semantics,
 sandbox-first validation, environment gates, and deployment-only rollback are
-defined in the [direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
+defined in the [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
 
 ### Historical bridge capabilities added by ENG-1738
 
@@ -204,7 +204,7 @@ Two things follow. A navigation now records **one** checks-per-request
 observation instead of one per choke point. And **`page:user` is eligible for
 `AUTHZED_ENFORCEMENT_TARGETS`** — before ENG-2444 it had to stay shadow-only.
 
-`formbricks_authzed_authorization_unscoped_checks_total` should stay flat for
+`forma_authzed_authorization_unscoped_checks_total` should stay flat for
 page traffic; it is kept deliberately as the regression detector if this boundary
 is ever narrowed again.
 

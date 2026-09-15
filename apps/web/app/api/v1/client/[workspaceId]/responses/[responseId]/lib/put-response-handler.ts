@@ -1,8 +1,8 @@
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { RESPONSE_ALREADY_FINISHED_ERROR_CODE, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TResponse, TResponseUpdateInput } from "@formbricks/types/responses";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { RESPONSE_ALREADY_FINISHED_ERROR_CODE, ResourceNotFoundError } from "@forma/types/errors";
+import { TResponse, TResponseUpdateInput } from "@forma/types/responses";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import { type ApiErrorResult, handleApiError } from "@/app/lib/api/handle-api-error";
 import { responses } from "@/app/lib/api/response";
 import { THandlerParams } from "@/app/lib/api/with-api-logging";

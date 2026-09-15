@@ -8,8 +8,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { PipelineTriggers, Webhook } from "@formbricks/database/prisma-browser";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { PipelineTriggers, Webhook } from "@forma/database/prisma-browser";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { SurveyCheckboxGroup } from "@/modules/integrations/webhooks/components/survey-checkbox-group";
 import { TriggerCheckboxGroup } from "@/modules/integrations/webhooks/components/trigger-checkbox-group";
@@ -272,7 +272,7 @@ export const WebhookSettingsTab = ({
               {t("workspace.integrations.webhooks.secret_description")}
             </p>
             <Link
-              href="https://formbricks.com/docs/platform/features/integrations/webhooks#webhook-security-with-standard-webhooks"
+              href="https://forma.ylam.ai/docs/platform/features/integrations/webhooks#webhook-security-with-standard-webhooks"
               target="_blank"
               className="mt-1 inline-flex items-center gap-1 text-xs text-slate-600 underline hover:text-slate-800">
               {t("workspace.integrations.webhooks.learn_to_verify")}
@@ -312,9 +312,7 @@ export const WebhookSettingsTab = ({
             )}
 
             <Button variant="secondary" asChild>
-              <Link
-                href="https://formbricks.com/docs/platform/features/integrations/webhooks"
-                target="_blank">
+              <Link href="https://forma.ylam.ai/docs/platform/features/integrations/webhooks" target="_blank">
                 {t("common.read_docs")}
               </Link>
             </Button>

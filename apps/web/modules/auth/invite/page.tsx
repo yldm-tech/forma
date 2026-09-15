@@ -6,7 +6,7 @@
    component from a client one (ENG-2366). */
 import Link from "next/link";
 import { after } from "next/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { WEBAPP_URL } from "@/lib/constants";
 import { verifyInviteToken } from "@/lib/jwt";
 import { createMembership } from "@/lib/membership/service";

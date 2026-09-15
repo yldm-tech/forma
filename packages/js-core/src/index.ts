@@ -1,9 +1,9 @@
 import { CommandQueue, CommandType } from "@/lib/common/command-queue";
 import {
-  type TFormbricksEventName,
-  type TFormbricksEventPayloads,
-  offFormbricksEvent,
-  onFormbricksEvent,
+  type TFormaEventName,
+  type TFormaEventPayloads,
+  offFormaEvent,
+  onFormaEvent,
 } from "@/lib/common/events";
 import * as Setup from "@/lib/common/setup";
 import { getIsDebug } from "@/lib/common/utils";
@@ -30,7 +30,7 @@ const setup = async (setupConfig: TConfigInput): Promise<void> => {
   ) {
     const isDebug = getIsDebug();
     if (isDebug) {
-      console.warn("🧱 Formbricks - Warning: Using legacy init");
+      console.warn("🧱 Forma - Warning: Using legacy init");
     }
     await queue.add(Setup.setup, CommandType.Setup, false, {
       ...setupConfig,
@@ -96,7 +96,7 @@ const registerRouteChange = async (): Promise<void> => {
  *
  * Synchronous and network-free on purpose (like `setNonce`, unlike the queued methods): calling it
  * on every SPA route change is free, and routing it through the command queue would silently drop
- * calls made before `setup()` completes — the exact failure the `formbricks_setup_successful`
+ * calls made before `setup()` completes — the exact failure the `forma_setup_successful`
  * readiness event exists to prevent (ENG-1846).
  */
 const setEmbeddedData = (data: TEmbeddedDataInput): void => {
@@ -113,11 +113,11 @@ const clearEmbeddedData = (...args: [] | [key: string]): void => {
 };
 
 /**
- * Subscribe to a Formbricks event (ENG-1814).
+ * Subscribe to a Forma event (ENG-1814).
  *
  * The host application is notified about what the SDK actually did — a survey reached the screen
- * (`formbricks_survey_shown`), was answered (`formbricks_response_submitted`, with the persisted
- * `responseId` and a `finished` flag), was dismissed or completed (`formbricks_survey_closed`), an
+ * (`forma_survey_shown`), was answered (`forma_response_submitted`, with the persisted
+ * `responseId` and a `finished` flag), was dismissed or completed (`forma_survey_closed`), an
  * action was tracked, or setup finished — so it can drive frequency capping and analytics off
  * reality rather than off the `track()` calls it made. The same events, under the same names, go
  * out as `window.dataLayer` pushes for Google Tag Manager.
@@ -125,14 +125,14 @@ const clearEmbeddedData = (...args: [] | [key: string]): void => {
  * Subscriptions are independent of setup(): registering before or after setup() both work, and a
  * handler stays registered across logout() until it is removed.
  *
- * @param event - Full event name, e.g. "formbricks_survey_shown"
+ * @param event - Full event name, e.g. "forma_survey_shown"
  * @param handler - Called with that event's payload (survey id, and where it applies the response id)
  * @returns A function that removes this subscription. `off()` with the same arguments does the same.
  */
-const on = <E extends TFormbricksEventName>(
+const on = <E extends TFormaEventName>(
   event: E,
-  handler: (payload: TFormbricksEventPayloads[E]) => void
-): (() => void) => onFormbricksEvent(event, handler);
+  handler: (payload: TFormaEventPayloads[E]) => void
+): (() => void) => onFormaEvent(event, handler);
 
 /**
  * Remove a subscription registered with on().
@@ -140,11 +140,11 @@ const on = <E extends TFormbricksEventName>(
  * @param event - The event name the handler was registered for
  * @param handler - The same function reference that was passed to on()
  */
-const off = <E extends TFormbricksEventName>(
+const off = <E extends TFormaEventName>(
   event: E,
-  handler: (payload: TFormbricksEventPayloads[E]) => void
+  handler: (payload: TFormaEventPayloads[E]) => void
 ): void => {
-  offFormbricksEvent(event, handler);
+  offFormaEvent(event, handler);
 };
 
 /**
@@ -153,14 +153,14 @@ const off = <E extends TFormbricksEventName>(
  */
 const setNonce = (nonce: string | undefined): void => {
   // Store nonce on window for access when surveys package loads
-  globalThis.window.__formbricksNonce = nonce;
+  globalThis.window.__formaNonce = nonce;
 
   // Set nonce in surveys package if it's already loaded
 
-  globalThis.window.formbricksSurveys?.setNonce?.(nonce);
+  globalThis.window.formaSurveys?.setNonce?.(nonce);
 };
 
-const formbricks = {
+const forma = {
   /** @deprecated Use setup() instead. This method will be removed in a future version */
   init: (initConfig: TLegacyConfigInput) => setup(initConfig as unknown as TConfigInput),
   setup,
@@ -179,14 +179,14 @@ const formbricks = {
   off,
 };
 
-// Explicitly assign to globalThis so the wrapper SDK (@formbricks/js) can
+// Explicitly assign to globalThis so the wrapper SDK (@forma/js) can
 // find us even when the UMD environment detection is fooled by a leaked
 // `exports` or `module` global on the page (e.g. from another UMD bundle,
 // a tag manager, or a browser extension).  This runs inside the UMD factory,
 // so it executes regardless of which branch the wrapper picks.
-(globalThis as unknown as Record<string, unknown>).formbricks = formbricks;
+(globalThis as unknown as Record<string, unknown>).forma = forma;
 
-type TFormbricks = typeof formbricks;
-export type { TFormbricks };
-export type { TFormbricksEventName, TFormbricksEventPayloads } from "@/lib/common/events";
-export default formbricks;
+type TForma = typeof forma;
+export type { TForma };
+export type { TFormaEventName, TFormaEventPayloads } from "@/lib/common/events";
+export default forma;

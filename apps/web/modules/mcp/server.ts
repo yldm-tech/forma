@@ -2,7 +2,7 @@ import "server-only";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import type { MCPAnalyticsOptions } from "@posthog/mcp";
 import { createMcpHandler } from "mcp-handler";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { instrumentMcpServerWithTracing } from "@/lib/posthog/mcp-tracing";
 import { getMcpAuthentication } from "./auth";
 import { MCP_SERVER_NAME, MCP_SERVER_VERSION } from "./constants";

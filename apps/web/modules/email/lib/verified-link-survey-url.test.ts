@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { buildVerifiedLinkSurveyUrl } from "./verified-link-survey-url";
 
 const baseParams = {
-  publicDomain: "https://app.formbricks.com",
+  publicDomain: "https://app.forma.ylam.ai",
   surveyId: "survey-1",
   token: "verify-token",
 };
@@ -58,7 +58,7 @@ describe("buildVerifiedLinkSurveyUrl", () => {
       surveyLanguageCode: "zh-Hans-CN",
     });
 
-    expect(url.startsWith("https://app.formbricks.com/s/survey-1?")).toBe(true);
+    expect(url.startsWith("https://app.forma.ylam.ai/s/survey-1?")).toBe(true);
     // The raw token would otherwise be read back as a space and a path separator.
     expect(url).not.toContain("a+b/c=");
     expect(paramsOf(url).get("verify")).toBe("a+b/c=");

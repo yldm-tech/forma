@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { type Page, expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TSurveyEnding } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { type TSurveyEnding } from "@forma/types/surveys/types";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { test } from "./lib/fixtures";
 
@@ -122,7 +122,7 @@ test.describe("Auto-captured browser context on responses @slow", () => {
 
     const meta = await readStoredMeta(surveyId ?? "");
 
-    // The page the respondent answered on. On a link survey this is the Formbricks-hosted survey
+    // The page the respondent answered on. On a link survey this is the Forma-hosted survey
     // page itself. `url` carries the whole thing including the query; `pagePath` is the query-free
     // page identity. There is no `pageUrl` - it read the same `location.href` as `url`.
     expect(meta.url).toContain(`/s/${surveyId}`);

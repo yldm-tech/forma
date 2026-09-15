@@ -5,7 +5,7 @@ import { CopyIcon, SendIcon } from "lucide-react";
 import { type SyntheticEvent, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { Button } from "@/modules/ui/components/button";
 import { CodeBlock } from "@/modules/ui/components/code-block";
@@ -141,7 +141,7 @@ export const EmailTab = ({ surveyId, email }: EmailTabProps) => {
               </div>
               <div className="border-b border-slate-200 pb-2 text-sm">
                 {t("workspace.surveys.share.send_email.email_subject_label")} :{" "}
-                {t("workspace.surveys.share.send_email.formbricks_email_survey_preview")}
+                {t("workspace.surveys.share.send_email.forma_email_survey_preview")}
               </div>
               <div data-testid="survey-email-preview-content">
                 {emailPreviewDocument ? (

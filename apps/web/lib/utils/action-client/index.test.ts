@@ -16,7 +16,7 @@ import {
   UnknownError,
   ValidationError,
   isExpectedError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { RequestBodyTooLargeError } from "@/app/lib/api/request-body";
 import { getSession } from "@/modules/auth/lib/session";
 
@@ -26,7 +26,7 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 // Mock logger — use plain functions for chained calls so vi.resetAllMocks() doesn't break them
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: () => ({ error: vi.fn() }),
     warn: vi.fn(),

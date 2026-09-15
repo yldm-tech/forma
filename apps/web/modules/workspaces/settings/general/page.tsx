@@ -1,5 +1,5 @@
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
@@ -33,7 +33,7 @@ export const GeneralSettingsPage = async (props: { params: Promise<{ workspaceId
         description={t("workspace.general.recontact_cooldown_period_settings_description")}>
         <EditCooldownPeriodForm workspace={workspace} isReadOnly={isReadOnly} />
       </SettingsCard>
-      {!IS_FORMBRICKS_CLOUD && (
+      {!IS_FORMA_CLOUD && (
         <SettingsCard
           title={t("workspace.general.custom_scripts")}
           description={t("workspace.general.custom_scripts_card_description")}>

@@ -1,15 +1,15 @@
 import { createId } from "@paralleldrive/cuid2";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { OperationNotAllowedError, ResourceNotFoundError, ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError, ResourceNotFoundError, ValidationError } from "@forma/types/errors";
 import {
   TBaseFilters,
   TEvaluateSegmentUserData,
   TSegmentCreateInput,
   TSegmentUpdateInput,
   TSegmentWithSurveyRefs,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { getSurvey } from "@/lib/survey/service";
 import { validateInputs } from "@/lib/utils/validate";
 import {
@@ -31,7 +31,7 @@ import {
 } from "./segments";
 
 // Mock dependencies
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     segment: {
       findUnique: vi.fn(),
@@ -58,7 +58,7 @@ vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(() => true), // Assume validation passes
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

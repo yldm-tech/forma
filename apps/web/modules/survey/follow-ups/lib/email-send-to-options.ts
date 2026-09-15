@@ -1,9 +1,9 @@
 import type { TFunction } from "i18next";
-import { getDeclaredIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { isLiteralEmailRecipient } from "@formbricks/workflows";
+import { getDeclaredIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { isLiteralEmailRecipient } from "@forma/workflows";
 import { normalizeEmailForComparison } from "@/lib/utils/email";
 import { recallToHeadline } from "@/lib/utils/recall";
 import type { TFollowUpEmailToUser } from "@/modules/survey/editor/types/survey-follow-up";

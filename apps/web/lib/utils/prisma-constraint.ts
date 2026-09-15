@@ -1,5 +1,5 @@
-import { Prisma } from "@formbricks/database/prisma";
-import type { PrismaClientKnownRequestError } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
+import type { PrismaClientKnownRequestError } from "@forma/database/prisma";
 
 /** Prisma unique-constraint violation code. */
 const UNIQUE_CONSTRAINT_VIOLATION = "P2002";

@@ -1,4 +1,4 @@
-import { TUser } from "@formbricks/types/user";
+import { TUser } from "@forma/types/user";
 
 export type AuditLoggingCtx = {
   /**

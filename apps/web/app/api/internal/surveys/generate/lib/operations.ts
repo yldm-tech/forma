@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
-import type { TStreamObjectResult } from "@formbricks/ai";
-import { logger } from "@formbricks/logger";
+import type { TStreamObjectResult } from "@forma/ai";
+import { logger } from "@forma/logger";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import type { TV3Authentication } from "@/app/api/v3/lib/types";
 import { mapV3SurveyGenerateError } from "@/app/api/v3/surveys/generate/error-mapping";
@@ -186,7 +186,7 @@ export async function streamV3SurveyGeneration({
     headers: {
       "Content-Type": SURVEY_GENERATION_STREAM_CONTENT_TYPE,
       // no-transform is the RFC 9111 signal that forbids an intermediary coalescing or re-encoding
-      // the body; X-Accel-Buffering is for self-hosters fronting Formbricks with nginx-ingress,
+      // the body; X-Accel-Buffering is for self-hosters fronting Forma with nginx-ingress,
       // where proxy_buffering is on by default and would hold the whole response.
       "Cache-Control": "no-cache, no-store, no-transform",
       "X-Accel-Buffering": "no",

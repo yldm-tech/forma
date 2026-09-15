@@ -7,7 +7,7 @@
 # GOOGLE_APPLICATION_CREDENTIALS. That name is Google's global Application Default Credentials
 # convention and gcloud users commonly export it from a shell profile; compose gives the shell
 # environment precedence over .env, so reading it here would let ambient state nobody set for
-# Formbricks drive this mount. A stale export (key since moved) would fail hub and hub-worker
+# Forma drive this mount. A stale export (key since moved) would fail hub and hub-worker
 # creation under create_host_path: false and take the whole db:up chain down with it, for someone
 # who never touched enrichment; a live one would silently bind a personal or production key into
 # both containers and activate it. HUB_ also matches the other Hub knobs here (HUB_API_KEY,
@@ -45,7 +45,7 @@ x-hub-volumes: &hub-volumes
       create_host_path: false
 
 services:
-  # PostgreSQL must load the vector library so Hub (and Formbricks) can use the pgvector extension.
+  # PostgreSQL must load the vector library so Hub (and Forma) can use the pgvector extension.
   postgres:
     image: pgvector/pgvector:pg18
     volumes:
@@ -187,8 +187,8 @@ services:
     environment:
       - RUSTFS_ADMIN_USER=devrustfs
       - RUSTFS_ADMIN_PASSWORD=devrustfs123
-      - RUSTFS_BUCKET_NAME=formbricks
-      - RUSTFS_POLICY_NAME=formbricks-policy
+      - RUSTFS_BUCKET_NAME=forma
+      - RUSTFS_POLICY_NAME=forma-policy
       - RUSTFS_SERVICE_USER=devrustfs-service
       - RUSTFS_SERVICE_PASSWORD=devrustfs-service123
       - RUSTFS_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:3002,http://127.0.0.1:3002
@@ -218,7 +218,7 @@ services:
   # Keep hub, hub-migrate, and any future hub-worker on the same tag — they share one image and
   # drift breaks migrations or job processing.
   hub-migrate:
-    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
@@ -231,9 +231,9 @@ services:
       hub-db-create:
         condition: service_completed_successfully
 
-  # Formbricks Hub API (ghcr.io/formbricks/hub). Uses a dedicated local Hub database by default.
+  # Forma Hub API (ghcr.io/yldm-tech/hub). Uses a dedicated local Hub database by default.
   hub:
-    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -297,7 +297,7 @@ services:
 
   # Hub worker processes async jobs enqueued by the API, including embeddings.
   hub-worker:
-    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -312,7 +312,7 @@ services:
 
   # Optional AI taxonomy beta service. Enable with COMPOSE_PROFILES=taxonomy.
   taxonomy:
-    image: ghcr.io/formbricks/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
+    image: ghcr.io/yldm-tech/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
     profiles: ["taxonomy"]
     depends_on:
       hub:
@@ -428,8 +428,8 @@ services:
       CUBEJS_DB_PORT: ${CUBEJS_DB_PORT:-5432}
       CUBEJS_DEV_MODE: "true"
       CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-}
-      CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-formbricks-web}
-      CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-formbricks-cube}
+      CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-forma-web}
+      CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-forma-cube}
       CUBEJS_DEFAULT_API_SCOPES: meta,data
       CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
     volumes:

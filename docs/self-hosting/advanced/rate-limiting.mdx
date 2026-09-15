@@ -1,20 +1,20 @@
 ---
 title: "Rate Limiting"
-description: "Current request rate limits in Formbricks"
+description: "Current request rate limits in Forma"
 icon: "timer"
 ---
 
-Formbricks applies request rate limits to protect against abuse and keep API usage fair.
+Forma applies request rate limits to protect against abuse and keep API usage fair.
 
-Starting with Formbricks v5, rate limiting is split across two layers:
+Starting with Forma v5, rate limiting is split across two layers:
 
 - Envoy Gateway for public and API-key routes that can be enforced at ingress
 - The application server for remaining session-authenticated routes, server actions, and other flows Envoy does
   not currently cover
 
 <Warning>
-  Formbricks v5 removes application-level rate limiting for several routes that are now expected to be
-  protected by Envoy Gateway. If you self-host Formbricks without Envoy or an equivalent edge rate limiter,
+  Forma v5 removes application-level rate limiting for several routes that are now expected to be
+  protected by Envoy Gateway. If you self-host Forma without Envoy or an equivalent edge rate limiter,
   those routes will no longer be throttled by the application server after upgrading.
 </Warning>
 
@@ -34,7 +34,7 @@ When a limit is exceeded, the API returns `429 Too Many Requests`.
 
 ## v5 Migration Note
 
-Before upgrading to Formbricks v5:
+Before upgrading to Forma v5:
 
 - deploy Envoy Gateway or an equivalent edge rate limiter for the covered routes below
 - keep application Redis/Valkey enabled for the remaining app-enforced limits
@@ -45,7 +45,7 @@ configuration and the [v5 migration guide](/self-hosting/advanced/migration#v5).
 
 ## Envoy-Managed Limits
 
-These limits are expected to be enforced at the gateway layer in Formbricks v5 and later:
+These limits are expected to be enforced at the gateway layer in Forma v5 and later:
 
 | **Route Group**                                                          | **Limit**    | **Window** | **Identifier** |
 | ------------------------------------------------------------------------ | ------------ | ---------- | -------------- |
@@ -72,7 +72,7 @@ Session-authenticated `/api/v1/management/*`, `/api/v1/management/me`, `/api/v1/
 
 ## App-Enforced Limits
 
-These are the limits that still run inside the Formbricks application server:
+These are the limits that still run inside the Forma application server:
 
 | **Config**                    | **Limit**    | **Window** | **Identifier**                | **Used For**                                                                                                                                              |
 | ----------------------------- | ------------ | ---------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -92,7 +92,7 @@ These are the limits that still run inside the Formbricks application server:
 | `actions.licenseRecheck`      | 5 requests   | 1 minute   | User ID                       | Enterprise license recheck action                                                                                                                         |
 
 Invite limits are recipient-counted, so a bulk request for 25 people consumes 25 units. Self-hosters can
-change the limit with `INVITE_RATE_LIMIT_PER_24_HOURS`; Formbricks Cloud organizations with the
+change the limit with `INVITE_RATE_LIMIT_PER_24_HOURS`; Forma Cloud organizations with the
 `bulk-invite` entitlement receive a limit of 500 recipients.
 
 ## Explicit Envoy Exclusions

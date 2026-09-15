@@ -1,17 +1,17 @@
-import { type JobHandlerOverrides, type JobsRuntimeHandle, startJobsRuntime } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
+import { type JobHandlerOverrides, type JobsRuntimeHandle, startJobsRuntime } from "@forma/jobs";
+import { logger } from "@forma/logger";
 import { getJobsQueueingConfig, getJobsWorkerBootstrapConfig } from "@/lib/jobs/config";
 import { RECURRING_JOB_REGISTRATIONS, getJobHandlerOverrides } from "@/lib/jobs/recurring-registrations";
 
 const WORKER_STARTUP_RETRY_DELAY_MS = 30_000;
 
 type TJobsRuntimeGlobal = typeof globalThis & {
-  formbricksJobsRecurringRegistration: Promise<void> | undefined;
-  formbricksJobsRecurringRegistered: boolean | undefined;
-  formbricksJobsRecurringRetryTimeout: ReturnType<typeof setTimeout> | undefined;
-  formbricksJobsRuntime: JobsRuntimeHandle | undefined;
-  formbricksJobsRuntimeInitializing: Promise<JobsRuntimeHandle> | undefined;
-  formbricksJobsRuntimeRetryTimeout: ReturnType<typeof setTimeout> | undefined;
+  formaJobsRecurringRegistration: Promise<void> | undefined;
+  formaJobsRecurringRegistered: boolean | undefined;
+  formaJobsRecurringRetryTimeout: ReturnType<typeof setTimeout> | undefined;
+  formaJobsRuntime: JobsRuntimeHandle | undefined;
+  formaJobsRuntimeInitializing: Promise<JobsRuntimeHandle> | undefined;
+  formaJobsRuntimeRetryTimeout: ReturnType<typeof setTimeout> | undefined;
 };
 
 const globalForJobsRuntime = globalThis as TJobsRuntimeGlobal;
@@ -41,23 +41,23 @@ const registerRecurringJobSchedules = async (): Promise<void> => {
 };
 
 const clearRecurringJobsRetryTimeout = (): void => {
-  if (globalForJobsRuntime.formbricksJobsRecurringRetryTimeout) {
-    clearTimeout(globalForJobsRuntime.formbricksJobsRecurringRetryTimeout);
-    globalForJobsRuntime.formbricksJobsRecurringRetryTimeout = undefined;
+  if (globalForJobsRuntime.formaJobsRecurringRetryTimeout) {
+    clearTimeout(globalForJobsRuntime.formaJobsRecurringRetryTimeout);
+    globalForJobsRuntime.formaJobsRecurringRetryTimeout = undefined;
   }
 };
 
 const scheduleRecurringJobsRetry = (): void => {
   if (
-    globalForJobsRuntime.formbricksJobsRecurringRegistered ||
-    globalForJobsRuntime.formbricksJobsRecurringRegistration ||
-    globalForJobsRuntime.formbricksJobsRecurringRetryTimeout
+    globalForJobsRuntime.formaJobsRecurringRegistered ||
+    globalForJobsRuntime.formaJobsRecurringRegistration ||
+    globalForJobsRuntime.formaJobsRecurringRetryTimeout
   ) {
     return;
   }
 
-  globalForJobsRuntime.formbricksJobsRecurringRetryTimeout = setTimeout(() => {
-    globalForJobsRuntime.formbricksJobsRecurringRetryTimeout = undefined;
+  globalForJobsRuntime.formaJobsRecurringRetryTimeout = setTimeout(() => {
+    globalForJobsRuntime.formaJobsRecurringRetryTimeout = undefined;
     void registerRecurringJobs().catch(() => undefined);
   }, WORKER_STARTUP_RETRY_DELAY_MS);
 
@@ -68,23 +68,23 @@ const scheduleRecurringJobsRetry = (): void => {
 };
 
 const clearJobsWorkerRetryTimeout = (): void => {
-  if (globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout) {
-    clearTimeout(globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout);
-    globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout = undefined;
+  if (globalForJobsRuntime.formaJobsRuntimeRetryTimeout) {
+    clearTimeout(globalForJobsRuntime.formaJobsRuntimeRetryTimeout);
+    globalForJobsRuntime.formaJobsRuntimeRetryTimeout = undefined;
   }
 };
 
 const scheduleJobsWorkerRetry = (): void => {
   if (
-    globalForJobsRuntime.formbricksJobsRuntime ||
-    globalForJobsRuntime.formbricksJobsRuntimeInitializing ||
-    globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout
+    globalForJobsRuntime.formaJobsRuntime ||
+    globalForJobsRuntime.formaJobsRuntimeInitializing ||
+    globalForJobsRuntime.formaJobsRuntimeRetryTimeout
   ) {
     return;
   }
 
-  globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout = setTimeout(() => {
-    globalForJobsRuntime.formbricksJobsRuntimeRetryTimeout = undefined;
+  globalForJobsRuntime.formaJobsRuntimeRetryTimeout = setTimeout(() => {
+    globalForJobsRuntime.formaJobsRuntimeRetryTimeout = undefined;
     void registerJobsWorker().catch(() => undefined);
   }, WORKER_STARTUP_RETRY_DELAY_MS);
 
@@ -100,25 +100,25 @@ export const registerRecurringJobs = async (): Promise<void> => {
     return;
   }
 
-  if (globalForJobsRuntime.formbricksJobsRecurringRegistered) {
+  if (globalForJobsRuntime.formaJobsRecurringRegistered) {
     return;
   }
 
-  if (globalForJobsRuntime.formbricksJobsRecurringRegistration) {
-    return await globalForJobsRuntime.formbricksJobsRecurringRegistration;
+  if (globalForJobsRuntime.formaJobsRecurringRegistration) {
+    return await globalForJobsRuntime.formaJobsRecurringRegistration;
   }
 
-  globalForJobsRuntime.formbricksJobsRecurringRegistration = (async () => {
+  globalForJobsRuntime.formaJobsRecurringRegistration = (async () => {
     await registerRecurringJobSchedules();
     clearRecurringJobsRetryTimeout();
-    globalForJobsRuntime.formbricksJobsRecurringRegistered = true;
-    globalForJobsRuntime.formbricksJobsRecurringRegistration = undefined;
+    globalForJobsRuntime.formaJobsRecurringRegistered = true;
+    globalForJobsRuntime.formaJobsRecurringRegistration = undefined;
   })();
 
   try {
-    return await globalForJobsRuntime.formbricksJobsRecurringRegistration;
+    return await globalForJobsRuntime.formaJobsRecurringRegistration;
   } catch (error) {
-    globalForJobsRuntime.formbricksJobsRecurringRegistration = undefined;
+    globalForJobsRuntime.formaJobsRecurringRegistration = undefined;
     logger.error({ err: error }, "BullMQ recurring job registration failed");
     scheduleRecurringJobsRetry();
     throw error;
@@ -134,12 +134,12 @@ export const registerJobsWorker = async (): Promise<JobsRuntimeHandle | null> =>
     return null;
   }
 
-  if (globalForJobsRuntime.formbricksJobsRuntime) {
-    return globalForJobsRuntime.formbricksJobsRuntime;
+  if (globalForJobsRuntime.formaJobsRuntime) {
+    return globalForJobsRuntime.formaJobsRuntime;
   }
 
-  if (globalForJobsRuntime.formbricksJobsRuntimeInitializing) {
-    return await globalForJobsRuntime.formbricksJobsRuntimeInitializing;
+  if (globalForJobsRuntime.formaJobsRuntimeInitializing) {
+    return await globalForJobsRuntime.formaJobsRuntimeInitializing;
   }
 
   const runtimeOptions = jobsWorkerBootstrapConfig.runtimeOptions;
@@ -149,22 +149,22 @@ export const registerJobsWorker = async (): Promise<JobsRuntimeHandle | null> =>
     ...getJobHandlerOverrides(),
   };
 
-  globalForJobsRuntime.formbricksJobsRuntimeInitializing = (async () => {
+  globalForJobsRuntime.formaJobsRuntimeInitializing = (async () => {
     const runtime = await startJobsRuntime({
       ...runtimeOptions,
       jobHandlerOverrides,
     });
 
     clearJobsWorkerRetryTimeout();
-    globalForJobsRuntime.formbricksJobsRuntime = runtime;
-    globalForJobsRuntime.formbricksJobsRuntimeInitializing = undefined;
+    globalForJobsRuntime.formaJobsRuntime = runtime;
+    globalForJobsRuntime.formaJobsRuntimeInitializing = undefined;
     return runtime;
   })();
 
   try {
-    return await globalForJobsRuntime.formbricksJobsRuntimeInitializing;
+    return await globalForJobsRuntime.formaJobsRuntimeInitializing;
   } catch (error) {
-    globalForJobsRuntime.formbricksJobsRuntimeInitializing = undefined;
+    globalForJobsRuntime.formaJobsRuntimeInitializing = undefined;
     logger.error({ err: error }, "BullMQ worker registration failed");
     scheduleJobsWorkerRetry();
     throw error;
@@ -172,14 +172,14 @@ export const registerJobsWorker = async (): Promise<JobsRuntimeHandle | null> =>
 };
 
 export const resetJobsWorkerRegistrationForTests = async (): Promise<void> => {
-  const runtime = globalForJobsRuntime.formbricksJobsRuntime;
-  const initializing = globalForJobsRuntime.formbricksJobsRuntimeInitializing;
+  const runtime = globalForJobsRuntime.formaJobsRuntime;
+  const initializing = globalForJobsRuntime.formaJobsRuntimeInitializing;
   clearRecurringJobsRetryTimeout();
   clearJobsWorkerRetryTimeout();
-  globalForJobsRuntime.formbricksJobsRecurringRegistered = undefined;
-  globalForJobsRuntime.formbricksJobsRecurringRegistration = undefined;
-  globalForJobsRuntime.formbricksJobsRuntime = undefined;
-  globalForJobsRuntime.formbricksJobsRuntimeInitializing = undefined;
+  globalForJobsRuntime.formaJobsRecurringRegistered = undefined;
+  globalForJobsRuntime.formaJobsRecurringRegistration = undefined;
+  globalForJobsRuntime.formaJobsRuntime = undefined;
+  globalForJobsRuntime.formaJobsRuntimeInitializing = undefined;
 
   const runtimesToClose = new Set<JobsRuntimeHandle>();
 
@@ -196,12 +196,12 @@ export const resetJobsWorkerRegistrationForTests = async (): Promise<void> => {
     }
   }
 
-  if (globalForJobsRuntime.formbricksJobsRuntime) {
-    runtimesToClose.add(globalForJobsRuntime.formbricksJobsRuntime);
+  if (globalForJobsRuntime.formaJobsRuntime) {
+    runtimesToClose.add(globalForJobsRuntime.formaJobsRuntime);
   }
 
-  globalForJobsRuntime.formbricksJobsRuntime = undefined;
-  globalForJobsRuntime.formbricksJobsRuntimeInitializing = undefined;
+  globalForJobsRuntime.formaJobsRuntime = undefined;
+  globalForJobsRuntime.formaJobsRuntimeInitializing = undefined;
 
   await Promise.all(
     [...runtimesToClose].map(async (runtimeHandle) => {

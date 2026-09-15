@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { type Response } from "@formbricks/database/prisma-browser";
-import { TSurvey, TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { type Response } from "@forma/database/prisma-browser";
+import { TSurvey, TSurveyStyling } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import {
   IMPRINT_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_RECAPTCHA_CONFIGURED,
   PRIVACY_URL,
   RECAPTCHA_SITE_KEY,
@@ -162,7 +162,7 @@ export const renderSurvey = async ({
         IMPRINT_URL={IMPRINT_URL}
         PRIVACY_URL={PRIVACY_URL}
         TERMS_URL={TERMS_URL}
-        IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+        IS_FORMA_CLOUD={IS_FORMA_CLOUD}
         verifiedEmail={verifiedEmail}
         languageCode={languageCode}
         locale={gateLocale}
@@ -198,7 +198,7 @@ export const renderSurvey = async ({
       IMPRINT_URL={IMPRINT_URL}
       PRIVACY_URL={PRIVACY_URL}
       TERMS_URL={TERMS_URL}
-      IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+      IS_FORMA_CLOUD={IS_FORMA_CLOUD}
     />
   );
 };

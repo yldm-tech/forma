@@ -6,7 +6,7 @@ export type TEmbeddedDataInput = Record<string, string | number | boolean | Date
 
 /**
  * The in-memory Embedded Data bag (ENG-1844): context a host page attaches to future responses
- * without tying it to a trigger — `formbricks.setEmbeddedData({ pageType: "product" })` from GTM
+ * without tying it to a trigger — `forma.setEmbeddedData({ pageType: "product" })` from GTM
  * instead of repeating the same values on every possible `track()` call.
  *
  * Lifetime rules, all deliberate:
@@ -80,7 +80,7 @@ export class EmbeddedDataStore {
     // A success trace, because the bag is otherwise invisible: it lives in memory (nothing in
     // devtools storage) and the API has no getter, so without this line a developer wiring up GTM
     // gets zero confirmation until a survey happens to display. Debug level: it prints only with
-    // `?formbricksDebug=true`, so respondents' consoles stay clean. Keys only, never values — the
+    // `?formaDebug=true`, so respondents' consoles stay clean. Keys only, never values — the
     // documented use of this bag includes hashed identity fields.
     const removedSegment = removed.length > 0 ? `, removed [${removed.join(", ")}]` : "";
     this.logger.debug(

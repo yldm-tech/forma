@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TResponsePipelineJobData } from "@formbricks/jobs";
+import type { TResponsePipelineJobData } from "@forma/jobs";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
 import { FollowUpSendError } from "@/modules/survey/follow-ups/types/follow-up";
 import { processResponsePipelineJob } from "./process-response-pipeline-job";
@@ -57,7 +57,7 @@ const {
   };
 });
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     organization: {
       findFirst: mockPrismaOrganizationFindFirst,
@@ -75,7 +75,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/jobs", () => ({
+vi.mock("@forma/jobs", () => ({
   UnrecoverableError: class UnrecoverableError extends Error {
     constructor(message: string) {
       super(message);
@@ -147,7 +147,7 @@ vi.mock("@/modules/ee/workflows/lib/runner/dispatch", () => ({
   dispatchWorkflowRunViaJobs: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: vi.fn(),
     error: mockLoggerError,

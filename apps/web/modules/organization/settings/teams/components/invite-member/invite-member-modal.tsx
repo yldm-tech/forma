@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { TOrganizationTeam } from "@/modules/ee/teams/team-list/types/team";
 import { TInvitee } from "@/modules/organization/settings/teams/types/invites";
 import {
@@ -24,7 +24,7 @@ interface InviteMemberModalProps {
   teams: TOrganizationTeam[];
   organizationId: string;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   membershipRole?: TOrganizationRole;
   isOwnerOrManager: boolean;
   isTeamAdmin: boolean;
@@ -40,7 +40,7 @@ export const InviteMemberModal = ({
   teams,
   organizationId,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   membershipRole,
   isOwnerOrManager,
   isTeamAdmin,
@@ -67,7 +67,7 @@ export const InviteMemberModal = ({
         teams={filteredTeams}
         organizationId={organizationId}
         isAccessControlAllowed={isAccessControlAllowed}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
         membershipRole={membershipRole}
         showTeamAdminRestrictions={showTeamAdminRestrictions}
         enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
@@ -80,7 +80,7 @@ export const InviteMemberModal = ({
         teams={filteredTeams}
         organizationId={organizationId}
         isAccessControlAllowed={isAccessControlAllowed}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
         isBulkInviteAllowed={isBulkInviteAllowed}
         enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
       />

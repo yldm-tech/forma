@@ -1,7 +1,7 @@
 import { type Queue, QueueEvents } from "bullmq";
 import IORedis from "ioredis";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { JOBS_DEFAULT_JOB_OPTIONS, JOBS_PREFIX, JOBS_QUEUE_NAME, JOB_NAMES } from "./constants";
 import {
   enqueueTestLogJob,
@@ -68,7 +68,7 @@ describe("BullMQ integration tests", () => {
 
     runtime = await startJobsRuntime({ redisUrl });
     queueEventsConnection = new IORedis(redisUrl, {
-      connectionName: "formbricks-jobs-queue-events",
+      connectionName: "forma-jobs-queue-events",
       maxRetriesPerRequest: null,
     });
     queueEvents = new QueueEvents(JOBS_QUEUE_NAME, {

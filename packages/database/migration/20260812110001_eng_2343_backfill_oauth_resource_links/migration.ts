@@ -123,7 +123,7 @@ export const eng2343BackfillOauthResourceLinks: MigrationScript = {
     // is a no-op afterwards. `name` is descriptive only.
     await migrationTx.$executeRaw`
       INSERT INTO "oauthResource" ("id", "identifier", "name", "allowedScopes", "createdAt", "updatedAt")
-      VALUES (${createId()}, ${resourceIdentifier}, 'Formbricks MCP', ${[
+      VALUES (${createId()}, ${resourceIdentifier}, 'Forma MCP', ${[
         ...MCP_RESOURCE_ALLOWED_SCOPES,
       ]}::TEXT[], NOW(), NOW())
       ON CONFLICT ("identifier") DO NOTHING

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurveyQuestionChoice, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurveyQuestionChoice, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { MAX_OTHER_OPTION_LENGTH } from "@/lib/constants";
 import { validateOtherOptionLength, validateOtherOptionLengthForMultipleChoice } from "../element";
 
@@ -25,7 +25,7 @@ vi.mock("@/modules/ee/license-check/lib/utils", () => ({
   getIsSpamProtectionEnabled: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

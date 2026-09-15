@@ -1,18 +1,18 @@
 {
-  "name": "@formbricks/cache",
+  "name": "@forma/cache",
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "homepage": "https://formbricks.com",
-  "description": "Unified Redis cache for Formbricks",
+  "homepage": "https://forma.ylam.ai",
+  "description": "Unified Redis cache for Forma",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "keywords": [
-    "Formbricks",
+    "Forma",
     "cache",
     "redis",
     "caching"
@@ -38,15 +38,15 @@
     "test:coverage": "vitest run --coverage",
     "go": "vite build --watch --mode dev"
   },
-  "author": "Formbricks <hola@formbricks.com>",
+  "author": "Forma <hola@forma.ylam.ai>",
   "dependencies": {
-    "@formbricks/logger": "workspace:*",
+    "@forma/logger": "workspace:*",
     "redis": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

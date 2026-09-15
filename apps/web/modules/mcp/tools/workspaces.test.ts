@@ -7,7 +7,7 @@ vi.mock("@/app/api/v3/workspaces/lib/operations", () => ({
   listV3Workspaces: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ error: vi.fn(), warn: vi.fn() })) },
 }));
 
@@ -20,7 +20,7 @@ const readAuthInfo = {
   token: "oauth:user_1:client_1",
   clientId: "client_1",
   scopes: ["surveys:read"],
-  extra: { formbricksAuthentication: oauthSession, requestId: "req_tool", authMethod: "oauth" },
+  extra: { formaAuthentication: oauthSession, requestId: "req_tool", authMethod: "oauth" },
 };
 
 const writeOnlyAuthInfo = { ...readAuthInfo, scopes: ["surveys:write"] };

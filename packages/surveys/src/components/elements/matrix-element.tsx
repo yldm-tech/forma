@@ -1,8 +1,8 @@
 import { useMemo, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { Matrix, type MatrixOption } from "@formbricks/survey-ui";
-import { type TResponseData, type TResponseTtc } from "@formbricks/types/responses";
-import type { TSurveyMatrixElement } from "@formbricks/types/surveys/elements";
+import { Matrix, type MatrixOption } from "@forma/survey-ui";
+import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
+import type { TSurveyMatrixElement } from "@forma/types/surveys/elements";
 import { htmlToPlainText } from "@/lib/html-utils";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";

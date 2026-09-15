@@ -4,7 +4,7 @@ import {
   OrganizationRole,
   TeamUserRole,
   WorkspaceTeamPermission,
-} from "@formbricks/database/prisma";
+} from "@forma/database/prisma";
 
 /**
  * The single source of truth mapping PostgreSQL source values to SpiceDB relation names.

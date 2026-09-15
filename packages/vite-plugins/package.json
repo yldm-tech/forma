@@ -1,13 +1,13 @@
 {
-  "name": "@formbricks/vite-plugins",
+  "name": "@forma/vite-plugins",
   "license": "MIT",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://formbricks.com",
+  "homepage": "https://forma.ylam.ai",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "sideEffects": false,
   "scripts": {
@@ -18,8 +18,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "postcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

@@ -1,14 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { OrganizationRole } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId, ZUuid } from "@formbricks/types/common";
-import { AuthenticationError, OperationNotAllowedError, ValidationError } from "@formbricks/types/errors";
-import { TOrganizationRole, ZOrganizationRole } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import { OrganizationRole } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId, ZUuid } from "@forma/types/common";
+import { AuthenticationError, OperationNotAllowedError, ValidationError } from "@forma/types/errors";
+import { TOrganizationRole, ZOrganizationRole } from "@forma/types/memberships";
 import { assertCan, can } from "@/lib/authorization";
-import { INVITE_DISABLED, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { INVITE_DISABLED, IS_FORMA_CLOUD } from "@/lib/constants";
 import { createInviteToken } from "@/lib/jwt";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getAccessFlags } from "@/lib/membership/utils";
@@ -290,7 +290,7 @@ export const inviteUserAction = authenticatedActionClient.inputSchema(ZInviteUse
       throw new AuthenticationError("Invite disabled");
     }
 
-    if (!IS_FORMBRICKS_CLOUD && parsedInput.role === OrganizationRole.billing) {
+    if (!IS_FORMA_CLOUD && parsedInput.role === OrganizationRole.billing) {
       throw new ValidationError("Billing role is not allowed");
     }
 
@@ -427,7 +427,7 @@ export const bulkInviteUsersAction = authenticatedActionClient.inputSchema(ZBulk
     }
 
     // Validate roles for the whole batch up front.
-    if (!IS_FORMBRICKS_CLOUD && invitees.some((invitee) => invitee.role === OrganizationRole.billing)) {
+    if (!IS_FORMA_CLOUD && invitees.some((invitee) => invitee.role === OrganizationRole.billing)) {
       throw new ValidationError("Billing role is not allowed");
     }
 

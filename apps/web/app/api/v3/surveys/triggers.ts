@@ -1,5 +1,5 @@
 import "server-only";
-import type { TActionClass } from "@formbricks/types/action-classes";
+import type { TActionClass } from "@forma/types/action-classes";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import type { TV3SurveyTrigger } from "./schemas";

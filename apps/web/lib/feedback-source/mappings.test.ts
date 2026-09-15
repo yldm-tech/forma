@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { resolveFormbricksMappingsInput } from "./mappings";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
+import { TSurvey } from "@forma/types/surveys/types";
+import { resolveFormaMappingsInput } from "./mappings";
 
 vi.mock("@/lib/survey/service", () => ({
   getSurvey: vi.fn(),
@@ -38,7 +38,7 @@ const buildSurvey = (id: string, workspaceId: string): TSurvey =>
     ],
   }) as unknown as TSurvey;
 
-describe("resolveFormbricksMappingsInput", () => {
+describe("resolveFormaMappingsInput", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -46,7 +46,7 @@ describe("resolveFormbricksMappingsInput", () => {
   test("resolves elements across surveys and blocks in the workspace", async () => {
     getSurvey.mockImplementation(async (surveyId: string) => buildSurvey(surveyId, WORKSPACE_ID));
 
-    const result = await resolveFormbricksMappingsInput(
+    const result = await resolveFormaMappingsInput(
       [
         { surveyId: SURVEY_ID, elementIds: ["el-text", "el-rating"] },
         { surveyId: OTHER_SURVEY_ID, elementIds: ["el-nps"] },
@@ -55,7 +55,7 @@ describe("resolveFormbricksMappingsInput", () => {
     );
 
     expect(result).toEqual({
-      type: "formbricks_survey",
+      type: "forma_survey",
       mappings: [
         { surveyId: SURVEY_ID, elementId: "el-text", hubFieldType: "text" },
         { surveyId: SURVEY_ID, elementId: "el-rating", hubFieldType: "rating" },
@@ -77,7 +77,7 @@ describe("resolveFormbricksMappingsInput", () => {
     test("is 'all' when every mappable element of every mapped survey is selected", async () => {
       getSurvey.mockImplementation(async (surveyId: string) => buildSurvey(surveyId, WORKSPACE_ID));
 
-      const result = await resolveFormbricksMappingsInput(
+      const result = await resolveFormaMappingsInput(
         [
           { surveyId: SURVEY_ID, elementIds: EVERY_SUPPORTED_ELEMENT },
           { surveyId: OTHER_SURVEY_ID, elementIds: EVERY_SUPPORTED_ELEMENT },
@@ -93,7 +93,7 @@ describe("resolveFormbricksMappingsInput", () => {
     test("is 'all' even though the survey holds an element with no Hub field", async () => {
       getSurvey.mockImplementation(async (surveyId: string) => buildSurvey(surveyId, WORKSPACE_ID));
 
-      const result = await resolveFormbricksMappingsInput(
+      const result = await resolveFormaMappingsInput(
         [{ surveyId: SURVEY_ID, elementIds: [...EVERY_SUPPORTED_ELEMENT, "el-file"] }],
         WORKSPACE_ID
       );
@@ -104,7 +104,7 @@ describe("resolveFormbricksMappingsInput", () => {
     test("is 'specific' when one element is left out", async () => {
       getSurvey.mockImplementation(async (surveyId: string) => buildSurvey(surveyId, WORKSPACE_ID));
 
-      const result = await resolveFormbricksMappingsInput(
+      const result = await resolveFormaMappingsInput(
         [{ surveyId: SURVEY_ID, elementIds: ["el-text", "el-nps"] }],
         WORKSPACE_ID
       );
@@ -117,7 +117,7 @@ describe("resolveFormbricksMappingsInput", () => {
     test("is 'specific' when one of several surveys is curated", async () => {
       getSurvey.mockImplementation(async (surveyId: string) => buildSurvey(surveyId, WORKSPACE_ID));
 
-      const result = await resolveFormbricksMappingsInput(
+      const result = await resolveFormaMappingsInput(
         [
           { surveyId: SURVEY_ID, elementIds: EVERY_SUPPORTED_ELEMENT },
           { surveyId: OTHER_SURVEY_ID, elementIds: ["el-text"] },
@@ -136,7 +136,7 @@ describe("resolveFormbricksMappingsInput", () => {
     getSurvey.mockResolvedValue(buildSurvey(SURVEY_ID, OTHER_WORKSPACE_ID));
 
     await expect(
-      resolveFormbricksMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-text"] }], WORKSPACE_ID)
+      resolveFormaMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-text"] }], WORKSPACE_ID)
     ).rejects.toThrow(ResourceNotFoundError);
   });
 
@@ -146,7 +146,7 @@ describe("resolveFormbricksMappingsInput", () => {
     );
 
     await expect(
-      resolveFormbricksMappingsInput(
+      resolveFormaMappingsInput(
         [
           { surveyId: SURVEY_ID, elementIds: ["el-text"] },
           { surveyId: OTHER_SURVEY_ID, elementIds: ["el-text"] },
@@ -160,14 +160,14 @@ describe("resolveFormbricksMappingsInput", () => {
     getSurvey.mockResolvedValue(null);
 
     await expect(
-      resolveFormbricksMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-text"] }], WORKSPACE_ID)
+      resolveFormaMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-text"] }], WORKSPACE_ID)
     ).rejects.toThrow(ResourceNotFoundError);
   });
 
   test("skips unknown element ids and element types with no Hub field", async () => {
     getSurvey.mockResolvedValue(buildSurvey(SURVEY_ID, WORKSPACE_ID));
 
-    const result = await resolveFormbricksMappingsInput(
+    const result = await resolveFormaMappingsInput(
       [{ surveyId: SURVEY_ID, elementIds: ["el-text", "el-gone", "el-file"] }],
       WORKSPACE_ID
     );
@@ -179,7 +179,7 @@ describe("resolveFormbricksMappingsInput", () => {
     getSurvey.mockResolvedValue(buildSurvey(SURVEY_ID, WORKSPACE_ID));
 
     await expect(
-      resolveFormbricksMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-file"] }], WORKSPACE_ID)
+      resolveFormaMappingsInput([{ surveyId: SURVEY_ID, elementIds: ["el-file"] }], WORKSPACE_ID)
     ).rejects.toThrow(InvalidInputError);
   });
 });

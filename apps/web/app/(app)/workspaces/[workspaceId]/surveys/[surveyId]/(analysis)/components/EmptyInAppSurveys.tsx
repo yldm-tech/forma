@@ -21,12 +21,12 @@ export const EmptyAppSurveys = () => {
         </h1>
 
         <p className="mt-2 text-sm text-slate-600">
-          {t("workspace.surveys.summary.connect_your_website_or_app_with_formbricks_to_get_started")}
+          {t("workspace.surveys.summary.connect_your_website_or_app_with_forma_to_get_started")}
         </p>
 
         <Link className="mt-2" href={`/workspaces/${workspace?.id}/settings/workspace/app-connection`}>
           <Button size="sm" className="flex w-fit justify-center">
-            {t("common.set_up_formbricks_sdk")}
+            {t("common.set_up_forma_sdk")}
           </Button>
         </Link>
       </div>

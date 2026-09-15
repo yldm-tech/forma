@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TAddressField, TContactInfoField } from "@formbricks/types/surveys/validation-rules";
+import { TAddressField, TContactInfoField } from "@forma/types/surveys/validation-rules";
 import {
   Select,
   SelectContent,

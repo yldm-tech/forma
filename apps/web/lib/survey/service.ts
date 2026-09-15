@@ -1,29 +1,29 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId, ZOptionalNumber } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId, ZOptionalNumber } from "@forma/types/common";
 import {
   DatabaseError,
   InvalidInputError,
   OperationNotAllowedError,
   ResourceNotFoundError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import {
   MAX_SEGMENT_SURVEYS,
   TBaseFilters,
   ZSegmentFilters,
   ZSegmentSurveyIds,
   getSegmentFilterTreeBoundsViolation,
-} from "@formbricks/types/segment";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+} from "@forma/types/segment";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import {
   type TDeclaredFieldSource,
   describeDeclaredFieldNameErrors,
   validateNewDeclaredFields,
-} from "@formbricks/types/surveys/declared-field-guard";
-import { TSurvey, TSurveyCreateInput, ZSurvey, ZSurveyCreateInput } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/declared-field-guard";
+import { TSurvey, TSurveyCreateInput, ZSurvey, ZSurveyCreateInput } from "@forma/types/surveys/types";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
 import { selectSurveyEmbeddedDataLinks, withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
 import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";

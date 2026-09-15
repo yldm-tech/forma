@@ -6,8 +6,8 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization, ZOrganization, ZOrganizationUpdateInput } from "@formbricks/types/organizations";
+import { TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization, ZOrganization, ZOrganizationUpdateInput } from "@forma/types/organizations";
 import {
   updateOrganizationDisplayTimeZoneAction,
   updateOrganizationNameAction,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { deriveLegacyEmbeddedData, getSurveyEmbeddedFields } from "@formbricks/types/embedded-data-resolver";
-import { type TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { deriveLegacyEmbeddedData, getSurveyEmbeddedFields } from "@forma/types/embedded-data-resolver";
+import { type TSurvey } from "@forma/types/surveys/types";
 import { resetDb } from "@/integration/reset-db";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
 import { selectSurvey } from "@/lib/survey/service";
@@ -13,7 +13,7 @@ import { transformPrismaSurvey } from "@/lib/survey/utils";
  * What only a real database can show: that the join in `selectSurvey` actually returns the rows the
  * write bridge wrote, that the inlined list comes back in the order the export headers and pickers
  * depend on, and that a survey whose rows are missing still resolves off its legacy columns. The unit
- * suite mocks `@formbricks/database`, so the join itself is invisible there.
+ * suite mocks `@forma/database`, so the join itself is invisible there.
  */
 
 const LEGACY = {

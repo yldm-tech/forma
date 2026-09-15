@@ -3,8 +3,8 @@ import { buildSurveyDocumentTitle } from "./document-title";
 
 describe("buildSurveyDocumentTitle", () => {
   test("appends the step to the base title", () => {
-    expect(buildSurveyDocumentTitle("Q3 Customer Satisfaction | Formbricks", "Page 2 of 5")).toBe(
-      "Q3 Customer Satisfaction | Formbricks — Page 2 of 5"
+    expect(buildSurveyDocumentTitle("Q3 Customer Satisfaction | Forma", "Page 2 of 5")).toBe(
+      "Q3 Customer Satisfaction | Forma — Page 2 of 5"
     );
   });
 

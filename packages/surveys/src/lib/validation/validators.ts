@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
-import type { TResponseDataValue } from "@formbricks/types/responses";
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
+import type { TResponseDataValue } from "@forma/types/responses";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
 import type {
   TRelativeDateBound,
   TValidationRuleParams,
@@ -27,7 +27,7 @@ import type {
   TValidationRuleParamsPattern,
   TValidationRuleType,
   TValidatorCheckResult,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import {
   applyTimezoneGrace,
   hasRelativeBound,

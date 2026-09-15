@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
 import {
   AuthenticationError,
   AuthorizationError,
   DatabaseError,
   ResourceNotFoundError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getAccessFlags } from "@/lib/membership/utils";
@@ -78,7 +78,7 @@ const resolveWorkspaceAuth = async (workspaceId: string): Promise<TWorkspaceAuth
   // once and keeps this helper aligned with the central `workspace.read` contract, which also denies
   // billing. Individual pages that also guard billing inline remain correct (defense in depth).
   if (isBilling) {
-    redirect(getBillingFallbackPath(organization.id, IS_FORMBRICKS_CLOUD));
+    redirect(getBillingFallbackPath(organization.id, IS_FORMA_CLOUD));
   }
 
   // Enforce workspace access here instead of delegating to the route layout, so
@@ -369,7 +369,7 @@ const resolveWorkspaceLayoutData = async (
   ]);
 
   let responseCount = 0;
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     responseCount = await getMonthlyOrganizationResponseCount(organization.id);
   }
 

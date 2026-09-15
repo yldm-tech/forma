@@ -1,6 +1,6 @@
-import { TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization } from "@formbricks/types/organizations";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization } from "@forma/types/organizations";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { MembersInfo } from "@/modules/organization/settings/teams/components/edit-memberships/members-info";
 import { getInvitesByOrganizationId } from "@/modules/organization/settings/teams/lib/invite";
 import { getMembershipByOrganizationId } from "@/modules/organization/settings/teams/lib/membership";
@@ -38,7 +38,7 @@ export const EditMemberships = async ({
       members={members ?? []}
       currentUserRole={role}
       isAccessControlAllowed={isAccessControlAllowed}
-      isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+      isFormaCloud={IS_FORMA_CLOUD}
       isUserManagementDisabledFromUi={isUserManagementDisabledFromUi}
     />
   );

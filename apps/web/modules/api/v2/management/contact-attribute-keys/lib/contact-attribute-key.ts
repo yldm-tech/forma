@@ -1,9 +1,9 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { ContactAttributeKey, Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { formatSnakeCaseToTitleCase } from "@formbricks/types/safe-identifier";
+import { prisma } from "@forma/database";
+import { ContactAttributeKey, Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { formatSnakeCaseToTitleCase } from "@forma/types/safe-identifier";
 import { isPrismaKnownRequestError, isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { getContactAttributeKeysQuery } from "@/modules/api/v2/management/contact-attribute-keys/lib/utils";
 import {

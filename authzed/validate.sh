@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Validates the canonical Formbricks authorization schema (schema.zed) against
+# Validates the canonical Forma authorization schema (schema.zed) against
 # the assertion suite in schema-validation.yaml using `zed validate`.
 #
 # Runs fully offline — no SpiceDB server required. Uses a local `zed` binary

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 
@@ -7,6 +7,6 @@ export const redirectBillingRoleFromRestrictedSettings = async (workspaceId: str
   const { isBilling, organization } = await getWorkspaceAuth(workspaceId);
 
   if (isBilling) {
-    redirect(getBillingFallbackPath(organization.id, IS_FORMBRICKS_CLOUD));
+    redirect(getBillingFallbackPath(organization.id, IS_FORMA_CLOUD));
   }
 };

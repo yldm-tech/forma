@@ -1,9 +1,9 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { TContactAttributeDataType, TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { formatSnakeCaseToTitleCase } from "@formbricks/types/safe-identifier";
+import { prisma } from "@forma/database";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { TContactAttributeDataType, TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { formatSnakeCaseToTitleCase } from "@forma/types/safe-identifier";
 import {
   getReservedFutureDefaultAttributeKeyIssue,
   isReservedFutureDefaultAttributeKey,

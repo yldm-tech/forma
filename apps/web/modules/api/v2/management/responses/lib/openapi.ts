@@ -1,5 +1,5 @@
 import { ZodOpenApiOperationObject, ZodOpenApiPathsObject } from "zod-openapi";
-import { ZResponse } from "@formbricks/database/zod/responses";
+import { ZResponse } from "@forma/database/zod/responses";
 import {
   deleteResponseEndpoint,
   getResponseEndpoint,

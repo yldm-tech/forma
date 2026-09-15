@@ -5,7 +5,7 @@ import Link from "next/link";
 import Papa, { type ParseResult } from "papaparse";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { cn } from "@/lib/cn";
 import type { TOrganizationTeam } from "@/modules/ee/teams/team-list/types/team";
 import { ZInvitees } from "@/modules/organization/settings/teams/types/invites";
@@ -24,7 +24,7 @@ interface BulkInviteTabProps {
   teams: TOrganizationTeam[];
   organizationId: string;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isBulkInviteAllowed: boolean;
   enterpriseLicenseRequestFormUrl: string;
 }
@@ -59,7 +59,7 @@ export const BulkInviteTab = ({
   teams,
   organizationId,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   isBulkInviteAllowed,
   enterpriseLicenseRequestFormUrl,
 }: Readonly<BulkInviteTabProps>) => {
@@ -134,7 +134,7 @@ export const BulkInviteTab = ({
       const email = readCell(csv, "Email Address", "email").trim();
       const roleCell = readCell(csv, "Organization Role", "Role", "role");
       const orgRole = isAccessControlAllowed ? roleCell.trim().toLowerCase() : "owner";
-      if (!isFormbricksCloud && orgRole === "billing") {
+      if (!isFormaCloud && orgRole === "billing") {
         billingRoleEmails.add(email);
       }
 
@@ -202,14 +202,14 @@ export const BulkInviteTab = ({
   if (!isBulkInviteAllowed) {
     const upgradeButtons: [ModalButton, ModalButton] = [
       {
-        text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-        href: isFormbricksCloud
+        text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+        href: isFormaCloud
           ? organizationSettingsPath(organizationId, "billing")
           : enterpriseLicenseRequestFormUrl,
       },
       {
         text: t("common.learn_more"),
-        href: "https://formbricks.com/docs/self-hosting/license",
+        href: "https://forma.ylam.ai/docs/self-hosting/license",
       },
     ];
 
@@ -285,7 +285,7 @@ export const BulkInviteTab = ({
             <div className="flex justify-start">
               <Link
                 download
-                href="/sample-csv/formbricks-organization-members-template.csv"
+                href="/sample-csv/forma-organization-members-template.csv"
                 target="_blank"
                 rel="noopener noreferrer">
                 <Button variant="secondary">

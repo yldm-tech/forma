@@ -6,7 +6,7 @@ import { makeCacheKey } from "./utils/key";
  * Pattern: fb:\{resource\}:\{identifier\}:\{subResource\}
  *
  * Benefits:
- * - Clear namespace hierarchy (fb = formbricks)
+ * - Clear namespace hierarchy (fb = forma)
  * - Collision-proof across workspaces
  * - Easy debugging and monitoring
  * - Predictable invalidation patterns

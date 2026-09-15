@@ -1,6 +1,6 @@
 import "server-only";
 import { APIError } from "better-auth/api";
-import { SIGNUP_DISABLED_ERROR_CODE } from "@formbricks/types/errors";
+import { SIGNUP_DISABLED_ERROR_CODE } from "@forma/types/errors";
 import { SIGNUP_ENABLED } from "@/lib/constants";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { isSignupDomainAllowed } from "@/modules/auth/lib/signup-request-context";
@@ -27,7 +27,7 @@ import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
  * administrator completing setup with no invite to show.
  *
  * Query cost is deliberate. `SIGNUP_ENABLED` is a derived constant
- * (`IS_FORMBRICKS_CLOUD || IS_DEVELOPMENT || E2E_TESTING`), so testing it is free — do that first and
+ * (`IS_FORMA_CLOUD || IS_DEVELOPMENT || E2E_TESTING`), so testing it is free — do that first and
  * only pay for a round trip that can still change the answer. On Cloud that answers the whole question
  * from the (cached) license and never counts users; on self-hosted, where the constant is always false,
  * it skips the license lookup and spends exactly one `count`. Evaluating freshness first — as the

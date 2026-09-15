@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthenticationError, OperationNotAllowedError } from "@formbricks/types/errors";
+import { AuthenticationError, OperationNotAllowedError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { assertCanRecheckLicense } from "./recheck-authorization";
 

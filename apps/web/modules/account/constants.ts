@@ -1,5 +1,5 @@
-export const FORMBRICKS_CLOUD_ACCOUNT_DELETION_SURVEY_URL =
-  "https://app.formbricks.com/s/clri52y3z8f221225wjdhsoo2";
+export const FORMA_CLOUD_ACCOUNT_DELETION_SURVEY_URL =
+  "https://app.forma.ylam.ai/s/clri52y3z8f221225wjdhsoo2";
 
 // Better Auth's deleteUser `beforeDelete` throws a generic BAD_REQUEST carrying this exact message when
 // the user is the sole owner of an organization on a single-org instance. The DeleteAccountModal matches

@@ -1,17 +1,17 @@
 {
-  "name": "@formbricks/js-core",
+  "name": "@forma/js-core",
   "private": true,
   "type": "module",
   "license": "MIT",
   "version": "1.0.0",
-  "description": "Js core for Formbricks that contains the logic for executing the @formbricks/js library and is loaded asynchronously over the Formbricks API.",
-  "homepage": "https://formbricks.com",
+  "description": "Js core for Forma that contains the logic for executing the @forma/js library and is loaded asynchronously over the Forma API.",
+  "homepage": "https://forma.ylam.ai",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "keywords": [
-    "Formbricks",
+    "Forma",
     "surveys",
     "experience management"
   ],
@@ -38,11 +38,11 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
-  "author": "Formbricks <hola@formbricks.com>",
+  "author": "Forma <hola@forma.ylam.ai>",
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
-    "@formbricks/vite-plugins": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
+    "@forma/vite-plugins": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

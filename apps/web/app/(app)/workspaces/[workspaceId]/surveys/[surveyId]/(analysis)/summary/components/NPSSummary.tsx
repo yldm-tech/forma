@@ -3,9 +3,9 @@
 import { BarChart, BarChartHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyElementSummaryNps } from "@formbricks/types/surveys/types";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyElementSummaryNps } from "@forma/types/surveys/types";
 import { HalfCircle, ProgressBar } from "@/modules/ui/components/progress-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/modules/ui/components/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";

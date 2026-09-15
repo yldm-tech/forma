@@ -4,7 +4,7 @@ description: "What Embedded Data changes for surveys that already use hidden fie
 icon: "arrow-right-arrow-left"
 ---
 
-If you already use hidden fields or variables, the short version is: **nothing renames, nothing moves, and no survey needs editing.** Embedded Data is the name for the concepts you already have, now sharing one type system and one read path, plus a set of fields Formbricks fills in for you.
+If you already use hidden fields or variables, the short version is: **nothing renames, nothing moves, and no survey needs editing.** Embedded Data is the name for the concepts you already have, now sharing one type system and one read path, plus a set of fields Forma fills in for you.
 
 ## The Mapping
 
@@ -22,7 +22,7 @@ The distinction the two names were always making is the one the new vocabulary m
 - **Recall tokens keep resolving.** `#recall:<name>/fallback:x#` for a hidden field and `#recall:<id>/fallback:x#` for a variable both still point at the same value.
 - **Logic conditions keep matching.** Hidden field and variable operands are unchanged.
 - **`?field=value` in a survey link keeps filling hidden fields**, including the case-insensitive matching that was already there.
-- **`formbricks.track("action", { hiddenFields: { … } })` keeps working**, and an explicit value there still beats an ambient one.
+- **`forma.track("action", { hiddenFields: { … } })` keeps working**, and an explicit value there still beats an ambient one.
 - **API payloads are unchanged.** `hiddenFields` and `variables` on the survey resource look exactly as they did.
 - **Exports keep their hidden field and variable columns.**
 
@@ -56,7 +56,7 @@ This is worth taking literally rather than treating as boilerplate:
 
 - Pass an opaque reference you can resolve on your own side, not the identifier itself.
 - For app surveys, prefer [`setEmbeddedData()`](/surveys/embedded-data/set-embedded-data), which never puts the value in a URL.
-- Remember that the page URL is itself captured as the reserved `url` field. Formbricks always strips the query string and fragment before recall, logic or an export can read it, and the [Anonymize responses](/surveys/embedded-data/reserved-fields#anonymize-responses) toggle strips it from storage too, but neither of those protects the link while it is in transit.
+- Remember that the page URL is itself captured as the reserved `url` field. Forma always strips the query string and fragment before recall, logic or an export can read it, and the [Anonymize responses](/surveys/embedded-data/reserved-fields#anonymize-responses) toggle strips it from storage too, but neither of those protects the link while it is in transit.
 
 ## Should I Change Anything?
 

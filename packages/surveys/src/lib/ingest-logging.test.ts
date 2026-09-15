@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { RESERVED_DECLARED_FIELD_NAMES } from "@formbricks/types/surveys/validation";
+import { RESERVED_DECLARED_FIELD_NAMES } from "@forma/types/surveys/validation";
 import { logIngestResult } from "./ingest-logging";
 
 describe("logIngestResult", () => {

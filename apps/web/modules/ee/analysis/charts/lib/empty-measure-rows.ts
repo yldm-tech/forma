@@ -1,4 +1,4 @@
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import type { TChartDataRow } from "@/modules/ee/analysis/types/analysis";
 
 /**

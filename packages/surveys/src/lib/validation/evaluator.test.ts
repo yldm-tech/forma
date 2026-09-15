@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import type { TResponseData } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import type { TResponseData } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type {
   TSurveyAddressElement,
   TSurveyContactInfoElement,
@@ -9,7 +9,7 @@ import type {
   TSurveyMatrixElement,
   TSurveyOpenTextElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
+} from "@forma/types/surveys/elements";
 import { getFirstErrorMessage, validateBlockResponses, validateElementResponse } from "./evaluator";
 
 // Mock translation function

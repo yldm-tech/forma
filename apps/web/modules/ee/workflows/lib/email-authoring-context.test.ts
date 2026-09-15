@@ -17,8 +17,8 @@ const {
   mockGetSurvey: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({ prisma: {} }));
-vi.mock("@formbricks/workflows/server", () => ({
+vi.mock("@forma/database", () => ({ prisma: {} }));
+vi.mock("@forma/workflows/server", () => ({
   createWorkflowsService: () => ({ getWorkflowById: mockGetWorkflowById }),
 }));
 // Keep ZWorkflowDefinition real so trigger surveyId parsing is exercised end-to-end.
@@ -122,7 +122,7 @@ describe("getWorkflowEmailAuthoringContext", () => {
 
   test("falls back to the app default sender when MAIL_FROM is unset", async () => {
     const ctx = await getWorkflowEmailAuthoringContext({ workflowId: "wf1", workspaceId: WORKSPACE_ID });
-    expect(ctx.mailFrom).toBe("noreply@formbricks.com");
+    expect(ctx.mailFrom).toBe("noreply@forma.ylam.ai");
   });
 
   test("returns an empty context when there is no session", async () => {

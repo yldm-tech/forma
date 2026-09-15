@@ -10,7 +10,7 @@ import {
   type TWorkflowDefinition,
   type TWorkflowResource,
   ZWorkflowDefinition,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { V3ApiError } from "@/modules/api/lib/v3-client";
 import { trackWorkflowEvent } from "@/modules/ee/workflows/lib/analytics";
 import { WORKFLOW_CLIENT_EVENTS } from "@/modules/ee/workflows/lib/analytics-events";

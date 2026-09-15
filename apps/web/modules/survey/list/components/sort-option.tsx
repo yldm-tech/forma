@@ -1,6 +1,6 @@
 "use client";
 
-import { TSortOption } from "@formbricks/types/surveys/types";
+import { TSortOption } from "@forma/types/surveys/types";
 import { TSurveyOverviewFilters } from "@/modules/survey/list/types/survey-overview";
 import { DropdownMenuItem } from "@/modules/ui/components/dropdown-menu";
 

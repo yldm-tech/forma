@@ -17,7 +17,7 @@ import {
   TSegmentSegmentFilter,
   TSegmentSurveyInteractionFilterValue,
   TSurveyInteractionOperator,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 
 // type guard to check if a resource is a filter
 export const isResourceFilter = (resource: TSegmentFilter | TBaseFilters): resource is TSegmentFilter => {

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { CacheService } from "./service";
 import type { RedisClient } from "./types/client";
 import { ErrorCode } from "./types/error";
 import type { CacheKey } from "./types/keys";
 
 // Mock logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),

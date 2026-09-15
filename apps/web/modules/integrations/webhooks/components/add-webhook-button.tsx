@@ -3,7 +3,7 @@
 import { Webhook } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { Button } from "@/modules/ui/components/button";
 import { AddWebhookModal } from "./add-webhook-modal";
 

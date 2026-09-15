@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test } from "vitest";
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TWorkflowDefinition } from "@forma/workflows";
 import {
   reorganizeWorkflowDefinition,
   snapWorkflowNodePosition,

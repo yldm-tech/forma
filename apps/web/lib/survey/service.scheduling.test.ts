@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/__mocks__/database";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { ValidationError } from "@formbricks/types/errors";
+import { ValidationError } from "@forma/types/errors";
 import { getActionClasses } from "@/lib/actionClass/service";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import {

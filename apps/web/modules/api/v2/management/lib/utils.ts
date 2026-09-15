@@ -1,4 +1,4 @@
-import { Prisma } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
 import { TGetFilter } from "@/modules/api/v2/types/api-filter";
 
 export function pickCommonFilter<T extends TGetFilter>(params: T) {

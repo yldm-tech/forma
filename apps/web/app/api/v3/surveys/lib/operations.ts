@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import {
   createdResponse,

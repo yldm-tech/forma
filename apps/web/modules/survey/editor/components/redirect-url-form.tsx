@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyRedirectUrlCard } from "@formbricks/types/surveys/types";
+import { TSurvey, TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
 import { headlineToRecall, recallToHeadline } from "@/lib/utils/recall";
 import { RecallWrapper } from "@/modules/survey/components/element-form-input/components/recall-wrapper";
 import { Input } from "@/modules/ui/components/input";
@@ -55,7 +55,7 @@ export const RedirectUrlForm = ({ localSurvey, endingCard, updateSurvey }: Redir
                   id="redirectUrl"
                   name="redirectUrl"
                   className="relative text-black caret-black"
-                  placeholder="https://formbricks.com"
+                  placeholder="https://forma.ylam.ai"
                   value={
                     recallToHeadline(
                       {
@@ -80,7 +80,7 @@ export const RedirectUrlForm = ({ localSurvey, endingCard, updateSurvey }: Redir
           id="redirectUrlLabel"
           name="redirectUrlLabel"
           className="bg-white"
-          placeholder="Formbricks App"
+          placeholder="Forma App"
           value={endingCard.label ?? ""}
           onChange={(e) => updateSurvey({ label: e.target.value })}
         />

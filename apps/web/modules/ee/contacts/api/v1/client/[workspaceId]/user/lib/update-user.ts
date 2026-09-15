@@ -1,9 +1,9 @@
-import { createCacheKey } from "@formbricks/cache";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { normalizeLanguageCode } from "@formbricks/i18n-utils";
-import { TContactAttributesInput } from "@formbricks/types/contact-attribute";
-import { TJsPersonState } from "@formbricks/types/js";
+import { createCacheKey } from "@forma/cache";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { normalizeLanguageCode } from "@forma/i18n-utils";
+import { TContactAttributesInput } from "@forma/types/contact-attribute";
+import { TJsPersonState } from "@forma/types/js";
 import { cache } from "@/lib/cache";
 import { toLegacyLanguageCodes } from "@/lib/i18n/utils";
 import { formatAttributeMessage, updateAttributes } from "@/modules/ee/contacts/lib/attributes";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type TSurveyElement } from "@formbricks/types/surveys/elements";
+import { type TSurveyElement } from "@forma/types/surveys/elements";
 import { formatStoredDateForDisplay, getSurveyDateFormatMap, parseStoredDateValue } from "./date-display";
 
 describe("date display utils", () => {

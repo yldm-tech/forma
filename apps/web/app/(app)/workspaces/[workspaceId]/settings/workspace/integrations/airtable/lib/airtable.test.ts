@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { TIntegrationAirtableTables } from "@formbricks/types/integration/airtable";
+import { logger } from "@forma/logger";
+import { TIntegrationAirtableTables } from "@forma/types/integration/airtable";
 import { authorize, fetchTables } from "./airtable";
 
 // Mock the logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

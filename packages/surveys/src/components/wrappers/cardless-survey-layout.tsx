@@ -1,8 +1,8 @@
 import { type JSX } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurveyStyling } from "@forma/types/surveys/types";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { ScrollToBottomButton } from "@/components/buttons/scroll-to-bottom-button";
 import { ProgressBar } from "@/components/general/progress-bar";
 import { cn } from "@/lib/utils";
@@ -102,7 +102,7 @@ export function CardlessSurveyLayout({
       ) : null}
       {showCardlessPreviewLogoSlot ? (
         <div
-          id="formbricks-cardless-preview-logo-slot"
+          id="forma-cardless-preview-logo-slot"
           className="mx-auto w-full shrink-0 px-4 pt-5 pb-2 sm:px-6 sm:pt-6"
           style={cardMaxWidthStyle}
         />

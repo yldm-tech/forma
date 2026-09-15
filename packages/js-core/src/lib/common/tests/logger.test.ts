@@ -58,11 +58,11 @@ describe("Logger", () => {
 
     // debug should now appear
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/🧱 Formbricks.*\[DEBUG\].*Debug log after config/)
+      expect.stringMatching(/🧱 Forma.*\[DEBUG\].*Debug log after config/)
     );
     // error should appear as well
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/🧱 Formbricks.*\[ERROR\].*Error log after config/)
+      expect.stringMatching(/🧱 Forma.*\[ERROR\].*Error log after config/)
     );
   });
 
@@ -70,10 +70,10 @@ describe("Logger", () => {
     logger.configure({ logLevel: "debug" });
     logger.debug("Some message");
 
-    // Check that the log includes 🧱 Formbricks, timestamp, [DEBUG], and the message
+    // Check that the log includes 🧱 Forma, timestamp, [DEBUG], and the message
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringMatching(
-        /^🧱 Formbricks - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z \[DEBUG\] - Some message$/
+        /^🧱 Forma - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z \[DEBUG\] - Some message$/
       )
     );
   });

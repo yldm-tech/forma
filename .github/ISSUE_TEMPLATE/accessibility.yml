@@ -1,17 +1,17 @@
 name: Accessibility issue
-description: "Report an accessibility barrier in Formbricks (WCAG, screen reader, keyboard, contrast, etc.)"
+description: "Report an accessibility barrier in Forma (WCAG, screen reader, keyboard, contrast, etc.)"
 type: bug
 labels: ["accessibility", "bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping make Formbricks accessible to everyone. Please fill in as much as you can — see [ACCESSIBILITY.md](https://github.com/formbricks/formbricks/blob/main/ACCESSIBILITY.md) for context.
+        Thanks for helping make Forma accessible to everyone. Please fill in as much as you can — see [ACCESSIBILITY.md](https://github.com/yldm-tech/forma/blob/main/ACCESSIBILITY.md) for context.
   - type: textarea
     id: summary
     attributes:
       label: Summary
-      description: What part of Formbricks is affected and what's wrong?
+      description: What part of Forma is affected and what's wrong?
       placeholder: "e.g. The language switcher in survey runtime can't be reached with Tab."
     validations:
       required: true
@@ -68,8 +68,8 @@ body:
     attributes:
       label: Your Environment
       options:
-        - Formbricks Cloud (app.formbricks.com)
-        - Self-hosted Formbricks
+        - Forma Cloud (app.forma.ylam.ai)
+        - Self-hosted Forma
     validations:
       required: true
   - type: textarea

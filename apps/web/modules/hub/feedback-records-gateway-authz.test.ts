@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
 import {
   canApiKeyMutateFeedbackDirectoryRecords,
   hasApiKeyImplicitFeedbackDirectoryAccess,

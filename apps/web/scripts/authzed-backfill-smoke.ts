@@ -6,7 +6,7 @@ import { INVALID_CONFIGURATION_RESULT, INVALID_REQUEST_RESULT } from "./authzed-
 /**
  * Drives the real backfill orchestrator against a real SpiceDB, without a database.
  *
- * The compose smoke harness has no Formbricks PostgreSQL — `DATABASE_URL` points at a fake host and
+ * The compose smoke harness has no Forma PostgreSQL — `DATABASE_URL` points at a fake host and
  * Prisma never connects — so both the source reads and the reconcilers are stubbed. What runs for real
  * is the half that can only be trusted once it has met the engine: paging past the read bound, pinning
  * one revision across pages, mapping raw relationships back to the source records they imply, and

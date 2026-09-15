@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import type { TEmbeddedDataType } from "@formbricks/types/embedded-data";
-import { MAX_INGESTED_VALUE_BYTES } from "@formbricks/types/embedded-data-ingest";
-import type { TLinkedEmbeddedField } from "@formbricks/types/embedded-data-resolver";
+import { logger } from "@forma/logger";
+import type { TEmbeddedDataType } from "@forma/types/embedded-data";
+import { MAX_INGESTED_VALUE_BYTES } from "@forma/types/embedded-data-ingest";
+import type { TLinkedEmbeddedField } from "@forma/types/embedded-data-resolver";
 import { type TIngestContractSurvey, applyIngestContractToResponseData } from "./ingest";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 

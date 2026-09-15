@@ -3,9 +3,9 @@
 import { EyeIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { TDisplay } from "@formbricks/types/displays";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TDisplay } from "@forma/types/displays";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { timeSince } from "@/lib/time";
 
 interface DisplayCardProps {

@@ -3,7 +3,7 @@ description: |
   Unified Docker build and push action for both ECR and GHCR registries.
 
   Supports:
-  - ECR builds for Formbricks Cloud deployment
+  - ECR builds for Forma Cloud deployment
   - GHCR builds for community self-hosting
   - Automatic version resolution and tagging
   - Conditional signing and deployment tags

@@ -1,8 +1,8 @@
 import { UAParser } from "ua-parser-js";
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { InvalidInputError, UniqueConstraintError } from "@formbricks/types/errors";
-import { TResponseWithQuotaFull } from "@formbricks/types/quota";
-import { pickAutoCapturedResponseMeta } from "@formbricks/types/responses";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { InvalidInputError, UniqueConstraintError } from "@forma/types/errors";
+import { TResponseWithQuotaFull } from "@forma/types/quota";
+import { pickAutoCapturedResponseMeta } from "@forma/types/responses";
 import { checkSurveyValidity } from "@/app/api/v2/client/[workspaceId]/responses/lib/utils";
 import { reportApiError } from "@/app/lib/api/api-error-reporter";
 import { parseAndValidateJsonBody } from "@/app/lib/api/parse-and-validate-json-body";

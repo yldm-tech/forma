@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TResponseData } from "@formbricks/types/responses";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurveyQuestion, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
-import { TValidationErrorMap } from "@formbricks/types/surveys/validation-rules";
+import { TResponseData } from "@forma/types/responses";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurveyQuestion, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
+import { TValidationErrorMap } from "@forma/types/surveys/validation-rules";
 import {
   formatValidationErrorsForV1Api,
   formatValidationErrorsForV2Api,
@@ -22,7 +22,7 @@ vi.mock("@/lib/survey/utils", () => ({
   getElementsFromBlocks: (...args: unknown[]) => mockGetElementsFromBlocks(...args),
 }));
 
-vi.mock("@formbricks/surveys/validation", () => ({
+vi.mock("@forma/surveys/validation", () => ({
   validateBlockResponses: (...args: unknown[]) => mockValidateBlockResponses(...args),
 }));
 

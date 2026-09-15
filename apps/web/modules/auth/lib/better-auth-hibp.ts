@@ -1,8 +1,8 @@
 import "server-only";
 import { APIError, isAPIError } from "better-auth/api";
 import { createHash } from "node:crypto";
-import { logger } from "@formbricks/logger";
-import { PASSWORD_COMPROMISED_ERROR_CODE } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { PASSWORD_COMPROMISED_ERROR_CODE } from "@forma/types/errors";
 import { PASSWORD_HIBP_CHECK_DISABLED } from "@/lib/constants";
 import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
 
@@ -29,7 +29,7 @@ import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
  * server actions.
  */
 
-// The two Better Auth paths that set a password in Formbricks. Signup carries `password`; reset
+// The two Better Auth paths that set a password in Forma. Signup carries `password`; reset
 // carries `newPassword`.
 const CHECKED_PATHS = new Set(["/sign-up/email", "/reset-password"]);
 
@@ -56,7 +56,7 @@ const isPasswordCompromised = async (password: string): Promise<boolean> => {
   try {
     const res = await fetch(`${HIBP_RANGE_URL}/${prefix}`, {
       // "Add-Padding" pads the response with decoy hashes so the row count can't hint at the prefix.
-      headers: { "Add-Padding": "true", "User-Agent": "Formbricks Password Checker" },
+      headers: { "Add-Padding": "true", "User-Agent": "Forma Password Checker" },
       signal: AbortSignal.timeout(HIBP_FETCH_TIMEOUT_MS),
       // Next.js instruments global fetch with its Data Cache — force every check to hit the live corpus
       // so a breach verdict is never served from a cached/stale response.
@@ -101,7 +101,7 @@ export const hibpBreachCheckBeforeHandler = async (ctx: AuthHookContext): Promis
 
 /**
  * True when `error` is the breach-check rejection thrown by this hook (a Better Auth APIError carrying
- * PASSWORD_COMPROMISED_ERROR_CODE). Sign-up / reset actions use this to re-surface it as a Formbricks
+ * PASSWORD_COMPROMISED_ERROR_CODE). Sign-up / reset actions use this to re-surface it as a Forma
  * expected error with a stable, client-mappable code.
  */
 export const isPasswordCompromisedError = (error: unknown): boolean =>

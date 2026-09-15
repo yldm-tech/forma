@@ -1,4 +1,4 @@
-import type { IdentityProvider } from "@formbricks/database/prisma";
+import type { IdentityProvider } from "@forma/database/prisma";
 
 /**
  * The SSO subset of `IdentityProvider`: every value except `email`, which denotes a credential account

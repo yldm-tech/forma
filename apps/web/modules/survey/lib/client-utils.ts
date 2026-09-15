@@ -1,5 +1,5 @@
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
 
 export const copySurveyLink = (surveyUrl: string, singleUseId?: string): string => {
   return singleUseId ? `${surveyUrl}?suId=${singleUseId}` : surveyUrl;

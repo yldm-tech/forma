@@ -1,8 +1,8 @@
 import { SignJWT, generateKeyPair, jwtVerify } from "jose";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { ApiKeyPermission } from "@forma/database/prisma";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { authenticateApiKeyFromHeaders } from "@/modules/api/lib/api-key-auth";
 import { applyIPRateLimit, applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import {
@@ -26,7 +26,7 @@ vi.mock("@better-auth/oauth-provider/resource-client", () => ({
   })),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findUnique: userFindUniqueMock,
@@ -67,7 +67,7 @@ vi.mock("@/modules/auth/lib/oauth-urls", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/auth/lib/oauth-urls")>()),
   getAuthIssuerUrl: vi.fn(() => "https://app.example.com/api/auth"),
   getMcpOrigin: vi.fn(() => "https://app.example.com"),
-  getMcpOAuthJwksUrl: vi.fn(() => "http://formbricks:3000/api/auth/jwks"),
+  getMcpOAuthJwksUrl: vi.fn(() => "http://forma:3000/api/auth/jwks"),
   getMcpProtectedResourceMetadataUrl: vi.fn(
     () => "https://app.example.com/.well-known/oauth-protected-resource/api/mcp"
   ),
@@ -75,7 +75,7 @@ vi.mock("@/modules/auth/lib/oauth-urls", async (importOriginal) => ({
   getOAuthUserInfoUrl: vi.fn(() => "https://app.example.com/api/auth/oauth2/userinfo"),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       warn: warnMock,
@@ -342,7 +342,7 @@ describe("authenticateMcpRequest", () => {
         issuer: "https://app.example.com/api/auth",
         typ: "at+jwt",
       },
-      jwksUrl: "http://formbricks:3000/api/auth/jwks",
+      jwksUrl: "http://forma:3000/api/auth/jwks",
     });
     expect(userFindUniqueMock).toHaveBeenCalledWith({
       where: { id: "user_1" },

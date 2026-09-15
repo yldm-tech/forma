@@ -17,7 +17,7 @@ const setItemMock = localStorage.setItem as unknown as Mock;
 
 // 2) Mock Config
 vi.mock("@/lib/common/config", () => ({
-  JS_LOCAL_STORAGE_KEY: "formbricks-js",
+  JS_LOCAL_STORAGE_KEY: "forma-js",
   Config: {
     getInstance: vi.fn(() => ({
       get: vi.fn(),
@@ -139,7 +139,7 @@ describe("setup.ts", () => {
       expect(mockLogger.debug).toHaveBeenCalledWith("Already set up, skipping setup.");
     });
 
-    test("the already-setup early return does NOT re-emit formbricks_setup_successful", async () => {
+    test("the already-setup early return does NOT re-emit forma_setup_successful", async () => {
       // The event's exactly-once guarantee is structural: the emit sits at the tail every fresh
       // setup converges on, and this branch returns before reaching it. A re-fire would re-trigger
       // every GTM tag listening for readiness.
@@ -153,7 +153,7 @@ describe("setup.ts", () => {
       expect(window.dataLayer).toBeUndefined();
     });
 
-    test("a failed setup (missing field) does not emit formbricks_setup_successful", async () => {
+    test("a failed setup (missing field) does not emit forma_setup_successful", async () => {
       delete (window as { dataLayer?: unknown }).dataLayer;
       const result = await setup({ appUrl: "https://my.url" });
 
@@ -225,8 +225,8 @@ describe("setup.ts", () => {
       // on, carrying the resolved workspace id.
       expect(window.dataLayer).toEqual([
         {
-          event: "formbricks_setup_successful",
-          formbricks: {
+          event: "forma_setup_successful",
+          forma: {
             workspaceId: "ws_123",
             surveyId: null,
             responseId: null,
@@ -311,7 +311,7 @@ describe("setup.ts", () => {
       const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        "Formbricks is in error state, but debug mode is active. Resetting config and continuing."
+        "Forma is in error state, but debug mode is active. Resetting config and continuing."
       );
     });
 
@@ -877,7 +877,7 @@ describe("setup.ts", () => {
       });
 
       await expect(setup({ workspaceId: "ws_123", appUrl: "https://urlX" })).rejects.toThrow(
-        "Could not set up formbricks"
+        "Could not set up forma"
       );
     });
 
@@ -938,7 +938,7 @@ describe("setup.ts", () => {
 
       await expect(async () => {
         await handleErrorOnFirstSetup(errorObj);
-      }).rejects.toThrow("Could not set up formbricks");
+      }).rejects.toThrow("Could not set up forma");
 
       expect(setItemMock).toHaveBeenCalledWith(
         JS_LOCAL_STORAGE_KEY,

@@ -1,19 +1,19 @@
 {
-  "name": "@formbricks/logger",
+  "name": "@forma/logger",
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "homepage": "https://formbricks.com",
+  "homepage": "https://forma.ylam.ai",
   "license": "MIT",
-  "description": "Logger for Formbricks",
+  "description": "Logger for Forma",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "keywords": [
-    "Formbricks",
+    "Forma",
     "logger",
     "logging"
   ],
@@ -37,7 +37,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
-  "author": "Formbricks <hola@formbricks.com>",
+  "author": "Forma <hola@forma.ylam.ai>",
   "dependencies": {
     "pino": "catalog:",
     "pino-opentelemetry-transport": "3.0.0",
@@ -45,8 +45,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",

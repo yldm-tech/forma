@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { BETTER_AUTH_IP_ADDRESS_CONFIG } from "@/lib/utils/client-ip";
 import { auth } from "@/modules/auth/lib/auth";
@@ -7,7 +7,7 @@ import { auth } from "@/modules/auth/lib/auth";
 /**
  * Integration coverage for the email/password flow (ENG-1054) — drives the REAL Better Auth instance
  * against a real Postgres (provisioned by integration/global-setup.ts) through the Boolean test client
- * (integration/db-boolean.ts). This is the first runtime exercise of the BA↔Formbricks boundary:
+ * (integration/db-boolean.ts). This is the first runtime exercise of the BA↔Forma boundary:
  * the user/account field mappings, the bcrypt password hook, and DB session issuance.
  */
 beforeEach(async () => {
@@ -19,7 +19,7 @@ describe("Better Auth email/password (real Postgres)", () => {
     expect(auth.options.advanced?.ipAddress).toEqual(BETTER_AUTH_IP_ADDRESS_CONFIG);
   });
 
-  test("sign-up creates the user and a bcrypt credential account via the Formbricks field mappings", async () => {
+  test("sign-up creates the user and a bcrypt credential account via the Forma field mappings", async () => {
     const response = await auth.api.signUpEmail({
       body: { email: "alice@example.com", password: "Sup3rSecret!", name: "Alice Example" },
       asResponse: true,

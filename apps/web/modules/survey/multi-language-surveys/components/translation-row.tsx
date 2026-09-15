@@ -2,7 +2,7 @@
 
 import DOMPurify from "isomorphic-dompurify";
 import { useTranslation } from "react-i18next";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { Input } from "@/modules/ui/components/input";
 import { type TranslatableString } from "../lib/types";
 import { RichTextTranslationInput } from "./rich-text-translation-input";

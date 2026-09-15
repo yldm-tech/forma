@@ -95,7 +95,7 @@ const nextConfig = {
   experimental: {
     proxyClientMaxBodySize: "16mb",
   },
-  transpilePackages: ["@formbricks/database", "@formbricks/workflows"],
+  transpilePackages: ["@forma/database", "@forma/workflows"],
   images: {
     // Optimize image processing to reduce CPU time and prevent timeouts
     deviceSizes: [640, 750, 828, 1080, 1200, 1920], // Removed 3840 to avoid processing huge images
@@ -490,10 +490,10 @@ const sentryRelease = (() => {
 const sentryOptions = {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-  // Production ingests into formbricks/formbricks (EU). "formbricks-cloud" lives in a
-  // different org (formbricks-us), so uploads were rejected with "projects are invalid".
-  project: "formbricks",
-  org: "formbricks",
+  // Production ingests into forma/forma (EU). "forma-cloud" lives in a
+  // different org (forma-us), so uploads were rejected with "projects are invalid".
+  project: "forma",
+  org: "forma",
 
   // Enable logging to debug sourcemap generation issues
   silent: false,

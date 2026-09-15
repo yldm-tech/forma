@@ -1,23 +1,23 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import type { PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { logger } from "@formbricks/logger";
-import { ZId, ZOptionalNumber } from "@formbricks/types/common";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import type { PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { logger } from "@forma/logger";
+import { ZId, ZOptionalNumber } from "@forma/types/common";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TFeedbackSource,
   TFeedbackSourceCreateInput,
   TFeedbackSourceElementScope,
   TFeedbackSourceFieldMappingCreateInput,
-  TFeedbackSourceFormbricksMappingCreateInput,
+  TFeedbackSourceFormaMappingCreateInput,
   TFeedbackSourceUpdateInput,
   TFeedbackSourceWithMappings,
   ZFeedbackSourceCreateInput,
   ZFeedbackSourceUpdateInput,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import { isPrismaKnownRequestError, isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { ITEMS_PER_PAGE } from "../constants";
 import { getUniqueConstraintFields } from "../utils/prisma-constraint";
@@ -37,7 +37,7 @@ const selectFeedbackSourceWithMappings = {
   lastSyncAt: true,
   createdBy: true,
   creator: { select: { name: true } },
-  formbricksMappings: {
+  formaMappings: {
     select: {
       id: true,
       createdAt: true,
@@ -145,9 +145,9 @@ export const getFeedbackSourcesBySurveyId = reactCache(
     try {
       const feedbackSources = await prisma.feedbackSource.findMany({
         where: {
-          type: "formbricks_survey",
+          type: "forma_survey",
           status: "active",
-          formbricksMappings: {
+          formaMappings: {
             some: {
               surveyId,
             },
@@ -167,7 +167,7 @@ export const getFeedbackSourcesBySurveyId = reactCache(
 );
 
 /**
- * Every formbricks_survey source mapping `surveyId`, regardless of status — the reconciliation read.
+ * Every forma_survey source mapping `surveyId`, regardless of status — the reconciliation read.
  *
  * Deliberately not filtered to `active` like the publish-path reader above, and deliberately not
  * request-cached: a paused source is exactly the one whose rows must not be allowed to drift. A
@@ -184,8 +184,8 @@ export const getFeedbackSourcesToReconcile = async (
   try {
     const feedbackSources = await prisma.feedbackSource.findMany({
       where: {
-        type: "formbricks_survey",
-        formbricksMappings: { some: { surveyId } },
+        type: "forma_survey",
+        formaMappings: { some: { surveyId } },
       },
       select: selectFeedbackSourceWithMappings,
     });
@@ -269,7 +269,7 @@ const mapUniqueConstraintError = (error: PrismaClientKnownRequestError): Invalid
   // (elementId/surveyId) match by their identical column name.
   const has = (...names: string[]): boolean => names.some((name) => fields.includes(name));
   if (has("elementId", "surveyId")) {
-    return new InvalidInputError("FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE");
+    return new InvalidInputError("FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE");
   }
   if (has("sourceFieldId", "source_field_id", "targetFieldId", "target_field_id")) {
     return new InvalidInputError("FEEDBACK_SOURCE_FIELD_MAPPING_DUPLICATE");
@@ -315,10 +315,10 @@ export const isDirectoryWorkspaceFkViolation = (error: PrismaClientKnownRequestE
   );
 };
 
-export type TFormbricksMappingsInput = {
-  type: "formbricks_survey";
-  mappings: TFeedbackSourceFormbricksMappingCreateInput[];
-  /** Derived in `resolveFormbricksMappingsInput`, never supplied by a caller. */
+export type TFormaMappingsInput = {
+  type: "forma_survey";
+  mappings: TFeedbackSourceFormaMappingCreateInput[];
+  /** Derived in `resolveFormaMappingsInput`, never supplied by a caller. */
   elementScope: TFeedbackSourceElementScope;
 };
 
@@ -327,7 +327,7 @@ export type TFieldMappingsInput = {
   mappings: TFeedbackSourceFieldMappingCreateInput[];
 };
 
-export type TMappingsInput = TFormbricksMappingsInput | TFieldMappingsInput;
+export type TMappingsInput = TFormaMappingsInput | TFieldMappingsInput;
 
 export const createFeedbackSourceWithMappings = async (
   workspaceId: string,
@@ -347,18 +347,16 @@ export const createFeedbackSourceWithMappings = async (
           workspaceId,
           feedbackDirectoryId: data.feedbackDirectoryId,
           createdBy: data.createdBy,
-          // Only formbricks_survey sources have an element selection to scope; csv sources keep the
+          // Only forma_survey sources have an element selection to scope; csv sources keep the
           // column's `specific` default, which reconciliation never reads for them.
-          ...(mappingsInput?.type === "formbricks_survey"
-            ? { elementScope: mappingsInput.elementScope }
-            : {}),
+          ...(mappingsInput?.type === "forma_survey" ? { elementScope: mappingsInput.elementScope } : {}),
         },
       });
 
-      if (mappingsInput?.type === "formbricks_survey") {
+      if (mappingsInput?.type === "forma_survey") {
         await Promise.all(
           mappingsInput.mappings.map((mapping) =>
-            tx.feedbackSourceFormbricksMapping.create({
+            tx.feedbackSourceFormaMapping.create({
               data: {
                 feedbackSourceId: feedbackSource.id,
                 workspaceId,
@@ -431,13 +429,13 @@ export const updateFeedbackSourceWithMappings = async (
       // again), only when the caller did not set `status` itself, and only from `error` — a `paused`
       // source stays paused, because pausing is an operator decision and re-mapping is not a request
       // to resume.
-      // Only formbricks mappings: `status: "error"` is written by exactly one thing, the formbricks
+      // Only forma mappings: `status: "error"` is written by exactly one thing, the forma
       // mapping reconciler, so a csv source saving *field* mappings cannot be clearing an error it
       // could have caused. `updateFeedbackSourceWithMappingsAction` accepts fieldMappings regardless
-      // of source type, so without the type check a csv save would silently un-error a formbricks
+      // of source type, so without the type check a csv save would silently un-error a forma
       // source that is still broken.
       const clearsErrorStatus =
-        mappingsInput?.type === "formbricks_survey" &&
+        mappingsInput?.type === "forma_survey" &&
         mappingsInput.mappings.length > 0 &&
         data.status === undefined;
 
@@ -451,20 +449,18 @@ export const updateFeedbackSourceWithMappings = async (
           // Re-derived from the selection being saved, in the same transaction as the mapping rows, so
           // the scope and the rows it describes can never drift apart. This is also what heals sources
           // created before the column existed: they default to `specific` until their next save.
-          ...(mappingsInput?.type === "formbricks_survey"
-            ? { elementScope: mappingsInput.elementScope }
-            : {}),
+          ...(mappingsInput?.type === "forma_survey" ? { elementScope: mappingsInput.elementScope } : {}),
         },
       });
 
-      if (mappingsInput?.type === "formbricks_survey") {
-        await tx.feedbackSourceFormbricksMapping.deleteMany({
+      if (mappingsInput?.type === "forma_survey") {
+        await tx.feedbackSourceFormaMapping.deleteMany({
           where: { feedbackSourceId, workspaceId },
         });
 
         await Promise.all(
           mappingsInput.mappings.map((mapping) =>
-            tx.feedbackSourceFormbricksMapping.create({
+            tx.feedbackSourceFormaMapping.create({
               data: {
                 feedbackSourceId,
                 workspaceId,

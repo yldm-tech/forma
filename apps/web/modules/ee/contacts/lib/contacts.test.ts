@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, ValidationError } from "@forma/types/errors";
 import { getSurvey } from "@/lib/survey/service";
 import { getContactSurveyLink } from "@/modules/ee/contacts/lib/contact-survey-link";
 import { SEGMENT_SURVEY_WORKSPACE_MISMATCH_ERROR_CODE } from "@/modules/ee/contacts/lib/personal-link-errors";
@@ -19,7 +19,7 @@ import {
 } from "./contacts";
 import { transformPrismaContact } from "./utils";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contact: {
       findMany: vi.fn(),
@@ -64,7 +64,7 @@ vi.mock("./utils", () => ({
   transformPrismaContact: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),

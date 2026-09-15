@@ -1,5 +1,5 @@
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";

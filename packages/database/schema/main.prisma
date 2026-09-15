@@ -338,7 +338,7 @@ enum SurveyScriptMode {
 }
 
 /// Represents a complete survey configuration including questions, styling, and display rules.
-/// Core model for the survey functionality in Formbricks.
+/// Core model for the survey functionality in Forma.
 ///
 /// @property id - Unique identifier for the survey
 /// @property name - Display name of the survey
@@ -405,15 +405,15 @@ model Survey {
   /// [SurveySingleUse]
   singleUse Json? @default("{\"enabled\": false, \"isEncrypted\": true}")
 
-  isVerifyEmailEnabled        Boolean                           @default(false)
-  isBackButtonHidden          Boolean                           @default(false)
-  isAutoProgressingEnabled    Boolean                           @default(false)
-  isCaptureIpEnabled          Boolean                           @default(false)
+  isVerifyEmailEnabled        Boolean                      @default(false)
+  isBackButtonHidden          Boolean                      @default(false)
+  isAutoProgressingEnabled    Boolean                      @default(false)
+  isCaptureIpEnabled          Boolean                      @default(false)
   // Survey-level "Anonymize responses". A column of its own rather than a reading of
   // `isCaptureIpEnabled`: that flag also defaults to false, so deriving anonymize from
   // `!isCaptureIpEnabled` would switch every survey that exists to anonymized and silently stop
   // capturing country and userAgent.
-  isAnonymizeResponsesEnabled Boolean                           @default(false) @map("is_anonymize_responses_enabled")
+  isAnonymizeResponsesEnabled Boolean                      @default(false) @map("is_anonymize_responses_enabled")
   pin                         String?
   displayPercentage           Decimal?
   languages                   SurveyLanguage[]
@@ -422,10 +422,10 @@ model Survey {
   showLanguageSwitch          Boolean?
   followUps                   SurveyFollowUp[]
   /// [SurveyRecaptcha]
-  recaptcha                   Json?                             @default("{\"enabled\": false, \"threshold\":0.1}")
+  recaptcha                   Json?                        @default("{\"enabled\": false, \"threshold\":0.1}")
   /// [SurveyLinkMetadata]
-  metadata                    Json                              @default("{}")
-  feedbackSourceMappings      FeedbackSourceFormbricksMapping[]
+  metadata                    Json                         @default("{}")
+  feedbackSourceMappings      FeedbackSourceFormaMapping[]
 
   slug String? @unique
 
@@ -547,7 +547,7 @@ enum IntegrationType {
 }
 
 /// Represents third-party service integrations.
-/// Enables data flow between Formbricks and external services.
+/// Enables data flow between Forma and external services.
 ///
 /// @property id - Unique identifier for the integration
 /// @property type - The service being integrated (Google Sheets, Notion, etc.)
@@ -601,7 +601,7 @@ enum SurveyOverlay {
   dark
 }
 
-/// Main grouping mechanism for resources in Formbricks.
+/// Main grouping mechanism for resources in Forma.
 /// Each organization can have multiple workspaces to separate different applications or products.
 ///
 /// @property id - Unique identifier for the workspace
@@ -657,8 +657,8 @@ model Workspace {
   @@unique([organizationId, name])
 }
 
-/// Represents the top-level organizational hierarchy in Formbricks.
-/// Self-hosting instances typically have a single organization, while Formbricks Cloud
+/// Represents the top-level organizational hierarchy in Forma.
+/// Self-hosting instances typically have a single organization, while Forma Cloud
 /// supports multiple organizations with multi-tenancy.
 ///
 /// @property id - Unique identifier for the organization
@@ -767,7 +767,7 @@ model Invite {
 }
 
 /// Represents enhanced API authentication keys with organization-level ownership.
-/// Used for authenticating API requests to Formbricks with more granular permissions.
+/// Used for authenticating API requests to Forma with more granular permissions.
 ///
 /// @property id - Unique identifier for the API key
 /// @property label - Optional descriptive name for the key
@@ -835,7 +835,7 @@ enum IdentityProvider {
 /// Enables OAuth and other external authentication methods.
 ///
 /// @property id - Unique identifier for the account
-/// @property user - The Formbricks user who owns this account
+/// @property user - The Forma user who owns this account
 /// @property provider - The authentication provider (GitHub, Google, etc.)
 /// @property providerAccountId - User ID from the provider
 /// @property access_token - OAuth access token
@@ -887,7 +887,7 @@ model Account {
 /// Stores active authentication sessions for revocable server-side login state.
 ///
 /// @property sessionToken - Opaque token stored in the browser cookie
-/// @property user - The Formbricks user who owns this session
+/// @property user - The Forma user who owns this session
 /// @property expires - Hard expiry for the session
 model Session {
   id           String   @id @default(cuid())
@@ -1168,7 +1168,7 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
-/// Represents a user in the Formbricks system.
+/// Represents a user in the Forma system.
 /// Central model for user authentication and profile management.
 ///
 /// @property id - Unique identifier for the user
@@ -1545,7 +1545,7 @@ model DashboardWidget {
 }
 
 enum FeedbackSourceType {
-  formbricks_survey
+  forma_survey
   csv
 }
 
@@ -1555,7 +1555,7 @@ enum FeedbackSourceStatus {
   error
 }
 
-/// Which survey responses a Formbricks feedback source imports into Hub.
+/// Which survey responses a Forma feedback source imports into Hub.
 /// completedOnly matches the live ingestion path, which only runs on responseFinished.
 /// all additionally imports partial responses — answers a respondent typed but never submitted.
 enum FeedbackSourceImportMode {
@@ -1563,7 +1563,7 @@ enum FeedbackSourceImportMode {
   all
 }
 
-/// Whether a formbricks_survey source tracks every supported element of the surveys it maps, or an
+/// Whether a forma_survey source tracks every supported element of the surveys it maps, or an
 /// explicit subset the operator curated. Ignored by csv sources, which map fields instead.
 ///
 /// Orthogonal to FeedbackSourceImportMode: that decides which responses are imported, this decides
@@ -1601,32 +1601,32 @@ enum HubFieldType {
 ///
 /// @property id - Unique identifier for the feedback source
 /// @property name - Display name for the feedback source
-/// @property type - Type of feedback source (formbricks_survey, csv, …)
+/// @property type - Type of feedback source (forma_survey, csv, …)
 /// @property status - Current state of the feedback source (active, paused, error)
 /// @property workspace - The workspace this feedback source belongs to
 /// @property feedbackDirectory - Hub directory the feedback source writes into
-/// @property formbricksMappings - Element mappings for Formbricks feedback sources
+/// @property formaMappings - Element mappings for Forma feedback sources
 /// @property fieldMappings - Field mappings for other feedback source types
 model FeedbackSource {
-  id                  String                            @id @default(cuid())
-  createdAt           DateTime                          @default(now()) @map(name: "created_at")
-  updatedAt           DateTime                          @updatedAt @map(name: "updated_at")
+  id                  String                       @id @default(cuid())
+  createdAt           DateTime                     @default(now()) @map(name: "created_at")
+  updatedAt           DateTime                     @updatedAt @map(name: "updated_at")
   name                String
   type                FeedbackSourceType
-  status              FeedbackSourceStatus              @default(active)
+  status              FeedbackSourceStatus         @default(active)
   /// Defaults to completedOnly so a new source agrees with the live ingestion path, which only
   /// fires on responseFinished. Existing rows take the default; nothing is re-imported.
-  importMode          FeedbackSourceImportMode          @default(completedOnly) @map(name: "import_mode")
-  elementScope        FeedbackSourceElementScope        @default(specific)
+  importMode          FeedbackSourceImportMode     @default(completedOnly) @map(name: "import_mode")
+  elementScope        FeedbackSourceElementScope   @default(specific)
   workspaceId         String
-  workspace           Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace           Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   feedbackDirectoryId String
-  feedbackDirectory   FeedbackDirectory                 @relation(fields: [feedbackDirectoryId], references: [id], onDelete: Cascade)
-  formbricksMappings  FeedbackSourceFormbricksMapping[]
+  feedbackDirectory   FeedbackDirectory            @relation(fields: [feedbackDirectoryId], references: [id], onDelete: Cascade)
+  formaMappings       FeedbackSourceFormaMapping[]
   fieldMappings       FeedbackSourceFieldMapping[]
-  lastSyncAt          DateTime?                         @map(name: "last_sync_at")
-  createdBy           String?                           @map(name: "created_by")
-  creator             User?                             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  lastSyncAt          DateTime?                    @map(name: "last_sync_at")
+  createdBy           String?                      @map(name: "created_by")
+  creator             User?                        @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   // Composite FK anchoring the source to an actual directory<->workspace assignment.
   // Defense-in-depth on top of the action-layer check: the DB refuses any (directory, workspace)
@@ -1640,7 +1640,7 @@ model FeedbackSource {
   @@index([feedbackDirectoryId, workspaceId])
 }
 
-/// Maps survey elements to Hub FeedbackRecords for Formbricks feedback sources.
+/// Maps survey elements to Hub FeedbackRecords for Forma feedback sources.
 /// Each row represents one element that will create FeedbackRecords when answered.
 ///
 /// @property id - Unique identifier for the mapping
@@ -1649,24 +1649,24 @@ model FeedbackSource {
 /// @property elementId - The element ID within the survey (from blocks[].elements[].id)
 /// @property hubFieldType - The field_type to use in Hub (text, nps, rating, etc.)
 /// @property customFieldLabel - Optional override for the element headline as field_label in Hub
-model FeedbackSourceFormbricksMapping {
+model FeedbackSourceFormaMapping {
   id               String         @id @default(cuid())
   createdAt        DateTime       @default(now()) @map(name: "created_at")
   feedbackSourceId String         @map(name: "feedback_source_id")
   workspaceId      String
-  feedbackSource   FeedbackSource @relation(fields: [feedbackSourceId, workspaceId], references: [id, workspaceId], onDelete: Cascade, map: "FeedbackSourceFormbricksMapping_feedbackSourceId_workspaceId_fk")
+  feedbackSource   FeedbackSource @relation(fields: [feedbackSourceId, workspaceId], references: [id, workspaceId], onDelete: Cascade, map: "FeedbackSourceFormaMapping_feedbackSourceId_workspaceId_fk")
   surveyId         String
   survey           Survey         @relation(fields: [surveyId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   elementId        String
   hubFieldType     HubFieldType
   customFieldLabel String?        @map(name: "custom_field_label")
 
-  @@unique([workspaceId, feedbackSourceId, surveyId, elementId], map: "FeedbackSourceFormbricksMapping_workspaceId_feedbackSourceId_su")
+  @@unique([workspaceId, feedbackSourceId, surveyId, elementId], map: "FeedbackSourceFormaMapping_workspaceId_feedbackSourceId_su")
   @@index([workspaceId, surveyId])
   @@index([surveyId])
 }
 
-/// Generic field mapping for non-Formbricks feedback sources (CSV today; webhook/email/slack later).
+/// Generic field mapping for non-Forma feedback sources (CSV today; webhook/email/slack later).
 /// Maps source fields to Hub FeedbackRecord fields.
 ///
 /// @property id - Unique identifier for the mapping

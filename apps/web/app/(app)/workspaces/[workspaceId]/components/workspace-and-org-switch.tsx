@@ -11,7 +11,7 @@ interface WorkspaceAndOrgSwitchProps {
   currentWorkspaceName?: string; // Optional: for pages without context
   isMultiOrgEnabled: boolean;
   organizationWorkspacesLimit: number;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isLicenseActive: boolean;
   isOwnerOrManager: boolean;
   isAccessControlAllowed: boolean;
@@ -29,7 +29,7 @@ export const WorkspaceAndOrgSwitch = ({
   currentWorkspaceName,
   isMultiOrgEnabled,
   organizationWorkspacesLimit,
-  isFormbricksCloud,
+  isFormaCloud,
   isLicenseActive,
   isOwnerOrManager,
   isAccessControlAllowed,
@@ -57,7 +57,7 @@ export const WorkspaceAndOrgSwitch = ({
             currentOrganizationId={currentOrganizationId}
             isOwnerOrManager={isOwnerOrManager}
             organizationWorkspacesLimit={organizationWorkspacesLimit}
-            isFormbricksCloud={isFormbricksCloud}
+            isFormaCloud={isFormaCloud}
             isLicenseActive={isLicenseActive}
             isAccessControlAllowed={isAccessControlAllowed}
             isEnvironmentBreadcrumbVisible={false}

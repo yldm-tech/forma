@@ -5,8 +5,8 @@ import { TFunction } from "i18next";
 import { X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TWorkflowSortBy, TWorkflowStatus } from "@formbricks/workflows";
-import { FORMBRICKS_WORKFLOWS_FILTERS_KEY_LS } from "@/lib/localStorage";
+import type { TWorkflowSortBy, TWorkflowStatus } from "@forma/workflows";
+import { FORMA_WORKFLOWS_FILTERS_KEY_LS } from "@/lib/localStorage";
 import { timeSince } from "@/lib/time";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { Button } from "@/modules/ui/components/button";
@@ -62,10 +62,10 @@ export const WorkflowsListPage = ({
   // happens post-mount because localStorage is unavailable during SSR.
   useEffect(() => {
     if (globalThis.window === undefined) return;
-    const stored = globalThis.window.localStorage.getItem(FORMBRICKS_WORKFLOWS_FILTERS_KEY_LS);
+    const stored = globalThis.window.localStorage.getItem(FORMA_WORKFLOWS_FILTERS_KEY_LS);
     const parsed = parseStoredWorkflowFilters(stored);
     if (stored && !parsed) {
-      globalThis.window.localStorage.removeItem(FORMBRICKS_WORKFLOWS_FILTERS_KEY_LS);
+      globalThis.window.localStorage.removeItem(FORMA_WORKFLOWS_FILTERS_KEY_LS);
     } else if (parsed) {
       setSearchValue(parsed.searchValue);
       setSelectedStatuses(parsed.selectedStatuses);
@@ -79,7 +79,7 @@ export const WorkflowsListPage = ({
   useEffect(() => {
     if (!isFilterInitialized || globalThis.window === undefined) return;
     globalThis.window.localStorage.setItem(
-      FORMBRICKS_WORKFLOWS_FILTERS_KEY_LS,
+      FORMA_WORKFLOWS_FILTERS_KEY_LS,
       JSON.stringify({ searchValue, selectedStatuses, sortBy })
     );
   }, [searchValue, selectedStatuses, sortBy, isFilterInitialized]);

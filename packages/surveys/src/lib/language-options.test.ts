@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { type TSurveyLanguage } from "@forma/types/surveys/types";
 import { canonicalizeLanguageCode, getVisibleSurveyLanguages, isSameLanguageCode } from "./language-options";
 
 const language = (code: string, { enabled = true, isDefault = false } = {}): TSurveyLanguage =>

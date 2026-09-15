@@ -9,15 +9,15 @@ import posthog from "posthog-js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
-import formbricks from "@formbricks/js";
+import forma from "@forma/js";
 import {
   type TCloudBillingInterval,
   type TOrganization,
   type TOrganizationStripePendingChange,
   type TOrganizationStripeSubscriptionStatus,
-} from "@formbricks/types/organizations";
+} from "@forma/types/organizations";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
-import { CHURN_SURVEY_PENDING_KEY } from "@/app/formbricks/components/formbricks-provider";
+import { CHURN_SURVEY_PENDING_KEY } from "@/app/forma/components/forma-provider";
 import { cn } from "@/lib/cn";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
@@ -640,7 +640,7 @@ export const PricingTable = ({
           <Trans
             i18nKey="workspace.settings.billing.payment_error_contact_support"
             components={{
-              supportLink: <a href="mailto:hola@formbricks.com" className="font-medium underline" />,
+              supportLink: <a href="mailto:hola@forma.ylam.ai" className="font-medium underline" />,
             }}
           />
         </div>
@@ -869,7 +869,7 @@ export const PricingTable = ({
           toast.error(getActionErrorMessage(response.serverError, t));
           return;
         }
-        formbricks.track("subscription_cancelled").catch(() => undefined);
+        forma.track("subscription_cancelled").catch(() => undefined);
         toast.success(getPlanChangeSuccessMessage(response?.data?.mode, t));
         router.refresh();
         return;
@@ -895,7 +895,7 @@ export const PricingTable = ({
           // Fire an in-app code action so a churn survey can be triggered from the dashboard
           // right after the org drops to the free plan. No reload follows this path, so the SDK
           // has time to deliver it.
-          formbricks.track("subscription_cancelled").catch(() => undefined);
+          forma.track("subscription_cancelled").catch(() => undefined);
         }
 
         if (response.data.mode === "immediate") {
@@ -906,8 +906,8 @@ export const PricingTable = ({
           if (globalThis.window !== undefined) {
             globalThis.window.sessionStorage.setItem(BILLING_UPGRADE_RESULT_KEY, JSON.stringify({ plan }));
             if (plan === "hobby") {
-              // formbricks.track() only queues the action; a call here would be lost or interrupted
-              // by the reload below. Persist a one-shot marker instead and let FormbricksProvider
+              // forma.track() only queues the action; a call here would be lost or interrupted
+              // by the reload below. Persist a one-shot marker instead and let FormaProvider
               // fire the code action once the SDK is set up again after reload. Scoped to the
               // originating user so a logout/login in the same tab before it's consumed can't
               // attribute the cancellation to whoever is signed in when it fires.
@@ -1588,7 +1588,7 @@ export const PricingTable = ({
                 </div>
                 <Button variant="default" className="shrink-0" asChild>
                   <Link
-                    href="https://app.formbricks.com/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=cloud&source=billingView&type=pricingRequest"
+                    href="https://app.forma.ylam.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=cloud&source=billingView&type=pricingRequest"
                     target="_blank"
                     rel="noopener noreferrer">
                     {t("workspace.settings.billing.contact_sales_cta")}

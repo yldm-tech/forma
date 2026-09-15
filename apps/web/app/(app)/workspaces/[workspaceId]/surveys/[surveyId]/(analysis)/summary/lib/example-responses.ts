@@ -1,10 +1,10 @@
 import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { type TResponseData, type TResponseInput, type TResponseTtc } from "@formbricks/types/responses";
-import { type TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { type TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { type TResponseData, type TResponseInput, type TResponseTtc } from "@forma/types/responses";
+import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { type TSurvey } from "@forma/types/surveys/types";
 import { generateOrganizationAIObject } from "@/lib/ai/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { AI_TRACING_FEATURE } from "@/lib/posthog/ai-tracing-feature";

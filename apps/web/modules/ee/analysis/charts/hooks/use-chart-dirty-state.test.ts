@@ -3,7 +3,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import type { TChartConfig } from "@formbricks/types/analysis";
+import type { TChartConfig } from "@forma/types/analysis";
 import type { AnalyticsResponse } from "@/modules/ee/analysis/types/analysis";
 import { useChartDirtyState } from "./use-chart-dirty-state";
 

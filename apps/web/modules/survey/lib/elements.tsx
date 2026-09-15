@@ -22,7 +22,7 @@ import {
   StarIcon,
 } from "lucide-react";
 import type { JSX } from "react";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { createI18nString } from "@/lib/i18n/utils";
 import { replaceElementPresetPlaceholders } from "@/lib/utils/templates";
 

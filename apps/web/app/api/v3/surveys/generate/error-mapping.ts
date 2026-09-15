@@ -1,10 +1,6 @@
-import { AIOutputTokenLimitError } from "@formbricks/ai";
-import { logger } from "@formbricks/logger";
-import {
-  OperationNotAllowedError,
-  ResourceNotFoundError,
-  TooManyRequestsError,
-} from "@formbricks/types/errors";
+import { AIOutputTokenLimitError } from "@forma/ai";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError, ResourceNotFoundError, TooManyRequestsError } from "@forma/types/errors";
 import {
   problemAIUnavailable,
   problemBadGateway,
@@ -19,7 +15,7 @@ import { V3SurveyGeneratePromptError, V3SurveyGeneratedPayloadValidationError } 
 const AI_UNAVAILABLE_DETAILS: Record<TAIErrorCode, string> = {
   [AI_ERROR_CODES.FEATURES_NOT_ENABLED]: "AI smart tools are not available for this organization.",
   [AI_ERROR_CODES.SMART_TOOLS_DISABLED]: "AI smart tools are disabled for this organization.",
-  [AI_ERROR_CODES.INSTANCE_NOT_CONFIGURED]: "AI is not configured for this Formbricks instance.",
+  [AI_ERROR_CODES.INSTANCE_NOT_CONFIGURED]: "AI is not configured for this Forma instance.",
   // Quota exhaustion is surfaced as a 429 (see the TooManyRequestsError branch below), not as an
   // AI-unavailable 503 — this entry only keeps the code map exhaustive.
   [AI_ERROR_CODES.QUOTA_EXCEEDED]: "The AI provider is temporarily rate-limited. Try again shortly.",

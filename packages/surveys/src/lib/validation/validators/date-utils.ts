@@ -1,9 +1,9 @@
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
 import {
   MAX_RELATIVE_DATE_AMOUNT,
   type TRelativeDateBound,
   type TValidationRule,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 
 /**
  * Format a Date as YYYY-MM-DD using its local calendar fields.

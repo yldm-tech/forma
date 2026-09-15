@@ -10,7 +10,7 @@ import {
   TSegmentFilter,
   TSegmentPersonFilter,
   TSegmentSegmentFilter,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import {
   addFilterBelow,
   addFilterInGroup,

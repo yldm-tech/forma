@@ -1,14 +1,14 @@
 ---
 title: "SMTP Configuration"
-description: "Set up email functionality for your self-hosted Formbricks instance"
+description: "Set up email functionality for your self-hosted Forma instance"
 icon: "envelope"
 ---
 
-By default, Formbricks doesn't include an SMTP server for sending emails. However, you can easily configure your self-hosted instance to use your own email provider through environment variables.
+By default, Forma doesn't include an SMTP server for sending emails. However, you can easily configure your self-hosted instance to use your own email provider through environment variables.
 
 ## Why Configure SMTP?
 
-Setting up an SMTP server enables important email functionality in Formbricks, including:
+Setting up an SMTP server enables important email functionality in Forma, including:
 
 - Email verification for new accounts
 - Password reset emails
@@ -17,7 +17,7 @@ Setting up an SMTP server enables important email functionality in Formbricks, i
 
 ## Email Configuration Options
 
-Formbricks uses Nodemailer to send emails and supports various SMTP providers like:
+Forma uses Nodemailer to send emails and supports various SMTP providers like:
 
 - AWS SES
 - SendGrid
@@ -33,7 +33,7 @@ To enable email functionality, configure the following environment variables:
 ```bash
 # Basic SMTP Configuration
 MAIL_FROM=noreply@yourdomain.com
-MAIL_FROM_NAME=Formbricks
+MAIL_FROM_NAME=Forma
 SMTP_HOST=smtp.yourprovider.com
 SMTP_PORT=587
 SMTP_USER=your_username
@@ -56,7 +56,7 @@ SMTP_REJECT_UNAUTHORIZED_TLS=1
 <Warning>
   Do not set `SMTP_REJECT_UNAUTHORIZED_TLS=0` in production. It disables SMTP server certificate verification
   and makes encrypted connections vulnerable to an active man-in-the-middle attack. If your SMTP server uses a
-  private certificate authority, mount that CA certificate into the Formbricks container and add it to Node.js'
+  private certificate authority, mount that CA certificate into the Forma container and add it to Node.js'
   trust store instead.
 </Warning>
 
@@ -65,22 +65,22 @@ SMTP_REJECT_UNAUTHORIZED_TLS=1
 Store the CA certificate as a PEM file, mount it read-only, and set `NODE_EXTRA_CA_CERTS` to the path inside the
 container. Keep `SMTP_REJECT_UNAUTHORIZED_TLS=1`.
 
-For Docker Compose, add the following to the Formbricks service:
+For Docker Compose, add the following to the Forma service:
 
 ```yaml
 volumes:
-  - ./certs/smtp-ca.pem:/etc/ssl/formbricks-ca/smtp-ca.pem:ro
+  - ./certs/smtp-ca.pem:/etc/ssl/forma-ca/smtp-ca.pem:ro
 environment:
-  NODE_EXTRA_CA_CERTS: /etc/ssl/formbricks-ca/smtp-ca.pem
+  NODE_EXTRA_CA_CERTS: /etc/ssl/forma-ca/smtp-ca.pem
   SMTP_REJECT_UNAUTHORIZED_TLS: 1
 ```
 
 For Kubernetes, create a ConfigMap containing the public CA certificate:
 
 ```sh
-kubectl create configmap formbricks-smtp-ca \
+kubectl create configmap forma-smtp-ca \
   --from-file=smtp-ca.pem=./smtp-ca.pem \
-  -n formbricks
+  -n forma
 ```
 
 Then mount it with the Helm chart:
@@ -88,24 +88,24 @@ Then mount it with the Helm chart:
 ```yaml
 deployment:
   env:
-    NODE_EXTRA_CA_CERTS: /etc/ssl/formbricks-ca/smtp-ca.pem
+    NODE_EXTRA_CA_CERTS: /etc/ssl/forma-ca/smtp-ca.pem
     SMTP_REJECT_UNAUTHORIZED_TLS: "1"
   extraVolumes:
     - name: smtp-ca
       configMap:
-        name: formbricks-smtp-ca
+        name: forma-smtp-ca
   extraVolumeMounts:
     - name: smtp-ca
-      mountPath: /etc/ssl/formbricks-ca
+      mountPath: /etc/ssl/forma-ca
       readOnly: true
 ```
 
-Restart the Formbricks pods after changing the CA file because Node.js reads `NODE_EXTRA_CA_CERTS` when the
+Restart the Forma pods after changing the CA file because Node.js reads `NODE_EXTRA_CA_CERTS` when the
 process starts.
 
 ## Enabling Email Features
 
-By default, email verification and password reset features are **disabled** in Formbricks. To enable these features:
+By default, email verification and password reset features are **disabled** in Forma. To enable these features:
 
 ```bash
 # Set to 0 to enable email verification (requires working SMTP)
@@ -128,7 +128,7 @@ If you're using the one-click setup with Docker Compose, you can either:
 environment:
   # Email Configuration
   MAIL_FROM: noreply@yourdomain.com
-  MAIL_FROM_NAME: Formbricks
+  MAIL_FROM_NAME: Forma
   SMTP_HOST: smtp.yourprovider.com
   SMTP_PORT: 587
   SMTP_USER: your_username
@@ -150,7 +150,7 @@ environment:
 
 ```bash
 MAIL_FROM=noreply@yourdomain.com
-MAIL_FROM_NAME=Formbricks
+MAIL_FROM_NAME=Forma
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
 SMTP_USER=apikey
@@ -161,7 +161,7 @@ SMTP_PASSWORD=your_sendgrid_api_key
 
 ```bash
 MAIL_FROM=noreply@yourdomain.com
-MAIL_FROM_NAME=Formbricks
+MAIL_FROM_NAME=Forma
 SMTP_HOST=email-smtp.us-east-1.amazonaws.com
 SMTP_PORT=587
 SMTP_USER=your_ses_access_key
@@ -172,7 +172,7 @@ SMTP_PASSWORD=your_ses_secret_key
 
 ```bash
 MAIL_FROM=your_email@gmail.com
-MAIL_FROM_NAME=Formbricks
+MAIL_FROM_NAME=Forma
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
@@ -191,4 +191,4 @@ If you're experiencing issues with your email configuration:
 4. If using Gmail, ensure you're using an App Password
 5. For secure connections, make sure you've set the correct port and SMTP_SECURE_ENABLED value
 
-For additional help, join the conversation on [GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+For additional help, join the conversation on [GitHub Discussions](https://github.com/yldm-tech/forma/discussions).

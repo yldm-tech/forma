@@ -1,15 +1,15 @@
 ---
 title: "setEmbeddedData"
-description: "Attach context from your app to the next Formbricks response, without tying it to a trigger. The JavaScript SDK reference for setEmbeddedData and clearEmbeddedData."
+description: "Attach context from your app to the next Forma response, without tying it to a trigger. The JavaScript SDK reference for setEmbeddedData and clearEmbeddedData."
 icon: "code"
 ---
 
-In an app survey the integrator usually does not know which action will open a survey: your app fires a dozen of them and Formbricks decides. Passing context on `track()` therefore means repeating the same values on every possible call.
+In an app survey the integrator usually does not know which action will open a survey: your app fires a dozen of them and Forma decides. Passing context on `track()` therefore means repeating the same values on every possible call.
 
 `setEmbeddedData()` decouples the two. You push context whenever you have it, and every survey displayed from then on picks it up — until you remove the key, or the page loads again.
 
 ```js
-formbricks.setEmbeddedData({ pageType: "product", plan: "pro" });
+forma.setEmbeddedData({ pageType: "product", plan: "pro" });
 ```
 
 <Note>
@@ -31,8 +31,8 @@ Values are scoped to the response. They are **never** written to the contact rec
 `setEmbeddedData()` merges into the current bag rather than replacing it, and per key the last write wins:
 
 ```js
-formbricks.setEmbeddedData({ plan: "pro", pageType: "product" });
-formbricks.setEmbeddedData({ pageType: "checkout" });
+forma.setEmbeddedData({ plan: "pro", pageType: "product" });
+forma.setEmbeddedData({ pageType: "checkout" });
 // bag is now { plan: "pro", pageType: "checkout" }
 ```
 
@@ -43,8 +43,8 @@ That is what lets you set stable fields once and refresh volatile ones as the us
 The two are deliberately different, and the difference is the whole reason the "pass every field unconditionally" idiom is safe:
 
 ```js
-formbricks.setEmbeddedData({ pageType: null });      // removes pageType
-formbricks.setEmbeddedData({ pageType: undefined }); // no-op — pageType keeps its value
+forma.setEmbeddedData({ pageType: null });      // removes pageType
+forma.setEmbeddedData({ pageType: undefined }); // no-op — pageType keeps its value
 ```
 
 A tag manager or a shared helper typically reads keys off a data layer and passes all of them on every page. On a page where `pageType` does not exist the key arrives as `undefined`, and it must not clear the value the previous page set. So `undefined` is a documented no-op, not an accident.
@@ -58,8 +58,8 @@ Anything else is refused rather than mangled. Passing a primitive, an array or a
 ## Clearing
 
 ```js
-formbricks.clearEmbeddedData("pageType"); // remove one key
-formbricks.clearEmbeddedData();           // clear the whole bag
+forma.clearEmbeddedData("pageType"); // remove one key
+forma.clearEmbeddedData();           // clear the whole bag
 ```
 
 Only a literal zero-argument call clears everything. `clearEmbeddedData(someValue)` where `someValue` turned out to be `undefined` is a logged no-op, for the same reason as above: code that reads the key name from its own state must not wipe the bag when that state is empty.
@@ -78,7 +78,7 @@ Only a literal zero-argument call clears everything. `clearEmbeddedData(someValu
   </Step>
 
   <Step title="Cleared on an identity switch">
-    Calling `formbricks.logout()`, or `formbricks.setUserId()` with a **different** id, clears the bag: one
+    Calling `forma.logout()`, or `forma.setUserId()` with a **different** id, clears the bag: one
     user's context must not ride onto the next user's responses on a shared device. Identifying for the first
     time keeps the bag, because pushing context before you know who the user is is a legitimate order.
   </Step>
@@ -97,8 +97,8 @@ Two patterns, and mixing them up is the one failure mode worth designing against
 function onRouteChange(route) {
   // `null` clears the key when the new route has no page type,
   // so the previous route's value cannot leak onto the next response
-  formbricks.setEmbeddedData({ pageType: route.pageType ?? null });
-  formbricks.registerRouteChange();
+  forma.setEmbeddedData({ pageType: route.pageType ?? null });
+  forma.registerRouteChange();
 }
 ```
 
@@ -108,14 +108,14 @@ Setting the key to `null` when the new route has no page type is what stops the 
 
 `setEmbeddedData()` is synchronous and does not go through the SDK's command queue, so a call made before `setup()` finishes is kept rather than dropped. Two things do have to be true first, and they have different answers.
 
-**The script must have loaded.** `window.formbricks` does not exist until then, and neither does anything on it — `setEmbeddedData` and `on` alike. Push your context from the script tag's own `onload`, or from a Google Tag Manager tag: the dataLayer buffers across load order, so a GTM trigger cannot be too early. Do not poll for the global.
+**The script must have loaded.** `window.forma` does not exist until then, and neither does anything on it — `setEmbeddedData` and `on` alike. Push your context from the script tag's own `onload`, or from a Google Tag Manager tag: the dataLayer buffers across load order, so a GTM trigger cannot be too early. Do not poll for the global.
 
 **`setup()` may be delayed, and that is what the readiness event is for.** When the script has loaded but `setup()` waits on something like a consent banner, subscribe first and push when it resolves:
 
 ```js
 // the script has loaded; setup() has not been called yet
-formbricks.on("formbricks_setup_successful", () => {
-  formbricks.setEmbeddedData({ plan: currentUser.plan });
+forma.on("forma_setup_successful", () => {
+  forma.setEmbeddedData({ plan: currentUser.plan });
 });
 ```
 
@@ -123,7 +123,7 @@ The order matters. Events are delivered live rather than replayed, so a handler 
 
 ## Checking What Is in the Bag
 
-The bag is invisible: it is memory, so there is nothing in devtools storage, and the API has no getter. Add `?formbricksDebug=true` to your URL and every write prints:
+The bag is invisible: it is memory, so there is nothing in devtools storage, and the API has no getter. Add `?formaDebug=true` to your URL and every write prints:
 
 ```text
 setEmbeddedData: set [pageType], removed [plan] — the bag now holds [pageType, accountType].
@@ -139,11 +139,11 @@ Keys land on a response only if the survey declares them as ingested Embedded Da
 
 ## Precedence Against `track()`
 
-The older `formbricks.track("action", { hiddenFields: { … } })` form still works and still wins. An explicit per-trigger value beats the ambient bag for the same field, whatever the casing on either side, so migrating one call site at a time is safe.
+The older `forma.track("action", { hiddenFields: { … } })` form still works and still wins. An explicit per-trigger value beats the ambient bag for the same field, whatever the casing on either side, so migrating one call site at a time is safe.
 
 <Note>
-  Two ways to load the SDK, two ways to pick this up. The script served by your Formbricks instance
-  (`/js/formbricks.umd.cjs`) carries it as soon as the instance is updated, because that bundle is served
+  Two ways to load the SDK, two ways to pick this up. The script served by your Forma instance
+  (`/js/forma.umd.cjs`) carries it as soon as the instance is updated, because that bundle is served
   rather than installed. The npm package proxies the SDK's methods explicitly, so there you get it by bumping
-  `@formbricks/js`.
+  `@forma/js`.
 </Note>

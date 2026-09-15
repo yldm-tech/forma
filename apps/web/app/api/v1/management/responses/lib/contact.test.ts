@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
+import { prisma } from "@forma/database";
+import { TContactAttributes } from "@forma/types/contact-attribute";
 import { getContactByUserId } from "./contact";
 
 // Mock prisma
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contact: {
       findFirst: vi.fn(),

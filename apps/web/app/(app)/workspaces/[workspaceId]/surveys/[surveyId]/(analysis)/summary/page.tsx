@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
 import { SurveyAnalysisNavigation } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/SurveyAnalysisNavigation";
 import { SummaryPage } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SummaryPage";
 import { SurveyAnalysisCTA } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SurveyAnalysisCTA";
@@ -8,7 +8,7 @@ import { getAISmartToolsUnavailableReason, getOrganizationAIConfig } from "@/lib
 import {
   DEFAULT_LOCALE,
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
 } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
@@ -81,7 +81,7 @@ const SurveyPage = async (
             responseCount={initialSurveySummary?.meta.totalResponses ?? 0}
             segments={segments}
             isContactsEnabled={isContactsEnabled}
-            isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+            isFormaCloud={IS_FORMA_CLOUD}
             isStorageConfigured={IS_STORAGE_CONFIGURED}
             enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
             aiUnavailableReason={aiUnavailableReason}

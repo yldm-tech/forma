@@ -1,7 +1,7 @@
 import { Config } from "@/lib/common/config";
 import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
 import { addCleanupEventListeners, addEventListeners } from "@/lib/common/event-listeners";
-import { FORMBRICKS_EVENTS, emitFormbricksEvent } from "@/lib/common/events";
+import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { getIsSetup, setIsSetup } from "@/lib/common/status";
 import { filterSurveys, getIsDebug, isNowExpired, wrapThrows } from "@/lib/common/utils";
@@ -146,25 +146,23 @@ export const setup = async (
     logger.debug("No existing configuration found.");
   }
 
-  // formbricks is in error state, skip setup
+  // forma is in error state, skip setup
   if (existingConfig?.status.value === "error") {
     if (isDebug) {
-      logger.debug(
-        "Formbricks is in error state, but debug mode is active. Resetting config and continuing."
-      );
+      logger.debug("Forma is in error state, but debug mode is active. Resetting config and continuing.");
       config.resetConfig();
       return okVoid();
     }
 
-    console.error("🧱 Formbricks - Formbricks was set to an error state.");
+    console.error("🧱 Forma - Forma was set to an error state.");
 
     const expiresAt = existingConfig.status.expiresAt;
 
     if (expiresAt && !isNowExpired(new Date(expiresAt))) {
-      console.error("🧱 Formbricks - Error state is not expired, skipping initialization");
+      console.error("🧱 Forma - Error state is not expired, skipping initialization");
       return okVoid();
     }
-    console.error("🧱 Formbricks - Error state is expired. Continuing with initialization.");
+    console.error("🧱 Forma - Error state is expired. Continuing with initialization.");
   }
 
   logger.debug("Start setup");
@@ -401,7 +399,7 @@ export const setup = async (
   setIsSetup(true);
   logger.debug("Set up complete");
 
-  // The readiness signal (ENG-1846): a consent-gated setup means `window.formbricks` may not exist
+  // The readiness signal (ENG-1846): a consent-gated setup means `window.forma` may not exist
   // at page load, so a GTM tag firing `setEmbeddedData` on page load silently drops its value — the
   // host triggers on this event instead. Emitted here, at the single point every *fresh* setup
   // converges on, and nowhere else: the "already set up" and missing-config early returns above
@@ -409,7 +407,7 @@ export const setup = async (
   // the host's tags.
   // `effectiveId`, not `config.get().workspaceId`: the input is what this setup just ran with, and
   // it is already resolved through the legacy `environmentId` shim above.
-  emitFormbricksEvent(FORMBRICKS_EVENTS.setupSuccessful, { workspaceId: effectiveId });
+  emitFormaEvent(FORMA_EVENTS.setupSuccessful, { workspaceId: effectiveId });
 
   return okVoid();
 };
@@ -442,7 +440,7 @@ export const handleErrorOnFirstSetup = (e: { code: string; responseMessage: stri
     logger.error(`Error during first setup: ${e.code} - ${e.responseMessage}. Please try again later.`);
   }
 
-  // put formbricks in error state (by creating a new config) and throw error
+  // put forma in error state (by creating a new config) and throw error
   const initialErrorConfig: Partial<TConfig> = {
     status: {
       value: "error",
@@ -454,21 +452,21 @@ export const handleErrorOnFirstSetup = (e: { code: string; responseMessage: stri
     localStorage.setItem(JS_LOCAL_STORAGE_KEY, JSON.stringify(initialErrorConfig));
   })();
 
-  throw new Error("Could not set up formbricks");
+  throw new Error("Could not set up forma");
 };
 
-export const putFormbricksInErrorState = (formbricksConfig: Config): void => {
+export const putFormaInErrorState = (formaConfig: Config): void => {
   const logger = Logger.getInstance();
 
   if (getIsDebug()) {
-    logger.debug("Not putting formbricks in error state because debug mode is active (no error state)");
+    logger.debug("Not putting forma in error state because debug mode is active (no error state)");
     return;
   }
 
-  logger.debug("Putting formbricks in error state");
-  // change formbricks status to error
-  formbricksConfig.update({
-    ...formbricksConfig.get(),
+  logger.debug("Putting forma in error state");
+  // change forma status to error
+  formaConfig.update({
+    ...formaConfig.get(),
     status: {
       value: "error",
       expiresAt: new Date(new Date().getTime() + 10 * 60000), // 10 minutes in the future

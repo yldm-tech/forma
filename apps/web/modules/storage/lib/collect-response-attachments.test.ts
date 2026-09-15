@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
 import { collectResponseAttachments } from "./collect-response-attachments";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { response: { findMany: vi.fn() } },
 }));
 

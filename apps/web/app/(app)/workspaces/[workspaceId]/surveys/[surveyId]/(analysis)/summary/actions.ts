@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZId } from "@forma/types/common";
+import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
 import { getEmailTemplateHtml } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/emailTemplate";
 import { generateExampleResponseDataset } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/example-responses";
 import { persistExampleResponseDataset } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/example-responses-persistence";
@@ -249,14 +249,7 @@ export const generatePersonalLinksAction = authenticatedActionClient
     );
 
     // Prepare CSV data with the specified headers and order
-    const csvHeaders = [
-      "Formbricks Contact ID",
-      "User ID",
-      "First Name",
-      "Last Name",
-      "Email",
-      "Personal Link",
-    ];
+    const csvHeaders = ["Forma Contact ID", "User ID", "First Name", "Last Name", "Email", "Personal Link"];
 
     const csvData = contactsResult
       .map((contact) => {
@@ -265,7 +258,7 @@ export const generatePersonalLinksAction = authenticatedActionClient
         }
         const attributes = contact.attributes ?? {};
         return {
-          "Formbricks Contact ID": contact.contactId,
+          "Forma Contact ID": contact.contactId,
           "User ID": attributes.userId ?? "",
           "First Name": attributes.firstName ?? "",
           "Last Name": attributes.lastName ?? "",

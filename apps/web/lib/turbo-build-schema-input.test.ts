@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 // shape as the next.config.mjs guard in `turbo-build-env.test.ts`.
 //
 // The web build reads the canonical authorization schema from the repo root at build time and emits
-// it into the packaged operator CLI, so `formbricks-authzed schema check` / `apply` ship whatever
+// it into the packaged operator CLI, so `forma-authzed schema check` / `apply` ship whatever
 // that build captured. But `authzed/schema.zed` lives outside `apps/web`, and the `build` task
 // declares no `inputs`, so Turbo hashes only files inside the package: without an explicit
 // declaration the file that defines the shipped authorization semantics is hashed by nothing, and a
@@ -38,11 +38,11 @@ describe("turbo hashes the canonical AuthZed schema into the web build", () => {
 
   test("a schema-only change invalidates the cached web build", () => {
     // Either mechanism is fine; what matters is that the file is hashed somewhere that reaches
-    // `@formbricks/web#build`. `globalDependencies` is the simpler of the two because package-scoped
+    // `@forma/web#build`. `globalDependencies` is the simpler of the two because package-scoped
     // task configs replace rather than merge, so an `inputs` override would have to restate the
     // whole build task.
     const globalDependencies = turboJson.globalDependencies ?? [];
-    const buildInputs = turboJson.tasks["@formbricks/web#build"]?.inputs ?? [];
+    const buildInputs = turboJson.tasks["@forma/web#build"]?.inputs ?? [];
 
     const hashed =
       globalDependencies.includes(CANONICAL_SCHEMA) ||
@@ -50,9 +50,9 @@ describe("turbo hashes the canonical AuthZed schema into the web build", () => {
 
     expect(
       hashed,
-      `${CANONICAL_SCHEMA} is not hashed into @formbricks/web#build. Add it to turbo.json's ` +
+      `${CANONICAL_SCHEMA} is not hashed into @forma/web#build. Add it to turbo.json's ` +
         "`globalDependencies` (or to that task's `inputs`), or a cached build can ship a stale " +
-        "authorization schema inside the packaged formbricks-authzed CLI (ENG-2340)."
+        "authorization schema inside the packaged forma-authzed CLI (ENG-2340)."
     ).toBe(true);
   });
 });

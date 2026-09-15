@@ -4,7 +4,7 @@ import {
   INVITE_TOKEN_INVALID_ERROR_CODE,
   SIGNUP_DISABLED_ERROR_CODE,
   SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { verifyInviteToken } from "@/lib/jwt";
 import { createMembership } from "@/lib/membership/service";
@@ -26,7 +26,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(),
 }));
 
-const requestHeaders = new Headers({ "x-formbricks-client-ip": "203.0.113.7" });
+const requestHeaders = new Headers({ "x-forma-client-ip": "203.0.113.7" });
 /** Captures cookies the action sets, so the ENG-2562 sign-up intent cookie can be asserted on. */
 let setCookies: { name: string; value: string }[] = [];
 const mockNextRequestData = () => {
@@ -38,7 +38,7 @@ const mockNextRequestData = () => {
   } as never);
 };
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),
@@ -84,7 +84,7 @@ vi.mock("@/modules/workspaces/settings/lib/workspace", () => ({ createWorkspace:
 // Getters so individual tests can flip the Cloud gate / invite kill-switch at runtime. The real
 // signup-email-domain utility reads these through live bindings; only the constants are mocked.
 const constantsOverrides = vi.hoisted(() => ({
-  IS_FORMBRICKS_CLOUD: false,
+  IS_FORMA_CLOUD: false,
   SIGNUP_DOMAIN_CHECK_ON_INVITES: false,
   SIGNUP_ENABLED: true,
 }));
@@ -98,8 +98,8 @@ vi.mock("@/lib/constants", () => ({
   ENCRYPTION_KEY: "0".repeat(64),
   NEXTAUTH_SECRET: "test-nextauth-secret",
   BETTER_AUTH_SECRET: undefined,
-  get IS_FORMBRICKS_CLOUD() {
-    return constantsOverrides.IS_FORMBRICKS_CLOUD;
+  get IS_FORMA_CLOUD() {
+    return constantsOverrides.IS_FORMA_CLOUD;
   },
   get SIGNUP_DOMAIN_CHECK_ON_INVITES() {
     return constantsOverrides.SIGNUP_DOMAIN_CHECK_ON_INVITES;
@@ -142,7 +142,7 @@ describe("createUserAction — signup verification email callbackURL", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockNextRequestData();
-    constantsOverrides.IS_FORMBRICKS_CLOUD = false;
+    constantsOverrides.IS_FORMA_CLOUD = false;
     constantsOverrides.SIGNUP_DOMAIN_CHECK_ON_INVITES = false;
     constantsOverrides.SIGNUP_ENABLED = true;
     vi.mocked(getIsFreshInstance).mockResolvedValue(true);
@@ -281,7 +281,7 @@ describe("createUserAction — signup verification email callbackURL", () => {
     // nothing about an account that already exists; arming one would hand them the auto-sign-in on the
     // victim's eventual verification click — the exact pre-hijack this fix withholds — and would leak
     // that the address is registered.
-    expect(setCookies.map((c) => c.name)).not.toContain("formbricks.signup_intent");
+    expect(setCookies.map((c) => c.name)).not.toContain("forma.signup_intent");
   });
 
   // ENG-2562: the other half of the same rule — a real creation DOES get the cookie, because that is
@@ -290,7 +290,7 @@ describe("createUserAction — signup verification email callbackURL", () => {
     const ctx = newCtx();
     await createUserAction({ ctx, parsedInput: baseInput } as never);
 
-    const intent = setCookies.find((c) => c.name === "formbricks.signup_intent");
+    const intent = setCookies.find((c) => c.name === "forma.signup_intent");
     expect(intent).toBeDefined();
     // Bound to this account and not readable as plaintext: assert through the reader, not the shape.
     expect(readSignupIntent(intent?.value)).toEqual({ userId: createdUser.id, reason: "valid" });
@@ -380,7 +380,7 @@ describe("createUserAction — personal email domain block (Cloud)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockNextRequestData();
-    constantsOverrides.IS_FORMBRICKS_CLOUD = true;
+    constantsOverrides.IS_FORMA_CLOUD = true;
     constantsOverrides.SIGNUP_ENABLED = true;
     vi.mocked(getIsFreshInstance).mockResolvedValue(true);
     constantsOverrides.SIGNUP_DOMAIN_CHECK_ON_INVITES = false;

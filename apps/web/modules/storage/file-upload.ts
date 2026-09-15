@@ -1,4 +1,4 @@
-import { STORAGE_CONFIGURATION_ERROR_CODES, type TStorageApiErrorDetails } from "@formbricks/types/storage";
+import { STORAGE_CONFIGURATION_ERROR_CODES, type TStorageApiErrorDetails } from "@forma/types/storage";
 
 export enum FileUploadError {
   NO_FILE = "no_file",

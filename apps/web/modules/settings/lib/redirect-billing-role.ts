@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { getOrganizationBillingPath } from "@/modules/settings/lib/routes";
 
@@ -37,6 +37,6 @@ export const redirectBillingRoleFromRestrictedOrgSettings = async (organizationI
   // keeping it out here means the drain scheduled by withAuthorizationSurface never has to survive
   // a throw from inside its own callback.
   if (!hasOrganizationReadAccess) {
-    redirect(getOrganizationBillingPath(organizationId, IS_FORMBRICKS_CLOUD));
+    redirect(getOrganizationBillingPath(organizationId, IS_FORMA_CLOUD));
   }
 };

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from "@/lib/constants";
 
 export const findMatchingLocale = async (): Promise<TUserLocale> => {

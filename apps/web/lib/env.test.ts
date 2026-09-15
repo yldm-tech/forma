@@ -8,9 +8,9 @@ const setTestEnv = (overrides: Record<string, string | undefined> = {}) => {
     NODE_ENV: "test",
     DATABASE_URL: "https://example.com/db",
     ENCRYPTION_KEY: "12345678901234567890123456789012",
-    HUB_API_URL: "https://hub.formbricks.local",
+    HUB_API_URL: "https://hub.forma.local",
     HUB_API_KEY: "test-hub-api-key",
-    CUBEJS_API_URL: "https://cube.formbricks.local",
+    CUBEJS_API_URL: "https://cube.forma.local",
     CUBEJS_API_SECRET: "cube-secret",
     AUTHZED_CONSISTENCY: undefined,
     AUTHZED_ENABLED: undefined,
@@ -123,7 +123,7 @@ describe("env", () => {
     expect(env.DEBUG_SHOW_RESET_LINK).toBe("1");
   });
 
-  test.each(["http://formbricks:3000/api/auth/jwks", "https://auth.example.com/internal/jwks?version=1"])(
+  test.each(["http://forma:3000/api/auth/jwks", "https://auth.example.com/internal/jwks?version=1"])(
     "accepts MCP OAuth JWKS URL %s",
     async (jwksUrl) => {
       setTestEnv({ MCP_OAUTH_JWKS_URL: jwksUrl });
@@ -135,9 +135,9 @@ describe("env", () => {
   );
 
   test.each([
-    "ftp://formbricks/api/auth/jwks",
-    "http://user:password@formbricks:3000/api/auth/jwks",
-    "http://formbricks:3000/api/auth/jwks#key",
+    "ftp://forma/api/auth/jwks",
+    "http://user:password@forma:3000/api/auth/jwks",
+    "http://forma:3000/api/auth/jwks#key",
   ])("rejects unsafe MCP OAuth JWKS URL %s", async (jwksUrl) => {
     setTestEnv({ MCP_OAUTH_JWKS_URL: jwksUrl });
 
@@ -150,7 +150,7 @@ describe("env", () => {
       AUTHZED_ENABLED: enabled,
       AUTHZED_ENDPOINT: "localhost:50051",
       AUTHZED_INSECURE: enabled,
-      AUTHZED_SYSTEM_KEY: "formbricks",
+      AUTHZED_SYSTEM_KEY: "forma",
       AUTHZED_TOKEN: "test-authzed-token",
     });
 
@@ -188,14 +188,14 @@ describe("env", () => {
     setTestEnv({
       AUTHZED_ENABLED: "false",
       AUTHZED_ENDPOINT: "spicedb:50051",
-      AUTHZED_SYSTEM_KEY: "formbricks",
+      AUTHZED_SYSTEM_KEY: "forma",
       AUTHZED_TOKEN: "prepared-token",
     });
 
     const { env } = await import("./env");
 
     expect(env.AUTHZED_ENDPOINT).toBe("spicedb:50051");
-    expect(env.AUTHZED_SYSTEM_KEY).toBe("formbricks");
+    expect(env.AUTHZED_SYSTEM_KEY).toBe("forma");
     expect(env.AUTHZED_TOKEN).toBe("prepared-token");
   });
 
@@ -216,7 +216,7 @@ describe("env", () => {
       const authzedEnv: Record<string, string | undefined> = {
         AUTHZED_ENABLED: "true",
         AUTHZED_ENDPOINT: "spicedb:50051",
-        AUTHZED_SYSTEM_KEY: "formbricks",
+        AUTHZED_SYSTEM_KEY: "forma",
         AUTHZED_TOKEN: "test-authzed-token",
       };
       authzedEnv[missingVariable] = undefined;
@@ -295,14 +295,14 @@ describe("env", () => {
   test.each([
     "ab",
     `a${"b".repeat(63)}1`,
-    "Formbricks",
+    "Forma",
     "form-bricks",
     "form/bricks",
     "form bricks",
-    "formbricks_",
-    "1formbricks",
-    " formbricks",
-    "formbricks ",
+    "forma_",
+    "1forma",
+    " forma",
+    "forma ",
   ])("rejects invalid AuthZed system key %s", async (systemKey) => {
     setTestEnv({ AUTHZED_SYSTEM_KEY: systemKey });
 
@@ -314,7 +314,7 @@ describe("env", () => {
     setTestEnv({
       AUTHZED_ENABLED: "true",
       AUTHZED_ENDPOINT: "https://invalid.example.com:443",
-      AUTHZED_SYSTEM_KEY: "formbricks",
+      AUTHZED_SYSTEM_KEY: "forma",
       AUTHZED_TOKEN: token,
     });
 
@@ -486,20 +486,20 @@ describe("env", () => {
     setTestEnv();
     const { env } = await import("./env");
 
-    expect(env.CUBEJS_API_URL).toBe("https://cube.formbricks.local");
+    expect(env.CUBEJS_API_URL).toBe("https://cube.forma.local");
     expect(env.CUBEJS_API_SECRET).toBe("cube-secret");
   });
 
   test("accepts Cube JWT issuer and audience configuration", async () => {
     setTestEnv({
-      CUBEJS_JWT_AUDIENCE: "formbricks-cube",
-      CUBEJS_JWT_ISSUER: "formbricks-web",
+      CUBEJS_JWT_AUDIENCE: "forma-cube",
+      CUBEJS_JWT_ISSUER: "forma-web",
     });
 
     const { env } = await import("./env");
 
-    expect(env.CUBEJS_JWT_AUDIENCE).toBe("formbricks-cube");
-    expect(env.CUBEJS_JWT_ISSUER).toBe("formbricks-web");
+    expect(env.CUBEJS_JWT_AUDIENCE).toBe("forma-cube");
+    expect(env.CUBEJS_JWT_ISSUER).toBe("forma-web");
   });
 
   test("fails to load when the Cube API secret is missing", async () => {

@@ -1,11 +1,11 @@
 ---
 title: Audit Logging
 sidebarTitle: Audit Logging
-description: Enable comprehensive audit logs for your Formbricks instance.
+description: Enable comprehensive audit logs for your Forma instance.
 icon: file-shield
 ---
 
-Audit logs record **who** did **what**, **when**, **from where**, and **with what outcome** across your Formbricks instance.
+Audit logs record **who** did **what**, **when**, **from where**, and **with what outcome** across your Forma instance.
 
 <Note>
   Audit logging is an Enterprise feature. Configure your
@@ -27,7 +27,7 @@ Audit logs record **who** did **what**, **when**, **from where**, and **with wha
 AUDIT_LOG_ENABLED=1
 AUDIT_LOG_GET_USER_IP=1
 
-# Set this to the exact number of trusted proxies in front of Formbricks.
+# Set this to the exact number of trusted proxies in front of Forma.
 TRUSTED_PROXY_HOP_COUNT=1
 ```
 
@@ -39,18 +39,18 @@ records with `level: "audit"` to your central logging destination.
 
 ### Configure Trusted Proxy Hops
 
-`AUDIT_LOG_GET_USER_IP=1` uses Formbricks' shared client-IP resolver. `TRUSTED_PROXY_HOP_COUNT` must equal the
+`AUDIT_LOG_GET_USER_IP=1` uses Forma' shared client-IP resolver. `TRUSTED_PROXY_HOP_COUNT` must equal the
 number of trusted CDN, WAF, load-balancer, ingress, and Envoy hops that append to `X-Forwarded-For` before the
-request reaches Formbricks. The application and Helm chart default to `1`, which assumes one trusted reverse
+request reaches Forma. The application and Helm chart default to `1`, which assumes one trusted reverse
 proxy.
 
 Examples:
 
 | Request Path | `TRUSTED_PROXY_HOP_COUNT` |
 | --- | ---: |
-| Client → ingress → Formbricks | `1` |
-| Client → load balancer → Envoy → Formbricks | `2` |
-| Client → CDN/WAF → load balancer → Envoy → Formbricks | `3` |
+| Client → ingress → Forma | `1` |
+| Client → load balancer → Envoy → Forma | `2` |
+| Client → CDN/WAF → load balancer → Envoy → Forma | `3` |
 
 <Warning>
   Count the hops in your real deployment; do not copy an example blindly. A value higher than the real chain can
@@ -74,7 +74,7 @@ deployment:
 Audit logs are **JSON Lines** (one JSON object per line). A typical entry looks like this:
 
 ```json
-{"level":"audit","time":1749207302158,"pid":20023,"hostname":"formbricks-node-1","name":"formbricks","actor":{"id":"cm90t4t7l0000vrws5hpo5ta5","type":"api"},"action":"created","target":{"id":"cmbkov4dn0000vrg72i7oznqv","type":"webhook"},"timestamp":"2025-06-06T10:55:02.145Z","organizationId":"cm8zovtbm0001vr3efa4n03ms","status":"success","ipAddress":"unknown","apiUrl":"http://localhost:3000/api/v1/webhooks","changes":{"id":"cmbkov4dn0000vrg72i7oznqv","name":"********","createdAt":"2025-06-06T10:55:02.123Z","updatedAt":"2025-06-06T10:55:02.123Z","url":"https://eoy8o887lmsqmhz.m.pipedream.net","source":"user","workspaceId":"cm8zowv0b0009vr3ec56w2qf3","environmentId":"cm8zowv0b0009vr3ec56w2qf3","triggers":["responseCreated","responseUpdated","responseFinished"],"surveyIds":[]}}
+{"level":"audit","time":1749207302158,"pid":20023,"hostname":"forma-node-1","name":"forma","actor":{"id":"cm90t4t7l0000vrws5hpo5ta5","type":"api"},"action":"created","target":{"id":"cmbkov4dn0000vrg72i7oznqv","type":"webhook"},"timestamp":"2025-06-06T10:55:02.145Z","organizationId":"cm8zovtbm0001vr3efa4n03ms","status":"success","ipAddress":"unknown","apiUrl":"http://localhost:3000/api/v1/webhooks","changes":{"id":"cmbkov4dn0000vrg72i7oznqv","name":"********","createdAt":"2025-06-06T10:55:02.123Z","updatedAt":"2025-06-06T10:55:02.123Z","url":"https://eoy8o887lmsqmhz.m.pipedream.net","source":"user","workspaceId":"cm8zowv0b0009vr3ec56w2qf3","environmentId":"cm8zowv0b0009vr3ec56w2qf3","triggers":["responseCreated","responseUpdated","responseFinished"],"surveyIds":[]}}
 ```
 
 Key fields:
@@ -85,7 +85,7 @@ Key fields:
 | `time` | Unix timestamp in milliseconds |
 | `pid` | Process ID of the logging instance |
 | `hostname` | Hostname of the server generating the log |
-| `name` | Application name, typically `"formbricks"` |
+| `name` | Application name, typically `"forma"` |
 | `timestamp` | ISO‑8601 time of the action |
 | `actor` | User or API key responsible (object with `id` and `type`) |
 | `action` | Action value such as `created`, `updated`, `authenticationAttempted`, or `signedIn` |
@@ -99,7 +99,7 @@ Key fields:
 
 ## Centralized Logging And Compliance
 
-Formbricks emits audit events to the application logger. The container's stdout stream is not, by itself, a
+Forma emits audit events to the application logger. The container's stdout stream is not, by itself, a
 durable or immutable audit store. Your deployment must forward the events to a logging platform and configure the
 controls required by your organization, including:
 
@@ -118,8 +118,8 @@ environment.
 - **Redacted values:** Sensitive fields covered by the audit redaction helpers are replaced with `"********"`
   before the event is written.
 - **Success and failure:** Covered operations can emit both `success` and `failure` events.
-- **Delivery model:** Formbricks writes events through the application logger; query APIs, long-term retention,
+- **Delivery model:** Forma writes events through the application logger; query APIs, long-term retention,
   and exports belong to your logging platform.
-- **Scope limitation:** For now, **only events triggered inside the `Formbricks` application** are audited. This means:
+- **Scope limitation:** For now, **only events triggered inside the `Forma` application** are audited. This means:
   - **Embed and Link Surveys** are **not** included in the audit logs.
   - **Survey responses** created via the client API or client-side SDKs are **not** audited.

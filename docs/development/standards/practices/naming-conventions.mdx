@@ -1,6 +1,6 @@
 ---
 title: Naming conventions
-description: Domain-specific naming rules used across the Formbricks codebase.
+description: Domain-specific naming rules used across the Forma codebase.
 icon: book-open
 ---
 
@@ -15,7 +15,7 @@ domains in the codebase**. Use them precisely.
 
 | Term | Domain | Meaning | Used in |
 | --- | --- | --- | --- |
-| `FeedbackSource` | **Unify Feedback** | A configured integration (Formbricks survey, CSV import, etc.) that streams records into the Hub. | `apps/web/lib/feedback-source/`, `apps/web/modules/ee/unify-feedback/`, Prisma models `FeedbackSource`, `FeedbackSourceFormbricksMapping`, `FeedbackSourceFieldMapping`, enums `FeedbackSourceType`/`FeedbackSourceStatus`, types `T/ZFeedbackSource*`, i18n keys under `workspace.unify.source_*` and `workspace.settings.feedback_directories.feedback_sources_*`. |
+| `FeedbackSource` | **Unify Feedback** | A configured integration (Forma survey, CSV import, etc.) that streams records into the Hub. | `apps/web/lib/feedback-source/`, `apps/web/modules/ee/unify-feedback/`, Prisma models `FeedbackSource`, `FeedbackSourceFormaMapping`, `FeedbackSourceFieldMapping`, enums `FeedbackSourceType`/`FeedbackSourceStatus`, types `T/ZFeedbackSource*`, i18n keys under `workspace.unify.source_*` and `workspace.settings.feedback_directories.feedback_sources_*`. |
 | `Connector` | **Workflows** *(upcoming)* and **logical condition combinator** | (a) The logical AND/OR connector used by survey logic, segment filters, and quotas (`ZConnector = z.enum(["and", "or"])`). (b) Reserved for the upcoming Workflows feature; do not use for new Unify Feedback work. | `packages/types/surveys/logic.ts` (`ZConnector`), segment / survey-logic / quota code. |
 
 ## Rules

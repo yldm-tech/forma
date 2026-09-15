@@ -4,7 +4,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { applyMigrations } from "./migration-runner";
 
 const __filename = fileURLToPath(import.meta.url);

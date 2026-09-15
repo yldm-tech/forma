@@ -42,19 +42,19 @@ describe("getMigrationDatabaseUrl", () => {
   test("prefers a non-empty MIGRATE_DATABASE_URL", () => {
     expect(
       getMigrationDatabaseUrl({
-        DATABASE_URL: "postgresql://app:secret@app-db/formbricks",
-        MIGRATE_DATABASE_URL: " postgresql://migrate:secret@migrate-db/formbricks ",
+        DATABASE_URL: "postgresql://app:secret@app-db/forma",
+        MIGRATE_DATABASE_URL: " postgresql://migrate:secret@migrate-db/forma ",
       })
-    ).toBe("postgresql://migrate:secret@migrate-db/formbricks");
+    ).toBe("postgresql://migrate:secret@migrate-db/forma");
   });
 
   test("falls back to DATABASE_URL", () => {
     expect(
       getMigrationDatabaseUrl({
-        DATABASE_URL: "postgresql://app:secret@app-db/formbricks",
+        DATABASE_URL: "postgresql://app:secret@app-db/forma",
         MIGRATE_DATABASE_URL: " ",
       })
-    ).toBe("postgresql://app:secret@app-db/formbricks");
+    ).toBe("postgresql://app:secret@app-db/forma");
   });
 
   test("fails when neither URL is configured", () => {
@@ -64,15 +64,15 @@ describe("getMigrationDatabaseUrl", () => {
 
 describe("parseDatabaseEndpoint", () => {
   test.each([
-    ["postgresql://user:secret@database/formbricks", { host: "database", port: 5432 }],
-    ["postgres://user:secret@database:6432/formbricks", { host: "database", port: 6432 }],
-    ["postgresql://user:secret@[2001:db8::1]:7432/formbricks", { host: "2001:db8::1", port: 7432 }],
+    ["postgresql://user:secret@database/forma", { host: "database", port: 5432 }],
+    ["postgres://user:secret@database:6432/forma", { host: "database", port: 6432 }],
+    ["postgresql://user:secret@[2001:db8::1]:7432/forma", { host: "2001:db8::1", port: 7432 }],
   ])("parses %s", (databaseUrl, expectedEndpoint) => {
     expect(parseDatabaseEndpoint(databaseUrl)).toEqual(expectedEndpoint);
   });
 
   test("rejects non-PostgreSQL URLs without echoing the value", () => {
-    const secretUrl = "mysql://admin:super-secret@database/formbricks";
+    const secretUrl = "mysql://admin:super-secret@database/forma";
 
     try {
       parseDatabaseEndpoint(secretUrl);
@@ -153,7 +153,7 @@ describe("waitForDatabase", () => {
         {
           checkConnection: () =>
             Promise.reject(
-              Object.assign(new Error("postgresql://admin:super-secret@database/formbricks"), {
+              Object.assign(new Error("postgresql://admin:super-secret@database/forma"), {
                 code: "ECONNREFUSED",
               })
             ),

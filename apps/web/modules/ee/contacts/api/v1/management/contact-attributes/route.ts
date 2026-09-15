@@ -1,4 +1,4 @@
-import { DatabaseError } from "@formbricks/types/errors";
+import { DatabaseError } from "@forma/types/errors";
 import { responses } from "@/app/lib/api/response";
 import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
 import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   type FileStreamResult,
   type StorageError,
@@ -8,9 +8,9 @@ import {
   deleteFilesByPrefix,
   getFileStream,
   getSignedUploadUrl,
-} from "@formbricks/storage";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { type TAccessType } from "@formbricks/types/storage";
+} from "@forma/storage";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { type TAccessType } from "@forma/types/storage";
 import { sanitizeFileName } from "./utils";
 
 const SAFE_FILE_PATH_SEGMENT = /^[A-Za-z0-9_-]+$/;

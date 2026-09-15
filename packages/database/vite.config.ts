@@ -41,7 +41,7 @@ export default defineConfig(async (): Promise<ViteUserConfig> => {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
-        "@formbricks/logger": resolve(__dirname, "../logger/src/index.ts"),
+        "@forma/logger": resolve(__dirname, "../logger/src/index.ts"),
       },
     },
     build: {

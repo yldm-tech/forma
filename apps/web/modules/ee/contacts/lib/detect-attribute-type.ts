@@ -1,4 +1,4 @@
-import { TContactAttributeDataType } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
 
 /**
  * Detects the data type of an attribute value from SDK input.

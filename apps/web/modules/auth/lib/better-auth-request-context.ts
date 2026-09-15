@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * Better Auth's router discards the endpoint before our logger is called — for a non-`APIError` it does
  * `ctx.logger?.error(e.name, e)` (`better-auth/dist/api/index.mjs:210`) — so the Sentry event raised in
  * `better-auth-observability.ts` carries an exception and nothing else: no transaction, no URL, no
- * route. That is why FORMBRICKS-183 has ~242 events and cannot be triaged. This store carries the
+ * route. That is why FORMA-183 has ~242 events and cannot be triaged. This store carries the
  * request identity across the handler so the capture can name its endpoint.
  *
  * The `[...all]` route opens it around `auth.handler`, which means it covers every throw inside the

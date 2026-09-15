@@ -2,9 +2,9 @@ import "server-only";
 import { cache as reactCache } from "react";
 import { ProxyAgent } from "undici";
 import { z } from "zod";
-import { createCacheKey } from "@formbricks/cache";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { createCacheKey } from "@forma/cache";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
 import { COMMUNITY_WORKSPACE_LIMIT, E2E_TESTING } from "@/lib/constants";
 import { env } from "@/lib/env";
@@ -35,8 +35,8 @@ const CONFIG = {
   API: {
     ENDPOINT:
       env.ENVIRONMENT === "staging"
-        ? "https://staging.ee.formbricks.com/api/licenses/check"
-        : "https://ee.formbricks.com/api/licenses/check",
+        ? "https://staging.ee.forma.ylam.ai/api/licenses/check"
+        : "https://ee.forma.ylam.ai/api/licenses/check",
     TIMEOUT_MS: 5000,
   },
 } as const;

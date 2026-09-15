@@ -3,7 +3,7 @@ import {
   THubFieldType,
   THubTargetField,
   ZHubFieldType,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import { FeedbackRecordCreateParams } from "@/modules/hub";
 import { routeResponseValueTarget } from "./utils";
 

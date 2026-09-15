@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
-import { type Prisma } from "@formbricks/database/prisma";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { prisma } from "@forma/database";
+import { type Prisma } from "@forma/database/prisma";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   EMBED_SURVEY_PREVIEW_CHOICE_IDS,
   EMBED_SURVEY_PREVIEW_HEADLINE,
@@ -107,10 +107,10 @@ test.describe("Survey Email Preview", () => {
     await expect(firstChoiceLink).toHaveAttribute("href", /skipPrefilled=true/);
     await expect(firstChoiceLink).toHaveAttribute("target", "_blank");
 
-    const poweredByLink = previewFrame.getByRole("link", { name: "Powered by Formbricks" });
+    const poweredByLink = previewFrame.getByRole("link", { name: "Powered by Forma" });
     await expect(poweredByLink).toHaveAttribute(
       "href",
-      "https://formbricks.com?utm_source=formbricks-app&utm_medium=email&utm_campaign=powered_by_badge"
+      "https://forma.ylam.ai?utm_source=forma-app&utm_medium=email&utm_campaign=powered_by_badge"
     );
   });
 

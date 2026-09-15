@@ -253,7 +253,7 @@ importers:
       '@azure/playwright':
         specifier: 1.1.5
         version: 1.1.5(@playwright/test@1.58.2)
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:packages/config-eslint
       '@playwright/test':
@@ -304,10 +304,10 @@ importers:
       '@chromatic-com/storybook':
         specifier: 5.0.2
         version: 5.0.2(storybook@10.3.6(@testing-library/dom@8.20.1)(prettier@3.8.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../../packages/config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../../packages/config-typescript
       '@storybook/addon-a11y':
@@ -379,49 +379,49 @@ importers:
       '@dnd-kit/utilities':
         specifier: 3.2.2
         version: 3.2.2(react@19.2.6)
-      '@formbricks/ai':
+      '@forma/ai':
         specifier: workspace:*
         version: link:../../packages/ai
-      '@formbricks/cache':
+      '@forma/cache':
         specifier: workspace:*
         version: link:../../packages/cache
-      '@formbricks/database':
+      '@forma/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@formbricks/email':
+      '@forma/email':
         specifier: workspace:*
         version: link:../../packages/email
-      '@formbricks/hub':
-        specifier: 0.12.0
-        version: 0.12.0
-      '@formbricks/i18n-utils':
+      '@forma/hub':
+        specifier: npm:@formbricks/hub@0.12.0
+        version: '@formbricks/hub@0.12.0'
+      '@forma/i18n-utils':
         specifier: workspace:*
         version: link:../../packages/i18n-utils
-      '@formbricks/jobs':
+      '@forma/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
-      '@formbricks/js':
-        specifier: 5.0.0
-        version: 5.0.0
-      '@formbricks/js-core':
+      '@forma/js':
+        specifier: npm:@formbricks/js@5.0.0
+        version: '@formbricks/js@5.0.0'
+      '@forma/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@formbricks/storage':
+      '@forma/storage':
         specifier: workspace:*
         version: link:../../packages/storage
-      '@formbricks/survey-ui':
+      '@forma/survey-ui':
         specifier: workspace:*
         version: link:../../packages/survey-ui
-      '@formbricks/surveys':
+      '@forma/surveys':
         specifier: workspace:*
         version: link:../../packages/surveys
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@formbricks/workflows':
+      '@forma/workflows':
         specifier: workspace:*
         version: link:../../packages/workflows
       '@formkit/auto-animate':
@@ -788,10 +788,10 @@ importers:
         specifier: 'catalog:'
         version: 5.4.6(zod@4.3.6)
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../../packages/config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../../packages/config-typescript
       '@playwright/test':
@@ -926,20 +926,20 @@ importers:
       '@aws-sdk/credential-providers':
         specifier: 3.1017.0
         version: 3.1017.0
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../logger
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../types
       ai:
         specifier: 'catalog:'
         version: 6.0.177(zod@4.3.6)
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -960,7 +960,7 @@ importers:
 
   packages/cache:
     dependencies:
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../logger
       redis:
@@ -970,10 +970,10 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -1057,16 +1057,16 @@ importers:
 
   packages/database:
     dependencies:
-      '@formbricks/i18n-utils':
+      '@forma/i18n-utils':
         specifier: workspace:*
         version: link:../i18n-utils
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../logger
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../types
-      '@formbricks/workflows':
+      '@forma/workflows':
         specifier: workspace:*
         version: link:../workflows
       '@paralleldrive/cuid2':
@@ -1097,10 +1097,10 @@ importers:
         specifier: 'catalog:'
         version: 5.4.6(zod@4.3.6)
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@types/pg':
@@ -1145,7 +1145,7 @@ importers:
 
   packages/email:
     dependencies:
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../types
       '@react-email/components':
@@ -1170,10 +1170,10 @@ importers:
         specifier: 'catalog:'
         version: 3.5.0
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@types/react':
@@ -1201,10 +1201,10 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@types/node':
@@ -1231,13 +1231,13 @@ importers:
 
   packages/jobs:
     dependencies:
-      '@formbricks/database':
+      '@forma/database':
         specifier: workspace:*
         version: link:../database
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../logger
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../types
       bullmq:
@@ -1250,10 +1250,10 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -1274,13 +1274,13 @@ importers:
 
   packages/js-core:
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
-      '@formbricks/vite-plugins':
+      '@forma/vite-plugins':
         specifier: workspace:*
         version: link:../vite-plugins
       '@types/node':
@@ -1317,10 +1317,10 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -1350,14 +1350,14 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1007.0
         version: 3.1007.0
-      '@formbricks/logger':
+      '@forma/logger':
         specifier: workspace:*
         version: link:../logger
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -1418,10 +1418,10 @@ importers:
         specifier: 'catalog:'
         version: 3.5.0
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@storybook/react':
@@ -1490,7 +1490,7 @@ importers:
       '@calcom/embed-snippet':
         specifier: 1.3.3
         version: 1.3.3
-      '@formbricks/survey-ui':
+      '@forma/survey-ui':
         specifier: workspace:*
         version: link:../survey-ui
       i18next:
@@ -1512,16 +1512,16 @@ importers:
         specifier: 'catalog:'
         version: 3.5.0
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
-      '@formbricks/i18n-utils':
+      '@forma/i18n-utils':
         specifier: workspace:*
         version: link:../i18n-utils
-      '@formbricks/types':
+      '@forma/types':
         specifier: workspace:*
         version: link:../types
       '@preact/preset-vite':
@@ -1594,7 +1594,7 @@ importers:
         specifier: 'catalog:'
         version: 5.4.6(zod@4.3.6)
     devDependencies:
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@vitest/coverage-v8':
@@ -1609,10 +1609,10 @@ importers:
 
   packages/vite-plugins:
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       postcss:
@@ -1634,10 +1634,10 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@formbricks/config-eslint':
+      '@forma/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@formbricks/config-typescript':
+      '@forma/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
       '@types/js-yaml':

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZContactAttributeKey } from "@formbricks/database/zod/contact-attribute-keys";
+import { ZContactAttributeKey } from "@forma/database/zod/contact-attribute-keys";
 
 export const ZContactAttributeKeyIdSchema = z
   .cuid2()

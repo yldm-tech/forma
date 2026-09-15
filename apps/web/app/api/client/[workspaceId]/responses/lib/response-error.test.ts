@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { Prisma, type PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@formbricks/types/errors";
+import { Prisma, type PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@forma/types/errors";
 import { handleClientResponseCreateError } from "./response-error";
 
 // Real Prisma 7 + adapter-pg P2002 shape (no meta.target; columns nested under the driver adapter).

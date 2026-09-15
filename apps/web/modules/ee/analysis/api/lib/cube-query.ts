@@ -1,5 +1,5 @@
 import "server-only";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 
 export const TENANT_MEMBER = "FeedbackRecords.tenantId";
 

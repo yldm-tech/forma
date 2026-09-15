@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { verifySsoRelinkIntent } from "@/lib/jwt";
 import { auth } from "@/modules/auth/lib/auth";
 import { getUserByEmail } from "@/modules/auth/lib/user";
@@ -54,7 +54,7 @@ const signupIntentMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/modules/auth/lib/signup-intent", () => ({
-  SIGNUP_INTENT_COOKIE_NAME: "formbricks.signup_intent",
+  SIGNUP_INTENT_COOKIE_NAME: "forma.signup_intent",
   SIGNUP_INTENT_COOKIE_OPTIONS: { httpOnly: true, secure: false, path: "/", sameSite: "lax", maxAge: 3600 },
   classifySignupIntent: signupIntentMocks.classifySignupIntent,
   createSignupIntentToken: signupIntentMocks.createSignupIntentToken,
@@ -361,7 +361,7 @@ describe("resendVerificationEmailAction", () => {
         );
         expect(signupIntentMocks.createSignupIntentToken).toHaveBeenCalledWith(mockUser.id);
         expect(cookieMocks.set).toHaveBeenCalledWith(
-          "formbricks.signup_intent",
+          "forma.signup_intent",
           "fresh-intent-token",
           expect.objectContaining({ httpOnly: true, maxAge: 3600 })
         );

@@ -4,7 +4,7 @@ import { type TLogLevel, ZLogLevel } from "./types/logger";
 const IS_PRODUCTION = !process.env.NODE_ENV || process.env.NODE_ENV === "production";
 const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
 const PROCESS_GLOBAL_KEY = "process";
-const PROCESS_HANDLERS_ATTACHED_KEY = Symbol.for("@formbricks/logger/process-handlers-attached");
+const PROCESS_HANDLERS_ATTACHED_KEY = Symbol.for("@forma/logger/process-handlers-attached");
 const NEXT_STANDALONE_APP_DIR_PATTERN = /[/\\]apps[/\\]web$/;
 const OTEL_TRANSPORT_PACKAGE_PATH =
   "node_modules/pino-opentelemetry-transport/lib/pino-opentelemetry-transport.js";
@@ -51,7 +51,7 @@ const baseLoggerConfig: LoggerOptions = {
   },
   useOnlyCustomLevels: true,
   timestamp: true,
-  name: "formbricks",
+  name: "forma",
 };
 
 /**
@@ -68,7 +68,7 @@ const buildTransport = (): LoggerOptions["transport"] => {
     process.env.OTEL_LOGS_ENABLED === "1" &&
     Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
 
-  const serviceName = process.env.OTEL_SERVICE_NAME ?? "formbricks";
+  const serviceName = process.env.OTEL_SERVICE_NAME ?? "forma";
   const serviceVersion = process.env.npm_package_version ?? "0.0.0";
 
   const buildOtelTarget = (): Pino.TransportTargetOptions => ({

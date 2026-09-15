@@ -2,8 +2,8 @@
 
 import { FileDigitIcon, FileType2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { type TLinkedEmbeddedField } from "@formbricks/types/embedded-data-resolver";
-import { TResponseVariables } from "@formbricks/types/responses";
+import { type TLinkedEmbeddedField } from "@forma/types/embedded-data-resolver";
+import { TResponseVariables } from "@forma/types/responses";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";
 
 interface ResponseVariablesProps {

@@ -1,6 +1,6 @@
 import "server-only";
 import { parse } from "csv-parse/sync";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import {
   CSV_AT_LEAST_ONE_ROW_ERROR_CODE,
   CSV_EMPTY_COLUMN_HEADERS_ERROR_CODE,

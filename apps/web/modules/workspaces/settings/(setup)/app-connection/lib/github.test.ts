@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     warn: vi.fn(),
   },
@@ -28,7 +28,7 @@ vi.mock("@/lib/cache", () => ({
   },
 }));
 
-vi.mock("@formbricks/cache", () => ({
+vi.mock("@forma/cache", () => ({
   createCacheKey: {
     custom: (...args: string[]) => args.join(":"),
   },

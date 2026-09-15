@@ -27,7 +27,7 @@ import { recordAuthorizationChecksPerRequest } from "./metrics";
  * the N+1 signal that histogram exists for.
  *
  * `getAuthorizationSurface()` reports `page` for the whole render instead of `unscoped` after the first
- * helper returns, so `formbricks_authzed_authorization_decisions_total` attributes page traffic
+ * helper returns, so `forma_authzed_authorization_decisions_total` attributes page traffic
  * correctly.
  *
  * Outside a React request scope — scripts, unit tests, any non-RSC caller — `cache()` does not
@@ -52,14 +52,14 @@ type TAuthorizationContext = {
 type TPageSurfaceSlot = { context: TAuthorizationContext | null };
 
 const globalForAuthorization = globalThis as unknown as {
-  formbricksAuthorizationContext: AsyncLocalStorage<TAuthorizationContext> | undefined;
-  formbricksAuthorizationPageSurfaceSlot: (() => TPageSurfaceSlot) | undefined;
+  formaAuthorizationContext: AsyncLocalStorage<TAuthorizationContext> | undefined;
+  formaAuthorizationPageSurfaceSlot: (() => TPageSurfaceSlot) | undefined;
 };
 
 const authorizationContext =
-  globalForAuthorization.formbricksAuthorizationContext ?? new AsyncLocalStorage<TAuthorizationContext>();
+  globalForAuthorization.formaAuthorizationContext ?? new AsyncLocalStorage<TAuthorizationContext>();
 
-globalForAuthorization.formbricksAuthorizationContext = authorizationContext;
+globalForAuthorization.formaAuthorizationContext = authorizationContext;
 
 /**
  * One slot per React request scope. In an RSC render that is the whole render pass, so a layout and
@@ -71,10 +71,10 @@ globalForAuthorization.formbricksAuthorizationContext = authorizationContext;
  * to `globalThis` so duplicated Next.js server bundles still use the same React cache key.
  */
 const getPageSurfaceSlot =
-  globalForAuthorization.formbricksAuthorizationPageSurfaceSlot ??
+  globalForAuthorization.formaAuthorizationPageSurfaceSlot ??
   reactCache((): TPageSurfaceSlot => ({ context: null }));
 
-globalForAuthorization.formbricksAuthorizationPageSurfaceSlot = getPageSurfaceSlot;
+globalForAuthorization.formaAuthorizationPageSurfaceSlot = getPageSurfaceSlot;
 
 /**
  * Whether React is holding a request scope we can hang the `page` surface on.

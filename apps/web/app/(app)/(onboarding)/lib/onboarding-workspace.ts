@@ -1,7 +1,7 @@
 import "server-only";
-import { AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
+import { TOrganization } from "@forma/types/organizations";
+import { TWorkspace } from "@forma/types/workspace";
 import { can } from "@/lib/authorization";
 import { getOrganization, updateOrganization } from "@/lib/organization/service";
 import { getUserWorkspaces, getWorkspaces } from "@/lib/workspace/service";

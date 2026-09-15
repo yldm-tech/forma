@@ -1,8 +1,8 @@
-import { LANGUAGE_CANONICAL_MAP } from "@formbricks/i18n-utils/canonical";
-import { iso639Languages } from "@formbricks/i18n-utils/utils";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyLanguage } from "@formbricks/types/surveys/types";
-import { TLanguage } from "@formbricks/types/workspace";
+import { LANGUAGE_CANONICAL_MAP } from "@forma/i18n-utils/canonical";
+import { iso639Languages } from "@forma/i18n-utils/utils";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyLanguage } from "@forma/types/surveys/types";
+import { TLanguage } from "@forma/types/workspace";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 
 // Helper function to create an i18nString from a regular string.

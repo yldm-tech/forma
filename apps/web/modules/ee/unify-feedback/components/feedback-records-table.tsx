@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import type { TFeedbackSourceFieldMapping } from "@formbricks/types/feedback-source";
+import type { TFeedbackSourceFieldMapping } from "@forma/types/feedback-source";
 import { getFeedbackRecordContactsAction, listFeedbackRecordsAction } from "@/lib/feedback-source/actions";
 import { formatDateForDisplay, formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -531,8 +531,8 @@ const FeedbackRecordRow = ({
   const value = formatValue(record, text, t, locale);
   const isLongValue = value.length > 60;
   const collectedAt = formatDateTimeForDisplay(new Date(record.collected_at), locale);
-  const isFormbricksSurveySource =
-    (record.source_type === "formbricks" || record.source_type === "formbricks_survey") && !!record.source_id;
+  const isFormaSurveySource =
+    (record.source_type === "forma" || record.source_type === "forma_survey") && !!record.source_id;
   const surveySummaryHref = `/workspaces/${workspaceId}/surveys/${record.source_id}/summary`;
 
   return (
@@ -572,7 +572,7 @@ const FeedbackRecordRow = ({
         />
       </td>
       <td className="px-4 py-3" title={record.source_name ?? undefined}>
-        {isFormbricksSurveySource ? (
+        {isFormaSurveySource ? (
           <Link
             href={surveySummaryHref}
             className="block min-w-0 truncate text-slate-700 underline underline-offset-2 hover:text-slate-900"

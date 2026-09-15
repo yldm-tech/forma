@@ -4,8 +4,8 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { APIError } from "better-auth/api";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
 import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
 import {
@@ -27,7 +27,7 @@ vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
   queueAuditEventBackground: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { user: { findUnique: vi.fn() } },
 }));
 
@@ -37,7 +37,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 // Stable context-logger so the betterAuthLogger tests can assert the local log level.
 const contextLoggerMock = { error: vi.fn(), warn: vi.fn(), info: vi.fn() };
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => contextLoggerMock) },
 }));
 
@@ -357,7 +357,7 @@ describe("betterAuthLogger (Sentry capture gating, ENG-2037)", () => {
   });
 
   // Better Auth logs handled OAuth rejections as a bare string code (redirectOnError) — the top Sentry
-  // noise source (FORMBRICKS-16Q). These must NOT be captured, only logged locally.
+  // noise source (FORMA-16Q). These must NOT be captured, only logged locally.
   test.each(["account_not_linked", "unable_to_create_user", "unable_to_get_user_info", "email_not_found"])(
     "does not capture the handled OAuth rejection code %s",
     (code) => {
@@ -417,7 +417,7 @@ describe("betterAuthLogger (Sentry capture gating, ENG-2037)", () => {
   test("preserves only an allowlisted warn-level error summary in application logs", () => {
     const dbError = Object.assign(new Error("Connection for admin@example.com included token-secret"), {
       code: "P1001",
-      databaseUrl: "postgres://user:password-secret@db.example.com/formbricks",
+      databaseUrl: "postgres://user:password-secret@db.example.com/forma",
     });
     dbError.stack = "Error: stack-secret";
 
@@ -586,7 +586,7 @@ describe("betterAuthLogger — OAuth state errors (ENG-2471)", () => {
  *
  * This drives a real `betterAuth` instance — configured with `betterAuthLogger` itself, so the whole
  * production path runs — at an OAuth callback carrying a `state` with no verification record. That is
- * exactly the reported failure (`State mismatch: verification not found`, FORMBRICKS-16G). If a future
+ * exactly the reported failure (`State mismatch: verification not found`, FORMA-16G). If a future
  * upgrade renames the code, changes the class, or stops routing it through the logger, this fails.
  */
 describe("betterAuthLogger — the real Better Auth StateError (ENG-2471 contract)", () => {
@@ -652,7 +652,7 @@ describe("betterAuthLogger — the real Better Auth StateError (ENG-2471 contrac
 });
 
 // ENG-2259: Better Auth's router logs a non-APIError as `(e.name, e)` and drops the endpoint, so the
-// capture arrived with no transaction, URL or route and FORMBRICKS-183 could not be triaged at all.
+// capture arrived with no transaction, URL or route and FORMA-183 could not be triaged at all.
 // The request context supplies the endpoint; these cases pin that it reaches Sentry AND the local log,
 // and that its absence degrades rather than breaking the capture.
 describe("betterAuthLogger (request-path tagging, ENG-2259)", () => {
@@ -751,7 +751,7 @@ describe("recordSsoCallbackOutcome (ENG-2551)", () => {
    */
   const signedInRedirect = (location: string) => {
     const response = new Response(null, { status: 302, headers: { location } });
-    response.headers.append("set-cookie", "__Secure-formbricks.session_token=abc; Path=/; HttpOnly");
+    response.headers.append("set-cookie", "__Secure-forma.session_token=abc; Path=/; HttpOnly");
     return response;
   };
 

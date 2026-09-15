@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import type { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TTemplate } from "@formbricks/types/templates";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
+import { TTemplate } from "@forma/types/templates";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { replacePresetPlaceholders } from "@/lib/utils/templates";
 import { getChannelMapping, getIndustryMapping, getRoleMapping } from "./utils";

@@ -3,7 +3,7 @@
 import type React from "react";
 import { type ReactNode, memo, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import type { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { cn } from "@/lib/cn";
 import {
   type TAiDraftQuestion,

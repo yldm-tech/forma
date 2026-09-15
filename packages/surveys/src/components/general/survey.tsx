@@ -1,7 +1,7 @@
 import { type JSX } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { applyIngestContract } from "@formbricks/types/embedded-data-ingest";
+import { applyIngestContract } from "@forma/types/embedded-data-ingest";
 import {
   RESERVED_FIELD_CATALOG,
   coerceToEmbeddedDataType,
@@ -12,23 +12,23 @@ import {
   listShadowingNames,
   mergeReservedValues,
   projectClientReservedValues,
-} from "@formbricks/types/embedded-data-resolver";
-import { SurveyContainerProps } from "@formbricks/types/formbricks-surveys";
-import { TJsFileUploadParams, type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
+} from "@forma/types/embedded-data-resolver";
+import { SurveyContainerProps } from "@forma/types/forma-surveys";
+import { TJsFileUploadParams, type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import type {
   TResponseData,
   TResponseTtc,
   TResponseUpdate,
   TResponseVariables,
-} from "@formbricks/types/responses";
-import { TUploadFileConfig } from "@formbricks/types/storage";
-import { getLinkSurveyCardMaxWidth } from "@formbricks/types/styling";
-import { TSurveyBlock, TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
+} from "@forma/types/responses";
+import { TUploadFileConfig } from "@forma/types/storage";
+import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
 import { BlockConditional } from "@/components/general/block-conditional";
 import { EndingCard } from "@/components/general/ending-card";
 import { ErrorComponent } from "@/components/general/error-component";
-import { FormbricksBranding } from "@/components/general/formbricks-branding";
+import { FormaBranding } from "@/components/general/forma-branding";
 import { LanguageSwitch } from "@/components/general/language-switch";
 import { ProgressBar } from "@/components/general/progress-bar";
 import { RecaptchaBranding } from "@/components/general/recaptcha-branding";
@@ -249,7 +249,7 @@ export function Survey({
               // host-supplied code (js-core's event bus → the host page). A throw here would be
               // caught as a SEND failure — the respondent shown an error and a retry for a response
               // the server already created. Never let a host page do that.
-              console.error("Formbricks: onResponseCreated handler threw", error);
+              console.error("Forma: onResponseCreated handler threw", error);
             }
           },
         },
@@ -377,7 +377,7 @@ export function Survey({
       Object.entries(result.data).filter(([key]) => {
         if (!elementIdSet.has(key)) return true;
         console.warn(
-          `Formbricks: "${key}" ${INGEST_DROP_MESSAGES.element_id_collision}, so the value was ignored.`
+          `Forma: "${key}" ${INGEST_DROP_MESSAGES.element_id_collision}, so the value was ignored.`
         );
         return false;
       })
@@ -673,7 +673,7 @@ export function Survey({
                 surveyState.enableBootstrapResponseCreate();
                 await persistSurveyStateSnapshot({ displayId: null });
               } else {
-                console.error("Formbricks: Failed to recover responseId from displayId", {
+                console.error("Forma: Failed to recover responseId from displayId", {
                   displayId: progress.surveyStateSnapshot.displayId,
                   error: responseLookup.error,
                 });
@@ -742,7 +742,7 @@ export function Survey({
         setPendingSyncCount(0);
 
         if (result.syncedCount > 0) {
-          console.log(`Formbricks: Synced ${result.syncedCount} offline response(s)`);
+          console.log(`Forma: Synced ${result.syncedCount} offline response(s)`);
         }
 
         // Clean up IndexedDB and mark sending as finished after successful sync
@@ -1165,7 +1165,7 @@ export function Survey({
   useEffect(() => {
     if (isResponseSendingFinished && isSurveyFinished) {
       // Post a message to the parent window indicating that the survey is completed.
-      window.parent.postMessage("formbricksSurveyCompleted", "*"); // NOSONAR typescript:S2819 // We can't check the targetOrigin here because we don't know the parent window's origin.
+      window.parent.postMessage("formaSurveyCompleted", "*"); // NOSONAR typescript:S2819 // We can't check the targetOrigin here because we don't know the parent window's origin.
       // Gated on isResponseSendingFinished, so outside preview/offline the ack has landed and the
       // queue has stamped the persisted responseId onto surveyState (ENG-1846).
       onFinished?.(surveyState?.responseId ?? undefined);
@@ -1533,7 +1533,7 @@ export function Survey({
                 "flex flex-col justify-center gap-2",
                 isCloseButtonVisible || isLanguageSwitchVisible ? "p-2" : "p-3"
               )}>
-              {isBrandingEnabled ? <FormbricksBranding /> : null}
+              {isBrandingEnabled ? <FormaBranding /> : null}
               {isSpamProtectionEnabled ? <RecaptchaBranding /> : null}
             </div>
           </div>

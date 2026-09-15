@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type TDesiredEmbeddedField } from "@formbricks/types/embedded-data-mapping";
+import { type TDesiredEmbeddedField } from "@forma/types/embedded-data-mapping";
 import {
   type TCurrentEmbeddedField,
   planEmbeddedDataReconcile,

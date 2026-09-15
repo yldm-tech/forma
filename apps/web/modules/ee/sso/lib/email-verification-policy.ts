@@ -60,7 +60,7 @@ export const SSO_EMAIL_VERIFICATION_TRUST: Record<TSsoIdentityProvider, TSsoEmai
  * Auth's coalesced value:
  *
  * - asserted `false` → NOT verified. This is the case the ticket exists for: an IdP that permits
- *   self-registration with an unverified address must not yield a verified Formbricks account.
+ *   self-registration with an unverified address must not yield a verified Forma account.
  * - asserted `true` → verified.
  * - **absent → verified.** An IdP that never sends the claim is not asserting anything, and treating
  *   its silence as a denial would flip every new user to unverified on upgrade for any self-hosted

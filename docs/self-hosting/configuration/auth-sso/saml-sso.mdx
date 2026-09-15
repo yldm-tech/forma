@@ -1,41 +1,41 @@
 ---
 title: "SAML SSO"
 icon: "user-shield"
-description: "Configure SAML Single Sign-On (SSO) for secure enterprise authentication with your Formbricks instance."
+description: "Configure SAML Single Sign-On (SSO) for secure enterprise authentication with your Forma instance."
 ---
 
-<Note>SAML SSO is part of the Formbricks [Enterprise Edition](/self-hosting/advanced/license)</Note>
+<Note>SAML SSO is part of the Forma [Enterprise Edition](/self-hosting/advanced/license)</Note>
 
 ## Overview
 
-Formbricks supports SAML Single Sign-On (SSO) to enable secure, centralized authentication. With SAML, organizations can integrate their existing Identity Provider (IdP) infrastructure for streamlined access management. Formbricks internally uses BoxyHQ's SAML Jackson to manage SAML connections. SAML Jackson is a service provided by BoxyHQ that manages SAML connection details and validates assertions. It is part of the Formbricks server.
+Forma supports SAML Single Sign-On (SSO) to enable secure, centralized authentication. With SAML, organizations can integrate their existing Identity Provider (IdP) infrastructure for streamlined access management. Forma internally uses BoxyHQ's SAML Jackson to manage SAML connections. SAML Jackson is a service provided by BoxyHQ that manages SAML connection details and validates assertions. It is part of the Forma server.
 
 To learn more about SAML Jackson, please refer to the [BoxyHQ SAML Jackson documentation](https://boxyhq.com/docs/jackson/deploy).
 
-## How SAML works in Formbricks
+## How SAML works in Forma
 
-SAML (Security Assertion Markup Language) is an XML-based standard for exchanging authentication and authorization data between an Identity Provider (IdP) and Formbricks. Here's how the integration works with BoxyHQ Jackson embedded into the flow:
+SAML (Security Assertion Markup Language) is an XML-based standard for exchanging authentication and authorization data between an Identity Provider (IdP) and Forma. Here's how the integration works with BoxyHQ Jackson embedded into the flow:
 
 1. **Login Initiation:**  
-   The user clicks `Continue with SAML SSO` on Formbricks.
+   The user clicks `Continue with SAML SSO` on Forma.
 
 2. **Configuration Retrieval via BoxyHQ:**  
-   Formbricks requests the SAML connection details from BoxyHQ Jackson. BoxyHQ securely stores and manages the IdP configuration, including endpoints, certificates, and other metadata.
+   Forma requests the SAML connection details from BoxyHQ Jackson. BoxyHQ securely stores and manages the IdP configuration, including endpoints, certificates, and other metadata.
 
 3. **Redirection:**  
-   With the configuration details from BoxyHQ, Formbricks redirects the user to the IdP’s login page (e.g., Okta).
+   With the configuration details from BoxyHQ, Forma redirects the user to the IdP’s login page (e.g., Okta).
 
 4. **Authentication:**  
    The user authenticates directly with the IdP.
 
 5. **SAML Response:**  
-   Upon successful authentication, the IdP sends a signed SAML response back to Formbricks via the user’s browser.
+   Upon successful authentication, the IdP sends a signed SAML response back to Forma via the user’s browser.
 
 6. **Validation via BoxyHQ:**  
-   BoxyHQ Jackson validates the SAML assertion—verifying the signature and extracting user details—before sending the validated data back to Formbricks.
+   BoxyHQ Jackson validates the SAML assertion—verifying the signature and extracting user details—before sending the validated data back to Forma.
 
 7. **Access Granted:**  
-   Formbricks logs the user in using the verified information.
+   Forma logs the user in using the verified information.
 
 ## SAML Auth Flow Sequence Diagram
 
@@ -44,11 +44,11 @@ Below is a sequence diagram illustrating the complete SAML authentication flow w
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant FB as Formbricks (SP)
+    participant FB as Forma (SP)
     participant BHQ as BoxyHQ Jackson
     participant OK as Okta (IdP)
 
-    Note over FB,BHQ: (Setup phase, done beforehand)<br/>1. Admin configures SAML metadata in Formbricks<br/>2. BoxyHQ stores & manages SAML connection details
+    Note over FB,BHQ: (Setup phase, done beforehand)<br/>1. Admin configures SAML metadata in Forma<br/>2. BoxyHQ stores & manages SAML connection details
 
     U->>FB: Clicks “Continue with SAML SSO"
     FB->>BHQ: Request SAML connection details
@@ -59,25 +59,25 @@ sequenceDiagram
     OK->>FB: Sends SAML Assertion (Callback URL)
     FB->>BHQ: Validates assertion & extracts user info
     BHQ->>FB: Returns validated user data
-    FB->>U: Logs user into Formbricks
+    FB->>U: Logs user into Forma
 
 ```
 
 ## Setting Up SAML SSO
 
-To configure SAML SSO in Formbricks, follow these steps:
+To configure SAML SSO in Forma, follow these steps:
 
 <Steps>
   <Step title="Database Setup">
-    Configure a dedicated database for SAML by setting the `SAML_DATABASE_URL` environment variable in your `docker-compose.yml` file (e.g., `postgres://postgres:postgres@postgres:5432/formbricks-saml`). If you're using a self-signed certificate for Postgres, include the `sslmode=disable` parameter.
+    Configure a dedicated database for SAML by setting the `SAML_DATABASE_URL` environment variable in your `docker-compose.yml` file (e.g., `postgres://postgres:postgres@postgres:5432/forma-saml`). If you're using a self-signed certificate for Postgres, include the `sslmode=disable` parameter.
   </Step>
   
   <Step title="IdP Application">
-    Create a SAML application in your IdP by following your provider's instructions. See [SAML with Identity Providers](/self-hosting/configuration/auth-sso/setup-saml-with-identity-providers) for the values Formbricks expects.
+    Create a SAML application in your IdP by following your provider's instructions. See [SAML with Identity Providers](/self-hosting/configuration/auth-sso/setup-saml-with-identity-providers) for the values Forma expects.
   </Step>
 
   <Step title="User Provisioning">
-    Provision users in your IdP and configure access to the IdP SAML app for all your users (who need access to Formbricks).
+    Provision users in your IdP and configure access to the IdP SAML app for all your users (who need access to Forma).
   </Step>
     
   <Step title="Metadata">
@@ -85,11 +85,11 @@ To configure SAML SSO in Formbricks, follow these steps:
   </Step>
 
   <Step title="Metadata Setup">
-    Create a file called `connection.xml` in your self-hosted Formbricks instance's `formbricks/saml-connection` (use `formbricks/apps/web/saml-connection` for development) directory and paste the XML metadata from your IdP into it. Please create the directory if it doesn't exist. Your metadata file should start with a tag like this: `<?xml version="1.0" encoding="UTF-8"?><...>` or `<md:EntityDescriptor entityID="...">`. Please remove any extra text from the metadata.
+    Create a file called `connection.xml` in your self-hosted Forma instance's `forma/saml-connection` (use `forma/apps/web/saml-connection` for development) directory and paste the XML metadata from your IdP into it. Please create the directory if it doesn't exist. Your metadata file should start with a tag like this: `<?xml version="1.0" encoding="UTF-8"?><...>` or `<md:EntityDescriptor entityID="...">`. Please remove any extra text from the metadata.
   </Step>
 
-  <Step title="Restart Formbricks">
-    Restart Formbricks to apply the changes. You can do this by running `docker compose down` and then `docker compose up -d`.
+  <Step title="Restart Forma">
+    Restart Forma to apply the changes. You can do this by running `docker compose down` and then `docker compose up -d`.
   </Step>
 </Steps>
 

@@ -624,7 +624,7 @@ async function validatePackage(
 async function main(): Promise<void> {
   console.log("\n");
   console.log("╔══════════════════════════════════════════════════════════╗");
-  console.log("║         Translation Key Validation for Formbricks        ║");
+  console.log("║         Translation Key Validation for Forma        ║");
   console.log("╚══════════════════════════════════════════════════════════╝");
   console.log();
 

@@ -3,13 +3,13 @@
 import { Dispatch, SetStateAction, useState } from "react";
 import toast from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
-import { logger } from "@formbricks/logger";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TUser } from "@formbricks/types/user";
+import { logger } from "@forma/logger";
+import { TOrganization } from "@forma/types/organizations";
+import { TUser } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
   ACCOUNT_DELETION_SOLE_OWNER_BLOCK_MESSAGE,
-  FORMBRICKS_CLOUD_ACCOUNT_DELETION_SURVEY_URL,
+  FORMA_CLOUD_ACCOUNT_DELETION_SURVEY_URL,
 } from "@/modules/account/constants";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { authClient } from "@/modules/auth/lib/auth-client";
@@ -24,7 +24,7 @@ interface DeleteAccountModalProps {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   user: TUser;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   organizationsWithSingleOwner: TOrganization[];
 }
 
@@ -33,7 +33,7 @@ export const DeleteAccountModal = ({
   setOpen,
   open,
   user,
-  isFormbricksCloud,
+  isFormaCloud,
   organizationsWithSingleOwner,
 }: Readonly<DeleteAccountModalProps>) => {
   const { t } = useTranslation();
@@ -91,8 +91,8 @@ export const DeleteAccountModal = ({
       logger.error({ error: signOutError }, "Failed to sign out after account deletion");
     }
 
-    if (isFormbricksCloud) {
-      globalThis.location.replace(FORMBRICKS_CLOUD_ACCOUNT_DELETION_SURVEY_URL);
+    if (isFormaCloud) {
+      globalThis.location.replace(FORMA_CLOUD_ACCOUNT_DELETION_SURVEY_URL);
     } else {
       globalThis.location.replace("/auth/login");
     }

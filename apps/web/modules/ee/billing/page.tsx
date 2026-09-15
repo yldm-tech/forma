@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { env } from "@/lib/env";
 import {
   getMonthlyOrganizationResponseCount,
@@ -21,7 +21,7 @@ export const PricingPage = async (props: { params: Promise<{ organizationId: str
 
   const { organization, isMember, session } = await getOrganizationAuth(params.organizationId);
 
-  if (!IS_FORMBRICKS_CLOUD) {
+  if (!IS_FORMA_CLOUD) {
     notFound();
   }
 

@@ -10,7 +10,7 @@ import {
   ZWorkflowStatus,
   ZWorkflowTriggerRunPayload,
   ZWorkflowTriggerType,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import type { Workflow, WorkflowRun, WorkflowRunLog, WorkflowVersion } from "../src/prisma";
 
 export const ZWorkflow = z.object({

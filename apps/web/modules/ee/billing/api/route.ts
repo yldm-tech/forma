@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { RequestBodyTooLargeError, readRequestBodyWithLimit } from "@/app/lib/api/request-body";
 import { webhookHandler } from "@/modules/ee/billing/api/lib/stripe-webhook";
 

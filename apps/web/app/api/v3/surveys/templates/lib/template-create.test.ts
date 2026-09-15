@@ -9,7 +9,7 @@ import { createTrustedTemplateSurveyResponse } from "./template-create";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       error: vi.fn(),

@@ -1,4 +1,4 @@
-import { TUser } from "@formbricks/types/user";
+import { TUser } from "@forma/types/user";
 
 export const mockUser: TUser = {
   id: "cm5xj580r00000cmgdj9ohups",

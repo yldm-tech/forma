@@ -1,6 +1,6 @@
-import { Prisma } from "@formbricks/database/prisma";
-import type { PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
+import { Prisma } from "@forma/database/prisma";
+import type { PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
 
 /**
  * Type guard for Prisma "known request" errors, optionally narrowed to a specific error code.

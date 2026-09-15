@@ -208,7 +208,7 @@ export const ZSurveyCTAElement = ZSurveyElementBase.extend({
       // Validate URL format only when buttonExternal is true and URL is provided. The scheme has to be
       // constrained, not just parseable: the renderer hands this value to `window.open()`, so accepting
       // any `z.url()`-parseable value (which includes `javascript:`) made an editable survey field
-      // stored XSS — on a link survey that executes on the Formbricks origin.
+      // stored XSS — on a link survey that executes on the Forma origin.
       ctx.addIssue({
         code: "custom",
         message: "Please enter a valid http(s), mailto: or tel: URL",

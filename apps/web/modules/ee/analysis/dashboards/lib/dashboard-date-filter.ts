@@ -1,4 +1,4 @@
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { DASHBOARD_DATE_PRESETS } from "@/modules/ee/analysis/lib/date-presets";
 
 // The dashboard-level date filter only ever overrides the "Collected at" time dimension, as

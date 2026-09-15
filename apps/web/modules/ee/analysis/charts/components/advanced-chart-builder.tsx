@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { DimensionsPanel } from "@/modules/ee/analysis/charts/components/dimensions-panel";
 import { FiltersPanel } from "@/modules/ee/analysis/charts/components/filters-panel";
 import { MeasuresPanel } from "@/modules/ee/analysis/charts/components/measures-panel";

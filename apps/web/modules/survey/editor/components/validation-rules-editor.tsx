@@ -2,19 +2,19 @@
 
 import { useTranslation } from "react-i18next";
 import { v7 as uuidv7 } from "uuid";
-import { TAllowedFileExtension } from "@formbricks/types/storage";
+import { TAllowedFileExtension } from "@forma/types/storage";
 import {
   TSurveyElement,
   TSurveyElementTypeEnum,
   TSurveyOpenTextElementInputType,
   TValidationLogic,
-} from "@formbricks/types/surveys/elements";
+} from "@forma/types/surveys/elements";
 import {
   TAddressField,
   TContactInfoField,
   TValidationRule,
   TValidationRuleType,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { AdvancedOptionToggle } from "@/modules/ui/components/advanced-option-toggle";
 import { RULE_TYPE_CONFIG } from "../lib/validation-rules-config";
 import {

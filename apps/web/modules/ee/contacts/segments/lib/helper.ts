@@ -1,6 +1,6 @@
-import { prisma } from "@formbricks/database";
-import { InvalidInputError } from "@formbricks/types/errors";
-import { TBaseFilters, TSegmentSurveyInteractionFilter } from "@formbricks/types/segment";
+import { prisma } from "@forma/database";
+import { InvalidInputError } from "@forma/types/errors";
+import { TBaseFilters, TSegmentSurveyInteractionFilter } from "@forma/types/segment";
 import { getSegment } from "@/modules/ee/contacts/segments/lib/segments";
 import {
   SURVEY_WORKSPACE_LOOKUP_BATCH_SIZE,

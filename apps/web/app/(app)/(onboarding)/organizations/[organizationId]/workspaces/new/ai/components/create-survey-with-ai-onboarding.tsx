@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { TUserLocale } from "@formbricks/types/user";
+import type { TUserLocale } from "@forma/types/user";
 import { CreateWithAIForm } from "@/modules/survey/components/template-list/components/create-with-ai-form";
 import { Header } from "@/modules/ui/components/header";
 

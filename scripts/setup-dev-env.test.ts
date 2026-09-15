@@ -9,7 +9,7 @@ const setupDevEnvScriptPath = fileURLToPath(new URL("./setup-dev-env.sh", import
 const tempDirs: string[] = [];
 
 const createTempDir = (): string => {
-  const tempDir = mkdtempSync(join(tmpdir(), "formbricks-authzed-dev-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "forma-authzed-dev-"));
   tempDirs.push(tempDir);
   return tempDir;
 };
@@ -52,8 +52,8 @@ describe("scripts/setup-dev-env.sh AuthZed setup", () => {
 
     const commandEnv = {
       ...process.env,
-      FORMBRICKS_ENV_PATH: envPath,
-      FORMBRICKS_ENV_TEMPLATE_PATH: templatePath,
+      FORMA_ENV_PATH: envPath,
+      FORMA_ENV_TEMPLATE_PATH: templatePath,
     };
 
     execFileSync("bash", [setupDevEnvScriptPath], { env: commandEnv });

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { BadgeContent } from "./components/badge-content";
 
 interface IdBadgeProps {

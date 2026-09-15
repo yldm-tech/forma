@@ -4,7 +4,7 @@ description: "AI enrichment that adds sentiment, emotions, and a consolidated la
 icon: "sparkles"
 ---
 
-Enrichment automatically adds AI-generated context to your open-text feedback. When a Feedback Record has a text answer (`value_text`), Formbricks analyzes it and attaches three kinds of enrichment:
+Enrichment automatically adds AI-generated context to your open-text feedback. When a Feedback Record has a text answer (`value_text`), Forma analyzes it and attaches three kinds of enrichment:
 
 - **Sentiment**: how positive or negative the feedback is.
 - **Emotions**: which emotions the text expresses.
@@ -17,7 +17,7 @@ These fields turn free text, which is normally hard to count, into structured si
 Enrichment is **automatic and per-record**. Individual records are never triggered or configured by hand; the only setting is the translation target language, which is configured once at the service level (see [Language consolidation](#language-consolidation)):
 
 1. A Feedback Record is ingested with a text answer in `value_text`.
-2. Formbricks enriches the record **asynchronously**. The enrichment fields are absent until processing finishes, so a record may show as **Not enriched** for a short time after it arrives.
+2. Forma enriches the record **asynchronously**. The enrichment fields are absent until processing finishes, so a record may show as **Not enriched** for a short time after it arrives.
 3. Once complete, the sentiment, emotion, and translation fields appear on the record and in charts.
 
 Only records with open text receive AI enrichment. Records that only carry a rating, NPS score, or categorical choice have no text to analyze. Categorical answers are still consolidated across languages through their **Value ID**, which is not AI enrichment. See [Consolidating the same option across languages](#consolidating-the-same-option-across-languages).
@@ -90,13 +90,13 @@ This means an analyst working in English can read, cluster, and chart feedback t
 
 <Note>
   The target language is set at the service level for your organization. On
-  Formbricks Cloud it is managed for you; self-hosted instances configure it in
-  the Hub service. See [Formbricks Hub](/unify-feedback/formbricks-hub).
+  Forma Cloud it is managed for you; self-hosted instances configure it in
+  the Hub service. See [Forma Hub](/unify-feedback/forma-hub).
 </Note>
 
 ### Consolidating the same option across languages
 
-For multiple-choice answers, Formbricks also carries a stable **Value ID**, the option's identifier from the source system (for example, a survey choice id). This lets charts group the **same option** together even when its label was captured in different languages or later edited, instead of splitting it into a separate category per localized label.
+For multiple-choice answers, Forma also carries a stable **Value ID**, the option's identifier from the source system (for example, a survey choice id). This lets charts group the **same option** together even when its label was captured in different languages or later edited, instead of splitting it into a separate category per localized label.
 
 When charting choice questions, group by **Value (Option)** rather than the raw text value to keep categories consolidated across languages.
 
@@ -107,9 +107,9 @@ All enrichment fields are available in [Dashboards & Charts](/unify-feedback/das
 ## Requirements
 
 - A Feedback Dataset with records that contain open text.
-- Enrichment runs on the Formbricks Hub. No local AI provider configuration is required to read enrichment fields.
+- Enrichment runs on the Forma Hub. No local AI provider configuration is required to read enrichment fields.
 
 <Note>
-  Unify Feedback is an enterprise feature. Enable it on Formbricks Cloud with a
+  Unify Feedback is an enterprise feature. Enable it on Forma Cloud with a
   paid plan, or self-host with a license.
 </Note>

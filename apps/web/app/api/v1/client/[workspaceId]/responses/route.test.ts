@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { MAX_INGESTED_VALUE_BYTES } from "@formbricks/types/embedded-data-ingest";
+import { MAX_INGESTED_VALUE_BYTES } from "@forma/types/embedded-data-ingest";
 import { POST } from "./route";
 
 /**

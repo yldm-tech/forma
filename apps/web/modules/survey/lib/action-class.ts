@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { ActionClass } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ActionClass } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 
 export const getActionClasses = reactCache(async (workspaceId: string): Promise<ActionClass[]> => {

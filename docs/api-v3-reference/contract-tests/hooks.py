@@ -50,7 +50,7 @@ def _load_fixtures() -> dict[str, Any]:
     except (OSError, ValueError) as exc:
         raise RuntimeError(
             f"Contract fixtures at {path} are missing or unreadable. Run "
-            "`pnpm --filter=@formbricks/database db:seed:contract` first, or point "
+            "`pnpm --filter=@forma/database db:seed:contract` first, or point "
             f"{FIXTURES_ENV_VAR} at the file it wrote. Running without it would test an empty "
             "workspace and report a green run that proves nothing."
         ) from exc
@@ -63,7 +63,7 @@ _FIXTURES = _load_fixtures()
 if not _FIXTURES.get(WORKSPACE_FIELD):
     raise RuntimeError(
         f"Contract fixtures at {os.environ.get(FIXTURES_ENV_VAR) or DEFAULT_FIXTURES_PATH} carry no "
-        f"'{WORKSPACE_FIELD}'. Re-run `pnpm --filter=@formbricks/database db:seed:contract` to "
+        f"'{WORKSPACE_FIELD}'. Re-run `pnpm --filter=@forma/database db:seed:contract` to "
         "regenerate them. Running without it would test an empty workspace and report a green run "
         "that proves nothing."
     )

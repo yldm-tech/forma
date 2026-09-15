@@ -68,7 +68,7 @@ test.describe("Survey Styling", async () => {
 
     // Verify Typography Variables
     await page.waitForTimeout(1000);
-    let css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    let css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toContain("--fb-element-headline-color: #aa0000");
     expect(css).toContain("--fb-element-description-color: #00aa00");
     expect(css).toContain("--fb-element-headline-font-size: 24px");
@@ -94,7 +94,7 @@ test.describe("Survey Styling", async () => {
     await setDimension(page, "Shadow", "0 4px 6px -1px rgba(0, 0, 0, 0.1)");
 
     await page.waitForTimeout(1000);
-    css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toContain("--fb-input-background-color: #eeeeee");
     expect(css).toContain("--fb-input-border-color: #cccccc");
     expect(css).toContain("--fb-input-text-color: #024eff");
@@ -120,7 +120,7 @@ test.describe("Survey Styling", async () => {
 
     await page.waitForTimeout(1000);
     // Partial verification for Buttons to ensure state is good before moving to Options
-    css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toContain("--fb-button-bg-color: #ff00ff");
     expect(css).toContain("--fb-button-text-color: #ffffff");
     expect(css).toContain("--fb-button-border-radius: 12px");
@@ -142,7 +142,7 @@ test.describe("Survey Styling", async () => {
     await setDimension(page, "Font Size", "15");
 
     await page.waitForTimeout(1000);
-    css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toContain("--fb-option-bg-color: #dddddd");
     expect(css).toContain("--fb-option-label-color: #111111");
     expect(css).toContain("--fb-option-border-color: #999999");
@@ -162,7 +162,7 @@ test.describe("Survey Styling", async () => {
     await setDimension(page, "Roundness", "20");
 
     await page.waitForTimeout(1000);
-    css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toContain("--fb-progress-track-height: 15px");
     expect(css).toContain("--fb-progress-track-border-radius: 20px");
   });
@@ -199,7 +199,7 @@ test.describe("Survey Styling", async () => {
     await page.waitForTimeout(1000);
 
     // Verify non-color CSS vars are set before suggesting
-    let cssBefore = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    let cssBefore = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(cssBefore).toContain("--fb-input-border-radius: 12px");
     expect(cssBefore).toContain("--fb-input-padding-y: 20px");
     expect(cssBefore).toContain("--fb-option-border-radius: 10px");
@@ -218,7 +218,7 @@ test.describe("Survey Styling", async () => {
     // Wait for the preview to update with derived colors
     await page.waitForTimeout(1500);
 
-    const css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    const css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toBeDefined();
 
     // --- Verify colors ARE derived from brand (not hardcoded) ---
@@ -278,7 +278,7 @@ test.describe("Survey Styling", async () => {
     // Wait for the preview to render with default styling
     await page.waitForTimeout(1500);
 
-    const css = await page.evaluate(() => document.getElementById("formbricks__css__custom")?.innerHTML);
+    const css = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(css).toBeDefined();
 
     // On initial load (no saved styling), button and progress bar should derive from brand color (#1e40af)
@@ -370,9 +370,7 @@ test.describe("Survey Styling", async () => {
     // utility is imported with `important` (CSS layer), which outranks the
     // unlayered `!important` from addCustomThemeToDom.  The variable IS set
     // correctly though, proving the form → preview pipeline works.
-    const editorCss = await page.evaluate(
-      () => document.getElementById("formbricks__css__custom")?.innerHTML
-    );
+    const editorCss = await page.evaluate(() => document.getElementById("forma__css__custom")?.innerHTML);
     expect(editorCss).toContain("--fb-element-headline-font-size: 30px");
   });
 });

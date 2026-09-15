@@ -17,7 +17,7 @@ import { ZV3SurveyGenerateBody } from "@/app/api/v3/surveys/generate/schemas";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { streamV3SurveyGeneration } from "../lib/operations";
 
-// @formbricks/ai pulls the provider SDKs and posthog-node, none of which are edge-compatible.
+// @forma/ai pulls the provider SDKs and posthog-node, none of which are edge-compatible.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

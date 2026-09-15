@@ -1,7 +1,7 @@
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { FORMBRICKS_CLIENT_IP_HEADER } from "@/lib/utils/client-ip";
+import { FORMA_CLIENT_IP_HEADER } from "@/lib/utils/client-ip";
 import { config, proxy } from "./proxy";
 
 const { mockGetProxySession, mockIsPublicDomainConfigured, mockIsRequestFromPublicDomain } = vi.hoisted(
@@ -47,7 +47,7 @@ vi.mock("@/lib/utils/url", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),
@@ -117,7 +117,7 @@ describe("proxy", () => {
 
     const response = await proxy(new NextRequest("http://localhost:3000/workspaces/ws-123/surveys"));
 
-    expect(response.cookies.get("formbricks-workspace-id")?.value).toBe("ws-123");
+    expect(response.cookies.get("forma-workspace-id")?.value).toBe("ws-123");
   });
 
   test("does not set the active-workspace cookie on non-workspace paths", async () => {
@@ -127,29 +127,29 @@ describe("proxy", () => {
       new NextRequest("http://localhost:3000/organizations/org-1/settings/general")
     );
 
-    expect(response.cookies.get("formbricks-workspace-id")).toBeUndefined();
+    expect(response.cookies.get("forma-workspace-id")).toBeUndefined();
   });
 
   test("does not re-set the active-workspace cookie when the request already carries the same value", async () => {
     mockGetProxySession.mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/workspaces/ws-123/surveys");
-    request.cookies.set("formbricks-workspace-id", "ws-123");
+    request.cookies.set("forma-workspace-id", "ws-123");
 
     const response = await proxy(request);
 
-    expect(response.cookies.get("formbricks-workspace-id")).toBeUndefined();
+    expect(response.cookies.get("forma-workspace-id")).toBeUndefined();
   });
 
   test("updates the active-workspace cookie when navigating to a different workspace", async () => {
     mockGetProxySession.mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/workspaces/ws-456/surveys");
-    request.cookies.set("formbricks-workspace-id", "ws-123");
+    request.cookies.set("forma-workspace-id", "ws-123");
 
     const response = await proxy(request);
 
-    expect(response.cookies.get("formbricks-workspace-id")?.value).toBe("ws-456");
+    expect(response.cookies.get("forma-workspace-id")?.value).toBe("ws-456");
   });
 
   test.each([
@@ -165,11 +165,11 @@ describe("proxy", () => {
     const request = new NextRequest("http://localhost:3000/workspaces/ws-deleted/settings/workspace/tags", {
       headers: { [prefetchHeader]: "1" },
     });
-    request.cookies.set("formbricks-workspace-id", "ws-surviving");
+    request.cookies.set("forma-workspace-id", "ws-surviving");
 
     const response = await proxy(request);
 
-    expect(response.cookies.get("formbricks-workspace-id")).toBeUndefined();
+    expect(response.cookies.get("forma-workspace-id")).toBeUndefined();
   });
 
   test("still sets the active-workspace cookie on a client-side navigation to a workspace", async () => {
@@ -180,44 +180,44 @@ describe("proxy", () => {
     const request = new NextRequest("http://localhost:3000/workspaces/ws-456/surveys", {
       headers: { rsc: "1", "next-router-state-tree": "%5B%22%22%5D" },
     });
-    request.cookies.set("formbricks-workspace-id", "ws-123");
+    request.cookies.set("forma-workspace-id", "ws-123");
 
     const response = await proxy(request);
 
-    expect(response.cookies.get("formbricks-workspace-id")?.value).toBe("ws-456");
+    expect(response.cookies.get("forma-workspace-id")?.value).toBe("ws-456");
   });
 
   test("overwrites a caller-supplied private IP header with the canonical trusted hop", async () => {
     mockGetProxySession.mockResolvedValue(null);
     const request = new NextRequest("http://localhost:3000/api/auth/sign-in/email", {
       headers: {
-        [FORMBRICKS_CLIENT_IP_HEADER]: "198.51.100.99",
+        [FORMA_CLIENT_IP_HEADER]: "198.51.100.99",
         "x-forwarded-for": "198.51.100.10, 203.0.113.7:54321",
       },
     });
 
     const response = await proxy(request);
 
-    expect(response.headers.get(`x-middleware-request-${FORMBRICKS_CLIENT_IP_HEADER}`)).toBe("203.0.113.7");
-    expect(response.headers.get(FORMBRICKS_CLIENT_IP_HEADER)).toBeNull();
+    expect(response.headers.get(`x-middleware-request-${FORMA_CLIENT_IP_HEADER}`)).toBe("203.0.113.7");
+    expect(response.headers.get(FORMA_CLIENT_IP_HEADER)).toBeNull();
   });
 
   test("removes a caller-supplied private IP header when trusted-hop resolution fails", async () => {
     mockGetProxySession.mockResolvedValue(null);
     const request = new NextRequest("http://localhost:3000/api/auth/sign-in/email", {
       headers: {
-        [FORMBRICKS_CLIENT_IP_HEADER]: "198.51.100.99",
+        [FORMA_CLIENT_IP_HEADER]: "198.51.100.99",
         "x-forwarded-for": "not-an-ip",
       },
     });
 
     const response = await proxy(request);
 
-    expect(response.headers.get(`x-middleware-request-${FORMBRICKS_CLIENT_IP_HEADER}`)).toBeNull();
+    expect(response.headers.get(`x-middleware-request-${FORMA_CLIENT_IP_HEADER}`)).toBeNull();
     expect(response.headers.get("x-middleware-override-headers")?.split(",")).not.toContain(
-      FORMBRICKS_CLIENT_IP_HEADER
+      FORMA_CLIENT_IP_HEADER
     );
-    expect(response.headers.get(FORMBRICKS_CLIENT_IP_HEADER)).toBeNull();
+    expect(response.headers.get(FORMA_CLIENT_IP_HEADER)).toBeNull();
   });
 });
 

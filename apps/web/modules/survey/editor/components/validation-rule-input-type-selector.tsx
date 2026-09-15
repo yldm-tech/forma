@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TSurveyOpenTextElementInputType } from "@formbricks/types/surveys/elements";
+import { TSurveyOpenTextElementInputType } from "@forma/types/surveys/elements";
 import {
   Select,
   SelectContent,

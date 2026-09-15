@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
@@ -52,14 +52,14 @@ export const ContactsPageLayout = async ({
             feature={upgradeFeature}
             buttons={[
               {
-                text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: IS_FORMBRICKS_CLOUD ? organizationBillingPath : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
+                text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                href: IS_FORMA_CLOUD ? organizationBillingPath : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
               },
               {
                 text: t("common.learn_more"),
-                href: IS_FORMBRICKS_CLOUD
+                href: IS_FORMA_CLOUD
                   ? organizationBillingPath
-                  : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_contacts",
+                  : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_contacts",
               },
             ]}
           />

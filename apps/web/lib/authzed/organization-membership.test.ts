@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { OrganizationRole } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { OrganizationRole } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
 import { type TAuthzedRelationshipUpdate, getAuthzedClient } from "./client";
 import { isAuthzedEnabled } from "./config";
 import { AUTHZED_ERROR_CODES, AuthzedError } from "./errors";
@@ -17,7 +17,7 @@ const clientMocks = {
   writeRelationships: vi.fn(),
 };
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     membership: {
       findMany: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: vi.fn(),
     warn: vi.fn(),

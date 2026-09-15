@@ -5,8 +5,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { ApiKeyPermission } from "@formbricks/database/prisma-browser";
-import { TOrganizationAccess } from "@formbricks/types/api-key";
+import { ApiKeyPermission } from "@forma/database/prisma-browser";
+import { TOrganizationAccess } from "@forma/types/api-key";
 import { TOrganizationWorkspace } from "@/modules/organization/settings/api-keys/types/api-keys";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
@@ -41,7 +41,7 @@ interface AddApiKeyModalProps {
   }) => Promise<void>;
   workspaces: TOrganizationWorkspace[];
   isCreatingAPIKey: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
 }
 
 interface WorkspaceOption {
@@ -63,7 +63,7 @@ export const AddApiKeyModal = ({
   onSubmit,
   workspaces,
   isCreatingAPIKey,
-  isFormbricksCloud,
+  isFormaCloud,
 }: AddApiKeyModalProps) => {
   const { t } = useTranslation();
   const { register, getValues, handleSubmit, reset, watch } = useForm<{ label: string }>();
@@ -336,7 +336,7 @@ export const AddApiKeyModal = ({
                   </div>
                 </div>
               ))}
-              {isFormbricksCloud && (
+              {isFormaCloud && (
                 <Alert variant="info" role="status">
                   <AlertDescription>
                     {t("workspace.api_keys.organization_access_cloud_note")}

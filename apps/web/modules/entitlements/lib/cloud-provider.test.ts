@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { TOrganizationBilling } from "@formbricks/types/organizations";
+import type { TOrganizationBilling } from "@forma/types/organizations";
 import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
 import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
 import { getCloudOrganizationEntitlementsContext } from "./cloud-provider";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn() },
 }));
 

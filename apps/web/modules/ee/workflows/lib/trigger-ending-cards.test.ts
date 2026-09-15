@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TWorkflowDefinition } from "@forma/workflows";
 import { reconcileDefinitionEndingCardIds, reconcileEndingCardIds } from "./trigger-ending-cards";
 
 const buildDefinition = (endingCardIds: string[]): TWorkflowDefinition =>

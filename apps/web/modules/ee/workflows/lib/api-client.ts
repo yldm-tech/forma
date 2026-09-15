@@ -8,7 +8,7 @@ import type {
   TWorkflowRunStatus,
   TWorkflowSortBy,
   TWorkflowStatus,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { parseV3ApiError } from "@/modules/api/lib/v3-client";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };

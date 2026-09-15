@@ -1,6 +1,6 @@
-import type { TSurveyBlocks } from "@formbricks/types/surveys/blocks";
-import type { TConditionGroup, TDynamicLogicFieldValue } from "@formbricks/types/surveys/logic";
-import type { TSurveyEndings, TSurveyHiddenFields, TSurveyVariables } from "@formbricks/types/surveys/types";
+import type { TSurveyBlocks } from "@forma/types/surveys/blocks";
+import type { TConditionGroup, TDynamicLogicFieldValue } from "@forma/types/surveys/logic";
+import type { TSurveyEndings, TSurveyHiddenFields, TSurveyVariables } from "@forma/types/surveys/types";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 
 type TReferenceValidationInput = {

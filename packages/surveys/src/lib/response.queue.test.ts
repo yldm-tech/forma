@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { err, ok } from "@formbricks/types/error-handlers";
-import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@formbricks/types/errors";
-import { TResponseUpdate } from "@formbricks/types/responses";
+import { err, ok } from "@forma/types/error-handlers";
+import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
+import { TResponseUpdate } from "@forma/types/responses";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 import { ResponseQueue, _syncLocks, delay } from "./response-queue";
 import { SurveyState } from "./survey-state";
@@ -478,7 +478,7 @@ describe("ResponseQueue", () => {
 
     expect(processSpy).toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to persist pending response to IndexedDB",
+      "Forma: Failed to persist pending response to IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -540,7 +540,7 @@ describe("ResponseQueue", () => {
     expect(result.success).toBe(false);
     expect(sendSpy).not.toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to count pending responses in IndexedDB",
+      "Forma: Failed to count pending responses in IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -583,7 +583,7 @@ describe("ResponseQueue", () => {
 
     expect(result.success).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to sync persisted responses in background",
+      "Forma: Failed to sync persisted responses in background",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -682,7 +682,7 @@ describe("ResponseQueue", () => {
     expect(offlineQueue["pendingDbIds"].has(responseUpdate)).toBe(true);
     expect(_syncLocks.getRequestInProgress("s1")).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to remove sent response from IndexedDB",
+      "Forma: Failed to remove sent response from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -753,7 +753,7 @@ describe("ResponseQueue", () => {
 
     expect(count).toBe(0);
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to count pending responses in IndexedDB",
+      "Forma: Failed to count pending responses in IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -815,7 +815,7 @@ describe("ResponseQueue", () => {
     expect(result).toEqual({ success: false, syncedCount: 0 });
     expect(_syncLocks.get("s1")).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to sync persisted responses from IndexedDB",
+      "Forma: Failed to sync persisted responses from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });
@@ -931,7 +931,7 @@ describe("ResponseQueue", () => {
     expect(offlineQueue.queue).toHaveLength(0);
     expect(_syncLocks.get("s1")).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
-      "Formbricks: Failed to remove synced response from IndexedDB",
+      "Forma: Failed to remove synced response from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
     );
   });

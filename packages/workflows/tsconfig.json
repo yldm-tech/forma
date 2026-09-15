@@ -6,6 +6,6 @@
     "rootDir": "."
   },
   "exclude": ["node_modules", "dist"],
-  "extends": "@formbricks/config-typescript/js-library.json",
+  "extends": "@forma/config-typescript/js-library.json",
   "include": ["src"]
 }

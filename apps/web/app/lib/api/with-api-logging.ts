@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { logger } from "@formbricks/logger";
-import type { Session, TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import type { Session, TAuthenticationApiKey } from "@forma/types/auth";
 import { authenticateRequest } from "@/app/api/v1/auth";
 import { reportApiError } from "@/app/lib/api/api-error-reporter";
 import { getRateLimitErrorResponse } from "@/app/lib/api/client-rate-limit";

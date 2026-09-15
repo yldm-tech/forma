@@ -1,6 +1,6 @@
-import { prisma } from "@formbricks/database";
-import { OrganizationRole, Prisma } from "@formbricks/database/prisma";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import { OrganizationRole, Prisma } from "@forma/database/prisma";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { USER_MANAGEMENT_MINIMUM_ROLE } from "@/lib/constants";
 import { getUserManagementAccess } from "@/lib/membership/utils";
 import { buildCommonFilterQuery, pickCommonFilter } from "@/modules/api/v2/management/lib/utils";

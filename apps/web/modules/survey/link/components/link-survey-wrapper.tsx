@@ -1,9 +1,9 @@
 import { type JSX, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SurveyType, Workspace } from "@formbricks/database/prisma-browser";
-import { getLinkSurveyCardMaxWidth } from "@formbricks/types/styling";
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { SurveyType, Workspace } from "@forma/database/prisma-browser";
+import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { TSurveyStyling } from "@forma/types/surveys/types";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { cn } from "@/lib/cn";
 import { getFooterLinkStyle } from "@/lib/styling/footer-link-color";
 import { LegalFooter } from "@/modules/survey/link/components/legal-footer";
@@ -27,7 +27,7 @@ interface LinkSurveyWrapperProps {
   IMPRINT_URL?: string;
   PRIVACY_URL?: string;
   TERMS_URL?: string;
-  IS_FORMBRICKS_CLOUD: boolean;
+  IS_FORMA_CLOUD: boolean;
   publicDomain: string;
   isBrandingEnabled: boolean;
   dir?: "ltr" | "rtl" | "auto";
@@ -47,7 +47,7 @@ export const LinkSurveyWrapper = ({
   IMPRINT_URL,
   PRIVACY_URL,
   TERMS_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   publicDomain,
   isBrandingEnabled,
   dir = "auto",
@@ -152,7 +152,7 @@ export const LinkSurveyWrapper = ({
                 IMPRINT_URL={IMPRINT_URL}
                 PRIVACY_URL={PRIVACY_URL}
                 TERMS_URL={TERMS_URL}
-                IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+                IS_FORMA_CLOUD={IS_FORMA_CLOUD}
                 surveyUrl={publicDomain + "/s/" + surveyId}
                 linkColor={footerLinkColor}
                 backdropColor={footerLinkBackdropColor}
@@ -175,7 +175,7 @@ export const LinkSurveyWrapper = ({
           IMPRINT_URL={IMPRINT_URL}
           PRIVACY_URL={PRIVACY_URL}
           TERMS_URL={TERMS_URL}
-          IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+          IS_FORMA_CLOUD={IS_FORMA_CLOUD}
           surveyUrl={publicDomain + "/s/" + surveyId}
           linkColor={footerLinkColor}
           backdropColor={footerLinkBackdropColor}

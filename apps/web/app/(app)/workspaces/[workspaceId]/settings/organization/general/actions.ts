@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZOrganizationUpdateInput } from "@formbricks/types/organizations";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { ZOrganizationUpdateInput } from "@forma/types/organizations";
 import { isInstanceAIConfigured } from "@/lib/ai/service";
 import { type TAuthorizationAction, assertCan } from "@/lib/authorization";
 import { deleteOrganization, getOrganization, updateOrganization } from "@/lib/organization/service";

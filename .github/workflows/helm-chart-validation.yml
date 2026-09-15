@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          chart="charts/formbricks"
+          chart="charts/forma"
           render_dir="$(mktemp -d)"
           trap 'rm -rf "$render_dir"' EXIT
           bundled_model_spec='{"name":"qwen","enabled":true,"repository":"vllm/vllm-openai","tag":"v0.14.0","modelURL":"Qwen/Qwen3-14B-AWQ","replicaCount":1,"requestCPU":4,"requestMemory":"24Gi","limitCPU":8,"limitMemory":"32Gi","requestGPU":1,"requestGPUType":"nvidia.com/gpu","pvcStorage":"100Gi","runtimeClassName":"","shmSize":"8Gi","vllmConfig":{"maxModelLen":65536,"dtype":"float16","tensorParallelSize":1,"maxNumSeqs":8,"gpuMemoryUtilization":0.9,"extraArgs":[]},"lmcacheConfig":{"enabled":false},"keda":{"enabled":false}}'
@@ -48,7 +48,7 @@ jobs:
             local pattern="$2"
             shift 2
             if helm template qa "$chart" \
-              --set formbricks.webappUrl=https://qa.example.com \
+              --set forma.webappUrl=https://qa.example.com \
               --set taxonomy.enabled=true \
               --set taxonomy.llm.baseUrl=https://llm.example.com/v1 \
               --set-string taxonomy.llm.contextWindowTokens=65536 \
@@ -61,11 +61,11 @@ jobs:
             grep -q "$pattern" "$render_dir/$name.yaml"
           }
 
-          helm lint "$chart" --set formbricks.webappUrl=https://qa.example.com
-          bash charts/formbricks/tests/authzed-operations.sh
+          helm lint "$chart" --set forma.webappUrl=https://qa.example.com
+          bash charts/forma/tests/authzed-operations.sh
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/deployment.yaml > "$render_dir/deployment-default.yaml"
           grep -q 'terminationGracePeriodSeconds: 30' "$render_dir/deployment-default.yaml"
           if grep -q '^          lifecycle:$' "$render_dir/deployment-default.yaml"; then
@@ -76,19 +76,19 @@ jobs:
           ! grep -q '^      volumes:$' "$render_dir/deployment-default.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set 'deployment.extraVolumes[0].name=custom-ca' \
             --set 'deployment.extraVolumes[0].configMap.name=custom-ca' \
             --set 'deployment.extraVolumeMounts[0].name=custom-ca' \
-            --set 'deployment.extraVolumeMounts[0].mountPath=/etc/ssl/formbricks-ca' \
+            --set 'deployment.extraVolumeMounts[0].mountPath=/etc/ssl/forma-ca' \
             --set 'deployment.extraVolumeMounts[0].readOnly=true' \
             --show-only templates/deployment.yaml > "$render_dir/deployment-volumes.yaml"
           test "$(grep -c 'name: custom-ca' "$render_dir/deployment-volumes.yaml")" -eq 3
-          test "$(grep -c 'mountPath: /etc/ssl/formbricks-ca' "$render_dir/deployment-volumes.yaml")" -eq 1
+          test "$(grep -c 'mountPath: /etc/ssl/forma-ca' "$render_dir/deployment-volumes.yaml")" -eq 1
           test "$(grep -c 'readOnly: true' "$render_dir/deployment-volumes.yaml")" -eq 1
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set deployment.terminationGracePeriodSeconds=60 \
             --set-json 'deployment.lifecycle={"preStop":{"exec":{"command":["sh","-c","sleep 30"]}}}' \
             --show-only templates/deployment.yaml > "$render_dir/deployment-lifecycle.yaml"
@@ -98,43 +98,43 @@ jobs:
           grep -q -- '- sleep 30' "$render_dir/deployment-lifecycle.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
-            --show-only templates/deployment.yaml > "$render_dir/formbricks-default.yaml"
-          if grep -q 'name: MCP_OAUTH_JWKS_URL' "$render_dir/formbricks-default.yaml"; then
+            --set forma.webappUrl=https://qa.example.com \
+            --show-only templates/deployment.yaml > "$render_dir/forma-default.yaml"
+          if grep -q 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-default.yaml"; then
             echo "MCP_OAUTH_JWKS_URL must remain opt-in"
             exit 1
           fi
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
-            --set formbricks.mcpOauthJwksUrl=http://auth-internal:3000/custom/api/auth/jwks \
-            --show-only templates/deployment.yaml > "$render_dir/formbricks-jwks-value.yaml"
-          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/formbricks-jwks-value.yaml" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set forma.mcpOauthJwksUrl=http://auth-internal:3000/custom/api/auth/jwks \
+            --show-only templates/deployment.yaml > "$render_dir/forma-jwks-value.yaml"
+          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-value.yaml" \
             | grep -q 'value: "http://auth-internal:3000/custom/api/auth/jwks"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set-string deployment.env.MCP_OAUTH_JWKS_URL=http://explicit:3000/api/auth/jwks \
-            --show-only templates/deployment.yaml > "$render_dir/formbricks-jwks-env.yaml"
-          test "$(grep -c 'name: MCP_OAUTH_JWKS_URL' "$render_dir/formbricks-jwks-env.yaml")" -eq 1
-          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/formbricks-jwks-env.yaml" \
+            --show-only templates/deployment.yaml > "$render_dir/forma-jwks-env.yaml"
+          test "$(grep -c 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-env.yaml")" -eq 1
+          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-env.yaml" \
             | grep -q 'value: "http://explicit:3000/api/auth/jwks"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/cube-deployment.yaml > "$render_dir/cube-default.yaml"
           grep -A1 'name: CUBEJS_EXTERNAL_DEFAULT' "$render_dir/cube-default.yaml" \
             | grep -q 'value: "false"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set-string cube.env.CUBEJS_EXTERNAL_DEFAULT=true \
             --show-only templates/cube-deployment.yaml > "$render_dir/cube-external.yaml"
           grep -A1 'name: CUBEJS_EXTERNAL_DEFAULT' "$render_dir/cube-external.yaml" \
             | grep -q 'value: "true"'
 
           if helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set cube.replicas=2 \
             --show-only templates/cube-deployment.yaml > "$render_dir/cube-invalid.yaml" 2>&1; then
             echo "Expected the in-memory Cube configuration with multiple replicas to fail" >&2
@@ -144,7 +144,7 @@ jobs:
             "$render_dir/cube-invalid.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-worker-default.yaml"
           grep -q 'max_attempts=120' "$render_dir/hub-worker-default.yaml"
           grep -q 'timeout 5 wget --no-verbose --tries=1 --timeout=5 --spider' \
@@ -156,43 +156,43 @@ jobs:
           grep -q 'sleep 5' "$render_dir/hub-worker-default.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.worker.waitForApi.maxAttempts=3 \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-worker-override.yaml"
           grep -q 'max_attempts=3' "$render_dir/hub-worker-override.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.worker.waitForApi.enabled=false \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-worker-disabled.yaml"
           ! grep -q 'wait-for-hub-api' "$render_dir/hub-worker-disabled.yaml"
           grep -q '/app/hub-worker' "$render_dir/hub-worker-disabled.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set-string hub.embeddings.background.batchMaxWaitMs=37 \
             --show-only templates/hub-deployment.yaml \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-embeddings-legacy.yaml"
-          test "$(grep -c 'http://formbricks-hub-embeddings:8080/v1' "$render_dir/hub-embeddings-legacy.yaml")" -eq 2
+          test "$(grep -c 'http://forma-hub-embeddings:8080/v1' "$render_dir/hub-embeddings-legacy.yaml")" -eq 2
           ! grep -q 'hub-embeddings-background:8080/v1' "$render_dir/hub-embeddings-legacy.yaml"
           grep -A1 'name: EMBEDDING_BATCH_SIZE' "$render_dir/hub-embeddings-legacy.yaml" | grep -q 'value: "1"'
           grep -A1 'name: EMBEDDING_BATCH_MAX_WAIT_MS' "$render_dir/hub-embeddings-legacy.yaml" | grep -q 'value: "25"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --show-only templates/hub-deployment.yaml > "$render_dir/hub-embeddings-legacy-api.yaml"
           ! grep -q 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embeddings-legacy-api.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-embeddings-legacy-worker.yaml"
           grep -A1 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embeddings-legacy-worker.yaml" | grep -q 'value: "false"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set-string hub.embeddings.background.maxConcurrent=24 \
@@ -207,8 +207,8 @@ jobs:
             --show-only templates/hub-embeddings-background-statefulset.yaml \
             --show-only templates/hub-embeddings-background-service.yaml \
             --show-only templates/hub-hpa.yaml > "$render_dir/hub-embeddings-background.yaml"
-          test "$(grep -c 'http://formbricks-hub-embeddings:8080/v1' "$render_dir/hub-embeddings-background.yaml")" -eq 1
-          test "$(grep -c 'http://formbricks-hub-embeddings-background:8080/v1' "$render_dir/hub-embeddings-background.yaml")" -eq 1
+          test "$(grep -c 'http://forma-hub-embeddings:8080/v1' "$render_dir/hub-embeddings-background.yaml")" -eq 1
+          test "$(grep -c 'http://forma-hub-embeddings-background:8080/v1' "$render_dir/hub-embeddings-background.yaml")" -eq 1
           grep -A1 'name: EMBEDDING_MAX_CONCURRENT' "$render_dir/hub-embeddings-background.yaml" | grep -q 'value: "24"'
           grep -A1 'name: EMBEDDING_BATCH_SIZE' "$render_dir/hub-embeddings-background.yaml" | grep -q 'value: "8"'
           grep -q '^kind: StatefulSet$' "$render_dir/hub-embeddings-background.yaml"
@@ -222,7 +222,7 @@ jobs:
           grep -q 'stabilizationWindowSeconds: 900' "$render_dir/hub-embeddings-background.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set-string hub.embeddings.background.httpDisableKeepAlives=true \
@@ -230,7 +230,7 @@ jobs:
           ! grep -q 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embeddings-background-api.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set-string hub.embeddings.background.httpDisableKeepAlives=true \
@@ -238,7 +238,7 @@ jobs:
           grep -A1 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embeddings-background-worker.yaml" | grep -q 'value: "true"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set-string hub.embeddings.background.httpDisableKeepAlives=true \
@@ -249,7 +249,7 @@ jobs:
           grep -A1 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embeddings-background-worker-override.yaml" | grep -q 'value: "false"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set hub.embeddings.background.persistence.enabled=false \
@@ -259,12 +259,12 @@ jobs:
           ! grep -q '^  volumeClaimTemplates:$' "$render_dir/hub-embeddings-background-ephemeral.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             > "$render_dir/hub-embedding-backfill-disabled.yaml"
           ! grep -q 'app.kubernetes.io/component: hub-embedding-backfill' "$render_dir/hub-embedding-backfill-disabled.yaml"
 
           if helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddingBackfill.enabled=true \
             --show-only templates/hub-embedding-backfill-job.yaml > "$render_dir/hub-embedding-backfill-invalid.yaml" 2>&1; then
@@ -274,7 +274,7 @@ jobs:
           grep -q 'hub.embeddingBackfill.runId is required' "$render_dir/hub-embedding-backfill-invalid.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set hub.embeddings.enabled=true \
             --set hub.embeddings.background.enabled=true \
             --set-string hub.embeddings.background.httpDisableKeepAlives=true \
@@ -294,7 +294,7 @@ jobs:
           grep -A1 'name: EMBEDDING_HTTP_DISABLE_KEEP_ALIVES' "$render_dir/hub-embedding-backfill.yaml" | grep -q 'value: "true"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.provider=openai-compatible \
             --set taxonomy.llm.model=operator-selected-model \
@@ -315,7 +315,7 @@ jobs:
           ! grep -q 'name: AWS_REGION' "$render_dir/taxonomy-openai-compatible.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.baseUrl=https://llm.example.com/v1 \
             --set-string taxonomy.llm.contextWindowTokens=65536 \
@@ -324,7 +324,7 @@ jobs:
           grep -A1 'name: TAXONOMY_REAPER_INTERVAL_SECONDS' "$render_dir/taxonomy-hub-wiring.yaml" | grep -q 'value: "60"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set llm.enabled=true \
             --set-json "llm.servingEngineSpec.modelSpec=$single_bundled_model_spec" \
             --set taxonomy.enabled=true \
@@ -335,7 +335,7 @@ jobs:
           grep -q 'router-service:8000/v1' "$render_dir/taxonomy-vllm.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set llm.enabled=true \
             --set-json "llm.servingEngineSpec.modelSpec=$multi_bundled_model_spec" \
             --set taxonomy.enabled=true \
@@ -345,7 +345,7 @@ jobs:
           grep -q 'router-service:8000/v1' "$render_dir/taxonomy-vllm-selected-model.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set llm.enabled=true \
             --set-json "llm.servingEngineSpec.modelSpec=$disabled_bundled_model_spec" \
             --set taxonomy.enabled=true \
@@ -354,7 +354,7 @@ jobs:
           grep -q 'router-service:8000/v1' "$render_dir/taxonomy-vllm-disabled-model.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.provider=vertex-gemini \
             --set taxonomy.llm.model=gemini-2.5-flash \
@@ -370,7 +370,7 @@ jobs:
           ! grep -q 'name: AWS_REGION' "$render_dir/taxonomy-vertex.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.provider=bedrock \
             --set taxonomy.llm.model=anthropic.claude-test \
@@ -386,7 +386,7 @@ jobs:
           ! grep -q 'name: TAXONOMY_LLM_API_KEY' "$render_dir/taxonomy-bedrock.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.provider=bedrock \
             --set taxonomy.llm.model=operator-selected-bedrock-model \
@@ -481,7 +481,7 @@ jobs:
             --set-json "llm.servingEngineSpec.modelSpec=$single_bundled_model_spec"
 
           if helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set llm.enabled=true \
             --set taxonomy.enabled=true \
             --set-string taxonomy.llm.contextWindowTokens=65536 \
@@ -494,7 +494,7 @@ jobs:
             "$render_dir/taxonomy-vllm-context-invalid.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set taxonomy.enabled=true \
             --set taxonomy.llm.baseUrl=https://llm.example.com/v1 \
             --set-string taxonomy.maxRecords=50000 \
@@ -505,13 +505,13 @@ jobs:
           grep -A1 'name: TAXONOMY_LLM_SUBTREE_MAX_CLUSTERS' "$render_dir/taxonomy-upgrade.yaml" | grep -q 'value: "30"'
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/hub-deployment.yaml \
             --show-only templates/hub-worker-deployment.yaml > "$render_dir/hub-default.yaml"
           ! grep -q 'qa-hub-credentials' "$render_dir/hub-default.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set 'hub.extraVolumes[0].name=qa-hub-credentials' \
             --set 'hub.extraVolumes[0].secret.secretName=qa-hub-credentials' \
             --set 'hub.extraVolumeMounts[0].name=qa-hub-credentials' \
@@ -519,7 +519,7 @@ jobs:
             --set 'hub.extraVolumeMounts[0].readOnly=true' \
             --show-only templates/hub-deployment.yaml > "$render_dir/hub-api-volumes.yaml"
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set 'hub.extraVolumes[0].name=qa-hub-credentials' \
             --set 'hub.extraVolumes[0].secret.secretName=qa-hub-credentials' \
             --set 'hub.extraVolumeMounts[0].name=qa-hub-credentials' \
@@ -533,7 +533,7 @@ jobs:
           done
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/migration-job.yaml > "$render_dir/default.yaml"
 
           grep -q 'packages/database/dist/scripts/wait-for-database.js' "$render_dir/default.yaml"
@@ -541,36 +541,36 @@ jobs:
           grep -q 'argocd.argoproj.io/sync-wave: "-1"' "$render_dir/default.yaml"
           test "$(grep -c '^          image: ' "$render_dir/default.yaml")" -eq 2
           test "$(grep '^          image: ' "$render_dir/default.yaml" | sort -u | wc -l | tr -d ' ')" -eq 1
-          test "$(grep -c 'name: formbricks-app-secrets' "$render_dir/default.yaml")" -eq 2
+          test "$(grep -c 'name: forma-app-secrets' "$render_dir/default.yaml")" -eq 2
           ! grep -q '^          env:$' "$render_dir/default.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set migration.waitForDatabase.enabled=false \
             --show-only templates/migration-job.yaml > "$render_dir/disabled.yaml"
           ! grep -q 'wait-for-database' "$render_dir/disabled.yaml"
           grep -q 'packages/database/dist/scripts/apply-migrations.js' "$render_dir/disabled.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --set postgresql.enabled=false \
-            --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/formbricks \
+            --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/forma \
             --set authzed.mode=external \
             --set authzed.operator.install=false \
             --set authzed.endpoint=grpc.authzed.com:443 \
-            --set authzed.auth.existingSecret=formbricks-authzed \
+            --set authzed.auth.existingSecret=forma-authzed \
             --show-only templates/migration-job.yaml > "$render_dir/external.yaml"
           grep -q 'packages/database/dist/scripts/wait-for-database.js' "$render_dir/external.yaml"
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
-            --set-string deployment.env.MIGRATE_DATABASE_URL=postgresql://user:password@migrate-postgresql:5432/formbricks \
+            --set forma.webappUrl=https://qa.example.com \
+            --set-string deployment.env.MIGRATE_DATABASE_URL=postgresql://user:password@migrate-postgresql:5432/forma \
             --show-only templates/migration-job.yaml > "$render_dir/migrate-url.yaml"
           test "$(grep -c 'name: MIGRATE_DATABASE_URL' "$render_dir/migrate-url.yaml")" -eq 2
           test "$(grep -c '^          env:' "$render_dir/migrate-url.yaml")" -eq 2
 
           helm template qa "$chart" \
-            --set formbricks.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only charts/postgresql/templates/primary/statefulset.yaml > "$render_dir/postgresql.yaml"
           grep -q 'argocd.argoproj.io/sync-wave: "-2"' "$render_dir/postgresql.yaml"
 
@@ -581,4 +581,4 @@ jobs:
       # stays runnable locally.
       - name: Validate the AuthZed bootstrap against real PostgreSQL
         shell: bash
-        run: bash charts/formbricks/tests/authzed-bootstrap-runtime.sh
+        run: bash charts/forma/tests/authzed-bootstrap-runtime.sh

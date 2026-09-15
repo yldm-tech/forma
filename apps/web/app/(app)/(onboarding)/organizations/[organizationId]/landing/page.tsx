@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { CreateFirstWorkspaceButton } from "@/app/(app)/(onboarding)/organizations/[organizationId]/landing/components/create-first-workspace-button";
 import { LandingSidebar } from "@/app/(app)/(onboarding)/organizations/[organizationId]/landing/components/landing-sidebar";
 import { WorkspaceAndOrgSwitch } from "@/app/(app)/workspaces/[workspaceId]/components/workspace-and-org-switch";
-import { IS_FORMBRICKS_CLOUD, IS_FORMBRICKS_SURVEYS_CONFIGURED } from "@/lib/constants";
+import { IS_FORMA_CLOUD, IS_FORMA_SURVEYS_CONFIGURED } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getAccessFlags } from "@/lib/membership/utils";
@@ -40,7 +40,7 @@ const Page = async (props: { params: Promise<{ organizationId: string }> }) => {
         user={user}
         organization={organization}
         publicDomain={publicDomain}
-        isFormbricksSurveysConfigured={IS_FORMBRICKS_SURVEYS_CONFIGURED}
+        isFormaSurveysConfigured={IS_FORMA_SURVEYS_CONFIGURED}
       />
       <div className="flex-1">
         <div className="flex h-full flex-col">
@@ -51,7 +51,7 @@ const Page = async (props: { params: Promise<{ organizationId: string }> }) => {
               currentOrganizationName={organization.name}
               isMultiOrgEnabled={isMultiOrgEnabled}
               organizationWorkspacesLimit={0}
-              isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+              isFormaCloud={IS_FORMA_CLOUD}
               isLicenseActive={false}
               isOwnerOrManager={false}
               isAccessControlAllowed={false}

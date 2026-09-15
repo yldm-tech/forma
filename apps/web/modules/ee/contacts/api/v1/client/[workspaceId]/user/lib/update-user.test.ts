@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { updateAttributes } from "@/modules/ee/contacts/lib/attributes";
 import { getPersonSegmentIds } from "./segments";
 import { updateUser } from "./update-user";
@@ -19,7 +19,7 @@ vi.mock("@/modules/ee/contacts/lib/attributes", async (importOriginal) => {
   };
 });
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contact: {
       findFirst: vi.fn(),
@@ -238,7 +238,7 @@ describe("updateUser", () => {
 
   test("should return messages from updateAttributes if any", async () => {
     vi.mocked(prisma.contact.findFirst).mockResolvedValue(mockContactData as any);
-    const newAttributes = { company: "Formbricks" };
+    const newAttributes = { company: "Forma" };
     const updateMessages = [
       { code: "new_attribute_created", params: { key: "company", dataType: "string" } },
     ];

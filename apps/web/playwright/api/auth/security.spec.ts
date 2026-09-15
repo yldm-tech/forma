@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { test } from "../../lib/fixtures";
 
 // Better Auth credential sign-in endpoint (ENG-1054 cutover). The NextAuth `/api/auth/csrf` +
@@ -469,7 +469,7 @@ test.describe("Authentication Security Tests - Vulnerability Prevention", () => 
       const user = await users.create();
       await user.login();
 
-      // Better Auth's signed session cookie is `formbricks.session_token` (or the browser-enforced
+      // Better Auth's signed session cookie is `forma.session_token` (or the browser-enforced
       // `__Secure-` prefix on HTTPS); replaces the NextAuth `next-auth.session-token` cookie (ENG-1054).
       const sessionCookie = (await page.context().cookies()).find((cookie) =>
         cookie.name.includes("session_token")

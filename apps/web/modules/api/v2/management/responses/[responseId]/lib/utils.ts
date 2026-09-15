@@ -1,5 +1,5 @@
-import { Response, Survey } from "@formbricks/database/prisma";
-import { Result, okVoid } from "@formbricks/types/error-handlers";
+import { Response, Survey } from "@forma/database/prisma";
+import { Result, okVoid } from "@forma/types/error-handlers";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { deleteResponseFileUrls } from "@/modules/storage/lib/delete-response-files";
 import { collectResponseFileUrls, getSurveyFileUploadElementIds } from "@/modules/storage/utils";

@@ -1,5 +1,5 @@
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import type { TSurvey as TInternalSurvey } from "@formbricks/types/surveys/types";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import type { TSurvey as TInternalSurvey } from "@forma/types/surveys/types";
 
 export type TV3SurveyResolverLanguage = {
   code: string;

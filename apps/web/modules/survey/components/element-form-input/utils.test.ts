@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { TFunction } from "i18next";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { createI18nString } from "@/lib/i18n/utils";
 import * as i18nUtils from "@/lib/i18n/utils";
 import {

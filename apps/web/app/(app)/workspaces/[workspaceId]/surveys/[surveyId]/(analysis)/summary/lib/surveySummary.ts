@@ -1,11 +1,11 @@
 import "server-only";
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZId, ZOptionalNumber } from "@formbricks/types/common";
-import { getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { ZId, ZOptionalNumber } from "@forma/types/common";
+import { getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TResponseContact,
   TResponseContactAttributes,
@@ -13,8 +13,8 @@ import {
   TResponseFilterCriteria,
   TResponseTtc,
   ZResponseFilterCriteria,
-} from "@formbricks/types/responses";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+} from "@forma/types/responses";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyElementSummaryAddress,
@@ -28,8 +28,8 @@ import {
   TSurveyElementSummaryRanking,
   TSurveyLanguage,
   TSurveySummary,
-} from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getQuotasSummary } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/survey";
 import { RESPONSES_PER_PAGE } from "@/lib/constants";
 import { getDisplayCountBySurveyId } from "@/lib/display/service";

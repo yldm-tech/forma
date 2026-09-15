@@ -1,8 +1,8 @@
 import "server-only";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
 import { RequestBodyTooLargeError, readRequestBodyWithLimit } from "@/app/lib/api/request-body";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";

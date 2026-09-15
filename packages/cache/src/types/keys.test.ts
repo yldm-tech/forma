@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { type CacheKey, type CustomCacheNamespace, ZCacheKey } from "./keys";
 
-describe("@formbricks/cache types/keys", () => {
+describe("@forma/cache types/keys", () => {
   describe("ZCacheKey schema", () => {
     test("should validate valid cache keys", () => {
       const validKeys = [

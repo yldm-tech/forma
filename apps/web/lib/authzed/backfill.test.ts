@@ -403,7 +403,7 @@ describe("drift status covers unrepaired state", () => {
           cursor: null,
           relationships: [
             {
-              relation: "not_a_formbricks_relation",
+              relation: "not_a_forma_relation",
               resource: { objectId: "org-1", objectType: "organization" },
               subject: { objectId: "someone", objectType: "user" },
             },

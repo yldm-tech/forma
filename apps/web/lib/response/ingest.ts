@@ -1,8 +1,8 @@
-import { logger } from "@formbricks/logger";
-import { type TIngestResult, applyIngestContract } from "@formbricks/types/embedded-data-ingest";
-import { getIngestedEmbeddedFields } from "@formbricks/types/embedded-data-resolver";
-import { type TResponseData } from "@formbricks/types/responses";
-import { type TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { type TIngestResult, applyIngestContract } from "@forma/types/embedded-data-ingest";
+import { getIngestedEmbeddedFields } from "@forma/types/embedded-data-resolver";
+import { type TResponseData } from "@forma/types/responses";
+import { type TSurvey } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 
 /**

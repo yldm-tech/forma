@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TFeedbackSourceFormbricksMapping } from "@formbricks/types/feedback-source";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TFeedbackSourceFormaMapping } from "@forma/types/feedback-source";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { transformResponseToFeedbackRecords } from "./transform";
 
 // Deliberately unmocked: @/lib/i18n/utils — the real getLocalizedValue has NO default-language
 // fallback, and an earlier mock that added one hid a bug where default-language responses
 // carrying a concrete code (e.g. "en-US") never matched choice labels keyed "default".
 
-vi.mock("@formbricks/types/surveys/validation", () => ({
+vi.mock("@forma/types/surveys/validation", () => ({
   getTextContent: (str: string) => str,
 }));
 
@@ -79,9 +79,9 @@ const mockResponse = {
 } as unknown as TResponse;
 
 const createMapping = (
-  overrides: Partial<TFeedbackSourceFormbricksMapping> &
-    Pick<TFeedbackSourceFormbricksMapping, "elementId" | "hubFieldType">
-): TFeedbackSourceFormbricksMapping => ({
+  overrides: Partial<TFeedbackSourceFormaMapping> &
+    Pick<TFeedbackSourceFormaMapping, "elementId" | "hubFieldType">
+): TFeedbackSourceFormaMapping => ({
   id: `mapping-${overrides.elementId}`,
   createdAt: NOW,
   feedbackSourceId: "conn-1",
@@ -91,7 +91,7 @@ const createMapping = (
   ...overrides,
 });
 
-const allMappings: TFeedbackSourceFormbricksMapping[] = [
+const allMappings: TFeedbackSourceFormaMapping[] = [
   createMapping({ elementId: "el-text", hubFieldType: "text" }),
   createMapping({ elementId: "el-nps", hubFieldType: "nps" }),
   createMapping({ elementId: "el-rating", hubFieldType: "rating" }),
@@ -151,7 +151,7 @@ describe("transformResponseToFeedbackRecords", () => {
     const result = transformResponseToFeedbackRecords(mockResponse, mockSurvey, mappings, mockTenantId);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
-      source_type: "formbricks_survey",
+      source_type: "forma_survey",
       field_id: "el-text",
       field_type: "text",
       field_label: "How can we improve?",
@@ -489,7 +489,7 @@ describe("transformResponseToFeedbackRecords", () => {
       const mappings = [
         createMapping({
           elementId: "el-multi",
-          hubFieldType: "unknown-type" as TFeedbackSourceFormbricksMapping["hubFieldType"],
+          hubFieldType: "unknown-type" as TFeedbackSourceFormaMapping["hubFieldType"],
         }),
       ];
       const result = transformResponseToFeedbackRecords(response, mockSurvey, mappings, mockTenantId);

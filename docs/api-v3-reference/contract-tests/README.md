@@ -29,8 +29,8 @@ Against a dev stack (`pnpm db:up`, app on `localhost:3000`):
 ```bash
 # 1. Seed the base data plus an API key. Any throwaway secret works; nothing is committed.
 export SEED_API_KEY="$(openssl rand -hex 32)"
-pnpm --filter=@formbricks/database db:seed
-pnpm --filter=@formbricks/database db:seed:contract
+pnpm --filter=@forma/database db:seed
+pnpm --filter=@forma/database db:seed:contract
 
 # 2. Run the suite (uv keeps the pinned version out of your global site-packages).
 SCHEMATHESIS_HOOKS=docs/api-v3-reference/contract-tests/hooks.py \

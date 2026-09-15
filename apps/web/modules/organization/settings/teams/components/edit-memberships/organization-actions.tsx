@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization } from "@formbricks/types/organizations";
-import { FORMBRICKS_ENVIRONMENT_ID_LS } from "@/lib/localStorage";
+import { TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization } from "@forma/types/organizations";
+import { FORMA_ENVIRONMENT_ID_LS } from "@/lib/localStorage";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { TOrganizationTeam } from "@/modules/ee/teams/team-list/types/team";
@@ -41,7 +41,7 @@ interface OrganizationActionsProps {
   teams: TOrganizationTeam[];
   isInviteDisabled: boolean;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isMultiOrgEnabled: boolean;
   isUserManagementDisabledFromUi: boolean;
   isTeamAdmin: boolean;
@@ -58,7 +58,7 @@ export const OrganizationActions = ({
   isLeaveOrganizationDisabled,
   isInviteDisabled,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   isMultiOrgEnabled,
   isUserManagementDisabledFromUi,
   isTeamAdmin,
@@ -89,7 +89,7 @@ export const OrganizationActions = ({
       toast.success(t("workspace.settings.general.member_deleted_successfully"));
       router.refresh();
       setLoading(false);
-      localStorage.removeItem(FORMBRICKS_ENVIRONMENT_ID_LS);
+      localStorage.removeItem(FORMA_ENVIRONMENT_ID_LS);
       router.push("/");
     } catch (err) {
       toast.error(`Error: ${err instanceof Error ? err.message : "Unknown error occurred"}`);
@@ -197,7 +197,7 @@ export const OrganizationActions = ({
         membershipRole={membershipRole}
         organizationId={organization.id}
         isAccessControlAllowed={isAccessControlAllowed}
-        isFormbricksCloud={isFormbricksCloud}
+        isFormaCloud={isFormaCloud}
         teams={teams}
         isOwnerOrManager={isOwnerOrManager}
         isTeamAdmin={isTeamAdmin}

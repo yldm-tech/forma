@@ -1,6 +1,6 @@
 import "server-only";
-import type { logger } from "@formbricks/logger";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
+import type { logger } from "@forma/logger";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { getV3AuthorizationActor } from "@/app/api/v3/lib/auth";
 import { requireUnifyFeedbackWorkspaceAccess } from "@/app/api/v3/lib/feedback-access";
 import { problemBadRequest, problemForbidden, problemUnprocessableContent } from "@/app/api/v3/lib/response";

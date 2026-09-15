@@ -1,9 +1,9 @@
 import "server-only";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
-import { ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
+import { ValidationError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { TWorkspaceUpdateBrandingInput, ZWorkspaceUpdateBrandingInput } from "../types/workspace";
 

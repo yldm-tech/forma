@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "react";
-import { type TPlacement } from "@formbricks/types/common";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TCardArrangementOptions } from "@formbricks/types/styling";
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
-import { type TWorkspaceStyling } from "@formbricks/types/workspace";
+import { type TPlacement } from "@forma/types/common";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TCardArrangementOptions } from "@forma/types/styling";
+import { TSurveyStyling } from "@forma/types/surveys/types";
+import { type TWorkspaceStyling } from "@forma/types/workspace";
 import { cn } from "@/lib/utils";
 import { StackedCard } from "./stacked-card";
 

@@ -10,7 +10,7 @@ import {
   WORKFLOW_ACTIONS,
   WORKFLOW_TRIGGERS,
   ZWorkflowExecutableDefinition,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 
 export type TWorkflowNodeCategory = "trigger" | "flow" | "action";
 export type TWorkflowNodeIcon = "trigger" | "ifElse" | "email";

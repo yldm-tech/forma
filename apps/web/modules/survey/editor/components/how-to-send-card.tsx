@@ -4,8 +4,8 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { CheckIcon, LinkIcon, MonitorIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TSegment } from "@formbricks/types/segment";
-import { TSurvey, TSurveyType } from "@formbricks/types/surveys/types";
+import { TSegment } from "@forma/types/segment";
+import { TSurvey, TSurveyType } from "@forma/types/surveys/types";
 import { getDefaultEndingCard } from "@/app/lib/survey-builder";
 import { cn } from "@/lib/cn";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
@@ -171,17 +171,15 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
                       <p className="mt-2 text-xs font-normal text-slate-600">{option.description}</p>
                       {localSurvey.type === option.id && option.alert && (
                         <Alert variant="warning" className="mt-2">
-                          <AlertTitle>
-                            {t("workspace.surveys.edit.formbricks_sdk_is_not_connected")}
-                          </AlertTitle>
+                          <AlertTitle>{t("workspace.surveys.edit.forma_sdk_is_not_connected")}</AlertTitle>
                           <AlertDescription>
-                            {t("workspace.surveys.edit.connect_formbricks_and_launch_surveys")}
+                            {t("workspace.surveys.edit.connect_forma_and_launch_surveys")}
                           </AlertDescription>
                           <AlertButton
                             onClick={() =>
                               window.open(`${workspaceBasePath}/settings/workspace/app-connection`, "_blank")
                             }>
-                            {t("common.set_up_formbricks_sdk")}
+                            {t("common.set_up_forma_sdk")}
                           </AlertButton>
                         </Alert>
                       )}

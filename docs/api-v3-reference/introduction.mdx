@@ -1,6 +1,6 @@
 ---
 title: "API v3 Reference (Private Beta)"
-description: "The next generation of the Formbricks management API, including the Feedback Records API"
+description: "The next generation of the Forma management API, including the Feedback Records API"
 icon: "code-compare"
 hidden: true
 ---
@@ -10,7 +10,7 @@ hidden: true
   without notice. Please share the URL only with people who have been invited to the beta.
 </Warning>
 
-API v3 is the management API the [MCP server](/platform/mcp/overview) is built on, and the one the Formbricks app
+API v3 is the management API the [MCP server](/platform/mcp/overview) is built on, and the one the Forma app
 is moving onto. It covers surveys, workflows, action classes, contact attribute keys and — the reason most beta
 users are here — **Feedback Records**, the normalized store behind Unify Feedback.
 
@@ -25,12 +25,12 @@ Create a management API key — **API Keys** in the organization dropdown of the
 permissions — `read`, `write` or `manage` — and every operation states which one it needs.
 
 ```bash
-curl "https://app.formbricks.com/api/v3/surveys?workspaceId=<workspaceId>" \
-  -H "x-api-key: $FORMBRICKS_API_KEY"
+curl "https://app.forma.ylam.ai/api/v3/surveys?workspaceId=<workspaceId>" \
+  -H "x-api-key: $FORMA_API_KEY"
 ```
 
 Send credentialed requests over **HTTPS only** — an API key in `x-api-key` crosses the wire in cleartext
-otherwise. Operations also accept a signed-in browser session, which is how the Formbricks app itself calls
+otherwise. Operations also accept a signed-in browser session, which is how the Forma app itself calls
 them; the operation pages document the API-key contract.
 
 ### Self-hosted instances
@@ -39,10 +39,10 @@ Substitute your own origin, and note that Feedback Records is the one part of v3
 routed to it, because it is served by the gateway rather than the application:
 
 - **Kubernetes / Helm** — off by default. Set `envoy.enabled: true` and
-  `envoy.formbricks.routes.feedbackRecords: true`. Enabling the route also installs its authorization policy,
+  `envoy.forma.routes.feedbackRecords: true`. Enabling the route also installs its authorization policy,
   so the two cannot drift apart.
 - **One-click Docker** — the installer writes the Traefik routes for you, so it works out of the box.
-- **Formbricks Cloud** — already enabled.
+- **Forma Cloud** — already enabled.
 
 The quickest way to tell whether an instance has it: an unauthenticated `GET /api/v3/feedbackRecords` answers
 `401` when the route is live, and `404` when it is not routed and the request falls through to the application.
@@ -65,7 +65,7 @@ parameter on `GET` and `DELETE /api/v3/feedbackRecords`, in the JSON body on `PO
 it: the gateway resolves the dataset from the record.
 
 The dataset id is not shown in the app today. Get it from the MCP server's `list_feedback_datasets` tool, which
-reports it as `dataset_id`, or ask your Formbricks contact.
+reports it as `dataset_id`, or ask your Forma contact.
 
 ### Field names are `snake_case`
 
@@ -106,8 +106,8 @@ allowed. The organization must hold the Unify Feedback entitlement.
 
 ```bash
 # The 20 most recent negative text answers in a dataset
-curl "https://app.formbricks.com/api/v3/feedbackRecords?tenant_id=<datasetId>&field_type=text&sentiment=negative&sentiment=very_negative&limit=20" \
-  -H "x-api-key: $FORMBRICKS_API_KEY"
+curl "https://app.forma.ylam.ai/api/v3/feedbackRecords?tenant_id=<datasetId>&field_type=text&sentiment=negative&sentiment=very_negative&limit=20" \
+  -H "x-api-key: $FORMA_API_KEY"
 ```
 
 Pagination is keyset: pass the response's `next_cursor` back as `cursor` with the same `sort` and `order`. It is
@@ -115,4 +115,4 @@ absent on the last page.
 
 ## Feedback
 
-Beta feedback goes to your Formbricks contact or to [hola@formbricks.com](mailto:hola@formbricks.com).
+Beta feedback goes to your Forma contact or to [hola@forma.ylam.ai](mailto:hola@forma.ylam.ai).

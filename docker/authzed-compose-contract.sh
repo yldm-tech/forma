@@ -40,33 +40,33 @@ jq --exit-status --arg token "${AUTHZED_TOKEN}" '
   .services["spicedb-migrate"].depends_on["authzed-db-bootstrap"].condition == "service_completed_successfully" and
   .services.spicedb.healthcheck.test == ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=localhost:50051"] and
   .services.spicedb.environment.SPICEDB_GRPC_PRESHARED_KEY == $token and
-  .services.formbricks.environment.AUTHZED_ENABLED == "true" and
-  .services.formbricks.environment.AUTHZED_ENDPOINT == "spicedb:50051" and
-  .services.formbricks.environment.AUTHZED_TOKEN == $token and
-  .services.formbricks.environment.AUTHZED_SYSTEM_KEY == "formbricks" and
-  .services.formbricks.environment.AUTHZED_INSECURE == "true" and
-  .services.formbricks.environment.AUTHZED_CONSISTENCY == "fully_consistent" and
-  .services.formbricks.depends_on.spicedb? == null and
-  .services["authzed-ops"].image == .services.formbricks.image and
+  .services.forma.environment.AUTHZED_ENABLED == "true" and
+  .services.forma.environment.AUTHZED_ENDPOINT == "spicedb:50051" and
+  .services.forma.environment.AUTHZED_TOKEN == $token and
+  .services.forma.environment.AUTHZED_SYSTEM_KEY == "forma" and
+  .services.forma.environment.AUTHZED_INSECURE == "true" and
+  .services.forma.environment.AUTHZED_CONSISTENCY == "fully_consistent" and
+  .services.forma.depends_on.spicedb? == null and
+  .services["authzed-ops"].image == .services.forma.image and
   .services["authzed-ops"].profiles == ["authzed-ops"] and
-  .services["authzed-ops"].entrypoint == ["formbricks-authzed"] and
+  .services["authzed-ops"].entrypoint == ["forma-authzed"] and
   .services["authzed-ops"].command == ["health"] and
   .services["authzed-ops"].depends_on.postgres.condition == "service_healthy" and
   .services["authzed-ops"].depends_on.spicedb.condition == "service_healthy" and
-  .services["authzed-ops"].environment.DATABASE_URL == .services.formbricks.environment.DATABASE_URL and
+  .services["authzed-ops"].environment.DATABASE_URL == .services.forma.environment.DATABASE_URL and
   .services["authzed-ops"].environment.AUTHZED_CONSISTENCY == "fully_consistent" and
-  .services["authzed-initialize"].image == .services.formbricks.image and
-  .services["authzed-initialize"].entrypoint == ["formbricks-authzed"] and
+  .services["authzed-initialize"].image == .services.forma.image and
+  .services["authzed-initialize"].entrypoint == ["forma-authzed"] and
   .services["authzed-initialize"].command == ["upgrade", "prepare"] and
   .services["authzed-initialize"].restart == "no" and
-  .services["authzed-initialize"].depends_on["formbricks-migrate"].condition == "service_completed_successfully" and
+  .services["authzed-initialize"].depends_on["forma-migrate"].condition == "service_completed_successfully" and
   .services["authzed-initialize"].depends_on.spicedb.condition == "service_healthy" and
   (.services["authzed-initialize"] | has("ports") | not) and
   (.services["authzed-initialize"] | has("volumes") | not) and
   (.services["authzed-ops"] | has("ports") | not) and
   (.services["authzed-ops"] | has("volumes") | not) and
   (.services["authzed-ops"] | has("restart") | not) and
-  ([.services | to_entries[] | select(.value.environment.AUTHZED_TOKEN? != null) | .key] | sort) == ["authzed-initialize", "authzed-ops", "formbricks"]
+  ([.services | to_entries[] | select(.value.environment.AUTHZED_TOKEN? != null) | .key] | sort) == ["authzed-initialize", "authzed-ops", "forma"]
 ' "${temp_dir}/production.json" >/dev/null
 
 if grep --fixed-strings --line-regexp "authzed-ops" "${temp_dir}/production-services.txt" >/dev/null; then

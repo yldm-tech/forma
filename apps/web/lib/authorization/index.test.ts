@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthorizationError } from "@formbricks/types/errors";
+import { AuthorizationError } from "@forma/types/errors";
 import { assertCan, can } from ".";
 import type { TAuthorizationActor, TAuthorizationResource } from "./contract";
 import { authorizationCoordinator } from "./coordinator";

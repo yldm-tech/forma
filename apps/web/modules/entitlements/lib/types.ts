@@ -1,4 +1,4 @@
-import type { TOrganizationStripeSubscriptionStatus } from "@formbricks/types/organizations";
+import type { TOrganizationStripeSubscriptionStatus } from "@forma/types/organizations";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
 import type {
   TEnterpriseLicenseFeatures,

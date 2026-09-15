@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { runAuthzedBackfill } from "./backfill";
 import { createAuthzedBackfillApply, createAuthzedBackfillNoopApply } from "./backfill-apply";
 import { getAuthzedClient } from "./client";

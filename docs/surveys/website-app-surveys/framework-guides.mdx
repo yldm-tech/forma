@@ -1,10 +1,10 @@
 ---
 title: "Framework Guides"
-description: "Easily add the Formbricks App Survey SDK to your app with guides for different frameworks."
+description: "Easily add the Forma App Survey SDK to your app with guides for different frameworks."
 icon: "book"
 ---
 
-Integrate the **Formbricks App Survey SDK** into your app using multiple options. Explore the available choices below. If you need something else, open a [**GitHub Discussion**](https://github.com/formbricks/formbricks/discussions), and we’ll be happy to help!
+Integrate the **Forma App Survey SDK** into your app using multiple options. Explore the available choices below. If you need something else, open a [**GitHub Discussion**](https://github.com/yldm-tech/forma/discussions), and we’ll be happy to help!
 
 <Info>
   **Important for Self-Hosted Setups:**
@@ -30,7 +30,7 @@ Integrate the **Formbricks App Survey SDK** into your app using multiple options
 </Card>
 
 <Card title="Vue.js" icon="vuejs" href="#vue-js">
-  Learn how to use Formbricks' Vue.js SDK to integrate your surveys into Vue.js applications.
+  Learn how to use Forma' Vue.js SDK to integrate your surveys into Vue.js applications.
 </Card>
 
 <Card title="React Native" icon="react" color="lightblue" href="#react-native">
@@ -60,57 +60,57 @@ Before getting started, make sure you have:
 
 - A running web application with user authentication in your chosen framework.
 
-- A Formbricks account with your **Workspace ID** and **SDK Connection URL** (the `appUrl` in every snippet below), available under **Settings → Workspace → Web & Mobile SDK**, on the **Workspace details** card.
+- A Forma account with your **Workspace ID** and **SDK Connection URL** (the `appUrl` in every snippet below), available under **Settings → Workspace → Web & Mobile SDK**, on the **Workspace details** card.
 
 ## HTML
 
 All you need to do is copy a `<script>` tag to your HTML head:
 
 ```javascript
-<!-- START Formbricks Surveys -->
+<!-- START Forma Surveys -->
 <script type="text/javascript">
 !function(){
-    var appUrl = "https://app.formbricks.com"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
+    var appUrl = "https://app.forma.ylam.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
     var workspaceId = "<your-workspace-id>";
-var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/formbricks.umd.cjs";t.onload=function(){window.formbricks.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
+var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";t.onload=function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
 </script>
-<!-- END Formbricks Surveys -->
+<!-- END Forma Surveys -->
 ```
 
 ### Required Customizations
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 Now, visit the [Validate Your Setup](#validate-your-setup) section to verify your setup!
 
 ## React.js
 
-Install the Formbricks SDK using one of the following package managers: `npm`, `pnpm`, or `yarn`. &#x20;
+Install the Forma SDK using one of the following package managers: `npm`, `pnpm`, or `yarn`. &#x20;
 Note that **`zod`** is required as a peer dependency and must also be installed in your app.
 
 ```javascript npm
-npm install @formbricks/js zod
+npm install @forma/js zod
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js zod
+pnpm add @forma/js zod
 ```
 
 ```bash yarn
-yarn add @formbricks/js zod
+yarn add @forma/js zod
 ```
 
-Update your `App.js/ts` file to initialize Formbricks.
+Update your `App.js/ts` file to initialize Forma.
 
 ```javascript src/App.js
 // other imports
-import formbricks from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
-  formbricks.setup({
+  forma.setup({
     workspaceId: "<workspace-id>",
     appUrl: "<app-url>", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
   });
@@ -127,55 +127,55 @@ export default App;
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 Now, visit the [Validate Your Setup](#validate-your-setup) section to verify your setup!
 
 ## Next.js
 
-Next.js apps use either the **App Directory** or the **Pages Directory**. Since the Formbricks SDK runs on the client side, follow these steps based on your setup:
+Next.js apps use either the **App Directory** or the **Pages Directory**. Since the Forma SDK runs on the client side, follow these steps based on your setup:
 
-- **App Directory**: Create a new component in `app/formbricks.tsx` and call it in `app/layout.tsx`.
+- **App Directory**: Create a new component in `app/forma.tsx` and call it in `app/layout.tsx`.
 
-- **Pages Directory**: Initialize Formbricks directly in `_app.tsx`.
+- **Pages Directory**: Initialize Forma directly in `_app.tsx`.
 
 Code snippets for the integration for both conventions are provided to further assist you.
 
 ```bash npm
-npm install @formbricks/js zod
+npm install @forma/js zod
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js zod
+pnpm add @forma/js zod
 ```
 
 ```bash yarn
-yarn add @formbricks/js zod
+yarn add @forma/js zod
 ```
 
 ### App directory
 
-```typescript app/formbricks.tsx
+```typescript app/forma.tsx
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import formbricks from "@formbricks/js";
+import forma from "@forma/js";
 
-export default function FormbricksProvider() {
+export default function FormaProvider() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    formbricks.setup({
+    forma.setup({
       workspaceId: "<workspace-id>",
       appUrl: "<app-url>", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
     });
   }, []);
 
   useEffect(() => {
-    formbricks?.registerRouteChange();
+    forma?.registerRouteChange();
   }, [pathname, searchParams]);
 
   return null;
@@ -184,7 +184,7 @@ export default function FormbricksProvider() {
 
 ```typescript app/layout.tsx
 // other imports
-import FormbricksProvider from "./formbricks";
+import FormaProvider from "./forma";
 import { Suspense } from "react";
 
 export default function RootLayout({
@@ -195,7 +195,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <Suspense>
-        <FormbricksProvider />
+        <FormaProvider />
       </Suspense>
       <body>{children}</body>
     </html>
@@ -209,10 +209,10 @@ export default function RootLayout({
 // other import
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import formbricks from "@formbricks/js";
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
-  formbricks.setup({
+  forma.setup({
     workspaceId: "<workspace-id>",
     appUrl: "<app-url>", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
   });
@@ -222,8 +222,8 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   useEffect(() => {
-    // Connect next.js router to Formbricks
-    const handleRouteChange = formbricks?.registerRouteChange;
+    // Connect next.js router to Forma
+    const handleRouteChange = forma?.registerRouteChange;
     router.events.on("routeChangeComplete", handleRouteChange);
 
     return () => {
@@ -238,45 +238,45 @@ export default function App({ Component, pageProps }: AppProps) {
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
-First, initialize the Formbricks SDK to run only on the client side. To track page changes, register the route change event with the Next.js router.
+First, initialize the Forma SDK to run only on the client side. To track page changes, register the route change event with the Next.js router.
 
 Next, go to the [**Validate Your Setup**](#validate-your-setup) section to verify your setup!
 
 ## Vue.js
 
-Integrating the Formbricks SDK with Vue.js is easy. We'll ensure the SDK is only loaded and used on the client side, as it's not meant for server-side use.
+Integrating the Forma SDK with Vue.js is easy. We'll ensure the SDK is only loaded and used on the client side, as it's not meant for server-side use.
 
 ```bash npm
-npm install @formbricks/js
+npm install @forma/js
 ```
 
 ```bash pnpm
-pnpm add @formbricks/js
+pnpm add @forma/js
 ```
 
 ```bash yarn
-yarn add @formbricks/js
+yarn add @forma/js
 ```
 
-```javascript src/formbricks.js
-import formbricks from "@formbricks/js";
+```javascript src/forma.js
+import forma from "@forma/js";
 
 if (typeof window !== "undefined") {
-  formbricks.setup({
+  forma.setup({
     workspaceId: "<workspace-id>",
     appUrl: "<app-url>", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
   });
 }
 
-export default formbricks;
+export default forma;
 ```
 
 ```javascript src/main.js
 // other imports
-import formbricks from "@/formbricks";
+import forma from "@/forma";
 
 const app = createApp(App);
 
@@ -285,8 +285,8 @@ app.use(router);
 app.mount("#app");
 
 router.afterEach((to, from) => {
-  if (typeof formbricks !== "undefined") {
-    formbricks.registerRouteChange();
+  if (typeof forma !== "undefined") {
+    forma.registerRouteChange();
   }
 });
 ```
@@ -295,36 +295,36 @@ router.afterEach((to, from) => {
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 Now, visit the [Validate Your Setup](#validate-your-setup) section to verify your setup!
 
 ## React Native
 
 <Info>
-  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **@formbricks/react-native 3.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
+  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **@forma/react-native 3.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
 </Info>
 
-Install the Formbricks React Native SDK using one of the package managers, i.e., npm, pnpm, or yarn.
+Install the Forma React Native SDK using one of the package managers, i.e., npm, pnpm, or yarn.
 
 ```bash npm
-npm install @formbricks/react-native
+npm install @forma/react-native
 ```
 
 ```bash pnpm
-pnpm add @formbricks/react-native
+pnpm add @forma/react-native
 ```
 
 ```bash yarn
-yarn add @formbricks/react-native
+yarn add @forma/react-native
 ```
 
-Now, update your `App.js/App.tsx` file to initialize Formbricks:
+Now, update your `App.js/App.tsx` file to initialize Forma:
 
 ```javascript src/App.js
 // other imports
-import Formbricks from "@formbricks/react-native";
+import Forma from "@forma/react-native";
 
 const config = {
   workspaceId: "<workspace-id>",
@@ -335,7 +335,7 @@ export default function App() {
   return (
     <>
       {/* Your app content */}
-      <Formbricks initConfig={config} />
+      <Forma initConfig={config} />
     </>
   );
 }
@@ -345,13 +345,13 @@ export default function App() {
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 Drive the SDK through its named exports from anywhere:
 
 ```javascript
-import { track, setUserId, setAttributes, setEmbeddedData, logout } from "@formbricks/react-native";
+import { track, setUserId, setAttributes, setEmbeddedData, logout } from "@forma/react-native";
 
 await track("button_clicked");
 await setUserId("user_123");
@@ -367,23 +367,23 @@ Now, visit the [Validate Your Setup](#validate-your-setup) section to verify you
 
 ## Swift
 
-<Info>**Minimum iOS Version:** The Formbricks iOS SDK requires **iOS 16.4** or higher.</Info>
+<Info>**Minimum iOS Version:** The Forma iOS SDK requires **iOS 16.4** or higher.</Info>
 
 <Info>
-  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **FormbricksSDK 2.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
+  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **FormaSDK 2.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
 </Info>
 
-Install the Formbricks iOS SDK using the following steps:
+Install the Forma iOS SDK using the following steps:
 
 **Swift Package Manager**
 
 1. In Xcode choose **File → Add Packages…**
-2. Enter your repo URL (e.g. `https://github.com/formbricks/ios.git`)
+2. Enter your repo URL (e.g. `https://github.com/yldm-tech/ios.git`)
 3. Choose version rule (e.g. "Up to Next Major" starting at `2.1.0`).
 4. Import in your code:
 
    ```swift
-   import FormbricksSDK
+   import FormaSDK
    ```
 
 **CocoaPods**
@@ -395,23 +395,23 @@ Install the Formbricks iOS SDK using the following steps:
    use_frameworks! :linkage => :static
 
    target 'YourTargetName' do
-     pod 'FormbricksSDK', '~> 2.1'
+     pod 'FormaSDK', '~> 2.1'
    end
    ```
 
 2. Run `pod install` in your app directory
 3. Import in your code:
    ```swift
-   import FormbricksSDK
+   import FormaSDK
    ```
 
-Now start using FormbricksSDK
+Now start using FormaSDK
 
 ```swift
-import FormbricksSDK
+import FormaSDK
 
 // 1. Build your config (you can also inject userId + attributes here)
-let config = FormbricksConfig.Builder(
+let config = FormaConfig.Builder(
         appUrl: "https://your‑app.bricks.com", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
         workspaceId: "YOUR_WORKSPACE_ID"
     )
@@ -419,32 +419,32 @@ let config = FormbricksConfig.Builder(
     .build()
 
 // 2. Initialize the SDK (once per launch)
-Formbricks.setup(with: config)
+Forma.setup(with: config)
 
 // 3. Identify the user
-Formbricks.setUserId("user‑123")
+Forma.setUserId("user‑123")
 
 // 4. Track events
-Formbricks.track("button_pressed")
+Forma.track("button_pressed")
 
 // 5. Set or add user attributes
-Formbricks.setAttribute("blue", forKey: "favoriteColor")
-Formbricks.setAttributes([
+Forma.setAttribute("blue", forKey: "favoriteColor")
+Forma.setAttributes([
     "plan": "pro",
     "tier": "gold"
 ])
 
 // 6. Change language (no userId required):
-Formbricks.setLanguage("de")
+Forma.setLanguage("de")
 
 // 7. Attach Embedded Data to future responses
-Formbricks.setEmbeddedData(["screen": "checkout", "plan": "pro"])
+Forma.setEmbeddedData(["screen": "checkout", "plan": "pro"])
 
 // 8. Log out (no userId required):
-Formbricks.logout()
+Forma.logout()
 
 // 9. Clean up SDK state (optional):
-Formbricks.cleanup(waitForOperations: true) {
+Forma.cleanup(waitForOperations: true) {
     print("SDK torn down")
 }
 ```
@@ -459,26 +459,26 @@ Formbricks.cleanup(waitForOperations: true) {
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 Now, visit the [Validate Your Setup](#validate-your-setup) section to verify your setup!
 
 ## Android
 
 <Info>
-  **Minimum Android Version:** The Formbricks Android SDK requires **Android 10 (API level 29)** or higher.
+  **Minimum Android Version:** The Forma Android SDK requires **Android 10 (API level 29)** or higher.
 </Info>
 
 <Info>
-  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **com.formbricks:android 2.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
+  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **com.forma:android 2.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
 </Info>
 
-Install the Formbricks Android SDK using the following steps:
+Install the Forma Android SDK using the following steps:
 
 ### Installation
 
-Add the Maven Central repository and the Formbricks SDK dependency to your application's `build.gradle.kts`:
+Add the Maven Central repository and the Forma SDK dependency to your application's `build.gradle.kts`:
 
 ```kotlin
 repositories {
@@ -487,7 +487,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.formbricks:android:2.1.0") // or a later version
+    implementation("com.forma:android:2.1.0") // or a later version
 }
 ```
 
@@ -505,38 +505,38 @@ android {
 
 ```kotlin
 // 1. Initialize the SDK
-val config = FormbricksConfig.Builder(
-    "https://your-formbricks-server.com",
+val config = FormaConfig.Builder(
+    "https://your-forma-server.com",
     "YOUR_WORKSPACE_ID"
 )
   .setLoggingEnabled(true)
   .setFragmentManager(supportFragmentManager)
   .build()
 
-// 2. Setup Formbricks
-Formbricks.setup(this, config)
+// 2. Setup Forma
+Forma.setup(this, config)
 
 // 3. Identify the user
-Formbricks.setUserId("user‑123")
+Forma.setUserId("user‑123")
 
 // 4. Track events
-Formbricks.track("button_pressed")
+Forma.track("button_pressed")
 
 // 5. Set or add user attributes
-Formbricks.setAttribute("test@web.com", "email")
-Formbricks.setAttributes(mapOf(Pair("attr1", "val1"), Pair("attr2", "val2")))
+Forma.setAttribute("test@web.com", "email")
+Forma.setAttributes(mapOf(Pair("attr1", "val1"), Pair("attr2", "val2")))
 
 // 6. Change language (no userId required):
-Formbricks.setLanguage("de")
+Forma.setLanguage("de")
 
 // 7. Attach Embedded Data to future responses
-Formbricks.setEmbeddedData(mapOf(
+Forma.setEmbeddedData(mapOf(
   "screen" to EmbeddedDataValue.string("checkout"),
   "plan" to EmbeddedDataValue.string("pro")
 ))
 
 // 8. Log out:
-Formbricks.logout()
+Forma.logout()
 ```
 
 <Note>
@@ -548,32 +548,32 @@ Formbricks.logout()
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 ## Flutter
 
 <Info>
-  **Platform Support:** The Formbricks Flutter SDK targets **iOS and Android only**. Flutter Web and desktop are not supported.
+  **Platform Support:** The Forma Flutter SDK targets **iOS and Android only**. Flutter Web and desktop are not supported.
 </Info>
 
 <Info>
-  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **formbricks 1.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
+  **Interaction-based Segments:** targeting users by whether they have seen, started or completed a survey requires **forma 1.1.0** or higher. See [Survey Display Logic](/surveys/website-app-surveys/survey-display-logic#level-4-interaction-based-segments).
 </Info>
 
-Install the Formbricks Flutter SDK from [pub.dev](https://pub.dev/packages/formbricks):
+Install the Forma Flutter SDK from [pub.dev](https://pub.dev/packages/forma):
 
 ```bash
-flutter pub add formbricks
+flutter pub add forma
 ```
 
 ### Usage
 
-Mount the `Formbricks` widget once, high in your widget tree (e.g. alongside your app's home). It initializes the SDK on mount and renders any triggered survey in a modal overlay:
+Mount the `Forma` widget once, high in your widget tree (e.g. alongside your app's home). It initializes the SDK on mount and renders any triggered survey in a modal overlay:
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:formbricks/formbricks.dart';
+import 'package:forma/forma.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -585,7 +585,7 @@ class MyApp extends StatelessWidget {
         children: [
           const HomePage(),
           // Initializes the SDK and hosts the survey overlay.
-          Formbricks(
+          Forma(
             appUrl: "<app-url>", // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
             workspaceId: "<workspace-id>",
           ),
@@ -600,43 +600,43 @@ Then drive the SDK through its static API from anywhere:
 
 ```dart
 // 1. Trigger a code action — shows a matching, eligible survey.
-await Formbricks.track("button_clicked");
+await Forma.track("button_clicked");
 
 // 2. Identify the current user.
-await Formbricks.setUserId("user_123");
+await Forma.setUserId("user_123");
 
 // 3. Set or add user attributes.
-await Formbricks.setAttribute("plan", "pro");
-await Formbricks.setAttributes({"plan": "pro", "mrr": 99, "signup_date": DateTime.now()});
+await Forma.setAttribute("plan", "pro");
+await Forma.setAttributes({"plan": "pro", "mrr": 99, "signup_date": DateTime.now()});
 
 // 4. Set the survey language.
-await Formbricks.setLanguage("de");
+await Forma.setLanguage("de");
 
 // 5. Attach Embedded Data to future responses (synchronous, no queue).
-Formbricks.setEmbeddedData({"screen": "checkout", "plan": "pro"});
+Forma.setEmbeddedData({"screen": "checkout", "plan": "pro"});
 
 // 6. Reset to an anonymous session on sign-out.
-await Formbricks.logout();
+await Forma.logout();
 ```
 
 <Note>
-  Prefer to initialize before any UI mounts? Call `Formbricks.setup(appUrl: ..., workspaceId: ...)` directly — the widget still needs to be in the tree to render surveys, but it won't re-run setup (setup is idempotent). `setup`, `track`, `setUserId`, `setAttribute`, `setAttributes`, `setLanguage` and `logout` are sequenced through an internal command queue, so they run in submission order and return a `Future<Result<void, FormbricksError>>`. `setEmbeddedData` and `clearEmbeddedData` are the exceptions: they are synchronous and return `void`, so a context push at launch is not dropped while setup is still running.
+  Prefer to initialize before any UI mounts? Call `Forma.setup(appUrl: ..., workspaceId: ...)` directly — the widget still needs to be in the tree to render surveys, but it won't re-run setup (setup is idempotent). `setup`, `track`, `setUserId`, `setAttribute`, `setAttributes`, `setLanguage` and `logout` are sequenced through an internal command queue, so they run in submission order and return a `Future<Result<void, FormaError>>`. `setEmbeddedData` and `clearEmbeddedData` are the exceptions: they are synchronous and return `void`, so a context push at launch is not dropped while setup is still running.
 </Note>
 
 ### Public API
 
 | Method                                              | Description                                                              |
 | --------------------------------------------------- | ------------------------------------------------------------------------ |
-| `Formbricks(appUrl:, workspaceId:, logLevel:)`      | Host widget — initializes the SDK and renders triggered surveys.         |
-| `Formbricks.setup({appUrl, workspaceId, logLevel})` | Imperative initialization. Idempotent.                                   |
-| `Formbricks.track(String name)`                     | Fire a code action; shows a matching eligible survey.                    |
-| `Formbricks.setUserId(String userId)`               | Identify the contact. Switching ids resets the prior user's state first. |
-| `Formbricks.setAttribute(String key, Object value)` | Set one attribute (`String` / `num` / `DateTime`).                       |
-| `Formbricks.setAttributes(Map<String, Object>)`     | Set several attributes at once.                                          |
-| `Formbricks.setLanguage(String language)`           | Set the survey language.                                                 |
-| `Formbricks.setEmbeddedData(Map<String, Object?>)`  | Attach [Embedded Data](/surveys/embedded-data/mobile-sdks) to future responses. Synchronous. |
-| `Formbricks.clearEmbeddedData('key')`               | Remove one Embedded Data key. With no argument, clears all of them.      |
-| `Formbricks.logout()`                               | Reset to an anonymous session.                                           |
+| `Forma(appUrl:, workspaceId:, logLevel:)`      | Host widget — initializes the SDK and renders triggered surveys.         |
+| `Forma.setup({appUrl, workspaceId, logLevel})` | Imperative initialization. Idempotent.                                   |
+| `Forma.track(String name)`                     | Fire a code action; shows a matching eligible survey.                    |
+| `Forma.setUserId(String userId)`               | Identify the contact. Switching ids resets the prior user's state first. |
+| `Forma.setAttribute(String key, Object value)` | Set one attribute (`String` / `num` / `DateTime`).                       |
+| `Forma.setAttributes(Map<String, Object>)`     | Set several attributes at once.                                          |
+| `Forma.setLanguage(String language)`           | Set the survey language.                                                 |
+| `Forma.setEmbeddedData(Map<String, Object?>)`  | Attach [Embedded Data](/surveys/embedded-data/mobile-sdks) to future responses. Synchronous. |
+| `Forma.clearEmbeddedData('key')`               | Remove one Embedded Data key. With no argument, clears all of them.      |
+| `Forma.logout()`                               | Reset to an anonymous session.                                           |
 
 Attribute keys must be lowercase letters, numbers, and underscores, and start with a letter. `DateTime` values are sent as UTC ISO-8601 strings; numbers stay numbers. Identity and attribute changes are debounced (~500 ms) and coalesced into a single backend request.
 
@@ -644,11 +644,11 @@ Attribute keys must be lowercase letters, numbers, and underscores, and start wi
 
 | Name           | Type   | Description                            |
 | -------------- | ------ | -------------------------------------- |
-| workspaceId    | string | Formbricks Workspace ID.               |
-| appUrl         | string | URL of the hosted Formbricks instance. |
+| workspaceId    | string | Forma Workspace ID.               |
+| appUrl         | string | URL of the hosted Forma instance. |
 
 <Note>
-  Surveys render by loading `{appUrl}/js/surveys.umd.cjs` in a WebView, so that URL must be reachable from the device. Formbricks Cloud and standard self-hosted instances serve this script automatically. Config is persisted with `shared_preferences` and is **not encrypted at rest** — avoid putting sensitive PII in attribute values.
+  Surveys render by loading `{appUrl}/js/surveys.umd.cjs` in a WebView, so that URL must be reachable from the device. Forma Cloud and standard self-hosted instances serve this script automatically. Config is persisted with `shared_preferences` and is **not encrypted at rest** — avoid putting sensitive PII in attribute values.
 </Note>
 
 Now, visit the [Validate Your Setup](#validate-your-setup) section to verify your setup!
@@ -657,42 +657,42 @@ Now, visit the [Validate Your Setup](#validate-your-setup) section to verify you
 
 Once you've completed the steps above, load your app so the SDK sends its first request, then open the **Connection status** card under **Settings → Workspace → Web & Mobile SDK** and hit **Re-check**. The card reads the status on load and on **Re-check** only, so it will not turn green while you watch it. It should change from this:
 
-![The Connection status card, grey, reading "Formbricks SDK is not yet connected."](/images/surveys/website-app-surveys/framework-guides/widget-status-not-connected.webp)
+![The Connection status card, grey, reading "Forma SDK is not yet connected."](/images/surveys/website-app-surveys/framework-guides/widget-status-not-connected.webp)
 
 To this:
 
-![The Connection status card, green, reading "Receiving data" and "Formbricks SDK is connected"](/images/surveys/website-app-surveys/framework-guides/widget-status-connected.webp)
+![The Connection status card, green, reading "Receiving data" and "Forma SDK is connected"](/images/surveys/website-app-surveys/framework-guides/widget-status-connected.webp)
 
 ## Content Security Policy
 
-If your app serves a strict `Content-Security-Policy` header, the browser can block the Formbricks widget before anything renders. Three directives are involved.
+If your app serves a strict `Content-Security-Policy` header, the browser can block the Forma widget before anything renders. Three directives are involved.
 
 <Note>
-  This applies to the JavaScript SDK only. Link surveys are served by Formbricks itself, and the mobile
+  This applies to the JavaScript SDK only. Link surveys are served by Forma itself, and the mobile
   SDKs render surveys in a WebView, so neither is affected by your app's CSP.
 </Note>
 
 ### Allowing scripts and API calls
 
-The SDK loads two scripts from your Formbricks instance: `formbricks.umd.cjs` (the SDK) and `surveys.umd.cjs` (the survey renderer, fetched the first time a survey is shown). It then talks to the client API on the same host. Both directives need to point at your `appUrl`:
+The SDK loads two scripts from your Forma instance: `forma.umd.cjs` (the SDK) and `surveys.umd.cjs` (the survey renderer, fetched the first time a survey is shown). It then talks to the client API on the same host. Both directives need to point at your `appUrl`:
 
 ```text
-script-src 'self' https://app.formbricks.com;
-connect-src 'self' https://app.formbricks.com;
+script-src 'self' https://app.forma.ylam.ai;
+connect-src 'self' https://app.forma.ylam.ai;
 ```
 
 The SDK does not put a nonce on the script tags it creates, so allowlisting the host is what makes them load. `'strict-dynamic'` works instead of a host allowlist, but only if the script that loads the SDK carries a matching nonce or hash of its own — both bundles are inserted programmatically, so they inherit trust from that root. Without a trusted root, `'strict-dynamic'` blocks the SDK before it ever reaches `surveys.umd.cjs`.
 
 ### Passing a nonce for survey styles
 
-Surveys are styled by two `<style>` elements the renderer appends to `<head>`: `formbricks__css` for the base stylesheet and `formbricks__css__custom` for your workspace and survey theme. `style-src` treats an injected `<style>` element as inline CSS, so a policy without `'unsafe-inline'` blocks both and surveys appear unstyled.
+Surveys are styled by two `<style>` elements the renderer appends to `<head>`: `forma__css` for the base stylesheet and `forma__css__custom` for your workspace and survey theme. `style-src` treats an injected `<style>` element as inline CSS, so a policy without `'unsafe-inline'` blocks both and surveys appear unstyled.
 
 Instead of loosening the policy, hand the SDK the nonce your server already generated for the request. `setNonce` stamps it onto both style elements, which satisfies `style-src 'nonce-...'`:
 
 ```javascript Setting the CSP nonce
-formbricks.setNonce("<your-request-nonce>");
+forma.setNonce("<your-request-nonce>");
 
-formbricks.setup({
+forma.setup({
   workspaceId: "<workspace-id>",
   appUrl: "<app-url>",
 });
@@ -716,18 +716,18 @@ Pass the raw value only — not the `nonce-` prefix that appears in the header. 
   exposes it rather than hardcoding a value.
 </Note>
 
-## Debugging Formbricks Integration
+## Debugging Forma Integration
 
 <Note>
   The debug mode is only available in the JavaScript SDK and works exclusively in the browser. It is not
   supported in mobile SDKs such as React Native, iOS, Android, or Flutter.
 </Note>
 
-Enabling debug mode in your browser can help troubleshoot issues with Formbricks. Here's how to activate it and what to look for in the logs.
+Enabling debug mode in your browser can help troubleshoot issues with Forma. Here's how to activate it and what to look for in the logs.
 
 ### Activate Debug Mode
 
-To enable debug mode, add `?formbricksDebug=true` to your app's URL (e.g., [`https://example.com?formbricksDebug=true)`](<https://example.com?formbricksDebug=true)>).&#x20;
+To enable debug mode, add `?formaDebug=true` to your app's URL (e.g., [`https://example.com?formaDebug=true)`](<https://example.com?formaDebug=true)>).&#x20;
 
 #### View Debug Logs
 
@@ -743,7 +743,7 @@ To enable debug mode, add `?formbricksDebug=true` to your app's URL (e.g., [`htt
 
 Debug mode is helpful for:
 
-- Verifying Formbricks initialization.
+- Verifying Forma initialization.
 
 - Identifying issues with survey triggers.
 
@@ -759,7 +759,7 @@ Logs provide insights into:
 
 - Initialization errors.
 
-If you're stuck, visit [**GitHub Discussions**](https://github.com/formbricks/formbricks/discussions) for assistance.
+If you're stuck, visit [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions) for assistance.
 
 ```
 

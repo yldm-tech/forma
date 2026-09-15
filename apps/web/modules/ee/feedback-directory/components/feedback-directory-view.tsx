@@ -1,4 +1,4 @@
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getTranslate } from "@/lingodotdev/server";
 import { FeedbackDirectoryTable } from "@/modules/ee/feedback-directory/components/feedback-directory-table";

@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Session } from "@formbricks/types/auth";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TUser } from "@formbricks/types/user";
+import type { Session } from "@forma/types/auth";
+import { TOrganization } from "@forma/types/organizations";
+import { TUser } from "@forma/types/user";
 import { DeleteAccountModal } from "@/modules/account/components/DeleteAccountModal";
 import { Button } from "@/modules/ui/components/button";
 import { TooltipRenderer } from "@/modules/ui/components/tooltip";
 
 interface DeleteAccountProps {
   session: Session | null;
-  IS_FORMBRICKS_CLOUD: boolean;
+  IS_FORMA_CLOUD: boolean;
   user: TUser;
   organizationsWithSingleOwner: TOrganization[];
   isMultiOrgEnabled: boolean;
@@ -20,7 +20,7 @@ interface DeleteAccountProps {
 
 export const DeleteAccount = ({
   session,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   user,
   organizationsWithSingleOwner,
   isMultiOrgEnabled,
@@ -41,7 +41,7 @@ export const DeleteAccount = ({
         open={isModalOpen}
         setOpen={setModalOpen}
         user={user}
-        isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+        isFormaCloud={IS_FORMA_CLOUD}
         organizationsWithSingleOwner={organizationsWithSingleOwner}
       />
       <p className="text-sm text-slate-700">

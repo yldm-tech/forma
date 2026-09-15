@@ -7,14 +7,9 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import type {
-  TBaseFilter,
-  TSegment,
-  TSegmentCreateInput,
-  TSegmentUpdateInput,
-} from "@formbricks/types/segment";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import type { TBaseFilter, TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@forma/types/segment";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { cn } from "@/lib/cn";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
@@ -439,7 +434,7 @@ export function TargetingCard({
                   components={{
                     docsLink: (
                       <Link
-                        href="https://formbricks.com/docs/app-surveys/user-identification"
+                        href="https://forma.ylam.ai/docs/app-surveys/user-identification"
                         target="_blank"
                         rel="noreferrer"
                         className="underline"

@@ -23,9 +23,9 @@ export const FormWrapper = async ({ children }: Readonly<FormWrapperProps>) => {
         <div className="mb-8 text-center">
           <Link
             target="_blank"
-            href="https://formbricks.com?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=auth_logo"
+            href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=auth_logo"
             rel="noopener noreferrer"
-            aria-label={t("common.formbricks_homepage")}
+            aria-label={t("common.forma_homepage")}
             className="inline-block rounded-md focus-visible:ring-2 focus-visible:ring-brand-dark focus-visible:ring-offset-2 focus-visible:outline-hidden">
             <Logo aria-hidden="true" className="mx-auto w-40 sm:w-48" />
           </Link>

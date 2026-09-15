@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   MAX_RELATIVE_DATE_AMOUNT,
   type TRelativeDateBound,
   type TValidationRule,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import {
   addCalendarDays,
   addWorkingDays,

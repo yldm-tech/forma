@@ -1,8 +1,8 @@
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale, ZUserLocale } from "@formbricks/types/user";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale, ZUserLocale } from "@forma/types/user";
 
 export function isRTL(text: string): boolean {
   const rtlCharRegex = /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/;

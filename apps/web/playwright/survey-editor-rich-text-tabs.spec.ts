@@ -27,7 +27,7 @@ const openWelcomeCardPanel = async (page: Page): Promise<void> => {
   // drops characters and breaks focus assertions. Stacked off-screen preview
   // cards render dummy buttons with tabindex="-1"; the real one is tabbable.
   const previewNext = page
-    .locator("#formbricks-survey-container")
+    .locator("#forma-survey-container")
     .getByRole("button", { name: "Next", exact: true })
     .and(page.locator('[tabindex="0"]'));
   await expect(previewNext).toBeFocused({ timeout: 15000 });

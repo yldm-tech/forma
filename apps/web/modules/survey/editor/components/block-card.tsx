@@ -7,13 +7,13 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronDownIcon, ChevronRightIcon, GripIcon } from "lucide-react";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyBlock, TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TUserLocale } from "@formbricks/types/user";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TUserLocale } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { recallToHeadline } from "@/lib/utils/recall";
 import { AddElementToBlockButton } from "@/modules/survey/editor/components/add-element-to-block-button";
@@ -67,7 +67,7 @@ interface BlockCardProps {
   lastElementIndex: number;
   invalidElements?: string[];
   addElement: (element: any, index?: number) => void;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isCxMode: boolean;
   locale: TUserLocale;
   responseCount: number;
@@ -102,7 +102,7 @@ export const BlockCard = ({
   lastElementIndex,
   invalidElements,
   addElement,
-  isFormbricksCloud,
+  isFormaCloud,
   isCxMode,
   locale,
   responseCount,
@@ -242,7 +242,7 @@ export const BlockCard = ({
     // FileUpload needs extra props
     if (element.type === TSurveyElementTypeEnum.FileUpload) {
       additionalProps.workspace = workspace;
-      additionalProps.isFormbricksCloud = isFormbricksCloud;
+      additionalProps.isFormaCloud = isFormaCloud;
     }
 
     // @ts-expect-error - These props should cover everything

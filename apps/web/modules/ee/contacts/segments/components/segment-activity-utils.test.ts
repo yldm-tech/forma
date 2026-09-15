@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { TBaseFilters, TSegment, TSegmentWithSurveyRefs } from "@formbricks/types/segment";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TBaseFilters, TSegment, TSegmentWithSurveyRefs } from "@forma/types/segment";
+import { TSurvey } from "@forma/types/surveys/types";
 import {
   buildSegmentActivitySummary,
   buildSegmentActivitySummaryFromSegments,

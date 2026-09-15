@@ -1,5 +1,5 @@
 import "server-only";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { COMMUNITY_WORKSPACE_LIMIT } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";

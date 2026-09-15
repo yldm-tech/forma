@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import http from "http";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 import { gotoSurveyList, gotoSurveyTemplates } from "./lib/utils";
 import { useSelectedTemplate } from "./utils/helper";
@@ -9,23 +9,23 @@ const HTML_TEMPLATE = `<head>
   <script type="text/javascript">
     !(function () {
       var t = document.createElement("script");
-      (t.type = "text/javascript"), (t.async = !0), (t.src = "http://localhost:3000/js/formbricks.umd.cjs");
+      (t.type = "text/javascript"), (t.async = !0), (t.src = "http://localhost:3000/js/forma.umd.cjs");
       var e = document.getElementsByTagName("script")[0];
       t.onload = function(){
-        if (window.formbricks) {
-          // formbricks.on() is the only JS subscription surface (ENG-1814); registered before
+        if (window.forma) {
+          // forma.on() is the only JS subscription surface (ENG-1814); registered before
           // setup(), which the API promises works. Same names as the GTM dataLayer pushes.
-          window.formbricksEvents = [];
-          ["formbricks_survey_shown", "formbricks_response_submitted", "formbricks_survey_closed"].forEach(
+          window.formaEvents = [];
+          ["forma_survey_shown", "forma_response_submitted", "forma_survey_closed"].forEach(
             function (name) {
-              window.formbricks.on(name, function (payload) {
-                window.formbricksEvents.push(Object.assign({ event: name }, payload));
+              window.forma.on(name, function (payload) {
+                window.formaEvents.push(Object.assign({ event: name }, payload));
               });
             }
           );
-          window.formbricks.setup({workspaceId: "WORKSPACE_ID", appUrl: "http://localhost:3000"});
+          window.forma.setup({workspaceId: "WORKSPACE_ID", appUrl: "http://localhost:3000"});
         } else {
-          console.error("Formbricks library failed to load properly. The formbricks object is not available.");
+          console.error("Forma library failed to load properly. The forma object is not available.");
         }
       };
       e.parentNode.insertBefore(t, e);
@@ -34,7 +34,7 @@ const HTML_TEMPLATE = `<head>
 </head>
 
 <body style="background-color: #fff">
-  <p>This is my sample page using the Formbricks JS javascript widget</p>
+  <p>This is my sample page using the Forma JS javascript widget</p>
 </body>
 `;
 
@@ -116,19 +116,19 @@ test.describe("JS Package Test", async () => {
     if (!surveyId) throw new Error(`Unable to parse surveyId from ${page.url()}`);
 
     await page.goto("http://localhost:3004");
-    await expect(page.locator("#formbricks-modal-container")).toHaveCount(1, { timeout: 120000 });
+    await expect(page.locator("#forma-modal-container")).toHaveCount(1, { timeout: 120000 });
 
     // The widget reads the survey from the public client API, which substitutes a placeholder for
     // every survey name so names are not exposed over an unauthenticated endpoint. This is the only
     // place the real API, the widget and the dialog are wired together, so it is the only place that
     // can catch the placeholder leaking into what a screen reader announces: the dialog falls back
     // to its generic name instead, and no heading carries the placeholder either.
-    const widget = page.locator("#formbricks-modal-container");
+    const widget = page.locator("#forma-modal-container");
     await expect(widget.getByRole("dialog")).toHaveAttribute("aria-label", "Survey Dialog");
     await expect(widget.getByText(/\[deprecated] survey name omitted/)).toHaveCount(0);
 
     await expect(
-      page.locator("#questionCard-0").getByRole("link", { name: "Powered by Formbricks" })
+      page.locator("#questionCard-0").getByRole("link", { name: "Powered by Forma" })
     ).toBeVisible();
 
     // Fill the survey
@@ -156,20 +156,20 @@ test.describe("JS Package Test", async () => {
     // carry it by firing from the response queue's creation ack — and the renderer that passes it
     // lives in a .tsx, which the repo does not unit-test. Asserted against the stored row rather
     // than for self-consistency, so a client-minted or dropped id fails here (ENG-1814: the
-    // formbricks.on() surface, registered before setup(), is what captured them).
-    await test.step("the journey reaches formbricks.on subscribers with the persisted responseId", async () => {
+    // forma.on() surface, registered before setup(), is what captured them).
+    await test.step("the journey reaches forma.on subscribers with the persisted responseId", async () => {
       const events = await page.evaluate(
         () =>
           (
             window as unknown as {
-              formbricksEvents: {
+              formaEvents: {
                 event: string;
                 surveyId: string;
                 responseId?: string;
                 finished?: boolean;
               }[];
             }
-          ).formbricksEvents
+          ).formaEvents
       );
 
       const storedResponse = await prisma.response.findFirst({
@@ -184,10 +184,10 @@ test.describe("JS Package Test", async () => {
       // Shown, first answer, completion, and — after the ending card auto-closes the modal —
       // closed exactly once. One vocabulary, in order.
       expect(events.map((event) => event.event)).toEqual([
-        "formbricks_survey_shown",
-        "formbricks_response_submitted",
-        "formbricks_response_submitted",
-        "formbricks_survey_closed",
+        "forma_survey_shown",
+        "forma_response_submitted",
+        "forma_response_submitted",
+        "forma_survey_closed",
       ]);
       expect(events.map((event) => event.finished)).toEqual([undefined, false, true, undefined]);
       for (const event of events) {

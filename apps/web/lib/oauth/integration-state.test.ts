@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ErrorCode } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
+import { ErrorCode } from "@forma/cache";
+import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
 import {
   IntegrationOAuthStateError,
@@ -10,7 +10,7 @@ import {
   getSafeOAuthCallbackError,
 } from "./integration-state";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),

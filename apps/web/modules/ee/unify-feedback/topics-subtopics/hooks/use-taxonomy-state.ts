@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 import { getTaxonomyState } from "../lib/api-client";
 import { type TTaxonomyScopeSelection, taxonomyKeys } from "../lib/query";
 

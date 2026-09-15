@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZHubEmotion, ZHubFieldType, ZHubSentiment } from "@formbricks/types/feedback-source";
+import { ZHubEmotion, ZHubFieldType, ZHubSentiment } from "@forma/types/feedback-source";
 
 /**
  * v3-owned schemas for the feedback-records surface. Kept in the v3 layer (not the MCP layer) so the
@@ -394,7 +394,7 @@ export const ZV3FeedbackRecordCreateBodyFields = z.object({
         "a chart groups by. NOT filterable or searchable through this API — metadata is read back " +
         "with a record, so narrowing by a metadata value means fetching and filtering client-side. " +
         "On update the whole object is REPLACED, not merged, so send every key you want to keep. " +
-        "Avoid personal data: it is stored unredacted (and the Formbricks survey pipeline repeats " +
+        "Avoid personal data: it is stored unredacted (and the Forma survey pipeline repeats " +
         "its own metadata on every record of a submission)."
     ),
 });

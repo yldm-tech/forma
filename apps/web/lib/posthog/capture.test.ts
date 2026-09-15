@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: mocks.loggerWarn },
 }));
 
@@ -183,7 +183,7 @@ describe("capturePostHogEvent with null client", () => {
     vi.resetModules();
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("./server", () => ({

@@ -1,43 +1,43 @@
 ---
 title: "Headless Surveys"
 icon: "pen"
-description: "Using Formbricks as a Headless Survey Platform"
+description: "Using Forma as a Headless Survey Platform"
 ---
 
-This document shows how you can use Formbricks to manage survey definitions and response collection via APIs, while rendering the surveys in your own frontend and forwarding the response data to your own analytics pipelines.
+This document shows how you can use Forma to manage survey definitions and response collection via APIs, while rendering the surveys in your own frontend and forwarding the response data to your own analytics pipelines.
 
 ## In a nutshell
 
-### What Formbricks handles:
+### What Forma handles:
 
-1. **Survey Management:** Create, update, and host survey definitions through the Formbricks Management API or dashboard.  
+1. **Survey Management:** Create, update, and host survey definitions through the Forma Management API or dashboard.  
 2. **Response Handling:** Receive and securely store responses via the Client or Management API.  
 3. **Webhooks Delivery:** Send real-time response data to your configured endpoints when responses are created, updated, or completed.
 
 ### What you handle:
 
 1. **Custom Survey Wrapper / UI:** Build your own front-end package that fetches the survey (via API or local cache), renders it, and captures user responses.  
-2. **Analysis & Reporting:** Process incoming webhook data or fetched responses in your own analytics, data warehouse, or visualization tools. You can still make use of Formbricks to view Survey stats and data, but any type of custom dashboards is currently not supported.
+2. **Analysis & Reporting:** Process incoming webhook data or fetched responses in your own analytics, data warehouse, or visualization tools. You can still make use of Forma to view Survey stats and data, but any type of custom dashboards is currently not supported.
 
 ## Why choose this approach?
 
 1. **Your UI, your brand:** You take full control of survey look, feel, transitions, validations, and logic in your application stack.  
-2. **Separation of concerns:** Formbricks functions like a specialized “Backend-as-a-Service” for survey schemas and response handling; you control the frontend and analytics.  
-3. **OSS, self-hostable**: With Formbricks being open source, you can self-host without vendor lock-in.
+2. **Separation of concerns:** Forma functions like a specialized “Backend-as-a-Service” for survey schemas and response handling; you control the frontend and analytics.  
+3. **OSS, self-hostable**: With Forma being open source, you can self-host without vendor lock-in.
 
 
 ## Core components
 
-1. **Formbricks Backend:** Use the Formbricks app or Management API to create surveys (questions, flows, locales, validations).  
-2. **Your UI Survey Package:** Renders your custom UI, collects the data and sends to Formbricks backend using Formbricks API. For inspiration, you can start looking [here](https://github.com/formbricks/formbricks/tree/main/packages/surveys). With an active Enterprise license you can even fork our surveys package, make changes and keep them private to your organization (freed from AGPL obligation to also release your changes under AGPL)  
+1. **Forma Backend:** Use the Forma app or Management API to create surveys (questions, flows, locales, validations).  
+2. **Your UI Survey Package:** Renders your custom UI, collects the data and sends to Forma backend using Forma API. For inspiration, you can start looking [here](https://github.com/yldm-tech/forma/tree/main/packages/surveys). With an active Enterprise license you can even fork our surveys package, make changes and keep them private to your organization (freed from AGPL obligation to also release your changes under AGPL)  
 3. **Webhook Integration:** Using in-built Webhook integration forward the data to your Analysis tool or Data warehouse.  
-4. **Your Analysis Tool / Data Warehouse:** Receive all the data from Formbricks integration and process it for analysis.
+4. **Your Analysis Tool / Data Warehouse:** Receive all the data from Forma integration and process it for analysis.
 
 ## Data Flow
 
-### **Create Survey with Formbricks:** 
+### **Create Survey with Forma:** 
 
-Create a survey in Formbricks (UI) or programmatically via the Management API. Read more about the API endpoint [here](https://formbricks.com/docs/api-reference/management-api--survey/create-survey).  
+Create a survey in Forma (UI) or programmatically via the Management API. Read more about the API endpoint [here](https://forma.ylam.ai/docs/api-reference/management-api--survey/create-survey).  
 Returns: Full survey object with id, schema, and configuration.  
 ⚠️ Backend only: Requires API key \- call from your server, not client-side.
 
@@ -60,7 +60,7 @@ Body:
 
 ### **Fetch Survey Schema:**
 
-Get the survey schema using the Formbricks API. Read more about the API endpoint [here](https://formbricks.com/docs/api-reference/management-api--survey/get-survey-by-id).
+Get the survey schema using the Forma API. Read more about the API endpoint [here](https://forma.ylam.ai/docs/api-reference/management-api--survey/get-survey-by-id).
 
 GET /api/v1/management/surveys/{surveyId}  
 Headers: x-api-key: \<your-api-key\>
@@ -100,7 +100,7 @@ Headers: x-api-key: \<your-api-key\>
 
 These are **necessary requirements** for the survey to show up in the endpoint.
 
-More about the Endpoint [here](https://formbricks.com/docs/api-reference/client-api--environment/get-environment-state).
+More about the Endpoint [here](https://forma.ylam.ai/docs/api-reference/client-api--environment/get-environment-state).
 
 ```javascript
 GET /api/v1/client/{workspaceId}/environment
@@ -136,7 +136,7 @@ Body:
 
 Your frontend receives the survey JSON and renders it using your own UI components. 
 
-For inspiration, you can start looking [here](https://github.com/formbricks/formbricks/tree/main/packages/surveys). With an active Enterprise license you can even fork our surveys package, make changes and keep them private to your organization (freed from AGPL obligation to also release your changes under AGPL)
+For inspiration, you can start looking [here](https://github.com/yldm-tech/forma/tree/main/packages/surveys). With an active Enterprise license you can even fork our surveys package, make changes and keep them private to your organization (freed from AGPL obligation to also release your changes under AGPL)
 
 * Question rendering based on type (openText, multipleChoiceSingle, rating, etc.)  
 * Skip logic and conditional branching  
@@ -144,11 +144,11 @@ For inspiration, you can start looking [here](https://github.com/formbricks/form
 * Progress tracking  
 * Custom styling and branding
 
-### **Submit Responses to Formbricks:**
+### **Submit Responses to Forma:**
 
 #### **Client-side Submission (Recommended):**
 
-Post responses directly from the browser to Formbricks Client API. Read more about it [here](https://formbricks.com/docs/api-reference/client-api--response/create-response).  
+Post responses directly from the browser to Forma Client API. Read more about it [here](https://forma.ylam.ai/docs/api-reference/client-api--response/create-response).  
 ✅ No authentication required \- Safe for browser/mobile apps.
 
 ```javascript
@@ -178,10 +178,10 @@ Use when: You need server-side validation, PII handling, or response enrichment 
 
 #### **Option A: Real-time Webhooks (Recommended):**
 
-Configure webhooks in Formbricks to push response data to your system. Read more about Webhooks [here](https://formbricks.com/docs/platform/features/integrations/webhooks#webhooks).
+Configure webhooks in Forma to push response data to your system. Read more about Webhooks [here](https://forma.ylam.ai/docs/platform/features/integrations/webhooks#webhooks).
 
 1. Go to **Settings → Workspace → Integrations → Webhooks**  
-2. Add your endpoint URL: https://your-domain.com/webhooks/formbricks  
+2. Add your endpoint URL: https://your-domain.com/webhooks/forma  
 3. Select triggers:  
    * responseCreated \- New response started  
    * responseUpdated \- Response in progress  
@@ -210,7 +210,7 @@ Forward to your analytics tool, data warehouse, or CRM in real-time.
 
 #### **Option B: Pull from API on Demand:**
 
-Fetch responses periodically from your backend, read more about the Endpoint [here](https://formbricks.com/docs/api-reference/management-api--response/get-survey-responses).
+Fetch responses periodically from your backend, read more about the Endpoint [here](https://forma.ylam.ai/docs/api-reference/management-api--response/get-survey-responses).
 
 ```javascript
 GET /api/v1/management/responses?surveyId={surveyId}

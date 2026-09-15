@@ -1,16 +1,16 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { DatabaseError } from "@forma/types/errors";
 import {
   TIntegration,
   TIntegrationByType,
   TIntegrationInput,
   ZIntegrationType,
-} from "@formbricks/types/integration";
+} from "@forma/types/integration";
 import { ITEMS_PER_PAGE } from "../constants";
 import { validateInputs } from "../utils/validate";
 

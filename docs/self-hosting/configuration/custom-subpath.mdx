@@ -1,39 +1,39 @@
 ---
 title: "Custom Subpath"
-description: "Serve Formbricks from a custom URL prefix when you cannot expose it on the root domain."
+description: "Serve Forma from a custom URL prefix when you cannot expose it on the root domain."
 icon: "link"
 ---
 
 <Note>
   Custom subpath deployments are currently under internal review. If you need early access, please reach out via
-  [GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+  [GitHub Discussions](https://github.com/yldm-tech/forma/discussions).
 </Note>
 
 ### When to use a custom subpath
 
 Use a custom subpath (also called a Next.js base path) when your reverse proxy reserves the root domain for another
-service, but you still want Formbricks to live under the same hostname—for example `https://example.com/feedback`.
-Support for a build-time `BASE_PATH` variable is available in the Formbricks web app so that Next.js-managed routes,
+service, but you still want Forma to live under the same hostname—for example `https://example.com/feedback`.
+Support for a build-time `BASE_PATH` variable is available in the Forma web app so that Next.js-managed routes,
 assets, and navigation honor the prefix.
 
 ### Requirements and limitations
 
 - `BASE_PATH` must be present during `pnpm build`; changing it afterward requires a rebuild.
-- Next.js inlines the base path into the client bundles, so setting `BASE_PATH` on an already-built official Formbricks
-  image has no effect. You must build your own Formbricks web image with the required value.
-- Formbricks-owned public URLs need the prefix, but each variable expects a different path: `WEBAPP_URL` uses the
+- Next.js inlines the base path into the client bundles, so setting `BASE_PATH` on an already-built official Forma
+  image has no effect. You must build your own Forma web image with the required value.
+- Forma-owned public URLs need the prefix, but each variable expects a different path: `WEBAPP_URL` uses the
   app root, while `NEXTAUTH_URL` and optional `BETTER_AUTH_URL` use the full auth endpoint under
-  `/custom-path/api/auth`. External webhook target URLs do not need the prefix unless they point to a Formbricks
+  `/custom-path/api/auth`. External webhook target URLs do not need the prefix unless they point to a Forma
   endpoint.
 - Known limitation: the browser auth client currently sends login and sign-up requests to `/api/auth` at the domain
   root instead of `/custom-path/api/auth`. Authentication therefore does not work for a true subpath-only deployment,
   and changing the URL environment variables does not correct the browser request path.
-- Your proxy must rewrite `/custom-path/*` to the Formbricks container while keeping the prefix visible to clients.
+- Your proxy must rewrite `/custom-path/*` to the Forma container while keeping the prefix visible to clients.
 
 ### Configure object storage separately
 
-`BASE_PATH` applies only to the Formbricks web application. It does not add the same prefix to RustFS, MinIO, or
-another S3-compatible storage service, and the custom image described below is a Formbricks image—not a custom
+`BASE_PATH` applies only to the Forma web application. It does not add the same prefix to RustFS, MinIO, or
+another S3-compatible storage service, and the custom image described below is a Forma image—not a custom
 storage image.
 
 Keep the S3 API at the root of a dedicated endpoint such as `https://files.example.com` and set `S3_ENDPOINT_URL`
@@ -55,32 +55,32 @@ NEXTAUTH_URL="https://yourdomain.com/custom-path/api/auth"
 BETTER_AUTH_URL="https://yourdomain.com/custom-path/api/auth"
 ```
 
-If you use third-party OAuth providers, ensure every Formbricks callback URL you register includes the prefix. MCP
+If you use third-party OAuth providers, ensure every Forma callback URL you register includes the prefix. MCP
 clients must use `https://yourdomain.com/custom-path/api/mcp`, and OAuth discovery is served from
 `https://yourdomain.com/custom-path/.well-known/oauth-authorization-server/api/auth`.
 
 ### Build a Docker image with a custom subpath
 
 <Steps>
-  <Step title="Clone Formbricks and prepare secrets">
+  <Step title="Clone Forma and prepare secrets">
     Make sure you have the repository checked out and create temporary files (or use <code>--secret</code>) for the
     required build-time secrets such as <code>DATABASE_URL</code>, <code>ENCRYPTION_KEY</code>, <code>REDIS_URL</code>,
     and optional telemetry tokens.
   </Step>
   <Step title="Pass BASE_PATH as a build argument">
-    Use the Formbricks web Dockerfile and supply the custom subpath via <code>--build-arg</code>. Example:
+    Use the Forma web Dockerfile and supply the custom subpath via <code>--build-arg</code>. Example:
 
 ```bash
 docker build \
   --progress=plain \
   --no-cache \
   --build-arg BASE_PATH=/custom-path \
-  --secret id=database_url,src=<(printf "postgresql://user:password@localhost:5432/formbricks?schema=public") \
+  --secret id=database_url,src=<(printf "postgresql://user:password@localhost:5432/forma?schema=public") \
   --secret id=encryption_key,src=<(printf "your-32-character-encryption-key-here") \
   --secret id=redis_url,src=<(printf "redis://localhost:6379") \
   --secret id=sentry_auth_token,src=<(printf "") \
   -f apps/web/Dockerfile \
-  -t formbricks-web \
+  -t forma-web \
   .
 ```
 
@@ -90,7 +90,7 @@ docker build \
   <Step title="Run the container behind your proxy">
     Start the resulting image with the same runtime environment variables you normally use (database credentials,
     mailing provider, etc.). Point your reverse proxy so that <code>/custom-path</code> requests forward to
-    <code>http://formbricks-web:3000/custom-path</code> without stripping the prefix.
+    <code>http://forma-web:3000/custom-path</code> without stripping the prefix.
   </Step>
 </Steps>
 

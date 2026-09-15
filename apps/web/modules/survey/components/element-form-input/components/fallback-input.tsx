@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyRecallItem } from "@formbricks/types/surveys/types";
+import { TSurveyRecallItem } from "@forma/types/surveys/types";
 import { getTextContentWithRecallTruncated } from "@/lib/utils/recall";
 import { Button } from "@/modules/ui/components/button";
 import { Input } from "@/modules/ui/components/input";

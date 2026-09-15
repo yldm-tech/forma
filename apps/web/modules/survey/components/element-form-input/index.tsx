@@ -4,21 +4,17 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { IMAGE_FILE_EXTENSIONS } from "@formbricks/types/storage";
-import {
-  TSurveyElement,
-  TSurveyElementChoice,
-  TSurveyElementTypeEnum,
-} from "@formbricks/types/surveys/elements";
+import { type TI18nString } from "@forma/types/i18n";
+import { IMAGE_FILE_EXTENSIONS } from "@forma/types/storage";
+import { TSurveyElement, TSurveyElementChoice, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyEndScreenCard,
   TSurveyRecallItem,
   TSurveyRedirectUrlCard,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "@/lib/i18n/utils";
 import { debounce } from "@/lib/utils/debounce";
 import { useSyncScroll } from "@/lib/utils/hooks/useSyncScroll";

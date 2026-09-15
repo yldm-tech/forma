@@ -5,13 +5,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 
-const formbricksScriptPath = fileURLToPath(new URL("../../../docker/formbricks.sh", import.meta.url));
+const formaScriptPath = fileURLToPath(new URL("../../../docker/forma.sh", import.meta.url));
 const rustfsInitTemplatePath = fileURLToPath(new URL("../../../docker/rustfs-init.sh", import.meta.url));
 
 const tempDirs: string[] = [];
 
 const createTempDir = (): string => {
-  const tempDir = mkdtempSync(join(tmpdir(), "formbricks-rustfs-init-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "forma-rustfs-init-"));
   tempDirs.push(tempDir);
   return tempDir;
 };
@@ -42,11 +42,11 @@ if [ "$1" = "ls" ] && [ "$2" = "rustfs" ]; then
   exit 0
 fi
 
-if [ "$1" = "mb" ] && [ "$2" = "rustfs/formbricks" ] && [ "$3" = "--ignore-existing" ]; then
+if [ "$1" = "mb" ] && [ "$2" = "rustfs/forma" ] && [ "$3" = "--ignore-existing" ]; then
   exit 0
 fi
 
-if [ "$1" = "cors" ] && [ "$2" = "set" ] && [ "$3" = "rustfs/formbricks" ]; then
+if [ "$1" = "cors" ] && [ "$2" = "set" ] && [ "$3" = "rustfs/forma" ]; then
   cp "$4" "$capture_dir/cors.xml"
   exit 0
 fi
@@ -99,7 +99,7 @@ exit 0
 const writeRustfsInitScript = (targetPath: string): void => {
   execFileSync(
     "bash",
-    ["-lc", 'source "$1"; write_rustfs_init_script "$2"', "bash", formbricksScriptPath, targetPath],
+    ["-lc", 'source "$1"; write_rustfs_init_script "$2"', "bash", formaScriptPath, targetPath],
     { encoding: "utf8" }
   );
 };
@@ -108,11 +108,11 @@ afterEach(() => {
   for (const tempDir of tempDirs.splice(0)) {
     rmSync(tempDir, { recursive: true, force: true });
   }
-  rmSync("/tmp/formbricks-cors.xml", { force: true });
-  rmSync("/tmp/formbricks-policy.json", { force: true });
+  rmSync("/tmp/forma-cors.xml", { force: true });
+  rmSync("/tmp/forma-policy.json", { force: true });
 });
 
-describe("docker/formbricks.sh RustFS bootstrap", () => {
+describe("docker/forma.sh RustFS bootstrap", () => {
   test("generated init script stays in sync with the checked-in dev bootstrap script", () => {
     const tempDir = createTempDir();
     const generatedScriptPath = join(tempDir, "rustfs-init.sh");
@@ -144,8 +144,8 @@ describe("docker/formbricks.sh RustFS bootstrap", () => {
         RUSTFS_ADMIN_PASSWORD: "admin-password",
         RUSTFS_SERVICE_USER: "service-user",
         RUSTFS_SERVICE_PASSWORD: "service-password",
-        RUSTFS_BUCKET_NAME: "formbricks",
-        RUSTFS_POLICY_NAME: "formbricks-app-policy",
+        RUSTFS_BUCKET_NAME: "forma",
+        RUSTFS_POLICY_NAME: "forma-app-policy",
         RUSTFS_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000",
       },
     });
@@ -155,13 +155,13 @@ describe("docker/formbricks.sh RustFS bootstrap", () => {
     expect(mcCalls).toEqual([
       "alias set rustfs http://rustfs:9000 admin-user admin-password",
       "ls rustfs",
-      "mb rustfs/formbricks --ignore-existing",
-      "cors set rustfs/formbricks /tmp/formbricks-cors.xml",
-      "admin policy info rustfs formbricks-app-policy",
-      "admin policy create rustfs formbricks-app-policy /tmp/formbricks-policy.json",
+      "mb rustfs/forma --ignore-existing",
+      "cors set rustfs/forma /tmp/forma-cors.xml",
+      "admin policy info rustfs forma-app-policy",
+      "admin policy create rustfs forma-app-policy /tmp/forma-policy.json",
       "admin user info rustfs service-user",
       "admin user add rustfs service-user service-password",
-      "admin policy attach rustfs formbricks-app-policy --user service-user",
+      "admin policy attach rustfs forma-app-policy --user service-user",
     ]);
 
     const policy = JSON.parse(readFileSync(join(captureDir, "policy.json"), "utf8")) as {
@@ -175,12 +175,12 @@ describe("docker/formbricks.sh RustFS bootstrap", () => {
         {
           Effect: "Allow",
           Action: ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"],
-          Resource: ["arn:aws:s3:::formbricks/*"],
+          Resource: ["arn:aws:s3:::forma/*"],
         },
         {
           Effect: "Allow",
           Action: ["s3:ListBucket"],
-          Resource: ["arn:aws:s3:::formbricks"],
+          Resource: ["arn:aws:s3:::forma"],
         },
       ],
     });
@@ -225,15 +225,15 @@ describe("docker/formbricks.sh RustFS bootstrap", () => {
         RUSTFS_ADMIN_PASSWORD: "admin-password",
         RUSTFS_SERVICE_USER: "service-user",
         RUSTFS_SERVICE_PASSWORD: "service-password",
-        RUSTFS_BUCKET_NAME: "formbricks",
-        RUSTFS_POLICY_NAME: "formbricks-app-policy",
+        RUSTFS_BUCKET_NAME: "forma",
+        RUSTFS_POLICY_NAME: "forma-app-policy",
       },
     });
 
     const mcCalls = readFileSync(logFile, "utf8").trim().split("\n");
 
-    expect(mcCalls).toContain("admin policy create rustfs formbricks-app-policy /tmp/formbricks-policy.json");
-    expect(mcCalls).toContain("admin policy add rustfs formbricks-app-policy /tmp/formbricks-policy.json");
+    expect(mcCalls).toContain("admin policy create rustfs forma-app-policy /tmp/forma-policy.json");
+    expect(mcCalls).toContain("admin policy add rustfs forma-app-policy /tmp/forma-policy.json");
   });
 
   test("generated init script exits non-zero when RustFS never becomes ready", () => {
@@ -260,8 +260,8 @@ describe("docker/formbricks.sh RustFS bootstrap", () => {
           RUSTFS_ADMIN_PASSWORD: "admin-password",
           RUSTFS_SERVICE_USER: "service-user",
           RUSTFS_SERVICE_PASSWORD: "service-password",
-          RUSTFS_BUCKET_NAME: "formbricks",
-          RUSTFS_POLICY_NAME: "formbricks-app-policy",
+          RUSTFS_BUCKET_NAME: "forma",
+          RUSTFS_POLICY_NAME: "forma-app-policy",
         },
       })
     ).toThrow();

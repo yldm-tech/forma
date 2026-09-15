@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { type TResponseData, type TResponseVariables } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import { type TSurveyOpenTextElement } from "@formbricks/types/surveys/elements";
+import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import { type TSurveyOpenTextElement } from "@forma/types/surveys/elements";
 import { parseRecallInformation, replaceRecallInfo } from "./recall";
 
 // Mock getLocalizedValue (assuming path and simple behavior)
@@ -32,7 +32,7 @@ describe("replaceRecallInfo", () => {
   };
 
   const variables: TResponseVariables = {
-    productName: "Formbricks",
+    productName: "Forma",
     userRole: "Admin",
     lastLogin: "2024-03-10",
   };
@@ -45,7 +45,7 @@ describe("replaceRecallInfo", () => {
 
   test("should replace recall info from variables if not in responseData", () => {
     const text = "Product: #recall:productName/fallback:N/A#. Role: #recall:userRole/fallback:User#.";
-    const expected = "Product: Formbricks. Role: Admin.";
+    const expected = "Product: Forma. Role: Admin.";
     expect(replaceRecallInfo(text, responseData, variables)).toBe(expected);
   });
 
@@ -97,7 +97,7 @@ describe("replaceRecallInfo", () => {
   test("should handle multiple recall patterns in a single string", () => {
     const text =
       "Hi #recall:name/fallback:User#, welcome to #recall:productName/fallback:Our Product#. Your role is #recall:userRole/fallback:Member#.";
-    const expected = "Hi John Doe, welcome to Formbricks. Your role is Admin.";
+    const expected = "Hi John Doe, welcome to Forma. Your role is Admin.";
     expect(replaceRecallInfo(text, responseData, variables)).toBe(expected);
   });
 
@@ -159,7 +159,7 @@ describe("parseRecallInformation", () => {
   };
 
   const variables: TResponseVariables = {
-    productName: "Formbricks",
+    productName: "Forma",
     userRole: "Admin",
     lastLogin: "2024-03-10",
     surveyType: "Onboarding",
@@ -200,7 +200,7 @@ describe("parseRecallInformation", () => {
       headline: { en: "Main Question" },
       subheader: { en: "Details: #recall:productName/fallback:N/A#." },
     };
-    const expectedSubheader = "Details: Formbricks.";
+    const expectedSubheader = "Details: Forma.";
     const result = parseRecallInformation(question, "en", responseData, variables);
     expect(result.subheader?.en).toBe(expectedSubheader);
   });

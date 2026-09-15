@@ -1,8 +1,8 @@
 {
-  "name": "@formbricks/workflows",
+  "name": "@forma/workflows",
   "version": "0.1.0",
   "private": true,
-  "description": "Formbricks Workflows core library",
+  "description": "Forma Workflows core library",
   "type": "module",
   "exports": {
     ".": {
@@ -28,8 +28,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@types/js-yaml": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "js-yaml": "catalog:",

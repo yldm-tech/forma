@@ -1,7 +1,7 @@
 import "server-only";
 import type { RedisClientType } from "redis";
-import { getCacheService } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
+import { getCacheService } from "@forma/cache";
+import { logger } from "@forma/logger";
 
 type CacheResult<T, E = { code: string }> = { ok: true; data: T } | { ok: false; error: E };
 

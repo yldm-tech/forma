@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, type PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, type PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import {
   createFeedbackDirectory,
@@ -24,7 +24,7 @@ vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => {
+vi.mock("@forma/database", () => {
   const prismaMock = {
     feedbackDirectory: {
       findMany: vi.fn(),
@@ -177,7 +177,7 @@ describe("FeedbackDirectory Service", () => {
           {
             id: "conn-1",
             name: "My Connector",
-            type: "formbricks_survey",
+            type: "forma_survey",
             workspaceId: mockWorkspaceId1,
             workspace: { name: "Workspace A" },
           },
@@ -191,7 +191,7 @@ describe("FeedbackDirectory Service", () => {
         {
           id: "conn-1",
           name: "My Connector",
-          type: "formbricks_survey",
+          type: "forma_survey",
           workspaceId: mockWorkspaceId1,
           workspaceName: "Workspace A",
         },

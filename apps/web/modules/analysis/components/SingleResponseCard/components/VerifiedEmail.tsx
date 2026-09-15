@@ -2,7 +2,7 @@
 
 import { MailIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TResponseData } from "@formbricks/types/responses";
+import { TResponseData } from "@forma/types/responses";
 
 interface VerifiedEmailProps {
   responseData: TResponseData;

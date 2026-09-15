@@ -5,7 +5,7 @@ import {
   type TWorkflowNode,
   getBlankSendEmailContentFields,
   getWorkflowNodeConcreteType,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { getNodeRegistryEntry } from "@/modules/ee/workflows/lib/node-registry";
 import type { TWorkflowNodeData, TWorkflowNodeIssue } from "@/modules/ee/workflows/state/editor";
 

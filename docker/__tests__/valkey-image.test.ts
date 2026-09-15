@@ -16,7 +16,7 @@ const sharedDirectPinFiles = [
   ".github/workflows/integration-tests.yml",
   "docker-compose.dev.yml",
   "docker/docker-compose.yml",
-  "docker/formbricks.sh",
+  "docker/forma.sh",
   "docker/migrate-to-v4.sh",
 ];
 const mainOnlyDirectPinFile = ".github/workflows/api-v3-contract-tests.yml";
@@ -30,7 +30,7 @@ describe("bundled Valkey image", () => {
   });
 
   test("uses the same index in the Helm defaults and generated values table", () => {
-    const values = load(readFileSync(join(repositoryRoot, "charts/formbricks/values.yaml"), "utf8")) as {
+    const values = load(readFileSync(join(repositoryRoot, "charts/forma/values.yaml"), "utf8")) as {
       redis?: { image?: { digest?: string; repository?: string } };
     };
 
@@ -38,13 +38,13 @@ describe("bundled Valkey image", () => {
       digest: valkeyIndexDigest,
       repository: "valkey/valkey",
     });
-    expect(readFileSync(join(repositoryRoot, "charts/formbricks/README.md"), "utf8")).toContain(
+    expect(readFileSync(join(repositoryRoot, "charts/forma/README.md"), "utf8")).toContain(
       `\`"${valkeyIndexDigest}"\``
     );
   });
 
   test("keeps the updater's current and legacy migration pins explicit", () => {
-    const updater = readFileSync(join(repositoryRoot, "docker/formbricks.sh"), "utf8");
+    const updater = readFileSync(join(repositoryRoot, "docker/forma.sh"), "utf8");
 
     expect(updater).toContain(`legacy_valkey_image="${legacyValkeyImage}"`);
     expect(updater).toContain(`multi_arch_valkey_image="${valkeyImage}"`);

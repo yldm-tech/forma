@@ -1,9 +1,9 @@
 import "server-only";
 import { type Archiver, type ArchiverError, ZipArchive } from "archiver";
 import { Readable } from "node:stream";
-import { logger } from "@formbricks/logger";
-import { StorageErrorCode } from "@formbricks/storage";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { StorageErrorCode } from "@forma/storage";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { type TAttachmentEntry } from "@/modules/storage/lib/collect-response-attachments";
 import { getFileStreamForDownload } from "@/modules/storage/service";
 import { buildAttachmentManifestCsv } from "./manifest";

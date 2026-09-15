@@ -2,7 +2,7 @@
  * Builds the document title for a public survey page (WCAG 2.4.2).
  *
  * The base title is whatever `generateMetadata` already produced server-side — link metadata title,
- * else the welcome-card headline, else the survey name, plus the root layout's `"| Formbricks"`
+ * else the welcome-card headline, else the survey name, plus the root layout's `"| Forma"`
  * template. It is read back off `document.title` rather than recomputed, so the author's custom link
  * title and the cloud/self-hosted suffix are respected without duplicating
  * `getBasicSurveyMetadata`'s priority chain on the client.
@@ -19,7 +19,7 @@ export const buildSurveyDocumentTitle = (baseTitle: string, step?: string): stri
   const suffix = step?.trim();
   if (!suffix) return base;
   if (!base) return suffix;
-  // Em dash rather than a pipe: the base title may already end in "| Formbricks", and two pipes read
+  // Em dash rather than a pipe: the base title may already end in "| Forma", and two pipes read
   // as one breadcrumb rather than a title plus a position.
   return `${base} — ${suffix}`;
 };

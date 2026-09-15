@@ -79,7 +79,7 @@ export function FeedbackSourceSuggestions({
             key={survey.id}
             className="m-2 grid h-12 min-h-12 grid-cols-12 content-center rounded-md bg-slate-50 transition-colors ease-in-out">
             <div className="col-span-6 flex min-w-0 items-center gap-2 pl-6">
-              {getFeedbackSourceIcon("formbricks_survey", "h-4 w-4 shrink-0 text-slate-500")}
+              {getFeedbackSourceIcon("forma_survey", "h-4 w-4 shrink-0 text-slate-500")}
               <span className="truncate text-sm font-medium text-slate-900">{survey.name}</span>
               <span className="inline-flex shrink-0 items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
                 {t("workspace.unify.suggestion")}

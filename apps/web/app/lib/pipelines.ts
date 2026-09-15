@@ -1,6 +1,6 @@
-import { TResponsePipelineJobData, getBackgroundJobProducer } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
-import type { TUserLocale } from "@formbricks/types/user";
+import { TResponsePipelineJobData, getBackgroundJobProducer } from "@forma/jobs";
+import { logger } from "@forma/logger";
+import type { TUserLocale } from "@forma/types/user";
 import { getJobsQueueingConfig } from "@/lib/jobs/config";
 import { findMatchingLocale } from "@/lib/utils/locale";
 

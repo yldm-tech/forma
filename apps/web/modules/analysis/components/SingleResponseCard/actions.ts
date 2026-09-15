@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZId } from "@forma/types/common";
+import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
 import { deleteResponse, getResponse, getResponseWithQuotas } from "@/lib/response/service";
 import { createTag, getTagsByWorkspaceId } from "@/lib/tag/service";

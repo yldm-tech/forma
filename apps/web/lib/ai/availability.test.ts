@@ -10,9 +10,9 @@ import {
 // pinning the English wording.
 const t = (key: string) => key;
 
-const CLOUD = { isFormbricksCloud: true, enterpriseLicenseRequestFormUrl: "https://forms.example/licence" };
+const CLOUD = { isFormaCloud: true, enterpriseLicenseRequestFormUrl: "https://forms.example/licence" };
 const SELF_HOSTED = {
-  isFormbricksCloud: false,
+  isFormaCloud: false,
   enterpriseLicenseRequestFormUrl: "https://forms.example/licence",
 };
 

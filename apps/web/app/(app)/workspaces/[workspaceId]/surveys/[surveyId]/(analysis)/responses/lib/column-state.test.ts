@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { RESERVED_FIELD_CATALOG } from "@formbricks/types/embedded-data-resolver";
+import { RESERVED_FIELD_CATALOG } from "@forma/types/embedded-data-resolver";
 import { reconcileColumnOrder, seedReservedColumnVisibility } from "./column-state";
 import { reservedColumnId } from "./utils";
 

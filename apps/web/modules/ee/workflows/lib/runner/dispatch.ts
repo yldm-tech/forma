@@ -1,4 +1,4 @@
-import { enqueueWorkflowRunJob } from "@formbricks/jobs";
+import { enqueueWorkflowRunJob } from "@forma/jobs";
 
 export interface WorkflowRunDispatch {
   workflowRunId: string;

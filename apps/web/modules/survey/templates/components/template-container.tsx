@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Workspace } from "@formbricks/database/prisma-browser";
-import type { TTemplate } from "@formbricks/types/templates";
-import type { TUserLocale } from "@formbricks/types/user";
+import type { Workspace } from "@forma/database/prisma-browser";
+import type { TTemplate } from "@forma/types/templates";
+import type { TUserLocale } from "@forma/types/user";
 import { customSurveyTemplate } from "@/app/lib/templates";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { TemplateList } from "@/modules/survey/components/template-list";

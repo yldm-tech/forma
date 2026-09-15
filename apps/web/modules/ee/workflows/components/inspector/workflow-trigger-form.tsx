@@ -4,7 +4,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TWorkflowResponseCompletedTriggerNode } from "@formbricks/workflows";
+import type { TWorkflowResponseCompletedTriggerNode } from "@forma/workflows";
 import { cn } from "@/lib/cn";
 import {
   WorkflowFieldError,

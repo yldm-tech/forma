@@ -7,14 +7,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TIntegrationItem } from "@formbricks/types/integration";
+import { TIntegrationItem } from "@forma/types/integration";
 import {
   TIntegrationSlack,
   TIntegrationSlackConfigData,
   TIntegrationSlackInput,
-} from "@formbricks/types/integration/slack";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/integration/slack";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
 import SlackLogo from "@/images/slacklogo.png";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -254,7 +254,7 @@ export const AddChannelMappingModal = ({
                     disabled={channels.length === 0}
                   />
                   <Link
-                    href="https://formbricks.com/docs/developer-docs/integrations/slack"
+                    href="https://forma.ylam.ai/docs/developer-docs/integrations/slack"
                     target="_blank"
                     className="text-xs">
                     <Button variant="ghost" size="sm" className="my-2" type="button">

@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { type TChartQuery } from "@formbricks/types/analysis";
+import { type TChartQuery } from "@forma/types/analysis";
 import { generateOrganizationAIObject } from "@/lib/ai/service";
 import { AI_TRACING_FEATURE } from "@/lib/posthog/ai-tracing-feature";
 import { formatDataProfile } from "@/modules/ee/analysis/lib/ai-data-profile";

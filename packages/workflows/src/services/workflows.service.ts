@@ -176,7 +176,7 @@ export interface WorkflowsService {
 
 /**
  * Data-access layer for the v3 Workflows API. Prisma is injected (see `ports.ts`) so the package
- * carries no runtime dependency on `@formbricks/database`. Inputs are already validated by the
+ * carries no runtime dependency on `@forma/database`. Inputs are already validated by the
  * contract schemas at the handler boundary, so the service does not re-parse them. DB errors are
  * allowed to bubble to the handler's error mapper (logged there once, as a 500).
  */

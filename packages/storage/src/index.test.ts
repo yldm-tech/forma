@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import * as storage from "./index";
 
-describe("@formbricks/storage public API", () => {
+describe("@forma/storage public API", () => {
   test("exports the runtime storage entry points and error enum", () => {
     expect(storage.getSignedUploadUrl).toBeTypeOf("function");
     expect(storage.getSignedDownloadUrl).toBeTypeOf("function");

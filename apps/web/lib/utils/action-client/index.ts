@@ -1,8 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { DEFAULT_SERVER_ERROR_MESSAGE, createSafeActionClient } from "next-safe-action";
 import { v4 as uuidv4 } from "uuid";
-import { logger } from "@formbricks/logger";
-import { AuthenticationError, AuthorizationError, isExpectedError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { AuthenticationError, AuthorizationError, isExpectedError } from "@forma/types/errors";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { AUDIT_LOG_ENABLED, AUDIT_LOG_GET_USER_IP } from "@/lib/constants";
 import { getUser } from "@/lib/user/service";

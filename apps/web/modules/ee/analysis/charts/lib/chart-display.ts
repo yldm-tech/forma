@@ -1,4 +1,4 @@
-import type { TChartConfig } from "@formbricks/types/analysis";
+import type { TChartConfig } from "@forma/types/analysis";
 import type { TChartType } from "@/modules/ee/analysis/types/analysis";
 
 export type TBarOrientation = NonNullable<TChartConfig["barOrientation"]>;

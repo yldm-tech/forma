@@ -1,21 +1,21 @@
 ---
 title: "Custom SSL Certificate"
-description: "Using Formbricks One-Click Setup with a Custom SSL Certificate."
+description: "Using Forma One-Click Setup with a Custom SSL Certificate."
 icon: "lock"
 ---
 
 <Note>
-  Formbricks One-Click setup already comes with a valid SSL certificate using **Let's Encrypt**. This guide is only if you already have a valid SSL certificate that you need to use due to company policy or other requirements.
+  Forma One-Click setup already comes with a valid SSL certificate using **Let's Encrypt**. This guide is only if you already have a valid SSL certificate that you need to use due to company policy or other requirements.
 </Note>
 
-Formbricks' One-Click setup automatically creates an SSL certificate using **Let's Encrypt**. However, some setups need a custom SSL certificate. This is common for intranets or systems with special certificate rules that use an internal or custom certificate authority (CA).
+Forma' One-Click setup automatically creates an SSL certificate using **Let's Encrypt**. However, some setups need a custom SSL certificate. This is common for intranets or systems with special certificate rules that use an internal or custom certificate authority (CA).
 
-### Step 1: Navigate to the Formbricks Folder
+### Step 1: Navigate to the Forma Folder
 
-Move into the `formbricks/` directory:
+Move into the `forma/` directory:
 
 ```bash
-cd formbricks
+cd forma
 ```
 
 ### Step 2: Create a Folder for SSL Certificates
@@ -91,17 +91,17 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
 <CodeGroup>
   ```yaml docker-compose.yml
   services:
-    formbricks:
+    forma:
       restart: always
-      image: ghcr.io/formbricks/formbricks:latest
+      image: ghcr.io/yldm-tech/forma:latest
       depends_on:
         - postgres
       labels:
         - "traefik.enable=true"  # Enable Traefik for this service
-        - "traefik.http.routers.formbricks.rule=Host(`my-domain.com`)"  # Use your actual domain or IP
-        - "traefik.http.routers.formbricks.entrypoints=websecure"  # Use the websecure entrypoint (port 443 with TLS)
-        - "traefik.http.routers.formbricks.tls=true"  # Enable TLS
-        - "traefik.http.services.formbricks.loadbalancer.server.port=3000"  # Forward traffic to Formbricks on port 3000
+        - "traefik.http.routers.forma.rule=Host(`my-domain.com`)"  # Use your actual domain or IP
+        - "traefik.http.routers.forma.entrypoints=websecure"  # Use the websecure entrypoint (port 443 with TLS)
+        - "traefik.http.routers.forma.tls=true"  # Enable TLS
+        - "traefik.http.services.forma.loadbalancer.server.port=3000"  # Forward traffic to Forma on port 3000
       ports:
         - 3000:3000
       volumes:
@@ -113,7 +113,7 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
       restart: always
       container_name: "traefik"
       depends_on:
-        - formbricks
+        - forma
       ports:
         - "80:80"
         - "443:443"
@@ -129,7 +129,7 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
 
 ## Summary
 
-* **Navigate to the Formbricks folder**
+* **Navigate to the Forma folder**
 
 * **Create a `certs/` folder** and move your certificate files inside.
 
@@ -143,6 +143,6 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
 
 * **Update `docker-compose.yml`** to use your custom SSL certificate.
 
-This setup ensures that Formbricks securely communicates using your own SSL certificate. 🚀
+This setup ensures that Forma securely communicates using your own SSL certificate. 🚀
 
-If you have any questions or require help, feel free to reach out to us on [**GitHub Discussions**](https://github.com/formbricks/formbricks/discussions). 😃
+If you have any questions or require help, feel free to reach out to us on [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions). 😃

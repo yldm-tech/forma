@@ -20,81 +20,80 @@ const getFeatureDefinitions = (t: TFunction): TFeatureDefinition[] => {
   return [
     {
       key: "removeBranding",
-      labelKey: t("workspace.settings.enterprise.hide_powered_by_formbricks"),
-      docsUrl:
-        "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/hide-powered-by-formbricks",
+      labelKey: t("workspace.settings.enterprise.hide_powered_by_forma"),
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/hide-powered-by-forma",
     },
     {
       key: "whitelabel",
       labelKey: t("workspace.settings.enterprise.whitelabel_email_follow_ups"),
       docsUrl:
-        "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/whitelabel-email-follow-ups",
+        "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/whitelabel-email-follow-ups",
     },
     {
       key: "accessControl",
       labelKey: t("workspace.settings.enterprise.teams_and_access_roles"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/team-access",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/team-access",
     },
     {
       key: "contacts",
       labelKey: t("workspace.settings.enterprise.contacts_and_segments"),
       docsUrl:
-        "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/contact-management-segments",
+        "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/contact-management-segments",
     },
     {
       key: "quotas",
       labelKey: t("workspace.settings.enterprise.quota_management"),
-      docsUrl: "https://formbricks.com/docs/surveys/general-features/quota-management",
+      docsUrl: "https://forma.ylam.ai/docs/surveys/general-features/quota-management",
     },
     {
       key: "feedbackDirectories",
       labelKey: t("workspace.settings.enterprise.feedback_directories"),
-      docsUrl: "https://formbricks.com/docs/unify-feedback/feedback-directories",
+      docsUrl: "https://forma.ylam.ai/docs/unify-feedback/feedback-directories",
     },
     {
       key: "dashboards",
       labelKey: t("workspace.settings.enterprise.insights_dashboards"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/dashboards",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/dashboards",
     },
     {
       key: "auditLogs",
       labelKey: t("workspace.settings.enterprise.audit_logs"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/audit-logging",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/audit-logging",
     },
     {
       key: "sso",
       labelKey: t("workspace.settings.enterprise.oidc_sso"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/oidc-sso",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/oidc-sso",
     },
     {
       key: "saml",
       labelKey: t("workspace.settings.enterprise.saml_sso"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/saml-sso",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/saml-sso",
     },
     {
       key: "spamProtection",
       labelKey: t("workspace.settings.enterprise.spam_protection_recaptcha"),
-      docsUrl: "https://formbricks.com/docs/surveys/general-features/spam-protection",
+      docsUrl: "https://forma.ylam.ai/docs/surveys/general-features/spam-protection",
     },
     {
       key: "twoFactorAuth",
       labelKey: t("workspace.settings.enterprise.two_factor_authentication"),
-      docsUrl: "https://formbricks.com/docs/platform/features/user-management/two-factor-auth",
+      docsUrl: "https://forma.ylam.ai/docs/platform/features/user-management/two-factor-auth",
     },
     {
       key: "workspaces",
       labelKey: t("workspace.settings.enterprise.custom_workspace_count"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/advanced/license#what-features-are-free",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/license#what-features-are-free",
     },
     {
       key: "aiSmartTools",
       labelKey: t("workspace.settings.general.ai_smart_tools_enabled"),
-      docsUrl: "https://formbricks.com/docs/self-hosting/configuration/ai",
+      docsUrl: "https://forma.ylam.ai/docs/self-hosting/configuration/ai",
     },
     {
       key: "workflows",
       labelKey: t("workspace.settings.enterprise.workflows"),
-      docsUrl: "https://formbricks.com/docs/workflows/overview",
+      docsUrl: "https://forma.ylam.ai/docs/workflows/overview",
     },
   ];
 };

@@ -1,5 +1,5 @@
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { TSurveyLanguage } from "@forma/types/surveys/types";
 
 /**
  * Resolve the language a survey should render in.

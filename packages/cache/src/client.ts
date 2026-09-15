@@ -1,5 +1,5 @@
 import { createClient } from "redis";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { RedisClient } from "@/types/client";
 import { type CacheError, ErrorCode, type Result, err, ok } from "@/types/error";
 import { CacheService } from "./service";
@@ -60,12 +60,12 @@ export async function createRedisClientFromEnv(): Promise<Result<RedisClient, Ca
 
 // Global singleton with globalThis for cross-module sharing
 const globalForCache = globalThis as unknown as {
-  formbricksCache: CacheService | undefined;
-  formbricksCacheInitializing: Promise<Result<CacheService, CacheError>> | undefined;
+  formaCache: CacheService | undefined;
+  formaCacheInitializing: Promise<Result<CacheService, CacheError>> | undefined;
 };
 
 // Module-level singleton for performance
-let singleton: CacheService | null = globalForCache.formbricksCache ?? null;
+let singleton: CacheService | null = globalForCache.formaCache ?? null;
 
 /**
  * Returns existing instance immediately if available
@@ -80,17 +80,17 @@ export async function getCacheService(): Promise<Result<CacheService, CacheError
   }
 
   // Return existing instance from globalForCache if available
-  if (globalForCache.formbricksCache) {
-    const rc = globalForCache.formbricksCache.getRedisClient();
+  if (globalForCache.formaCache) {
+    const rc = globalForCache.formaCache.getRedisClient();
     if (rc?.isReady && rc.isOpen) {
-      singleton = globalForCache.formbricksCache;
-      return ok(globalForCache.formbricksCache);
+      singleton = globalForCache.formaCache;
+      return ok(globalForCache.formaCache);
     }
   }
 
   // Prevent concurrent initialization
-  if (globalForCache.formbricksCacheInitializing) {
-    const result = await globalForCache.formbricksCacheInitializing;
+  if (globalForCache.formaCacheInitializing) {
+    const result = await globalForCache.formaCacheInitializing;
     if (result.ok) {
       singleton = result.data;
     }
@@ -98,7 +98,7 @@ export async function getCacheService(): Promise<Result<CacheService, CacheError
   }
 
   // Start initialization - fail fast approach
-  globalForCache.formbricksCacheInitializing = (async (): Promise<Result<CacheService, CacheError>> => {
+  globalForCache.formaCacheInitializing = (async (): Promise<Result<CacheService, CacheError>> => {
     const clientResult = await createRedisClientFromEnv();
     if (!clientResult.ok) {
       logger.error({ error: clientResult.error }, "Redis client creation failed");
@@ -109,14 +109,14 @@ export async function getCacheService(): Promise<Result<CacheService, CacheError
     logger.debug("Redis connection established");
     const svc = new CacheService(client);
     singleton = svc;
-    globalForCache.formbricksCache = svc;
+    globalForCache.formaCache = svc;
     logger.debug("Cache service created");
     return ok(svc);
   })();
 
-  const result = await globalForCache.formbricksCacheInitializing;
+  const result = await globalForCache.formaCacheInitializing;
   if (!result.ok) {
-    globalForCache.formbricksCacheInitializing = undefined; // Allow retry
+    globalForCache.formaCacheInitializing = undefined; // Allow retry
     logger.error({ error: result.error }, "Cache service creation failed");
   }
   return result;
@@ -124,6 +124,6 @@ export async function getCacheService(): Promise<Result<CacheService, CacheError
 
 export function resetCacheFactory(): void {
   singleton = null;
-  globalForCache.formbricksCache = undefined;
-  globalForCache.formbricksCacheInitializing = undefined;
+  globalForCache.formaCache = undefined;
+  globalForCache.formaCacheInitializing = undefined;
 }

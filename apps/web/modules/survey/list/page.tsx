@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { DEFAULT_LOCALE, IS_FORMBRICKS_CLOUD, SURVEYS_PER_PAGE } from "@/lib/constants";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { DEFAULT_LOCALE, IS_FORMA_CLOUD, SURVEYS_PER_PAGE } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { resolveDefaultSurveyLanguage } from "@/lib/i18n/default-survey-language";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
@@ -37,7 +37,7 @@ export const SurveysPage = async ({ params: paramsProps }: SurveyTemplateProps) 
   const { session, isBilling, isReadOnly } = await getWorkspaceAuth(params.workspaceId);
 
   if (isBilling) {
-    return redirect(getBillingFallbackPath(workspace.organizationId, IS_FORMBRICKS_CLOUD));
+    return redirect(getBillingFallbackPath(workspace.organizationId, IS_FORMA_CLOUD));
   }
 
   const currentWorkspaceChannel = workspace.config.channel ?? null;

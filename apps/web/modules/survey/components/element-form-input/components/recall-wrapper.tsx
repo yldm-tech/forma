@@ -4,7 +4,7 @@ import { PencilIcon } from "lucide-react";
 import React, { JSX, ReactNode, useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyRecallItem } from "@formbricks/types/surveys/types";
+import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import {
   extractId,

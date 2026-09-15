@@ -1,8 +1,8 @@
 import "server-only";
-import { Prisma } from "@formbricks/database/prisma";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSegment } from "@formbricks/types/segment";
-import { TSurvey, TSurveyFilterCriteria } from "@formbricks/types/surveys/types";
+import { Prisma } from "@forma/database/prisma";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSegment } from "@forma/types/segment";
+import { TSurvey, TSurveyFilterCriteria } from "@forma/types/surveys/types";
 import { withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
 
 export const transformPrismaSurvey = <T extends TSurvey | TJsWorkspaceStateSurvey>(surveyPrisma: any): T => {

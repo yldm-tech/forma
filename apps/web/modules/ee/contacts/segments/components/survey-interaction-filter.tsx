@@ -9,7 +9,7 @@ import {
   type TSegmentSurveyInteractionFilterValue,
   type TSurveyInteractionOperator,
   type TSurveyInteractionTimeUnit,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import {
   convertOperatorToText,

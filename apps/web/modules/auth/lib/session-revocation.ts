@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { validateInputs } from "@/lib/utils/validate";
 import { getSessionTokensByUserId } from "@/modules/auth/lib/auth-session-repository";
 

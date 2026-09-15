@@ -2,7 +2,7 @@ import postcss from "postcss";
 import { describe, expect, test } from "vitest";
 import scopeFbjs from "./postcss-scope-fbjs.cjs";
 
-// Regression guard for ENG-1333 / formbricks/js#46.
+// Regression guard for ENG-1333 / forma/js#46.
 //
 // survey-ui's and surveys' compiled CSS is injected into the host page's <head>
 // by the survey widget. Tailwind v4 emits three constructs that are GLOBAL by

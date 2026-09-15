@@ -3,7 +3,7 @@
 import { BarChart, DatabaseIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TChartConfig } from "@formbricks/types/analysis";
+import type { TChartConfig } from "@forma/types/analysis";
 import { cn } from "@/lib/cn";
 import { ChartErrorBoundary } from "@/modules/ee/analysis/charts/components/chart-error-boundary";
 import { ChartRenderer } from "@/modules/ee/analysis/charts/components/chart-renderer";

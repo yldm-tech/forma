@@ -2,7 +2,7 @@
 title: "Market Research Panel with Prolific"
 sidebarTitle: "Market Research Panel"
 description:
-  "Formbricks surveys can be integrated with Prolifics participant panel easily. This tutorial walks you through the steps on how to access a pool of over 200.000 participants for your research."
+  "Forma surveys can be integrated with Prolifics participant panel easily. This tutorial walks you through the steps on how to access a pool of over 200.000 participants for your research."
 icon: "users"
 ---
 
@@ -23,9 +23,9 @@ External research panels are useful when:
 
 ## Steps to Follow
 
-### Step 1: Add hidden fields to the Formbricks survey
+### Step 1: Add hidden fields to the Forma survey
 
-To be able to attribute a completed answer to a research participant, you need to add hidden fields to your Formbricks survey. To do so, edit your survey and scroll down to the Hidden Fields card.
+To be able to attribute a completed answer to a research participant, you need to add hidden fields to your Forma survey. To do so, edit your survey and scroll down to the Hidden Fields card.
 
 Add three fields with the IDs `PROLIFIC_PID`, `STUDY_ID`, and `SESSION_ID`.
 
@@ -41,20 +41,20 @@ Once you're logged in to Prolific, create a new study.
 
 ![Create a study on Prolific](/images/surveys/link-surveys/market-research-panel/create-study.webp)
 
-### Step 4: Copy the Formbricks survey link to the Prolific study
+### Step 4: Copy the Forma survey link to the Prolific study
 
-We connect the Formbricks survey with the Prolific study by copying the survey link from Formbricks and pasting it into the Prolific study:
+We connect the Forma survey with the Prolific study by copying the survey link from Forma and pasting it into the Prolific study:
 
 ![Copy the survey link](/images/surveys/link-surveys/market-research-panel/copy-survey-link.webp)
 
 
 ### Step 5: Choose URL parameters for attribution
 
-To attribute responses to the correct participant, you need to add URL parameters to the Formbricks survey link. The parameters are `PROLIFIC_PID`, `STUDY_ID`, and `SESSION_ID`, exactly like the hidden fields you added.
+To attribute responses to the correct participant, you need to add URL parameters to the Forma survey link. The parameters are `PROLIFIC_PID`, `STUDY_ID`, and `SESSION_ID`, exactly like the hidden fields you added.
 
 ![Adding URL parameters to the survey](/images/surveys/link-surveys/market-research-panel/url-parameters.webp)
 
-### Step 6: Update the Formbricks Redirect URL
+### Step 6: Update the Forma Redirect URL
 
 To ensure that participants are redirected back to Prolific after completing the survey, add the redirect URL provided in the Prolific study setup (e.g. `https://app.prolific.co/submissions/complete?cc=I2PWSFRG`)
 
@@ -62,9 +62,9 @@ Copy from Prolific:
 
 ![Copy redirect URL](/images/surveys/link-surveys/market-research-panel/redirect-url.webp)
 
-Set it up as Redirect URL in the Response Options in Formbricks:
+Set it up as Redirect URL in the Response Options in Forma:
 
-![Add redirect URL to Formbricks](/images/surveys/link-surveys/market-research-panel/redirect-url-formbricks.webp)
+![Add redirect URL to Forma](/images/surveys/link-surveys/market-research-panel/redirect-url-forma.webp)
 
 ### Step 7: Preview the study
 

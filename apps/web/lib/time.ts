@@ -1,6 +1,6 @@
 import { type Locale, formatDistance } from "date-fns";
 import { de, enUS, es, fr, hu, ja, nl, pt, ptBR, ro, ru, sv, tr, zhCN, zhTW } from "date-fns/locale";
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { formatDateForDisplay } from "./utils/datetime";
 
 const DEFAULT_LOCALE: TUserLocale = "en-US";

@@ -33,7 +33,7 @@ const createMigration = async (
 };
 
 const createMigrationHistory = async (): Promise<string> => {
-  const migrationsDir = await createTemporaryDirectory("formbricks-migration-source-");
+  const migrationsDir = await createTemporaryDirectory("forma-migration-source-");
   await fs.writeFile(path.join(migrationsDir, "migration_lock.toml"), MIGRATION_LOCK_CONTENT);
   return migrationsDir;
 };
@@ -54,7 +54,7 @@ describe("stagePrismaMigrationHistory", () => {
 
   test("copies schema migrations in order and ignores data migrations", async () => {
     const migrationsDir = await createMigrationHistory();
-    const destinationDir = await createTemporaryDirectory("formbricks-migration-destination-");
+    const destinationDir = await createTemporaryDirectory("forma-migration-destination-");
 
     await createMigration(migrationsDir, "20260103000000_second_schema", "migration.sql");
     await createMigration(migrationsDir, "20260102000000_data_only", "migration.ts");
@@ -112,8 +112,8 @@ describe("runPrismaDiff", () => {
 
 describe("checkMigrationDrift", () => {
   const databaseEnvironment = {
-    DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/formbricks",
-    SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/formbricks_shadow",
+    DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/forma",
+    SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/forma_shadow",
   };
 
   test("accepts distinct primary and explicitly marked shadow databases", () => {
@@ -150,7 +150,7 @@ describe("checkMigrationDrift", () => {
     {
       environment: {
         DATABASE_URL: databaseEnvironment.DATABASE_URL,
-        SHADOW_DATABASE_URL: "http://localhost:5432/formbricks_shadow",
+        SHADOW_DATABASE_URL: "http://localhost:5432/forma_shadow",
       },
       expectedError: "SHADOW_DATABASE_URL must be a valid PostgreSQL URL",
       name: "a non-PostgreSQL shadow URL",
@@ -158,15 +158,15 @@ describe("checkMigrationDrift", () => {
     {
       environment: {
         DATABASE_URL: databaseEnvironment.DATABASE_URL,
-        SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/formbricks_scratch",
+        SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/forma_scratch",
       },
       expectedError: 'SHADOW_DATABASE_URL database name must contain the marker "shadow"',
       name: "an unmarked shadow database",
     },
     {
       environment: {
-        DATABASE_URL: "postgresql://postgres:postgres@localhost/formbricks_shadow?schema=main",
-        SHADOW_DATABASE_URL: "postgres://postgres:postgres@localhost:5432/formbricks_shadow?schema=public",
+        DATABASE_URL: "postgresql://postgres:postgres@localhost/forma_shadow?schema=main",
+        SHADOW_DATABASE_URL: "postgres://postgres:postgres@localhost:5432/forma_shadow?schema=public",
       },
       expectedError: "SHADOW_DATABASE_URL must not target the DATABASE_URL database",
       name: "the primary database through an equivalent URL",
@@ -182,7 +182,7 @@ describe("checkMigrationDrift", () => {
       checkMigrationDrift({
         environment: {
           DATABASE_URL: databaseEnvironment.DATABASE_URL,
-          SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/formbricks_scratch",
+          SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/forma_scratch",
         },
         migrationsDir: "/migrations",
         prismaBin: "prisma",

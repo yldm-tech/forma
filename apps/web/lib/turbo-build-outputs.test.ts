@@ -8,9 +8,9 @@ import { describe, expect, test } from "vitest";
 // Next.js cache and dev directories — otherwise they fill local and CI disks (regression of the
 // ENG-1662 fix).
 //
-// `@formbricks/web` declares no `outputs` of its own today, so it inherits the shared `build` task.
+// `@forma/web` declares no `outputs` of its own today, so it inherits the shared `build` task.
 // This resolves `outputs` the way Turbo actually does — apps/web/turbo.json `build` → root
-// `@formbricks/web#build` → root `build`, per key, with a higher-precedence declaration REPLACING the
+// `@forma/web#build` → root `build`, per key, with a higher-precedence declaration REPLACING the
 // list instead of merging into it — so neither kind of future override can silently drop the
 // exclusions. Since ENG-1682 moved the web build's env into apps/web/turbo.json, that file is now the
 // likelier place for such an override to appear. See lib/turbo-build-env.test.ts for the same trap on
@@ -35,13 +35,13 @@ describe("turbo.json web build excludes transient Next.js dirs", () => {
   const webTasks = readTasks(webTurboJsonPath);
 
   const resolvedOutputs =
-    webTasks.build?.outputs ?? rootTasks["@formbricks/web#build"]?.outputs ?? rootTasks.build?.outputs ?? [];
+    webTasks.build?.outputs ?? rootTasks["@forma/web#build"]?.outputs ?? rootTasks.build?.outputs ?? [];
 
-  test("resolved @formbricks/web#build outputs exclude .next/cache and .next/dev", () => {
+  test("resolved @forma/web#build outputs exclude .next/cache and .next/dev", () => {
     const missing = REQUIRED_EXCLUSIONS.filter((exclusion) => !resolvedOutputs.includes(exclusion));
     expect(
       missing,
-      `@formbricks/web#build resolved outputs are missing exclusion(s): ${missing.join(", ")}. ` +
+      `@forma/web#build resolved outputs are missing exclusion(s): ${missing.join(", ")}. ` +
         "Add them to the build task's `outputs` array so Turbo does not cache transient Next.js dirs (ENG-1805)."
     ).toEqual([]);
   });

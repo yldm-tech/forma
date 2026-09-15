@@ -1,6 +1,6 @@
-# `@formbricks/config-prettier`
+# `@forma/config-prettier`
 
-Shared Prettier preset for the Formbricks monorepo (110-char width, semicolons, double quotes, import-order groups).
+Shared Prettier preset for the Forma monorepo (110-char width, semicolons, double quotes, import-order groups).
 
 The preset lives in `prettier-preset.js` and is consumed by **relative path**, not by package name — Prettier resolves `require`s from the config file's location:
 

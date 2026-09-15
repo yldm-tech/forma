@@ -2,7 +2,7 @@
 
 import { InboxIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyElementSummaryCta } from "@formbricks/types/surveys/types";
+import { TSurvey, TSurveyElementSummaryCta } from "@forma/types/surveys/types";
 import { ProgressBar } from "@/modules/ui/components/progress-bar";
 import { convertFloatToNDecimal } from "../lib/utils";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";

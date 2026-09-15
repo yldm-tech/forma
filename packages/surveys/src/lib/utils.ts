@@ -1,16 +1,16 @@
 import { twMerge } from "tailwind-merge";
-import { type TPlacement } from "@formbricks/types/common";
-import { type Result, err, ok, wrapThrowsAsync } from "@formbricks/types/error-handlers";
-import { type ApiErrorResponse } from "@formbricks/types/errors";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TAllowedFileExtension } from "@formbricks/types/storage";
+import { type TPlacement } from "@forma/types/common";
+import { type Result, err, ok, wrapThrowsAsync } from "@forma/types/error-handlers";
+import { type ApiErrorResponse } from "@forma/types/errors";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TAllowedFileExtension } from "@forma/types/storage";
 import {
   type TSurveyBlock,
   type TSurveyBlockLogic,
   type TSurveyBlockLogicAction,
-} from "@formbricks/types/surveys/blocks";
-import { type TSurveyElement, type TSurveyElementChoice } from "@formbricks/types/surveys/elements";
-import { type TShuffleOption } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/blocks";
+import { type TSurveyElement, type TSurveyElementChoice } from "@forma/types/surveys/elements";
+import { type TShuffleOption } from "@forma/types/surveys/types";
 import { isSameLanguageCode } from "@/lib/language-options";
 import { ApiResponse, ApiSuccessResponse } from "@/types/api";
 
@@ -271,7 +271,7 @@ export const resolveSelectedLanguageCode = (languageCode: string, defaultLanguag
   return isSameLanguageCode(languageCode, defaultLanguageCode) ? "default" : languageCode;
 };
 
-// Inlined from @formbricks/types/storage.ts to avoid Zod dependency
+// Inlined from @forma/types/storage.ts to avoid Zod dependency
 const mimeTypes: Record<string, string> = {
   heic: "image/heic",
   png: "image/png",

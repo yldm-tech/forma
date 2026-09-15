@@ -6,7 +6,7 @@ import {
   THubFieldType,
   UNSUPPORTED_FEEDBACK_SOURCE_ELEMENT_TYPES,
   ZHubFieldType,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import {
   CSV_REQUIRED_UI_FIELDS,
   CSV_TARGET_FIELDS,
@@ -41,9 +41,9 @@ export const getSelectableQuestionIds = (survey: TUnifySurvey): string[] =>
     .map((element) => element.id);
 
 /**
- * Distinct surveys a Formbricks source replays responses from.
+ * Distinct surveys a Forma source replays responses from.
  *
- * `formbricksMappings` holds one row per mapped question, so a source covering five questions has
+ * `formaMappings` holds one row per mapped question, so a source covering five questions has
  * five rows all naming the same survey — hence the dedupe. It reads every distinct survey rather
  * than assuming the first because the schema does not forbid more than one:
  * `@@unique([workspaceId, feedbackSourceId, surveyId, elementId])`. Today's create dialog only
@@ -51,13 +51,13 @@ export const getSelectableQuestionIds = (survey: TUnifySurvey): string[] =>
  * future multi-survey source into a silent partial re-import.
  */
 export const getMappedSurveyIds = (feedbackSource: TFeedbackSourceWithMappings): string[] => [
-  ...new Set(feedbackSource.formbricksMappings.map((mapping) => mapping.surveyId)),
+  ...new Set(feedbackSource.formaMappings.map((mapping) => mapping.surveyId)),
 ];
 
 /**
  * Whether "Re-import historic data" applies to a source.
  *
- * Only Formbricks sources replay responses (`importHistoricalResponses` rejects every other type),
+ * Only Forma sources replay responses (`importHistoricalResponses` rejects every other type),
  * and only one that names a survey has anything to replay from.
  *
  * `status` is part of the gate because pausing a source is the user's switch for stopping it
@@ -68,7 +68,7 @@ export const getMappedSurveyIds = (feedbackSource: TFeedbackSourceWithMappings):
  * active the moment it is created.
  */
 export const canReimportHistoricalData = (feedbackSource: TFeedbackSourceWithMappings): boolean =>
-  feedbackSource.type === "formbricks_survey" &&
+  feedbackSource.type === "forma_survey" &&
   feedbackSource.status === "active" &&
   getMappedSurveyIds(feedbackSource).length > 0;
 
@@ -132,9 +132,9 @@ export interface TFeedbackSourceOption {
 
 export const getFeedbackSourceOptions = (t: TFunction): TFeedbackSourceOption[] => [
   {
-    id: "formbricks_survey",
-    name: t("workspace.unify.formbricks_surveys"),
-    description: t("workspace.unify.source_connect_formbricks_description"),
+    id: "forma_survey",
+    name: t("workspace.unify.forma_surveys"),
+    description: t("workspace.unify.source_connect_forma_description"),
   },
   {
     id: "csv",

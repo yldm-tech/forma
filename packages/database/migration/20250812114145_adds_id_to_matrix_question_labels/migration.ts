@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 
 type I18nString = Record<string, string>;

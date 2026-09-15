@@ -1,4 +1,4 @@
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { responses } from "@/app/lib/api/response";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";

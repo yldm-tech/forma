@@ -1,16 +1,16 @@
 import { isValidIP, normalizeIP } from "@better-auth/core/utils/ip";
 import { headers } from "next/headers";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 
 /** Private request header written by Proxy after the trusted forwarding hop has been resolved. */
-export const FORMBRICKS_CLIENT_IP_HEADER = "x-formbricks-client-ip";
+export const FORMA_CLIENT_IP_HEADER = "x-forma-client-ip";
 
 /** Collapse IPv6 identities to a stable network prefix before rate limiting or persistence. */
 export const CLIENT_IP_IPV6_SUBNET_PREFIX = 64;
 
-/** Better Auth must consume exactly the same private request identity as the rest of Formbricks. */
+/** Better Auth must consume exactly the same private request identity as the rest of Forma. */
 export const BETTER_AUTH_IP_ADDRESS_CONFIG = {
-  ipAddressHeaders: [FORMBRICKS_CLIENT_IP_HEADER],
+  ipAddressHeaders: [FORMA_CLIENT_IP_HEADER],
   ipv6Subnet: CLIENT_IP_IPV6_SUBNET_PREFIX,
 };
 
@@ -136,7 +136,7 @@ export async function getClientIpFromHeaders(): Promise<string> {
     return UNTRUSTED_CLIENT_IP;
   }
 
-  const internalClientIp = headersList.get(FORMBRICKS_CLIENT_IP_HEADER);
+  const internalClientIp = headersList.get(FORMA_CLIENT_IP_HEADER);
   if (!internalClientIp) return UNTRUSTED_CLIENT_IP;
 
   return canonicalizeIp(internalClientIp) ?? UNTRUSTED_CLIENT_IP;

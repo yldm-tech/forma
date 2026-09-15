@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import {
   applyReconciliationToFeedbackSource,
   reconcileFeedbackSourcesForSurvey,
@@ -10,11 +10,11 @@ import {
 } from "./mapping-reconciliation";
 import { getFeedbackSourcesToReconcile } from "./service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     feedbackSource: { update: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     survey: { findUnique: vi.fn() },
-    feedbackSourceFormbricksMapping: {
+    feedbackSourceFormaMapping: {
       count: vi.fn(),
       createMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
@@ -39,7 +39,7 @@ vi.mock("./service", () => ({
   getFeedbackSourcesToReconcile: vi.fn(),
 }));
 
-// Deliberately unmocked: @/lib/survey/utils, @formbricks/types/feedback-source and
+// Deliberately unmocked: @/lib/survey/utils, @forma/types/feedback-source and
 // @/lib/utils/validate. The point of these tests is that the real element walk, the real
 // element-type -> Hub-field table and the real id validation decide the outcome; stubbing any of
 // them would let the fixtures drift from what production sees.
@@ -58,7 +58,7 @@ const mapping = (elementId: string, hubFieldType: string, surveyId = SURVEY_ID) 
 const mockTx = () => {
   const tx = {
     feedbackSource: { update: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
-    feedbackSourceFormbricksMapping: {
+    feedbackSourceFormaMapping: {
       count: vi.fn().mockResolvedValue(1),
       createMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -229,7 +229,7 @@ describe("reconcileMappingsAgainstSurvey", () => {
 
   // A source with zero rows for its survey is unreachable through every other write path (both
   // action schemas require min(1)) and unrecoverable, because getFeedbackSourcesToReconcile matches on
-  // `formbricksMappings: { some: { surveyId } }` — the source would never be found for this survey
+  // `formaMappings: { some: { surveyId } }` — the source would never be found for this survey
   // again, so no later reconcile could heal it.
   // The guard below must never hold back a row whose element still EXISTS but was retyped to an
   // unmappable type. The publish path resolves such a row by element id, finds the answer and ships it
@@ -348,7 +348,7 @@ describe("applyReconciliationToFeedbackSource", () => {
       toUpdate: [],
     });
 
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.deleteMany).toHaveBeenCalledWith({
       where: {
         feedbackSourceId: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
@@ -372,8 +372,8 @@ describe("applyReconciliationToFeedbackSource", () => {
     });
 
     // Three changed elements, two distinct target types -> two statements, not three.
-    expect(tx.feedbackSourceFormbricksMapping.updateMany).toHaveBeenCalledTimes(2);
-    expect(tx.feedbackSourceFormbricksMapping.updateMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.updateMany).toHaveBeenCalledTimes(2);
+    expect(tx.feedbackSourceFormaMapping.updateMany).toHaveBeenCalledWith({
       where: {
         feedbackSourceId: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
@@ -382,7 +382,7 @@ describe("applyReconciliationToFeedbackSource", () => {
       },
       data: { hubFieldType: "nps" },
     });
-    expect(tx.feedbackSourceFormbricksMapping.updateMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.updateMany).toHaveBeenCalledWith({
       where: {
         feedbackSourceId: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
@@ -402,7 +402,7 @@ describe("applyReconciliationToFeedbackSource", () => {
       toUpdate: [],
     });
 
-    expect(tx.feedbackSourceFormbricksMapping.createMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.createMany).toHaveBeenCalledWith({
       data: [
         {
           feedbackSourceId: SOURCE_ID,
@@ -426,9 +426,9 @@ describe("applyReconciliationToFeedbackSource", () => {
     });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).toHaveBeenCalledTimes(1);
-    expect(tx.feedbackSourceFormbricksMapping.updateMany).toHaveBeenCalledTimes(1);
-    expect(tx.feedbackSourceFormbricksMapping.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.feedbackSourceFormaMapping.deleteMany).toHaveBeenCalledTimes(1);
+    expect(tx.feedbackSourceFormaMapping.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.feedbackSourceFormaMapping.createMany).toHaveBeenCalledTimes(1);
   });
 
   test("rejects a malformed id without writing, and still does not throw", async () => {
@@ -442,7 +442,7 @@ describe("applyReconciliationToFeedbackSource", () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).not.toHaveBeenCalled();
+    expect(tx.feedbackSourceFormaMapping.deleteMany).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalled();
   });
 
@@ -451,7 +451,7 @@ describe("applyReconciliationToFeedbackSource", () => {
   // the source out of the publish path until someone re-maps it.
   test("flags the source as errored when the delete leaves it with no mappings at all", async () => {
     const tx = mockTx();
-    tx.feedbackSourceFormbricksMapping.count.mockResolvedValue(0);
+    tx.feedbackSourceFormaMapping.count.mockResolvedValue(0);
 
     await applyReconciliationToFeedbackSource(SOURCE_ID, WORKSPACE_ID, SURVEY_ID, {
       toCreate: [],
@@ -471,7 +471,7 @@ describe("applyReconciliationToFeedbackSource", () => {
 
   test("does not flag, or log, a source that was already paused", async () => {
     const tx = mockTx();
-    tx.feedbackSourceFormbricksMapping.count.mockResolvedValue(0);
+    tx.feedbackSourceFormaMapping.count.mockResolvedValue(0);
     // No row matched the `active` filter — the source is paused.
     tx.feedbackSource.updateMany.mockResolvedValue({ count: 0 });
 
@@ -489,7 +489,7 @@ describe("applyReconciliationToFeedbackSource", () => {
   // Counted across every survey, so a source still serving a sibling survey keeps working.
   test("leaves the source alone when mappings for another survey survive", async () => {
     const tx = mockTx();
-    tx.feedbackSourceFormbricksMapping.count.mockResolvedValue(2);
+    tx.feedbackSourceFormaMapping.count.mockResolvedValue(2);
 
     await applyReconciliationToFeedbackSource(SOURCE_ID, WORKSPACE_ID, SURVEY_ID, {
       toCreate: [],
@@ -503,7 +503,7 @@ describe("applyReconciliationToFeedbackSource", () => {
   // The count must run after the creates, or a source about to regain rows gets flagged.
   test("does not flag the source when a create replaces everything deleted", async () => {
     const tx = mockTx();
-    tx.feedbackSourceFormbricksMapping.count.mockResolvedValue(1);
+    tx.feedbackSourceFormaMapping.count.mockResolvedValue(1);
 
     await applyReconciliationToFeedbackSource(SOURCE_ID, WORKSPACE_ID, SURVEY_ID, {
       toCreate: [{ elementId: "el-new", hubFieldType: "rating" }],
@@ -511,8 +511,8 @@ describe("applyReconciliationToFeedbackSource", () => {
       toUpdate: [],
     });
 
-    const countOrder = tx.feedbackSourceFormbricksMapping.count.mock.invocationCallOrder[0];
-    const createOrder = tx.feedbackSourceFormbricksMapping.createMany.mock.invocationCallOrder[0];
+    const countOrder = tx.feedbackSourceFormaMapping.count.mock.invocationCallOrder[0];
+    const createOrder = tx.feedbackSourceFormaMapping.createMany.mock.invocationCallOrder[0];
     expect(countOrder).toBeGreaterThan(createOrder);
     expect(tx.feedbackSource.update).not.toHaveBeenCalled();
   });
@@ -539,7 +539,7 @@ describe("applyReconciliationToFeedbackSource", () => {
 
   test("does not clear the error flag when nothing is being created", async () => {
     const tx = mockTx();
-    tx.feedbackSourceFormbricksMapping.count.mockResolvedValue(2);
+    tx.feedbackSourceFormaMapping.count.mockResolvedValue(2);
 
     await applyReconciliationToFeedbackSource(SOURCE_ID, WORKSPACE_ID, SURVEY_ID, {
       toCreate: [],
@@ -580,7 +580,7 @@ describe("reconcileFeedbackSourcesForSurvey", () => {
         id: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
         elementScope: "specific",
-        formbricksMappings: [
+        formaMappings: [
           { surveyId: SURVEY_ID, elementId: "el-kept", hubFieldType: "rating" },
           { surveyId: SURVEY_ID, elementId: "el-gone", hubFieldType: "text" },
           { surveyId: OTHER_SURVEY_ID, elementId: "el-sibling", hubFieldType: "nps" },
@@ -592,7 +592,7 @@ describe("reconcileFeedbackSourcesForSurvey", () => {
 
     expect(getFeedbackSourcesToReconcile).toHaveBeenCalledWith(SURVEY_ID);
     // The sibling survey's row must survive; only this survey's stale row is removed.
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.deleteMany).toHaveBeenCalledWith({
       where: {
         feedbackSourceId: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
@@ -660,7 +660,7 @@ describe("scheduleFeedbackSourceReconciliation", () => {
         id: SOURCE_ID,
         workspaceId: WORKSPACE_ID,
         elementScope: "specific",
-        formbricksMappings: [
+        formaMappings: [
           { surveyId: SURVEY_ID, elementId: "el-old", hubFieldType: "text" },
           { surveyId: SURVEY_ID, elementId: "el-new", hubFieldType: "text" },
         ],
@@ -681,7 +681,7 @@ describe("scheduleFeedbackSourceReconciliation", () => {
     await scheduled[0]();
 
     const deleted = vi
-      .mocked(tx.feedbackSourceFormbricksMapping.deleteMany)
+      .mocked(tx.feedbackSourceFormaMapping.deleteMany)
       .mock.calls.flatMap((call: any) => call[0]?.where?.elementId?.in ?? []);
     expect(deleted).not.toContain("el-new");
     expect(deleted).toEqual([]);

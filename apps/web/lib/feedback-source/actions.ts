@@ -1,14 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { ZId } from "@formbricks/types/common";
-import { AuthorizationError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ZId } from "@forma/types/common";
+import { AuthorizationError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   ZFeedbackSourceCreateInput,
   ZFeedbackSourceFieldMappingCreateInput,
   ZFeedbackSourceUpdateInput,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import { assertCan } from "@/lib/authorization";
 import { getResponseCountBySurveyId } from "@/lib/response/service";
 import { getSurvey } from "@/lib/survey/service";
@@ -28,7 +28,7 @@ import { listFeedbackRecords } from "@/modules/hub/service";
 import type { FeedbackRecordListParams, FeedbackRecordListResponse } from "@/modules/hub/types";
 import { assertFeedbackSourceDirectoryAccess } from "./access";
 import { importHistoricalResponses } from "./import";
-import { resolveFormbricksMappingsInput } from "./mappings";
+import { resolveFormaMappingsInput } from "./mappings";
 import {
   TMappingsInput,
   createFeedbackSourceWithMappings,
@@ -85,7 +85,7 @@ export const deleteFeedbackSourceAction = authenticatedActionClient
     })
   );
 
-const ZFormbricksSurveyMapping = z.object({
+const ZFormaSurveyMapping = z.object({
   surveyId: ZId,
   elementIds: z.array(z.string()).min(1),
 });
@@ -107,16 +107,16 @@ const ZCreateFeedbackSourceWithMappingsAction = z
   .object({
     workspaceId: ZId,
     feedbackSourceInput: ZFeedbackSourceCreateInput,
-    formbricksMappings: z.array(ZFormbricksSurveyMapping).optional(),
+    formaMappings: z.array(ZFormaSurveyMapping).optional(),
     fieldMappings: z.array(ZFeedbackSourceFieldMappingCreateInput).optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.feedbackSourceInput.type === "formbricks_survey") {
-      if (!data.formbricksMappings?.length) {
+    if (data.feedbackSourceInput.type === "forma_survey") {
+      if (!data.formaMappings?.length) {
         ctx.addIssue({
           code: "custom",
-          path: ["formbricksMappings"],
-          message: "At least one survey mapping is required for Formbricks feedbackSources",
+          path: ["formaMappings"],
+          message: "At least one survey mapping is required for Forma feedbackSources",
         });
       }
     } else if (data.feedbackSourceInput.type === "csv") {
@@ -173,10 +173,10 @@ export const createFeedbackSourceWithMappingsAction = authenticatedActionClient
 
       let mappingsInput: TMappingsInput | undefined;
 
-      const { formbricksMappings, fieldMappings } = parsedInput;
+      const { formaMappings, fieldMappings } = parsedInput;
 
-      if (formbricksMappings?.length) {
-        mappingsInput = await resolveFormbricksMappingsInput(formbricksMappings, parsedInput.workspaceId);
+      if (formaMappings?.length) {
+        mappingsInput = await resolveFormaMappingsInput(formaMappings, parsedInput.workspaceId);
       } else if (fieldMappings?.length) {
         mappingsInput = {
           type: "field",
@@ -202,7 +202,7 @@ const ZUpdateFeedbackSourceWithMappingsAction = z.object({
   feedbackSourceId: ZId,
   workspaceId: ZId,
   feedbackSourceInput: ZFeedbackSourceUpdateInput,
-  formbricksMappings: z.array(ZFormbricksSurveyMapping).min(1).optional(),
+  formaMappings: z.array(ZFormaSurveyMapping).min(1).optional(),
   fieldMappings: z.array(ZFeedbackSourceFieldMappingCreateInput).optional(),
 });
 
@@ -242,11 +242,8 @@ export const updateFeedbackSourceWithMappingsAction = authenticatedActionClient
 
       let mappingsInput: TMappingsInput | undefined;
 
-      if (parsedInput.formbricksMappings?.length) {
-        mappingsInput = await resolveFormbricksMappingsInput(
-          parsedInput.formbricksMappings,
-          parsedInput.workspaceId
-        );
+      if (parsedInput.formaMappings?.length) {
+        mappingsInput = await resolveFormaMappingsInput(parsedInput.formaMappings, parsedInput.workspaceId);
       } else if (parsedInput.fieldMappings && parsedInput.fieldMappings.length > 0) {
         mappingsInput = {
           type: "field",
@@ -421,7 +418,7 @@ const ZGetFeedbackRecordContactsAction = z.object({
   userIds: z.array(z.string()).max(1000),
 });
 
-// Resolves a page of feedback records' user_ids to Formbricks contact ids (batched, deduped).
+// Resolves a page of feedback records' user_ids to Forma contact ids (batched, deduped).
 export const getFeedbackRecordContactsAction = authenticatedActionClient
   .inputSchema(ZGetFeedbackRecordContactsAction)
   .action(

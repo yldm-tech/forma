@@ -1,6 +1,6 @@
 import "server-only";
-import { type JobHandler, type TWorkflowRunReconcileJobData } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
+import { type JobHandler, type TWorkflowRunReconcileJobData } from "@forma/jobs";
+import { logger } from "@forma/logger";
 import { dispatchWorkflowRunViaJobs } from "./dispatch";
 import { reconcileOrphanedWorkflowRuns } from "./reconcile-orphaned-runs";
 import { reconcileStuckRunningWorkflowRuns } from "./reconcile-stuck-running-runs";

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { prepareV3SurveyCreate, prepareV3SurveyCreateInput, prepareV3SurveyPatchInput } from "./prepare";
 import { ZV3CreateSurveyBody } from "./schemas";
 

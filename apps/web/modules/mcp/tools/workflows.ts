@@ -135,7 +135,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "list_workflows",
     {
       title: "List workflows",
-      description: "List workflows in a Formbricks workspace using the v3 Workflows API contract.",
+      description: "List workflows in a Forma workspace using the v3 Workflows API contract.",
       inputSchema: ZMcpListWorkflowsInput,
       annotations: {
         readOnlyHint: true,
@@ -163,7 +163,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "get_workflow",
     {
       title: "Get workflow",
-      description: "Get one Formbricks workflow using the v3 Workflows API contract.",
+      description: "Get one Forma workflow using the v3 Workflows API contract.",
       inputSchema: ZMcpGetWorkflowInput,
       annotations: {
         readOnlyHint: true,
@@ -189,7 +189,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "List workflow runs",
       description:
-        "List workflow runs for a Formbricks workspace (newest first) using the v3 Workflows API contract.",
+        "List workflow runs for a Forma workspace (newest first) using the v3 Workflows API contract.",
       inputSchema: ZMcpListWorkflowRunsInput,
       annotations: {
         readOnlyHint: true,
@@ -218,7 +218,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "Get workflow run",
       description:
-        "Get one Formbricks workflow run with its ordered step logs using the v3 Workflows API contract.",
+        "Get one Forma workflow run with its ordered step logs using the v3 Workflows API contract.",
       inputSchema: ZMcpGetWorkflowRunInput,
       annotations: {
         readOnlyHint: true,
@@ -244,7 +244,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "Test workflow (dry-run)",
       description: [
-        "Dry-run a Formbricks workflow using the v3 Workflows API contract:",
+        "Dry-run a Forma workflow using the v3 Workflows API contract:",
         "validate its live definition would execute, resolve the trigger's survey + ending cards, and confirm every literal send_email recipient is an organization member.",
         "No run is persisted and no side effects occur; the response reports { ok, problems }.",
       ].join(" "),
@@ -278,7 +278,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "create_workflow",
     {
       title: "Create workflow",
-      description: "Create a Formbricks workflow (always as a draft) using the v3 Workflows API contract.",
+      description: "Create a Forma workflow (always as a draft) using the v3 Workflows API contract.",
       inputSchema: ZMcpCreateWorkflowInput,
       annotations: {
         readOnlyHint: false,
@@ -300,7 +300,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "Patch workflow",
       description: [
-        "Update a Formbricks workflow using the v3 Workflows API patch contract.",
+        "Update a Forma workflow using the v3 Workflows API patch contract.",
         "Provided top-level fields replace that whole subtree; definition edits are only accepted while draft or disabled.",
       ].join(" "),
       inputSchema: ZMcpPatchWorkflowInput,
@@ -328,7 +328,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "Duplicate workflow",
       description:
-        "Duplicate a Formbricks workflow as a new draft (empty run + version history) using the v3 Workflows API contract.",
+        "Duplicate a Forma workflow as a new draft (empty run + version history) using the v3 Workflows API contract.",
       inputSchema: ZMcpDuplicateWorkflowInput,
       annotations: {
         readOnlyHint: false,
@@ -353,7 +353,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "delete_workflow",
     {
       title: "Delete workflow",
-      description: "Delete a Formbricks workflow using the v3 Workflows API contract.",
+      description: "Delete a Forma workflow using the v3 Workflows API contract.",
       inputSchema: ZMcpWorkflowIdInput,
       annotations: {
         readOnlyHint: false,
@@ -375,7 +375,7 @@ export function registerWorkflowTools(server: McpServer): void {
     {
       title: "Enable workflow",
       description: [
-        "Enable a Formbricks workflow using the v3 Workflows API contract:",
+        "Enable a Forma workflow using the v3 Workflows API contract:",
         "validate executability, snapshot an immutable version, and make it live.",
         "Once live it runs on matching survey responses and can send emails.",
       ].join(" "),
@@ -400,8 +400,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "disable_workflow",
     {
       title: "Disable workflow",
-      description:
-        "Disable a live Formbricks workflow (stops future runs) using the v3 Workflows API contract.",
+      description: "Disable a live Forma workflow (stops future runs) using the v3 Workflows API contract.",
       inputSchema: ZMcpWorkflowIdInput,
       annotations: {
         readOnlyHint: false,
@@ -422,7 +421,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "archive_workflow",
     {
       title: "Archive workflow",
-      description: "Archive a Formbricks workflow using the v3 Workflows API contract.",
+      description: "Archive a Forma workflow using the v3 Workflows API contract.",
       inputSchema: ZMcpWorkflowIdInput,
       annotations: {
         readOnlyHint: false,
@@ -444,7 +443,7 @@ export function registerWorkflowTools(server: McpServer): void {
     "unarchive_workflow",
     {
       title: "Unarchive workflow",
-      description: "Unarchive a Formbricks workflow (back to draft) using the v3 Workflows API contract.",
+      description: "Unarchive a Forma workflow (back to draft) using the v3 Workflows API contract.",
       inputSchema: ZMcpWorkflowIdInput,
       annotations: {
         readOnlyHint: false,

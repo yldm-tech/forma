@@ -70,7 +70,7 @@ export type TAuthzedObservationSummary = Readonly<{
   /**
    * Relationships this vocabulary does not recognize.
    *
-   * Something other than Formbricks writing to this SpiceDB, or a schema change that landed without a
+   * Something other than Forma writing to this SpiceDB, or a schema change that landed without a
    * matching projector. Reported so it is visible; never reconciled and never pruned, because the
    * tooling cannot know what source record — if any — should own them.
    */
@@ -216,7 +216,7 @@ const byCodeUnit = (left: string, right: string): number => {
 };
 
 /**
- * Resource types Formbricks projects today and may therefore reconcile.
+ * Resource types Forma projects today and may therefore reconcile.
  *
  * Sorted explicitly for two reasons: the sweep's order must not depend on how the resolver literal above
  * happens to be written, and it must be identical on every machine, so two passes over unchanged state

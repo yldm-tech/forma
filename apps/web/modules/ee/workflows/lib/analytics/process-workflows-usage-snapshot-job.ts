@@ -1,6 +1,6 @@
 import "server-only";
-import type { JobHandler, TWorkflowsUsageSnapshotJobData } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
+import type { JobHandler, TWorkflowsUsageSnapshotJobData } from "@forma/jobs";
+import { logger } from "@forma/logger";
 import { POSTHOG_KEY } from "@/lib/constants";
 import { emitWorkflowUsageSnapshots } from "./usage-snapshot";
 

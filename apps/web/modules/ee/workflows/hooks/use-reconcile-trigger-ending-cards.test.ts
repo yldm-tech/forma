@@ -6,7 +6,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { Provider, createStore, useAtomValue } from "jotai";
 import { type ReactNode, createElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TWorkflowDefinition } from "@forma/workflows";
 import {
   prunedTriggerEndingCardIdsAtom,
   setWorkflowDefinitionAtom,

@@ -2,7 +2,7 @@
 
 import { CalendarIcon, HashIcon, TagIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import { formatLocalDay, parseStoredDay } from "@/lib/utils/datetime";
 import { toUTCDateString } from "@/modules/ee/contacts/segments/lib/date-utils";
 import { Button } from "@/modules/ui/components/button";

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { toDesiredEmbeddedFields } from "@formbricks/types/embedded-data-mapping";
-import { type TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { toDesiredEmbeddedFields } from "@forma/types/embedded-data-mapping";
+import { type TSurvey } from "@forma/types/surveys/types";
 import { patchV3Survey } from "@/app/api/v3/surveys/patch";
 import { resetDb } from "@/integration/reset-db";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
@@ -15,7 +15,7 @@ import { transformPrismaSurvey } from "@/lib/survey/utils";
  * straight through `survey.update`. Once readers resolve definitions through the EmbeddedData tables,
  * a patch that does not reconcile leaves the rows describing the pre-patch survey — a variable added
  * over the API would be invisible to the logic engine, the export columns and the response filters,
- * and a deleted one would keep its column. The unit suite mocks `@formbricks/database`, so only a
+ * and a deleted one would keep its column. The unit suite mocks `@forma/database`, so only a
  * real database shows that the rows actually end up agreeing with the columns.
  */
 

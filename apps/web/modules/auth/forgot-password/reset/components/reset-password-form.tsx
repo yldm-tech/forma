@@ -9,8 +9,8 @@ import { z } from "zod";
 import {
   INVALID_PASSWORD_RESET_TOKEN_ERROR_CODE,
   PASSWORD_COMPROMISED_ERROR_CODE,
-} from "@formbricks/types/errors";
-import { ZUserPassword } from "@formbricks/types/user";
+} from "@forma/types/errors";
+import { ZUserPassword } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { resetPasswordAction } from "@/modules/auth/forgot-password/reset/actions";
 import { PasswordChecks } from "@/modules/auth/signup/components/password-checks";

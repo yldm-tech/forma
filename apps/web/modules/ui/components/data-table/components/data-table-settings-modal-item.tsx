@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Column, HeaderContext, Table, flexRender } from "@tanstack/react-table";
 import { GripVertical } from "lucide-react";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { Switch } from "@/modules/ui/components/switch";
 
 interface DataTableSettingsModalItemProps<T> {

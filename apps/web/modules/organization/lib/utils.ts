@@ -1,5 +1,5 @@
 import { cache as reactCache } from "react";
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";

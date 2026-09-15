@@ -1,10 +1,10 @@
 import { createId } from "@paralleldrive/cuid2";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { TContactAttributeDataType } from "@formbricks/types/contact-attribute-key";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { isSafeIdentifier } from "@formbricks/types/safe-identifier";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { isSafeIdentifier } from "@forma/types/safe-identifier";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import {
   getReservedFutureDefaultAttributeKeyIssue,

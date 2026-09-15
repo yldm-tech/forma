@@ -1,4 +1,4 @@
-import type { TActionClass } from "@formbricks/types/action-classes";
+import type { TActionClass } from "@forma/types/action-classes";
 
 /**
  * Public v3 action-class shape. Exposes only what a client needs to reference an action class from an

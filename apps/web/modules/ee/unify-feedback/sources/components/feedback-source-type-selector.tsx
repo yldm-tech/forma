@@ -37,7 +37,7 @@ export function FeedbackSourceTypeSelector({
       <div className="space-y-2">
         {feedbackSourceOptions.map((option) => {
           const showNoSurveysAlert =
-            surveyCount === 0 && option.id === "formbricks_survey" && selectedType === "formbricks_survey";
+            surveyCount === 0 && option.id === "forma_survey" && selectedType === "forma_survey";
           return (
             <div key={option.id} className="space-y-2">
               <button
@@ -64,7 +64,7 @@ export function FeedbackSourceTypeSelector({
                   )}
                 </div>
               </button>
-              {showNoSurveysAlert && <NoFormbricksSurveysAlert workspaceId={workspaceId} />}
+              {showNoSurveysAlert && <NoFormaSurveysAlert workspaceId={workspaceId} />}
             </div>
           );
         })}
@@ -73,7 +73,7 @@ export function FeedbackSourceTypeSelector({
         <AlertTitle>{t("workspace.unify.missing_feedback_source_title")}</AlertTitle>
         <AlertButton asChild>
           <Link
-            href="https://app.formbricks.com/s/cmob8tub9s2ndu5010ei4it0g"
+            href="https://app.forma.ylam.ai/s/cmob8tub9s2ndu5010ei4it0g"
             target="_blank"
             rel="noopener noreferrer"
             className="text-slate-900 hover:underline">
@@ -85,12 +85,12 @@ export function FeedbackSourceTypeSelector({
   );
 }
 
-const NoFormbricksSurveysAlert = ({ workspaceId }: Readonly<{ workspaceId: string }>) => {
+const NoFormaSurveysAlert = ({ workspaceId }: Readonly<{ workspaceId: string }>) => {
   return (
     <Alert variant="info" size="small">
       <AlertDescription className="overflow-visible whitespace-normal">
         <Trans
-          i18nKey="workspace.unify.no_formbricks_surveys_available_description"
+          i18nKey="workspace.unify.no_forma_surveys_available_description"
           components={{
             surveyLink: (
               <Link href={`/workspaces/${workspaceId}/surveys/templates`} className="font-medium underline" />

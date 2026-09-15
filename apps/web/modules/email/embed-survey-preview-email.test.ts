@@ -1,10 +1,10 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test } from "vitest";
-import { renderEmbedSurveyPreviewEmail } from "@formbricks/email";
-import { exampleData } from "@formbricks/email/src/lib/example-data";
-import { embedSurveyPreviewEmailHtml } from "@formbricks/email/src/lib/fixtures/embed-survey-preview-email-html";
-import { t as mockT } from "@formbricks/email/src/lib/mock-translate";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { renderEmbedSurveyPreviewEmail } from "@forma/email";
+import { exampleData } from "@forma/email/src/lib/example-data";
+import { embedSurveyPreviewEmailHtml } from "@forma/email/src/lib/fixtures/embed-survey-preview-email-html";
+import { t as mockT } from "@forma/email/src/lib/mock-translate";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { extractEmailBodyFragment } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/emailTemplateFragment";
 import { mixColor } from "@/lib/utils/colors";
 import { getPreviewEmailTemplateHtml } from "@/modules/email/components/preview-email-template";
@@ -81,7 +81,7 @@ const expectSharedPreviewSignals = (html: string) => {
   expect(html).toContain(
     `${EMBED_SURVEY_PREVIEW_QUESTION_ID}=${encodeURIComponent(EMBED_SURVEY_PREVIEW_CHOICE_IDS.pineapples)}`
   );
-  expect(html).toContain("utm_source=formbricks-app");
+  expect(html).toContain("utm_source=forma-app");
   expect(html).toContain("utm_campaign=powered_by_badge");
 };
 

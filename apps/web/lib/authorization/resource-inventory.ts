@@ -38,7 +38,7 @@ export const PRISMA_AUTHORIZATION_RESOURCE_INVENTORY = {
   FeedbackDirectoryWorkspace: "relationship_or_grant_source",
   FeedbackSource: "parent_derived_or_data_integrity",
   FeedbackSourceFieldMapping: "parent_derived_or_data_integrity",
-  FeedbackSourceFormbricksMapping: "parent_derived_or_data_integrity",
+  FeedbackSourceFormaMapping: "parent_derived_or_data_integrity",
   Integration: "workspace_inherited_resource",
   Invite: "authentication_or_application",
   Language: "parent_derived_or_data_integrity",
