@@ -191,11 +191,15 @@ Principles:
 - Confidence over coverage. Test behavior and outcomes; avoid brittle implementation-detail tests.
 - Prove a behavior at the cheapest level that can fail on it. An E2E test is not a stronger unit test; it
   has a different subject — the journey, not the logic.
-- **An E2E test is paid on every PR, by everyone, forever.** The Playwright job is the critical path of the
-  PR gate (as of Aug 2026: a ~13 min job, of which ~6 min is the Playwright step itself — the rest is
-  install, build and boot — over ~110 tests and ~30 browser-minutes), and its wall clock can never drop
-  below its slowest single test. Weigh that before adding one — sometimes the right answer is no test
+- **An E2E test is paid on every PR, by everyone, forever.** Upstream the Playwright job is the critical
+  path of the PR gate (as of Aug 2026: a ~13 min job, of which ~6 min is the Playwright step itself — the
+  rest is install, build and boot — over ~110 tests and ~30 browser-minutes), and its wall clock can never
+  drop below its slowest single test. Weigh that before adding one — sometimes the right answer is no test
   at this level.
+- **On this fork the Playwright job is not wired into `pr.yml` at all.** `e2e.yml` requires an
+  `ENTERPRISE_LICENSE_KEY` secret this organisation does not have, so the call fails during validation
+  before any step runs. The workflow is kept and still dispatchable. Until the secret exists, treat every
+  `e2e` row in a Coverage table as a claim nothing verified, and say so under `Open gaps`.
 
 Which level, concretely:
 

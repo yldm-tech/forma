@@ -33,12 +33,10 @@ jobs:
     uses: ./.github/workflows/typecheck.yml
 
   # NOTE: there is deliberately no standalone "build the web app" job here. It used to run
-  # `pnpm build --filter=@forma/web...` in parallel with e2e-test, which builds the
-  # very same app, and cached the output into a key nothing downstream ever read. Sharing
-  # that build with e2e-test would require `needs: build`, which serializes two jobs that
-  # are currently concurrent and makes the critical path longer, not shorter. The compile
-  # signal is still covered twice: e2e-test builds the app, and docker-build-validation.yml
-  # builds it again in production config.
+  # `pnpm build --filter=@forma/web...` in parallel with the E2E job, which builds the very
+  # same app, and cached the output into a key nothing downstream ever read. The compile
+  # signal is covered by docker-build-validation.yml, which builds the app in production
+  # config, and by typecheck.
 
   helm-chart-validation:
     name: Validate Helm Chart
@@ -48,10 +46,12 @@ jobs:
     name: Validate CodeRabbit Config
     uses: ./.github/workflows/coderabbit-config-validation.yml
 
-  e2e-test:
-    name: Run E2E Tests
-    uses: ./.github/workflows/e2e.yml
-    secrets: inherit
+  # e2e.yml is deliberately not wired in here. It declares ENTERPRISE_LICENSE_KEY as a required
+  # secret, so without one the call fails during validation — in about two seconds, before a single
+  # step runs — and `required` below treats that as a failed gate on every PR. This organisation has
+  # no enterprise licence yet. The workflow itself is kept, and still has its workflow_dispatch
+  # trigger, so adding the secret and restoring the job below is all it takes to put the gate back.
+  # Until then the browser-level journeys are unverified by CI.
 
   validate-authzed-schema:
     name: Validate AuthZed Schema
@@ -72,8 +72,7 @@ jobs:
         run: bash authzed/validate.sh
 
   # No `paths:` filter, deliberately: `required` below fails on a skipped job, and a required check
-  # that never reports would keep every PR out of the merge queue. It runs concurrently with e2e-test,
-  # which is the gate's critical path, so it costs runner minutes rather than wall-clock.
+  # that never reports would keep every PR out of the merge queue.
   api-v3-contract-tests:
     name: Run API v3 Contract Tests
     uses: ./.github/workflows/api-v3-contract-tests.yml
@@ -91,7 +90,6 @@ jobs:
         test,
         helm-chart-validation,
         coderabbit-config-validation,
-        e2e-test,
         validate-authzed-schema,
         api-v3-contract-tests,
       ]
