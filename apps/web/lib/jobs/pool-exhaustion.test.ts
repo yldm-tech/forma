@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { isDatabasePoolExhaustionError } from "./pool-exhaustion";
 
 describe("isDatabasePoolExhaustionError", () => {

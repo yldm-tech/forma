@@ -1,7 +1,7 @@
 import { TFunction } from "i18next";
 import { z } from "zod";
-import { THubFieldType, ZFeedbackSourceImportMode, ZHubFieldType } from "@formbricks/types/feedback-source";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import { THubFieldType, ZFeedbackSourceImportMode, ZHubFieldType } from "@forma/types/feedback-source";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 
 export interface TUnifySurveyElement {
   id: string;
@@ -223,7 +223,7 @@ export const CSV_REQUIRED_UI_FIELDS = ["submission_id", "field_id", "field_type"
 
 export const SAMPLE_CSV_COLUMNS = "timestamp,response_id,customer_id,rating,feedback_text,category";
 
-export const SAMPLE_CSV_FILE_NAME = "formbricks-sample-feedback.csv";
+export const SAMPLE_CSV_FILE_NAME = "forma-sample-feedback.csv";
 
 export const SAMPLE_CSV_CONTENT = `submission_id,collected_at,field_id,field_type,value,email,language
 sub-001,2026-01-15T10:00:00Z,nps_score,nps,9,alice@example.com,en
@@ -283,7 +283,7 @@ export type TFeedbackCSVData = z.infer<ReturnType<typeof createFeedbackCSVDataSc
 
 export type TCreateFeedbackSourceStep = "selectType" | "mapping";
 
-export const ZFormbricksFeedbackSourceForm = z.object({
+export const ZFormaFeedbackSourceForm = z.object({
   sourceName: z.string().trim().min(1, "FEEDBACK_SOURCE_NAME_REQUIRED"),
   surveyId: z.string().min(1, "FEEDBACK_SOURCE_SURVEY_REQUIRED"),
   selectedQuestionIds: z.array(z.string()).min(1, "FEEDBACK_SOURCE_QUESTIONS_REQUIRED"),
@@ -292,7 +292,7 @@ export const ZFormbricksFeedbackSourceForm = z.object({
   importMode: ZFeedbackSourceImportMode,
 });
 
-export type TFormbricksFeedbackSourceForm = z.infer<typeof ZFormbricksFeedbackSourceForm>;
+export type TFormaFeedbackSourceForm = z.infer<typeof ZFormaFeedbackSourceForm>;
 
 export const getTranslatedFeedbackSourceError = (
   errorCode: string,
@@ -302,8 +302,8 @@ export const getTranslatedFeedbackSourceError = (
   switch (errorCode) {
     case "FEEDBACK_SOURCE_NAME_DUPLICATE":
       return t("workspace.unify.error_source_name_duplicate");
-    case "FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE":
-      return t("workspace.unify.error_source_formbricks_mapping_duplicate");
+    case "FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE":
+      return t("workspace.unify.error_source_forma_mapping_duplicate");
     case "FEEDBACK_SOURCE_FIELD_MAPPING_DUPLICATE":
       return t("workspace.unify.error_source_field_mapping_duplicate");
     case CSV_IMPORT_MISSING_COLUMNS_ERROR_CODE:

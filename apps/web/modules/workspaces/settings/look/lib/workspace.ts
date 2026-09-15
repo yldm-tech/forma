@@ -1,9 +1,9 @@
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma, Workspace } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, Workspace } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 
 export const getWorkspaceById = reactCache(async (workspaceId: string): Promise<Workspace | null> => {

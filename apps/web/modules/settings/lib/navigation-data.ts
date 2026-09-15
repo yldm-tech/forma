@@ -1,13 +1,13 @@
 import "server-only";
 import { cookies } from "next/headers";
-import type { Session } from "@formbricks/types/auth";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
-import type { TWorkspace } from "@formbricks/types/workspace";
+import type { Session } from "@forma/types/auth";
+import type { TOrganizationRole } from "@forma/types/memberships";
+import type { TWorkspace } from "@forma/types/workspace";
 import { getOrganizationsByUserId } from "@/app/(app)/workspaces/[workspaceId]/lib/organization";
 import { getWorkspacesByUserId } from "@/app/(app)/workspaces/[workspaceId]/lib/workspace";
-import { IS_DEVELOPMENT, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_DEVELOPMENT, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
-import { FORMBRICKS_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
+import { FORMA_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getMonthlyOrganizationResponseCount, getOrganization } from "@/lib/organization/service";
 import { getUser } from "@/lib/user/service";
@@ -34,7 +34,7 @@ export interface TSettingsLayoutData {
   organizationWorkspacesLimit: number;
   license: TLicense;
   responseCount: number;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isDevelopment: boolean;
   publicDomain: string;
   // The "current" workspace used to render the sidebar's Workspace section, back link, and the
@@ -78,7 +78,7 @@ const resolveActiveOrganizationId = async (
  * `organizationId` is optional — account settings don't carry one, so it is resolved from the last
  * active workspace (see `resolveActiveOrganizationId`).
  *
- * The "current" workspace is resolved from the same `formbricks-workspace-id` cookie (set by the
+ * The "current" workspace is resolved from the same `forma-workspace-id` cookie (set by the
  * proxy from the last visited `/workspaces/[workspaceId]` path), so navigating into the
  * workspace-agnostic org-settings routes keeps the workspace you came from. If the cookie is missing
  * or points at a workspace the user can't access, it falls back to the first accessible workspace.
@@ -91,7 +91,7 @@ export const getSettingsLayoutData = async (
   if (!session?.user) return null;
 
   const cookieStore = await cookies();
-  const activeWorkspaceId = cookieStore.get(FORMBRICKS_WORKSPACE_ID_COOKIE)?.value;
+  const activeWorkspaceId = cookieStore.get(FORMA_WORKSPACE_ID_COOKIE)?.value;
 
   const orgId = organizationId ?? (await resolveActiveOrganizationId(userId, activeWorkspaceId));
   if (!orgId) return null;
@@ -110,7 +110,7 @@ export const getSettingsLayoutData = async (
     getWorkspacesByUserId(userId, organization.id),
   ]);
 
-  const responseCount = IS_FORMBRICKS_CLOUD ? await getMonthlyOrganizationResponseCount(organization.id) : 0;
+  const responseCount = IS_FORMA_CLOUD ? await getMonthlyOrganizationResponseCount(organization.id) : 0;
 
   // Resolve the workspace to display in the shell. Prefer the last active workspace when it belongs
   // to the accessible list; otherwise fall back to the first accessible workspace so the shell
@@ -134,7 +134,7 @@ export const getSettingsLayoutData = async (
     organizationWorkspacesLimit,
     license,
     responseCount,
-    isFormbricksCloud: IS_FORMBRICKS_CLOUD,
+    isFormaCloud: IS_FORMA_CLOUD,
     isDevelopment: IS_DEVELOPMENT,
     publicDomain: getPublicDomain(),
     currentWorkspace,

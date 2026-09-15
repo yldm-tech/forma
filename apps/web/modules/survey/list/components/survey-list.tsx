@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import type { TSurveyStatus, TSurveyType } from "@formbricks/types/surveys/types";
-import type { TUserLocale } from "@formbricks/types/user";
-import type { TWorkspaceConfigChannel } from "@formbricks/types/workspace";
+import type { TSurveyStatus, TSurveyType } from "@forma/types/surveys/types";
+import type { TUserLocale } from "@forma/types/user";
+import type { TWorkspaceConfigChannel } from "@forma/types/workspace";
 import { CUSTOM_SURVEY_TEMPLATE_ID } from "@/app/lib/templates";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
-import { FORMBRICKS_SURVEYS_FILTERS_KEY_LS } from "@/lib/localStorage";
+import { FORMA_SURVEYS_FILTERS_KEY_LS } from "@/lib/localStorage";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { CreateWithAIDialog } from "@/modules/survey/components/template-list/components/create-with-ai-dialog";
 import { useCreateSurveyFromTemplate } from "@/modules/survey/components/template-list/hooks/use-create-survey-from-template";
@@ -167,11 +167,11 @@ export const SurveysList = ({
       return;
     }
 
-    const storedFilters = globalThis.window.localStorage.getItem(FORMBRICKS_SURVEYS_FILTERS_KEY_LS);
+    const storedFilters = globalThis.window.localStorage.getItem(FORMA_SURVEYS_FILTERS_KEY_LS);
     const parsedFilters = parseStoredSurveyFilters(storedFilters, currentWorkspaceChannel);
 
     if (storedFilters && !parsedFilters) {
-      globalThis.window.localStorage.removeItem(FORMBRICKS_SURVEYS_FILTERS_KEY_LS);
+      globalThis.window.localStorage.removeItem(FORMA_SURVEYS_FILTERS_KEY_LS);
       setSurveyFilters(initialFilters);
     } else if (parsedFilters) {
       setSurveyFilters(parsedFilters);
@@ -190,10 +190,7 @@ export const SurveysList = ({
       return;
     }
 
-    globalThis.window.localStorage.setItem(
-      FORMBRICKS_SURVEYS_FILTERS_KEY_LS,
-      JSON.stringify(normalizedFilters)
-    );
+    globalThis.window.localStorage.setItem(FORMA_SURVEYS_FILTERS_KEY_LS, JSON.stringify(normalizedFilters));
   }, [normalizedFilters, isFilterInitialized]);
 
   const {

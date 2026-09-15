@@ -5,7 +5,7 @@
  * `runs` segment, so it never collides with `/api/v3/workflows/{workflowId}`.
  *
  * Thin adapter: authenticate via the shared wrapper, build the workflow API context, and delegate
- * to the framework-agnostic handlers in `@formbricks/workflows/server`.
+ * to the framework-agnostic handlers in `@forma/workflows/server`.
  */
 import { withV3ApiWrapper } from "@/app/api/v3/lib/api-wrapper";
 import { buildWorkflowApiContext, workflowsHandlers } from "../lib/context";

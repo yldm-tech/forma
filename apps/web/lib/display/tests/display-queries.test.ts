@@ -1,9 +1,9 @@
 import { mockDisplayId, mockSurveyId } from "./__mocks__/data.mock";
 import { prisma } from "@/lib/__mocks__/database";
 import { describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { DatabaseError, InvalidInputError, ValidationError } from "@formbricks/types/errors";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { DatabaseError, InvalidInputError, ValidationError } from "@forma/types/errors";
 import {
   assertDisplayOwnership,
   getDisplayCountBySurveyId,

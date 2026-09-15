@@ -25,7 +25,7 @@ vi.mock("./auth", () => ({
   getMcpAuthentication: mocks.getMcpAuthentication,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: mocks.loggerWarn },
 }));
 

@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
-import { createCacheKey } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
+import { createCacheKey } from "@forma/cache";
+import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
 
 const INTEGRATION_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;

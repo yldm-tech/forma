@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TResponseInput } from "@formbricks/types/responses";
+import { TResponseInput } from "@forma/types/responses";
 import { buildPrismaResponseData } from "./utils";
 
 const input = (language?: string): TResponseInput =>

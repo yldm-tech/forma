@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { type ChartBuilderState, buildCubeQuery, parseQueryToState } from "./query-builder";
 
 describe("query-builder", () => {

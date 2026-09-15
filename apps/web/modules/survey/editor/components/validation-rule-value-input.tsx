@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { ALLOWED_FILE_EXTENSIONS, TAllowedFileExtension } from "@formbricks/types/storage";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TValidationRule, TValidationRuleType } from "@formbricks/types/surveys/validation-rules";
+import { ALLOWED_FILE_EXTENSIONS, TAllowedFileExtension } from "@forma/types/storage";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TValidationRule, TValidationRuleType } from "@forma/types/surveys/validation-rules";
 import { Input } from "@/modules/ui/components/input";
 import { MultiSelect } from "@/modules/ui/components/multi-select";
 import {

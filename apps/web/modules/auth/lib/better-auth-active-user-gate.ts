@@ -1,7 +1,7 @@
 import "server-only";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 
 type SessionDatabaseHook = NonNullable<NonNullable<BetterAuthOptions["databaseHooks"]>["session"]>;
 

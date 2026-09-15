@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@formbricks/types/js-constants";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
 import { getWorkspaceStateData } from "./data";
 
 vi.mock("server-only", () => ({}));
 
 // Mock dependencies
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       findUnique: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

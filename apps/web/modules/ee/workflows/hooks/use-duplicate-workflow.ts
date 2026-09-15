@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TWorkflowResource } from "@formbricks/workflows";
+import type { TWorkflowResource } from "@forma/workflows";
 import { duplicateWorkflow } from "../lib/api-client";
 import { workflowKeys } from "../lib/query";
 

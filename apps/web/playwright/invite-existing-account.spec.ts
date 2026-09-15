@@ -1,9 +1,9 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 
 /**
- * ENG-2091: an invitee who already has a Formbricks account used to be sent to "please confirm your
+ * ENG-2091: an invitee who already has a Forma account used to be sent to "please confirm your
  * email address" for a verification email that is never sent, in front of a resend button that no-ops
  * for an already-verified address — and their invite was consumed on the way, so logging in afterwards
  * showed "Invite Not Found".
@@ -14,7 +14,7 @@ import { test } from "./lib/fixtures";
  */
 test.describe("Invite sign-up with an address that already has an account @slow", async () => {
   test("routes to login with the invite intact", async ({ page, users, browser }) => {
-    // The invitee already has a Formbricks account with this address — the precondition for the bug.
+    // The invitee already has a Forma account with this address — the precondition for the bug.
     const inviteeEmail = `invitee-existing-${Date.now()}@corporate-example.com`;
     const invitee = await users.create({ email: inviteeEmail, skipSurveySeed: true });
 
@@ -33,7 +33,7 @@ test.describe("Invite sign-up with an address that already has an account @slow"
       await page.getByLabel("Full Name").fill("Existing Person");
       await page.getByLabel("Email").fill(inviteeEmail);
       await page.getByRole("button", { name: "Invite", exact: true }).click();
-      await expect(page.locator(".formbricks__toast__success")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator(".forma__toast__success")).toBeVisible({ timeout: 15000 });
 
       const invitedMemberInfo = page.locator("#singleMemberInfo").filter({ hasText: inviteeEmail });
       await expect(invitedMemberInfo).toBeVisible({ timeout: 10000 });

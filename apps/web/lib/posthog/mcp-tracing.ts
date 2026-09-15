@@ -1,7 +1,7 @@
 import "server-only";
 import { PostHogMCPAnalyticsProperty, instrument } from "@posthog/mcp";
 import type { MCPAnalyticsOptions, McpAnalytics } from "@posthog/mcp";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { posthogTracingClient } from "./server";
 
 // Raw PostHog properties @posthog/mcp writes that aren't part of its own

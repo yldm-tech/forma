@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ZodOpenApiOperationObject, ZodOpenApiPathsObject } from "zod-openapi";
-import { ZSurveyWithoutQuestionType } from "@formbricks/database/zod/surveys";
+import { ZSurveyWithoutQuestionType } from "@forma/database/zod/surveys";
 import { getPersonalizedSurveyLink } from "@/modules/api/v2/management/surveys/[surveyId]/contact-links/contacts/[contactId]/lib/openapi";
 import { ZGetSurveysFilter, ZSurveyInput } from "@/modules/api/v2/management/surveys/types/surveys";
 

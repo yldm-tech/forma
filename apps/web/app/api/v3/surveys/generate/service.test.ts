@@ -158,7 +158,7 @@ describe("generateV3SurveyCreatePayloadFromPrompt", () => {
       expect.objectContaining({
         organizationId: "org_1",
         schema: ZGeneratedSurveyDraftForAI,
-        schemaName: "FormbricksSurveyDraft",
+        schemaName: "FormaSurveyDraft",
         temperature: 0.2,
         maxOutputTokens: 8192,
         timeout: 45_000,

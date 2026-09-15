@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { handleErrorResponse } from "@/app/api/v1/auth";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { responses } from "@/app/lib/api/response";

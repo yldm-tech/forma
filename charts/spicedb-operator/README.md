@@ -6,7 +6,7 @@ and pins the operator's multi-architecture image digest.
 
 ```yaml
 watchNamespaces:
-  - formbricks
+  - forma
 ```
 
 Install exactly one operator release per cluster and list every namespace that may contain a `SpiceDBCluster`.

@@ -7,7 +7,7 @@ import {
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 
 const ALGORITHM_V1 = "aes256";

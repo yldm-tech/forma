@@ -1,4 +1,4 @@
-import type { TSurveyType } from "@formbricks/types/surveys/types";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import { parseV3ApiError } from "@/modules/api/lib/v3-client";
 
 type TV3SurveyCreateResponse = {

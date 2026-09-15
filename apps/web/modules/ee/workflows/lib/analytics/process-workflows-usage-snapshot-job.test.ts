@@ -4,7 +4,7 @@ import { emitWorkflowUsageSnapshots } from "./usage-snapshot";
 const mocks = vi.hoisted(() => ({ constants: { POSTHOG_KEY: "phc_test" as string | undefined } }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@formbricks/logger", () => ({ logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }));
 vi.mock("@/lib/constants", () => mocks.constants);
 vi.mock("./usage-snapshot", () => ({ emitWorkflowUsageSnapshots: vi.fn() }));
 

@@ -24,7 +24,7 @@ export const ZStorageUrl = z.string().refine(
       // URLs, organization logos and favicons, and styling background URLs, and they are rendered
       // straight into `src`/`href` attributes. `new URL()` happily accepts `javascript:`, `data:` and
       // `vbscript:`, so accepting any parseable URL turned an editable survey field into stored XSS —
-      // on a link survey that executes on the Formbricks origin, and in an embedded survey on the
+      // on a link survey that executes on the Forma origin, and in an embedded survey on the
       // customer's own site.
       return parsed.protocol === "https:" || parsed.protocol === "http:";
     } catch {

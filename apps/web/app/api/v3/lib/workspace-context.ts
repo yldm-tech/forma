@@ -4,7 +4,7 @@
  * Workspace is the container for surveys. The workspaceId in the API
  * directly maps to the Workspace entity.
  */
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspace } from "@/lib/workspace/service";
 

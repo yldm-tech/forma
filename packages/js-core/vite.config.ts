@@ -21,7 +21,7 @@ export default defineConfig({
     emptyOutDir: false, // keep the dist folder to avoid errors with pnpm go when folder is empty during build
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "formbricks",
+      name: "forma",
       formats: ["umd"],
       fileName: "index",
     },
@@ -35,7 +35,7 @@ export default defineConfig({
       beforeWriteFile: rewriteNodeNextDtsSpecifiers,
     }) as VitestPluginOption,
     copyCompiledAssetsPlugin({
-      filename: "formbricks",
+      filename: "forma",
       distDir: resolve(__dirname, "dist"),
       skipDirectoryCheck: true, // Skip checking for subdirectories that might not exist
     }) as VitestPluginOption,

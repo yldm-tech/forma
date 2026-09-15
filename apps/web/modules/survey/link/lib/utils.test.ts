@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import {
   getElementsFromSurveyBlocks,
   getGateLocale,

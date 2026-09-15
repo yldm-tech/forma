@@ -8,12 +8,12 @@ import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/works
 import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 interface TargetingLockedCardProps {
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   enterpriseLicenseRequestFormUrl: string;
 }
 
 export const TargetingLockedCard = ({
-  isFormbricksCloud,
+  isFormaCloud,
   enterpriseLicenseRequestFormUrl,
 }: Readonly<TargetingLockedCardProps>) => {
   const { t } = useTranslation();
@@ -51,14 +51,14 @@ export const TargetingLockedCard = ({
             feature="targeting"
             buttons={[
               {
-                text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: isFormbricksCloud ? organizationBillingPath : enterpriseLicenseRequestFormUrl,
+                text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                href: isFormaCloud ? organizationBillingPath : enterpriseLicenseRequestFormUrl,
               },
               {
                 text: t("common.learn_more"),
-                href: isFormbricksCloud
+                href: isFormaCloud
                   ? organizationBillingPath
-                  : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_targeting",
+                  : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_targeting",
               },
             ]}
           />

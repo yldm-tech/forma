@@ -1,13 +1,13 @@
 import "server-only";
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { type TIngestFlag, mergeIngestFlags } from "@formbricks/types/embedded-data-ingest";
-import { type TEmbeddedValueResponse } from "@formbricks/types/embedded-data-resolver";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { type TIngestFlag, mergeIngestFlags } from "@forma/types/embedded-data-ingest";
+import { type TEmbeddedValueResponse } from "@forma/types/embedded-data-resolver";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TResponse,
   TResponseContact,
@@ -16,9 +16,9 @@ import {
   TResponseWithQuotas,
   ZResponseFilterCriteria,
   ZResponseUpdateInput,
-} from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
+} from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
 import { getIsQuotasEnabled } from "@/modules/ee/license-check/lib/utils";
 import { reduceQuotaLimits } from "@/modules/ee/quotas/lib/quotas";
 import { deleteResponseFileUrls } from "@/modules/storage/lib/delete-response-files";
@@ -485,7 +485,7 @@ export const getResponseDownloadFile = async (
       "Finished",
       ...(isQuotasAllowed ? ["Quotas"] : []),
       "Survey ID",
-      "Formbricks ID (internal)",
+      "Forma ID (internal)",
       "User ID",
       "Tags",
       ...metaDataFields,

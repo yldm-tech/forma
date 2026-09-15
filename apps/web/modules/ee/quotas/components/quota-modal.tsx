@@ -15,8 +15,8 @@ import {
   TSurveyQuotaLogic,
   ZSurveyQuotaAction,
   ZSurveyQuotaInput,
-} from "@formbricks/types/quota";
-import { TSurvey } from "@formbricks/types/surveys/types";
+} from "@forma/types/quota";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";
 import { createQuotaAction, updateQuotaAction } from "@/modules/ee/quotas/actions";

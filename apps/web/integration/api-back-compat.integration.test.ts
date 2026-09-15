@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { toDesiredEmbeddedFields } from "@formbricks/types/embedded-data-mapping";
-import { deriveLegacyEmbeddedData } from "@formbricks/types/embedded-data-resolver";
-import { type TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { toDesiredEmbeddedFields } from "@forma/types/embedded-data-mapping";
+import { deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { type TSurvey } from "@forma/types/surveys/types";
 import { patchV3Survey } from "@/app/api/v3/surveys/patch";
 import { V3SurveyReferenceValidationError } from "@/app/api/v3/surveys/reference-validation";
 import { resetDb } from "@/integration/reset-db";

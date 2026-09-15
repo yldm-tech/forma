@@ -1,7 +1,7 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { ZWorkflowDefinition } from "@formbricks/workflows";
-import { createWorkflowsService } from "@formbricks/workflows/server";
+import { prisma } from "@forma/database";
+import { ZWorkflowDefinition } from "@forma/workflows";
+import { createWorkflowsService } from "@forma/workflows/server";
 import { DEFAULT_LOCALE, MAIL_FROM } from "@/lib/constants";
 import { getWorkspaceMembers } from "@/lib/workspace/service";
 import { getSession } from "@/modules/auth/lib/session";
@@ -38,7 +38,7 @@ export const getWorkflowEmailAuthoringContext = async ({
   const session = await getSession();
   // Match the app-wide default sender used by `@/modules/email` so the read-only From box shows the
   // address emails are actually sent from.
-  const mailFrom = MAIL_FROM ?? "noreply@formbricks.com";
+  const mailFrom = MAIL_FROM ?? "noreply@forma.ylam.ai";
 
   const emptyContext: TWorkflowEmailAuthoringContext = {
     survey: null,

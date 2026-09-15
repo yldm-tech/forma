@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TSurveyEnding } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { type TSurveyEnding } from "@forma/types/surveys/types";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { type UsersFixture } from "../fixtures/users";
 
@@ -135,7 +135,7 @@ const buildKitchenSinkQuestions = (baseURL: string) => [
   // NOTE: no `cal` question on purpose — the Cal.com embed loads a live third-party
   // iframe, which would make the unattended axe walk depend on external network and
   // markup we do not control (its violations would all be wontfix-allowlisted anyway).
-  // The wrapper Formbricks DOES own is scanned in `buildAnsweredStatesQuestions`
+  // The wrapper Forma DOES own is scanned in `buildAnsweredStatesQuestions`
   // below, where the spec blocks the embed origin instead of loading it.
   {
     id: createId(),
@@ -258,7 +258,7 @@ export const CTA_EXTERNAL_BUTTON_LABEL = "Open the setup guide";
  * request to `CAL_EMBED_ORIGIN` so the third-party snippet never loads, never resolves this
  * handle, and never injects its iframe. Only the wrapper around it is ours to scan.
  */
-export const CAL_USER_NAME = "formbricks-a11y-fixture/30min";
+export const CAL_USER_NAME = "forma-a11y-fixture/30min";
 
 /**
  * Origin the Cal.com embed snippet is fetched from (see packages/surveys cal-embed.tsx). The spec

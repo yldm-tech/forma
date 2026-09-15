@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
-import { FORMBRICKS_CLOUD_ACCOUNT_DELETION_SURVEY_URL } from "@/modules/account/constants";
+import { FORMA_CLOUD_ACCOUNT_DELETION_SURVEY_URL } from "@/modules/account/constants";
 import { auth } from "@/modules/auth/lib/auth";
 import { sendDeleteAccountConfirmationEmail } from "@/modules/email";
 import { requestSsoAccountDeletionEmail } from "./better-auth-account-deletion-request";
@@ -12,16 +12,16 @@ import { requestSsoAccountDeletionEmail } from "./better-auth-account-deletion-r
 const { getSessionMock } = vi.hoisted(() => ({ getSessionMock: vi.fn() }));
 vi.mock("@/modules/auth/lib/session", () => ({ getSession: getSessionMock }));
 
-// Toggle IS_FORMBRICKS_CLOUD per test to cover both post-deletion redirect targets; every other
+// Toggle IS_FORMA_CLOUD per test to cover both post-deletion redirect targets; every other
 // constant (WEBAPP_URL, etc.) stays real so the Better Auth harness is untouched (auth.ts does not
-// read IS_FORMBRICKS_CLOUD).
-const { constantsOverrides } = vi.hoisted(() => ({ constantsOverrides: { isFormbricksCloud: false } }));
+// read IS_FORMA_CLOUD).
+const { constantsOverrides } = vi.hoisted(() => ({ constantsOverrides: { isFormaCloud: false } }));
 vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/constants")>();
   return {
     ...actual,
-    get IS_FORMBRICKS_CLOUD() {
-      return constantsOverrides.isFormbricksCloud;
+    get IS_FORMA_CLOUD() {
+      return constantsOverrides.isFormaCloud;
     },
   };
 });
@@ -54,7 +54,7 @@ const createVerifiedUser = async (email: string, password: string): Promise<stri
 beforeEach(async () => {
   await resetDb();
   vi.clearAllMocks();
-  constantsOverrides.isFormbricksCloud = false;
+  constantsOverrides.isFormaCloud = false;
 });
 
 describe("requestSsoAccountDeletionEmail (real Postgres)", () => {
@@ -81,7 +81,7 @@ describe("requestSsoAccountDeletionEmail (real Postgres)", () => {
     const mailArgs = sendDeleteAccountConfirmationEmailMock.mock.calls[0][0];
     expect(mailArgs.email).toBe(email);
     expect(mailArgs.deleteLink).toContain("/api/auth/delete-user/callback?token=");
-    // Self-hosted (IS_FORMBRICKS_CLOUD is false under test): the callback returns to the login page.
+    // Self-hosted (IS_FORMA_CLOUD is false under test): the callback returns to the login page.
     expect(mailArgs.deleteLink).toContain(`callbackURL=${encodeURIComponent("/auth/login")}`);
     const token = new URL(mailArgs.deleteLink).searchParams.get("token");
     expect(token).toBeTruthy();
@@ -104,8 +104,8 @@ describe("requestSsoAccountDeletionEmail (real Postgres)", () => {
     expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
   });
 
-  test("on Formbricks Cloud, the emailed link returns to the account-deletion survey (ENG-1780)", async () => {
-    constantsOverrides.isFormbricksCloud = true;
+  test("on Forma Cloud, the emailed link returns to the account-deletion survey (ENG-1780)", async () => {
+    constantsOverrides.isFormaCloud = true;
     const email = "ssocloud@example.com";
     const userId = await createVerifiedUser(email, "Passw0rd!");
     await prisma.user.update({ where: { id: userId }, data: { identityProvider: "google" } });
@@ -117,7 +117,7 @@ describe("requestSsoAccountDeletionEmail (real Postgres)", () => {
     const mailArgs = sendDeleteAccountConfirmationEmailMock.mock.calls[0][0];
     // Cloud: the callback redirects to the offboarding survey instead of the login page.
     expect(mailArgs.deleteLink).toContain(
-      `callbackURL=${encodeURIComponent(FORMBRICKS_CLOUD_ACCOUNT_DELETION_SURVEY_URL)}`
+      `callbackURL=${encodeURIComponent(FORMA_CLOUD_ACCOUNT_DELETION_SURVEY_URL)}`
     );
   });
 

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "preact/hooks";
-import { type TResponseData, type TResponseTtc } from "@formbricks/types/responses";
-import type { TSurveyCalElement } from "@formbricks/types/surveys/elements";
+import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
+import type { TSurveyCalElement } from "@forma/types/surveys/elements";
 import { CalEmbed } from "@/components/general/cal-embed";
 import { ElementMedia } from "@/components/general/element-media";
 import { Headline } from "@/components/general/headline";

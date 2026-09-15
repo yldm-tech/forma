@@ -2,7 +2,7 @@ import { createWriteStream, mkdirSync, writeFileSync } from "node:fs";
 import type { WriteStream } from "node:fs";
 import { dirname } from "node:path";
 import { performance } from "node:perf_hooks";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 

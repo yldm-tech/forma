@@ -9,7 +9,7 @@ Three Stripe objects drive the app per Scale org:
 
 - Availability entitlement — product feature lookup key **`workflows`** → `getIsWorkflowsEnabled(orgId)`.
 - Included-volume entitlement — product feature **`workflow-runs-included-1000`** → `limits.monthly.workflowRuns`.
-- Metered price — `formbricks_price_kind: workflow_runs`, attached to meter **`workflow_run_created`**.
+- Metered price — `forma_price_kind: workflow_runs`, attached to meter **`workflow_run_created`**.
 
 Key facts:
 
@@ -37,7 +37,7 @@ Key facts:
    - `usage_type: metered`, attached to the meter from step 2.
    - **Graduated, first tier `unit_amount: 0` up to `1000`** (this boundary is what the card shows as
      "included"), then overage tier(s) per pricing.
-   - metadata: `formbricks_price_kind: workflow_runs`, `formbricks_interval: monthly`.
+   - metadata: `forma_price_kind: workflow_runs`, `forma_interval: monthly`.
    - Exactly **one** active such price per plan (a duplicate → catalog throws "found 2").
 
 4. **Attach 2 product features** to the Scale product:

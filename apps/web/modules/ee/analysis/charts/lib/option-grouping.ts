@@ -1,8 +1,8 @@
 import "server-only";
-import { type TChartQuery, type TCubeFilter, type TMemberFilter } from "@formbricks/types/analysis";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import type { TSurveyElementChoice } from "@formbricks/types/surveys/elements";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+import { type TChartQuery, type TCubeFilter, type TMemberFilter } from "@forma/types/analysis";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import type { TSurveyElementChoice } from "@forma/types/surveys/elements";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getFeedbackSourcesWithMappings } from "@/lib/feedback-source/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { getSurvey } from "@/lib/survey/service";
@@ -45,7 +45,7 @@ const resolveElementByFieldId = async (
 ): Promise<TResolvedElement | undefined> => {
   const feedbackSources = await getFeedbackSourcesWithMappings(workspaceId);
   for (const source of feedbackSources) {
-    const mapping = source.formbricksMappings.find((m) => m.elementId === fieldId);
+    const mapping = source.formaMappings.find((m) => m.elementId === fieldId);
     if (mapping) {
       return { elementId: fieldId, surveyId: mapping.surveyId };
     }
@@ -98,7 +98,7 @@ const resolveElementByFieldLabel = async (
   // Collect candidates: mappings whose effective label exactly matches the filter value.
   const candidates: TResolvedElement[] = [];
   for (const source of feedbackSources) {
-    for (const mapping of source.formbricksMappings) {
+    for (const mapping of source.formaMappings) {
       const effectiveLabel = await getMappingEffectiveLabel(mapping, loadSurvey);
       if (effectiveLabel === fieldLabelFilter) {
         candidates.push({ elementId: mapping.elementId, surveyId: mapping.surveyId });

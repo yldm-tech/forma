@@ -2,9 +2,9 @@
 
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZUserEmail } from "@formbricks/types/user";
+import { logger } from "@forma/logger";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { ZUserEmail } from "@forma/types/user";
 import { WEBAPP_URL } from "@/lib/constants";
 import { verifySsoRelinkIntent } from "@/lib/jwt";
 import { actionClient } from "@/lib/utils/action-client";

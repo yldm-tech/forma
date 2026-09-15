@@ -6,7 +6,7 @@ import { auth } from "@/modules/auth/lib/auth";
 import { createAuthPathLabeller } from "@/modules/auth/lib/better-auth-path-label";
 
 /**
- * ENG-2259 / FORMBRICKS-183 — the endpoint label must survive the real Better Auth request.
+ * ENG-2259 / FORMA-183 — the endpoint label must survive the real Better Auth request.
  *
  * This has to be an integration test. The question is whether the AsyncLocalStorage store opened by
  * the route is still readable by the time better-call's router catches an unexpected throw and calls

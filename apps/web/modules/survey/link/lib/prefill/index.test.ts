@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, test } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { FORBIDDEN_IDS } from "@formbricks/types/surveys/validation";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { FORBIDDEN_IDS } from "@forma/types/surveys/validation";
 import { getPrefillValue } from "./index";
 
 describe("prefill integration tests", () => {

@@ -13,7 +13,7 @@ vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
   queueAuditEventWithoutRequest: mockQueueAuditEventWithoutRequest,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mockLoggerError,
     info: mockLoggerInfo,

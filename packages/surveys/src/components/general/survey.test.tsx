@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { Survey } from "./survey";
 
 const apiClientMocks = vi.hoisted(() => ({
@@ -95,8 +95,8 @@ vi.mock("@/components/general/response-error-component", () => ({
   ResponseErrorComponent: () => <div>Response Error</div>,
 }));
 
-vi.mock("@/components/general/formbricks-branding", () => ({
-  FormbricksBranding: () => null,
+vi.mock("@/components/general/forma-branding", () => ({
+  FormaBranding: () => null,
 }));
 
 vi.mock("@/components/general/language-switch", () => ({

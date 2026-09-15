@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { POSTHOG_KEY } from "@/lib/constants";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { ATTRIBUTION_COOKIE_NAME, getAttributionPropertiesFromCookies } from "@/modules/auth/lib/attribution";

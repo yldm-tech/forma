@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurveyBlock, TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TSurvey } from "@forma/types/surveys/types";
 import { cn } from "@/lib/cn";
 import { duplicateLogicItem } from "@/lib/surveyLogic/utils";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";

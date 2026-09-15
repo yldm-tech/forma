@@ -33,7 +33,7 @@ export const formatSurveyFollowUpsSunsetDate = (locale: string): string =>
   });
 
 /** Docs page that explains the replacement. */
-export const WORKFLOWS_DOCS_URL = "https://formbricks.com/docs/workflows/overview";
+export const WORKFLOWS_DOCS_URL = "https://forma.ylam.ai/docs/workflows/overview";
 
 interface FollowUpsTabVisibilityInput {
   /** Follow-ups persisted on the survey — deliberately the server count, see below. */

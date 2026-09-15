@@ -3,7 +3,7 @@
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TCreateWorkflowInput } from "@formbricks/workflows";
+import type { TCreateWorkflowInput } from "@forma/workflows";
 import { createEmptyWorkflowDefinition } from "../lib/default-workflow";
 import { workflowKeys } from "../lib/query";
 import { createWrapper, newQueryClient } from "./test-utils";

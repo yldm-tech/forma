@@ -39,7 +39,7 @@ const mockWorkerConstructor = vi.fn(function MockWorker(_: string, __: unknown, 
   return asWorker(worker);
 });
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: (context: unknown, message?: string): void => {
       mockLogger.error(context, message);
@@ -82,7 +82,7 @@ vi.mock("bullmq", () => ({
   },
 }));
 
-describe("@formbricks/jobs runtime", () => {
+describe("@forma/jobs runtime", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     producerConnection = createMockRedisConnection();

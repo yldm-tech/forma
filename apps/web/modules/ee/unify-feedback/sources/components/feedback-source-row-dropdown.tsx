@@ -13,7 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
 import { ConfirmationModal } from "@/modules/ui/components/confirmation-modal";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";
 import {
@@ -54,7 +54,7 @@ export function FeedbackSourceRowDropdown({
   const isActive = feedbackSource.status === "active";
   const canReimport = canReimportHistoricalData(feedbackSource);
   const linkedSurveyId =
-    feedbackSource.type === "formbricks_survey" ? feedbackSource.formbricksMappings[0]?.surveyId : undefined;
+    feedbackSource.type === "forma_survey" ? feedbackSource.formaMappings[0]?.surveyId : undefined;
 
   const handleReimport = async () => {
     // The confirm button is already disabled while the import runs (Button applies

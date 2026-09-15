@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { StorageErrorCode } from "@formbricks/storage";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { StorageErrorCode } from "@forma/storage";
+import type { TSurvey } from "@forma/types/surveys/types";
 import type { TAttachmentEntry } from "@/modules/storage/lib/collect-response-attachments";
 import { getFileStreamForDownload } from "@/modules/storage/service";
 import {
@@ -12,7 +12,7 @@ import { buildAttachmentManifestCsv } from "./manifest";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn(), error: vi.fn() },
 }));
 

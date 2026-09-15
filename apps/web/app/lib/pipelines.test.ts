@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { PipelineTriggers } from "@formbricks/database/prisma";
-import { TResponsePipelineJobData, getBackgroundJobProducer } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
-import { TResponse } from "@formbricks/types/responses";
+import { PipelineTriggers } from "@forma/database/prisma";
+import { TResponsePipelineJobData, getBackgroundJobProducer } from "@forma/jobs";
+import { logger } from "@forma/logger";
+import { TResponse } from "@forma/types/responses";
 import { sendToPipeline } from "@/app/lib/pipelines";
 import { getJobsQueueingConfig } from "@/lib/jobs/config";
 import { findMatchingLocale } from "@/lib/utils/locale";
 
 const mockEnqueueResponsePipeline = vi.fn();
 
-vi.mock("@formbricks/jobs", () => ({
+vi.mock("@forma/jobs", () => ({
   getBackgroundJobProducer: vi.fn(() => ({
     enqueueResponsePipeline: mockEnqueueResponsePipeline,
   })),
@@ -23,7 +23,7 @@ vi.mock("@/lib/utils/locale", () => ({
   findMatchingLocale: vi.fn(() => Promise.resolve("en-US")),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

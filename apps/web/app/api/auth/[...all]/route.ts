@@ -49,7 +49,7 @@ const labelAuthPath = createAuthPathLabeller(Object.values(auth.api).map((endpoi
  * `runWithBetterAuthRequestContext` sits OUTSIDE that so it also covers the middleware Better Auth
  * runs ahead of `hooks.before` (origin check, CSRF, rate limiter): it carries the endpoint label into
  * the Sentry capture in better-auth-observability.ts, which otherwise reports a bare exception with no
- * route at all (ENG-2259 / FORMBRICKS-183).
+ * route at all (ENG-2259 / FORMA-183).
  *
  * NOTE (S2 / observability): the old route also emitted the failed-`signedIn` audit + Sentry capture
  * on thrown errors. The success audit is covered by `signInAuditDatabaseHook`; the failure audit by

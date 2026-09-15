@@ -5,7 +5,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "ignore": ["@formbricks/demo", "@formbricks/web"],
+  "ignore": ["@forma/demo", "@forma/web"],
   "linked": [],
   "updateInternalDependencies": "patch"
 }

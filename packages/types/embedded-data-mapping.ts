@@ -31,7 +31,7 @@ export interface TLegacyEmbeddedFields {
  * Translates a survey's legacy `variables` + `hiddenFields` into the fields it should have as rows.
  *
  * Shared by the two things that write those rows: the editor write bridge (ENG-1978) and the
- * one-time backfill (ENG-1835). Keeping it in `@formbricks/types` is what lets both reach it — a
+ * one-time backfill (ENG-1835). Keeping it in `@forma/types` is what lets both reach it — a
  * data migration in `packages/database` cannot import from `apps/web`.
  *
  * **The rule that makes the migration safe:** `storageKey` is the field's *existing* address — a

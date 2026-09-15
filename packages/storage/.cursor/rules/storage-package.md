@@ -1,8 +1,8 @@
-# Storage Package Rules for Formbricks
+# Storage Package Rules for Forma
 
 ## Package Purpose & Design Philosophy
 
-The `@formbricks/storage` package provides a **type-safe, environment-agnostic S3 storage abstraction** for Formbricks. It's designed as a standalone library that can work with any S3-compatible storage provider (AWS S3, RustFS, LocalStack, etc.).
+The `@forma/storage` package provides a **type-safe, environment-agnostic S3 storage abstraction** for Forma. It's designed as a standalone library that can work with any S3-compatible storage provider (AWS S3, RustFS, LocalStack, etc.).
 
 ### Key Design Decisions
 
@@ -116,7 +116,7 @@ if (!result.ok) {
 S3_ACCESS_KEY=your-access-key
 S3_SECRET_KEY=your-secret-key
 S3_REGION=us-east-1
-S3_BUCKET_NAME=formbricks-storage
+S3_BUCKET_NAME=forma-storage
 ```
 
 ### Optional Variables (for non-AWS providers)
@@ -162,7 +162,7 @@ for (let i = 0; i < keys.length; i += 1000) {
 
 ## Integration Patterns
 
-### In Formbricks Web App
+### In Forma Web App
 
 ```typescript
 // Survey file cleanup when survey is deleted

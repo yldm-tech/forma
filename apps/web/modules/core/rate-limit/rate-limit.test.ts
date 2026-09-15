@@ -34,7 +34,7 @@ vi.mock("@/lib/constants", () => ({
   RATE_LIMITING_DISABLED: false,
   SENTRY_DSN: "https://test@sentry.io/test",
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -225,7 +225,7 @@ describe("checkRateLimit", () => {
       captureException: mockCaptureException,
     }));
 
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: {
         info: vi.fn(),
         debug: vi.fn(),
@@ -268,7 +268,7 @@ describe("checkRateLimit", () => {
       captureException: mockCaptureException,
     }));
 
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: {
         info: vi.fn(),
         debug: vi.fn(),
@@ -320,7 +320,7 @@ describe("checkRateLimit", () => {
       captureException: mockCaptureException,
     }));
 
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: {
         info: vi.fn(),
         debug: vi.fn(),
@@ -466,7 +466,7 @@ describe("peekRateLimit", () => {
       captureException: mockCaptureException,
     }));
 
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: {
         info: vi.fn(),
         debug: vi.fn(),

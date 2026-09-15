@@ -36,7 +36,7 @@ describe("createSetupCheckoutSession", () => {
     const url = await createSetupCheckoutSession(
       "cus_1",
       "sub_1",
-      "https://app.formbricks.com/workspaces/ws_1/settings/organization/billing",
+      "https://app.forma.ylam.ai/workspaces/ws_1/settings/organization/billing",
       "org_1"
     );
 
@@ -44,7 +44,7 @@ describe("createSetupCheckoutSession", () => {
     expect(mocks.checkoutSessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         success_url:
-          "https://app.formbricks.com/workspaces/ws_1/settings/organization/billing?checkout_success=1",
+          "https://app.forma.ylam.ai/workspaces/ws_1/settings/organization/billing?checkout_success=1",
         metadata: {
           organizationId: "org_1",
           subscriptionId: "sub_1",
@@ -57,7 +57,7 @@ describe("createSetupCheckoutSession", () => {
     await createSetupCheckoutSession(
       "cus_1",
       "sub_1",
-      "https://app.formbricks.com/workspaces/ws_1/settings/organization/billing",
+      "https://app.forma.ylam.ai/workspaces/ws_1/settings/organization/billing",
       "org_1",
       {
         targetPlan: "scale",
@@ -68,7 +68,7 @@ describe("createSetupCheckoutSession", () => {
     expect(mocks.checkoutSessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         success_url:
-          "https://app.formbricks.com/workspaces/ws_1/settings/organization/billing?checkout_success=1&upgrade_pending=1&session_id={CHECKOUT_SESSION_ID}",
+          "https://app.forma.ylam.ai/workspaces/ws_1/settings/organization/billing?checkout_success=1&upgrade_pending=1&session_id={CHECKOUT_SESSION_ID}",
         metadata: {
           organizationId: "org_1",
           subscriptionId: "sub_1",

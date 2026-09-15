@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SurveyType } from "@formbricks/database/prisma-browser";
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { SurveyType } from "@forma/database/prisma-browser";
+import { TSurveyStyling } from "@forma/types/surveys/types";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { cn } from "@/lib/cn";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 
@@ -122,14 +122,14 @@ export const MediaBackground: React.FC<MediaBackgroundProps> = ({
                 <div className="absolute right-6 bottom-4 z-10 ml-auto hidden w-max text-xs text-slate-400 md:block">
                   <span>{t("common.photo_by")}</span>
                   <Link
-                    href={authorDetailsForUnsplash.authorURL + "?utm_source=formbricks&utm_medium=referral"}
+                    href={authorDetailsForUnsplash.authorURL + "?utm_source=forma&utm_medium=referral"}
                     target="_blank"
                     className="hover:underline">
                     {authorDetailsForUnsplash.authorName}
                   </Link>
                   <span> {t("common.on")} </span>
                   <Link
-                    href="https://unsplash.com/?utm_source=formbricks&utm_medium=referral"
+                    href="https://unsplash.com/?utm_source=forma&utm_medium=referral"
                     target="_blank"
                     className="hover:underline">
                     Unsplash

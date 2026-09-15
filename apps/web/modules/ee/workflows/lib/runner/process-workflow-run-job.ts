@@ -1,13 +1,13 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { type JobHandler, type TWorkflowRunJobData } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
-import type { TResponse } from "@formbricks/types/responses";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import { type TUserLocale, ZUserLocale } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { type JobHandler, type TWorkflowRunJobData } from "@forma/jobs";
+import { logger } from "@forma/logger";
+import type { TResponse } from "@forma/types/responses";
+import type { TSurvey } from "@forma/types/surveys/types";
+import { type TUserLocale, ZUserLocale } from "@forma/types/user";
 import {
   type TWorkflowExecutableStep,
   type TWorkflowRunData,
@@ -18,7 +18,7 @@ import {
   ZWorkflowTriggerRunPayload,
   isLiteralEmailRecipient,
   planExecutableSteps,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { isDatabasePoolExhaustionError } from "@/lib/jobs/pool-exhaustion";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getResponse } from "@/lib/response/service";
@@ -102,7 +102,7 @@ const getWorkflowRunLogContext = (
   workspaceId: data.workspaceId,
 });
 
-const MESSAGE_ID_FALLBACK_DOMAIN = "formbricks.com";
+const MESSAGE_ID_FALLBACK_DOMAIN = "forma.ylam.ai";
 
 /** Extracts the domain from a validated email address, falling back to a stable default. */
 const domainFromEmail = (from: string): string => from.split("@")[1]?.trim() || MESSAGE_ID_FALLBACK_DOMAIN;

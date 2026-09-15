@@ -1,13 +1,13 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   collectDeclaredFieldNames,
   describeDeclaredFieldNameError,
   validateNewDeclaredFieldNames,
-} from "@formbricks/types/surveys/declared-field-guard";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/declared-field-guard";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { getActionClasses } from "@/lib/actionClass/service";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
 import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";

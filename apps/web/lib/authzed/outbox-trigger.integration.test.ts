@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import {
   AUTHZED_OUTBOX_MAX_PERMANENT_FAILURES,

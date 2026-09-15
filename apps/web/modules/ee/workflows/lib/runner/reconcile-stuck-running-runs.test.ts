@@ -9,13 +9,13 @@ const { runFindMany, runUpdateMany, logUpdateMany } = vi.hoisted(() => ({
 }));
 const { warn, error } = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn() }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workflowRun: { findMany: runFindMany, updateMany: runUpdateMany },
     workflowRunLog: { updateMany: logUpdateMany },
   },
 }));
-vi.mock("@formbricks/logger", () => ({ logger: { warn, error } }));
+vi.mock("@forma/logger", () => ({ logger: { warn, error } }));
 
 const NOW = new Date("2026-07-01T12:00:00.000Z");
 // Stale threshold is 1h (see reconcile-constants). 2h since the last executor write → abandoned.

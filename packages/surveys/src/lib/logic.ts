@@ -3,14 +3,14 @@ import {
   getComputedEmbeddedFields,
   getComputedFieldDataType,
   getLogicVariableValue,
-} from "@formbricks/types/embedded-data-resolver";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TResponseData, type TResponseVariables } from "@formbricks/types/responses";
-import { type TActionCalculate, type TSurveyBlockLogicAction } from "@formbricks/types/surveys/blocks";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { type TConditionGroup, type TSingleCondition } from "@formbricks/types/surveys/logic";
-import { evaluateConditionGroup } from "@formbricks/types/surveys/logic-evaluation";
+} from "@forma/types/embedded-data-resolver";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
+import { type TActionCalculate, type TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
+import { type TConditionGroup, type TSingleCondition } from "@forma/types/surveys/logic";
+import { evaluateConditionGroup } from "@forma/types/surveys/logic-evaluation";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getElementsFromSurveyBlocks } from "./utils";
 

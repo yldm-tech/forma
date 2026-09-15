@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { WORKFLOW_RUN_FAILED_EVENT } from "../analytics-events";

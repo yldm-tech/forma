@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
     throw new Error("NEXT_NOT_FOUND");
   }),
 }));
-vi.mock("@/lib/constants", () => ({ IS_FORMBRICKS_CLOUD: true }));
+vi.mock("@/lib/constants", () => ({ IS_FORMA_CLOUD: true }));
 vi.mock("@/lib/membership/navigation", () => ({
   getBillingFallbackPath: vi.fn(() => "/billing-fallback"),
 }));

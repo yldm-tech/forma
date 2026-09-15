@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 
 /**
@@ -48,7 +48,7 @@ test.describe("Workspace tags settings @slow", () => {
     // The tab title used to come from one section-wide `metadata` that still said "Configuration" — a
     // word the UI shows nowhere, and the phrase the product docs picked up from it. Each settings page
     // now titles itself with the heading it renders, so assert the two agree on the way past.
-    await expect(page).toHaveTitle("Tags | Formbricks");
+    await expect(page).toHaveTitle("Tags | Forma");
 
     // Rows are addressed by the id the API returned, and names are read with `toHaveValue`, which reads
     // the live value. An `input[value="…"]` selector would match the *attribute* instead — `fill()` never
@@ -81,7 +81,7 @@ test.describe("Workspace tags settings @slow", () => {
 
       await nameFieldFor(keep.id).fill(renamed);
       await nameFieldFor(keep.id).blur();
-      await expect(page.locator(".formbricks__toast__success")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator(".forma__toast__success")).toBeVisible({ timeout: 15000 });
       await expect(nameFieldFor(keep.id)).toHaveValue(renamed);
       expect(await prisma.tag.findUnique({ where: { id: keep.id } })).toMatchObject({ name: renamed });
       expect(renames).toHaveLength(1);
@@ -90,10 +90,10 @@ test.describe("Workspace tags settings @slow", () => {
     await test.step("renaming onto a name already in use is rejected by its own message", async () => {
       // Asserting the *specific* copy matters: the route reports the duplicate as an `invalid_params`
       // reason, and reading the wrong property there still produces an error toast — just the generic one.
-      // Matching only `.formbricks__toast__error` passed while that branch was broken.
+      // Matching only `.forma__toast__error` passed while that branch was broken.
       await nameFieldFor(doomed.id).fill(renamed);
       await nameFieldFor(doomed.id).blur();
-      await expect(page.locator(".formbricks__toast__error")).toContainText("Tag already exists", {
+      await expect(page.locator(".forma__toast__error")).toContainText("Tag already exists", {
         timeout: 15000,
       });
       expect(await prisma.tag.findUnique({ where: { id: doomed.id } })).toMatchObject({

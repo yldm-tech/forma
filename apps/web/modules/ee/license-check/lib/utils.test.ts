@@ -31,7 +31,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/constants")>();
   return {
     ...actual,
-    IS_FORMBRICKS_CLOUD: false,
+    IS_FORMA_CLOUD: false,
     IS_RECAPTCHA_CONFIGURED: true,
     AUDIT_LOG_ENABLED: true,
   };
@@ -99,7 +99,7 @@ describe("License Utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+    vi.mocked(constants).IS_FORMA_CLOUD = false;
     vi.mocked(constants).IS_RECAPTCHA_CONFIGURED = true;
     vi.mocked(constants).AUDIT_LOG_ENABLED = true;
 
@@ -133,7 +133,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud hide-branding entitlement for remove-branding", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getRemoveBrandingPermission("org_1");
@@ -146,7 +146,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud hide-branding entitlement for whitelabel", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getWhiteLabelPermission("org_1");
@@ -161,7 +161,7 @@ describe("License Utils", () => {
 
   describe("getBulkInvitePermission", () => {
     test("returns true on self-hosted without checking entitlements", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
 
       const result = await getBulkInvitePermission("org_1");
 
@@ -170,7 +170,7 @@ describe("License Utils", () => {
     });
 
     test("uses the cloud bulk-invite entitlement when entitled", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getBulkInvitePermission("org_1");
@@ -183,7 +183,7 @@ describe("License Utils", () => {
     });
 
     test("returns false on cloud when the bulk-invite entitlement is missing", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(false);
 
       const result = await getBulkInvitePermission("org_1");
@@ -194,7 +194,7 @@ describe("License Utils", () => {
 
   describe("custom plan guarded permissions", () => {
     test("uses cloud RBAC entitlement for access control", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getAccessControlPermission("org_1");
@@ -207,7 +207,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud quota entitlement", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsQuotasEnabled("org_1");
@@ -220,7 +220,7 @@ describe("License Utils", () => {
     });
 
     test("returns self-hosted custom feature from license", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: {
@@ -240,7 +240,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud AI smart tools entitlement", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsAISmartToolsEnabled("org_1");
@@ -253,7 +253,7 @@ describe("License Utils", () => {
     });
 
     test("returns self-hosted AI smart tools from license", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: { ...defaultFeatures, aiSmartTools: true },
@@ -264,7 +264,7 @@ describe("License Utils", () => {
     });
 
     test("returns false for self-hosted AI smart tools when not enabled", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: { ...defaultFeatures, aiSmartTools: false },
@@ -275,7 +275,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud feedback record directories entitlement", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsFeedbackDirectoriesEnabled("org_1");
@@ -289,7 +289,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud dashboards entitlement", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsDashboardsEnabled("org_1");
@@ -303,7 +303,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud workflows entitlement", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsWorkflowsEnabled("org_1");
@@ -317,7 +317,7 @@ describe("License Utils", () => {
     });
 
     test("returns self-hosted FRD / dashboards / workflows from license", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: {
@@ -341,7 +341,7 @@ describe("License Utils", () => {
     });
 
     test("returns false for self-hosted FRD / dashboards / workflows when not enabled", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: defaultFeatures,
@@ -367,7 +367,7 @@ describe("License Utils", () => {
     test.each(["active", "unreachable", "expired"] as const)(
       "keeps the bigger upload size for self-hosted while the license is active and the status is %s",
       async (licenseStatus) => {
-        vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+        vi.mocked(constants).IS_FORMA_CLOUD = false;
         vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
           ...defaultEntitlementsContext,
           source: "self_hosted_license",
@@ -382,7 +382,7 @@ describe("License Utils", () => {
     );
 
     test("returns false for self-hosted once the license is no longer active", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         source: "self_hosted_license",
@@ -398,7 +398,7 @@ describe("License Utils", () => {
     });
 
     test("returns true on cloud when paid capacity and active/no-license status", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "active",
@@ -411,7 +411,7 @@ describe("License Utils", () => {
     });
 
     test("returns false on cloud for hobby-level capacity", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "active",
@@ -424,7 +424,7 @@ describe("License Utils", () => {
     });
 
     test("returns false on cloud when license status is not usable", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "expired",
@@ -479,7 +479,7 @@ describe("License Utils", () => {
 
   describe("getIsSamlSsoEnabled", () => {
     test("returns false on cloud", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
 
       const result = await getIsSamlSsoEnabled();
 
@@ -487,7 +487,7 @@ describe("License Utils", () => {
     });
 
     test("returns true when both sso and saml features are enabled in self-hosted", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getLicenseFeatures).mockResolvedValue({
         ...defaultFeatures,
         sso: true,
@@ -511,7 +511,7 @@ describe("License Utils", () => {
     });
 
     test("uses cloud spam-protection entitlement when configured", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
 
       const result = await getIsSpamProtectionEnabled("org_1");
@@ -524,7 +524,7 @@ describe("License Utils", () => {
     });
 
     test("returns self-hosted spam-protection feature from active license", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: { ...defaultFeatures, spamProtection: true },
@@ -538,7 +538,7 @@ describe("License Utils", () => {
 
   describe("getOrganizationWorkspacesLimit", () => {
     test("returns cloud workspaces limit when cloud license status allows usage", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "active",
@@ -551,7 +551,7 @@ describe("License Utils", () => {
     });
 
     test("returns Infinity when cloud workspaces limit is unbounded", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "no-license",
@@ -564,7 +564,7 @@ describe("License Utils", () => {
     });
 
     test("falls back to the cloud Hobby limit when the license status does not allow usage", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = true;
+      vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         licenseStatus: "expired",
@@ -579,7 +579,7 @@ describe("License Utils", () => {
     });
 
     test("returns Infinity for self-hosted when an active license grants unlimited workspaces", async () => {
-      vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+      vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
         ...defaultEntitlementsContext,
         source: "self_hosted_license",
@@ -621,7 +621,7 @@ describe("License Utils", () => {
     ])(
       "returns the community limit for self-hosted with $case",
       async ({ licenseActive, licenseStatus, licenseFeatures }) => {
-        vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+        vi.mocked(constants).IS_FORMA_CLOUD = false;
         vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
           ...defaultEntitlementsContext,
           source: "self_hosted_license",
@@ -644,7 +644,7 @@ describe("License Utils", () => {
     test.each(["active", "unreachable", "expired"] as const)(
       "keeps the licensed self-hosted workspace limit when the license status is %s",
       async (licenseStatus) => {
-        vi.mocked(constants).IS_FORMBRICKS_CLOUD = false;
+        vi.mocked(constants).IS_FORMA_CLOUD = false;
         vi.mocked(getOrganizationEntitlementsContext).mockResolvedValue({
           ...defaultEntitlementsContext,
           source: "self_hosted_license",

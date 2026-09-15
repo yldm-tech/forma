@@ -3,13 +3,10 @@
 import { LanguagesIcon, LucideIcon, MonitorIcon, SmartphoneIcon, Tag } from "lucide-react";
 import { Fragment, ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
-import { getLanguageLabel } from "@formbricks/i18n-utils/utils";
-import {
-  RESERVED_FIELD_CATALOG,
-  listDisplayableReservedFields,
-} from "@formbricks/types/embedded-data-resolver";
-import { TResponse } from "@formbricks/types/responses";
-import { TUserLocale } from "@formbricks/types/user";
+import { getLanguageLabel } from "@forma/i18n-utils/utils";
+import { RESERVED_FIELD_CATALOG, listDisplayableReservedFields } from "@forma/types/embedded-data-resolver";
+import { TResponse } from "@forma/types/responses";
+import { TUserLocale } from "@forma/types/user";
 import { getReservedFieldLabel } from "@/modules/analysis/lib/reserved-field-display";
 import { Button } from "@/modules/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/modules/ui/components/popover";

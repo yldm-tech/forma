@@ -462,7 +462,7 @@ const reconcileTargets = async (
  * Observe the relationships on one organization's own resources.
  *
  * Bounded to resources PostgreSQL still knows about, because SpiceDB relationship filters have no
- * notion of "belongs to organization X" and Formbricks object IDs carry no organization prefix. A
+ * notion of "belongs to organization X" and Forma object IDs carry no organization prefix. A
  * resource whose row is already gone is therefore unreachable from its organization, which is why
  * single-organization repair reports `orphanScope: "known_resources"` and only a full sweep can claim
  * completeness.

@@ -1,22 +1,22 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { CANONICAL_LANGUAGE_CODES, normalizeLanguageCode } from "@formbricks/i18n-utils";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { CANONICAL_LANGUAGE_CODES, normalizeLanguageCode } from "@forma/i18n-utils";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
 import {
   DatabaseError,
   OperationNotAllowedError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import {
   TLanguage,
   TLanguageInput,
   TLanguageUpdate,
   ZLanguageInput,
   ZLanguageUpdate,
-} from "@formbricks/types/workspace";
+} from "@forma/types/workspace";
 import { isWorkspaceDefaultSurveyLanguage } from "../i18n/default-survey-language";
 import { validateInputs } from "../utils/validate";
 import { getWorkspace } from "../workspace/service";

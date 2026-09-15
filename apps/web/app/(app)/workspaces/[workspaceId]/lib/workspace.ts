@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { ZId } from "@forma/types/common";
+import { DatabaseError } from "@forma/types/errors";
 import { lookupAuthorizedWorkspaceIds } from "@/lib/authorization/resource-list";
 import { validateInputs } from "@/lib/utils/validate";
 

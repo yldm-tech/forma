@@ -86,7 +86,7 @@ export type TAuthzedRelationshipFilter =
         subject: TAuthzedSubjectFilter;
       }>);
 
-/** An opaque SpiceDB revision. Formbricks-owned wrapper: the SDK's ZedToken never crosses the facade. */
+/** An opaque SpiceDB revision. Forma-owned wrapper: the SDK's ZedToken never crosses the facade. */
 export type TAuthzedSnapshot = Readonly<{
   token: string;
 }>;
@@ -109,7 +109,7 @@ export type TAuthzedReadCursor = Readonly<{
  * organization or team. Such a delete is unlimited and transactional, bounded only by how many
  * relationships match — so a new call site has to reason about the match size itself.
  *
- * `optionalResourceIdPrefix` is deliberately not surfaced: Formbricks object IDs are unprefixed
+ * `optionalResourceIdPrefix` is deliberately not surfaced: Forma object IDs are unprefixed
  * cuids, so it could never narrow anything, and unused surface on a frozen facade is a liability.
  */
 export type TAuthzedRelationshipReadFilter = Readonly<{
@@ -193,8 +193,8 @@ type TAuthzedConfig =
     }>;
 
 const globalForAuthzed = globalThis as unknown as {
-  formbricksAuthzedClient: TAuthzedClientSingleton | undefined;
-  formbricksAuthzedRequestTimeoutMs: number | undefined;
+  formaAuthzedClient: TAuthzedClientSingleton | undefined;
+  formaAuthzedRequestTimeoutMs: number | undefined;
 };
 
 const STABLE_SCHEMA_DIFF_KINDS = {
@@ -373,7 +373,7 @@ const validateRelationshipQuery = (query: TAuthzedRelationshipQuery): void => {
  * Convert one streamed response into a facade relationship.
  *
  * Strict by design. Every field below is optional in the generated SDK types, and a missing one
- * would yield a relationship that compares unequal to the tuple Formbricks wrote — which reconciling
+ * would yield a relationship that compares unequal to the tuple Forma wrote — which reconciling
  * tooling would classify as orphaned and delete. Failing loudly is the only safe reading.
  */
 const toFacadeRelationship = (response: v1.ReadRelationshipsResponse): TAuthzedRelationship => {
@@ -383,7 +383,7 @@ const toFacadeRelationship = (response: v1.ReadRelationshipsResponse): TAuthzedR
 
   // The message fields are optional in the generated types; the scalars inside them are plain protobuf
   // strings that default to `""` when absent from the wire. Both have to be rejected, or a relationship
-  // with an empty relation or object ID passes here, matches no tuple Formbricks ever wrote, and gets
+  // with an empty relation or object ID passes here, matches no tuple Forma ever wrote, and gets
   // classified as orphaned — which under `--prune` means deleted. Same fail-loud rule, same reason.
   if (
     !relationship ||
@@ -403,11 +403,11 @@ const toFacadeRelationship = (response: v1.ReadRelationshipsResponse): TAuthzedR
     });
   }
 
-  // Formbricks never writes caveated or expiring relationships and the facade cannot represent them, so
+  // Forma never writes caveated or expiring relationships and the facade cannot represent them, so
   // dropping the qualifier would misreport the tuple — and a misreported tuple is exactly what
   // reconciling tooling would classify as stale. Refusing is therefore the safe reading today.
   //
-  // Note this becomes a tripwire the day Formbricks adopts SpiceDB's expiration feature, which AuthZed
+  // Note this becomes a tripwire the day Forma adopts SpiceDB's expiration feature, which AuthZed
   // recommends for time-limited access: the facade must learn to represent it before anything writes
   // one, or reconciliation will start refusing to run.
   if (relationship.optionalCaveat !== undefined || relationship.optionalExpiresAt !== undefined) {
@@ -775,7 +775,7 @@ const createAuthzedClient = (requestTimeoutMs: number): TAuthzedClientSingleton 
  * the failure this replaced.
  */
 export const configureAuthzedClientForBulkWork = (): void => {
-  if (globalForAuthzed.formbricksAuthzedClient) {
+  if (globalForAuthzed.formaAuthzedClient) {
     throw new AuthzedError({
       attempts: 0,
       code: AUTHZED_ERROR_CODES.FAILED_PRECONDITION,
@@ -784,20 +784,20 @@ export const configureAuthzedClientForBulkWork = (): void => {
     });
   }
 
-  globalForAuthzed.formbricksAuthzedRequestTimeoutMs = AUTHZED_BULK_REQUEST_TIMEOUT_MS;
+  globalForAuthzed.formaAuthzedRequestTimeoutMs = AUTHZED_BULK_REQUEST_TIMEOUT_MS;
 };
 
 /** The shared client. Deadline sized for a single cheap call unless the process asked for bulk work. */
 export const getAuthzedClient = (): TAuthzedResourceLookupClient => {
-  globalForAuthzed.formbricksAuthzedClient ??= createAuthzedClient(
-    globalForAuthzed.formbricksAuthzedRequestTimeoutMs ?? AUTHZED_REQUEST_TIMEOUT_MS
+  globalForAuthzed.formaAuthzedClient ??= createAuthzedClient(
+    globalForAuthzed.formaAuthzedRequestTimeoutMs ?? AUTHZED_REQUEST_TIMEOUT_MS
   );
 
-  return globalForAuthzed.formbricksAuthzedClient.facade;
+  return globalForAuthzed.formaAuthzedClient.facade;
 };
 
 export const closeAuthzedClient = (): void => {
-  globalForAuthzed.formbricksAuthzedClient?.close();
-  globalForAuthzed.formbricksAuthzedClient = undefined;
-  globalForAuthzed.formbricksAuthzedRequestTimeoutMs = undefined;
+  globalForAuthzed.formaAuthzedClient?.close();
+  globalForAuthzed.formaAuthzedClient = undefined;
+  globalForAuthzed.formaAuthzedRequestTimeoutMs = undefined;
 };

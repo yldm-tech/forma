@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 
 test("requires workspace name confirmation before deleting a workspace", async ({ page, users }) => {

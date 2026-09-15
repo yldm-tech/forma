@@ -1,6 +1,6 @@
 import { createStore } from "jotai";
 import { describe, expect, test } from "vitest";
-import type { TWorkflowDefinition, TWorkflowResource } from "@formbricks/workflows";
+import type { TWorkflowDefinition, TWorkflowResource } from "@forma/workflows";
 import {
   addWorkflowTriggerAtom,
   appendSendEmailAfterNodeAtom,

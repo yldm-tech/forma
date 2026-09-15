@@ -1,4 +1,4 @@
-import { type ApiErrorResponse } from "@formbricks/types/errors";
+import { type ApiErrorResponse } from "@forma/types/errors";
 
 export type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
 

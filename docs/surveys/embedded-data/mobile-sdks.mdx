@@ -16,14 +16,14 @@ The rules are identical everywhere, so read the [`setEmbeddedData` reference](/s
 <Note>
   `setEmbeddedData` lives in the SDK itself, so adopting it means upgrading the SDK dependency and shipping a
   new build of your app. The [auto-captured fields](#what-mobile-responses-auto-capture) further down do not:
-  those come from the survey renderer, which is loaded from your Formbricks instance at display time, so an
+  those come from the survey renderer, which is loaded from your Forma instance at display time, so an
   already-installed app picks them up with no upgrade and no rebuild.
 </Note>
 
 ## React Native
 
 ```javascript
-import { setEmbeddedData, clearEmbeddedData } from "@formbricks/react-native";
+import { setEmbeddedData, clearEmbeddedData } from "@forma/react-native";
 
 setEmbeddedData({
   plan: "pro",
@@ -42,7 +42,7 @@ Values are `string`, `number`, `boolean` or `Date`. `null` removes a key and `un
 ## Swift (iOS)
 
 ```swift
-Formbricks.setEmbeddedData([
+Forma.setEmbeddedData([
     "plan": "pro",
     "seats": 25,
     "isTrial": false,
@@ -50,8 +50,8 @@ Formbricks.setEmbeddedData([
     "screen": nil,   // removes the key
 ])
 
-Formbricks.clearEmbeddedData("plan")  // one key
-Formbricks.clearEmbeddedData()        // everything
+Forma.clearEmbeddedData("plan")  // one key
+Forma.clearEmbeddedData()        // everything
 ```
 
 Values are an `EmbeddedDataValue`: `.string`, `.number`, `.bool` or `.date`. String, integer, floating-point and boolean literals convert on their own, so the common call reads as plain data; a `Date` needs the explicit `.date(…)` case.
@@ -64,7 +64,7 @@ Values are an `EmbeddedDataValue`: `.string`, `.number`, `.bool` or `.date`. Str
 
   ```swift
   // ⚠️ clears `plan` whenever the optional is empty
-  Formbricks.setEmbeddedData(["plan": user.plan.map(EmbeddedDataValue.string)])
+  Forma.setEmbeddedData(["plan": user.plan.map(EmbeddedDataValue.string)])
   ```
 
   Build the dictionary from the keys you actually have, and use `clearEmbeddedData(_:)` when you mean to
@@ -76,7 +76,7 @@ The single-key and clear-everything forms are separate overloads, so a `String` 
 ## Kotlin (Android)
 
 ```kotlin
-Formbricks.setEmbeddedData(mapOf(
+Forma.setEmbeddedData(mapOf(
     "plan" to EmbeddedDataValue.string("pro"),
     "seats" to EmbeddedDataValue.number(25.0),
     "isTrial" to EmbeddedDataValue.boolean(false),
@@ -84,8 +84,8 @@ Formbricks.setEmbeddedData(mapOf(
     "screen" to null,   // removes the key
 ))
 
-Formbricks.clearEmbeddedData("plan")  // one key
-Formbricks.clearEmbeddedData()        // everything
+Forma.clearEmbeddedData("plan")  // one key
+Forma.clearEmbeddedData()        // everything
 ```
 
 Values are an `EmbeddedDataValue`, built with `string()`, `number()`, `boolean()` or `date()`. Kotlin has no `undefined` either, so `null` removes a key and the iOS warning above applies here too. As on iOS, the two clear forms are separate overloads.
@@ -93,7 +93,7 @@ Values are an `EmbeddedDataValue`, built with `string()`, `number()`, `boolean()
 ## Flutter
 
 ```dart
-Formbricks.setEmbeddedData({
+Forma.setEmbeddedData({
   'plan': 'pro',
   'seats': 25,
   'isTrial': false,
@@ -101,8 +101,8 @@ Formbricks.setEmbeddedData({
   'screen': null, // removes the key
 });
 
-Formbricks.clearEmbeddedData('plan'); // one key
-Formbricks.clearEmbeddedData();       // everything
+Forma.clearEmbeddedData('plan'); // one key
+Forma.clearEmbeddedData();       // everything
 ```
 
 Values must be a `String`, `num`, `bool` or `DateTime`; anything else is logged and skipped. `null` removes a key.
@@ -149,7 +149,7 @@ All four SDKs let you call `setEmbeddedData` **before** `setup()`: the bag is pu
 
 ## What Mobile Responses Auto-Capture
 
-The [reserved fields](/surveys/embedded-data/reserved-fields) work in a WebView with **no extra wiring**: the survey renderer is loaded from your Formbricks instance at display time, so an already-installed app picks this up without a rebuild or an SDK upgrade.
+The [reserved fields](/surveys/embedded-data/reserved-fields) work in a WebView with **no extra wiring**: the survey renderer is loaded from your Forma instance at display time, so an already-installed app picks this up without a rebuild or an SDK upgrade.
 
 | Captured on mobile                                                                                     | Absent on mobile                                            |
 | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |

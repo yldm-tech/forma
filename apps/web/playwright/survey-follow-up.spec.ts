@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 import { createSurveyFromScratch } from "./utils/helper";
 
@@ -23,7 +23,7 @@ const seedFollowUp = async ({ surveyId, name, to }: { surveyId: string; name: st
         type: "send-email",
         properties: {
           to,
-          from: "hola@formbricks.com",
+          from: "hola@forma.ylam.ai",
           replyTo: [to],
           subject: "Thanks for responding",
           body: "<p>Thanks!</p>",
@@ -78,7 +78,7 @@ test.describe("Survey Follow-Up deprecation", async () => {
 
       await page.getByRole("button", { name: "Save" }).click();
 
-      const successToast = await page.waitForSelector(".formbricks__toast__success", { timeout: 5000 });
+      const successToast = await page.waitForSelector(".forma__toast__success", { timeout: 5000 });
       expect(successToast).toBeTruthy();
 
       await expect(page.getByText("Updated Follow-Up")).toBeVisible();

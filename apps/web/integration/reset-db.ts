@@ -1,4 +1,4 @@
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 
 /**
  * Reset the test database between integration tests (ENG-1054 harness).

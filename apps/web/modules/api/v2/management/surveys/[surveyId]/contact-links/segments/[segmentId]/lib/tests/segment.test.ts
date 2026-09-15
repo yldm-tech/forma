@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Segment } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Segment } from "@forma/database/prisma";
 import { getSegment } from "../segment";
 
 // Mock dependencies
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     segment: {
       findUnique: vi.fn(),

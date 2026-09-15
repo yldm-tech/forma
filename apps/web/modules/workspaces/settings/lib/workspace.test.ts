@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { StorageErrorCode } from "@formbricks/storage";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { StorageErrorCode } from "@forma/storage";
 import {
   DatabaseError,
   InvalidInputError,
   OperationNotAllowedError,
   ValidationError,
-} from "@formbricks/types/errors";
-import { TWorkspace } from "@formbricks/types/workspace";
+} from "@forma/types/errors";
+import { TWorkspace } from "@forma/types/workspace";
 import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { deleteFilesByWorkspaceId } from "@/modules/storage/service";
@@ -40,7 +40,7 @@ const baseWorkspace = {
   customHeadScripts: null,
 } satisfies TWorkspace;
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
@@ -87,7 +87,7 @@ const expectNoFrdSideEffects = () => {
   expect(prisma.feedbackDirectoryWorkspace.create).not.toHaveBeenCalled();
 };
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),

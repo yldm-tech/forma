@@ -1,5 +1,5 @@
 import "server-only";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
+import { OperationNotAllowedError } from "@forma/types/errors";
 import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
 
 export const CONTACTS_NOT_ENABLED_MESSAGE = "Contacts are not enabled for this organization";

@@ -1,7 +1,7 @@
 import { APIError } from "better-auth/api";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { deleteUserOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { deleteUserTeamRelationships } from "@/lib/authzed/team-workspace";
 import { deleteOrganization, getOrganizationsWhereUserIsSingleOwner } from "@/lib/organization/service";
@@ -16,8 +16,8 @@ import {
   requireDeletionConfirmationBeforeHandler,
 } from "./better-auth-account-deletion";
 
-vi.mock("@formbricks/database", () => ({ prisma: { invite: { deleteMany: vi.fn() } } }));
-vi.mock("@formbricks/logger", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@forma/database", () => ({ prisma: { invite: { deleteMany: vi.fn() } } }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("@/lib/authzed/organization-membership", () => ({
   deleteUserOrganizationRelationships: vi.fn(),
 }));

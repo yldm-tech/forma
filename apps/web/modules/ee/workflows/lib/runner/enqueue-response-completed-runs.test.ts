@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
 import { enqueueResponseCompletedWorkflowRuns } from "./enqueue-response-completed-runs";
 
 const { findMany, create, findUnique } = vi.hoisted(() => ({
@@ -14,10 +14,10 @@ const { recordWorkflowRunCreatedMeterEvent } = vi.hoisted(() => ({
   recordWorkflowRunCreatedMeterEvent: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: { workflow: { findMany }, workflowRun: { create, findUnique } },
 }));
-vi.mock("@formbricks/logger", () => ({ logger: { warn, error, info } }));
+vi.mock("@forma/logger", () => ({ logger: { warn, error, info } }));
 vi.mock("./mark-dispatched", () => ({ markWorkflowRunDispatched: markDispatched }));
 vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getIsWorkflowsEnabled }));
 vi.mock("@/modules/ee/billing/lib/metering", () => ({ recordWorkflowRunCreatedMeterEvent }));

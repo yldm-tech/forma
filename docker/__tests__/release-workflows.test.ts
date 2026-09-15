@@ -7,9 +7,9 @@ import { describe, expect, test } from "vitest";
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const workflowsDirectory = ".github/workflows";
 const linearSyncWorkflow = `${workflowsDirectory}/linear-release.yml`;
-const formbricksReleaseWorkflow = `${workflowsDirectory}/formbricks-release.yml`;
+const formaReleaseWorkflow = `${workflowsDirectory}/forma-release.yml`;
 const linearSmokeWorkflow = `${workflowsDirectory}/linear-release-smoke.yml`;
-const releaseWorkflows = [linearSyncWorkflow, formbricksReleaseWorkflow, linearSmokeWorkflow];
+const releaseWorkflows = [linearSyncWorkflow, formaReleaseWorkflow, linearSmokeWorkflow];
 
 const linearAction = "linear/linear-release-action";
 const linearActionSha = "17b8c24f8ceb2b98cabaf1965ff83c55dd596fac";
@@ -59,7 +59,7 @@ describe("release workflows", () => {
     expect(Object.keys(readWorkflow(path).jobs ?? {})).not.toHaveLength(0);
   });
 
-  // Every use is checked, not just the first: formbricks-release.yml calls the action twice, so a
+  // Every use is checked, not just the first: forma-release.yml calls the action twice, so a
   // `toContain` on the file text would let one correct use mask a second that had drifted.
   test.each(releaseWorkflows)("pins every Linear release action use by commit SHA in %s", (path) => {
     const uses = linearUses(readWorkflow(path));
@@ -90,7 +90,7 @@ describe("release workflows", () => {
   });
 
   test("completes the Linear release once the published artifacts are out", () => {
-    const needs = readWorkflow(formbricksReleaseWorkflow).jobs?.["linear-release-complete"]?.needs;
+    const needs = readWorkflow(formaReleaseWorkflow).jobs?.["linear-release-complete"]?.needs;
 
     expect(needs).toEqual(
       expect.arrayContaining(["docker-build-community", "docker-build-cloud", "helm-chart-release"])
@@ -126,14 +126,14 @@ describe("release workflows", () => {
   });
 
   test("stamps the released version on Linear before completing the release", () => {
-    const steps = linearSteps(readWorkflow(formbricksReleaseWorkflow), "linear-release-complete");
+    const steps = linearSteps(readWorkflow(formaReleaseWorkflow), "linear-release-complete");
 
     expect(steps.map((step) => step.with?.version)).toEqual([releasedVersion, releasedVersion]);
     expect(steps.map((step) => step.with?.command)).toEqual([undefined, "complete"]);
   });
 
   test("skips the Linear completion for prereleases", () => {
-    expect(readWorkflow(formbricksReleaseWorkflow).jobs?.["linear-release-complete"]?.if).toBe(
+    expect(readWorkflow(formaReleaseWorkflow).jobs?.["linear-release-complete"]?.if).toBe(
       "${{ !github.event.release.prerelease }}"
     );
   });

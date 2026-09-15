@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
-import { AuthorizationError } from "@formbricks/types/errors";
+import { ApiKeyPermission } from "@forma/database/prisma";
+import { AuthorizationError } from "@forma/types/errors";
 import { assertCan, can } from "@/lib/authorization";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspace } from "@/lib/workspace/service";
 import { getV3AuthorizationActor, requireSessionWorkspaceAccess, requireV3WorkspaceAccess } from "./auth";
 import type { TV3Authentication } from "./types";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       warn: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock("@/lib/authorization", () => ({ assertCan: vi.fn(), can: vi.fn() }));
 const requestId = "req-123";
 
 describe("getV3AuthorizationActor", () => {
-  test("maps session and API-key authentication to Formbricks actors", () => {
+  test("maps session and API-key authentication to Forma actors", () => {
     expect(getV3AuthorizationActor({ user: { id: "user_1" } } as unknown as TV3Authentication)).toEqual({
       type: "user",
       id: "user_1",

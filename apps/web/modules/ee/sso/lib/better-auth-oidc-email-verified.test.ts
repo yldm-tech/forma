@@ -15,8 +15,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
  * `jwks_uri` for the same reason it is omitted in the SSO smoke recipe — with one present, Better Auth
  * builds an id_token verification config and the flow would need a signed token to get anywhere.
  */
-const BASE_URL = "https://app.formbricks.test";
-const IDP = "https://idp.formbricks.test";
+const BASE_URL = "https://app.forma.test";
+const IDP = "https://idp.forma.test";
 
 const { captureSsoIdentity } = vi.hoisted(() => ({ captureSsoIdentity: vi.fn() }));
 const { runWithSsoRequestContext } = await import("./sso-request-context");
@@ -37,7 +37,7 @@ vi.mock("./sso-provisioning", () => ({
   provisionSsoUserMemberships: vi.fn(),
 }));
 vi.mock("./sso-recovery", () => ({ startSsoRecovery: vi.fn() }));
-vi.mock("@formbricks/database", () => ({ prisma: { user: { findUnique: vi.fn() } } }));
+vi.mock("@forma/database", () => ({ prisma: { user: { findUnique: vi.fn() } } }));
 vi.mock("@/lib/posthog", () => ({ identifyPostHogPerson: vi.fn() }));
 vi.mock("@/lib/utils/locale", () => ({ findMatchingLocale: vi.fn(async () => "en-US") }));
 // Async like the real helper: the sign-up path calls it without awaiting, so a stub returning

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { type TResponseData } from "@formbricks/types/responses";
-import { type TSurveyElement } from "@formbricks/types/surveys/elements";
+import { type TResponseData } from "@forma/types/responses";
+import { type TSurveyElement } from "@forma/types/surveys/elements";
 import { SubmitButton } from "@/components/buttons/submit-button";
 import { processResponseData } from "@/lib/response";
 

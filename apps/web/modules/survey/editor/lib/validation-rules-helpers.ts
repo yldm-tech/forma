@@ -2,13 +2,13 @@ import {
   TSurveyElement,
   TSurveyElementTypeEnum,
   TSurveyOpenTextElementInputType,
-} from "@formbricks/types/surveys/elements";
+} from "@forma/types/surveys/elements";
 import {
   TAddressField,
   TContactInfoField,
   TValidationRule,
   TValidationRuleType,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { RULE_TYPE_CONFIG } from "./validation-rules-config";
 
 /**

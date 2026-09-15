@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
+import { ApiKeyPermission } from "@forma/database/prisma";
 import { buildV3AuditLog, queueV3AuditLog } from "@/app/api/v3/lib/audit";
 import {
   createdResponse,
@@ -48,7 +48,7 @@ vi.mock("@/app/api/v3/lib/audit", () => ({
   queueV3AuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ error: vi.fn(), warn: vi.fn() })) },
 }));
 
@@ -71,7 +71,7 @@ const authInfo = {
   token: "key_1",
   clientId: "key_1",
   scopes: ["workflows:read", "workflows:write"],
-  extra: { formbricksAuthentication: apiKeyAuth, requestId: "req_tool" },
+  extra: { formaAuthentication: apiKeyAuth, requestId: "req_tool" },
 };
 
 // A write-capable user's OAuth token that was only granted read scope — the ENG-1967 case: workspace

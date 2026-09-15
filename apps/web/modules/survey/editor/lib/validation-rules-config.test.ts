@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TValidationRuleType } from "@formbricks/types/surveys/validation-rules";
+import { TValidationRuleType } from "@forma/types/surveys/validation-rules";
 import { RULE_TYPE_CONFIG } from "./validation-rules-config";
 
 describe("RULE_TYPE_CONFIG", () => {

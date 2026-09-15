@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { listV3Workspaces } from "@/app/api/v3/workspaces/lib/operations";
 import { resetDb } from "@/integration/reset-db";
 import { getIssuedAuthorizationCheckCount, withAuthorizationSurface } from "./context";

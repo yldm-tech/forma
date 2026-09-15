@@ -1,6 +1,6 @@
 ---
 title: "Code Formatting"
-description: "Standards for consistent code formatting across the Formbricks codebase"
+description: "Standards for consistent code formatting across the Forma codebase"
 icon: code
 ---
 
@@ -8,7 +8,7 @@ icon: code
 ## Core Configuration
 
 ### Prettier Config
-Formbricks uses a standardized Prettier configuration defined in `@formbricks/config-prettier`:
+Forma uses a standardized Prettier configuration defined in `@forma/config-prettier`:
 ```javascript
 module.exports = {
   bracketSpacing: true,
@@ -24,7 +24,7 @@ module.exports = {
     "(.*)/__mocks__/(.*)",
     "server-only",
     "<THIRD_PARTY_MODULES>",
-    "^@formbricks/(.*)$",
+    "^@forma/(.*)$",
     "^~/(.*)$",
     "^@/(.*)$",
     "^[./]",
@@ -46,13 +46,13 @@ All imports follow a strict ordering:
 1. Mocks (for testing)
 2. Server-only imports
 3. Third-party modules
-4. Internal `@formbricks/*` modules
+4. Internal `@forma/*` modules
 5. Local aliases (`~/*)
 6. Relative imports
 
 ### TypeScript Config
 - Strict TypeScript checking enabled
-- Consistent use of `tsconfig.json` extending from `@formbricks/config-typescript`
+- Consistent use of `tsconfig.json` extending from `@forma/config-typescript`
 - Example configuration:
 
 ```json
@@ -64,7 +64,7 @@ All imports follow a strict ordering:
     "resolveJsonModule": true,
     "strict": true
   },
-  "extends": "@formbricks/config-typescript/js-library.json",
+  "extends": "@forma/config-typescript/js-library.json",
   "include": ["src", "package.json"]
 }
 ```
@@ -132,29 +132,29 @@ Using Husky and lint-staged for automated checks:
 The hook formats staged files only — ESLint is not part of it. Lint violations are caught by `pnpm lint` and the "Run Linters" CI job.
 
 ### ESLint Configuration
-ESLint runs on the flat config format. Every package and app has its own `eslint.config.mjs` that imports one of the composable tiers exported by `@formbricks/config-eslint`:
+ESLint runs on the flat config format. Every package and app has its own `eslint.config.mjs` that imports one of the composable tiers exported by `@forma/config-eslint`:
 
 | Import | Use for |
 | --- | --- |
-| `@formbricks/config-eslint/library` | Node/TypeScript packages |
-| `@formbricks/config-eslint/react` | React packages (react, react-hooks, jsx-a11y) |
-| `@formbricks/config-eslint/react-hooks` | React packages that only need the hooks rules |
-| `@formbricks/config-eslint/next` | Next.js applications |
+| `@forma/config-eslint/library` | Node/TypeScript packages |
+| `@forma/config-eslint/react` | React packages (react, react-hooks, jsx-a11y) |
+| `@forma/config-eslint/react-hooks` | React packages that only need the hooks rules |
+| `@forma/config-eslint/next` | Next.js applications |
 
-Every tier builds on `@formbricks/config-eslint/base`, which holds the shared turbo, prettier, vitest and unused-vars conventions. It exports named building blocks rather than a ready-made config, so packages import one of the tiers above instead of `base` directly.
+Every tier builds on `@forma/config-eslint/base`, which holds the shared turbo, prettier, vitest and unused-vars conventions. It exports named building blocks rather than a ready-made config, so packages import one of the tiers above instead of `base` directly.
 
 The `library` and `react` tiers are factories — call them with the package's `tsconfigRootDir` so the type-aware rules resolve against that package's own tsconfig. The `react-hooks` and `next` tiers are plain arrays a config re-exports or spreads with its own overrides:
 
 ```javascript
 // packages/<pkg>/eslint.config.mjs
-import library from "@formbricks/config-eslint/library";
+import library from "@forma/config-eslint/library";
 
 export default library({ tsconfigRootDir: import.meta.dirname });
 ```
 
 ```javascript
 // apps/web/eslint.config.mjs
-import next from "@formbricks/config-eslint/next";
+import next from "@forma/config-eslint/next";
 
 export default [
   { ignores: [".next/**", "public/**"] },
@@ -211,4 +211,4 @@ Use the extensionless subpaths above — they are the only ones the package expo
    - Use JSDoc for public APIs
    - Keep comments current with code changes
 
-These standards ensure consistency across the Formbricks codebase while maintaining high code quality and developer productivity.
+These standards ensure consistency across the Forma codebase while maintaining high code quality and developer productivity.

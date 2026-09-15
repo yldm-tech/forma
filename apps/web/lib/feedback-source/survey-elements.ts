@@ -1,6 +1,6 @@
 import "server-only";
-import { THubFieldType, getHubFieldTypeFromElementType } from "@formbricks/types/feedback-source";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+import { THubFieldType, getHubFieldTypeFromElementType } from "@forma/types/feedback-source";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 
 export type TSurveyElementIndex = {

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, Response as ResponsePrisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TResponse, TResponseInput } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { Prisma, Response as ResponsePrisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { TResponse, TResponseInput } from "@forma/types/responses";
 import { getResponseContact } from "@/lib/response/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
@@ -84,7 +84,7 @@ const mockTransformedResponses = [mockResponse, { ...mockResponse, id: "response
 
 // Mock dependencies
 vi.mock("@/lib/constants", () => ({
-  IS_FORMBRICKS_CLOUD: true,
+  IS_FORMA_CLOUD: true,
   POSTHOG_KEY: undefined,
   ENCRYPTION_KEY: "mock-encryption-key",
   ENTERPRISE_LICENSE_KEY: "mock-enterprise-license-key",
@@ -111,7 +111,7 @@ vi.mock("@/lib/utils/helper");
 vi.mock("@/lib/response/service");
 vi.mock("@/lib/response/utils");
 vi.mock("@/lib/utils/validate");
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       create: vi.fn(),
@@ -119,7 +119,7 @@ vi.mock("@formbricks/database", () => ({
     },
   },
 }));
-vi.mock("@formbricks/logger");
+vi.mock("@forma/logger");
 vi.mock("./contact");
 
 type MockTx = {

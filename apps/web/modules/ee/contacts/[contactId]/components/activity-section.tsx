@@ -1,6 +1,6 @@
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
 import { DEFAULT_LOCALE } from "@/lib/constants";
 import { getDisplaysByContactId } from "@/lib/display/service";
 import { getResponsesByContactId } from "@/lib/response/service";

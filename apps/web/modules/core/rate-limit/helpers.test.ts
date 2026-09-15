@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { err, ok } from "@formbricks/types/error-handlers";
+import { logger } from "@forma/logger";
+import { err, ok } from "@forma/types/error-handlers";
 import { hashString } from "@/lib/hash-string";
 // Import modules after mocking
 import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
@@ -28,7 +28,7 @@ vi.mock("./rate-limit", () => ({
   peekRateLimit: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

@@ -5,10 +5,10 @@ import Link from "next/link";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { OrganizationRole } from "@formbricks/database/prisma-browser";
-import { ZId } from "@formbricks/types/common";
-import { TOrganizationRole, ZOrganizationRole } from "@formbricks/types/memberships";
-import { ZUserName } from "@formbricks/types/user";
+import { OrganizationRole } from "@forma/database/prisma-browser";
+import { ZId } from "@forma/types/common";
+import { TOrganizationRole, ZOrganizationRole } from "@forma/types/memberships";
+import { ZUserName } from "@forma/types/user";
 import { AddMemberRole } from "@/modules/ee/role-management/components/add-member-role";
 import { TOrganizationTeam } from "@/modules/ee/teams/team-list/types/team";
 import { organizationSettingsPath } from "@/modules/settings/lib/routes";
@@ -28,7 +28,7 @@ interface IndividualInviteTabProps {
   teams: TOrganizationTeam[];
   organizationId: string;
   isAccessControlAllowed: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   membershipRole?: TOrganizationRole;
   showTeamAdminRestrictions: boolean;
   enterpriseLicenseRequestFormUrl: string;
@@ -40,7 +40,7 @@ export const IndividualInviteTab = ({
   teams,
   organizationId,
   isAccessControlAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   membershipRole,
   showTeamAdminRestrictions,
   enterpriseLicenseRequestFormUrl,
@@ -135,7 +135,7 @@ export const IndividualInviteTab = ({
               <AddMemberRole
                 control={control}
                 isAccessControlAllowed={isAccessControlAllowed}
-                isFormbricksCloud={isFormbricksCloud}
+                isFormaCloud={isFormaCloud}
                 membershipRole={membershipRole}
               />
               {watch("role") === "member" && (
@@ -190,7 +190,7 @@ export const IndividualInviteTab = ({
                 className="ml-1 underline"
                 target="_blank"
                 href={
-                  isFormbricksCloud
+                  isFormaCloud
                     ? organizationSettingsPath(organizationId, "billing")
                     : enterpriseLicenseRequestFormUrl
                 }>

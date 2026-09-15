@@ -1,6 +1,6 @@
 import "server-only";
-import type { TSurveyType } from "@formbricks/types/surveys/types";
-import type { TTemplate } from "@formbricks/types/templates";
+import type { TSurveyType } from "@forma/types/surveys/types";
+import type { TTemplate } from "@forma/types/templates";
 import { isInternalI18nString, isPlainObject } from "../../guards";
 
 export type TV3TemplateSurveyCreatePayload = {

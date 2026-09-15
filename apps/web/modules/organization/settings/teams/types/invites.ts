@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { Invite } from "@formbricks/database/prisma";
-import { ZInvite } from "@formbricks/database/zod/invites";
-import { ZUserName } from "@formbricks/types/user";
+import { Invite } from "@forma/database/prisma";
+import { ZInvite } from "@forma/database/zod/invites";
+import { ZUserName } from "@forma/types/user";
 
 export interface TInvite extends Omit<
   Invite,

@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TSegment } from "@formbricks/types/segment";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUser } from "@formbricks/types/user";
+import { TSegment } from "@forma/types/segment";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUser } from "@forma/types/user";
 import { AnonymousLinksTab } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/anonymous-links-tab";
 import { AppTab } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/app-tab";
 import { CustomHtmlTab } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/custom-html-tab";
@@ -50,7 +50,7 @@ interface ShareSurveyModalProps {
   user: TUser;
   segments: TSegment[];
   isContactsEnabled: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isReadOnly: boolean;
   isStorageConfigured: boolean;
   workspaceCustomScripts?: string | null;
@@ -66,7 +66,7 @@ export const ShareSurveyModal = ({
   user,
   segments,
   isContactsEnabled,
-  isFormbricksCloud,
+  isFormaCloud,
   isReadOnly,
   isStorageConfigured,
   workspaceCustomScripts,
@@ -107,7 +107,7 @@ export const ShareSurveyModal = ({
           surveyId: survey.id,
           segments,
           isContactsEnabled,
-          isFormbricksCloud,
+          isFormaCloud,
           enterpriseLicenseRequestFormUrl,
         },
         disabled: survey.singleUse?.enabled,
@@ -198,8 +198,8 @@ export const ShareSurveyModal = ({
       },
     ];
 
-    // Filter out tabs that should not be shown on Formbricks Cloud
-    return isFormbricksCloud
+    // Filter out tabs that should not be shown on Forma Cloud
+    return isFormaCloud
       ? tabs.filter(
           (tab) => tab.id !== ShareSettingsType.PRETTY_URL && tab.id !== ShareSettingsType.CUSTOM_HTML
         )
@@ -213,7 +213,7 @@ export const ShareSurveyModal = ({
     isReadOnly,
     segments,
     isContactsEnabled,
-    isFormbricksCloud,
+    isFormaCloud,
     email,
     isStorageConfigured,
     workspaceCustomScripts,

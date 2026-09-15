@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextRequest } from "next/server";
 import { Mock, beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { TAuthenticationApiKey } from "@forma/types/auth";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { AuthenticationMethod } from "@/app/middleware/endpoint-validator";
 import { responses } from "./response";
 
@@ -29,7 +29,7 @@ const mockContextualLoggerWarn = vi.fn();
 const mockContextualLoggerInfo = vi.fn();
 const V1_MANAGEMENT_SURVEYS_URL = "https://api.test/api/v1/management/surveys";
 
-vi.mock("@formbricks/logger", () => {
+vi.mock("@forma/logger", () => {
   const mockWithContextInstance = vi.fn(() => ({
     error: mockContextualLoggerError,
     warn: mockContextualLoggerWarn,

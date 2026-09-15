@@ -1,13 +1,13 @@
 import "server-only";
-import { type StorageError, StorageErrorCode } from "@formbricks/storage";
-import { TResponseData } from "@formbricks/types/responses";
+import { type StorageError, StorageErrorCode } from "@forma/storage";
+import { TResponseData } from "@forma/types/responses";
 import {
   IMAGE_FILE_EXTENSIONS,
   type TAccessType,
   type TAllowedFileExtension,
   ZAllowedFileExtension,
-} from "@formbricks/types/storage";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+} from "@forma/types/storage";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { responses } from "@/app/lib/api/response";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
@@ -339,7 +339,7 @@ const isScopedPrivateUploadUrl = ({
     );
   }
 
-  // Legacy shapes uploaded before #8044 (pre-Formbricks-5 environment-id prefix, or the Formbricks-5
+  // Legacy shapes uploaded before #8044 (pre-Forma-5 environment-id prefix, or the Forma-5
   // workspace-id prefix) never recorded a survey or element, so they are only 4 parts:
   // /storage/{prefix}/private/{file}. A read-then-write of such a response (backfills, re-imports,
   // two-way integrations) must still validate — but only when {prefix} is a storage namespace THIS

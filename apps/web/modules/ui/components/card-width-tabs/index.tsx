@@ -3,7 +3,7 @@
 import { ChevronsLeftRight, ChevronsLeftRightEllipsis, ChevronsRightLeft } from "lucide-react";
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { TLinkSurveyCardWidthOptions } from "@formbricks/types/styling";
+import { TLinkSurveyCardWidthOptions } from "@forma/types/styling";
 import { StylingTabs } from "@/modules/ui/components/styling-tabs";
 
 interface CardWidthTabsProps {

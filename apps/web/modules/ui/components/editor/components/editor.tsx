@@ -14,7 +14,7 @@ import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
-import { TSurvey, TSurveyRecallItem } from "@formbricks/types/surveys/types";
+import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { cn } from "@/lib/cn";
 import { FallbackInput } from "@/modules/survey/components/element-form-input/components/fallback-input";
 import "@/modules/ui/components/editor/styles-editor-frontend.css";

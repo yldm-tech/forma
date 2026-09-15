@@ -14,17 +14,17 @@ import {
 import { getSurvey } from "./__mocks__/survey-service.mock";
 import { prisma } from "@/lib/__mocks__/database";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { logger } from "@formbricks/logger";
-import { DatabaseError } from "@formbricks/types/errors";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { logger } from "@forma/logger";
+import { DatabaseError } from "@forma/types/errors";
+import { TSurvey } from "@forma/types/surveys/types";
 import { deleteResponsesAndDisplaysForSurvey, getQuotasSummary } from "./survey";
 
 /**
  * The fixtures declare only the three fields the service reads, so the hand-off to `getSurvey` (typed
  * `TSurvey | null`) is cast once here. The fixture fields themselves stay typed against
- * `@formbricks/types`, so a wrong block or element shape still fails typecheck.
+ * `@forma/types`, so a wrong block or element shape still fails typecheck.
  */
 const mockSurvey = (survey: SurveyFileUploadFields | null) => {
   getSurvey.mockResolvedValue(survey as TSurvey | null);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { verifyRecaptchaToken } from "./recaptcha";
 
 // Mock constants
@@ -9,7 +9,7 @@ vi.mock("@/lib/constants", () => ({
 }));
 
 // Mock logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     warn: vi.fn(),
     error: vi.fn(),

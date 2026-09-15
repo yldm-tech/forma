@@ -1,8 +1,8 @@
 import "server-only";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { ZSurveyType } from "@formbricks/types/surveys/types";
-import type { TTemplate } from "@formbricks/types/templates";
+import { logger } from "@forma/logger";
+import { ZSurveyType } from "@forma/types/surveys/types";
+import type { TTemplate } from "@forma/types/templates";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { problemBadRequest, problemInternalError } from "@/app/api/v3/lib/response";
 import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";

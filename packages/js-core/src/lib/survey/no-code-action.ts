@@ -16,7 +16,7 @@ export const createTrackNoCodeActionWithContext = (context: string) => {
       const errorToLog = result.error as { message?: string };
       const errorMessageText = errorToLog.message ?? "An unknown error occurred.";
       console.error(
-        `🧱 Formbricks - Error in no-code ${context} action '${actionName}': ${errorMessageText}`,
+        `🧱 Forma - Error in no-code ${context} action '${actionName}': ${errorMessageText}`,
         errorToLog
       );
     }

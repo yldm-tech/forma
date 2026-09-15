@@ -1,7 +1,7 @@
 import { TFunction } from "i18next";
 import { EyeOffIcon, FileDigitIcon, FileType2Icon, GlobeIcon } from "lucide-react";
 import { HTMLInputTypeAttribute, JSX } from "react";
-import type { TEmbeddedDataType } from "@formbricks/types/embedded-data";
+import type { TEmbeddedDataType } from "@forma/types/embedded-data";
 import {
   RESERVED_FIELD_CATALOG,
   type TReservedFieldCatalogEntry,
@@ -10,26 +10,21 @@ import {
   getDeclaredIngestedStorageKeys,
   listMidSurveyReservedEntries,
   listShadowingNames,
-} from "@formbricks/types/embedded-data-resolver";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { formatFieldNameToTitleCase } from "@formbricks/types/safe-identifier";
-import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+} from "@forma/types/embedded-data-resolver";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyQuota } from "@forma/types/quota";
+import { formatFieldNameToTitleCase } from "@forma/types/safe-identifier";
+import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TConditionGroup,
   TLeftOperand,
   TRightOperand,
   TSingleCondition,
   TSurveyLogicConditionsOperator,
-} from "@formbricks/types/surveys/logic";
-import {
-  TSurvey,
-  TSurveyEndings,
-  TSurveyVariable,
-  TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/logic";
+import { TSurvey, TSurveyEndings, TSurveyVariable, TSurveyWelcomeCard } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { isConditionGroup } from "@/lib/surveyLogic/utils";
 import { recallToHeadline } from "@/lib/utils/recall";

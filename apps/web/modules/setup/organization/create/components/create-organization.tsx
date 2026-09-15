@@ -7,7 +7,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { ZOrganization } from "@formbricks/types/organizations";
+import { ZOrganization } from "@forma/types/organizations";
 import { createOrganizationAction } from "@/app/setup/organization/create/actions";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { Button } from "@/modules/ui/components/button";

@@ -1,6 +1,6 @@
-# Formbricks Workflows
+# Forma Workflows
 
-Framework-independent domain package for Formbricks Workflows.
+Framework-independent domain package for Forma Workflows.
 
 This package owns reusable workflow building blocks: contracts, validation, domain services, HTTP handler
 abstractions, and runner-facing helpers. It should remain independent from `apps/web` and any specific web

@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { TFunction } from "i18next";
 import { UsersIcon } from "lucide-react";
-import { TSegmentWithSurveyRefs } from "@formbricks/types/segment";
+import { TSegmentWithSurveyRefs } from "@forma/types/segment";
 import { timeSinceDate } from "@/lib/time";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 

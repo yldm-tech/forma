@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TFeedbackSourceImportMode, TFeedbackSourceType } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceImportMode, TFeedbackSourceType } from "@forma/types/feedback-source";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { getResponseCountAction, importHistoricalResponsesAction } from "@/lib/feedback-source/actions";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -47,10 +47,10 @@ import {
   CSV_PROTECTED_TARGET_IDS,
   TCreateFeedbackSourceStep,
   TFieldMapping,
-  TFormbricksFeedbackSourceForm,
+  TFormaFeedbackSourceForm,
   TSourceField,
   TUnifySurvey,
-  ZFormbricksFeedbackSourceForm,
+  ZFormaFeedbackSourceForm,
   getTranslatedFeedbackSourceError,
 } from "../types";
 import {
@@ -65,11 +65,11 @@ import {
 } from "../utils";
 import { CsvFeedbackSourceUI } from "./csv-feedback-source-ui";
 import { FeedbackSourceTypeSelector } from "./feedback-source-type-selector";
-import { FormbricksQuestionList } from "./formbricks-question-list";
+import { FormaQuestionList } from "./forma-question-list";
 import { ImportModeField } from "./import-mode-field";
 
-const API_INGESTION_DOCS_URL = "https://formbricks.com/docs/unify-feedback/feedback-sources";
-const FEEDBACK_RECORD_MCP_DOCS_URL = "https://formbricks.com/docs/platform/mcp/overview";
+const API_INGESTION_DOCS_URL = "https://forma.ylam.ai/docs/unify-feedback/feedback-sources";
+const FEEDBACK_RECORD_MCP_DOCS_URL = "https://forma.ylam.ai/docs/platform/mcp/overview";
 
 interface CreateFeedbackSourceModalProps {
   open: boolean;
@@ -101,7 +101,7 @@ const getDialogTitle = (
   t: (key: string) => string
 ): string => {
   if (step === "selectType") return t("workspace.unify.add_feedback_source");
-  if (type === "formbricks_survey") return t("workspace.unify.select_survey_and_questions");
+  if (type === "forma_survey") return t("workspace.unify.select_survey_and_questions");
   if (type === "csv") return t("workspace.unify.import_csv_data");
   return t("workspace.unify.configure_mapping");
 };
@@ -112,13 +112,13 @@ const getDialogDescription = (
   t: (key: string) => string
 ): string => {
   if (step === "selectType") return t("workspace.unify.select_source_type_description");
-  if (type === "formbricks_survey") return t("workspace.unify.select_survey_questions_description");
+  if (type === "forma_survey") return t("workspace.unify.select_survey_questions_description");
   if (type === "csv") return t("workspace.unify.upload_csv_data_description");
   return t("workspace.unify.configure_mapping");
 };
 
 const getNextStepButtonLabel = (type: TFeedbackSourceOptionId | null, t: (key: string) => string): string => {
-  if (type === "formbricks_survey") return t("workspace.unify.select_questions");
+  if (type === "forma_survey") return t("workspace.unify.select_questions");
   if (type === "csv") return t("workspace.unify.configure_import");
   if (type === "api_ingestion") return t("common.learn_more");
   if (type === "feedback_record_mcp") return t("common.learn_more");
@@ -144,16 +144,16 @@ export const CreateFeedbackSourceModal = ({
 
   const defaultFeedbackSourceName = useMemo<Record<TFeedbackSourceType, string>>(
     () => ({
-      formbricks_survey: t("workspace.unify.default_source_name_formbricks"),
+      forma_survey: t("workspace.unify.default_source_name_forma"),
       csv: t("workspace.unify.default_source_name_csv"),
     }),
     [t]
   );
 
-  const formbricksForm = useForm<TFormbricksFeedbackSourceForm>({
-    resolver: zodResolver(ZFormbricksFeedbackSourceForm),
+  const formaForm = useForm<TFormaFeedbackSourceForm>({
+    resolver: zodResolver(ZFormaFeedbackSourceForm),
     defaultValues: {
-      sourceName: defaultFeedbackSourceName.formbricks_survey,
+      sourceName: defaultFeedbackSourceName.forma_survey,
       surveyId: "",
       selectedQuestionIds: [],
       importHistorical: true,
@@ -176,9 +176,9 @@ export const CreateFeedbackSourceModal = ({
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<string | null>(directories[0]?.id ?? null);
   const userEditedFeedbackSourceNameRef = useRef(false);
 
-  const formbricksValues = formbricksForm.watch();
-  const selectedSurveyId = formbricksValues.surveyId;
-  const selectedQuestionIds = formbricksValues.selectedQuestionIds ?? [];
+  const formaValues = formaForm.watch();
+  const selectedSurveyId = formaValues.surveyId;
+  const selectedQuestionIds = formaValues.selectedQuestionIds ?? [];
 
   const selectedSurvey = useMemo(
     () => surveys.find((survey) => survey.id === selectedSurveyId) ?? null,
@@ -221,27 +221,27 @@ export const CreateFeedbackSourceModal = ({
   );
 
   useEffect(() => {
-    if (selectedSurveyId && currentStep === "mapping" && selectedType === "formbricks_survey") {
+    if (selectedSurveyId && currentStep === "mapping" && selectedType === "forma_survey") {
       fetchResponseCount(selectedSurveyId);
     }
   }, [currentStep, fetchResponseCount, selectedSurveyId, selectedType]);
 
   useEffect(() => {
-    if (currentStep !== "mapping" || selectedType !== "formbricks_survey" || !selectedSurveyId) {
+    if (currentStep !== "mapping" || selectedType !== "forma_survey" || !selectedSurveyId) {
       return;
     }
 
     const survey = surveys.find((item) => item.id === selectedSurveyId);
     const supportedElementIds = survey ? getSelectableQuestionIds(survey) : [];
 
-    formbricksForm.setValue("selectedQuestionIds", supportedElementIds, {
+    formaForm.setValue("selectedQuestionIds", supportedElementIds, {
       shouldDirty: true,
       shouldValidate: true,
     });
-    formbricksForm.setValue("importHistorical", true, {
+    formaForm.setValue("importHistorical", true, {
       shouldDirty: true,
     });
-  }, [currentStep, formbricksForm, selectedSurveyId, selectedType, surveys]);
+  }, [currentStep, formaForm, selectedSurveyId, selectedType, surveys]);
 
   // When opened from a suggestion, jump straight to the survey mapping step with the survey preselected.
   useEffect(() => {
@@ -249,22 +249,22 @@ export const CreateFeedbackSourceModal = ({
     const survey = surveys.find((item) => item.id === initialSurveyId);
     if (!survey) return;
 
-    setSelectedType("formbricks_survey");
+    setSelectedType("forma_survey");
     setCurrentStep("mapping");
-    formbricksForm.reset({
+    formaForm.reset({
       sourceName: t("workspace.unify.source_connector_name", { surveyName: survey.name }),
       surveyId: initialSurveyId,
       selectedQuestionIds: getSelectableQuestionIds(survey),
       importHistorical: true,
       importMode: "completedOnly",
     });
-  }, [open, initialSurveyId, surveys, formbricksForm, t]);
+  }, [open, initialSurveyId, surveys, formaForm, t]);
 
   const resetForm = () => {
     setCurrentStep("selectType");
     setSelectedType(null);
-    formbricksForm.reset({
-      sourceName: defaultFeedbackSourceName.formbricks_survey,
+    formaForm.reset({
+      sourceName: defaultFeedbackSourceName.forma_survey,
       surveyId: "",
       selectedQuestionIds: [],
       importHistorical: true,
@@ -302,9 +302,9 @@ export const CreateFeedbackSourceModal = ({
       return;
     }
 
-    if (selectedType === "formbricks_survey") {
-      formbricksForm.reset({
-        sourceName: defaultFeedbackSourceName.formbricks_survey,
+    if (selectedType === "forma_survey") {
+      formaForm.reset({
+        sourceName: defaultFeedbackSourceName.forma_survey,
         surveyId: "",
         selectedQuestionIds: [],
         importHistorical: true,
@@ -410,15 +410,15 @@ export const CreateFeedbackSourceModal = ({
     }
   };
 
-  const handleFormbricksQuestionToggle = (questionId: string) => {
-    const nextSelection = toggleQuestionId(formbricksForm.getValues("selectedQuestionIds"), questionId);
-    formbricksForm.setValue("selectedQuestionIds", nextSelection, {
+  const handleFormaQuestionToggle = (questionId: string) => {
+    const nextSelection = toggleQuestionId(formaForm.getValues("selectedQuestionIds"), questionId);
+    formaForm.setValue("selectedQuestionIds", nextSelection, {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
 
-  const handleCreateFormbricksFeedbackSource = async (values: TFormbricksFeedbackSourceForm) => {
+  const handleCreateFormaFeedbackSource = async (values: TFormaFeedbackSourceForm) => {
     if (!selectedDirectoryId) return;
     setIsCreating(true);
 
@@ -426,7 +426,7 @@ export const CreateFeedbackSourceModal = ({
     // so the mode chosen here is the one that import obeys.
     const feedbackSourceId = await onCreateFeedbackSource({
       name: values.sourceName.trim(),
-      type: "formbricks_survey",
+      type: "forma_survey",
       feedbackDirectoryId: selectedDirectoryId,
       importMode: values.importMode,
       surveyMappings: [{ surveyId: values.surveyId, elementIds: values.selectedQuestionIds }],
@@ -548,13 +548,13 @@ export const CreateFeedbackSourceModal = ({
                 workspaceId={workspaceId}
               />
             )}
-            {currentStep === "mapping" && selectedType === "formbricks_survey" && (
-              <FormProvider {...formbricksForm}>
+            {currentStep === "mapping" && selectedType === "forma_survey" && (
+              <FormProvider {...formaForm}>
                 <form
                   className="space-y-4"
-                  onSubmit={formbricksForm.handleSubmit(handleCreateFormbricksFeedbackSource)}>
+                  onSubmit={formaForm.handleSubmit(handleCreateFormaFeedbackSource)}>
                   <FormField
-                    control={formbricksForm.control}
+                    control={formaForm.control}
                     name="surveyId"
                     render={({ field, fieldState: { error } }) => (
                       <FormItem>
@@ -568,7 +568,7 @@ export const CreateFeedbackSourceModal = ({
                               // They can still rename it later in the Edit modal.
                               const survey = surveys.find((item) => item.id === value);
                               if (survey) {
-                                formbricksForm.setValue(
+                                formaForm.setValue(
                                   "sourceName",
                                   t("workspace.unify.source_connector_name", { surveyName: survey.name }),
                                   {
@@ -614,17 +614,17 @@ export const CreateFeedbackSourceModal = ({
                   )}
 
                   <FormField
-                    control={formbricksForm.control}
+                    control={formaForm.control}
                     name="selectedQuestionIds"
                     render={({ fieldState: { error } }) => (
                       <FormItem>
                         <FormLabel>{t("workspace.unify.select_questions")}</FormLabel>
                         <FormControl>
                           <div>
-                            <FormbricksQuestionList
+                            <FormaQuestionList
                               survey={selectedSurvey}
                               selectedQuestionIds={selectedQuestionIds}
-                              onQuestionToggle={handleFormbricksQuestionToggle}
+                              onQuestionToggle={handleFormaQuestionToggle}
                             />
                           </div>
                         </FormControl>
@@ -637,7 +637,7 @@ export const CreateFeedbackSourceModal = ({
 
                   {selectedSurveyResponseCount !== null && selectedSurveyResponseCount > 0 && (
                     <FormField
-                      control={formbricksForm.control}
+                      control={formaForm.control}
                       name="importHistorical"
                       render={({ field }) => (
                         <FormItem className="rounded-md border border-slate-200 p-3">
@@ -660,9 +660,9 @@ export const CreateFeedbackSourceModal = ({
                       finish-only in both modes — so with the switch above off, or with no responses
                       to back-fill, this choice would change nothing at all. Offering it there would
                       be a control that silently does nothing. */}
-                  {formbricksValues.importHistorical &&
+                  {formaValues.importHistorical &&
                     selectedSurveyResponseCount !== null &&
-                    selectedSurveyResponseCount > 0 && <ImportModeField control={formbricksForm.control} />}
+                    selectedSurveyResponseCount > 0 && <ImportModeField control={formaForm.control} />}
                 </form>
               </FormProvider>
             )}
@@ -741,24 +741,24 @@ export const CreateFeedbackSourceModal = ({
             {currentStep === "selectType" ? (
               <Button
                 onClick={handleNextStep}
-                disabled={!selectedType || (selectedType === "formbricks_survey" && surveys.length === 0)}>
+                disabled={!selectedType || (selectedType === "forma_survey" && surveys.length === 0)}>
                 {getNextStepButtonLabel(selectedType, t)}
               </Button>
             ) : (
               <Button
                 onClick={
-                  selectedType === "formbricks_survey"
-                    ? () => void formbricksForm.handleSubmit(handleCreateFormbricksFeedbackSource)()
+                  selectedType === "forma_survey"
+                    ? () => void formaForm.handleSubmit(handleCreateFormaFeedbackSource)()
                     : handleCreateCsvFeedbackSource
                 }
                 disabled={
                   isCreating ||
                   isImporting ||
                   !selectedDirectoryId ||
-                  (selectedType === "formbricks_survey"
-                    ? !isFeedbackSourceNameValid(formbricksValues.sourceName ?? "") ||
-                      !formbricksValues.surveyId ||
-                      !formbricksValues.selectedQuestionIds?.length
+                  (selectedType === "forma_survey"
+                    ? !isFeedbackSourceNameValid(formaValues.sourceName ?? "") ||
+                      !formaValues.surveyId ||
+                      !formaValues.selectedQuestionIds?.length
                     : !isFeedbackSourceNameValid(csvFeedbackSourceName) ||
                       !isCsvValid ||
                       !areCsvRequiredFieldsMapped)

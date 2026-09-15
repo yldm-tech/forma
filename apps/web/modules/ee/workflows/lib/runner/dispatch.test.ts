@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { dispatchWorkflowRunViaJobs } from "./dispatch";
 
 const { enqueueWorkflowRunJob } = vi.hoisted(() => ({ enqueueWorkflowRunJob: vi.fn() }));
-vi.mock("@formbricks/jobs", () => ({ enqueueWorkflowRunJob }));
+vi.mock("@forma/jobs", () => ({ enqueueWorkflowRunJob }));
 
 describe("dispatchWorkflowRunViaJobs", () => {
   test("enqueues the run with a deterministic jobId equal to the run id", async () => {

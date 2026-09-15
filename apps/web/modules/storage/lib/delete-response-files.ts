@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
 import { deleteFile } from "@/modules/storage/service";
 import { parseStorageFileUrl } from "@/modules/storage/utils";

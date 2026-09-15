@@ -33,7 +33,7 @@ jobs:
     uses: ./.github/workflows/typecheck.yml
 
   # NOTE: there is deliberately no standalone "build the web app" job here. It used to run
-  # `pnpm build --filter=@formbricks/web...` in parallel with e2e-test, which builds the
+  # `pnpm build --filter=@forma/web...` in parallel with e2e-test, which builds the
   # very same app, and cached the output into a key nothing downstream ever read. Sharing
   # that build with e2e-test would require `needs: build`, which serializes two jobs that
   # are currently concurrent and makes the critical path longer, not shorter. The compile

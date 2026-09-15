@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "crypto";
-import { createCacheKey } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
+import { createCacheKey } from "@forma/cache";
+import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
 import { hashSecret, verifySecret } from "@/lib/crypto";
 import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";

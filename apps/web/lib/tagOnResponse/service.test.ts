@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { getResponse } from "../response/service";
 import { addTagToRespone, deleteTagOnResponse, getTagsOnResponsesCount } from "./service";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     tagsOnResponses: {
       create: vi.fn(),

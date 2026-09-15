@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { isSurveyRuntimeLanguage } from "@formbricks/i18n-utils/survey-runtime-languages";
-import { ZWorkspaceUpdateInput } from "@formbricks/types/workspace";
+import { isSurveyRuntimeLanguage } from "@forma/i18n-utils/survey-runtime-languages";
+import { ZWorkspaceUpdateInput } from "@forma/types/workspace";
 
 /**
  * `ZWorkspaceUpdateInput` plus the checks that need to know about other workspace packages.

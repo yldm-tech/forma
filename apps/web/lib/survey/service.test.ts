@@ -2,24 +2,24 @@ import { prisma } from "@/lib/__mocks__/database";
 import { createId } from "@paralleldrive/cuid2";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { testInputValidation } from "vitestSetup";
-import { ActionClass, Prisma, Survey } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { TActionClass } from "@formbricks/types/action-classes";
+import { ActionClass, Prisma, Survey } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { TActionClass } from "@forma/types/action-classes";
 import {
   DatabaseError,
   InvalidInputError,
   OperationNotAllowedError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import {
   MAX_SEGMENT_FILTERS_PER_TREE,
   MAX_SEGMENT_SURVEYS,
   TBaseFilters,
   TSegment,
-} from "@formbricks/types/segment";
-import { TSurveyFollowUp } from "@formbricks/types/surveys/follow-up";
-import { TSurvey, TSurveyCreateInput, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+} from "@forma/types/segment";
+import { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
+import { TSurvey, TSurveyCreateInput, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { getActionClasses } from "@/lib/actionClass/service";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
 import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";

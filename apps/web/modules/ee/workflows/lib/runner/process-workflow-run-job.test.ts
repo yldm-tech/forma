@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { Prisma } from "@formbricks/database/prisma";
-import type { TWorkflowRunJobData } from "@formbricks/jobs";
+import { Prisma } from "@forma/database/prisma";
+import type { TWorkflowRunJobData } from "@forma/jobs";
 import { processWorkflowRunJob } from "./process-workflow-run-job";
 
 const {
@@ -39,7 +39,7 @@ const {
   mockCapturePostHogEvent: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workflowRun: {
       findFirst: mockWorkflowRunFindFirst,
@@ -67,7 +67,7 @@ vi.mock("@formbricks/database", () => ({
 }));
 
 // Prisma's known-request-error shape the claim path checks for a P2002 unique-constraint conflict.
-vi.mock("@formbricks/database/prisma", () => ({
+vi.mock("@forma/database/prisma", () => ({
   // The workflow runner's merged import graph reaches the AuthZed projectors, which map these
   // Prisma enums to relation names at module scope. Values mirror the Prisma schema.
   ApiKeyPermission: { manage: "manage", read: "read", write: "write" },
@@ -85,7 +85,7 @@ vi.mock("@formbricks/database/prisma", () => ({
   },
 }));
 
-vi.mock("@formbricks/database/types/error", () => ({
+vi.mock("@forma/database/types/error", () => ({
   PrismaErrorType: { UniqueConstraintViolation: "P2002" },
 }));
 
@@ -120,7 +120,7 @@ vi.mock("@/lib/posthog", () => ({
   capturePostHogEvent: mockCapturePostHogEvent,
 }));
 
-vi.mock("@formbricks/logger", () => {
+vi.mock("@forma/logger", () => {
   const mockLogger = {
     debug: vi.fn(),
     error: mockLoggerError,

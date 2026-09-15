@@ -7,14 +7,14 @@ icon: "file-spreadsheet"
 The Google Sheets integration allows you to automatically send responses to an Google Sheets of your choice.
 
 <Note>
-  If you are using Formbricks Cloud, you will need to configure this
+  If you are using Forma Cloud, you will need to configure this
   integration differently. Please follow this guide
   [here](/platform/features/integrations/google-sheets) to set it up.
 </Note>
 
 ## Setup
 
-Integrating Google Sheets with a self-hosted Formbricks instance requires configuring Google Cloud and updating your environment variables.
+Integrating Google Sheets with a self-hosted Forma instance requires configuring Google Cloud and updating your environment variables.
 
 <Note>
   If your Google Cloud Console project has a publishing status of "Testing" your refresh token will expire after 7 days. To avoid that, you need to change the publishing status to "Production". [Google OAuth 2.0 documentation](https://developers.google.com/identity/protocols/oauth2?hl=en#expiration)
@@ -68,7 +68,7 @@ Integrating Google Sheets with a self-hosted Formbricks instance requires config
 
 * Save and note the Client ID and Client Secret.
 
-* Copy the Client ID and Client Secret and set them as environment variables in your Formbricks instance:
+* Copy the Client ID and Client Secret and set them as environment variables in your Forma instance:
 
   * `GOOGLE_SHEETS_CLIENT_ID`
 
@@ -76,7 +76,7 @@ Integrating Google Sheets with a self-hosted Formbricks instance requires config
 
   * `GOOGLE_SHEETS_REDIRECT_URL`
 
-Now just copy **GOOGLE\_SHEETS\_CLIENT\_ID**, **GOOGLE\_SHEETS\_CLIENT\_SECRET** and **GOOGLE\_SHEETS\_REDIRECT\_URL** for your integration & add it to your **Formbricks environment variables** as in the docker compose file:
+Now just copy **GOOGLE\_SHEETS\_CLIENT\_ID**, **GOOGLE\_SHEETS\_CLIENT\_SECRET** and **GOOGLE\_SHEETS\_REDIRECT\_URL** for your integration & add it to your **Forma environment variables** as in the docker compose file:
 
 * `GOOGLE_SHEETS_CLIENT_ID`
 
@@ -84,6 +84,6 @@ Now just copy **GOOGLE\_SHEETS\_CLIENT\_ID**, **GOOGLE\_SHEETS\_CLIENT\_SECRET**
 
 * `GOOGLE_SHEETS_REDIRECT_URL`
 
-Voila! You have successfully enabled the Google Sheets integration in your self-hosted Formbricks instance. Now you can follow the steps mentioned in [Google Sheets Integration with Formbricks](/platform/features/integrations/google-sheets) section to link a Google Sheet with Formbricks.
+Voila! You have successfully enabled the Google Sheets integration in your self-hosted Forma instance. Now you can follow the steps mentioned in [Google Sheets Integration with Forma](/platform/features/integrations/google-sheets) section to link a Google Sheet with Forma.
 
-Still struggling or something not working as expected? [Join our Github Discussions](https://github.com/formbricks/formbricks/discussions) and we'd be glad to assist you!
+Still struggling or something not working as expected? [Join our Github Discussions](https://github.com/yldm-tech/forma/discussions) and we'd be glad to assist you!

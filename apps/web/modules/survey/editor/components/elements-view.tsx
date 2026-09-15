@@ -14,14 +14,14 @@ import { createId } from "@paralleldrive/cuid2";
 import React, { SetStateAction, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TSurveyBlock, TSurveyBlockLogic, TSurveyBlockLogicAction } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { type TConditionGroup, type TSingleCondition } from "@formbricks/types/surveys/logic";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TSurveyBlock, TSurveyBlockLogic, TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { type TConditionGroup, type TSingleCondition } from "@forma/types/surveys/logic";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { getDefaultEndingCard } from "@/app/lib/survey-builder";
 import { addMultiLanguageLabels, createI18nString, extractLanguageCodes } from "@/lib/i18n/utils";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
@@ -71,7 +71,7 @@ interface ElementsViewProps {
   invalidElements: string[] | null;
   setInvalidElements: React.Dispatch<SetStateAction<string[] | null>>;
   selectedLanguageCode: string;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isCxMode: boolean;
   locale: TUserLocale;
   responseCount: number;
@@ -90,7 +90,7 @@ export const ElementsView = ({
   invalidElements,
   setInvalidElements,
   selectedLanguageCode,
-  isFormbricksCloud,
+  isFormaCloud,
   isCxMode,
   locale,
   responseCount,
@@ -903,7 +903,7 @@ export const ElementsView = ({
           setActiveElementId={setActiveElementId}
           invalidElements={invalidElements}
           addElement={addElement}
-          isFormbricksCloud={isFormbricksCloud}
+          isFormaCloud={isFormaCloud}
           isCxMode={isCxMode}
           locale={locale}
           responseCount={responseCount}
@@ -938,7 +938,7 @@ export const ElementsView = ({
                   activeElementId={activeElementId}
                   isInvalid={invalidElements ? invalidElements.includes(ending.id) : false}
                   addEndingCard={addEndingCard}
-                  isFormbricksCloud={isFormbricksCloud}
+                  isFormaCloud={isFormaCloud}
                   locale={locale}
                   isStorageConfigured={isStorageConfigured}
                   quotas={quotas}

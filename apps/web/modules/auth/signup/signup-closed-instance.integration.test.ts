@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { auth } from "@/modules/auth/lib/auth";
 import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-context";
@@ -24,7 +24,7 @@ import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-conte
 
 /**
  * A CLOSED self-hosted instance. `SIGNUP_ENABLED` is derived
- * (`IS_FORMBRICKS_CLOUD || IS_DEVELOPMENT || E2E_TESTING`) and so is already false under vitest, but
+ * (`IS_FORMA_CLOUD || IS_DEVELOPMENT || E2E_TESTING`) and so is already false under vitest, but
  * pin it: this suite is meaningless if an env change quietly opens sign-up, and a passing test would
  * then prove nothing. Multi-org is forced off for the same reason — with it on, public sign-up counts
  * as open and every assertion below would invert.

@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { generateOrganizationAIObject } from "@/lib/ai/service";
 import { AI_TRACING_FEATURE } from "@/lib/posthog/ai-tracing-feature";
 

@@ -27,13 +27,13 @@ describe("OAuth URL helpers", () => {
   });
 
   test("preserves custom WEBAPP_URL subpaths for the MCP resource", async () => {
-    envMock.WEBAPP_URL = "https://app.example.com/formbricks/";
+    envMock.WEBAPP_URL = "https://app.example.com/forma/";
 
     const { getMcpProtectedResourceMetadataUrl, getMcpResourceUrl } = await loadOAuthUrls();
 
-    expect(getMcpResourceUrl()).toBe("https://app.example.com/formbricks/api/mcp");
+    expect(getMcpResourceUrl()).toBe("https://app.example.com/forma/api/mcp");
     expect(getMcpProtectedResourceMetadataUrl()).toBe(
-      "https://app.example.com/formbricks/.well-known/oauth-protected-resource/api/mcp"
+      "https://app.example.com/forma/.well-known/oauth-protected-resource/api/mcp"
     );
   });
 
@@ -59,7 +59,7 @@ describe("OAuth URL helpers", () => {
 
   test("derives the auth issuer from Better Auth URL while preserving subpaths", async () => {
     envMock.WEBAPP_URL = "https://admin.example.com";
-    envMock.NEXTAUTH_URL = "https://auth.example.com/formbricks";
+    envMock.NEXTAUTH_URL = "https://auth.example.com/forma";
     envMock.BETTER_AUTH_URL = "https://auth.example.com/custom";
 
     const { getAuthIssuerUrl } = await loadOAuthUrls();
@@ -99,11 +99,11 @@ describe("OAuth URL helpers", () => {
 
   test("uses an internal JWKS URL without changing the public issuer", async () => {
     envMock.BETTER_AUTH_URL = "https://auth.example.com";
-    envMock.MCP_OAUTH_JWKS_URL = "http://formbricks:3000/api/auth/jwks";
+    envMock.MCP_OAUTH_JWKS_URL = "http://forma:3000/api/auth/jwks";
 
     const { getAuthIssuerUrl, getMcpOAuthJwksUrl } = await loadOAuthUrls();
 
     expect(getAuthIssuerUrl()).toBe("https://auth.example.com/api/auth");
-    expect(getMcpOAuthJwksUrl()).toBe("http://formbricks:3000/api/auth/jwks");
+    expect(getMcpOAuthJwksUrl()).toBe("http://forma:3000/api/auth/jwks");
   });
 });

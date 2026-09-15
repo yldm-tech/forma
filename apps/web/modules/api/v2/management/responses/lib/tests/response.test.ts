@@ -10,8 +10,8 @@ import {
   workspaceId,
 } from "./__mocks__/response.mock";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { err, ok } from "@forma/types/error-handlers";
 import {
   getMonthlyOrganizationResponseCount,
   getOrganizationBilling,
@@ -25,7 +25,7 @@ vi.mock("@/modules/api/v2/management/responses/lib/organization", () => ({
   getMonthlyOrganizationResponseCount: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       create: vi.fn(),
@@ -43,7 +43,7 @@ vi.mock("@/lib/constants", async () => {
   const actual = await vi.importActual<typeof import("@/lib/constants")>("@/lib/constants");
   return {
     ...actual,
-    IS_FORMBRICKS_CLOUD: true,
+    IS_FORMA_CLOUD: true,
     IS_PRODUCTION: false,
     ENCRYPTION_KEY: "test",
   };

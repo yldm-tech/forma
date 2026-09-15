@@ -1,10 +1,10 @@
 import "server-only";
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { env } from "./env";
 
 export { DEFAULT_BRAND_COLOR } from "./brand-color";
 
-export const IS_FORMBRICKS_CLOUD = env.IS_FORMBRICKS_CLOUD === "1";
+export const IS_FORMA_CLOUD = env.IS_FORMA_CLOUD === "1";
 
 export const IS_PRODUCTION = env.NODE_ENV === "production";
 
@@ -58,12 +58,12 @@ export const OIDC_DISPLAY_NAME = env.OIDC_DISPLAY_NAME;
 export const OIDC_SIGNING_ALGORITHM = env.OIDC_SIGNING_ALGORITHM;
 
 export const SAML_DATABASE_URL = env.SAML_DATABASE_URL;
-export const SAML_TENANT = "formbricks.com";
-export const SAML_PRODUCT = "formbricks";
-export const SAML_AUDIENCE = "https://saml.formbricks.com";
+export const SAML_TENANT = "forma.ylam.ai";
+export const SAML_PRODUCT = "forma";
+export const SAML_AUDIENCE = "https://saml.forma.ylam.ai";
 export const SAML_PATH = "/api/auth/saml/callback";
 
-export const SIGNUP_ENABLED = IS_FORMBRICKS_CLOUD || IS_DEVELOPMENT || E2E_TESTING;
+export const SIGNUP_ENABLED = IS_FORMA_CLOUD || IS_DEVELOPMENT || E2E_TESTING;
 export const EMAIL_AUTH_ENABLED = env.EMAIL_AUTH_DISABLED !== "1";
 export const INVITE_DISABLED = env.INVITE_DISABLED === "1";
 export const INVITE_RATE_LIMIT_PER_24_HOURS = env.INVITE_RATE_LIMIT_PER_24_HOURS;
@@ -190,7 +190,7 @@ export const DEBUG = env.DEBUG === "1";
 export const ENTERPRISE_LICENSE_KEY = env.ENTERPRISE_LICENSE_KEY;
 
 export const ENTERPRISE_LICENSE_REQUEST_FORM_URL =
-  "https://app.formbricks.com/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=onpremise&source=ce&type=licenseRequest";
+  "https://app.forma.ylam.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=onpremise&source=ce&type=licenseRequest";
 
 export const REDIS_URL = env.REDIS_URL;
 export const RATE_LIMITING_DISABLED = env.RATE_LIMITING_DISABLED === "1";
@@ -198,7 +198,7 @@ export const RATE_LIMITING_DISABLED = env.RATE_LIMITING_DISABLED === "1";
  * Number of reverse proxies in front of the app whose `X-Forwarded-For` entries may be believed.
  *
  * Defaults to 1 because that matches every supported topology — the Helm chart's Traefik/Envoy ingress,
- * docker-compose behind a proxy, and Formbricks Cloud — and because Next 16 gives route handlers no
+ * docker-compose behind a proxy, and Forma Cloud — and because Next 16 gives route handlers no
  * socket peer address to fall back on, so a default of 0 would leave IP-based rate limiting unable to
  * tell clients apart until an operator set this. Deployments with a longer proxy chain must raise it;
  * setting it higher than the real chain lets a caller spoof the address by prepending entries.
@@ -245,11 +245,11 @@ export const PLAIN_APP_ID = env.PLAIN_APP_ID;
 export const PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID = env.PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID;
 export const IS_PLAIN_CHAT_CONFIGURED = Boolean(env.PLAIN_APP_ID);
 
-// Formbricks-in-Formbricks: in-app surveys served by a Formbricks instance
-// (defaults to Formbricks Cloud). The widget only mounts when a workspace id is set.
-export const FORMBRICKS_WORKSPACE_ID = env.FORMBRICKS_WORKSPACE_ID;
-export const FORMBRICKS_APP_URL = env.FORMBRICKS_APP_URL || "https://app.formbricks.com";
-export const IS_FORMBRICKS_SURVEYS_CONFIGURED = Boolean(env.FORMBRICKS_WORKSPACE_ID);
+// Forma-in-Forma: in-app surveys served by a Forma instance
+// (defaults to Forma Cloud). The widget only mounts when a workspace id is set.
+export const FORMA_WORKSPACE_ID = env.FORMA_WORKSPACE_ID;
+export const FORMA_APP_URL = env.FORMA_APP_URL || "https://app.forma.ylam.ai";
+export const IS_FORMA_SURVEYS_CONFIGURED = Boolean(env.FORMA_WORKSPACE_ID);
 
 export const POSTHOG_KEY = env.POSTHOG_KEY;
 

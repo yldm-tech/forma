@@ -13,7 +13,7 @@ vi.mock("@posthog/ai/vercel", () => ({
   withTracing: mocks.withTracing,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: mocks.loggerWarn },
 }));
 
@@ -108,7 +108,7 @@ describe("wrapAiModelWithTracing with null client", () => {
     vi.resetModules();
     vi.doMock("server-only", () => ({}));
     vi.doMock("@posthog/ai/vercel", () => ({ withTracing: mocks.withTracing }));
-    vi.doMock("@formbricks/logger", () => ({ logger: { warn: mocks.loggerWarn } }));
+    vi.doMock("@forma/logger", () => ({ logger: { warn: mocks.loggerWarn } }));
     vi.doMock("./server", () => ({ posthogTracingClient: null }));
 
     const { wrapAiModelWithTracing: wrapWithNullClient } = await import("./ai-tracing");

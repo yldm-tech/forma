@@ -1,10 +1,10 @@
 import { Column, Container, Heading, Hr, Link, Row, Section, Text } from "@react-email/components";
 import { FileDigitIcon, FileType2Icon } from "lucide-react";
-import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import type { TOrganization } from "@formbricks/types/organizations";
-import type { TResponse } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import type { TOrganization } from "@forma/types/organizations";
+import type { TResponse } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { EmailButton } from "../../src/components/email-button";
 import { EmailTemplate } from "../../src/components/email-template";
 import { renderEmailResponseValue } from "../../src/lib/email-utils";

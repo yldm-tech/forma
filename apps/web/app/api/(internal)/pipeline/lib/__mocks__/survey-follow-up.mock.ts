@@ -1,9 +1,5 @@
-import { TResponse } from "@formbricks/types/responses";
-import {
-  TSurvey,
-  TSurveyContactInfoQuestion,
-  TSurveyQuestionTypeEnum,
-} from "@formbricks/types/surveys/types";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey, TSurveyContactInfoQuestion, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 
 export const mockEndingId1 = "mpkt4n5krsv2ulqetle7b9e7";
 export const mockEndingId2 = "ge0h63htnmgq6kwx1suh9cyi";
@@ -133,7 +129,7 @@ export const mockSurvey: TSurvey = {
       subheader: {
         default: "We appreciate your feedback.‌‌‍‍‌‍‍‍‌‌‌‍‍‌‍‌‌‌‌‌‌‌‍‌‍‌‌",
       },
-      buttonLink: "https://formbricks.com",
+      buttonLink: "https://forma.ylam.ai",
       buttonLabel: {
         default: "Create your own Survey‌‌‍‍‌‍‍‍‌‌‌‍‍‌‍‌‍‌‌‌‌‌‍‌‍‌‌",
       },

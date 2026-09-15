@@ -5,7 +5,7 @@ import {
   DEFAULT_SURVEY_LANGUAGE_CODE,
   SURVEY_RUNTIME_LANGUAGE_CODES,
   resolveSurveyLanguageDefaultTag,
-} from "@formbricks/i18n-utils/survey-runtime-languages";
+} from "@forma/i18n-utils/survey-runtime-languages";
 import arEGTranslations from "../../locales/ar-EG.json";
 import daDKTranslations from "../../locales/da-DK.json";
 import deDETranslations from "../../locales/de-DE.json";

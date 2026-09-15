@@ -1,8 +1,8 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { ZOrganizationBillingPlanLimits, ZOrganizationStripeBilling } from "@formbricks/types/organizations";
-import { type TWorkflowStatus, ZWorkflowStatus, summarizeWorkflowDefinition } from "@formbricks/workflows";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { prisma } from "@forma/database";
+import { ZOrganizationBillingPlanLimits, ZOrganizationStripeBilling } from "@forma/types/organizations";
+import { type TWorkflowStatus, ZWorkflowStatus, summarizeWorkflowDefinition } from "@forma/workflows";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { capturePostHogEvent, groupIdentifyPostHog } from "@/lib/posthog";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
 import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
@@ -61,7 +61,7 @@ const liveWorkflowCount = (counts: StatusCounts): number => counts.draft + count
  * stack, so a rule change there needs mirroring here.
  */
 const toWorkflowsEntitlement = (stripeFeatures: string[], license: LicenseFacts): boolean => {
-  if (!IS_FORMBRICKS_CLOUD) return license.active && !!license.features?.workflows;
+  if (!IS_FORMA_CLOUD) return license.active && !!license.features?.workflows;
   if (!stripeFeatures.includes(CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.WORKFLOWS)) return false;
   if (license.status === "no-license") return true;
   if (license.status !== "active") return false;
@@ -80,7 +80,7 @@ const toOrganizationContext = (
   const limits = ZOrganizationBillingPlanLimits.safeParse(organization.billing?.limits);
   const cloudPlan = stripe.success ? (stripe.data.plan ?? null) : null;
   let plan: string | null = cloudPlan;
-  if (!IS_FORMBRICKS_CLOUD) plan = license.active ? "self_hosted_enterprise" : "self_hosted_community";
+  if (!IS_FORMA_CLOUD) plan = license.active ? "self_hosted_enterprise" : "self_hosted_community";
 
   return {
     createdAt: organization.createdAt,
@@ -278,7 +278,7 @@ export const emitWorkflowUsageSnapshots = async (now: Date): Promise<WorkflowUsa
   // Reported on both deployments: on cloud the license guards the Stripe entitlement, so its status
   // is part of why `has_workflows_entitlement` reads the way it does.
   const { status: licenseStatus } = await getEnterpriseLicense();
-  const deployment = IS_FORMBRICKS_CLOUD ? "cloud" : "self_hosted";
+  const deployment = IS_FORMA_CLOUD ? "cloud" : "self_hosted";
   let events = 0;
   let workspaces = 0;
 

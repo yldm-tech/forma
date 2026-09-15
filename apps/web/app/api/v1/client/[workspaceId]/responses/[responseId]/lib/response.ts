@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { TResponseWithQuotaFull } from "@formbricks/types/quota";
-import { TResponseUpdateInput } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { TResponseWithQuotaFull } from "@forma/types/quota";
+import { TResponseUpdateInput } from "@forma/types/responses";
 import { updateResponse } from "@/lib/response/service";
 import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
 

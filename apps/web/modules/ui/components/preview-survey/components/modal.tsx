@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { TOverlay, TPlacement } from "@formbricks/types/common";
+import { TOverlay, TPlacement } from "@forma/types/common";
 import { cn } from "@/lib/cn";
 import { getPlacementStyle } from "../lib/utils";
 

@@ -7,14 +7,14 @@ import { getIsSamlSsoEnabled } from "@/modules/ee/license-check/lib/utils";
 export const GET = async (req: NextRequest) => {
   const jacksonInstance = await jackson();
   if (!jacksonInstance) {
-    return responses.forbiddenResponse("SAML SSO is not enabled in your Formbricks license");
+    return responses.forbiddenResponse("SAML SSO is not enabled in your Forma license");
   }
   const { oauthController } = jacksonInstance;
   const searchParams = Object.fromEntries(req.nextUrl.searchParams);
   const isSamlSsoEnabled = await getIsSamlSsoEnabled();
 
   if (!isSamlSsoEnabled) {
-    return responses.forbiddenResponse("SAML SSO is not enabled in your Formbricks license");
+    return responses.forbiddenResponse("SAML SSO is not enabled in your Forma license");
   }
 
   try {

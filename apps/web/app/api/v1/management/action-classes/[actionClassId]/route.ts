@@ -1,6 +1,6 @@
-import { logger } from "@formbricks/logger";
-import { TActionClass, ZActionClassInput } from "@formbricks/types/action-classes";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import { TActionClass, ZActionClassInput } from "@forma/types/action-classes";
+import { TAuthenticationApiKey } from "@forma/types/auth";
 import { handleErrorResponse } from "@/app/api/v1/auth";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";

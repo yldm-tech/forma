@@ -4,7 +4,7 @@ import { TriangleAlertIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import type { TLicenseStatus } from "@/modules/ee/license-check/types/enterprise-license";
 import { organizationSettingsPath } from "@/modules/settings/lib/routes";

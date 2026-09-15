@@ -13,15 +13,15 @@ import {
   Tailwind,
   Text,
   render,
-} from "@formbricks/email";
-import { isSafeLinkUrl } from "@formbricks/types/common";
+} from "@forma/email";
+import { isSafeLinkUrl } from "@forma/types/common";
 import {
   type TSurveyAddressElement,
   type TSurveyCTAElement,
   type TSurveyContactInfoElement,
   TSurveyElementTypeEnum,
-} from "@formbricks/types/surveys/elements";
-import { type TSurvey, type TSurveyStyling } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/elements";
+import { type TSurvey, type TSurveyStyling } from "@forma/types/surveys/types";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
@@ -1052,10 +1052,10 @@ function EmailFooter({
     <Container className="mx-auto mt-8 text-center">
       <Link
         className="text-signature-color text-xs"
-        href="https://formbricks.com?utm_source=formbricks-app&utm_medium=email&utm_campaign=powered_by_badge"
+        href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=email&utm_campaign=powered_by_badge"
         style={{ ...getForcedColorStyle(signatureColor), fontFamily }}
         target={PREVIEW_LINK_TARGET}>
-        {t("common.powered_by_formbricks")}
+        {t("common.powered_by_forma")}
       </Link>
     </Container>
   );

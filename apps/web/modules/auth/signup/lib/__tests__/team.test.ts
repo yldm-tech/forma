@@ -1,7 +1,7 @@
 import { MOCK_IDS, MOCK_INVITE, MOCK_TEAM_USER } from "./__mocks__/team-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { OrganizationRole } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { OrganizationRole } from "@forma/database/prisma";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { CreateMembershipInvite } from "@/modules/auth/signup/types/invites";
 import { createTeamMembership, getTeamForOrganization } from "../team";
@@ -9,7 +9,7 @@ import { createTeamMembership, getTeamForOrganization } from "../team";
 // Setup all mocks
 const setupMocks = () => {
   // Mock dependencies
-  vi.mock("@formbricks/database", () => ({
+  vi.mock("@forma/database", () => ({
     prisma: {
       team: {
         findUnique: vi.fn(),
@@ -33,7 +33,7 @@ const setupMocks = () => {
     reconcileTeamWorkspaceRelationships: vi.fn(),
   }));
 
-  vi.mock("@formbricks/logger", () => ({
+  vi.mock("@forma/logger", () => ({
     logger: {
       error: vi.fn(),
       warn: vi.fn(),

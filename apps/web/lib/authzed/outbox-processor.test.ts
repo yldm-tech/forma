@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { reconcileApiKeyRelationships } from "./api-key";
 import { isAuthzedEnabled } from "./config";
 import { reconcileFeedbackDirectoryRelationships } from "./feedback-directory";
@@ -24,13 +24,13 @@ import type { TAuthzedOutboxEvent, TAuthzedOutboxTargetType } from "./outbox-typ
 import type { TAuthzedProjectionResult } from "./projection";
 import { deleteUserTeamRelationships, reconcileTeamWorkspaceRelationships } from "./team-workspace";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     organization: { findMany: vi.fn() },
     user: { findMany: vi.fn() },
   },
 }));
-vi.mock("@formbricks/logger", () => ({ logger: { warn: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn() } }));
 vi.mock("./api-key", () => ({ reconcileApiKeyRelationships: vi.fn() }));
 vi.mock("./config", () => ({ isAuthzedEnabled: vi.fn() }));
 vi.mock("./feedback-directory", () => ({ reconcileFeedbackDirectoryRelationships: vi.fn() }));

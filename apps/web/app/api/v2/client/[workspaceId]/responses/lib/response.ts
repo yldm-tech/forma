@@ -1,11 +1,11 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { TResponseWithQuotaFull } from "@formbricks/types/quota";
-import { TResponse, ZResponseInput } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { TContactAttributes } from "@forma/types/contact-attribute";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { TResponseWithQuotaFull } from "@forma/types/quota";
+import { TResponse, ZResponseInput } from "@forma/types/responses";
 import {
   buildClientResponse,
   createResponseWithQuotaEvaluation as createClientResponseWithQuotaEvaluation,

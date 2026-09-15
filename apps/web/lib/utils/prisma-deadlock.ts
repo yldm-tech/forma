@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { isPrismaKnownRequestError } from "@/lib/utils/prisma-error";
 
 /**

@@ -96,7 +96,7 @@ test.describe("Signed-out screens on a phone", () => {
 
   test("the signup form is labelled and operable at 375px", async ({ page }) => {
     // A distinct address: the serial block above already registers mockUsers.signup[0].
-    const mobileEmail = `signup-mobile-${Date.now()}@formbricks.com`;
+    const mobileEmail = `signup-mobile-${Date.now()}@forma.ylam.ai`;
 
     await page.setViewportSize(MOBILE);
     await page.goto("/auth/signup");

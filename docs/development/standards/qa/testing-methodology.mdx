@@ -1,12 +1,12 @@
 ---
 title: "Testing Methodology"
-description: "How we test Formbricks to ensure reliability, performance, and high-quality code."
+description: "How we test Forma to ensure reliability, performance, and high-quality code."
 icon: magnifying-glass
 ---
 
 ## Overview
 
-At Formbricks, we maintain a rigorous testing strategy to ensure high-quality code and reliable functionality. Our testing approach is standardized and integrated into our development workflow.
+At Forma, we maintain a rigorous testing strategy to ensure high-quality code and reliable functionality. Our testing approach is standardized and integrated into our development workflow.
 
 ## Testing Structure
 
@@ -114,7 +114,7 @@ Common test utilities are available in `vitestSetup.ts`:
    - Example:
 
    ```typescript
-   vi.mock("@formbricks/database", () => ({
+   vi.mock("@forma/database", () => ({
      prisma: {
        user: {
          create: vi.fn(),

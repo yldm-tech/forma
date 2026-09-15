@@ -18,7 +18,7 @@ const {
 vi.mock("./reconcile-orphaned-runs", () => ({ reconcileOrphanedWorkflowRuns }));
 vi.mock("./reconcile-stuck-running-runs", () => ({ reconcileStuckRunningWorkflowRuns }));
 vi.mock("./dispatch", () => ({ dispatchWorkflowRunViaJobs }));
-vi.mock("@formbricks/logger", () => ({ logger: { info, debug } }));
+vi.mock("@forma/logger", () => ({ logger: { info, debug } }));
 
 const context = {
   attempt: 1,

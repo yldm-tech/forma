@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { createInviteToken } from "@/lib/jwt";
 import { capturePostHogEvent, identifyPostHogPerson } from "@/lib/posthog";
@@ -113,7 +113,7 @@ describe("ENG-2091: accepting an invite via sign-up", () => {
 
   test("invitee who ALREADY has an account: no side effects touch it, invite survives", async () => {
     const { inviteToken, organizationId } = await seedInvite();
-    // The invitee already signed up for Formbricks earlier with the same corporate address.
+    // The invitee already signed up for Forma earlier with the same corporate address.
     const existing = await prisma.user.create({
       data: {
         name: "Invitee",
@@ -268,7 +268,7 @@ describe("plain sign-up (no invite) with an address that already exists", () => 
     // "already have an account? log in" line). This is the enumeration-safety boundary.
     expect(result?.data).toEqual({ success: true });
     expect(sendVerificationLinkEmail).not.toHaveBeenCalled();
-    // On Formbricks Cloud getIsMultiOrgEnabled() is true, so before the fix this branch created an
+    // On Forma Cloud getIsMultiOrgEnabled() is true, so before the fix this branch created an
     // organization + owner membership on someone else's account, once per request.
     expect({
       orgs: await prisma.organization.count(),

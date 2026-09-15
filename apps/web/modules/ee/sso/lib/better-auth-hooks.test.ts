@@ -1,7 +1,7 @@
 import { getOAuthState } from "better-auth/api";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE } from "@forma/types/errors";
 import { identifyPostHogPerson } from "@/lib/posthog";
 import { findMatchingLocale } from "@/lib/utils/locale";
 import { enforceCredentialSignupBackstop } from "@/modules/auth/lib/credential-signup-backstop";
@@ -36,13 +36,13 @@ vi.mock("better-auth/api", async (importOriginal) => ({
   // Passthrough so the wrapped hook is testable directly as its inner function.
   createAuthMiddleware: (fn: unknown) => fn,
 }));
-vi.mock("@formbricks/database", () => ({ prisma: { user: { findUnique: vi.fn() } } }));
+vi.mock("@forma/database", () => ({ prisma: { user: { findUnique: vi.fn() } } }));
 // The unverified-sign-up signal (ENG-2589) is asserted through both of its channels.
 const { loggerWarn, loggerError, loggerWithContext } = vi.hoisted(() => {
   const warn = vi.fn();
   return { loggerWarn: warn, loggerError: vi.fn(), loggerWithContext: vi.fn(() => ({ warn })) };
 });
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: loggerWithContext, warn: loggerWarn, error: loggerError },
 }));
 vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({ queueAuditEventBackground: vi.fn() }));
@@ -722,7 +722,7 @@ describe("ssoProfileSyncUpdateBefore", () => {
  * mapping identically in both shapes.
  */
 describe("SSO sign-up persists the IdP's email_verified claim (real Better Auth, ENG-2589)", () => {
-  const BASE_URL = "https://app.formbricks.test";
+  const BASE_URL = "https://app.forma.test";
 
   afterEach(() => {
     vi.unstubAllGlobals();

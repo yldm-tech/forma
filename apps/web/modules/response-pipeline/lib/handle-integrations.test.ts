@@ -1,31 +1,31 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
-import { deriveLegacyEmbeddedData } from "@formbricks/types/embedded-data-resolver";
+import { logger } from "@forma/logger";
+import { deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
 import {
   TIntegrationAirtable,
   TIntegrationAirtableConfig,
   TIntegrationAirtableConfigData,
   TIntegrationAirtableCredential,
-} from "@formbricks/types/integration/airtable";
+} from "@forma/types/integration/airtable";
 import {
   TIntegrationGoogleSheets,
   TIntegrationGoogleSheetsConfig,
   TIntegrationGoogleSheetsConfigData,
   TIntegrationGoogleSheetsCredential,
-} from "@formbricks/types/integration/google-sheet";
+} from "@forma/types/integration/google-sheet";
 import {
   TIntegrationNotion,
   TIntegrationNotionConfigData,
   TIntegrationNotionCredential,
-} from "@formbricks/types/integration/notion";
+} from "@forma/types/integration/notion";
 import {
   TIntegrationSlack,
   TIntegrationSlackConfigData,
   TIntegrationSlackCredential,
-} from "@formbricks/types/integration/slack";
-import { TResponse, TResponseMeta } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+} from "@forma/types/integration/slack";
+import { TResponse, TResponseMeta } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { writeData as airtableWriteData } from "@/lib/airtable/service";
 import { writeData as googleSheetWriteData } from "@/lib/googleSheet/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
@@ -47,7 +47,7 @@ vi.mock("@/lib/slack/service");
 vi.mock("@/lib/utils/datetime");
 vi.mock("@/lib/utils/recall");
 vi.mock("@/lib/utils/strings");
-vi.mock("@formbricks/logger");
+vi.mock("@forma/logger");
 
 // Mock data
 const surveyId = "survey1";

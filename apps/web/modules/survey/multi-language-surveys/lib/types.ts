@@ -1,4 +1,4 @@
-import { TI18nString } from "@formbricks/types/i18n";
+import { TI18nString } from "@forma/types/i18n";
 
 export interface TranslatableString {
   path: string;

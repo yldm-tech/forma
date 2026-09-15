@@ -384,7 +384,7 @@ export type TResponseFilterCriteria = z.infer<typeof ZResponseFilterCriteria>;
  * placeholder, so "absent" always reads as "we could not observe this", never as an empty string.
  *
  * Both link and app surveys render through the same component, so all of these are captured for
- * both. Their *meaning* differs: on a link survey they describe the Formbricks-hosted survey page
+ * both. Their *meaning* differs: on a link survey they describe the Forma-hosted survey page
  * and how the respondent arrived at it; on an app survey they describe the host page the survey was
  * triggered on.
  */

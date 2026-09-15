@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
-import { ActionClass } from "@formbricks/database/prisma";
-import { TActionClassInput } from "@formbricks/types/action-classes";
-import { DatabaseError, UniqueConstraintError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ActionClass } from "@forma/database/prisma";
+import { TActionClassInput } from "@forma/types/action-classes";
+import { DatabaseError, UniqueConstraintError } from "@forma/types/errors";
 import { getUniqueConstraintFields, isUniqueConstraintError } from "@/lib/utils/prisma-constraint";
 
 export const createActionClass = async (

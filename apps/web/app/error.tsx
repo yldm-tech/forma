@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import { TFunction } from "i18next";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { type ClientErrorType, getClientErrorData, isExpectedError } from "@formbricks/types/errors";
+import { type ClientErrorType, getClientErrorData, isExpectedError } from "@forma/types/errors";
 import { IS_DEVELOPMENT_BUILD } from "@/lib/env-client";
 import { Button } from "@/modules/ui/components/button";
 import { ErrorComponent } from "@/modules/ui/components/error-component";

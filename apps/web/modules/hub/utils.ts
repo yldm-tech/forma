@@ -100,7 +100,7 @@ const CONNECTION_ERROR_CODES = new Set([
 // Deliberately a constant. The errno is what gets inspected; nothing from the error (host, port,
 // syscall) is interpolated, so this can never carry connection details into a log line.
 const HUB_UNREACHABLE_HINT =
-  "Hub looks unreachable at HUB_API_URL — is it running? Try: docker logs formbricks-hub-1";
+  "Hub looks unreachable at HUB_API_URL — is it running? Try: docker logs forma-hub-1";
 
 // Walks `cause` and AggregateError.errors looking for a network errno. Node's fetch failure nests
 // them two or three deep (APIConnectionError → TypeError: fetch failed → AggregateError → errno),

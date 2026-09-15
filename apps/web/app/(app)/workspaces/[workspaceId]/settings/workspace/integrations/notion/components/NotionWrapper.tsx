@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import {
   TIntegrationNotion,
   TIntegrationNotionConfigData,
   TIntegrationNotionDatabase,
-} from "@formbricks/types/integration/notion";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/integration/notion";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { AddIntegrationModal } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/notion/components/AddIntegrationModal";
 import { ManageIntegration } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/notion/components/ManageIntegration";
 import notionLogo from "@/images/notion.png";

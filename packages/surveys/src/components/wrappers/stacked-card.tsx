@@ -2,9 +2,9 @@ import { MutableRef } from "preact/hooks";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { JSX } from "preact/jsx-runtime";
 import React from "react";
-import { type TPlacement } from "@formbricks/types/common";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TCardArrangementOptions } from "@formbricks/types/styling";
+import { type TPlacement } from "@forma/types/common";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TCardArrangementOptions } from "@forma/types/styling";
 
 interface StackedCardProps {
   cardRefs: MutableRef<(HTMLDivElement | null)[]>;

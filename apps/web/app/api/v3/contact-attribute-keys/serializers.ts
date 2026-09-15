@@ -1,4 +1,4 @@
-import type { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import type { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 
 /**
  * Public v3 contact-attribute-key shape. Exposes what an agent needs to author targeting filters:

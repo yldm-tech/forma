@@ -45,7 +45,7 @@ get:
 
         keys match the emitted `languages[].code` values for this survey.
 
-        For compatibility with existing Formbricks surveys, GET accepts language
+        For compatibility with existing Forma surveys, GET accepts language
         tags such as `de`,
 
         `de-DE`, `zh-Hans`, and `zh-Hans-CN`, accepts `_` or `-` separators, is

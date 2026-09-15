@@ -1,20 +1,17 @@
 import { TFunction } from "i18next";
-import { TEmbeddedDataType } from "@formbricks/types/embedded-data";
-import {
-  getComputedEmbeddedFields,
-  getIngestedEmbeddedFields,
-} from "@formbricks/types/embedded-data-resolver";
-import { TSurveyQuota } from "@formbricks/types/quota";
+import { TEmbeddedDataType } from "@forma/types/embedded-data";
+import { getComputedEmbeddedFields, getIngestedEmbeddedFields } from "@forma/types/embedded-data-resolver";
+import { TSurveyQuota } from "@forma/types/quota";
 import {
   TResponseFilterCriteria,
   TResponseHiddenFieldsFilter,
   TSurveyContactAttributes,
   TSurveyMetaFieldFilter,
-} from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TTag } from "@formbricks/types/tags";
+} from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TTag } from "@forma/types/tags";
 import {
   DateRange,
   FilterValue,

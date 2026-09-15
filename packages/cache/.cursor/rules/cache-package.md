@@ -1,4 +1,4 @@
-# @formbricks/cache Package Rules
+# @forma/cache Package Rules
 
 ## Core Principles
 
@@ -43,13 +43,13 @@ types/
 
 ```typescript
 // ✅ GOOD - Use globalThis singleton client
-import { getCacheService } from "@formbricks/cache";
+import { getCacheService } from "@forma/cache";
 // ✅ GOOD - Production validation (index.ts)
-import { validateRedisConfig } from "@formbricks/cache";
+import { validateRedisConfig } from "@forma/cache";
 // Throws if REDIS_URL missing in production
 
 // ❌ BAD - CacheService class not exported for direct instantiation
-import { CacheService } from "@formbricks/cache";
+import { CacheService } from "@forma/cache";
 
 const result = await getCacheService();
 if (!result.ok) {
@@ -280,7 +280,7 @@ return await fn(); // Always return function result
 - **Auto-Skip Logic**: Automatically skips when Redis unavailable (`REDIS_URL` not set)
 - **Comprehensive Coverage**: All cache operations through real code paths
 - **CI Integration**: Runs in E2E workflow with Redis/Valkey service
-- **Logger Integration**: Uses `@formbricks/logger` with structured logging
+- **Logger Integration**: Uses `@forma/logger` with structured logging
 
 ```typescript
 // ✅ Integration test pattern
@@ -343,8 +343,8 @@ const redis = await cache.getRedisClient();
 ```typescript
 // Cross-platform singleton using globalThis (not global)
 const globalForCache = globalThis as unknown as {
-  formbricksCache: CacheService | undefined;
-  formbricksCacheInitializing: Promise<Result<CacheService, CacheError>> | undefined;
+  formaCache: CacheService | undefined;
+  formaCacheInitializing: Promise<Result<CacheService, CacheError>> | undefined;
 };
 
 // Prevents multiple Redis connections in HMR/serverless/Edge Runtime

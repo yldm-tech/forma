@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
 // Import as Cta to fix sonar issue - "Imported JSX component CTA must be in PascalCase"
-import { CTA as Cta, isSafeLinkUrl } from "@formbricks/survey-ui";
-import { type TResponseData, type TResponseTtc } from "@formbricks/types/responses";
-import type { TSurveyCTAElement } from "@formbricks/types/surveys/elements";
+import { CTA as Cta, isSafeLinkUrl } from "@forma/survey-ui";
+import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
+import type { TSurveyCTAElement } from "@forma/types/surveys/elements";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 

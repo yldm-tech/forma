@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { OrganizationAccessType } from "@formbricks/types/api-key";
+import { OrganizationAccessType } from "@forma/types/api-key";
 import {
   getFeedbackDirectoryAssignmentAuthorizationAction,
   getFeedbackDirectoryAuthorizationAction,

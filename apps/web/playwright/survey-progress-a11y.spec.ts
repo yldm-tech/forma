@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { type Locator, type Page, expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TSurveyEnding } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { type TSurveyEnding } from "@forma/types/surveys/types";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { test } from "./lib/fixtures";
 
@@ -449,7 +449,7 @@ test.describe("App survey auto-close countdown accessibility @slow", () => {
     });
 
     await page.goto(editorUrl ?? "");
-    const preview = page.locator("#formbricks-survey-container");
+    const preview = page.locator("#forma-survey-container");
     await expect(preview, "editor preview should render the app survey").toBeVisible({
       timeout: EDITOR_TIMEOUT,
     });
@@ -492,7 +492,7 @@ test.describe("App survey auto-close countdown accessibility @slow", () => {
     page,
   }) => {
     await page.goto(editorUrl ?? "");
-    const preview = page.locator("#formbricks-survey-container");
+    const preview = page.locator("#forma-survey-container");
     await expect(preview).toBeVisible({ timeout: EDITOR_TIMEOUT });
     await expect(preview.getByRole("progressbar", { name: COUNTDOWN_LABEL })).toHaveCount(1);
 

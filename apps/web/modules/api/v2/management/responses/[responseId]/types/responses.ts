@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZResponse } from "@formbricks/database/zod/responses";
+import { ZResponse } from "@forma/database/zod/responses";
 
 export const ZResponseIdSchema = z
   .cuid2()

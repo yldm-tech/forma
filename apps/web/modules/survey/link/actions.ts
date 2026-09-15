@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZLinkSurveyEmailData } from "@formbricks/types/email";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZLinkSurveyEmailData } from "@forma/types/email";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { actionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromSurveyId } from "@/lib/utils/helper";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";

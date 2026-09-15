@@ -1,6 +1,6 @@
 import "server-only";
 import { compare, hash } from "bcryptjs";
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 
 export const hashPassword = async (password: string) => {

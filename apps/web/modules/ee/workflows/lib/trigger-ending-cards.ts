@@ -1,4 +1,4 @@
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TWorkflowDefinition } from "@forma/workflows";
 
 export interface TEndingCardReconciliation {
   /** Stored ids that still resolve to a survey ending, de-duplicated, order preserved. */

@@ -1,14 +1,14 @@
-import { TDisplayCreateInput } from "@formbricks/types/displays";
-import { Result } from "@formbricks/types/error-handlers";
-import { type ApiErrorResponse, FILE_UPLOAD_ERROR_NAMES } from "@formbricks/types/errors";
-import { TSurveyQuotaAction } from "@formbricks/types/quota";
-import { TResponseInput, TResponseUpdateInput } from "@formbricks/types/responses";
+import { TDisplayCreateInput } from "@forma/types/displays";
+import { Result } from "@forma/types/error-handlers";
+import { type ApiErrorResponse, FILE_UPLOAD_ERROR_NAMES } from "@forma/types/errors";
+import { TSurveyQuotaAction } from "@forma/types/quota";
+import { TResponseInput, TResponseUpdateInput } from "@forma/types/responses";
 import {
   STORAGE_CONFIGURATION_ERROR_CODES,
   type TStorageApiErrorDetails,
   type TUploadFileConfig,
   type TUploadFileResponse,
-} from "@formbricks/types/storage";
+} from "@forma/types/storage";
 import { makeRequest } from "@/lib/utils";
 
 type TResponseCreateResponseQuotaFull = {

@@ -2,9 +2,9 @@
 
 import { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Webhook } from "@formbricks/database/prisma-browser";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { type TUserLocale } from "@formbricks/types/user";
+import { Webhook } from "@forma/database/prisma-browser";
+import { TSurvey } from "@forma/types/surveys/types";
+import { type TUserLocale } from "@forma/types/user";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { Label } from "@/modules/ui/components/label";
 

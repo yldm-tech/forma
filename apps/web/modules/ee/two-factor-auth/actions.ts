@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
+import { OperationNotAllowedError } from "@forma/types/errors";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 import { getIsTwoFactorAuthEnabled } from "@/modules/ee/license-check/lib/utils";

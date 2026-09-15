@@ -1,5 +1,5 @@
 {
-  "name": "@formbricks/jobs",
+  "name": "@forma/jobs",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -24,16 +24,16 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@formbricks/database": "workspace:*",
-    "@formbricks/logger": "workspace:*",
-    "@formbricks/types": "workspace:*",
+    "@forma/database": "workspace:*",
+    "@forma/logger": "workspace:*",
+    "@forma/types": "workspace:*",
     "bullmq": "5.61.0",
     "ioredis": "5.8.1",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

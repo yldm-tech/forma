@@ -4,10 +4,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TResponseWithQuotas } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
-import { TUserLocale } from "@formbricks/types/user";
+import { TResponseWithQuotas } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
+import { TUserLocale } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { SingleResponseCard } from "@/modules/analysis/components/SingleResponseCard";
 import {

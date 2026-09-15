@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { DatabaseError, InvalidInputError, UniqueConstraintError } from "@forma/types/errors";
 import { resetDb } from "@/integration/reset-db";
 import { handleClientResponseCreateError } from "./response-error";
 

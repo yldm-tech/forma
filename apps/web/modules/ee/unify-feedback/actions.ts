@@ -1,6 +1,6 @@
 "use server";
 
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { AuthenticatedActionClientCtx } from "@/lib/utils/action-client/types/context";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";

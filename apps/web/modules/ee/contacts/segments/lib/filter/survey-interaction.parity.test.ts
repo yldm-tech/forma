@@ -4,7 +4,7 @@ import {
   TSegmentConnector,
   TSurveyInteractionOperator,
   TSurveyInteractionTimeUnit,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { segmentFilterToPrismaQuery } from "./prisma-query";
 import {
   type TContactInteractionData,
@@ -16,7 +16,7 @@ import {
 // check each path in isolation; this suite feeds the SAME fixtures through BOTH and asserts they agree,
 // including for mixed AND/OR connectors (the precedence bug fixed alongside this test).
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {},
 }));
 vi.mock("../segments", () => ({ getSegment: vi.fn() }));

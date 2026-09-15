@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TSurvey } from "@forma/types/surveys/types";
+import type { TWorkflowDefinition } from "@forma/workflows";
 import type { TWorkflowEmailAuthoringContext } from "@/modules/ee/workflows/types/email-authoring-context";
 import { resolveBoundTriggerSurvey } from "./bound-survey";
 

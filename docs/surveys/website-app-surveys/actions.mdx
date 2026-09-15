@@ -1,6 +1,6 @@
 ---
 title: "Actions"
-description: "Actions are predefined events within your app that prompt Formbricks to display a survey when triggered. These are detected by the Formbricks widget, which then presents the appropriate survey based on your predefined settings."
+description: "Actions are predefined events within your app that prompt Forma to display a survey when triggered. These are detected by the Forma widget, which then presents the appropriate survey based on your predefined settings."
 icon: "code"
 ---
 
@@ -11,20 +11,20 @@ icon: "code"
     The user performs an action in your application.
   </Step>
 
-<Step title="Formbricks widget detects action">
+<Step title="Forma widget detects action">
   The embedded widget (SDK) detects the action, if you set up a [No Code
   Action](/surveys/website-app-surveys/actions#setting-up-no-code-actions) or a [Code
   Action](/surveys/website-app-surveys/actions#setting-up-code-actions) to do so.
 </Step>
 
 <Step title="Check for survey trigger">
-  If a survey is set to trigger on that action, Formbricks checks if the user or visitor qualifies.
+  If a survey is set to trigger on that action, Forma checks if the user or visitor qualifies.
 </Step>
 
   <Step title="Check for user or visitor qualification">
     If a [Cooldown Period](/surveys/website-app-surveys/cooldown-period) applies and the user or visitor was **shown** a survey inside it, this one will not be shown, to prevent survey fatigue. Three things about that gate are easy to get wrong: the interval is whatever you configured, not a fixed one; a survey can set its own, which overrides the workspace value, and a survey set to ignore the cooldown skips the check entirely; and it counts displays of **any** survey, not answers to this one — so declining to answer, or being shown a different survey, still starts the clock.
 
-    Also, if this user or visitor has seen this specific survey before, Formbricks might not show it as this is dependent on the [Recontact Options](/surveys/website-app-surveys/recontact).
+    Also, if this user or visitor has seen this specific survey before, Forma might not show it as this is dependent on the [Recontact Options](/surveys/website-app-surveys/recontact).
 
   </Step>
 
@@ -47,7 +47,7 @@ icon: "code"
 
 ## Setting up no-code Actions
 
-Formbricks offers an intuitive No-Code interface that allows you to configure actions without needing to write any code.
+Forma offers an intuitive No-Code interface that allows you to configure actions without needing to write any code.
 
 <Note>
   No Code Actions are **not available for surveys in mobile apps**. No Code Action tracking are heavily
@@ -125,25 +125,25 @@ An action does nothing until a survey listens for it. In the survey editor, open
 For more granular control, you can implement actions directly in your code:
 
 <Steps>
-  <Step title="Configure action in Formbricks">
-    First, add the action via the Formbricks web interface to make it available for survey configuration. Switch the dialog to **Code** and give the action a key — that key is the string your code will send.
+  <Step title="Configure action in Forma">
+    First, add the action via the Forma web interface to make it available for survey configuration. Switch the dialog to **Code** and give the action a key — that key is the string your code will send.
 
 ![The Track New User Action dialog on its Code tab](/images/surveys/website-app-surveys/actions/code-action.webp "The Track New User Action dialog on its Code tab")
 
   </Step>
 
   <Step title="Add action tracking to your code">
-    Use formbricks.track() to send an action event to Formbricks:
+    Use forma.track() to send an action event to Forma:
 
     ```
-    formbricks.track("action");
+    forma.track("action");
     ```
 
     Here is an example of how to fire an action when a user clicks a button:
 
     ```javascript
     const handleClick = () => {
-      formbricks.track("Button Clicked");
+      forma.track("Button Clicked");
     };
 
     return <button onClick={handleClick}>Click Me</button>;

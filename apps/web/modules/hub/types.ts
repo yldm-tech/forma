@@ -1,53 +1,52 @@
-import type FormbricksHub from "@formbricks/hub";
+import type FormaHub from "@formbricks/hub";
 
 // value_id (ENG-1671/ENG-1673): stable id of the selected option in the source system (a survey
-// choice id for Formbricks responses). Lets Hub consolidate the same option across languages
+// choice id for Forma responses). Lets Hub consolidate the same option across languages
 // instead of splitting it per localized label. The published SDK predates the field, so bridge
 // it as an optional param until the SDK ships it.
-export type FeedbackRecordCreateParams = FormbricksHub.FeedbackRecordCreateParams & {
+export type FeedbackRecordCreateParams = FormaHub.FeedbackRecordCreateParams & {
   value_id?: string;
 };
-export type FeedbackRecordListParams = FormbricksHub.FeedbackRecordListParams;
-export type FeedbackRecordUpdateParams = FormbricksHub.FeedbackRecordUpdateParams;
+export type FeedbackRecordListParams = FormaHub.FeedbackRecordListParams;
+export type FeedbackRecordUpdateParams = FormaHub.FeedbackRecordUpdateParams;
 
 // Hub-derived, read-only translation fields (ENG-1255). The published SDK predates them, so bridge
 // them as optional reads; drop once the SDK ships them. May be null when translation is off/pending.
 // `emotions` is a read-only enrichment field that also predates the SDK type (the DB column is a
 // Postgres text[]); absent until a record is enriched. Typed to accept either the serialized array
 // or a comma-joined string, since the serialization is owned by the external hub service.
-export type FeedbackRecordData = FormbricksHub.FeedbackRecordData & {
+export type FeedbackRecordData = FormaHub.FeedbackRecordData & {
   value_text_translated?: string | null;
   translation_lang_key?: string | null;
   value_id?: string | null;
   emotions?: string[] | string | null;
 };
 
-export type FeedbackRecordListResponse = Omit<FormbricksHub.FeedbackRecordListResponse, "data"> & {
+export type FeedbackRecordListResponse = Omit<FormaHub.FeedbackRecordListResponse, "data"> & {
   data: FeedbackRecordData[];
 };
 
 // `GET /v1/feedback-records/count` — the Hub documents it as taking the same query parameters as the
 // list endpoint, minus pagination, and answering with a single total.
-export type FeedbackRecordCountParams = FormbricksHub.FeedbackRecordCountParams;
-export type FeedbackRecordCountResponse = FormbricksHub.FeedbackRecordCountResponse;
+export type FeedbackRecordCountParams = FormaHub.FeedbackRecordCountParams;
+export type FeedbackRecordCountResponse = FormaHub.FeedbackRecordCountResponse;
 
-export type SemanticSearchInput = FormbricksHub.FeedbackRecords.SearchPerformSemanticSearchParams;
-export type SemanticSearchResponse = FormbricksHub.FeedbackRecords.SearchPerformSemanticSearchResponse;
-export type SemanticSearchResultItem = FormbricksHub.FeedbackRecords.SearchPerformSemanticSearchResponse.Data;
+export type SemanticSearchInput = FormaHub.FeedbackRecords.SearchPerformSemanticSearchParams;
+export type SemanticSearchResponse = FormaHub.FeedbackRecords.SearchPerformSemanticSearchResponse;
+export type SemanticSearchResultItem = FormaHub.FeedbackRecords.SearchPerformSemanticSearchResponse.Data;
 
 // Nearest-neighbour lookup for one record. The Hub returns the same row shape as semantic search (id +
 // score + field label + text), so the two are interchangeable downstream — one serializer covers both.
-export type SimilarRecordsParams = FormbricksHub.FeedbackRecords.FeedbackRecordRetrieveSimilarParams;
-export type SimilarRecordsResponse = FormbricksHub.FeedbackRecords.FeedbackRecordRetrieveSimilarResponse;
-export type SimilarRecordsResultItem =
-  FormbricksHub.FeedbackRecords.FeedbackRecordRetrieveSimilarResponse.Data;
+export type SimilarRecordsParams = FormaHub.FeedbackRecords.FeedbackRecordRetrieveSimilarParams;
+export type SimilarRecordsResponse = FormaHub.FeedbackRecords.FeedbackRecordRetrieveSimilarResponse;
+export type SimilarRecordsResultItem = FormaHub.FeedbackRecords.FeedbackRecordRetrieveSimilarResponse.Data;
 
 // Tenant-scoped enrichment progress (ENG-1670). Counts are data-derived from the directory's feedback
 // records — how many qualify for an enrichment vs. how many carry it — not queue depth, so `done` never
 // exceeds `eligible` and "in progress" is the difference. `enabled: false` means the enrichment is
 // switched off for the tenant or not configured in the deployment, and its counts are zero.
 //
-// `failed`/`failed_terminal` (ENG-2375, hub PR formbricks/hub#125) split what used to be silently
+// `failed`/`failed_terminal` (ENG-2375, hub PR forma/hub#125) split what used to be silently
 // folded into `eligible - done`: `failed` is a transient failure River will retry; `failed_terminal`
 // gave up for good (content filter, refusal, truncation) and will never complete on its own. Without
 // this, a permanently-failed record read as "still in progress" forever and the poll never stopped.
@@ -59,7 +58,7 @@ export type SimilarRecordsResultItem =
 // `failed` is intentionally not read by the aggregator: a transient failure is still going to be
 // retried by River, so it stays folded into `pending` the same way it always did — only
 // `failed_terminal` (which will never resolve on its own) is pulled out and shown separately.
-export type EnrichmentTypeStatus = FormbricksHub.TypeStatus & {
+export type EnrichmentTypeStatus = FormaHub.TypeStatus & {
   failed?: number;
   failed_terminal?: number;
 };
@@ -67,7 +66,7 @@ export type EnrichmentTypeStatus = FormbricksHub.TypeStatus & {
 // because the aggregator treats an absent key as "disabled" rather than assuming the Hub always
 // answers with all three — matching the `status?.enabled` optional-chaining it already does.
 export type EnrichmentStatusResponse = Omit<
-  FormbricksHub.EnrichmentStatusRetrieveResponse,
+  FormaHub.EnrichmentStatusRetrieveResponse,
   "translation" | "sentiment" | "emotions"
 > & {
   translation?: EnrichmentTypeStatus;

@@ -1,7 +1,7 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { TResponseInput } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { logger } from "@forma/logger";
+import { TResponseInput } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { responses } from "@/app/lib/api/response";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 import { symmetricDecrypt } from "@/lib/crypto";

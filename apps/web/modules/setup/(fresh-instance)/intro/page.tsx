@@ -12,7 +12,7 @@ export const IntroPage = async () => {
   const t = await getTranslate();
   return (
     <div className="flex flex-col items-center">
-      <h2 className="mb-6 text-xl font-medium">{t("setup.intro.welcome_to_formbricks")}</h2>
+      <h2 className="mb-6 text-xl font-medium">{t("setup.intro.welcome_to_forma")}</h2>
       <div className="mx-auto max-w-sm space-y-4 text-sm leading-6 text-slate-600">
         <p dangerouslySetInnerHTML={{ __html: t("setup.intro.paragraph_1") }} />
         <p dangerouslySetInnerHTML={{ __html: t("setup.intro.paragraph_2") }} />

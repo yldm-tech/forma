@@ -3,7 +3,7 @@ import {
   TBaseFilters,
   TSegmentSurveyInteractionFilter,
   TSurveyInteractionOperator,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import {
   type TContactInteractionData,
   combineFilterResults,

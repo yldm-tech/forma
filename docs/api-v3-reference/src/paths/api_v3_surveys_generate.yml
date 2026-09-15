@@ -232,7 +232,7 @@ post:
                 code: bad_gateway
                 requestId: req_123
     "503":
-      description: AI is not configured on this Formbricks instance
+      description: AI is not configured on this Forma instance
       content:
         application/problem+json:
           schema:
@@ -243,7 +243,7 @@ post:
               value:
                 title: AI Unavailable
                 status: 503
-                detail: AI is not configured for this Formbricks instance.
+                detail: AI is not configured for this Forma instance.
                 code: ai_instance_not_configured
                 requestId: req_123
   security:

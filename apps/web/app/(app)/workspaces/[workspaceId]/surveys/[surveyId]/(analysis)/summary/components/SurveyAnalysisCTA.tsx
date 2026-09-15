@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSegment } from "@formbricks/types/segment";
-import { TUser } from "@formbricks/types/user";
+import { TSegment } from "@forma/types/segment";
+import { TUser } from "@forma/types/user";
 import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { useResponseFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/response-filter-context";
 import { SuccessMessage } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SuccessMessage";
@@ -33,7 +33,7 @@ interface SurveyAnalysisCTAProps {
   responseCount: number;
   segments: TSegment[];
   isContactsEnabled: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isStorageConfigured: boolean;
   enterpriseLicenseRequestFormUrl: string;
   aiUnavailableReason: TAIUnavailableReason | null;
@@ -51,7 +51,7 @@ export const SurveyAnalysisCTA = ({
   responseCount,
   segments,
   isContactsEnabled,
-  isFormbricksCloud,
+  isFormaCloud,
   isStorageConfigured,
   enterpriseLicenseRequestFormUrl,
   aiUnavailableReason,
@@ -314,7 +314,7 @@ export const SurveyAnalysisCTA = ({
           modalView={modalState.start ? "start" : "share"}
           segments={segments}
           isContactsEnabled={isContactsEnabled}
-          isFormbricksCloud={isFormbricksCloud}
+          isFormaCloud={isFormaCloud}
           isReadOnly={isReadOnly}
           isStorageConfigured={isStorageConfigured}
           workspaceCustomScripts={workspace.customHeadScripts}

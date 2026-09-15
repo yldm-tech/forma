@@ -80,7 +80,7 @@ FORCE_RECONFIGURE=false
 MIGRATE_ONLY=false
 REGENERATE_CREDS=false
 
-# Quietly detect uploads path inside the running formbricks container (returns only the path or empty)
+# Quietly detect uploads path inside the running forma container (returns only the path or empty)
 get_container_uploads_path_quiet() {
     # Prefer explicit container target from compose, else UPLOADS_DIR (absolute), else legacy
     local target
@@ -98,8 +98,8 @@ get_container_uploads_path_quiet() {
     local max_attempts=12
     local attempt=1
     while [[ $attempt -le $max_attempts ]]; do
-        if docker compose ps -q formbricks >/dev/null 2>&1; then
-            if docker compose exec -T formbricks test -d "$path" 2>/dev/null; then
+        if docker compose ps -q forma >/dev/null 2>&1; then
+            if docker compose exec -T forma test -d "$path" 2>/dev/null; then
                 echo "container:$path"
                 return 0
             fi
@@ -162,12 +162,12 @@ collect_upload_sources_post_start() {
     local env_path
     env_path=$(read_compose_value "UPLOADS_DIR")
 
-    # Parse rendered compose volumes for formbricks service (write awk program to a tmp file to avoid any escape/ANSI issues)
+    # Parse rendered compose volumes for forma service (write awk program to a tmp file to avoid any escape/ANSI issues)
     local __awk_tmp__
     __awk_tmp__=$(mktemp)
     cat > "$__awk_tmp__" <<'AWK_EOF'
-      /^  formbricks:/ { in_svc=1; next }
-      /^  [A-Za-z0-9_-]+:/ && !/^  formbricks:/ { in_svc=0 }
+      /^  forma:/ { in_svc=1; next }
+      /^  [A-Za-z0-9_-]+:/ && !/^  forma:/ { in_svc=0 }
       in_svc && /^    volumes:/ { in_vol=1; next }
       in_svc && /^    [A-Za-z0-9_-]+:/ { if(in_vol) in_vol=0 }
       in_vol {
@@ -222,7 +222,7 @@ preview_upload_sources() {
         if [[ "$src" == container:* ]]; then
             local p="${src#container:}"
             local cnt
-            cnt=$(docker compose exec -T formbricks sh -lc 'find '"$p"' -type f 2>/dev/null | wc -l' || echo 0)
+            cnt=$(docker compose exec -T forma sh -lc 'find '"$p"' -type f 2>/dev/null | wc -l' || echo 0)
             echo "  - $src → $cnt files"
         else
             local cnt
@@ -237,7 +237,7 @@ migrate_from_source() {
     local src="$1"
     if [[ "$src" == container:* ]]; then
         local p="${src#container:}"
-        if docker compose exec -T formbricks test -d "$p" 2>/dev/null; then
+        if docker compose exec -T forma test -d "$p" 2>/dev/null; then
             migrate_container_files_to_minio "$p"
         else
             print_warning "Container path not found, skipping: $p"
@@ -263,11 +263,11 @@ read_compose_value() {
     echo "$val"
 }
 
-# Read container mount target for the named volume `uploads` under the formbricks service (e.g., /home/nextjs/apps/web/uploads)
+# Read container mount target for the named volume `uploads` under the forma service (e.g., /home/nextjs/apps/web/uploads)
 get_uploads_container_target() {
     docker compose config 2>/dev/null | awk '
-      /^  formbricks:/ { in_svc=1; next }
-      /^  [A-Za-z0-9_-]+:/ && !/^  formbricks:/ { in_svc=0 }
+      /^  forma:/ { in_svc=1; next }
+      /^  [A-Za-z0-9_-]+:/ && !/^  forma:/ { in_svc=0 }
       in_svc && /^    volumes:/ { in_vol=1; next }
       in_svc && /^    [A-Za-z0-9_-]+:/ { if(in_vol) in_vol=0 }
       in_vol {
@@ -304,11 +304,11 @@ add_or_replace_env_var() {
             awk -v insert_key="$key" -v insert_val="$value" '
               /^[[:space:]]*#+[[:space:]]*REQUIRED[[:space:]]*#+[[:space:]]*$/ {print; in_required=1; next}
               in_required && /^[[:space:]]*#+.*OPTIONAL/ && !printed { 
-                print ""; print "    # " insert_key " (required for Formbricks 4.0)"; 
+                print ""; print "    # " insert_key " (required for Forma 4.0)"; 
                 print "    " insert_key ": \"" insert_val "\""; printed=1 
               }
               { print }
-              END { if(in_required && !printed) { print ""; print "    # " insert_key " (required for Formbricks 4.0)"; print "    " insert_key ": \"" insert_val "\"" } }
+              END { if(in_required && !printed) { print ""; print "    # " insert_key " (required for Forma 4.0)"; print "    " insert_key ": \"" insert_val "\"" } }
             ' docker-compose.yml > tmp.yml && mv tmp.yml docker-compose.yml
             section_found=true
         elif [[ "$section" == "STORAGE" ]] && grep -q -E "^[[:space:]]*#+[[:space:]]*OPTIONAL[[:space:]]*\\([[:space:]]*STORAGE[[:space:]]*\\)[[:space:]]*#+[[:space:]]*$" docker-compose.yml; then
@@ -341,31 +341,31 @@ add_or_replace_env_var() {
 }
 
 # Function to check if we're in the correct directory
-check_formbricks_directory() {
+check_forma_directory() {
     # Case 1: docker-compose.yml in current directory
     if [[ -f "docker-compose.yml" ]]; then
-        if grep -q "formbricks" docker-compose.yml; then
+        if grep -q "forma" docker-compose.yml; then
             return 0
         else
-            print_error "This doesn't appear to be a Formbricks docker-compose.yml file!"
+            print_error "This doesn't appear to be a Forma docker-compose.yml file!"
             exit 1
         fi
     fi
 
-    # Case 2: one-click setup parent directory containing ./formbricks/docker-compose.yml
-    if [[ -f "formbricks/docker-compose.yml" ]]; then
-        cd formbricks
-        print_status "Detected one-click setup layout. Switched to ./formbricks directory."
-        if ! grep -q "formbricks" docker-compose.yml; then
-            print_error "This doesn't appear to be a Formbricks docker-compose.yml file!"
+    # Case 2: one-click setup parent directory containing ./forma/docker-compose.yml
+    if [[ -f "forma/docker-compose.yml" ]]; then
+        cd forma
+        print_status "Detected one-click setup layout. Switched to ./forma directory."
+        if ! grep -q "forma" docker-compose.yml; then
+            print_error "This doesn't appear to be a Forma docker-compose.yml file!"
             exit 1
         fi
         return 0
     fi
 
-    # Neither current directory nor ./formbricks contains a compose file
-    print_error "docker-compose.yml not found in current directory or in ./formbricks/"
-    print_info "Run this script from the parent directory created by the one-click setup (containing ./formbricks/), or from the directory containing docker-compose.yml."
+    # Neither current directory nor ./forma contains a compose file
+    print_error "docker-compose.yml not found in current directory or in ./forma/"
+    print_info "Run this script from the parent directory created by the one-click setup (containing ./forma/), or from the directory containing docker-compose.yml."
     exit 1
 }
 
@@ -437,9 +437,9 @@ generate_minio_credentials() {
     existing_service_user=$(read_compose_value "MINIO_SERVICE_USER")
     existing_service_password=$(read_compose_value "MINIO_SERVICE_PASSWORD")
 
-    # Service account (used by Formbricks) — prefer existing S3_* first, then existing MINIO_SERVICE_*, else generate
+    # Service account (used by Forma) — prefer existing S3_* first, then existing MINIO_SERVICE_*, else generate
     if [[ "$REGENERATE_CREDS" == true ]]; then
-        minio_service_user="formbricks-service-$(openssl rand -hex 4)"
+        minio_service_user="forma-service-$(openssl rand -hex 4)"
         minio_service_password=$(openssl rand -base64 20)
     elif [[ -n "$existing_s3_access" && -n "$existing_s3_secret" ]]; then
         minio_service_user="$existing_s3_access"
@@ -448,7 +448,7 @@ generate_minio_credentials() {
         minio_service_user="$existing_service_user"
         minio_service_password="$existing_service_password"
     else
-        minio_service_user="formbricks-service-$(openssl rand -hex 4)"
+        minio_service_user="forma-service-$(openssl rand -hex 4)"
         minio_service_password=$(openssl rand -base64 20)
     fi
 
@@ -456,23 +456,23 @@ generate_minio_credentials() {
     if [[ -n "$existing_bucket" ]]; then
         minio_bucket_name="$existing_bucket"
     else
-        minio_bucket_name="formbricks-uploads"
+        minio_bucket_name="forma-uploads"
     fi
 
     # Root credentials for MinIO server — prefer existing if present
     if [[ "$REGENERATE_CREDS" == true ]]; then
-        minio_root_user="formbricks-$(openssl rand -hex 4)"
+        minio_root_user="forma-$(openssl rand -hex 4)"
         minio_root_password=$(openssl rand -base64 20)
     elif [[ -n "$existing_root_user" && -n "$existing_root_password" ]]; then
         minio_root_user="$existing_root_user"
         minio_root_password="$existing_root_password"
     else
-        minio_root_user="formbricks-$(openssl rand -hex 4)"
+        minio_root_user="forma-$(openssl rand -hex 4)"
         minio_root_password=$(openssl rand -base64 20)
     fi
 
     # Shared policy across rotations for simplicity and no dangling policies
-    minio_policy_name="formbricks-policy"
+    minio_policy_name="forma-policy"
     if [[ "$REGENERATE_CREDS" == true ]]; then
         prev_service_user="${existing_s3_access:-$existing_service_user}"
     else
@@ -618,7 +618,7 @@ ${tls_block}
         mc mb minio/$minio_bucket_name --ignore-existing;
         
         echo '📄 Creating JSON policy file...';
-        cat > /tmp/formbricks-policy.json << 'POLICY_EOF'
+        cat > /tmp/forma-policy.json << 'POLICY_EOF'
         {
           \"Version\": \"2012-10-17\",
           \"Statement\": [
@@ -638,7 +638,7 @@ ${tls_block}
         
         echo '🔒 Creating policy (idempotent)...';
         if ! mc admin policy info minio $minio_policy_name >/dev/null 2>&1; then
-          mc admin policy create minio $minio_policy_name /tmp/formbricks-policy.json || true;
+          mc admin policy create minio $minio_policy_name /tmp/forma-policy.json || true;
           echo 'Policy created successfully.';
         else
           echo 'Policy already exists, skipping creation.';
@@ -686,7 +686,7 @@ ${tls_block}
 
 # Generic function to add service dependency
 add_service_dependency() {
-    local service="$1"     # Target service (e.g., "formbricks", "traefik")
+    local service="$1"     # Target service (e.g., "forma", "traefik")
     local dependency="$2"  # Dependency to add (e.g., "redis", "minio-init", "minio")
     local optional="${3:-false}"  # Optional parameter - if true, don't exit if service not found
     
@@ -960,8 +960,8 @@ ensure_service_user_and_policy() {
         --entrypoint /bin/sh quay.io/minio/mc@sha256:95b5f3f7969a5c5a9f3a700ba72d5c84172819e13385aaf916e237cf111ab868 -lc '
             mc alias set minio http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1;
             # Create shared policy if missing
-            if ! mc admin policy info minio formbricks-policy >/dev/null 2>&1; then
-                cat > /tmp/formbricks-policy.json << EOF
+            if ! mc admin policy info minio forma-policy >/dev/null 2>&1; then
+                cat > /tmp/forma-policy.json << EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -970,14 +970,14 @@ ensure_service_user_and_policy() {
   ]
 }
 EOF
-                mc admin policy create minio formbricks-policy /tmp/formbricks-policy.json >/dev/null 2>&1 || true
+                mc admin policy create minio forma-policy /tmp/forma-policy.json >/dev/null 2>&1 || true
             fi;
             # Create service user if missing
             if ! mc admin user info minio "$MINIO_SERVICE_USER" >/dev/null 2>&1; then
                 mc admin user add minio "$MINIO_SERVICE_USER" "$MINIO_SERVICE_PASSWORD" >/dev/null 2>&1 || true
             fi;
             # Attach policy (idempotent)
-            mc admin policy attach minio formbricks-policy --user "$MINIO_SERVICE_USER" >/dev/null 2>&1 || true
+            mc admin policy attach minio forma-policy --user "$MINIO_SERVICE_USER" >/dev/null 2>&1 || true
         '
 }
 
@@ -993,7 +993,7 @@ migrate_container_files_to_minio() {
     ensure_bucket_exists || return 1
     
     # Count files to migrate
-    local file_count=$(docker compose exec -T formbricks find "$container_path" -type f 2>/dev/null | wc -l)
+    local file_count=$(docker compose exec -T forma find "$container_path" -type f 2>/dev/null | wc -l)
     if [[ $file_count -eq 0 ]]; then
         print_warning "No files found in container path $container_path to migrate."
         return 0
@@ -1001,12 +1001,12 @@ migrate_container_files_to_minio() {
     
     print_info "Found $file_count files to migrate from container"
     
-    # Use a one-off mc container that mounts the formbricks container filesystem and mirrors the path
+    # Use a one-off mc container that mounts the forma container filesystem and mirrors the path
     print_info "Starting container-to-MinIO migration..."
-    local FORMBRICKS_CID
-    FORMBRICKS_CID=$(docker compose ps -q formbricks)
+    local FORMA_CID
+    FORMA_CID=$(docker compose ps -q forma)
     docker run --rm $(compose_network_flag) \
-        --volumes-from "$FORMBRICKS_CID" \
+        --volumes-from "$FORMA_CID" \
         -e MINIO_ROOT_USER="$minio_root_user" \
         -e MINIO_ROOT_PASSWORD="$minio_root_password" \
         -e MINIO_BUCKET_NAME="$minio_bucket_name" \
@@ -1019,7 +1019,7 @@ migrate_container_files_to_minio() {
     if [[ $? -eq 0 ]]; then
         print_status "Container file migration completed successfully!"
         # Non-blocking suggestion for clearing container path
-        print_info "Tip: To clear container uploads later, run: docker compose exec -T formbricks sh -lc 'rm -rf "$container_path"/*'"
+        print_info "Tip: To clear container uploads later, run: docker compose exec -T forma sh -lc 'rm -rf "$container_path"/*'"
     else
         print_error "Container file migration encountered errors. Please check the output above."
         return 1
@@ -1106,7 +1106,7 @@ restart_docker_compose() {
     read -r restart_confirm
     restart_confirm=$(echo "$restart_confirm" | tr '[:upper:]' '[:lower:]')
     if [[ -z "$restart_confirm" || "$restart_confirm" == "y" ]]; then
-        print_info "We need to briefly restart Formbricks to apply the changes."
+        print_info "We need to briefly restart Forma to apply the changes."
         print_info "Stopping services..."
         docker compose down
         print_info "Starting services with MinIO..."
@@ -1143,10 +1143,10 @@ wait_for_service_up() {
 
 # Main migration function
 migrate_to_v4() {
-    echo "🧱 Formbricks v4.0 Migration"
+    echo "🧱 Forma v4.0 Migration"
     echo "============================"
     echo ""
-    print_info "We'll prepare your Formbricks instance for v4.0 by:"
+    print_info "We'll prepare your Forma instance for v4.0 by:"
     print_info "- Adding Redis (for caching)"
     print_info "- Adding MinIO (for file storage)"
     print_info "- Moving your existing files into MinIO"
@@ -1154,17 +1154,17 @@ migrate_to_v4() {
     echo ""
     
     # Check if we're in the right directory
-    check_formbricks_directory
+    check_forma_directory
 
     # Backup docker-compose.yml before making any changes
     backup_docker_compose
     
-    # Add Redis configuration first (prerequisite for Formbricks 4.0)
+    # Add Redis configuration first (prerequisite for Forma 4.0)
     print_status "Setting up Redis..."
     add_redis_environment_variables
     add_redis_service
     add_redis_volume
-    add_service_dependency "formbricks" "redis"
+    add_service_dependency "forma" "redis"
     echo ""
     
     # Abort early if external S3 already configured and no bundled MinIO
@@ -1245,8 +1245,8 @@ migrate_to_v4() {
         # Add MinIO service
         add_minio_service "$files_domain" "$main_domain" "$https_setup"
         
-        # Add MinIO dependency to formbricks
-        add_service_dependency "formbricks" "minio-init"
+        # Add MinIO dependency to forma
+        add_service_dependency "forma" "minio-init"
         
         # Update Traefik configuration (optional - skip if traefik not present)
         add_service_dependency "traefik" "minio" "true"
@@ -1298,9 +1298,9 @@ migrate_to_v4() {
         restart_success=true
         echo ""
         
-        # Ensure formbricks container is up so uploads path is visible; hard-fail otherwise
-        if ! wait_for_service_up formbricks; then
-            print_error "Formbricks service is not up. Aborting migration."
+        # Ensure forma container is up so uploads path is visible; hard-fail otherwise
+        if ! wait_for_service_up forma; then
+            print_error "Forma service is not up. Aborting migration."
             return 1
         fi
         
@@ -1331,7 +1331,7 @@ migrate_to_v4() {
                     local planned=0 rc=0
                     if [[ "$src" == container:* ]]; then
                         local p="${src#container:}"
-                        planned=$(docker compose exec -T formbricks sh -lc 'find '"$p"' -type f 2>/dev/null | wc -l' || echo 0)
+                        planned=$(docker compose exec -T forma sh -lc 'find '"$p"' -type f 2>/dev/null | wc -l' || echo 0)
                     else
                         planned=$(find "$src" -type f 2>/dev/null | wc -l || echo 0)
                     fi
@@ -1354,12 +1354,12 @@ migrate_to_v4() {
                       skip && /^  [A-Za-z0-9_-]+:/ {skip=0}
                       { if(!skip) print }
                     ' docker-compose.yml > tmp.yml && mv tmp.yml docker-compose.yml
-                    # Remove depends_on reference from formbricks (portable via awk)
+                    # Remove depends_on reference from forma (portable via awk)
                     awk '
                       BEGIN{in_fb=0}
-                      /^  formbricks:/ {in_fb=1}
+                      /^  forma:/ {in_fb=1}
                       in_fb && /^[[:space:]]*-[[:space:]]*minio-init[[:space:]]*$/ {next}
-                      /^  [A-Za-z0-9_-]+:/ && !/^  formbricks:/ {in_fb=0}
+                      /^  [A-Za-z0-9_-]+:/ && !/^  forma:/ {in_fb=0}
                       {print}
                     ' docker-compose.yml > tmp.yml && mv tmp.yml docker-compose.yml
                     # Remove any stopped container for minio-init and server orphan containers
@@ -1391,7 +1391,7 @@ migrate_to_v4() {
     fi
     
     echo ""
-    echo "🎉 Formbricks v4.0 Migration Complete!"
+    echo "🎉 Forma v4.0 Migration Complete!"
     echo "======================================="
     echo ""
     print_status "Infrastructure Configuration:"
@@ -1402,7 +1402,7 @@ migrate_to_v4() {
     echo ""
     
     if [[ "$restart_success" == true ]]; then
-        print_status "Your Formbricks instance is now ready for v4.0!"
+        print_status "Your Forma instance is now ready for v4.0!"
         print_info "- Redis is configured for caching"
         print_info "- MinIO is configured for file storage"
         print_info "To check that everything is running, use: docker compose ps"
@@ -1430,11 +1430,11 @@ cleanup_uploads_from_compose() {
     # 1) Comment out UPLOADS_DIR if present
     if sed --version >/dev/null 2>&1; then sed -i 's/^\([[:space:]]*\)UPLOADS_DIR:[[:space:]].*/\1# UPLOADS_DIR:/' docker-compose.yml || true; else sed -i '' 's/^\([[:space:]]*\)UPLOADS_DIR:[[:space:]].*/\1# UPLOADS_DIR:/' docker-compose.yml || true; fi
 
-    # 2) Remove uploads mapping from formbricks service volumes
+    # 2) Remove uploads mapping from forma service volumes
     awk '
       BEGIN{in_svc=0; in_vol=0}
-      /^  formbricks:/ {in_svc=1}
-      /^  [A-Za-z0-9_-]+:/ && !/^  formbricks:/ {in_svc=0}
+      /^  forma:/ {in_svc=1}
+      /^  [A-Za-z0-9_-]+:/ && !/^  forma:/ {in_svc=0}
       {line=$0}
       in_svc && /^    volumes:/ {in_vol=1; print; next}
       in_svc && /^    [A-Za-z0-9_-]+:/ {if(in_vol) in_vol=0}

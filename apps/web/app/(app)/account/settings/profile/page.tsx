@@ -1,4 +1,4 @@
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { AccountSecurity } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/AccountSecurity";
 import { DeleteAccount } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/DeleteAccount";
 import { EditProfileDetailsForm } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/EditProfileDetailsForm";
@@ -6,7 +6,7 @@ import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/comp
 import {
   EMAIL_VERIFICATION_DISABLED,
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   PASSWORD_RESET_DISABLED,
 } from "@/lib/constants";
 import { getOrganizationsWhereUserIsSingleOwner } from "@/lib/organization/service";
@@ -40,7 +40,7 @@ const Page = async () => {
   // Two-factor upgrade points at the user's organization billing page (org-scoped after the refactor).
   const layoutData = await getSettingsLayoutData(session.user.id);
   const billingUpgradeHref = layoutData
-    ? getOrganizationBillingPath(layoutData.organization.id, IS_FORMBRICKS_CLOUD)
+    ? getOrganizationBillingPath(layoutData.organization.id, IS_FORMA_CLOUD)
     : "/";
 
   const isPasswordResetEnabled = !PASSWORD_RESET_DISABLED && user.identityProvider === "email";
@@ -69,14 +69,14 @@ const Page = async () => {
                 description={t("workspace.settings.profile.two_factor_authentication_description")}
                 buttons={[
                   {
-                    text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                    href: IS_FORMBRICKS_CLOUD ? billingUpgradeHref : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
+                    text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                    href: IS_FORMA_CLOUD ? billingUpgradeHref : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
                   },
                   {
                     text: t("common.learn_more"),
-                    href: IS_FORMBRICKS_CLOUD
+                    href: IS_FORMA_CLOUD
                       ? billingUpgradeHref
-                      : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_two_factor",
+                      : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_two_factor",
                   },
                 ]}
               />
@@ -91,7 +91,7 @@ const Page = async () => {
           description={t("workspace.settings.profile.confirm_delete_account")}>
           <DeleteAccount
             session={session}
-            IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+            IS_FORMA_CLOUD={IS_FORMA_CLOUD}
             user={user}
             organizationsWithSingleOwner={organizationsWithSingleOwner}
             isMultiOrgEnabled={isMultiOrgEnabled}

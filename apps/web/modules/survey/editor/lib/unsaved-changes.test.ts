@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { hasUnsavedSurveyChanges } from "./unsaved-changes";
 
 const baseSurvey = {

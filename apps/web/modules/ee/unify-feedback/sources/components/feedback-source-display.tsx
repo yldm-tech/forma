@@ -1,11 +1,11 @@
 "use client";
 
 import { FileSpreadsheetIcon, FormIcon } from "lucide-react";
-import { TFeedbackSourceType } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceType } from "@forma/types/feedback-source";
 
 export const getFeedbackSourceIcon = (type: TFeedbackSourceType, className: string) => {
   switch (type) {
-    case "formbricks_survey":
+    case "forma_survey":
       return <FormIcon className={className} />;
     case "csv":
       return <FileSpreadsheetIcon className={className} />;
@@ -15,8 +15,8 @@ export const getFeedbackSourceIcon = (type: TFeedbackSourceType, className: stri
 
 export const getFeedbackSourceTypeLabelKey = (type: TFeedbackSourceType): string => {
   switch (type) {
-    case "formbricks_survey":
-      return "workspace.unify.formbricks_surveys";
+    case "forma_survey":
+      return "workspace.unify.forma_surveys";
     case "csv":
       return "workspace.unify.csv_import";
     /* exhausted */

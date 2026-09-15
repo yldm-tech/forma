@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Formbricks API
-  description: Manage Formbricks resources programmatically.
+  title: Forma API
+  description: Manage Forma resources programmatically.
   version: 2.0.0
 servers:
-  - url: https://app.formbricks.com/api/v2
-    description: Formbricks Cloud
+  - url: https://app.forma.ylam.ai/api/v2
+    description: Forma Cloud
 tags:
   - name: Health
     description: Operations for checking critical application dependencies health status.
@@ -87,8 +87,8 @@ paths:
       tags:
         - Client API - Response
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks Client
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma Client
   /client/{workspaceId}/responses:
     post:
       security: []
@@ -123,8 +123,8 @@ paths:
       tags:
         - Client API - Response
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks Client
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma Client
   /client/{workspaceId}/displays:
     post:
       security: []
@@ -159,12 +159,12 @@ paths:
       tags:
         - Client API - Display
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks Client
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma Client
   /client/{workspaceId}/environment:
     get:
       security: []
-      description: "Retrieves the Workspace state to be used in Formbricks SDKs.
+      description: "Retrieves the Workspace state to be used in Forma SDKs.
         Note - Environments are deprecated. Use Workspace/workspaceId terminology.
         **Cache Behavior**: This endpoint uses server-side caching with a
         **5-minute TTL (Time To Live)**. Any changes to surveys, action classes,
@@ -193,8 +193,8 @@ paths:
       tags:
         - Client API - Workspace
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks Client
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma Client
   /client/{workspaceId}/user:
     post:
       security: []
@@ -232,8 +232,8 @@ paths:
       tags:
         - Client API - User
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks Client
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma Client
   /client/{workspaceId}/storage:
     post:
       security: []
@@ -311,7 +311,7 @@ paths:
                       policy: <base64-policy>
                       x-amz-algorithm: AWS4-HMAC-SHA256
                     updatedFileName: file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
-                    fileUrl: https://app.formbricks.com/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
+                    fileUrl: https://app.forma.ylam.ai/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
         "400":
           description: Bad Request - One or more required fields are missing.
           content:
@@ -337,8 +337,8 @@ paths:
                 example:
                   error: Survey survey123 not found
       servers:
-        - url: https://app.formbricks.com/api/v2
-          description: Formbricks API Server
+        - url: https://app.forma.ylam.ai/api/v2
+          description: Forma API Server
   /health:
     get:
       tags:
@@ -3292,7 +3292,7 @@ paths:
       operationId: getUsers
       summary: Get users
       description: Gets users from the database.<br />Only available for self-hosted
-        Formbricks.
+        Forma.
       tags:
         - Organizations API - Users
       parameters:
@@ -3435,7 +3435,7 @@ paths:
       operationId: createUser
       summary: Create a user
       description: Create a new user in the database.<br />Only available for
-        self-hosted Formbricks.
+        self-hosted Forma.
       tags:
         - Organizations API - Users
       parameters:
@@ -3538,7 +3538,7 @@ paths:
       operationId: updateUser
       summary: Update a user
       description: Updates an existing user in the database.<br />Only available for
-        self-hosted Formbricks.
+        self-hosted Forma.
       tags:
         - Organizations API - Users
       parameters:
@@ -3639,7 +3639,7 @@ components:
       type: apiKey
       in: header
       name: x-api-key
-      description: Use your Formbricks x-api-key to authenticate.
+      description: Use your Forma x-api-key to authenticate.
   schemas:
     health:
       type: object

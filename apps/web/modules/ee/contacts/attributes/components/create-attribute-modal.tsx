@@ -5,12 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeDataType } from "@formbricks/types/contact-attribute-key";
-import {
-  formatSnakeCaseToTitleCase,
-  isSafeIdentifier,
-  toSafeIdentifier,
-} from "@formbricks/types/safe-identifier";
+import { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
+import { formatSnakeCaseToTitleCase, isSafeIdentifier, toSafeIdentifier } from "@forma/types/safe-identifier";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
   RESERVED_FUTURE_DEFAULT_ATTRIBUTE_SAFE_IDENTIFIER_KEYS_TEXT,

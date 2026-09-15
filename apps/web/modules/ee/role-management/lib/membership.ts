@@ -1,10 +1,10 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZString } from "@formbricks/types/common";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { TMembership, TMembershipUpdateInput, ZMembershipUpdateInput } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZString } from "@forma/types/common";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { TMembership, TMembershipUpdateInput, ZMembershipUpdateInput } from "@forma/types/memberships";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";

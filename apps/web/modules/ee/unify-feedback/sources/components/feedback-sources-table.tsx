@@ -7,7 +7,7 @@ import {
   TFeedbackSourceStatus,
   TFeedbackSourceType,
   TFeedbackSourceWithMappings,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import { timeSinceDate } from "@/lib/time";
 import { Badge } from "@/modules/ui/components/badge";
 import { SettingsTable, type TSettingsTableColumn } from "@/modules/ui/components/settings-table";
@@ -106,10 +106,10 @@ const getFeedbackSourceColumns = ({
     // row instead, which is what collapses two tab stops into one.
     stopRowClick: true,
     cell: (feedbackSource) => {
-      const originSurveyId = feedbackSource.formbricksMappings[0]?.surveyId;
+      const originSurveyId = feedbackSource.formaMappings[0]?.surveyId;
       const originSurveyName = originSurveyId ? surveyNameById[originSurveyId] : undefined;
 
-      if (feedbackSource.type !== "formbricks_survey" || !originSurveyId || !originSurveyName) {
+      if (feedbackSource.type !== "forma_survey" || !originSurveyId || !originSurveyName) {
         return <span className="text-sm text-slate-400">—</span>;
       }
 
@@ -190,7 +190,7 @@ const getFeedbackSourceColumns = ({
 
 interface FeedbackSourcesTableProps {
   feedbackSources: TFeedbackSourceWithMappings[];
-  /** Maps survey id -> survey name, used to render the "Data origin" column for Formbricks sources. */
+  /** Maps survey id -> survey name, used to render the "Data origin" column for Forma sources. */
   surveyNameById: Record<string, string>;
   /** Surveys not yet connected as a source — rendered as "Suggestions" below the table rows. */
   suggestedSurveys: TUnifySurvey[];

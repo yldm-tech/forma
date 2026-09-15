@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { upsertBulkContacts } from "@/modules/ee/contacts/api/v2/management/contacts/bulk/lib/contact";
 
 // Ensure that createId always returns "mock-id" for predictability
@@ -8,7 +8,7 @@ vi.mock("@paralleldrive/cuid2", () => ({
 }));
 
 // Mock prisma methods
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contactAttribute: {
       findMany: vi.fn(),

@@ -124,7 +124,7 @@ reviews:
         - Assert on inputs and outputs. Flag tests that lock implementation details, markup, or
           snapshots, and tests that cannot fail (no meaningful assertion, everything mocked).
         - Do not request extra tests purely to raise coverage, and do not request tests for `.tsx`.
-        - Network and storage boundaries should be mocked via helpers from `@formbricks/*` and
+        - Network and storage boundaries should be mocked via helpers from `@forma/*` and
           mocks placed in a `__mocks__` directory.
 
     - path: "apps/web/playwright/**/*.spec.ts"
@@ -262,7 +262,7 @@ reviews:
         with an H1; headings are Camel Case with only the feature name capitalized. Enterprise-only
         features need the Enterprise note block. New pages must be added to `docs/docs.json` nav.
 
-    - path: "charts/formbricks/**"
+    - path: "charts/forma/**"
       instructions: |
         Helm chart consumed by self-hosters. Flag changes that alter a `values.yaml` key name or
         default, or that require manual action on upgrade, without a breaking-change entry. New
@@ -364,7 +364,7 @@ reviews:
           - Removes or renames an endpoint or route, changes a webhook payload, or changes the
             HTTP status code returned for an existing request/response case.
           - Changes a default value, or removes or renames an environment variable or config key —
-            including keys in `charts/formbricks/values.yaml` and `.env.example`. Adding one counts
+            including keys in `charts/forma/values.yaml` and `.env.example`. Adding one counts
             only when it is required, or has no default that keeps existing installs working.
           - Adds a database migration that needs manual action, drops or renames a column or
             table, or adds a NOT NULL column with no default and no backfill.

@@ -389,7 +389,7 @@ export const RESERVED_FIELD_CATALOG: readonly TReservedFieldCatalogEntry[] = [
    *
    * Both link and app surveys render through the same component, so all twelve are captured for
    * both. What they *describe* differs: on a link survey `pagePath`/`pageReferrer`/`utm*` are about
-   * the Formbricks-hosted survey page and how the respondent reached it; on an app survey they are
+   * the Forma-hosted survey page and how the respondent reached it; on an app survey they are
    * about the host page the survey was triggered on.
    */
   /**

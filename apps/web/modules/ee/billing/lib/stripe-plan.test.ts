@@ -7,18 +7,16 @@ const product = (input: Partial<Stripe.Product> & Pick<Stripe.Product, "id">): S
 
 describe("stripe-plan", () => {
   test("maps known product metadata values to cloud plans", () => {
-    expect(
-      getCloudPlanFromProduct(product({ id: "prod_hobby", metadata: { formbricks_plan: "hobby" } }))
-    ).toBe("hobby");
-    expect(getCloudPlanFromProduct(product({ id: "prod_pro", metadata: { formbricks_plan: "pro" } }))).toBe(
-      "pro"
+    expect(getCloudPlanFromProduct(product({ id: "prod_hobby", metadata: { forma_plan: "hobby" } }))).toBe(
+      "hobby"
     );
-    expect(
-      getCloudPlanFromProduct(product({ id: "prod_scale", metadata: { formbricks_plan: "scale" } }))
-    ).toBe("scale");
-    expect(
-      getCloudPlanFromProduct(product({ id: "prod_custom", metadata: { formbricks_plan: "custom" } }))
-    ).toBe("custom");
+    expect(getCloudPlanFromProduct(product({ id: "prod_pro", metadata: { forma_plan: "pro" } }))).toBe("pro");
+    expect(getCloudPlanFromProduct(product({ id: "prod_scale", metadata: { forma_plan: "scale" } }))).toBe(
+      "scale"
+    );
+    expect(getCloudPlanFromProduct(product({ id: "prod_custom", metadata: { forma_plan: "custom" } }))).toBe(
+      "custom"
+    );
   });
 
   test("falls back to unknown for missing or unknown products", () => {
@@ -27,7 +25,7 @@ describe("stripe-plan", () => {
     expect(getCloudPlanFromProduct("prod_unknown")).toBe("unknown");
     expect(getCloudPlanFromProduct(product({ id: "prod_unknown", metadata: {} }))).toBe("unknown");
     expect(
-      getCloudPlanFromProduct(product({ id: "prod_unknown", metadata: { formbricks_plan: "enterprise" } }))
+      getCloudPlanFromProduct(product({ id: "prod_unknown", metadata: { forma_plan: "enterprise" } }))
     ).toBe("unknown");
   });
 });

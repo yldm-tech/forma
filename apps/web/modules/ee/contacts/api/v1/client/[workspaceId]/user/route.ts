@@ -1,9 +1,9 @@
 import { userAgent } from "next/server";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
-import { TContactAttributesInput } from "@formbricks/types/contact-attribute";
-import { ResourceNotFoundError, ValidationError } from "@formbricks/types/errors";
-import { TJsPersonState } from "@formbricks/types/js";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
+import { TContactAttributesInput } from "@forma/types/contact-attribute";
+import { ResourceNotFoundError, ValidationError } from "@forma/types/errors";
+import { TJsPersonState } from "@forma/types/js";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { responses } from "@/app/lib/api/response";
 import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";

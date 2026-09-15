@@ -10,7 +10,7 @@ const { mockAuthorizeGatewayRequest, mockLoggerError, runtime } = vi.hoisted(() 
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mockLoggerError,
   },

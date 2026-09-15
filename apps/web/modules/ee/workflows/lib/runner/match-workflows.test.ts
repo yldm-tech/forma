@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TWorkflowExecutableDefinition } from "@formbricks/workflows";
+import type { TWorkflowExecutableDefinition } from "@forma/workflows";
 import { type WorkflowMatchCandidate, matchWorkflowsForResponse } from "./match-workflows";
 
 const SURVEY = "cm9zr4q7i000108l84gozfggr";

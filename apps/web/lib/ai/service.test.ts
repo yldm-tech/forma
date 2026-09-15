@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   assertOrganizationAIConfigured,
   generateOrganizationAIObject,
@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/ai", () => ({
+vi.mock("@forma/ai", () => ({
   AIConfigurationError: class AIConfigurationError extends Error {
     code: string;
 
@@ -40,7 +40,7 @@ vi.mock("@formbricks/ai", () => ({
   classifyAIProviderError: mocks.classifyAIProviderError,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mocks.loggerError,
   },
@@ -329,7 +329,7 @@ describe("AI organization service", () => {
   });
 
   describe("streamOrganizationAIObject", () => {
-    // Cast rather than `any`: `@formbricks/ai` is mocked here, so the schema is never read — but the
+    // Cast rather than `any`: `@forma/ai` is mocked here, so the schema is never read — but the
     // input type still requires one.
     const streamInput = () =>
       ({ organizationId: "org_1", prompt: "Generate", schema: { type: "object" } }) as unknown as Parameters<

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { SingleSelect, type SingleSelectOption } from "@formbricks/survey-ui";
-import { type TResponseData, type TResponseTtc } from "@formbricks/types/responses";
-import type { TSurveyMultipleChoiceElement } from "@formbricks/types/surveys/elements";
+import { SingleSelect, type SingleSelectOption } from "@forma/survey-ui";
+import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
+import type { TSurveyMultipleChoiceElement } from "@forma/types/surveys/elements";
 import { htmlToPlainText } from "@/lib/html-utils";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";

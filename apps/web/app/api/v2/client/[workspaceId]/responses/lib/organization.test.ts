@@ -1,17 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { TOrganizationBilling } from "@forma/types/organizations";
 import { getOrganizationBillingByWorkspaceId } from "./organization";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     organization: {
       findFirst: vi.fn(),
     },
   },
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

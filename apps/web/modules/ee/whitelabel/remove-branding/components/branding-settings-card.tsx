@@ -1,6 +1,6 @@
-import { TWorkspace } from "@formbricks/types/workspace";
+import { TWorkspace } from "@forma/types/workspace";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { EditBranding } from "@/modules/ee/whitelabel/remove-branding/components/edit-branding";
 import { RemoveBrandingLicenseTip } from "@/modules/ee/whitelabel/remove-branding/components/remove-branding-license-tip";
@@ -23,14 +23,14 @@ export const BrandingSettingsCard = async ({
   const t = await getTranslate();
   const buttons: [ModalButton, ModalButton] = [
     {
-      text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-      href: IS_FORMBRICKS_CLOUD
+      text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+      href: IS_FORMA_CLOUD
         ? `/organizations/${workspace.organizationId}/settings/billing`
         : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
     },
     {
       text: t("common.learn_more"),
-      href: "https://formbricks.com/docs/self-hosting/advanced/enterprise-features/hide-powered-by-formbricks",
+      href: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/hide-powered-by-forma",
     },
   ];
 
@@ -67,8 +67,8 @@ export const BrandingSettingsCard = async ({
 
   return (
     <SettingsCard
-      title={t("workspace.look.formbricks_branding")}
-      description={t("workspace.look.formbricks_branding_settings_description")}
+      title={t("workspace.look.forma_branding")}
+      description={t("workspace.look.forma_branding_settings_description")}
       bodyVariant={showLiteLicenseTip ? "bleed" : "padded"}>
       {brandingContent}
       {isReadOnly && (

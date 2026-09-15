@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 
 export const convertFloatToNDecimal = (num: number, N: number = 2) => {

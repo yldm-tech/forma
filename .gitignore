@@ -70,7 +70,7 @@ branch.json
 # IntelliJ IDEA
 /.idea/
 /*.iml
-packages/ios/FormbricksSDK/FormbricksSDK.xcodeproj/project.xcworkspace/xcuserdata
+packages/ios/FormaSDK/FormaSDK.xcodeproj/project.xcworkspace/xcuserdata
 .cursorrules
 i18n.cache
 stats.html
@@ -87,7 +87,7 @@ authzed/*.perf.jsonl
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/nextjs-docs
-.agents/formbricks-context
+.agents/forma-context
 
 # v3 API contract tests: generated fixture id map, Schemathesis' local replay cache, and the
 # bytecode cache Python leaves next to hooks.py

@@ -15,7 +15,7 @@ vi.mock("@/modules/workspaces/settings/lib/tag", () => ({
   mergeTags: vi.fn(),
   updateTagName: vi.fn(),
 }));
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { withContext: vi.fn(() => ({ error: vi.fn(), warn: vi.fn() })) },
 }));
 

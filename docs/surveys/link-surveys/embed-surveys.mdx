@@ -1,13 +1,13 @@
 ---
 title: "Embed Surveys"
 description:
-  "Embed Formbricks surveys seamlessly into your website using an iframe & Email using code snippets."
+  "Embed Forma surveys seamlessly into your website using an iframe & Email using code snippets."
 icon: "code"
 ---
 
 # Embed Surveys in Your Web Page & Emails
 
-Embedding Formbricks surveys directly into your web pages & emails allows you to integrate interactive surveys without redirecting users to a separate survey site. This method ensures a seamless integration and maintains the aesthetic continuity of your website or application and your email marketing campaigns.
+Embedding Forma surveys directly into your web pages & emails allows you to integrate interactive surveys without redirecting users to a separate survey site. This method ensures a seamless integration and maintains the aesthetic continuity of your website or application and your email marketing campaigns.
 
 ## Embedding Surveys in Web Pages
 
@@ -28,7 +28,7 @@ Embedding Formbricks surveys directly into your web pages & emails allows you to
 ```html Example Embedding Code
 <div style="position: relative; height:100vh; max-height:100vh; overflow:auto;">
   <iframe
-    src="https://app.formbricks.com/s/<your-surveyId>"
+    src="https://app.forma.ylam.ai/s/<your-surveyId>"
     frameborder="0"
     style="position: absolute; left:0; top:0; width:100%; height:100%; border:0;"
   >
@@ -38,15 +38,15 @@ Embedding Formbricks surveys directly into your web pages & emails allows you to
 
 ## Iframe Events
 
-The iframe fires a **formbricksSurveyCompleted** event when a user finishes a survey within the embedded iframe. This event can be captured through a message listener in your webpage's JavaScript
+The iframe fires a **formaSurveyCompleted** event when a user finishes a survey within the embedded iframe. This event can be captured through a message listener in your webpage's JavaScript
 
 ### How to Use it?
 
-1. Embed the Formbricks survey on your webpage using the iframe method as described above.
+1. Embed the Forma survey on your webpage using the iframe method as described above.
 
 2. Add an event listener to your webpage’s JavaScript that listens for `message` events from the iframe.
 
-3. Check if the received message indicates that the survey is completed by comparing the `event.data` with the value `formbricksSurveyCompleted`.
+3. Check if the received message indicates that the survey is completed by comparing the `event.data` with the value `formaSurveyCompleted`.
 
 <Note>
   It is important to verify the origin of the message to ensure it comes from
@@ -60,10 +60,10 @@ The iframe fires a **formbricksSurveyCompleted** event when a user finishes a su
 
 ```javascript Example Code for Event Listener
 window.addEventListener("message", (event) => {
-  // Replace 'https://app.formbricks.com' with the actual web app url
+  // Replace 'https://app.forma.ylam.ai' with the actual web app url
   if (
-    event.origin === "https://app.formbricks.com" &&
-    event.data === "formbricksSurveyCompleted"
+    event.origin === "https://app.forma.ylam.ai" &&
+    event.data === "formaSurveyCompleted"
   ) {
     console.log("Survey completed!");
     // Implement your custom actions here
@@ -95,11 +95,11 @@ It can be enabled by simply appending **?embed=true** to your survey link or fro
 
 ## Embedding Surveys in Emails
 
-Embedding Formbricks surveys directly into your emails allows you to collect valuable feedback from your users at every touchpoint. Seamlessly integrate interactive surveys into your email campaigns to gather insights and improve user experience.
+Embedding Forma surveys directly into your emails allows you to collect valuable feedback from your users at every touchpoint. Seamlessly integrate interactive surveys into your email campaigns to gather insights and improve user experience.
 
 ## Generate an Embed Code
 
-To embed a Formbricks survey in an email, first, create a survey and publish it. Follow these steps to generate the embed code:
+To embed a Forma survey in an email, first, create a survey and publish it. Follow these steps to generate the embed code:
 
 1. **Create and Publish a Survey**: Start by creating a link survey and publish it once ready.
 2. **Access the Share Options**: Go to the survey summary page and click the Share button (see below).
@@ -134,7 +134,7 @@ Gmail does not support HTML embedding natively. It's a WYSIWYG (What You See Is 
 
   ![Choose a link survey template](/images/surveys/link-surveys/embed-surveys/plugin-source-tab.webp)
 
-- Now paste the copied HTML code from Formbricks into this window. On the right, you will see a preview of how the email will look.
+- Now paste the copied HTML code from Forma into this window. On the right, you will see a preview of how the email will look.
 
   ![Choose a link survey template](/images/surveys/link-surveys/embed-surveys/plugin-add-survey.webp)
 
@@ -194,4 +194,4 @@ PS: If you do not see any signature settings, just use one of the methods we've 
 
 ---
 
-**Need help?** [Reach out in Github Discussions](https://github.com/formbricks/formbricks/discussions)
+**Need help?** [Reach out in Github Discussions](https://github.com/yldm-tech/forma/discussions)

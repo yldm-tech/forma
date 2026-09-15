@@ -17,7 +17,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: formbricks_migration_shadow
+          POSTGRES_DB: forma_migration_shadow
         ports:
           - 5432:5432
         options: >-
@@ -128,13 +128,13 @@ jobs:
           done
 
           printf 'Linting migration: %s\n' "${migration_files[@]}"
-          pnpm --filter @formbricks/database lint:migrations -- "${absolute_migration_files[@]}"
+          pnpm --filter @forma/database lint:migrations -- "${absolute_migration_files[@]}"
 
       - name: Check database migration drift
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
-          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/formbricks_migration_shadow?schema=public
-        run: pnpm --filter @formbricks/database check:migration-drift
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/forma_migration_shadow?schema=public
+        run: pnpm --filter @forma/database check:migration-drift
 
       - name: Lint
         run: pnpm lint

@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { TResponse, TResponseInput, ZResponseInput } from "@formbricks/types/responses";
+import { logger } from "@forma/logger";
+import { TResponse, TResponseInput, ZResponseInput } from "@forma/types/responses";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { handleApiError } from "@/app/lib/api/handle-api-error";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";

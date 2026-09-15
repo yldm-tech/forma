@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { authorize } from "./slack";
 
 // Mock the logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

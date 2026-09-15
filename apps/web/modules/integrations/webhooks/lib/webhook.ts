@@ -1,14 +1,9 @@
 import { v7 as uuidv7 } from "uuid";
-import { prisma } from "@formbricks/database";
-import { Prisma, Webhook } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZId } from "@formbricks/types/common";
-import {
-  DatabaseError,
-  InvalidInputError,
-  ResourceNotFoundError,
-  UnknownError,
-} from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, Webhook } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError, UnknownError } from "@forma/types/errors";
 import { DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS } from "@/lib/constants";
 import { generateStandardWebhookSignature, generateWebhookSecret } from "@/lib/crypto";
 import { validateInputs } from "@/lib/utils/validate";

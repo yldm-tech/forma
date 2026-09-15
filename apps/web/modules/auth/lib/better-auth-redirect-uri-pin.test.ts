@@ -23,9 +23,9 @@ import { afterEach, describe, expect, test, vi } from "vitest";
  * is the same shape the SAML bridge provider uses in production.
  */
 
-const BASE_URL = "https://app.formbricks.test";
+const BASE_URL = "https://app.forma.test";
 const PINNED_REDIRECT_URI = `${BASE_URL}/api/auth/oauth2/callback/pinned-provider`;
-const IDP = "https://idp.formbricks.test";
+const IDP = "https://idp.forma.test";
 
 const createAuthInstance = () =>
   betterAuth({
@@ -141,7 +141,7 @@ describe("Better Auth sends the pinned redirect URI on the token leg too", () =>
       if (requested.startsWith(`${IDP}/userinfo`)) {
         return Response.json({
           sub: "pinned-subject",
-          email: "pinned@formbricks.test",
+          email: "pinned@forma.test",
           email_verified: true,
           name: "Pinned Person",
         });

@@ -1,15 +1,15 @@
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ZId, ZString } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ZId, ZString } from "@forma/types/common";
 import {
   DatabaseError,
   OperationNotAllowedError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import {
   DATE_OPERATORS,
   TAllOperators,
@@ -32,7 +32,7 @@ import {
   ZSegmentCreateInput,
   ZSegmentFilters,
   ZSegmentUpdateInput,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { getSurvey } from "@/lib/survey/service";
 import { validateInputs } from "@/lib/utils/validate";
 import {

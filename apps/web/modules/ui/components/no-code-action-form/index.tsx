@@ -3,7 +3,7 @@
 import { InfoIcon } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { TActionClassInput } from "@formbricks/types/action-classes";
+import { TActionClassInput } from "@forma/types/action-classes";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { FormControl, FormError, FormField, FormItem } from "@/modules/ui/components/form";
 import { Input } from "@/modules/ui/components/input";

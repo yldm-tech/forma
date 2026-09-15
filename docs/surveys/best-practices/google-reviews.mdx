@@ -1,6 +1,6 @@
 ---
 title: "Collect Google Reviews"
-description: "A step-by-step guide to asking for feedback and turning it into public Google reviews with Formbricks."
+description: "A step-by-step guide to asking for feedback and turning it into public Google reviews with Forma."
 icon: "star"
 ---
 
@@ -10,7 +10,7 @@ Google reviews are the first thing a potential customer sees about your business
 
 Most happy customers would leave a review, they just never get around to it. A short survey right after a good experience catches them while the goodwill is fresh, gives you private feedback either way, and hands the review link to the people who want to share it publicly.
 
-## Formbricks Approach
+## Forma Approach
 
 - Ask one question, not ten. The survey is the ask, not the review.
 - Give everyone the review link — never only the happy ones (see the note below).
@@ -22,7 +22,7 @@ Most happy customers would leave a review, they just never get around to it. A s
 
 ## Setup
 
-To collect Google reviews with Formbricks you need to:
+To collect Google reviews with Forma you need to:
 
 1. Get your Google review link
 2. Build a short survey
@@ -37,7 +37,7 @@ In your [Google Business Profile](https://business.google.com/), open **Read rev
 https://g.page/r/<your-place-id>/review
 ```
 
-Opening that link takes a signed-in user straight to the review dialog for your business. Copy it — you will paste it into Formbricks in step 3.
+Opening that link takes a signed-in user straight to the review dialog for your business. Copy it — you will paste it into Forma in step 3.
 
 ### 2. Build a short survey
 
@@ -46,7 +46,7 @@ Create a survey and keep it to one or two questions:
 - A [Rating](/surveys/question-type/rating) question, for example "How was your experience with us?" — smileys or stars, 5-point scale.
 - An optional [Free Text](/surveys/question-type/free-text) question for anything they want to add.
 
-This gives you the private signal. The review itself happens on Google, not in Formbricks.
+This gives you the private signal. The review itself happens on Google, not in Forma.
 
 ### 3. Add the review link to the ending card
 
@@ -60,13 +60,13 @@ Every respondent now sees the review button after submitting.
 ![The ending card, with a button pointing at your Google review link](/images/surveys/best-practices/google-reviews/ending.webp)
 
 <Note>
-  On Formbricks Cloud, custom external URLs in the Button URL field require a paid plan. This helps us prevent phishing. Self-hosted instances have no such restriction.
+  On Forma Cloud, custom external URLs in the Button URL field require a paid plan. This helps us prevent phishing. Self-hosted instances have no such restriction.
 </Note>
 
 To tailor the wording without gating the link, give low ratings their own ending. Duplicate the ending you just configured with the copy icon in its header — that carries the button label and URL over — then change the copy on the duplicate and route between the two with [Conditional Logic](/surveys/general-features/conditional-logic). For example "Glad we got it right! Mind sharing that on Google?" for high ratings and "Thanks for telling us — we'll fix this. If you'd like to leave a public review, here's the link" for low ones. Both endings keep the review button.
 
 <Note>
-  Duplicate rather than **Add ending**: a new ending starts with the Formbricks default button (`Create your own Survey`, pointing at formbricks.com), so you would have to enter the review link again — and if you miss it, low-rating respondents lose the link your anti-gating setup depends on.
+  Duplicate rather than **Add ending**: a new ending starts with the Forma default button (`Create your own Survey`, pointing at forma.ylam.ai), so you would have to enter the review link again — and if you miss it, low-rating respondents lose the link your anti-gating setup depends on.
 </Note>
 
 
@@ -93,5 +93,5 @@ The second ending from step 3 is what makes this work: a workflow filters on the
 3. Add the **Send email** action and pick the workspace member who owns follow-ups as the recipient. Type `@` in the body to recall the rating and the comment, or turn on **Attach response data** to send the whole response.
 
 <Note>
-  Workflows are part of the Formbricks [Enterprise Edition](/self-hosting/advanced/license).
+  Workflows are part of the Forma [Enterprise Edition](/self-hosting/advanced/license).
 </Note>

@@ -4,7 +4,7 @@ import {
   InvalidInputError,
   OperationNotAllowedError,
   ResourceNotFoundError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import {
   DELETE_WORKSPACE_CONFIRMATION_REQUIRED_ERROR,
   deleteWorkspaceWithConfirmation,
@@ -131,7 +131,7 @@ describe("deleteWorkspaceWithConfirmation", () => {
     await callDeleteWorkspaceWithConfirmation();
 
     expect(mocks.cookieSet).toHaveBeenCalledWith(
-      "formbricks-workspace-id",
+      "forma-workspace-id",
       remainingWorkspace.id,
       expect.objectContaining({ path: "/", httpOnly: true })
     );
@@ -143,7 +143,7 @@ describe("deleteWorkspaceWithConfirmation", () => {
 
     const result = await callDeleteWorkspaceWithConfirmation();
 
-    expect(mocks.cookieDelete).toHaveBeenCalledWith("formbricks-workspace-id");
+    expect(mocks.cookieDelete).toHaveBeenCalledWith("forma-workspace-id");
     expect(mocks.cookieSet).not.toHaveBeenCalled();
     expect(result.destination).toEqual({ workspaceId: null, path: "/" });
   });
@@ -164,7 +164,7 @@ describe("deleteWorkspaceWithConfirmation", () => {
 
     // Otherwise the cookie keeps naming the workspace we just deleted, disagreeing with the "/"
     // destination we return.
-    expect(mocks.cookieDelete).toHaveBeenCalledWith("formbricks-workspace-id");
+    expect(mocks.cookieDelete).toHaveBeenCalledWith("forma-workspace-id");
     expect(mocks.cookieSet).not.toHaveBeenCalled();
   });
 

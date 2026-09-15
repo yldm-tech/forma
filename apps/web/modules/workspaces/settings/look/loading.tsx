@@ -153,12 +153,12 @@ export const WorkspaceLookSettingsLoading = () => {
       </SettingsCard>
 
       <SettingsCard
-        title="Formbricks Signature"
+        title="Forma Signature"
         description="We love your support but understand if you toggle it off.">
         <div className="w-full items-center">
           <div className="pointer-events-none flex cursor-not-allowed items-center gap-x-2 select-none">
             <Switch id="signature" checked={false} />
-            <Label htmlFor="signature">{t("workspace.look.show_powered_by_formbricks")}</Label>
+            <Label htmlFor="signature">{t("workspace.look.show_powered_by_forma")}</Label>
           </div>
         </div>
       </SettingsCard>

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 import {
   DatabaseError,
   InvalidInputError,
   ResourceNotFoundError,
   UniqueConstraintError,
-} from "@formbricks/types/errors";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TResponseInput } from "@formbricks/types/responses";
+} from "@forma/types/errors";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TResponseInput } from "@forma/types/responses";
 import { getOrganization } from "@/lib/organization/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
@@ -17,11 +17,11 @@ import { createResponse, createResponseWithQuotaEvaluation } from "./response";
 
 vi.mock("server-only", () => ({}));
 
-let mockIsFormbricksCloud = false;
+let mockIsFormaCloud = false;
 
 vi.mock("@/lib/constants", () => ({
-  get IS_FORMBRICKS_CLOUD() {
-    return mockIsFormbricksCloud;
+  get IS_FORMA_CLOUD() {
+    return mockIsFormaCloud;
   },
   ENCRYPTION_KEY: "test",
 }));
@@ -44,7 +44,7 @@ vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       create: vi.fn(),
@@ -53,7 +53,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },
@@ -124,7 +124,7 @@ describe("createResponse", () => {
   });
 
   afterEach(() => {
-    mockIsFormbricksCloud = false;
+    mockIsFormaCloud = false;
   });
 
   test("should handle finished response and calculate TTC", async () => {
@@ -213,7 +213,7 @@ describe("createResponseWithQuotaEvaluation", () => {
   });
 
   afterEach(() => {
-    mockIsFormbricksCloud = false;
+    mockIsFormaCloud = false;
   });
 
   test("should return response without quotaFull when no quota violations", async () => {

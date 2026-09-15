@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { reconcileApiKeyRelationships } from "./api-key";
 import { type TAuthzedRelationshipUpdate, getAuthzedClient } from "./client";
 import { isAuthzedEnabled } from "./config";
@@ -12,7 +12,7 @@ const clientMocks = {
   writeRelationships: vi.fn(),
 };
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     apiKey: {
       findMany: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: vi.fn(),
     warn: vi.fn(),

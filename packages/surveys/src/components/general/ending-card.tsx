@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { isSafeLinkUrl } from "@formbricks/survey-ui";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { type TResponseData, type TResponseVariables } from "@formbricks/types/responses";
-import { type TSurveyEndScreenCard, type TSurveyRedirectUrlCard } from "@formbricks/types/surveys/types";
+import { isSafeLinkUrl } from "@forma/survey-ui";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
+import { type TSurveyEndScreenCard, type TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
 import { SubmitButton } from "@/components/buttons/submit-button";
 import { ElementMedia } from "@/components/general/element-media";
 import { Headline } from "@/components/general/headline";

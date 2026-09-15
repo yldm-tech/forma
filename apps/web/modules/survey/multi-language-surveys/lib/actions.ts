@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ZLanguageInput, ZLanguageUpdate } from "@formbricks/types/workspace";
+import { ZId } from "@forma/types/common";
+import { ZLanguageInput, ZLanguageUpdate } from "@forma/types/workspace";
 import { assertCan } from "@/lib/authorization";
 import {
   createLanguage,

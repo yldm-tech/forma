@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { createI18nString } from "@/lib/i18n/utils";
 import { buildBlock } from "./survey-block-builder";
 

@@ -8,7 +8,7 @@ import "react-grid-layout/css/styles.css";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import "react-resizable/css/styles.css";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { CreateChartDialog } from "@/modules/ee/analysis/charts/components/create-chart-dialog";

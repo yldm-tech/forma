@@ -1,12 +1,12 @@
 "use server";
 
 import { headers } from "next/headers";
-import { AuthenticationError, AuthorizationError, OperationNotAllowedError } from "@formbricks/types/errors";
+import { AuthenticationError, AuthorizationError, OperationNotAllowedError } from "@forma/types/errors";
 import {
   TUserPersonalInfoUpdateInput,
   TUserUpdateInput,
   ZUserPersonalInfoUpdateInput,
-} from "@formbricks/types/user";
+} from "@forma/types/user";
 import { getIsEmailUnique } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/lib/user";
 import { EMAIL_VERIFICATION_DISABLED, PASSWORD_RESET_DISABLED, WEBAPP_URL } from "@/lib/constants";
 import { verifyUserPassword } from "@/lib/user/password";

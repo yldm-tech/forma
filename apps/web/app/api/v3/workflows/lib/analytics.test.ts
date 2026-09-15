@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
-import type { WorkflowAnalyticsDetail } from "@formbricks/workflows/server";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
+import type { WorkflowAnalyticsDetail } from "@forma/workflows/server";
 import type { TV3Authentication } from "@/app/api/v3/lib/types";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
@@ -54,12 +54,8 @@ beforeEach(() => {
 
 describe("resolveWorkflowAnalyticsVia", () => {
   test("a session is the UI, an API key is the API, and the MCP route wins over both", () => {
-    expect(resolveWorkflowAnalyticsVia(sessionAuth, "https://app.formbricks.com/api/v3/workflows")).toBe(
-      "ui"
-    );
-    expect(resolveWorkflowAnalyticsVia(apiKeyAuth, "https://app.formbricks.com/api/v3/workflows")).toBe(
-      "api"
-    );
+    expect(resolveWorkflowAnalyticsVia(sessionAuth, "https://app.forma.ylam.ai/api/v3/workflows")).toBe("ui");
+    expect(resolveWorkflowAnalyticsVia(apiKeyAuth, "https://app.forma.ylam.ai/api/v3/workflows")).toBe("api");
     expect(resolveWorkflowAnalyticsVia(apiKeyAuth, MCP_API_ROUTE)).toBe("mcp");
     expect(resolveWorkflowAnalyticsVia(sessionAuth, MCP_API_ROUTE)).toBe("mcp");
     expect(resolveWorkflowAnalyticsVia(null, "inst")).toBe("ui");
@@ -100,7 +96,7 @@ describe("toWorkflowLifecycleEventProperties", () => {
 
 describe("buildRecordAnalytics", () => {
   test("a signed-in user is the distinct id and the organization is resolved from the workspace", async () => {
-    await buildRecordAnalytics(sessionAuth, "https://app.formbricks.com/api/v3/workflows/wf_1")(detail);
+    await buildRecordAnalytics(sessionAuth, "https://app.forma.ylam.ai/api/v3/workflows/wf_1")(detail);
 
     expect(getOrganizationIdFromWorkspaceId).toHaveBeenCalledWith("ws_1");
     expect(capturePostHogEvent).toHaveBeenCalledTimes(1);
@@ -120,7 +116,7 @@ describe("buildRecordAnalytics", () => {
   test("an API key uses its own organization as the distinct id without a workspace lookup", async () => {
     await buildRecordAnalytics(
       apiKeyAuth,
-      "https://app.formbricks.com/api/v3/workflows/wf_1"
+      "https://app.forma.ylam.ai/api/v3/workflows/wf_1"
     )({
       ...detail,
       operation: "created",

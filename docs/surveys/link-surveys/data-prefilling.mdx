@@ -1,11 +1,11 @@
 ---
 title: "Data Prefilling"
 description:
-  "URL Data Prefilling for Link Surveys in Formbricks"
+  "URL Data Prefilling for Link Surveys in Forma"
 icon: "fill"
 ---
 
-Data prefilling via the URL allows you to increase completion rate by prefilling data you already have in a different system. Formbricks allows you to prefill multiple questions in a survey and skip prefilled questions.
+Data prefilling via the URL allows you to increase completion rate by prefilling data you already have in a different system. Forma allows you to prefill multiple questions in a survey and skip prefilled questions.
 
 ## Purpose
 
@@ -13,13 +13,13 @@ Data prefilling via URL comes in handy when you:
 
 - Have data for some of the respondents, but not all
 - Have data you want the respondent to confirm or update
-- Have data in a different system (e.g. your database) and want to add it to the user profile in Formbricks
+- Have data in a different system (e.g. your database) and want to add it to the user profile in Forma
 - Want to embed a survey in an email and increase completion by prefilling the choice selected in the email
 
 ## Quick Example
 
 ```sh Example URL
-https://app.formbricks.com/s/clin3dxja02k8l80hpwmx4bjy?question_id_1=answer_1&question_id_2=answer_2&skipPrefilled=true
+https://app.forma.ylam.ai/s/clin3dxja02k8l80hpwmx4bjy?question_id_1=answer_1&question_id_2=answer_2&skipPrefilled=true
 ```
 
 ## How it works
@@ -34,12 +34,12 @@ https://app.formbricks.com/s/clin3dxja02k8l80hpwmx4bjy?question_id_1=answer_1&qu
 You can skip prefilled questions by adding the `skipPrefilled` parameter in the URL. To skip prefilled questions and show the next available question, add `skipPrefilled=true` to the URL. By default, `skipPrefilled` is set to `false`.
 
 ```sh Skipping prefilled questions
-app.formbricks.com/s/clin3dxj?question_id_1=answer_1&skipPrefilled=true
+app.forma.ylam.ai/s/clin3dxj?question_id_1=answer_1&skipPrefilled=true
 ```
 
 ### Prefilling multiple values
 
-Formbricks lets you prefill as many values as you want. Combine multiple values in the URL using `&`, for example: `name=Bernadette&age=18`. The order of query parameters doesn’t matter, so you can move questions around or add new ones without worrying about the parameter order.
+Forma lets you prefill as many values as you want. Combine multiple values in the URL using `&`, for example: `name=Bernadette&age=18`. The order of query parameters doesn’t matter, so you can move questions around or add new ones without worrying about the parameter order.
 
 ### Where do I find my question Id?
 
@@ -56,7 +56,7 @@ Here are a few examples to get you started:
 Translates to 5 stars / points / emojis:
 
 ```sh Rating Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?rating_question_id=5
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?rating_question_id=5
 ```
 
 ### NPS Question
@@ -64,7 +64,7 @@ https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?rating_question_id=5
 Translates to an NPS rating of 10:
 
 ```sh NPS Questions
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?nps_question_id=10
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?nps_question_id=10
 ```
 
 ### Single Select Question (Radio)
@@ -72,7 +72,7 @@ https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?nps_question_id=10
 Chooses the option 'Very disappointed' in the single select question. The string has to be identical to the option in your question:
 
 ```sh Single-select Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?single_select_question_id=Very%20disappointed
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?single_select_question_id=Very%20disappointed
 ```
 
 ### Multi Select Question (Checkbox)
@@ -80,15 +80,15 @@ https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?single_select_question_id
 Selects three options 'Sun, Palms and Beach' in the multi select question. The strings have to be identical to the options in your question:
 
 ```sh Multi-select Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?multi_select_question_id=Sun%2CPalms%2CBeach
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?multi_select_question_id=Sun%2CPalms%2CBeach
 ```
 
 ### Open Text Question
 
-Adds 'I love Formbricks' as the answer to the open text question:
+Adds 'I love Forma' as the answer to the open text question:
 
 ```sh Open Text Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?openText_question_id=I%20love%20Formbricks
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?openText_question_id=I%20love%20Forma
 ```
 
 ### Consent Question
@@ -96,7 +96,7 @@ https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?openText_question_id=I%20
 Adds 'accepted' as the answer to the Consent question. Alternatively, you can set it to 'dismissed' to skip the question.
 
 ```txt Consent Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?consent_question_id=accepted
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?consent_question_id=accepted
 ```
 
 ### Picture Selection Question
@@ -104,7 +104,7 @@ https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?consent_question_id=accep
 Adds index of the selected image(s) as the answer to the Picture Selection question. The index starts from 1
 
 ```txt Picture Selection Question
-https://app.formbricks.com/s/clin3yxja52k8l80hpwmx4bjy?pictureSelection_question_id=1%2C2%2C3
+https://app.forma.ylam.ai/s/clin3yxja52k8l80hpwmx4bjy?pictureSelection_question_id=1%2C2%2C3
 ```
 
 
@@ -123,7 +123,7 @@ Single Select and Multi Select questions support prefilling with **option IDs** 
 When you create one CTA link per answer option (for example in emails), use the option ID as the parameter value:
 
 ```sh Option-ID prefill
-https://app.formbricks.com/s/cmoh0584taxoxu501jyvk8tzn?tuk2i9ktui1lee0mfos82czb=e2r697fou23n7ba4vmt7you6
+https://app.forma.ylam.ai/s/cmoh0584taxoxu501jyvk8tzn?tuk2i9ktui1lee0mfos82czb=e2r697fou23n7ba4vmt7you6
 ```
 
 In this example:
@@ -143,13 +143,13 @@ In this example:
 **Single Select:**
 
 ```sh Single Select with Option ID
-https://app.formbricks.com/s/surveyId?questionId=option-abc123
+https://app.forma.ylam.ai/s/surveyId?questionId=option-abc123
 ```
 
 **Multi Select:**
 
 ```sh Multi Select with Option IDs
-https://app.formbricks.com/s/surveyId?questionId=option-1,option-2,option-3
+https://app.forma.ylam.ai/s/surveyId?questionId=option-1,option-2,option-3
 ```
 
 **Mixed IDs and Labels:**
@@ -157,7 +157,7 @@ https://app.formbricks.com/s/surveyId?questionId=option-1,option-2,option-3
 You can even mix option IDs and labels in the same URL (though using IDs consistently is recommended):
 
 ```sh Mixed Approach
-https://app.formbricks.com/s/surveyId?questionId=option-abc,Some%20Label,option-xyz
+https://app.forma.ylam.ai/s/surveyId?questionId=option-abc,Some%20Label,option-xyz
 ```
 
 ### Backward Compatibility

@@ -1,4 +1,4 @@
-import { TWorkspaceConfigChannel } from "@formbricks/types/workspace";
+import { TWorkspaceConfigChannel } from "@forma/types/workspace";
 import { initialFilters } from "@/modules/survey/list/lib/constants";
 import {
   TSurveyOverviewFilters,

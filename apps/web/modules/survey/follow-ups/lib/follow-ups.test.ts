@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TOrganization } from "@forma/types/organizations";
+import { TResponse } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getResponse } from "@/lib/response/service";
 import { getSurvey } from "@/lib/survey/service";

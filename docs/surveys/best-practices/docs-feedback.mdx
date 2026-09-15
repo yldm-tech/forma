@@ -1,7 +1,7 @@
 ---
 title: "Docs Feedback"
 icon: "comment"
-description: "A step-by-step guide to getting feedback on your Documentation with Formbricks"
+description: "A step-by-step guide to getting feedback on your Documentation with Forma"
 ---
 
 
@@ -15,7 +15,7 @@ Your users don’t spend as much time thinking about your product as you do. To 
 
 To get this running, you'll need a bit of time. Here are the steps we're going through:
 
-- Set up Formbricks Cloud
+- Set up Forma Cloud
 
 - Build the frontend
 
@@ -23,9 +23,9 @@ To get this running, you'll need a bit of time. Here are the steps we're going t
 
 - Test
 
-## 1. Setting up Formbricks Cloud
+## 1. Setting up Forma Cloud
 
-Create a [Formbricks Cloud](https://app.formbricks.com/auth/signup) account, then a survey from the **Docs Feedback** template — **New Survey → Choose a template**, then search for it.
+Create a [Forma Cloud](https://app.forma.ylam.ai/auth/signup) account, then a survey from the **Docs Feedback** template — **New Survey → Choose a template**, then search for it.
 
 ### Make it a link survey
 
@@ -33,7 +33,7 @@ Open **Settings → Survey Type** and make sure **Link survey** is selected. A n
 from the workspace channel chosen during onboarding, so a workspace set up for a website or app creates
 **app** surveys by default — check it rather than assuming it.
 
-This matters more than it looks. You are going to post responses to the client API from your own frontend, so nothing here uses the Formbricks widget. An **app** survey cannot be published without a trigger — `survey-menu-bar.tsx` refuses to save one with no triggers — which is why older versions of this guide told you to invent an action that never fires. A link survey has no such requirement, so the workaround is unnecessary.
+This matters more than it looks. You are going to post responses to the client API from your own frontend, so nothing here uses the Forma widget. An **app** survey cannot be published without a trigger — `survey-menu-bar.tsx` refuses to save one with no triggers — which is why older versions of this guide told you to invent an action that never fires. A link survey has no such requirement, so the workaround is unnecessary.
 
 ### Set the question IDs
 
@@ -65,7 +65,7 @@ Publish the survey.
 
 Before we start, lets talk about the widget. It works like this:
 
-* Once the user selects yes/no, a partial response is sent to the Formbricks API. It includes the feedback and the current page url.
+* Once the user selects yes/no, a partial response is sent to the Forma API. It includes the feedback and the current page url.
 
 * Then the user is presented with an additional open text field to further explain their choice. Once it's submitted, the previous response is updated with the additional feedback.
 
@@ -101,9 +101,9 @@ export const DocsFeedback = () => {
   const [freeText, setFreeText] = useState("");
 
   if (
-    !process.env.NEXT_PUBLIC_FORMBRICKS_COM_DOCS_FEEDBACK_SURVEY_ID ||
-    !process.env.NEXT_PUBLIC_FORMBRICKS_COM_API_HOST ||
-    !process.env.NEXT_PUBLIC_FORMBRICKS_COM_WORKSPACE_ID
+    !process.env.NEXT_PUBLIC_FORMA_COM_DOCS_FEEDBACK_SURVEY_ID ||
+    !process.env.NEXT_PUBLIC_FORMA_COM_API_HOST ||
+    !process.env.NEXT_PUBLIC_FORMA_COM_WORKSPACE_ID
   ) {
     return null;
   }
@@ -181,9 +181,9 @@ Disabling feedback if config environment variables are not set properly:
 
 ```tsx Disable feedback if incorrect config env vars
 if (
-  !process.env.NEXT_PUBLIC_FORMBRICKS_COM_DOCS_FEEDBACK_SURVEY_ID ||
-  !process.env.NEXT_PUBLIC_FORMBRICKS_COM_API_HOST ||
-  !process.env.NEXT_PUBLIC_FORMBRICKS_COM_WORKSPACE_ID
+  !process.env.NEXT_PUBLIC_FORMA_COM_DOCS_FEEDBACK_SURVEY_ID ||
+  !process.env.NEXT_PUBLIC_FORMA_COM_API_HOST ||
+  !process.env.NEXT_PUBLIC_FORMA_COM_WORKSPACE_ID
 ) {
   return null;
 }
@@ -203,10 +203,10 @@ return (
                 <PopoverTrigger
                   className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-slate-900 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-1 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-300"
                   onClick={async () => {
-                    const id = await handleFeedbackSubmit(option, router.asPath); // handleFeedbackSubmit sends the Yes / No choice as well as the current URL to Formbricks and returns the responseId
+                    const id = await handleFeedbackSubmit(option, router.asPath); // handleFeedbackSubmit sends the Yes / No choice as well as the current URL to Forma and returns the responseId
                     setResponseId(id); // add responseId to local state so we can use it if user decides to add more feedback in free text field
                   }}>
-                  {option} // "Yes 👍" or "No 👎" - they have to be identical with the choices in the survey on app.formbricks.com for it to work (!)
+                  {option} // "Yes 👍" or "No 👎" - they have to be identical with the choices in the survey on app.forma.ylam.ai for it to work (!)
                 </PopoverTrigger>
               ))}
             </div>
@@ -244,9 +244,9 @@ return (
 }
 ```
 
-## 3. Connecting to the Formbricks API
+## 3. Connecting to the Forma API
 
-The last step is to hook up your new frontend to the Formbricks API. To achieve that, we followed the “[Create Response](/api-reference/client-api--response/create-response)” and “[Update Response](/api-reference/client-api--response/update-response)” pages in our docs.
+The last step is to hook up your new frontend to the Forma API. To achieve that, we followed the “[Create Response](/api-reference/client-api--response/create-response)” and “[Update Response](/api-reference/client-api--response/update-response)” pages in our docs.
 
 Here is the code for the `handleFeedbackSubmit` function with comments:
 
@@ -254,19 +254,19 @@ Here is the code for the `handleFeedbackSubmit` function with comments:
 export const handleFeedbackSubmit = async (YesNo, pageUrl) => {
   const response_data = {
     data: {
-      isHelpful: YesNo, // the "Yes 👍" or "No 👎" response. Remember: They have to be identical with the choices in the survey on app.formbricks.com for it to work.
+      isHelpful: YesNo, // the "Yes 👍" or "No 👎" response. Remember: They have to be identical with the choices in the survey on app.forma.ylam.ai for it to work.
       pageUrl: pageUrl, // So you know which page the user gives feedback about.
     },
   };
 
   const payload = {
     response: response_data,
-    surveyId: process.env.NEXT_PUBLIC_FORMBRICKS_COM_DOCS_FEEDBACK_SURVEY_ID, // For testing, replace this with the survey ID of your survey (more info below)
+    surveyId: process.env.NEXT_PUBLIC_FORMA_COM_DOCS_FEEDBACK_SURVEY_ID, // For testing, replace this with the survey ID of your survey (more info below)
   };
 
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_FORMBRICKS_COM_API_HOST}/api/v1/client/${process.env.NEXT_PUBLIC_FORMBRICKS_COM_WORKSPACE_ID}/responses`, // For testing, replace this with the API host and workspace ID of your Development workspace on app.formbricks.com
+      `${process.env.NEXT_PUBLIC_FORMA_COM_API_HOST}/api/v1/client/${process.env.NEXT_PUBLIC_FORMA_COM_WORKSPACE_ID}/responses`, // For testing, replace this with the API host and workspace ID of your Development workspace on app.forma.ylam.ai
       {
         method: "POST",
         headers: {
@@ -302,13 +302,13 @@ export const updateFeedback = async (freeText, responseId) => {
       data: {
         additionalFeedback: freeText,
       },
-      finished: true, // Lets Formbricks calculate Completion Rate
+      finished: true, // Lets Forma calculate Completion Rate
     },
   };
 
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_FORMBRICKS_COM_API_HOST}/api/v1/client/${process.env.NEXT_PUBLIC_FORMBRICKS_COM_WORKSPACE_ID}/responses/${responseId}`,
+      `${process.env.NEXT_PUBLIC_FORMA_COM_API_HOST}/api/v1/client/${process.env.NEXT_PUBLIC_FORMA_COM_WORKSPACE_ID}/responses/${responseId}`,
       {
         method: "PUT",
         headers: {
@@ -339,7 +339,7 @@ Before you roll it out in production, you want to test it. To do so, you need tw
 Open the survey and read both out of the address bar — they are the two path segments:
 
 ```
-https://app.formbricks.com/workspaces/<workspaceId>/surveys/<surveyId>/summary
+https://app.forma.ylam.ai/workspaces/<workspaceId>/surveys/<surveyId>/summary
 ```
 
 Now, you have to replace the IDs and the API host accordingly in your `handleFeedbackSubmit`:
@@ -352,8 +352,8 @@ Now, you have to replace the IDs and the API host accordingly in your `handleFee
 
   try {
     const res = await fetch(
-			// Note that we also updated the API host to 'https://app.formbricks.com/'
-      `https://app.formbricks.com/api/v1/client/clgwcwp4z000lpf0hur7uxbuv/responses`,
+			// Note that we also updated the API host to 'https://app.forma.ylam.ai/'
+      `https://app.forma.ylam.ai/api/v1/client/clgwcwp4z000lpf0hur7uxbuv/responses`,
 ```
 
 And lastly, in the `updateFeedback` function
@@ -361,12 +361,12 @@ And lastly, in the `updateFeedback` function
 ```tsx Replace the ID and API here as well
   try {
     const res = await fetch(
-		// Note that we also updated the API host to 'https://app.formbricks.com/'
-      `https://app.formbricks.com/api/v1/client/clgwcwp4z000lpf0hur7uxbuv/responses/${responseId}`, // Note that we also updated the API host to 'https://app.formbricks.com/'
+		// Note that we also updated the API host to 'https://app.forma.ylam.ai/'
+      `https://app.forma.ylam.ai/api/v1/client/clgwcwp4z000lpf0hur7uxbuv/responses/${responseId}`, // Note that we also updated the API host to 'https://app.forma.ylam.ai/'
 ```
 
 ### You’re good to go! 🎉
 
 Something doesn’t work? Check your browser console for the error.
 
-**Need help?** [Reach out in GitHub Discussions](https://github.com/formbricks/formbricks/discussions)
+**Need help?** [Reach out in GitHub Discussions](https://github.com/yldm-tech/forma/discussions)

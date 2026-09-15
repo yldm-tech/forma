@@ -1,18 +1,15 @@
 import "server-only";
 import { google } from "googleapis";
 import { z } from "zod";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZString } from "@formbricks/types/common";
+import { Prisma } from "@forma/database/prisma";
+import { ZString } from "@forma/types/common";
 import {
   AuthenticationError,
   DatabaseError,
   OperationNotAllowedError,
   UnknownError,
-} from "@formbricks/types/errors";
-import {
-  TIntegrationGoogleSheets,
-  ZIntegrationGoogleSheets,
-} from "@formbricks/types/integration/google-sheet";
+} from "@forma/types/errors";
+import { TIntegrationGoogleSheets, ZIntegrationGoogleSheets } from "@forma/types/integration/google-sheet";
 import {
   GOOGLE_SHEETS_CLIENT_ID,
   GOOGLE_SHEETS_CLIENT_SECRET,

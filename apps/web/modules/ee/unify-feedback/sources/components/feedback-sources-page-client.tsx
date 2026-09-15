@@ -11,7 +11,7 @@ import {
   TFeedbackSourceType,
   TFeedbackSourceWithMappings,
   THubTargetField,
-} from "@formbricks/types/feedback-source";
+} from "@forma/types/feedback-source";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import {
   createFeedbackSourceWithMappingsAction,
@@ -72,10 +72,7 @@ export function FeedbackSourcesSection({
   );
   // A survey can only back one feedback source, so surveys already connected are disabled in the picker.
   const connectedSurveyIds = useMemo(
-    () =>
-      initialFeedbackSources.flatMap((source) =>
-        source.formbricksMappings.map((mapping) => mapping.surveyId)
-      ),
+    () => initialFeedbackSources.flatMap((source) => source.formaMappings.map((mapping) => mapping.surveyId)),
     [initialFeedbackSources]
   );
   // Surveys that aren't backing a source yet (and aren't drafts) are surfaced as "Suggestions" below the table.
@@ -109,10 +106,10 @@ export function FeedbackSourcesSection({
         feedbackDirectoryId: data.feedbackDirectoryId,
         importMode: data.importMode,
       },
-      formbricksMappings:
-        data.type === "formbricks_survey" && data.surveyMappings?.length ? data.surveyMappings : undefined,
+      formaMappings:
+        data.type === "forma_survey" && data.surveyMappings?.length ? data.surveyMappings : undefined,
       fieldMappings:
-        data.type !== "formbricks_survey" && data.fieldMappings?.length
+        data.type !== "forma_survey" && data.fieldMappings?.length
           ? data.fieldMappings.map((m) => ({
               sourceFieldId: m.sourceFieldId || "",
               targetFieldId: m.targetFieldId as THubTargetField,
@@ -145,7 +142,7 @@ export function FeedbackSourcesSection({
         name: data.name,
         importMode: data.importMode,
       },
-      formbricksMappings: data.surveyMappings?.length ? data.surveyMappings : undefined,
+      formaMappings: data.surveyMappings?.length ? data.surveyMappings : undefined,
       fieldMappings: data.fieldMappings?.length
         ? data.fieldMappings.map((m) => ({
             sourceFieldId: m.sourceFieldId || "",
@@ -204,7 +201,7 @@ export function FeedbackSourcesSection({
     // route beside this button, which opens the modal with the choice.
     const feedbackSourceId = await handleCreateFeedbackSource({
       name: t("workspace.unify.source_connector_name", { surveyName: survey.name }),
-      type: "formbricks_survey",
+      type: "forma_survey",
       feedbackDirectoryId,
       importMode: "completedOnly",
       surveyMappings: [{ surveyId: survey.id, elementIds }],

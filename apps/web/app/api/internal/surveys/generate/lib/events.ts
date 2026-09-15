@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { DeepPartial } from "@formbricks/ai";
+import type { DeepPartial } from "@forma/ai";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 import type { ZGeneratedSurveyDraftForAI } from "@/app/api/v3/surveys/generate/schemas";
 import type { TV3SurveyGenerateValidation } from "@/app/api/v3/surveys/generate/service";

@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
-import { TOrganization } from "@formbricks/types/organizations";
+import { TOrganizationRole } from "@forma/types/memberships";
+import { TOrganization } from "@forma/types/organizations";
 import { updateOrganizationAISettingsAction } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/general/actions";
 import { getDisplayedOrganizationAISettingValue, getOrganizationAIEnablementState } from "@/lib/ai/utils";
 import { getAccessFlags } from "@/lib/membership/utils";
@@ -20,7 +20,7 @@ interface AISettingsToggleProps {
   membershipRole?: TOrganizationRole;
   isInstanceAIConfigured: boolean;
   hasAIPermission: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   enterpriseLicenseRequestFormUrl: string;
 }
 
@@ -29,7 +29,7 @@ export const AISettingsToggle = ({
   membershipRole,
   isInstanceAIConfigured,
   hasAIPermission,
-  isFormbricksCloud,
+  isFormaCloud,
   enterpriseLicenseRequestFormUrl,
 }: Readonly<AISettingsToggleProps>) => {
   const organizationBillingPath = organizationSettingsPath(organization.id, "billing");
@@ -78,12 +78,12 @@ export const AISettingsToggle = ({
 
   const upgradeButtons: [ModalButton, ModalButton] = [
     {
-      text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-      href: isFormbricksCloud ? organizationBillingPath : enterpriseLicenseRequestFormUrl,
+      text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+      href: isFormaCloud ? organizationBillingPath : enterpriseLicenseRequestFormUrl,
     },
     {
       text: t("common.learn_more"),
-      href: "https://formbricks.com/docs/platform/features/ai-features",
+      href: "https://forma.ylam.ai/docs/platform/features/ai-features",
     },
   ];
 

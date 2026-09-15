@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const cubeConfigPath = require.resolve("../../../../../../../docker/cube/cube.js");
-const chartCubeConfigPath = require.resolve("../../../../../../../charts/formbricks/cube/cube.js");
+const chartCubeConfigPath = require.resolve("../../../../../../../charts/forma/cube/cube.js");
 const cubeSchemaPath = require.resolve("../../../../../../../docker/cube/schema/FeedbackRecords.js");
 process.env.CUBEJS_API_SECRET = process.env.CUBEJS_API_SECRET || "cube-secret";
 
@@ -375,8 +375,8 @@ describe("cube queryRewrite", () => {
     expect(logPayload).not.toContain("secret-value");
   });
 
-  // The Helm chart mounts charts/formbricks/cube/cube.js over the pod's config
-  // (see charts/formbricks/templates/cube-configmap.yaml), so it must stay
+  // The Helm chart mounts charts/forma/cube/cube.js over the pod's config
+  // (see charts/forma/templates/cube-configmap.yaml), so it must stay
   // byte-identical to the Docker copy this suite runs against — mirroring the
   // schema parity guard in schema-definition.test.ts.
   test("keeps the Helm and Docker Cube configs in sync", () => {

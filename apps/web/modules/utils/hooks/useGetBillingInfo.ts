@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { TOrganizationBilling } from "@forma/types/organizations";
 import { getOrganizationBillingInfoAction } from "./actions";
 
 export const useGetBillingInfo = (organizationId: string) => {

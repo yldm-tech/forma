@@ -1,17 +1,17 @@
 ---
 title: "MCP Server"
-description: "Configure and use the Formbricks v3 Surveys and Workflows MCP server"
+description: "Configure and use the Forma v3 Surveys and Workflows MCP server"
 icon: "robot"
 ---
 
 ## Overview
 
-The Formbricks MCP server exposes v3 Surveys and Workflows tool surfaces for AI agents. It runs inside
-the Formbricks web app at `/api/mcp` and reuses the same v3 API authentication, authorization,
+The Forma MCP server exposes v3 Surveys and Workflows tool surfaces for AI agents. It runs inside
+the Forma web app at `/api/mcp` and reuses the same v3 API authentication, authorization,
 rate limiting, response handling, and audit logging paths as the REST routes.
 
 <Note>
-  OAuth 2.1 is the preferred authentication path for MCP clients. Formbricks API keys remain supported as a
+  OAuth 2.1 is the preferred authentication path for MCP clients. Forma API keys remain supported as a
   backwards-compatible fallback for local development, self-hosters, and clients that do not support MCP OAuth
   yet.
 </Note>
@@ -23,10 +23,10 @@ rate limiting, response handling, and audit logging paths as the REST routes.
 
 ## Endpoint
 
-Use the streamable HTTP MCP endpoint on the Formbricks app:
+Use the streamable HTTP MCP endpoint on the Forma app:
 
 ```text
-https://app.formbricks.com/api/mcp
+https://app.forma.ylam.ai/api/mcp
 ```
 
 For local development:
@@ -36,7 +36,7 @@ http://localhost:3000/api/mcp
 ```
 
 The route supports `POST` requests, runs with the Next.js Node.js runtime, and sets private no-store
-response headers. Browser-origin MCP requests must come from the configured Formbricks app origin.
+response headers. Browser-origin MCP requests must come from the configured Forma app origin.
 
 ### Protocol revisions
 
@@ -57,7 +57,7 @@ route this handler is mounted on is the only mount point.
 OAuth clients discover the protected resource metadata here:
 
 ```text
-https://app.formbricks.com/.well-known/oauth-protected-resource/api/mcp
+https://app.forma.ylam.ai/.well-known/oauth-protected-resource/api/mcp
 ```
 
 The metadata advertises `/api/mcp` as the protected resource and points clients to the Better Auth
@@ -71,13 +71,13 @@ OAuth clients use Authorization Code + PKCE with Dynamic Client Registration. Th
 resource is:
 
 ```text
-https://app.formbricks.com/api/mcp
+https://app.forma.ylam.ai/api/mcp
 ```
 
 The authorization server issuer is:
 
 ```text
-https://app.formbricks.com/api/auth
+https://app.forma.ylam.ai/api/auth
 ```
 
 Discovery endpoints:
@@ -144,7 +144,7 @@ from that list, so `offline_access` must be advertised there for clients to be i
 </Warning>
 
 OAuth scopes gate MCP tool categories at the token layer. Actual workspace access is still evaluated
-at tool execution through the existing v3 authorization checks for the signed-in Formbricks user, so
+at tool execution through the existing v3 authorization checks for the signed-in Forma user, so
 a token scope and a workspace role are independent gates — a call must satisfy both.
 
 Scope groups are **independent**: a token authenticates as long as it holds at least one resource
@@ -153,7 +153,7 @@ scope, so a `feedbackRecords:read`-only grant is valid and simply can't reach th
 
 ### API-key fallback
 
-API-key MCP access remains supported. Authenticate with a Formbricks API key in a request header:
+API-key MCP access remains supported. Authenticate with a Forma API key in a request header:
 
 ```http
 Authorization: Bearer fbk_...
@@ -214,12 +214,12 @@ gate and the per-workspace access check above are independent — a `:write` too
 
 ## Local Setup
 
-Start Formbricks and prepare the database:
+Start Forma and prepare the database:
 
 ```bash
 pnpm db:up
 pnpm db:migrate:dev
-pnpm --filter @formbricks/web dev
+pnpm --filter @forma/web dev
 ```
 
 <Note>
@@ -278,18 +278,18 @@ curl -sS -X POST http://localhost:3000/api/auth/oauth2/register \
 The consent screen is served at `/account/authorize`. Users can revoke approved MCP clients from
 `/account/settings/authorized-apps`.
 
-For API-key fallback, create an API key in the Formbricks app with access to the target workspace.
+For API-key fallback, create an API key in the Forma app with access to the target workspace.
 Use the least privileged permission needed by the agent workflow.
 
 Verify that the MCP endpoint can list tools:
 
 ```bash
-export FORMBRICKS_MCP_API_KEY="fbk_..."
+export FORMA_MCP_API_KEY="fbk_..."
 
 curl -sS -X POST http://localhost:3000/api/mcp \
   -H "Accept: application/json, text/event-stream" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $FORMBRICKS_MCP_API_KEY" \
+  -H "Authorization: Bearer $FORMA_MCP_API_KEY" \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
@@ -301,7 +301,7 @@ Add the HTTP MCP server. Include `--oauth-resource` so the OAuth access token is
 the MCP resource URL:
 
 ```bash
-codex mcp add formbricks-local \
+codex mcp add forma-local \
   --url http://localhost:3000/api/mcp \
   --oauth-resource http://localhost:3000/api/mcp
 ```
@@ -309,14 +309,14 @@ codex mcp add formbricks-local \
 Authenticate and request the scopes the agent needs:
 
 ```bash
-codex mcp login formbricks-local \
+codex mcp login forma-local \
   --scopes openid,profile,email,offline_access,surveys:read,surveys:write,workflows:read,workflows:write,feedbackRecords:read,feedbackRecords:write
 ```
 
 For read-only usage, omit the `:write` scopes:
 
 ```bash
-codex mcp login formbricks-local \
+codex mcp login forma-local \
   --scopes openid,profile,email,offline_access,surveys:read,workflows:read,feedbackRecords:read
 ```
 
@@ -324,14 +324,14 @@ Scope groups are independent — a token needs at least one resource scope, but 
 only the feedback-record tools, request `feedbackRecords:read` (plus `feedbackRecords:write` to create)
 and omit the survey scopes.
 
-Codex opens the browser to Formbricks, completes Dynamic Client Registration, and stores the OAuth
+Codex opens the browser to Forma, completes Dynamic Client Registration, and stores the OAuth
 client and tokens in Codex's credential store. The user approves the requested scopes on the
-Formbricks consent screen.
+Forma consent screen.
 
 Equivalent Codex config for the server entry:
 
 ```toml
-[mcp_servers.formbricks-local]
+[mcp_servers.forma-local]
 url = "http://localhost:3000/api/mcp"
 oauth_resource = "http://localhost:3000/api/mcp"
 ```
@@ -340,13 +340,13 @@ Verify the registration:
 
 ```bash
 codex mcp list
-codex mcp get formbricks-local
+codex mcp get forma-local
 ```
 
 Then ask Codex to use the configured server:
 
 ```text
-Use the formbricks-local MCP server to list surveys for workspace clxx1234567890123456789012.
+Use the forma-local MCP server to list surveys for workspace clxx1234567890123456789012.
 ```
 
 ### API-key fallback
@@ -354,21 +354,21 @@ Use the formbricks-local MCP server to list surveys for workspace clxx1234567890
 Store the API key in the shell environment:
 
 ```bash
-export FORMBRICKS_MCP_API_KEY="fbk_..."
+export FORMA_MCP_API_KEY="fbk_..."
 ```
 
 For Codex Desktop on macOS, persist the value in the launch environment and restart Codex Desktop:
 
 ```bash
-launchctl setenv FORMBRICKS_MCP_API_KEY "fbk_..."
+launchctl setenv FORMA_MCP_API_KEY "fbk_..."
 ```
 
 Register the local MCP server with a bearer-token environment variable:
 
 ```bash
-codex mcp add formbricks-local-api-key \
+codex mcp add forma-local-api-key \
   --url http://localhost:3000/api/mcp \
-  --bearer-token-env-var FORMBRICKS_MCP_API_KEY
+  --bearer-token-env-var FORMA_MCP_API_KEY
 ```
 
 ## Claude Configuration
@@ -380,14 +380,14 @@ codex mcp add formbricks-local-api-key \
 Add the remote HTTP MCP server:
 
 ```bash
-claude mcp add --transport http formbricks-local http://localhost:3000/api/mcp
+claude mcp add --transport http forma-local http://localhost:3000/api/mcp
 ```
 
-Run `/mcp` and authenticate `formbricks-local`. Claude Code discovers the MCP protected-resource
+Run `/mcp` and authenticate `forma-local`. Claude Code discovers the MCP protected-resource
 metadata, registers a public client whose scopes are taken from that metadata's `scopes_supported`
 (`surveys:read surveys:write workflows:read workflows:write feedbackRecords:read
 feedbackRecords:write offline_access`), and launches the browser-based OAuth flow — there is no
-scope-entry step. You approve the requested scopes on the Formbricks consent screen. A `:write` tool
+scope-entry step. You approve the requested scopes on the Forma consent screen. A `:write` tool
 requires both the matching `:write` scope on the token and write/manage permission on the target
 workspace at execution time (see [Authentication](#authentication)).
 
@@ -395,7 +395,7 @@ Verify it:
 
 ```bash
 claude mcp list
-claude mcp get formbricks-local
+claude mcp get forma-local
 ```
 
 For project-shared Claude Code configuration, use `.mcp.json` without static credentials:
@@ -403,7 +403,7 @@ For project-shared Claude Code configuration, use `.mcp.json` without static cre
 ```json
 {
   "mcpServers": {
-    "formbricks-local": {
+    "forma-local": {
       "type": "http",
       "url": "http://localhost:3000/api/mcp"
     }
@@ -419,14 +419,14 @@ API-key fallback below until that client is updated.
 Set the API key:
 
 ```bash
-export FORMBRICKS_MCP_API_KEY="fbk_..."
+export FORMA_MCP_API_KEY="fbk_..."
 ```
 
 Add the HTTP MCP server:
 
 ```bash
-claude mcp add --transport http formbricks-local-api-key http://localhost:3000/api/mcp \
-  --header "Authorization: Bearer $FORMBRICKS_MCP_API_KEY"
+claude mcp add --transport http forma-local-api-key http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer $FORMA_MCP_API_KEY"
 ```
 
 For a project-shared fallback configuration, keep the API key outside git:
@@ -434,9 +434,9 @@ For a project-shared fallback configuration, keep the API key outside git:
 ```json
 {
   "mcpServers": {
-    "formbricks-local-api-key": {
+    "forma-local-api-key": {
       "headers": {
-        "Authorization": "Bearer ${FORMBRICKS_MCP_API_KEY}"
+        "Authorization": "Bearer ${FORMA_MCP_API_KEY}"
       },
       "type": "http",
       "url": "http://localhost:3000/api/mcp"
@@ -445,7 +445,7 @@ For a project-shared fallback configuration, keep the API key outside git:
 }
 ```
 
-Claude Code will fail to parse this fallback config if `FORMBRICKS_MCP_API_KEY` is not set.
+Claude Code will fail to parse this fallback config if `FORMA_MCP_API_KEY` is not set.
 
 ### Claude Desktop
 
@@ -464,7 +464,7 @@ Example config:
 ```json
 {
   "mcpServers": {
-    "formbricks-local": {
+    "forma-local": {
       "type": "http",
       "url": "http://localhost:3000/api/mcp"
     }
@@ -477,9 +477,9 @@ Fallback config with an API key:
 ```json
 {
   "mcpServers": {
-    "formbricks-local-api-key": {
+    "forma-local-api-key": {
       "headers": {
-        "Authorization": "Bearer ${FORMBRICKS_MCP_API_KEY}"
+        "Authorization": "Bearer ${FORMA_MCP_API_KEY}"
       },
       "type": "http",
       "url": "http://localhost:3000/api/mcp"
@@ -492,7 +492,7 @@ Set the API key in the Desktop launch environment before opening Claude Desktop 
 fallback config:
 
 ```bash
-launchctl setenv FORMBRICKS_MCP_API_KEY "fbk_..."
+launchctl setenv FORMA_MCP_API_KEY "fbk_..."
 ```
 
 If a Claude Desktop version only supports stdio MCP servers, use Claude Code for the HTTP endpoint or
@@ -553,7 +553,7 @@ Two kinds of exception:
 
 <Note>
   A client that adds its own keys to a tool call's `arguments` will be rejected. Nothing in the MCP spec
-  invites that, but it is a behaviour change from earlier Formbricks releases, which silently dropped
+  invites that, but it is a behaviour change from earlier Forma releases, which silently dropped
   such keys.
 
   Two consequences worth knowing. **Read-modify-write needs trimming:** `update_feedback_record` accepts
@@ -1384,15 +1384,15 @@ Ownership of the anchor record is verified before any neighbour is fetched (see
   embedding to wait for" — the latter also covers text cleared by an update.
 </Note>
 
-`limit` (1–100, default 10) and `minScore` (0–1, default 0.5) are validated by Formbricks rather than
+`limit` (1–100, default 10) and `minScore` (0–1, default 0.5) are validated by Forma rather than
 passed straight through: the Hub silently coerces out-of-range values to its own defaults, which would
-return something other than what was asked for. The default `minScore` of 0.5 is Formbricks' own — the Hub
+return something other than what was asked for. The default `minScore` of 0.5 is Forma' own — the Hub
 defaults to 0.7, which is strict enough that a fair paraphrase often falls just below it.
 
 ## Relationship to V3 Workflows API
 
 Like the survey tools, workflow tools run no custom database queries — each calls the shared,
-framework-agnostic `@formbricks/workflows` handlers used by the v3 REST routes:
+framework-agnostic `@forma/workflows` handlers used by the v3 REST routes:
 
 | MCP Tool             | REST Contract                                   |
 | -------------------- | ----------------------------------------------- |
@@ -1433,7 +1433,7 @@ Feedback-record tools do not map to a v3 REST route. They call the shared server
 (`@/modules/hub/service`) — the same client the Unify Feedback UI uses — and enforce the same
 `feedbackDirectories` Enterprise entitlement.
 
-A feedback record lives in the Formbricks Hub, addressed by an opaque tenant id. Every tool
+A feedback record lives in the Forma Hub, addressed by an opaque tenant id. Every tool
 resolves that tenant server-side: it authorizes the caller's access to `workspaceId`, checks the
 `feedbackDirectories` license, then maps the workspace to its assigned feedback dataset — the
 `FeedbackDirectory` id **is** the Hub tenant id, and it is surfaced to callers as `dataset_id`.
@@ -1508,7 +1508,7 @@ query, like `create_feedback_record`.
 - `apps/web/modules/mcp/tools/workflows.ts`
 - `apps/web/modules/mcp/tools/workflow-schemas.ts`
 - `apps/web/app/api/v3/surveys/lib/operations.ts`
-- `apps/web/app/api/v3/workflows/lib/context.ts` (adapter to the `@formbricks/workflows` handlers)
+- `apps/web/app/api/v3/workflows/lib/context.ts` (adapter to the `@forma/workflows` handlers)
 - `apps/web/app/api/v3/feedbackRecords/lib/operations.ts`
 - `apps/web/app/api/v3/feedbackRecords/lib/access.ts` (tenant resolution + per-record ownership guard)
 - `apps/web/app/api/v3/feedbackRecords/lib/errors.ts` (Hub error → v3 problem mapping)

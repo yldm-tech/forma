@@ -1,7 +1,7 @@
 import "server-only";
-import { createCacheKey } from "@formbricks/cache";
-import { prisma } from "@formbricks/database";
-import { TJsWorkspaceState } from "@formbricks/types/js";
+import { createCacheKey } from "@forma/cache";
+import { prisma } from "@forma/database";
+import { TJsWorkspaceState } from "@forma/types/js";
 import {
   addLegacyProjectOverwritesToList,
   addLegacyProjectToEnvironmentState,

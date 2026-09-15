@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyQuota, TSurveyQuotaInput } from "@formbricks/types/quota";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyQuota, TSurveyQuotaInput } from "@forma/types/quota";
+import { TSurvey } from "@forma/types/surveys/types";
 import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
@@ -26,7 +26,7 @@ import { QuotaModal } from "./quota-modal";
 interface QuotasCardProps {
   localSurvey: TSurvey;
   isQuotasAllowed: boolean;
-  isFormbricksCloud?: boolean;
+  isFormaCloud?: boolean;
   quotas: TSurveyQuota[];
   hasResponses: boolean;
   enterpriseLicenseRequestFormUrl: string;
@@ -65,7 +65,7 @@ const AddQuotaButton = ({
 export const QuotasCard = ({
   localSurvey,
   isQuotasAllowed,
-  isFormbricksCloud,
+  isFormaCloud,
   quotas,
   hasResponses,
   enterpriseLicenseRequestFormUrl,
@@ -174,16 +174,16 @@ export const QuotasCard = ({
                 feature="quotas"
                 buttons={[
                   {
-                    text: isFormbricksCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                    href: isFormbricksCloud
+                    text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                    href: isFormaCloud
                       ? `/organizations/${workspace?.organizationId}/settings/billing`
                       : enterpriseLicenseRequestFormUrl,
                   },
                   {
                     text: t("common.learn_more"),
-                    href: isFormbricksCloud
+                    href: isFormaCloud
                       ? `/organizations/${workspace?.organizationId}/settings/billing`
-                      : "https://formbricks.com/learn-more-self-hosting-license?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=ee_lock_quotas",
+                      : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_quotas",
                   },
                 ]}
               />

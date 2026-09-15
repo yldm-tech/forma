@@ -5,7 +5,7 @@ import { ArrowDownToLineIcon, Loader2Icon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TResponseWithQuotas } from "@formbricks/types/responses";
+import { TResponseWithQuotas } from "@forma/types/responses";
 import { Button } from "@/modules/ui/components/button";
 import { DecrementQuotasCheckbox } from "@/modules/ui/components/decrement-quotas-checkbox";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";

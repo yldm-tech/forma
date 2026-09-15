@@ -20,7 +20,7 @@ vi.mock("@/lib/env", () => ({
   env: { HUB_API_KEY: "test-key", HUB_API_URL: "https://hub.test" },
 }));
 
-const globalForHub = globalThis as unknown as { formbricksHubClientRepeatArrays: unknown };
+const globalForHub = globalThis as unknown as { formaHubClientRepeatArrays: unknown };
 
 const record = { tenant_id: "t1", submission_id: "s1", field_id: "q1" } as FeedbackRecordCreateParams;
 
@@ -57,7 +57,7 @@ const getClient = async () => {
 describe("Hub client retries, through the SDK's own request loop", () => {
   beforeEach(() => {
     vi.resetModules();
-    globalForHub.formbricksHubClientRepeatArrays = undefined;
+    globalForHub.formaHubClientRepeatArrays = undefined;
   });
 
   afterEach(() => {

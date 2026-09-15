@@ -3,13 +3,13 @@
  * Keeps HTTP parsing separate from the route handler and shared survey list service.
  */
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
+import { ZId } from "@forma/types/common";
 import {
   type TSurveyFilterCriteria,
   ZSurveyFilters,
   ZSurveyStatus,
   ZSurveyType,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import {
   type TSurveyListPageCursor,
   type TSurveyListSort,

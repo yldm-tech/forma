@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthenticationError, UnknownError } from "@formbricks/types/errors";
-import { TIntegrationGoogleSheets } from "@formbricks/types/integration/google-sheet";
+import { AuthenticationError, UnknownError } from "@forma/types/errors";
+import { TIntegrationGoogleSheets } from "@forma/types/integration/google-sheet";
 import { GOOGLE_SHEET_INTEGRATION_INVALID_GRANT } from "@/lib/googleSheet/constants";
 
 vi.mock("@/lib/integration/service", () => ({ createOrUpdateIntegration: vi.fn() }));

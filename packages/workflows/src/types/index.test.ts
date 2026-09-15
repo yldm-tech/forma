@@ -63,7 +63,7 @@ const createDefinition = (): TWorkflowDefinitionBase => ({
   entryNodeId: "trigger",
 });
 
-describe("@formbricks/workflows", () => {
+describe("@forma/workflows", () => {
   test("validates the full workflow definition fixture", async () => {
     const fixture = await loadJsonFixture("workflow-definition.full.json");
 

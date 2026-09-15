@@ -5,7 +5,7 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
+import { Workspace } from "@forma/database/prisma-browser";
 import { cn } from "@/lib/cn";
 import {
   type TElement,

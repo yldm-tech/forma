@@ -90,7 +90,7 @@ const node: TaxonomyNode = {
  * RFC 9457 body, so it stringifies the whole body — internal problem URLs included — into `message`.
  * Nothing built from these may reach the response, which is what the `toContain` guards below check.
  */
-const HUB_INTERNAL_MARKER = "hub.formbricks.com/problems";
+const HUB_INTERNAL_MARKER = "hub.forma.ylam.ai/problems";
 const hubNotFound = {
   status: 404,
   message: `404 {"type":"https://${HUB_INTERNAL_MARKER}/not-found","title":"Not Found"}`,

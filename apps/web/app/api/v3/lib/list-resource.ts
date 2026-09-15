@@ -1,6 +1,6 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, InvalidInputError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { DatabaseError, InvalidInputError } from "@forma/types/errors";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { paginateByIdCursor } from "@/app/api/v3/lib/cursor-pagination";
 import { problemBadRequest, problemInternalError, successListResponse } from "@/app/api/v3/lib/response";

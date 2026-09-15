@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { TWorkspace } from "@forma/types/workspace";
 import { getSurveyCount } from "@/lib/survey/service";
 import { getOnboardingRedirectPath, redirectIfOnboardingComplete } from "./redirect-if-onboarding-complete";
 
 const constantsMock = vi.hoisted(() => ({
-  isFormbricksCloud: false,
+  isFormaCloud: false,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -13,8 +13,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/constants", () => ({
-  get IS_FORMBRICKS_CLOUD() {
-    return constantsMock.isFormbricksCloud;
+  get IS_FORMA_CLOUD() {
+    return constantsMock.isFormaCloud;
   },
 }));
 
@@ -57,7 +57,7 @@ describe("redirectIfOnboardingComplete", () => {
 describe("getOnboardingRedirectPath", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    constantsMock.isFormbricksCloud = false;
+    constantsMock.isFormaCloud = false;
   });
 
   test("returns null when no onboarding workspace is provided", async () => {
@@ -83,7 +83,7 @@ describe("getOnboardingRedirectPath", () => {
   });
 
   test("returns plan onboarding path for cloud when workspace has no surveys", async () => {
-    constantsMock.isFormbricksCloud = true;
+    constantsMock.isFormaCloud = true;
     vi.mocked(getSurveyCount).mockResolvedValue(0);
 
     const result = await getOnboardingRedirectPath({

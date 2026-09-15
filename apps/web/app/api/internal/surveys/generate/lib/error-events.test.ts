@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { AIOutputTokenLimitError } from "@formbricks/ai";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { AIOutputTokenLimitError } from "@forma/ai";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { V3SurveyGeneratedPayloadValidationError } from "@/app/api/v3/surveys/generate/service";
 import { isClientAbort, toStreamErrorEvent } from "./error-events";
 

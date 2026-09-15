@@ -1,4 +1,4 @@
-import type { TTag } from "@formbricks/types/tags";
+import type { TTag } from "@forma/types/tags";
 
 export type TV3Tag = {
   id: string;

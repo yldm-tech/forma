@@ -12,7 +12,7 @@ import type {
 /**
  * Runtime ports the workflow server code depends on. They are injected by the adapter
  * (`apps/web`) so this package stays framework-agnostic and carries no dependency on
- * `@formbricks/database` — which itself imports `@formbricks/workflows`, so a hard edge back
+ * `@forma/database` — which itself imports `@forma/workflows`, so a hard edge back
  * would create a package build cycle.
  *
  * The row and delegate shapes are hand-authored from our own domain types (the row's
@@ -269,7 +269,7 @@ export interface WorkflowsDb {
 }
 
 /**
- * Minimal structural logger port. Satisfied by a request-bound `@formbricks/logger` child
+ * Minimal structural logger port. Satisfied by a request-bound `@forma/logger` child
  * (`logger.withContext({ requestId })`). The package never imports the logger package directly.
  */
 export interface WorkflowsLogger {

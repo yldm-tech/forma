@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "formbricksStorage",
+      name: "formaStorage",
       fileName: "index",
       formats: ["es", "cjs"],
     },
@@ -15,7 +15,7 @@ export default defineConfig({
         "@aws-sdk/client-s3",
         "@aws-sdk/s3-presigned-post",
         "@aws-sdk/s3-request-presigner",
-        "@formbricks/logger",
+        "@forma/logger",
       ],
     },
   },

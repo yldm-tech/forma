@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { FORMBRICKS_ENVIRONMENT_ID_LS, FORMBRICKS_WORKSPACE_ID_LS } from "@/lib/localStorage";
+import { FORMA_ENVIRONMENT_ID_LS, FORMA_WORKSPACE_ID_LS } from "@/lib/localStorage";
 import { logSignOutAction } from "@/modules/auth/actions/sign-out";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 
@@ -12,7 +12,7 @@ const { baSignOut, loggerError } = vi.hoisted(() => ({ baSignOut: vi.fn(), logge
 vi.mock("@/modules/auth/lib/auth-client", () => ({
   authClient: { signOut: (...args: unknown[]) => baSignOut(...args) },
 }));
-vi.mock("@formbricks/logger", () => ({ logger: { error: loggerError } }));
+vi.mock("@forma/logger", () => ({ logger: { error: loggerError } }));
 
 const mockedLogSignOut = vi.mocked(logSignOutAction);
 // The hook reads a bare `localStorage` global, which vitest's jsdom doesn't expose on globalThis.
@@ -82,8 +82,8 @@ describe("useSignOut", () => {
 
     await signOut({ clearWorkspaceId: true });
 
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith(FORMBRICKS_WORKSPACE_ID_LS);
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith(FORMBRICKS_ENVIRONMENT_ID_LS);
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith(FORMA_WORKSPACE_ID_LS);
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith(FORMA_ENVIRONMENT_ID_LS);
   });
 
   test("skips the audit log when there is no session user", async () => {

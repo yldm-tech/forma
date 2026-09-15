@@ -1,6 +1,6 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import type { ApiKeyPermission } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import type { ApiKeyPermission } from "@forma/database/prisma";
 import { type TAuthzedRelationshipFilter, type TAuthzedRelationshipUpdate, getAuthzedClient } from "./client";
 import { deleteOrganizationParentRelationships } from "./organization-parent";
 import {

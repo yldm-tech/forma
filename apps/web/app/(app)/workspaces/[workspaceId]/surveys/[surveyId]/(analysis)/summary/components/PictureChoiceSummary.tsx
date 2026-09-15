@@ -3,9 +3,9 @@
 import { InboxIcon } from "lucide-react";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyElementSummaryPictureSelection } from "@formbricks/types/surveys/types";
+import { type TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyElementSummaryPictureSelection } from "@forma/types/surveys/types";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 import { getChoiceIdByValue } from "@/lib/response/utils";
 import { IdBadge } from "@/modules/ui/components/id-badge";

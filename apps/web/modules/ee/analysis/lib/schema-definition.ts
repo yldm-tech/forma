@@ -39,7 +39,7 @@ export interface MeasureDefinition {
  * value-label maps (typed against these tuples, so additions fail the build until
  * every map is updated), and the ordinal sentiment axis sort all derive from them.
  *
- * NOTE: `ZHubSentiment` / `ZHubEmotion` in `@formbricks/types/feedback-source` carry the same two
+ * NOTE: `ZHubSentiment` / `ZHubEmotion` in `@forma/types/feedback-source` carry the same two
  * vocabularies for the feedback-record filter schemas. These stay as `as const` tuples because the
  * build-time exhaustiveness guard above depends on the literal tuple type; keep both in sync until
  * ENG-2373 hoists them to one source.
@@ -209,7 +209,7 @@ export const FEEDBACK_FIELDS = {
       label: "Channel",
       type: "string",
       description:
-        "Channel the response came in through (e.g. link, app, email). Distinct from Source Type, which names the system the record came from (formbricks_survey, csv).",
+        "Channel the response came in through (e.g. link, app, email). Distinct from Source Type, which names the system the record came from (forma_survey, csv).",
     },
     {
       id: "FeedbackRecords.metadataSurveyType",

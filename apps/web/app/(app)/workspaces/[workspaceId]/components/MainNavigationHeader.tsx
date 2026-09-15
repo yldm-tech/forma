@@ -4,7 +4,7 @@ import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import FBLogo from "@/images/formbricks-wordmark.svg";
+import FBLogo from "@/images/forma-wordmark.svg";
 import { cn } from "@/lib/cn";
 import { Button } from "@/modules/ui/components/button";
 
@@ -18,7 +18,7 @@ interface MainNavigationHeaderProps {
 }
 
 /**
- * The sidebar's top row: the Formbricks wordmark (expanded only) and the collapse/expand toggle.
+ * The sidebar's top row: the Forma wordmark (expanded only) and the collapse/expand toggle.
  *
  * Split out of MainNavigation rather than inlined: the block branched on `isCollapsed` three times
  * and on `isTextVisible` once, all nested inside the JSX, which is where most of that component's
@@ -41,7 +41,7 @@ export const MainNavigationHeader = ({
             "flex items-center justify-center transition-opacity duration-100",
             isTextVisible ? "opacity-0" : "opacity-100"
           )}>
-          <Image src={FBLogo} width={160} height={30} alt={t("workspace.formbricks_logo")} />
+          <Image src={FBLogo} width={160} height={30} alt={t("workspace.forma_logo")} />
         </Link>
       )}
       <Button

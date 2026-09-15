@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
-import { logger } from "@formbricks/logger";
-import { ZDeleteFileRequest, ZDownloadFileRequest } from "@formbricks/types/storage";
+import { logger } from "@forma/logger";
+import { ZDeleteFileRequest, ZDownloadFileRequest } from "@forma/types/storage";
 import { responses } from "@/app/lib/api/response";
 import { transformErrorToDetails } from "@/app/lib/api/validator";
 import { authorizePrivateDownload } from "@/app/storage/[workspaceId]/[accessType]/[...filePath]/lib/auth";

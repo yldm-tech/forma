@@ -1,18 +1,18 @@
 {
-  "name": "@formbricks/storage",
+  "name": "@forma/storage",
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "homepage": "https://formbricks.com",
-  "description": "Storage Controller for Formbricks",
+  "homepage": "https://forma.ylam.ai",
+  "description": "Storage Controller for Forma",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks"
+    "url": "https://github.com/yldm-tech/forma"
   },
   "keywords": [
-    "Formbricks",
+    "Forma",
     "storage",
     "storage controller"
   ],
@@ -37,16 +37,16 @@
     "test:coverage": "vitest run --coverage",
     "go": "vite build --watch --mode dev"
   },
-  "author": "Formbricks <hola@formbricks.com>",
+  "author": "Forma <hola@forma.ylam.ai>",
   "dependencies": {
     "@aws-sdk/client-s3": "3.1007.0",
     "@aws-sdk/s3-presigned-post": "3.1007.0",
     "@aws-sdk/s3-request-presigner": "3.1007.0",
-    "@formbricks/logger": "workspace:*"
+    "@forma/logger": "workspace:*"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

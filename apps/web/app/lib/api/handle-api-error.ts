@@ -1,4 +1,4 @@
-import { ResourceNotFoundError, isExpectedError } from "@formbricks/types/errors";
+import { ResourceNotFoundError, isExpectedError } from "@forma/types/errors";
 import { responses } from "@/app/lib/api/response";
 
 /**

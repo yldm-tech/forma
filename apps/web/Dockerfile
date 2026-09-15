@@ -11,7 +11,7 @@ FROM node:24-alpine3.23 AS base
 # WORKDIR /app
 # RUN yarn global add turbo
 # COPY . .
-# RUN turbo prune @formbricks/web --docker
+# RUN turbo prune @forma/web --docker
 
 #
 ## step 2: Install & build
@@ -64,7 +64,7 @@ RUN pnpm install --ignore-scripts --frozen-lockfile
 # the secret and run through the secret reader so a build-time fallback is supplied
 # (mirrors the web build below); prisma generate never connects to the database.
 RUN --mount=type=secret,id=database_url \
-    /tmp/read-secrets.sh pnpm build --filter=@formbricks/database
+    /tmp/read-secrets.sh pnpm build --filter=@forma/database
 
 # Build the project using our secret reader script
 # This mounts the secrets only during this build step without storing them in layers
@@ -77,7 +77,7 @@ RUN --mount=type=secret,id=database_url \
     --mount=type=secret,id=cubejs_api_secret \
     --mount=type=secret,id=sentry_auth_token \
     --mount=type=secret,id=posthog_key \
-    /tmp/read-secrets.sh pnpm build --filter=@formbricks/web...
+    /tmp/read-secrets.sh pnpm build --filter=@forma/web...
 
 #
 ## step 3: setup production runner
@@ -112,8 +112,8 @@ RUN chown -R nextjs:nextjs ./authzed-cli \
     && find ./authzed-cli -type d -exec chmod 555 {} + \
     && find ./authzed-cli -type f -exec chmod 444 {} +
 
-COPY --from=installer /app/apps/web/scripts/docker/formbricks-authzed /usr/local/bin/formbricks-authzed
-RUN chown root:root /usr/local/bin/formbricks-authzed && chmod 555 /usr/local/bin/formbricks-authzed
+COPY --from=installer /app/apps/web/scripts/docker/forma-authzed /usr/local/bin/forma-authzed
+RUN chown root:root /usr/local/bin/forma-authzed && chmod 555 /usr/local/bin/forma-authzed
 
 COPY --from=installer /app/prisma.config.mjs ./prisma.config.mjs
 RUN chmod 644 ./prisma.config.mjs
@@ -316,10 +316,10 @@ RUN chmod -R 755 \
         transport: { \
           target, \
           options: { \
-            loggerName: 'formbricks-build-smoke', \
+            loggerName: 'forma-build-smoke', \
             serviceVersion: '0.0.0', \
             resourceAttributes: { \
-              'service.name': 'formbricks-build-smoke', \
+              'service.name': 'forma-build-smoke', \
               'service.version': '0.0.0' \
             } \
           } \

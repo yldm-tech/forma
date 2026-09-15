@@ -1,6 +1,6 @@
-# Formbricks Authorization Schema (AuthZed / SpiceDB)
+# Forma Authorization Schema (AuthZed / SpiceDB)
 
-This directory contains the canonical SpiceDB schema for Formbricks and its
+This directory contains the canonical SpiceDB schema for Forma and its
 assertion-based validation suite.
 
 - `schema.zed` — the canonical, non-composable authorization schema
@@ -9,7 +9,7 @@ assertion-based validation suite.
   blocks that pin down the schema's semantics.
 - `validate.sh` — offline validation runner (local `zed` binary or the pinned
   `authzed/zed` container image; no SpiceDB server needed).
-- [Direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) — the approved direct-authority, fail-closed,
+- [Direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) — the approved direct-authority, fail-closed,
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than
   being duplicated in this repository.
@@ -36,7 +36,7 @@ documented semantics.
 
 ## Checking and applying the schema
 
-Schema deployment is an explicit operational action. Formbricks never writes a
+Schema deployment is an explicit operational action. Forma never writes a
 schema during application startup, database migration, health checks,
 readiness, or Helm reconciliation.
 
@@ -79,7 +79,7 @@ read-back failures exit `1` with a stable `authzed_*` code.
 The command loads the repository `.env`. For an external TLS endpoint use a
 bare `host:port` with `AUTHZED_INSECURE=false`; internal Docker or Kubernetes
 plaintext endpoints use `AUTHZED_INSECURE=true`. Restart long-running
-Formbricks processes after changing AuthZed environment values.
+Forma processes after changing AuthZed environment values.
 
 ### Backups and rollback
 
@@ -99,12 +99,12 @@ the stored relationships.
 ## Guiding principle: mirror the current system
 
 The engine-independent application contract in
-`apps/web/lib/authorization` is the source of truth for Formbricks actor,
+`apps/web/lib/authorization` is the source of truth for Forma actor,
 action, and resource types. This SpiceDB schema is a downstream implementation
 of that contract; application types must never be generated from SDK or schema
 types.
 
-The schema is a **technical migration of the current Formbricks authorization
+The schema is a **technical migration of the current Forma authorization
 system**. It models exactly what the application enforces today — no future
 capabilities, no permission changes. A principal must never gain or lose access
 because a check moved from application code into this schema.
@@ -116,7 +116,7 @@ updating the assertions in the same PR, with review.
 ## Organization membership projection
 
 PostgreSQL remains the source of truth for membership lifecycle and roles.
-After a `Membership` source mutation commits, Formbricks reconciles the
+After a `Membership` source mutation commits, Forma reconciles the
 corresponding SpiceDB `organization` relationship:
 
 - `Membership.role` maps exhaustively to exactly one of `owner`, `manager`,
@@ -208,7 +208,7 @@ User deletion removes both organization-role and team-role relationships for
 the deleted user. API-key projection is described separately below because API
 keys are independent authorization subjects rather than user-owned role edges.
 
-The application facade accepts only Formbricks-owned relationship types. It
+The application facade accepts only Forma-owned relationship types. It
 supports idempotent `touch`/`delete` batches of at most 1,000 updates and safely
 narrowed bulk deletions. The SDK client, credentials, SDK request/response
 types, and raw errors never cross the facade. Relationship identifiers are
@@ -217,7 +217,7 @@ write-only inputs and never appear in projection results or logs.
 ## Team membership and workspace-grant projection
 
 PostgreSQL also remains authoritative for team and workspace access. After a
-source mutation commits, Formbricks reconciles the affected graph:
+source mutation commits, Forma reconciles the affected graph:
 
 - `Team.organizationId` touches `team#organization@organization`.
 - `TeamUser.role` maps exhaustively to exactly one `team#admin@user` or
@@ -229,7 +229,7 @@ source mutation commits, Formbricks reconciles the affected graph:
   `workspace#manager_team` relationship with a `team#member` subject, deleting
   the two alternate grants.
 
-Formbricks never precomputes a user's highest workspace permission. SpiceDB
+Forma never precomputes a user's highest workspace permission. SpiceDB
 unions every team grant at evaluation time, preserving the current
 `read < readWrite < manage` ladder when a user belongs to multiple teams.
 
@@ -265,7 +265,7 @@ are not backfilled by these hooks; `pnpm authzed:backfill` covers them.
 ## API-key scope projection
 
 PostgreSQL remains authoritative for API-key ownership and access. After API
-key creation commits, Formbricks reconciles:
+key creation commits, Forma reconciles:
 
 - `ApiKey.organizationId` to `api_key#organization@organization`;
 - `organizationAccess.accessControl.read` to
@@ -304,7 +304,7 @@ Existing API keys are not backfilled by mutation hooks; `pnpm authzed:backfill`
 covers them, including a scope revoked outside a hook, which the projector alone
 cannot see. API-key principals are routed through the central interface; the
 direct-authority release contract is now owned by ENG-2448 and
-the [direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
+the [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
 
 ## Feedback Dataset projection
 
@@ -338,7 +338,7 @@ remain in the application and Hub layers.
 
 ### Feedback Dataset authorization routing
 
-Current feedback access is routed through the central Formbricks authorization interface without changing
+Current feedback access is routed through the central Forma authorization interface without changing
 its effective rules:
 
 - dataset administration checks `organization.manage`;
@@ -388,7 +388,7 @@ relationship graph current.
 The immutable bridge/candidate artifacts, fail-closed behavior, sandbox-first
 sequence, staging and regional production gates, abort triggers, rollback, and
 self-hosted v6 contract are defined in the [direct AuthZed cutover and rollback
-contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad). Operational execution is documented in the
+contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad). Operational execution is documented in the
 [relationship sync runbook](./RUNBOOK.md#7-direct-authority-cutover).
 
 ## Mapping from the current system
@@ -574,7 +574,7 @@ Two limits worth knowing before relying on a run:
 
 - `--organization-id` and `--workspace-id` report
   `orphanScope: "known_resources"`. SpiceDB relationship filters have no notion of
-  "belongs to organization X" and Formbricks object IDs carry no organization
+  "belongs to organization X" and Forma object IDs carry no organization
   prefix, so a resource whose row is already gone is unreachable from its
   organization. Only the default whole-deployment run sweeps by resource type and
   can claim completeness. (`--scope=all` is a confirmation token for pruning
@@ -588,7 +588,7 @@ Note also that the command reads `.env` and ignores `.env.local`, so the instanc
 it rewrites is not necessarily the one a local dev server talks to. Always pass
 `--expected-endpoint` when pruning.
 
-Released Formbricks images include the equivalent `formbricks-authzed backfill`
+Released Forma images include the equivalent `forma-authzed backfill`
 command for self-hosted operators. Repository development retains
 `pnpm authzed:backfill`.
 
@@ -597,10 +597,10 @@ command for self-hosted operators. Repository development retains
 Release images expose bounded, identifier-free outbox operations:
 
 ```bash
-formbricks-authzed outbox status
-formbricks-authzed outbox drain
-formbricks-authzed outbox drain --max-batches=500
-formbricks-authzed outbox replay
+forma-authzed outbox status
+forma-authzed outbox drain
+forma-authzed outbox drain --max-batches=500
+forma-authzed outbox replay
 ```
 
 `status` reports aggregate pending, dead-letter, oldest-age, and revocation-age
@@ -631,8 +631,8 @@ dead-letter rows are never removed by retention cleanup.
 Release images expose two aggregate-only orchestration commands:
 
 ```bash
-formbricks-authzed upgrade prepare
-formbricks-authzed upgrade check
+forma-authzed upgrade prepare
+forma-authzed upgrade check
 ```
 
 `prepare` requires `AUTHZED_ENABLED=true` and `AUTHZED_CONSISTENCY=fully_consistent`, checks authenticated

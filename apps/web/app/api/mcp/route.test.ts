@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
+import { ApiKeyPermission } from "@forma/database/prisma";
 import { buildV3AuditLog, queueV3AuditLog } from "@/app/api/v3/lib/audit";
 import {
   createdResponse,
@@ -35,7 +35,7 @@ vi.mock("@/modules/auth/lib/auth", () => ({
   auth: {},
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findUnique: userFindUniqueMock,
@@ -50,7 +50,7 @@ vi.mock("@/modules/auth/lib/oauth-urls", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/auth/lib/oauth-urls")>()),
   getAuthIssuerUrl: () => "http://localhost/api/auth",
   getMcpOrigin: () => "http://localhost",
-  getMcpOAuthJwksUrl: () => "http://formbricks:3000/api/auth/jwks",
+  getMcpOAuthJwksUrl: () => "http://forma:3000/api/auth/jwks",
   getMcpProtectedResourceMetadataUrl: () => "http://localhost/.well-known/oauth-protected-resource/api/mcp",
   getMcpResourceUrl: () => "http://localhost/api/mcp",
 }));
@@ -92,7 +92,7 @@ vi.mock("@/app/api/v3/lib/audit", () => ({
   queueV3AuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       error: vi.fn(),
@@ -454,7 +454,7 @@ describe("POST /api/mcp", () => {
     expect(verifyBearerTokenMock).toHaveBeenCalledWith(
       "eyJhbGciOiJFZERTQSJ9.payload.signature",
       expect.objectContaining({
-        jwksUrl: "http://formbricks:3000/api/auth/jwks",
+        jwksUrl: "http://forma:3000/api/auth/jwks",
         verifyOptions: expect.objectContaining({
           audience: "http://localhost/api/mcp",
           issuer: "http://localhost/api/auth",

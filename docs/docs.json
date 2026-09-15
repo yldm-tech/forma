@@ -16,9 +16,9 @@
   "favicon": "/images/favicon.svg",
   "footer": {
     "socials": {
-      "github": "https://github.com/formbricks/formbricks",
-      "linkedin": "https://linkedin.com/company/formbricks",
-      "x": "https://x.com/formbricks"
+      "github": "https://github.com/yldm-tech/forma",
+      "linkedin": "https://linkedin.com/company/forma",
+      "x": "https://x.com/forma"
     }
   },
   "integrations": {
@@ -31,16 +31,16 @@
     "dark": "/images/logo-dark.svg",
     "light": "/images/logo-light.svg"
   },
-  "name": "Documentation - Formbricks",
+  "name": "Documentation - Forma",
   "navbar": {
     "links": [
       {
-        "href": "https://github.com/formbricks/formbricks/discussions",
+        "href": "https://github.com/yldm-tech/forma/discussions",
         "label": "Support"
       }
     ],
     "primary": {
-      "href": "https://app.formbricks.com",
+      "href": "https://app.forma.ylam.ai",
       "label": "Go to app",
       "type": "button"
     }
@@ -53,7 +53,7 @@
             "group": "Overview",
             "pages": [
               "platform/introduction",
-              "platform/what-is-formbricks",
+              "platform/what-is-forma",
               "platform/open-source",
               "platform/accessibility"
             ]
@@ -282,7 +282,7 @@
           },
           {
             "group": "Powered by",
-            "pages": ["unify-feedback/formbricks-hub"]
+            "pages": ["unify-feedback/forma-hub"]
           }
         ],
         "tab": "Unify Feedback (Analyze)"
@@ -369,7 +369,7 @@
                 "group": "Enterprise Features",
                 "icon": "building",
                 "pages": [
-                  "self-hosting/advanced/enterprise-features/hide-powered-by-formbricks",
+                  "self-hosting/advanced/enterprise-features/hide-powered-by-forma",
                   "self-hosting/advanced/enterprise-features/whitelabel-email-follow-ups",
                   "self-hosting/advanced/enterprise-features/team-access",
                   "self-hosting/advanced/enterprise-features/contact-management-segments",
@@ -541,12 +541,12 @@
       "source": "/docs/overview/introduction"
     },
     {
-      "destination": "/docs/platform/what-is-formbricks",
-      "source": "/docs/overview/what-is-formbricks"
+      "destination": "/docs/platform/what-is-forma",
+      "source": "/docs/overview/what-is-forma"
     },
     {
-      "destination": "/docs/platform/what-is-formbricks",
-      "source": "/docs/introduction/what-is-formbricks"
+      "destination": "/docs/platform/what-is-forma",
+      "source": "/docs/introduction/what-is-forma"
     },
     {
       "destination": "/docs/platform/open-source",

@@ -1,8 +1,8 @@
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
 import {
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
   SURVEY_BG_COLORS,
   UNSPLASH_ACCESS_KEY,
@@ -35,15 +35,12 @@ export const WorkspaceLookSettingsPage = async (props: { params: Promise<{ works
 
   const [canRemoveBranding, enterpriseLicense] = await Promise.all([
     getRemoveBrandingPermission(organization.id),
-    IS_FORMBRICKS_CLOUD ? Promise.resolve(null) : getEnterpriseLicense(),
+    IS_FORMA_CLOUD ? Promise.resolve(null) : getEnterpriseLicense(),
   ]);
 
   const isOwnerOrManager = isManager || isOwner;
   const showLiteLicenseTip =
-    !IS_FORMBRICKS_CLOUD &&
-    isOwnerOrManager &&
-    enterpriseLicense?.status === "no-license" &&
-    !canRemoveBranding;
+    !IS_FORMA_CLOUD && isOwnerOrManager && enterpriseLicense?.status === "no-license" && !canRemoveBranding;
   const publicDomain = getPublicDomain();
 
   return (

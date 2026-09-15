@@ -4,8 +4,8 @@ import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TLogo } from "@formbricks/types/styling";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TLogo } from "@forma/types/styling";
 import { cn } from "@/lib/cn";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 

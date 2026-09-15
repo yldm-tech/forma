@@ -1,12 +1,12 @@
 ---
 title: "Migrating Surveys"
 description:
-  "Copy surveys and their responses from one Formbricks instance to another with the management API."
+  "Copy surveys and their responses from one Forma instance to another with the management API."
 icon: "right-left"
 ---
 
-This page is about moving **selected surveys and their response data** between two running Formbricks
-instances — a staging box to production, a self-hosted instance to Formbricks Cloud, one company's
+This page is about moving **selected surveys and their response data** between two running Forma
+instances — a staging box to production, a self-hosted instance to Forma Cloud, one company's
 instance to another after a split. It uses nothing but the public management API, so the two instances
 can be on different versions, different databases, and different object storage.
 
@@ -16,11 +16,11 @@ can be on different versions, different databases, and different object storage.
   Postgres dump plus a copy of your S3 bucket is faster, complete, and keeps every ID intact:
 
   ```bash
-  pg_dump "$OLD_DB_URL" -Fc -f formbricks.dump
-  pg_restore -d "$NEW_DB_URL" --no-owner formbricks.dump
+  pg_dump "$OLD_DB_URL" -Fc -f forma.dump
+  pg_restore -d "$NEW_DB_URL" --no-owner forma.dump
   ```
 
-  Restore into an instance running the **same Formbricks version** as the source, then upgrade it
+  Restore into an instance running the **same Forma version** as the source, then upgrade it
   following the [migration guide](/self-hosting/advanced/migration). The API route below exists for
   the cases a dump cannot serve: you only want some surveys, the target already has data you must
   keep, or you do not own the database on one of the two ends.
@@ -114,13 +114,13 @@ the trigger to survive.
 
 ```bash fb-copy-survey.sh
 #!/usr/bin/env bash
-# Copy one survey and all of its responses from one Formbricks instance to another.
+# Copy one survey and all of its responses from one Forma instance to another.
 set -euo pipefail
 
-SOURCE_URL="${SOURCE_URL:?e.g. https://old.formbricks.example.com}"
+SOURCE_URL="${SOURCE_URL:?e.g. https://old.forma.example.com}"
 SOURCE_API_KEY="${SOURCE_API_KEY:?read access on the source workspace is enough}"
 SOURCE_SURVEY_ID="${SOURCE_SURVEY_ID:?survey id, see the survey URL in the app}"
-TARGET_URL="${TARGET_URL:?e.g. https://new.formbricks.example.com}"
+TARGET_URL="${TARGET_URL:?e.g. https://new.forma.example.com}"
 TARGET_API_KEY="${TARGET_API_KEY:?needs manage access on the target workspace}"
 TARGET_WORKSPACE_ID="${TARGET_WORKSPACE_ID:?workspace id, see the app URL}"
 THROTTLE="${THROTTLE:-0.7}" # seconds between requests; keeps you under 100/minute
@@ -247,10 +247,10 @@ The survey ID is the last path segment of the survey's URL in the app,
 `/workspaces/<workspaceId>/surveys/<surveyId>/edit`.
 
 ```bash
-SOURCE_URL=https://old.formbricks.example.com \
+SOURCE_URL=https://old.forma.example.com \
 SOURCE_API_KEY=fbk_xxx \
 SOURCE_SURVEY_ID=cmrsxxwej0009tm06aq5i4lx0 \
-TARGET_URL=https://new.formbricks.example.com \
+TARGET_URL=https://new.forma.example.com \
 TARGET_API_KEY=fbk_yyy \
 TARGET_WORKSPACE_ID=cmt8fp2zt00024906cy3ysb8g \
 ./fb-copy-survey.sh
@@ -261,7 +261,7 @@ source: Link survey (link, inProgress)
 target: cmt8wewit0008s706rsqaqtf1
 response cmrszt8n7000btm06nbo0evhh failed (HTTP 400): {"error":{"code":400,"message":"Bad Request", …
 responses: 1 imported, 1 failed
-link:      https://new.formbricks.example.com/s/cmt8wewit0008s706rsqaqtf1
+link:      https://new.forma.example.com/s/cmt8wewit0008s706rsqaqtf1
 ```
 
 Failures are printed per response on stderr and counted, but they do not stop the run — redirect
@@ -282,10 +282,10 @@ source instance.
 
 ```bash fb-export.sh
 #!/usr/bin/env bash
-# Export every survey, response and action class of one Formbricks workspace.
+# Export every survey, response and action class of one Forma workspace.
 set -euo pipefail
 
-SOURCE_URL="${SOURCE_URL:?e.g. https://old.formbricks.example.com}"
+SOURCE_URL="${SOURCE_URL:?e.g. https://old.forma.example.com}"
 SOURCE_API_KEY="${SOURCE_API_KEY:?API key with manage access on the source workspace}"
 SOURCE_WORKSPACE_ID="${SOURCE_WORKSPACE_ID:?workspace id, see the app URL}"
 OUT_DIR="${OUT_DIR:-./fb-export}"
@@ -350,7 +350,7 @@ echo "exported $(wc -l < "$OUT_DIR/survey-ids.txt" | tr -d ' ') surveys to ${OUT
 ```
 
 ```bash
-SOURCE_URL=https://old.formbricks.example.com \
+SOURCE_URL=https://old.forma.example.com \
 SOURCE_API_KEY=fbk_xxx \
 SOURCE_WORKSPACE_ID=cmrsx9nej0001tm061tt2pmbk \
 ./fb-export.sh
@@ -389,11 +389,11 @@ rejected as invalid.
 
 ```bash fb-import.sh
 #!/usr/bin/env bash
-# Import a ./fb-export dump into a target Formbricks workspace. Idempotent it is not:
+# Import a ./fb-export dump into a target Forma workspace. Idempotent it is not:
 # running it twice creates a second copy of everything.
 set -euo pipefail
 
-TARGET_URL="${TARGET_URL:?e.g. https://new.formbricks.example.com}"
+TARGET_URL="${TARGET_URL:?e.g. https://new.forma.example.com}"
 TARGET_API_KEY="${TARGET_API_KEY:?API key with manage access on the target workspace}"
 TARGET_WORKSPACE_ID="${TARGET_WORKSPACE_ID:?workspace id, see the app URL}"
 IN_DIR="${IN_DIR:-./fb-export}"
@@ -500,7 +500,7 @@ done < "$IN_DIR/survey-id-map.tsv"
 ```
 
 ```bash
-TARGET_URL=https://new.formbricks.example.com \
+TARGET_URL=https://new.forma.example.com \
 TARGET_API_KEY=fbk_yyy \
 TARGET_WORKSPACE_ID=cmt8fp2zt00024906cy3ysb8g \
 ./fb-import.sh
@@ -583,7 +583,7 @@ silently misfiled, so a summary that reads correctly is a good signal.
   link settings, survey PIN, reCAPTCHA, custom head scripts, custom slug.
 - **Re-create app-survey targeting** (see below), then re-enable webhooks, integrations and workflows.
 - **Update your SDK setup** if you are moving app surveys: `workspaceId` and `appUrl` in
-  `Formbricks.setup()` both still point at the old instance.
+  `Forma.setup()` both still point at the old instance.
 
 ## App surveys
 
@@ -795,4 +795,4 @@ their own management endpoints (`/api/v2/management/contacts`,
 ---
 
 **Need help?** Reach out in
-[GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+[GitHub Discussions](https://github.com/yldm-tech/forma/discussions).

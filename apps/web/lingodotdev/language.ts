@@ -1,4 +1,4 @@
-import { TUserLocale } from "@formbricks/types/user";
+import { TUserLocale } from "@forma/types/user";
 import { DEFAULT_LOCALE } from "@/lib/constants";
 import { getUserLocale } from "@/lib/user/service";
 import { findMatchingLocale } from "@/lib/utils/locale";

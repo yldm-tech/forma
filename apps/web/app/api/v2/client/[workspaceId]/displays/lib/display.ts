@@ -1,6 +1,6 @@
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TDisplayCreateInputV2,
   ZDisplayCreateInputV2,

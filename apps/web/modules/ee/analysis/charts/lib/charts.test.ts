@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
 
 vi.mock("server-only", () => ({}));
 
@@ -12,7 +12,7 @@ var mockTxChart: {
   delete: ReturnType<typeof vi.fn>;
 };
 
-vi.mock("@formbricks/database", () => {
+vi.mock("@forma/database", () => {
   const tx = {
     findFirst: vi.fn(),
     update: vi.fn(),

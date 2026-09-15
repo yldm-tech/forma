@@ -7,7 +7,7 @@ import {
   TRelativeDateBound,
   TRelativeDateDirection,
   TRelativeDateUnit,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { Input } from "@/modules/ui/components/input";
 import {
   Select,

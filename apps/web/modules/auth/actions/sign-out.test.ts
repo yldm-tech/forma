@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { logSignOut } from "@/modules/auth/lib/utils";
 import { logSignOutAction } from "./sign-out";
 
 // Mock the dependencies
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

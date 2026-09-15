@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
-import { type TJsFileUploadParams } from "@formbricks/types/js";
-import { type TResponseData, type TResponseDataValue, type TResponseTtc } from "@formbricks/types/responses";
-import { type TUploadFileConfig } from "@formbricks/types/storage";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
-import { type TSurveyElement, type TSurveyElementChoice } from "@formbricks/types/surveys/elements";
-import { TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { type TJsFileUploadParams } from "@forma/types/js";
+import { type TResponseData, type TResponseDataValue, type TResponseTtc } from "@forma/types/responses";
+import { type TUploadFileConfig } from "@forma/types/storage";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import { type TSurveyElement, type TSurveyElementChoice } from "@forma/types/surveys/elements";
+import { TSurveyLanguage } from "@forma/types/surveys/types";
 import { AddressElement } from "@/components/elements/address-element";
 import { CalElement } from "@/components/elements/cal-element";
 import { ConsentElement } from "@/components/elements/consent-element";
@@ -101,7 +101,7 @@ export function ElementConditional({
   useEffect(() => {
     if (!isRecognizedType) {
       console.warn(
-        `[Formbricks] Unrecognized element type "${element.type}" for element with id "${element.id}". No component will be rendered.`
+        `[Forma] Unrecognized element type "${element.type}" for element with id "${element.id}". No component will be rendered.`
       );
     }
   }, [element.type, element.id, isRecognizedType]);

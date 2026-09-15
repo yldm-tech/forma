@@ -124,7 +124,7 @@ describe("signup intent token", () => {
   });
 
   test("cookie name is namespaced so it cannot collide with a Better Auth cookie", () => {
-    expect(SIGNUP_INTENT_COOKIE_NAME).toBe("formbricks.signup_intent");
+    expect(SIGNUP_INTENT_COOKIE_NAME).toBe("forma.signup_intent");
   });
 });
 

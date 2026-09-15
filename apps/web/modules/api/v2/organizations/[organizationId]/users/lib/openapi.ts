@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ZodOpenApiOperationObject, ZodOpenApiPathsObject } from "zod-openapi";
-import { ZUser } from "@formbricks/database/zod/users";
+import { ZUser } from "@forma/database/zod/users";
 import { ZOrganizationIdSchema } from "@/modules/api/v2/organizations/[organizationId]/types/organizations";
 import {
   ZGetUsersFilter,
@@ -12,7 +12,7 @@ import { makePartialSchema, responseWithMetaSchema } from "@/modules/api/v2/type
 export const getUsersEndpoint: ZodOpenApiOperationObject = {
   operationId: "getUsers",
   summary: "Get users",
-  description: `Gets users from the database.<br />Only available for self-hosted Formbricks.`,
+  description: `Gets users from the database.<br />Only available for self-hosted Forma.`,
   requestParams: {
     path: z.object({
       organizationId: ZOrganizationIdSchema,
@@ -35,7 +35,7 @@ export const getUsersEndpoint: ZodOpenApiOperationObject = {
 export const createUserEndpoint: ZodOpenApiOperationObject = {
   operationId: "createUser",
   summary: "Create a user",
-  description: `Create a new user in the database.<br />Only available for self-hosted Formbricks.`,
+  description: `Create a new user in the database.<br />Only available for self-hosted Forma.`,
   requestParams: {
     path: z.object({
       organizationId: ZOrganizationIdSchema,
@@ -66,7 +66,7 @@ export const createUserEndpoint: ZodOpenApiOperationObject = {
 export const updateUserEndpoint: ZodOpenApiOperationObject = {
   operationId: "updateUser",
   summary: "Update a user",
-  description: `Updates an existing user in the database.<br />Only available for self-hosted Formbricks.`,
+  description: `Updates an existing user in the database.<br />Only available for self-hosted Forma.`,
   requestParams: {
     path: z.object({
       organizationId: ZOrganizationIdSchema,

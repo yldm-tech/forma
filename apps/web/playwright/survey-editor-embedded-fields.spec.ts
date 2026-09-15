@@ -1,5 +1,5 @@
 import { type Locator, type Page, expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 import { createSurveyFromScratch, fillRichTextEditor } from "./utils/helper";
 

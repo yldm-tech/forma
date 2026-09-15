@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import {
   hasOrganizationAccess,

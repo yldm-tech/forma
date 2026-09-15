@@ -1,8 +1,8 @@
 /**
  * POST /api/v3/workflows/{workflowId}/unarchive — restore an archived workflow to draft.
- * Thin adapter delegating to the framework-agnostic handler in `@formbricks/workflows/server`.
+ * Thin adapter delegating to the framework-agnostic handler in `@forma/workflows/server`.
  */
-import { ZWorkflowIdInput } from "@formbricks/workflows";
+import { ZWorkflowIdInput } from "@forma/workflows";
 import { withV3ApiWrapper } from "@/app/api/v3/lib/api-wrapper";
 import { buildWorkflowApiContext, workflowsHandlers } from "../../lib/context";
 

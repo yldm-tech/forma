@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import type { TAuthzedClient, TAuthzedRelationshipUpdate } from "./client";
 import { getAuthzedClient } from "./client";
 import { getFeedbackDirectoryAssignmentObjectId } from "./feedback-directory-assignment-id";

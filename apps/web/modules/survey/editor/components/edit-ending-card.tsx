@@ -8,10 +8,10 @@ import { GripIcon, Handshake, Undo2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TSurvey, TSurveyEndScreenCard, TSurveyRedirectUrlCard } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TUserLocale } from "@formbricks/types/user";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TSurvey, TSurveyEndScreenCard, TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TUserLocale } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { extractLanguageCodes } from "@/lib/i18n/utils";
 import { recallToHeadline } from "@/lib/utils/recall";
@@ -36,7 +36,7 @@ interface EditEndingCardProps {
   activeElementId: string | null;
   isInvalid: boolean;
   addEndingCard: (index: number) => void;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   locale: TUserLocale;
   isStorageConfigured: boolean;
   quotas: TSurveyQuota[];
@@ -51,7 +51,7 @@ export const EditEndingCard = ({
   activeElementId,
   isInvalid,
   addEndingCard,
-  isFormbricksCloud,
+  isFormaCloud,
   locale,
   isStorageConfigured,
   quotas,
@@ -65,7 +65,7 @@ export const EditEndingCard = ({
     [localSurvey.endings, endingCardIndex]
   );
 
-  const isRedirectToUrlDisabled = isFormbricksCloud
+  const isRedirectToUrlDisabled = isFormaCloud
     ? !isExternalUrlsAllowed && endingCard.type !== "redirectToUrl"
     : false;
 

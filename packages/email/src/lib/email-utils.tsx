@@ -1,6 +1,6 @@
 import { Column, Container, Img, Link, Row, Text } from "@react-email/components";
 import { FileIcon } from "lucide-react";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TFunction } from "../types/translations";
 
 // Simplified version - just get the filename from URL

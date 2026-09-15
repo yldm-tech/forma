@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { ZUserLocale } from "@formbricks/types/user";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { ZUserLocale } from "@forma/types/user";
 import {
   GENERATED_SURVEY_ELEMENT_TYPES,
   GENERATED_SURVEY_MAX_BLOCKS,

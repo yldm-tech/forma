@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Current Formbricks authorization vocabulary.
+ * Current Forma authorization vocabulary.
  *
  * This map is the application source of truth for valid resource/permission
  * combinations. Keep it independent from AuthZed SDK and schema types.

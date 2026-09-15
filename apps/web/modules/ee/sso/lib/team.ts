@@ -1,10 +1,10 @@
 import "server-only";
 import { cache as reactCache } from "react";
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Organization, Prisma, PrismaClient, Team } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Organization, Prisma, PrismaClient, Team } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { DEFAULT_TEAM_ID } from "@/lib/constants";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { validateInputs } from "@/lib/utils/validate";

@@ -1,6 +1,6 @@
-import { prisma } from "@formbricks/database";
-import type { IdentityProvider, Prisma } from "@formbricks/database/prisma";
-import type { Account } from "@formbricks/types/auth";
+import { prisma } from "@forma/database";
+import type { IdentityProvider, Prisma } from "@forma/database/prisma";
+import type { Account } from "@forma/types/auth";
 import { OAUTH_ACCOUNT_NOT_LINKED_ERROR, canonicalAccountIssuer } from "@/modules/ee/sso/lib/constants";
 
 export const LINKED_SSO_LOOKUP_SELECT = {

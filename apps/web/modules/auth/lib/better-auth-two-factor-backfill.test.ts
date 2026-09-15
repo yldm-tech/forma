@@ -1,11 +1,11 @@
 import { isAPIError } from "better-auth/api";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { buildReencodedTwoFactorData } from "@/modules/auth/lib/cutover/reencode-two-factor";
 import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
 import { twoFactorBackfillAfterHandler } from "./better-auth-two-factor-backfill";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: { findFirst: vi.fn() },
     twoFactor: { findUnique: vi.fn(), upsert: vi.fn() },
@@ -14,7 +14,7 @@ vi.mock("@formbricks/database", () => ({
 
 vi.mock("better-auth/api", () => ({ isAPIError: vi.fn() }));
 
-vi.mock("@formbricks/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn() } }));
 
 vi.mock("@/modules/auth/lib/auth", () => ({
   auth: { $context: Promise.resolve({ secretConfig: "ba-secret-config" }) },

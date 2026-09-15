@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
+import { TSurveyStyling } from "@forma/types/surveys/types";
 import { getContrastRatio, mixColor } from "@/lib/utils/colors";
 import { FOOTER_MEDIA_BACKDROP, getFooterLinkStyle } from "./footer-link-color";
 

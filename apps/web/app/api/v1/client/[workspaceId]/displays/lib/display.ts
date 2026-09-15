@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { TDisplayCreateInput, ZDisplayCreateInput } from "@formbricks/types/displays";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { TDisplayCreateInput, ZDisplayCreateInput } from "@forma/types/displays";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { getContactByUserId } from "./contact";
 

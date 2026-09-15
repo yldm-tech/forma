@@ -1,7 +1,7 @@
 #!/bin/sh
 # Shared RustFS bootstrap script.
 # Used directly by docker-compose.dev.yml for local development and used as the
-# source template for the generated rustfs-init.sh in docker/formbricks.sh for
+# source template for the generated rustfs-init.sh in docker/forma.sh for
 # one-click/self-hosted installs. packages/storage/src/rustfs-init-bootstrap.test.ts
 # also validates that the generated script stays in sync with this file.
 set -e
@@ -28,7 +28,7 @@ mc mb rustfs/$RUSTFS_BUCKET_NAME --ignore-existing
 
 if [ -n "${RUSTFS_CORS_ALLOWED_ORIGINS:-}" ]; then
   echo '🌐 Applying bucket CORS configuration...'
-  cors_file="/tmp/formbricks-cors.xml"
+  cors_file="/tmp/forma-cors.xml"
 
   cat > "$cors_file" << EOF
 <CORSConfiguration>
@@ -63,7 +63,7 @@ EOF
 fi
 
 echo '📄 Creating JSON policy file...'
-cat > /tmp/formbricks-policy.json << EOF
+cat > /tmp/forma-policy.json << EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -83,8 +83,8 @@ EOF
 
 echo '🔒 Creating policy (idempotent)...'
 if ! mc admin policy info rustfs "$RUSTFS_POLICY_NAME" >/dev/null 2>&1; then
-  mc admin policy create rustfs "$RUSTFS_POLICY_NAME" /tmp/formbricks-policy.json || \
-    mc admin policy add rustfs "$RUSTFS_POLICY_NAME" /tmp/formbricks-policy.json
+  mc admin policy create rustfs "$RUSTFS_POLICY_NAME" /tmp/forma-policy.json || \
+    mc admin policy add rustfs "$RUSTFS_POLICY_NAME" /tmp/forma-policy.json
   echo 'Policy created successfully.'
 else
   echo 'Policy already exists, skipping creation.'

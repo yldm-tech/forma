@@ -1,6 +1,6 @@
 import React from "preact/compat";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { type TJsWorkspaceStateSurvey } from "@formbricks/types/js";
+import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { AutoCloseProgressBar } from "@/components/general/auto-close-progress-bar";
 
 interface AutoCloseProps {

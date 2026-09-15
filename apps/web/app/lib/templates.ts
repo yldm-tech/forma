@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import type { TFunction } from "i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import type { TTemplate } from "@formbricks/types/templates";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
+import type { TTemplate } from "@forma/types/templates";
 import {
   buildBlock,
   buildCTAElement,
@@ -572,7 +572,7 @@ const churnSurvey = (t: TFunction): TTemplate => {
               headline: t("templates.churn_survey_question_3_headline"),
               required: false,
               buttonUrl:
-                "https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=template_cta_churn_survey",
+                "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=template_cta_churn_survey",
               buttonExternal: true,
               ctaButtonLabel: t("templates.churn_survey_question_3_button_label"),
             }),
@@ -1002,7 +1002,7 @@ const improveTrialConversion = (t: TFunction): TTemplate => {
               headline: t("templates.improve_trial_conversion_question_4_headline"),
               required: false,
               buttonUrl:
-                "https://formbricks.com/github?utm_source=formbricks-app&utm_medium=survey&utm_campaign=template_cta_trial_conversion",
+                "https://forma.ylam.ai/github?utm_source=forma-app&utm_medium=survey&utm_campaign=template_cta_trial_conversion",
               buttonExternal: true,
               ctaButtonLabel: t("templates.improve_trial_conversion_question_4_button_label"),
             }),
@@ -1122,7 +1122,7 @@ const reviewPrompt = (t: TFunction): TTemplate => {
               headline: t("templates.review_prompt_question_2_headline"),
               required: false,
               buttonUrl:
-                "https://formbricks.com/github?utm_source=formbricks-app&utm_medium=survey&utm_campaign=template_cta_review_prompt",
+                "https://forma.ylam.ai/github?utm_source=forma-app&utm_medium=survey&utm_campaign=template_cta_review_prompt",
               buttonExternal: true,
               ctaButtonLabel: t("templates.review_prompt_question_2_button_label"),
             }),
@@ -2642,7 +2642,7 @@ const marketSiteClarity = (t: TFunction): TTemplate => {
               headline: t("templates.market_site_clarity_question_3_headline"),
               subheader: "",
               required: false,
-              buttonUrl: "https://app.formbricks.com/auth/signup",
+              buttonUrl: "https://app.forma.ylam.ai/auth/signup",
               buttonExternal: true,
               ctaButtonLabel: t("templates.market_site_clarity_question_3_button_label"),
             }),
@@ -3729,7 +3729,7 @@ const identifySignUpBarriers = (t: TFunction): TTemplate => {
               subheader: t("templates.identify_sign_up_barriers_question_9_html"),
               headline: t("templates.identify_sign_up_barriers_question_9_headline"),
               required: false,
-              buttonUrl: "https://app.formbricks.com/auth/signup",
+              buttonUrl: "https://app.forma.ylam.ai/auth/signup",
               buttonExternal: true,
               ctaButtonLabel: t("templates.identify_sign_up_barriers_question_9_button_label"),
             }),
@@ -3956,7 +3956,7 @@ const improveNewsletterContent = (t: TFunction): TTemplate => {
               headline: t("templates.improve_newsletter_content_question_3_headline"),
               required: false,
               buttonUrl:
-                "https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=template_cta_newsletter",
+                "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=template_cta_newsletter",
               buttonExternal: true,
               ctaButtonLabel: t("templates.improve_newsletter_content_question_3_button_label"),
             }),

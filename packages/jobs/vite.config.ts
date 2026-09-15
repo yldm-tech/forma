@@ -12,12 +12,12 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "formbricksJobs",
+      name: "formaJobs",
       fileName: "index",
       formats: ["es", "cjs"],
     },
     rollupOptions: {
-      external: ["@formbricks/logger", "bullmq", "ioredis", "zod"],
+      external: ["@forma/logger", "bullmq", "ioredis", "zod"],
     },
   },
   test: {

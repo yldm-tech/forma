@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Formbricks runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, with feature modules under `app/` and `modules/`, assets in `public/` and `images/`, and Playwright specs in `apps/web/playwright/`. `apps/storybook` renders reusable UI pieces for review. Shared logic lives in `packages/*`: `database` (Prisma schemas/migrations), `surveys`, `js-core`, `types`, plus linting and TypeScript presets (`config-*`). Deployment collateral is kept in `docs/`, `docker/`, and `helm-chart/`. Unit tests sit next to their source as `*.test.ts` or inside `__tests__`.
+Forma runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, with feature modules under `app/` and `modules/`, assets in `public/` and `images/`, and Playwright specs in `apps/web/playwright/`. `apps/storybook` renders reusable UI pieces for review. Shared logic lives in `packages/*`: `database` (Prisma schemas/migrations), `surveys`, `js-core`, `types`, plus linting and TypeScript presets (`config-*`). Deployment collateral is kept in `docs/`, `docker/`, and `helm-chart/`. Unit tests sit next to their source as `*.test.ts` or inside `__tests__`.
 
 ## Build, Test & Development Commands
 
@@ -47,13 +47,13 @@ workspace globs from `pnpm-workspace.yaml` itself.
 
 ### Survey Packages Build & Cache
 
-The `@formbricks/surveys` package is pre-compiled (Vite → UMD + ESM) and the built bundle is copied to `apps/web/public/js/`. The Next.js app imports from `dist/`, **not** the source files. This means:
+The `@forma/surveys` package is pre-compiled (Vite → UMD + ESM) and the built bundle is copied to `apps/web/public/js/`. The Next.js app imports from `dist/`, **not** the source files. This means:
 
 - After any change to `packages/surveys` or its dependencies (`packages/survey-ui`, `packages/types`, etc.), you **must rebuild** for changes to take effect in the running app.
 - Turborepo caches build outputs aggressively. Always use `--force` to bypass the cache when iterating on survey packages:
   ```
   rm -rf packages/surveys/dist apps/web/public/js/surveys.* node_modules/.cache/turbo
-  pnpm build --filter=@formbricks/surveys... --force
+  pnpm build --filter=@forma/surveys... --force
   ```
 - The browser also caches the UMD bundle (`surveys.umd.cjs`) served from `public/js/`. After rebuilding, do a **hard refresh** (Cmd+Shift+R / Ctrl+Shift+R) or disable the browser cache via DevTools to pick up the new bundle.
 - If changes still don't appear, restart the Next.js dev server (`pnpm dev`).
@@ -61,15 +61,15 @@ The `@formbricks/surveys` package is pre-compiled (Vite → UMD + ESM) and the b
 ### Stale package builds after a branch switch
 
 The same trap applies to **every** workspace package consumed through its built output rather than its
-source — `@formbricks/ai`, `@formbricks/database` and `@formbricks/i18n-utils` resolve via `dist/` in
+source — `@forma/ai`, `@forma/database` and `@forma/i18n-utils` resolve via `dist/` in
 their `exports` map, so `apps/web` imports the build, not `src/`. `git switch`, a rebase, or a pull changes `src/` but leaves
 `dist/` exactly as it was, and nothing warns you.
 
 **This only bites when you bypass Turborepo.** Running `vitest` or `tsc` directly inside `apps/web`,
-`pnpm --filter @formbricks/web test`, or an IDE test runner all skip the task graph — which is how you
+`pnpm --filter @forma/web test`, or an IDE test runner all skip the task graph — which is how you
 usually meet it, iterating on one test file. The root `pnpm test` and `pnpm typecheck` are safe:
-`@formbricks/web#test` and `@formbricks/web#typecheck` in `turbo.json` each declare `dependsOn` on
-`@formbricks/ai#build`, `@formbricks/database#build` and five more, so turbo rebuilds them before the
+`@forma/web#test` and `@forma/web#typecheck` in `turbo.json` each declare `dependsOn` on
+`@forma/ai#build`, `@forma/database#build` and five more, so turbo rebuilds them before the
 suite runs. That is also why the unit-test workflow (`test.yml`) stays green with no build step of its
 own — do **not** read "green on CI, red locally" as evidence of a stale `dist/`; both run the same
 graph.
@@ -79,7 +79,7 @@ absent from `dist/`, so depending on what is missing the import either resolves 
 outright at module resolution — and both read like real regressions:
 
 - `TypeError: Right-hand side of 'instanceof' is not an object` (the class is in `src/`, not `dist/`)
-- a missing named export, or `Failed to resolve entry for package "@formbricks/…"` when `dist/` is
+- a missing named export, or `Failed to resolve entry for package "@forma/…"` when `dist/` is
   absent altogether
 - `tsc` or Vitest failures in files you never touched
 
@@ -99,7 +99,7 @@ Recursive on purpose: `packages/ai/src` has nested directories (`providers/`), a
 The fix is to rebuild the dependency graph:
 
 ```shell
-pnpm build --filter=@formbricks/web^...
+pnpm build --filter=@forma/web^...
 ```
 
 (Dependencies only — `^...` excludes the Next app itself. This is the same command
@@ -109,13 +109,13 @@ pnpm build --filter=@formbricks/web^...
 
 Tailwind v4 detects sources starting from the consuming app's own root (`apps/web` for the Next.js
 PostCSS build, the Vite root for `apps/storybook`) and **never descends into `node_modules`** — which
-is exactly where every `@formbricks/*` workspace package is linked. A utility used only inside a
+is exactly where every `@forma/*` workspace package is linked. A utility used only inside a
 workspace package therefore never reaches the consuming app's stylesheet. Consumed workspace packages
 ship their own CSS rather than relying on the app to scan them:
 
-- `@formbricks/surveys` — prebuilt bundle served from `apps/web/public/js/` (see the section above).
-- `@formbricks/survey-ui` — exports `./styles` (`dist/survey-ui.css`), scoped to `#fbjs`.
-- `@formbricks/email` — ships no stylesheet at all; `@react-email/tailwind` compiles and inlines the
+- `@forma/surveys` — prebuilt bundle served from `apps/web/public/js/` (see the section above).
+- `@forma/survey-ui` — exports `./styles` (`dist/survey-ui.css`), scoped to `#fbjs`.
+- `@forma/email` — ships no stylesheet at all; `@react-email/tailwind` compiles and inlines the
   classes into the email HTML at render time.
 
 If you ever consume a workspace package as raw source **for its styling**, the app has to be told
@@ -135,8 +135,8 @@ reached through an explicit `@config` bridge from the package's own stylesheet. 
 
 ## Coding Style & Naming Conventions
 
-TypeScript, React, and Prisma are the primary languages. Use the shared ESLint presets (`@formbricks/config-eslint`) and Prettier preset (110-char width, semicolons, double quotes, sorted import groups). Two-space indentation is standard; prefer `PascalCase` for React components and folders under `modules/`, `camelCase` for functions/variables, and `SCREAMING_SNAKE_CASE` only for constants. When adding mocks, place them inside `__mocks__` so import ordering stays stable.
-Import order is set by `@trivago/prettier-plugin-sort-imports` and verified in CI by `pnpm format:check`, so it is not a matter of taste: `__mocks__` imports come first (they carry `vi.mock` calls), then `server-only`, then third-party packages, then `@formbricks/*`, `~/*`, `@/*`, and relative imports. Do not ask for or apply a different order in review — it will fail the check.
+TypeScript, React, and Prisma are the primary languages. Use the shared ESLint presets (`@forma/config-eslint`) and Prettier preset (110-char width, semicolons, double quotes, sorted import groups). Two-space indentation is standard; prefer `PascalCase` for React components and folders under `modules/`, `camelCase` for functions/variables, and `SCREAMING_SNAKE_CASE` only for constants. When adding mocks, place them inside `__mocks__` so import ordering stays stable.
+Import order is set by `@trivago/prettier-plugin-sort-imports` and verified in CI by `pnpm format:check`, so it is not a matter of taste: `__mocks__` imports come first (they carry `vi.mock` calls), then `server-only`, then third-party packages, then `@forma/*`, `~/*`, `@/*`, and relative imports. Do not ask for or apply a different order in review — it will fail the check.
 We are using SonarQube to identify code smells and security hotspots.
 Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonly<MyProps>)`).
 
@@ -238,7 +238,7 @@ Do:
 - Unit tests: cover stable, high-value logic in `.ts` files, such as validators, transformers,
   evaluators, calculations, and edge cases. Keep assertions on inputs and outputs, colocate specs with
   the code they exercise (`utility.test.ts`), and mock network and storage boundaries through helpers
-  from `@formbricks/*`.
+  from `@forma/*`.
 - API v3 contract tests (Schemathesis): every documented `/api/v3` operation is driven against a real
   instance on each PR and must match the committed OpenAPI bundle — status codes, content type and
   response schema. Nothing to register per endpoint; documenting an operation is what enrolls it. To
@@ -295,7 +295,7 @@ Do not:
 
 - Keep code DRY and small; remove dead code and unused imports.
 - Follow React hooks rules, keep effects focused, and avoid unnecessary `useMemo`/`useCallback`.
-- Prefer type inference, avoid `any`, and use shared types from `@formbricks/types`. This is enforced:
+- Prefer type inference, avoid `any`, and use shared types from `@forma/types`. This is enforced:
   `@typescript-eslint/no-explicit-any` is an error in `packages/*` and a warning in `apps/web`, where the
   typescript-eslint baseline is being ratcheted to error rule by rule (ENG-2264). Never add new `any`s —
   a warning today becomes an error once its rule's backlog is cleared.
@@ -322,6 +322,6 @@ Do not rely on training data for Next.js behavior in this repo. For any Next.js-
 
 Shared agent skills and subagents are installed under `.claude/`, and design context under `.agents/` (symlinked from the robots clone; `git -C <clone> pull` refreshes every install). This complements the conventions above; it does not replace them.
 
-- If `.agents/formbricks-context/DESIGN.md` exists, read it before building or reviewing UI for this repo: it indexes the per-surface design guides (tokens, components, motion, the quality bar).
+- If `.agents/forma-context/DESIGN.md` exists, read it before building or reviewing UI for this repo: it indexes the per-surface design guides (tokens, components, motion, the quality bar).
 - Skills and subagents live in `.claude/`. Treat the design context above as part of these instructions.
 <!-- robots:end -->

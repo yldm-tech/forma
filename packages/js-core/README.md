@@ -1,36 +1,36 @@
-# Formbricks Browser JS Library
+# Forma Browser JS Library
 
 [![npm package](https://img.shields.io/npm/v/@formbricks/js?style=flat-square)](https://www.npmjs.com/package/@formbricks/js)
 [![MIT License](https://img.shields.io/badge/License-MIT-red.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-Please see [Formbricks Docs](https://formbricks.com/docs).
-Specifically, [Quickstart/Implementation details](https://formbricks.com/docs/getting-started/quickstart-in-app-survey).
+Please see [Forma Docs](https://forma.ylam.ai/docs).
+Specifically, [Quickstart/Implementation details](https://forma.ylam.ai/docs/getting-started/quickstart-in-app-survey).
 
-## What is Formbricks
+## What is Forma
 
-Formbricks is your go-to solution for in-product micro-surveys that will supercharge your product experience! 🚀 For more information please check out [formbricks.com](https://formbricks.com).
+Forma is your go-to solution for in-product micro-surveys that will supercharge your product experience! 🚀 For more information please check out [forma.ylam.ai](https://forma.ylam.ai).
 
 ## How to use this library
 
-1. Install the Formbricks package inside your project using npm:
+1. Install the Forma package inside your project using npm:
 
 ```bash
 npm install -s @formbricks/js
 ```
 
-2. Import Formbricks and initialize the widget in your main component (e.g., App.tsx or App.js):
+2. Import Forma and initialize the widget in your main component (e.g., App.tsx or App.js):
 
 ```javascript
-import formbricks from "@formbricks/js";
+import forma from "@formbricks/js";
 
 if (typeof window !== "undefined") {
-  formbricks.setup({
+  forma.setup({
     workspaceId: "your-workspace-id",
-    appUrl: "https://app.formbricks.com",
+    appUrl: "https://app.forma.ylam.ai",
   });
 }
 ```
 
-Replace your-environment-id with your actual environment ID. You can find your environment ID in the **Setup Checklist** in the Formbricks settings.
+Replace your-environment-id with your actual environment ID. You can find your environment ID in the **Setup Checklist** in the Forma settings.
 
-For more detailed guides for different frameworks, check out our [Framework Guides](https://formbricks.com/docs/getting-started/framework-guides).
+For more detailed guides for different frameworks, check out our [Framework Guides](https://forma.ylam.ai/docs/getting-started/framework-guides).

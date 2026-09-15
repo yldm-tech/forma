@@ -1,12 +1,12 @@
 "use client";
 
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
-import { ActionClass, Language, OrganizationRole, Workspace } from "@formbricks/database/prisma-browser";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TSegment } from "@formbricks/types/segment";
-import { TSurvey, TSurveyEditorTabs, TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { ActionClass, Language, OrganizationRole, Workspace } from "@forma/database/prisma-browser";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TSegment } from "@forma/types/segment";
+import { TSurvey, TSurveyEditorTabs, TSurveyStyling } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { extractLanguageCodes, getEnabledLanguages } from "@/lib/i18n/utils";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { useDocumentVisibility } from "@/lib/useDocumentVisibility";
@@ -38,7 +38,7 @@ interface SurveyEditorProps {
   colors: string[];
   isUserTargetingAllowed?: boolean;
   isSpamProtectionAllowed?: boolean;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isUnsplashConfigured: boolean;
   isQuotasAllowed: boolean;
   isCxMode: boolean;
@@ -71,7 +71,7 @@ export const SurveyEditor = ({
   colors,
   isUserTargetingAllowed = false,
   isSpamProtectionAllowed = false,
-  isFormbricksCloud,
+  isFormaCloud,
   isUnsplashConfigured,
   isQuotasAllowed,
   isCxMode = false,
@@ -243,7 +243,7 @@ export const SurveyEditor = ({
               invalidElements={invalidElements}
               setInvalidElements={setInvalidElements}
               selectedLanguageCode={selectedLanguageCode || "default"}
-              isFormbricksCloud={isFormbricksCloud}
+              isFormaCloud={isFormaCloud}
               isCxMode={isCxMode}
               locale={locale}
               responseCount={responseCount}
@@ -294,7 +294,7 @@ export const SurveyEditor = ({
               isUserTargetingAllowed={isUserTargetingAllowed}
               isSpamProtectionAllowed={isSpamProtectionAllowed}
               workspacePermission={workspacePermission}
-              isFormbricksCloud={isFormbricksCloud}
+              isFormaCloud={isFormaCloud}
               isQuotasAllowed={isQuotasAllowed}
               quotas={quotas}
               surveySchedulingConfig={surveySchedulingConfig}

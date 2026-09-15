@@ -1,5 +1,5 @@
 /**
- * Server entry point for `@formbricks/workflows/server`. Everything here is server-only (it talks
+ * Server entry point for `@forma/workflows/server`. Everything here is server-only (it talks
  * to an injected Prisma client and builds HTTP responses) and is deliberately kept out of the
  * browser-safe `.` entry, which exposes only contracts and types. The `apps/web` Next.js routes
  * import from here, inject `prisma`/`logger`/`authorize`, and delegate.

@@ -1,5 +1,5 @@
 import "server-only";
-import type { JobsRuntimeOptions } from "@formbricks/jobs";
+import type { JobsRuntimeOptions } from "@forma/jobs";
 import { env } from "@/lib/env";
 
 const DEFAULT_BULLMQ_WORKER_CONCURRENCY = 1;

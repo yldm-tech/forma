@@ -1,14 +1,14 @@
 "use server";
 
-import { logger } from "@formbricks/logger";
-import { TUserEmail, ZUserEmail } from "@formbricks/types/user";
+import { logger } from "@forma/logger";
+import { TUserEmail, ZUserEmail } from "@forma/types/user";
 import { validateInputs } from "@/lib/utils/validate";
 
 export type TMailingListId = "security" | "product-updates";
 
 const MAILING_LIST_ENDPOINTS: Record<TMailingListId, string> = {
-  security: "https://ee.formbricks.com/api/v1/public/mailing/security/subscriptions",
-  "product-updates": "https://ee.formbricks.com/api/v1/public/mailing/product-updates/subscriptions",
+  security: "https://ee.forma.ylam.ai/api/v1/public/mailing/security/subscriptions",
+  "product-updates": "https://ee.forma.ylam.ai/api/v1/public/mailing/product-updates/subscriptions",
 } as const;
 
 const EE_SERVER_TIMEOUT_MS = 5000;
@@ -74,18 +74,18 @@ export const subscribeToMailingList = async ({
 
 export const subscribeUserToMailingList = async ({
   email,
-  isFormbricksCloud,
+  isFormaCloud,
   subscribeToSecurityUpdates,
   subscribeToProductUpdates,
 }: {
   email: TUserEmail;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   subscribeToSecurityUpdates?: boolean;
   subscribeToProductUpdates?: boolean;
 }): Promise<void> => {
-  if (isFormbricksCloud && subscribeToProductUpdates) {
+  if (isFormaCloud && subscribeToProductUpdates) {
     await subscribeToMailingList({ email, listId: "product-updates" });
-  } else if (!isFormbricksCloud && subscribeToSecurityUpdates) {
+  } else if (!isFormaCloud && subscribeToSecurityUpdates) {
     await subscribeToMailingList({ email, listId: "security" });
   }
 };

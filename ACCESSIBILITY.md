@@ -1,6 +1,6 @@
 # Accessibility
 
-Formbricks is committed to making our platform usable by everyone, including people who rely on assistive technologies.
+Forma is committed to making our platform usable by everyone, including people who rely on assistive technologies.
 
 ## Standards
 
@@ -12,8 +12,8 @@ We aim to conform to:
 
 ## Priorities
 
-1. **End-user surveys** (`packages/surveys`) — everything respondents see and interact with. This is our highest priority because survey takers don't choose Formbricks; the organisations running surveys choose for them.
-2. **Admin app** (`apps/web`) — survey creation, response analysis, and team management used by Formbricks customers.
+1. **End-user surveys** (`packages/surveys`) — everything respondents see and interact with. This is our highest priority because survey takers don't choose Forma; the organisations running surveys choose for them.
+2. **Admin app** (`apps/web`) — survey creation, response analysis, and team management used by Forma customers.
 
 In both areas we focus on:
 
@@ -38,7 +38,7 @@ When contributing UI changes:
 
 ## Reporting Accessibility Issues
 
-If you encounter an accessibility barrier, please [open an issue](https://github.com/formbricks/formbricks/issues/new?labels=accessibility&template=accessibility.yml) using the accessibility template. For blocking issues in a procurement or compliance context, email **[hola@formbricks.com](mailto:hola@formbricks.com)**.
+If you encounter an accessibility barrier, please [open an issue](https://github.com/yldm-tech/forma/issues/new?labels=accessibility&template=accessibility.yml) using the accessibility template. For blocking issues in a procurement or compliance context, email **[hola@forma.ylam.ai](mailto:hola@forma.ylam.ai)**.
 
 ## Resources
 

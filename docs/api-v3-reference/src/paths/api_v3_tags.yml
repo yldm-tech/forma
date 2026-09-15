@@ -8,7 +8,7 @@ get:
   description: |
     Returns a workspace's response tags, each with the number of responses currently carrying it.
 
-    Session cookie only. Tags are managed from the Formbricks app (Workspace settings → Tags); these
+    Session cookie only. Tags are managed from the Forma app (Workspace settings → Tags); these
     endpoints back that screen, so they do not accept `x-api-key`.
   tags:
     - V3 Tags

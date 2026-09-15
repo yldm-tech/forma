@@ -1,4 +1,4 @@
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { isRatioMeasure } from "@/modules/ee/analysis/lib/schema-definition";
 import type { TChartDataRow, TChartType } from "@/modules/ee/analysis/types/analysis";
 

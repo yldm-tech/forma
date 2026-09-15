@@ -1,13 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
 import bcryptjs from "bcryptjs";
 import { createHash } from "node:crypto";
-import { logger } from "@formbricks/logger";
-import { type TSurveyBlocks } from "@formbricks/types/surveys/blocks";
-import type {
-  TWorkflowDefinition,
-  TWorkflowRunData,
-  TWorkflowTriggerRunPayload,
-} from "@formbricks/workflows";
+import { logger } from "@forma/logger";
+import { type TSurveyBlocks } from "@forma/types/surveys/blocks";
+import type { TWorkflowDefinition, TWorkflowRunData, TWorkflowTriggerRunPayload } from "@forma/workflows";
 import { type Prisma, PrismaClient } from "./prisma";
 import { createPrismaPgAdapter } from "./prisma-adapter";
 import { SEED_CREDENTIALS, SEED_IDS } from "./seed/constants";
@@ -231,7 +227,7 @@ async function seedDemoWorkflows(workspaceId: string, surveyId: string): Promise
       email: {
         to: "team@example.com",
         subject: "New survey response received",
-        body: "A new response was completed. Check Formbricks for details.",
+        body: "A new response was completed. Check Forma for details.",
       },
     },
   ];
@@ -524,7 +520,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
   {
     id: createId(),
     type: "openText",
-    headline: { default: "What do you think of Formbricks?" },
+    headline: { default: "What do you think of Forma?" },
     subheader: { default: "Please be honest!" },
     required: true,
     placeholder: { default: "Your feedback here..." },
@@ -533,7 +529,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
   {
     id: createId(),
     type: "multipleChoiceSingle",
-    headline: { default: "How often do you use Formbricks?" },
+    headline: { default: "How often do you use Forma?" },
     required: true,
     choices: [
       { id: createId(), label: { default: "Daily" } },
@@ -557,7 +553,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
   {
     id: createId(),
     type: "nps",
-    headline: { default: "How likely are you to recommend Formbricks?" },
+    headline: { default: "How likely are you to recommend Forma?" },
     required: true,
     lowerLabel: { default: "Not likely" },
     upperLabel: { default: "Very likely" },
@@ -568,7 +564,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
     headline: { default: "Check out our documentation!" },
     required: true,
     ctaButtonLabel: { default: "Go to Docs" },
-    buttonUrl: "https://formbricks.com/docs",
+    buttonUrl: "https://forma.ylam.ai/docs",
     buttonExternal: true,
   },
   {
@@ -591,7 +587,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
   {
     id: createId(),
     type: "date",
-    headline: { default: "When did you start using Formbricks?" },
+    headline: { default: "When did you start using Forma?" },
     required: true,
     format: "M-d-y",
   },

@@ -15,9 +15,9 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { logger } from "@formbricks/logger";
-import { type TSurveyBlocks } from "@formbricks/types/surveys/blocks";
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import { logger } from "@forma/logger";
+import { type TSurveyBlocks } from "@forma/types/surveys/blocks";
+import type { TWorkflowDefinition } from "@forma/workflows";
 import { PrismaClient } from "../prisma";
 import { createPrismaPgAdapter } from "../prisma-adapter";
 import { SEED_CREDENTIALS, SEED_IDS } from "../seed/constants";

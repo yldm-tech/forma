@@ -18,7 +18,7 @@ import { seedAppSurvey } from "./utils/app-survey";
 
 declare global {
   interface Window {
-    formbricks: {
+    forma: {
       setup: (config: { workspaceId: string; appUrl: string }) => Promise<void>;
       track: (name: string) => Promise<void>;
     };
@@ -40,9 +40,9 @@ const HOST_PAGE = `<!doctype html>
     <script type="text/javascript">
       !(function () {
         var t = document.createElement("script");
-        (t.type = "text/javascript"), (t.async = !0), (t.src = "http://localhost:3000/js/formbricks.umd.cjs");
+        (t.type = "text/javascript"), (t.async = !0), (t.src = "http://localhost:3000/js/forma.umd.cjs");
         t.onload = function () {
-          window.formbricks.setup({ workspaceId: window.__workspaceId, appUrl: "http://localhost:3000" });
+          window.forma.setup({ workspaceId: window.__workspaceId, appUrl: "http://localhost:3000" });
         };
         var e = document.getElementsByTagName("script")[0];
         e.parentNode.insertBefore(t, e);
@@ -117,11 +117,11 @@ test.describe("App survey widget does not block the host page", () => {
       window.__workspaceId = workspaceId;
     }, seeded.workspaceId);
     await page.goto(hostUrl);
-    await page.waitForFunction(() => Boolean(window.formbricks), null, { timeout: 120000 });
+    await page.waitForFunction(() => Boolean(window.forma), null, { timeout: 120000 });
 
     // The status region is mounted at SDK setup — long before any survey opens — because screen
     // readers only reliably announce changes to a live region that already existed.
-    const liveRegion = page.locator("#formbricks-live-region");
+    const liveRegion = page.locator("#forma-live-region");
     await expect(liveRegion).toBeAttached({ timeout: 120000 });
     await expect(liveRegion).toHaveAttribute("role", "status");
     await expect(liveRegion).toBeEmpty();
@@ -130,7 +130,7 @@ test.describe("App survey widget does not block the host page", () => {
     // firing mid-form must not pull the user out of what they are typing.
     await page.locator("#host-input").fill("BEFORE");
 
-    await page.evaluate((key) => window.formbricks.track(key), seeded.actionKey);
+    await page.evaluate((key) => window.forma.track(key), seeded.actionKey);
 
     const dialog = page.locator("#fbjs [role='dialog']");
     await expect(dialog).toBeVisible({ timeout: 120000 });
@@ -221,10 +221,10 @@ test.describe("App survey widget does not block the host page", () => {
       window.__workspaceId = workspaceId;
     }, seeded.workspaceId);
     await page.goto(hostUrl);
-    await page.waitForFunction(() => Boolean(window.formbricks), null, { timeout: 120000 });
+    await page.waitForFunction(() => Boolean(window.forma), null, { timeout: 120000 });
 
     await page.locator("#host-input").fill("BEFORE");
-    await page.evaluate((key) => window.formbricks.track(key), seeded.actionKey);
+    await page.evaluate((key) => window.forma.track(key), seeded.actionKey);
 
     const dialog = page.locator("#fbjs [role='dialog']");
     await expect(dialog).toBeVisible({ timeout: 120000 });
@@ -246,6 +246,6 @@ test.describe("App survey widget does not block the host page", () => {
 
     // With an overlay the trap's focus move is the announcement — the status region stays silent
     // so screen readers don't hear the open twice.
-    await expect(page.locator("#formbricks-live-region")).toBeEmpty();
+    await expect(page.locator("#forma-live-region")).toBeEmpty();
   });
 });

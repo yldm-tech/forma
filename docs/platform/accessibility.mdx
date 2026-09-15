@@ -1,10 +1,10 @@
 ---
 title: "Accessibility"
-description: "How the Formbricks survey UI supports respondents with disabilities, which standards we measure against, and where we currently fall short."
+description: "How the Forma survey UI supports respondents with disabilities, which standards we measure against, and where we currently fall short."
 icon: "universal-access"
 ---
 
-Formbricks is used to ask people questions. A survey that some people cannot answer is a survey that returns
+Forma is used to ask people questions. A survey that some people cannot answer is a survey that returns
 incomplete data, so accessibility is not a compliance exercise for us — it is part of the product working
 correctly.
 
@@ -13,7 +13,7 @@ open a link survey or are shown a website or in-app survey. It covers what alrea
 how to reach us.
 
 <Note>
-  This page covers the respondent-facing survey UI only. The Formbricks application that survey creators use
+  This page covers the respondent-facing survey UI only. The Forma application that survey creators use
   to build surveys, and the self-hosting and administration interfaces, have not been assessed to the same
   standard and are not described here.
 </Note>
@@ -22,7 +22,7 @@ how to reach us.
 
 ## Standards We Measure Against
 
-Formbricks assesses the public survey UI against two standards:
+Forma assesses the public survey UI against two standards:
 
 | Standard | Level assessed |
 | --- | --- |
@@ -33,7 +33,7 @@ Our assessment is published as a Voluntary Product Accessibility Template (VPAT)
 Revised Section 508 Edition** format. The most recent report was completed on **9 August 2026**.
 
 To request the full report, ask in
-[GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+[GitHub Discussions](https://github.com/yldm-tech/forma/discussions).
 
 ---
 
@@ -65,7 +65,7 @@ Everything in this table was assessed as supported in the most recent report.
 | Visible focus | The element that currently has keyboard focus is shown with a visible focus indicator. | 2.4.7 |
 | Focus order | Focus moves through the survey in an order that preserves meaning and operability. | 2.4.3 |
 | Text alternatives | Non-text content is given a text alternative. | 1.1.1 |
-| Contrast | Text and images of text in the default survey theme meet the minimum contrast ratio. A survey creator can override every colour, and Formbricks does not check the contrast of a custom theme. | 1.4.3 |
+| Contrast | Text and images of text in the default survey theme meet the minimum contrast ratio. A survey creator can override every colour, and Forma does not check the contrast of a custom theme. | 1.4.3 |
 | Resizing text | Text can be resized up to 200% without assistive technology, and without loss of content or functionality. | 1.4.4 |
 | No time limits | There is no time limit on completing a survey. | 2.2.1 |
 | No auto-playing media | No audio or video ever plays on its own. Nothing in a survey starts playing that the respondent did not start. | 2.2.2 |
@@ -97,12 +97,12 @@ versions.
 
 **Affected criteria:** 1.2.1, 1.2.2, 1.2.3, 1.2.5
 
-Formbricks lets survey creators embed a video from YouTube, Vimeo, or Loom into a question. Formbricks provides
+Forma lets survey creators embed a video from YouTube, Vimeo, or Loom into a question. Forma provides
 no way to upload a transcript, add captions, or supply an audio description or text alternative for that video.
 A respondent who is deaf, hard of hearing, blind, or has low vision may not be able to access information that
 is only presented in the video.
 
-Adding captions on the hosting platform does not fully close the gap either, because Formbricks reduces the
+Adding captions on the hosting platform does not fully close the gap either, because Forma reduces the
 embedded player's controls:
 
 | Platform | What the embedded player hides |
@@ -173,14 +173,14 @@ amount of navigation a respondent has to do.
 
 **Affected criterion:** 3.1.2
 
-Formbricks declares the survey's language for the survey as a whole, and only when the survey has languages
+Forma declares the survey's language for the survey as a whole, and only when the survey has languages
 configured. Where a survey uses the multi-language feature, its root element carries a `lang` attribute
 resolved from the active language, updated when the respondent uses the language switcher — so an embedded
-survey shown in a language other than its host page's is still announced correctly, without Formbricks
+survey shown in a language other than its host page's is still announced correctly, without Forma
 altering the page it is embedded in. Link surveys additionally set `lang` and `dir` on the page's `<html>`
 element, so right-to-left languages read in the right direction.
 
-A survey that does not use the multi-language feature has no configured language for Formbricks to resolve
+A survey that does not use the multi-language feature has no configured language for Forma to resolve
 from, so it declares no language of its own. It inherits whatever the surrounding page declares — the
 respondent's app locale for a link survey, or the host site's `lang` for an embedded one. A survey written in
 one language and opened where the page declares another is then announced using the wrong pronunciation rules.
@@ -219,7 +219,7 @@ We have **not** formally tested the survey UI against specific named combination
 browser — for example a particular screen reader paired with a particular browser version. We do not claim
 support for combinations we have not evidenced.
 
-If you use a specific assistive technology and hit a barrier in a Formbricks survey, we want to hear about it.
+If you use a specific assistive technology and hit a barrier in a Forma survey, we want to hear about it.
 See [Contact](#contact) below.
 
 ---
@@ -234,9 +234,9 @@ format here does not work for you, tell us which format you need and we will pro
 
 ## Contact
 
-For accessibility questions about Formbricks, to request the full accessibility report, to ask for this
+For accessibility questions about Forma, to request the full accessibility report, to ask for this
 documentation in another format, or to report an accessibility barrier in the survey UI, reach us in
-[GitHub Discussions](https://github.com/formbricks/formbricks/discussions).
+[GitHub Discussions](https://github.com/yldm-tech/forma/discussions).
 
 If you are a **survey respondent** and you cannot complete a survey that someone has sent you, contact the
 organisation that sent you the survey — they own the survey content and can offer you another way to respond.
@@ -246,7 +246,7 @@ You are also welcome to raise it with us so we can fix the underlying barrier.
 
 ## Guidance for Survey Creators
 
-Formbricks handles the parts of accessibility that belong to the survey UI. The content you put into a survey is
+Forma handles the parts of accessibility that belong to the survey UI. The content you put into a survey is
 yours, and it decides whether the finished survey is usable. The following practices make a measurable
 difference.
 
@@ -254,7 +254,7 @@ difference.
 without the surrounding context. "How satisfied were you with the onboarding call?" works; "And this one?" does
 not.
 
-**Do not put information only in an image.** Formbricks does not currently offer a field for image alt text, so
+**Do not put information only in an image.** Forma does not currently offer a field for image alt text, so
 an image cannot carry information on its own. Treat images as illustration and put anything a respondent needs
 in order to answer into the headline or the description.
 

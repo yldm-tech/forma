@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SurveyContainerProps } from "@formbricks/types/formbricks-surveys";
+import { SurveyContainerProps } from "@forma/types/forma-surveys";
 import { getSurveyDisplayName, hasSurveyInstructions } from "@/lib/survey-page";
 import { getSurveyLanguageTag, isRTLLanguage } from "@/lib/utils";
 import { SurveyContainer } from "../wrappers/survey-container";

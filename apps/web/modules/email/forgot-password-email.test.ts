@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderForgotPasswordEmail } from "@formbricks/email";
+import { renderForgotPasswordEmail } from "@forma/email";
 
 const t = (key: string, replacements?: Record<string, string>): string => {
   if (key === "emails.forgot_password_email_link_valid_for_24_hours") {
@@ -13,8 +13,8 @@ const t = (key: string, replacements?: Record<string, string>): string => {
     "emails.forgot_password_email_change_password": "Change password",
     "emails.forgot_password_email_did_not_request": "If you didn't request this, please ignore this email.",
     "emails.email_footer_text_1": "Have a great day!",
-    "emails.email_footer_text_2": "The Formbricks Team",
-    "emails.email_template_text_1": "This email was sent via Formbricks.",
+    "emails.email_footer_text_2": "The Forma Team",
+    "emails.email_template_text_1": "This email was sent via Forma.",
   };
 
   return translations[key] ?? key;
@@ -23,7 +23,7 @@ const t = (key: string, replacements?: Record<string, string>): string => {
 describe("renderForgotPasswordEmail", () => {
   test("renders the configurable link lifetime in minutes", async () => {
     const html = await renderForgotPasswordEmail({
-      verifyLink: "https://app.formbricks.com/auth/forgot-password/reset?token=test-token",
+      verifyLink: "https://app.forma.ylam.ai/auth/forgot-password/reset?token=test-token",
       linkValidityInMinutes: 30,
       t,
     });

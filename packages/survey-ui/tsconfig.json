@@ -12,6 +12,6 @@
     "resolveJsonModule": true
   },
   "exclude": ["src/**/*.stories.tsx", "src/**/story-helpers.tsx"],
-  "extends": "@formbricks/config-typescript/react-library.json",
+  "extends": "@forma/config-typescript/react-library.json",
   "include": ["src"]
 }

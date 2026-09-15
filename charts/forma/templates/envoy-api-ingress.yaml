@@ -1,0 +1,101 @@
+{{- if and .Values.envoy.enabled .Values.envoy.forma.ingress.enabled }}
+{{- $explicitHost := "" -}}
+{{- if .Values.envoy.forma.ingress.host -}}
+{{- $explicitHost = tpl .Values.envoy.forma.ingress.host $ | trim -}}
+{{- end -}}
+{{- if and .Values.ingress.enabled .Values.ingress.hosts (gt (len .Values.ingress.hosts) 0) (not $explicitHost) -}}
+{{- fail "envoy.forma.ingress.host must be set explicitly when ingress.enabled and envoy.forma.ingress.enabled are both true" -}}
+{{- end -}}
+{{- $host := include "forma.envoy.ingressHost" . -}}
+{{- $proxyServiceName := include "forma.envoy.proxyServiceName" . -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-envoy-api" (include "forma.name" .) }}
+  namespace: {{ include "forma.namespace" . }}
+  labels:
+    {{- include "forma.labels" . | nindent 4 }}
+  {{- if .Values.envoy.forma.ingress.annotations }}
+  annotations:
+    {{- include "forma.tplvalues.render" (dict "value" .Values.envoy.forma.ingress.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.envoy.forma.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.envoy.forma.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+    - host: {{ $host }}
+      http:
+        paths:
+          {{- if .Values.envoy.forma.routes.authCallback }}
+          - path: /api/auth/callback
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.v1Client }}
+          - path: /api/v1/client
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.v2Client }}
+          - path: /api/v2/client
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.v1Management }}
+          - path: /api/v1/management
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.v1Webhooks }}
+          - path: /api/v1/webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.feedbackRecords }}
+          - path: /api/v3/feedbackRecords
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          - path: /v1/feedback-records
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+          {{- if .Values.envoy.forma.routes.storage }}
+          - path: /storage
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxyServiceName }}
+                port:
+                  number: 80
+          {{- end }}
+{{- end }}

@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Locator, Page } from "playwright";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { CreateSurveyParams, CreateSurveyWithLogicParams } from "@/playwright/utils/mock";
 
 const MOCK_STORAGE_UPLOAD_PATH = "/__playwright__/mock-storage-upload";
@@ -351,8 +351,8 @@ export const isWorkspaceStorageConfigured = async (page: Page, workspaceId: stri
 export const uploadFileForFileUploadQuestion = async (page: Page) => {
   try {
     const fileInput = page.locator('input[type="file"]');
-    const response1 = await fetch("https://formbricks-cdn.s3.eu-central-1.amazonaws.com/puppy-1-small.jpg");
-    const response2 = await fetch("https://formbricks-cdn.s3.eu-central-1.amazonaws.com/puppy-2-small.jpg");
+    const response1 = await fetch("https://forma-cdn.s3.eu-central-1.amazonaws.com/puppy-1-small.jpg");
+    const response2 = await fetch("https://forma-cdn.s3.eu-central-1.amazonaws.com/puppy-2-small.jpg");
     const buffer1 = Buffer.from(await response1.arrayBuffer());
     const buffer2 = Buffer.from(await response2.arrayBuffer());
 
@@ -698,7 +698,7 @@ export const publishSurvey = async (page: Page): Promise<void> => {
   // Scoped to react-hot-toast's own error class (set in modules/ui/components/toaster-client) rather
   // than `role="status"`, which the shared `Alert` also uses — several of those are on screen in the
   // editor and would be reported as publish failures.
-  const errorToasts = page.locator(".formbricks__toast__error");
+  const errorToasts = page.locator(".forma__toast__error");
 
   await expect(publishButtonOf(page)).toBeEnabled();
   await publishButtonOf(page).click();

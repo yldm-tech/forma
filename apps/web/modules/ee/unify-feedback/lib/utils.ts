@@ -168,9 +168,9 @@ export const formatFieldTypeLabel = (fieldType: string, t: TFunction): string =>
 
 export const formatSourceType = (sourceType: string, t: TFunction): string => {
   switch (sourceType) {
-    case "formbricks":
-    case "formbricks_survey":
-      return t("workspace.unify.formbricks_surveys");
+    case "forma":
+    case "forma_survey":
+      return t("workspace.unify.forma_surveys");
     case "csv":
       return t("workspace.unify.csv_import");
     case "survey":

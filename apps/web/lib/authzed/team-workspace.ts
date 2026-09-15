@@ -1,6 +1,6 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import type { TeamUserRole, WorkspaceTeamPermission } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import type { TeamUserRole, WorkspaceTeamPermission } from "@forma/database/prisma";
 import {
   type TAuthzedClient,
   type TAuthzedRelationshipFilter,

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import * as crypto from "@/lib/crypto";
 import {
   createEmailChangeToken,
@@ -87,7 +87,7 @@ vi.mock("@/lib/constants", () => ({
 }));
 
 // Mock prisma
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
@@ -102,7 +102,7 @@ const CREDENTIAL_UPDATED_AT = new Date("2026-01-01T00:00:00.000Z");
 const CREDENTIAL_UPDATED_AT_AFTER_RESET = new Date("2026-01-02T09:30:00.000Z");
 
 // Mock logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),
@@ -464,7 +464,7 @@ describe("JWT Functions - Comprehensive Security Tests", () => {
       expect(result).toBeNull();
 
       // Verify error logging
-      const { logger } = await import("@formbricks/logger");
+      const { logger } = await import("@forma/logger");
       expect(logger.error).toHaveBeenCalledWith(expect.any(Error), "Survey link token verification failed");
     });
 
@@ -561,7 +561,7 @@ describe("JWT Functions - Comprehensive Security Tests", () => {
       await expect(verifyToken(invalidToken)).rejects.toThrow("Invalid token");
 
       // Verify both methods were attempted
-      const { logger } = await import("@formbricks/logger");
+      const { logger } = await import("@forma/logger");
       expect(logger.error).toHaveBeenCalledWith(
         expect.any(Error),
         "Token verification failed with new method"

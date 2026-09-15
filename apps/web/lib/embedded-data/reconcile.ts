@@ -1,17 +1,17 @@
 import "server-only";
-import { Prisma } from "@formbricks/database/prisma";
+import { Prisma } from "@forma/database/prisma";
 import {
   type TEmbeddedDataDefaultValue,
   type TEmbeddedDataSource,
   type TEmbeddedDataType,
   isLocalEmbeddedData,
-} from "@formbricks/types/embedded-data";
+} from "@forma/types/embedded-data";
 import {
   type TDesiredEmbeddedField,
   type TLegacyEmbeddedFields,
   toDesiredEmbeddedFields,
-} from "@formbricks/types/embedded-data-mapping";
-import { InvalidInputError } from "@formbricks/types/errors";
+} from "@forma/types/embedded-data-mapping";
+import { InvalidInputError } from "@forma/types/errors";
 
 /** One field a survey currently has, as the link plus the definition it points at. */
 export interface TCurrentEmbeddedField {

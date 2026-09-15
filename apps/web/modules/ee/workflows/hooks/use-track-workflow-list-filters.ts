@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { TWorkflowSortBy, TWorkflowStatus } from "@formbricks/workflows";
+import type { TWorkflowSortBy, TWorkflowStatus } from "@forma/workflows";
 import { trackWorkflowEvent } from "../lib/analytics";
 import { WORKFLOW_CLIENT_EVENTS } from "../lib/analytics-events";
 

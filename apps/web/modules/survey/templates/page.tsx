@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { DEFAULT_LOCALE } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { resolveDefaultSurveyLanguage } from "@/lib/i18n/default-survey-language";

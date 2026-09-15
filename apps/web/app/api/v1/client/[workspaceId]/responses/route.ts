@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { UAParser } from "ua-parser-js";
-import { TResponseWithQuotaFull } from "@formbricks/types/quota";
-import { TResponseInput, ZResponseInput, pickAutoCapturedResponseMeta } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TResponseWithQuotaFull } from "@forma/types/quota";
+import { TResponseInput, ZResponseInput, pickAutoCapturedResponseMeta } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { validateSingleUseResponseInput } from "@/app/api/client/[workspaceId]/responses/lib/single-use";
 import { handleApiError } from "@/app/lib/api/handle-api-error";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";

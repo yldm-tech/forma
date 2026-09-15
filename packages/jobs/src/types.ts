@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { ZResponse } from "@formbricks/types/responses";
-import { ZTag } from "@formbricks/types/tags";
-import { ZUserLocale } from "@formbricks/types/user";
+import { ZResponse } from "@forma/types/responses";
+import { ZTag } from "@forma/types/tags";
+import { ZUserLocale } from "@forma/types/user";
 
 export const ZTestLogJobData = z.object({
   message: z.string().min(1),

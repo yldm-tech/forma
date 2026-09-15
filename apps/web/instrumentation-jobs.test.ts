@@ -35,7 +35,7 @@ const slowTest = (name: string, fn: () => Promise<void>): void => {
 
 // Only the queue calls are stubbed: `lib/jobs/recurring-registrations` runs for real against these
 // handles, so the env-derived timing it pairs with each job stays under test.
-vi.mock("@formbricks/jobs", () => ({
+vi.mock("@forma/jobs", () => ({
   ONE_SHOT_JOB_NAMES: {
     responsePipeline: "response-pipeline.process",
     workflowRun: "workflow-run.process",
@@ -97,7 +97,7 @@ vi.mock("@/lib/jobs/config", () => ({
   getJobsWorkerBootstrapConfig: mockGetJobsWorkerBootstrapConfig,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: mockDebug,
     error: mockError,
@@ -187,7 +187,7 @@ describe("instrumentation-jobs", () => {
    */
   test("each recurring registration is paired with its own job handle", async () => {
     const { RECURRING_JOB_REGISTRATIONS_BY_KEY } = await import("@/lib/jobs/recurring-registrations");
-    const { recurringJobs } = await import("@formbricks/jobs");
+    const { recurringJobs } = await import("@forma/jobs");
 
     for (const [key, registration] of Object.entries(RECURRING_JOB_REGISTRATIONS_BY_KEY)) {
       expect(registration.job, `registration "${key}" holds another job's handle`).toBe(
@@ -507,7 +507,7 @@ describe("instrumentation-jobs", () => {
       await registerRecurringJobs();
       await registerRecurringJobs();
 
-      // The schedule identity and payload now belong to the job declaration in @formbricks/jobs (and are
+      // The schedule identity and payload now belong to the job declaration in @forma/jobs (and are
       // asserted there); what this app owns, and what is asserted here, is the timing per job.
       expect(mockStartJobsRuntime).not.toHaveBeenCalled();
       expect(mockUpsertAuthzedProjectionDelivery).toHaveBeenCalledOnce();

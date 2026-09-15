@@ -5,8 +5,8 @@ import { CheckIcon } from "lucide-react";
 import { KeyboardEventHandler, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import {
   type TSurveySchedulingConfig,

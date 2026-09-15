@@ -13,7 +13,7 @@ const originalOtelLogsEnabled = process.env.OTEL_LOGS_ENABLED;
 const originalOtelServiceName = process.env.OTEL_SERVICE_NAME;
 const originalNpmPackageVersion = process.env.npm_package_version;
 const originalEnvironment = process.env.ENVIRONMENT;
-const processHandlersAttachedKey = Symbol.for("@formbricks/logger/process-handlers-attached");
+const processHandlersAttachedKey = Symbol.for("@forma/logger/process-handlers-attached");
 
 const restoreEnv = (key: string, value: string | undefined): void => {
   if (value === undefined) {
@@ -173,7 +173,7 @@ describe("Logger", () => {
     process.env.NEXT_RUNTIME = "nodejs";
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "http://signoz-otel-collector.signoz:4318";
     process.env.OTEL_LOGS_ENABLED = "1";
-    process.env.OTEL_SERVICE_NAME = "formbricks-web";
+    process.env.OTEL_SERVICE_NAME = "forma-web";
     process.env.npm_package_version = "5.1.2";
     const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue("/home/nextjs/apps/web");
 
@@ -188,10 +188,10 @@ describe("Logger", () => {
             target:
               "/home/nextjs/node_modules/pino-opentelemetry-transport/lib/pino-opentelemetry-transport.js",
             options: expect.objectContaining({
-              loggerName: "formbricks-web",
+              loggerName: "forma-web",
               serviceVersion: "5.1.2",
               resourceAttributes: expect.objectContaining({
-                "service.name": "formbricks-web",
+                "service.name": "forma-web",
                 "service.version": "5.1.2",
               }) as Record<string, string>,
             }) as Record<string, unknown>,

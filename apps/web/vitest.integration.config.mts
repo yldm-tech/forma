@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
  * real Postgres (provisioned by integration/global-setup.ts) and the real Redis — NO database mock.
  *
  * Kept entirely separate from the unit config (vite.config.mts), whose vitestSetup.ts globally mocks
- * @formbricks/database. Run via `pnpm test:integration`.
+ * @forma/database. Run via `pnpm test:integration`.
  */
 export default defineConfig({
   plugins: [tsconfigPaths()],
@@ -23,7 +23,7 @@ export default defineConfig({
       // Alias ONLY the bare specifier (not the /prisma or /prisma-adapter subpaths) to the Boolean
       // test client, so the real Better Auth instance creates/reads Users with emailVerified as a
       // Boolean — see integration/db-boolean.ts + gen-boolean-client.mjs.
-      { find: /^@formbricks\/database$/, replacement: resolve(here, "integration/db-boolean.ts") },
+      { find: /^@forma\/database$/, replacement: resolve(here, "integration/db-boolean.ts") },
     ],
   },
   test: {

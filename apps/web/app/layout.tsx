@@ -9,8 +9,8 @@ import "../modules/ui/globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Formbricks",
-    default: "Formbricks",
+    template: "%s | Forma",
+    default: "Forma",
   },
   description: "Open-Source Survey Suite",
 };

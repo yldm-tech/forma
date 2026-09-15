@@ -2,7 +2,7 @@
 
 import { CopyIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TSurveyQuota } from "@formbricks/types/quota";
+import { TSurveyQuota } from "@forma/types/quota";
 import { Button } from "@/modules/ui/components/button";
 import { Label } from "@/modules/ui/components/label";
 import { TooltipRenderer } from "@/modules/ui/components/tooltip";

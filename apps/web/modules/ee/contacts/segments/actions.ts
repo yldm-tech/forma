@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZSegmentCreateInput, ZSegmentFilters, ZSegmentUpdateInput } from "@formbricks/types/segment";
+import { ZId } from "@forma/types/common";
+import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { ZSegmentCreateInput, ZSegmentFilters, ZSegmentUpdateInput } from "@forma/types/segment";
 import { assertCan } from "@/lib/authorization";
 import { getOrganization } from "@/lib/organization/service";
 import { capturePostHogEvent } from "@/lib/posthog";

@@ -10,7 +10,7 @@ interface SAMLCallbackBody {
 export const POST = async (req: Request) => {
   const jacksonInstance = await jackson();
   if (!jacksonInstance) {
-    return responses.forbiddenResponse("SAML SSO is not enabled in your Formbricks license");
+    return responses.forbiddenResponse("SAML SSO is not enabled in your Forma license");
   }
   const { oauthController } = jacksonInstance;
 

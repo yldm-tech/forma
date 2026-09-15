@@ -11,7 +11,7 @@ const { mockDebug, mockError, mockWarn } = vi.hoisted(() => ({
   mockWarn: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mockError,
     info: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@formbricks/logger", () => ({
   },
 }));
 
-describe("@formbricks/jobs processor registry", () => {
+describe("@forma/jobs processor registry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

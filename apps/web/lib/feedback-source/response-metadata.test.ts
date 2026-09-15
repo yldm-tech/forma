@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey } from "@forma/types/surveys/types";
 import {
   HUB_METADATA_FIELDS,
   type TMetadataContext,

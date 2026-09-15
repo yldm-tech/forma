@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { TWorkflowStatus } from "@formbricks/workflows";
-import { ZWorkflowSortBy, ZWorkflowStatus } from "@formbricks/workflows";
+import type { TWorkflowStatus } from "@forma/workflows";
+import { ZWorkflowSortBy, ZWorkflowStatus } from "@forma/workflows";
 
 /**
  * Map the status-filter selection to the `statusIn` the list API expects. The API default-excludes

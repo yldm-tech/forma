@@ -13,7 +13,7 @@ describe("getPostHogFeatureFlag", () => {
 
   test("returns false when PostHog is not configured", async () => {
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: undefined }));
@@ -30,7 +30,7 @@ describe("getPostHogFeatureFlag", () => {
 
   test("returns false when posthogServerClient is null", async () => {
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: "phc_test_key" }));
@@ -49,7 +49,7 @@ describe("getPostHogFeatureFlag", () => {
     mocks.getFeatureFlag.mockResolvedValue(true);
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: "phc_test_key" }));
@@ -78,7 +78,7 @@ describe("getPostHogFeatureFlag", () => {
     mocks.getFeatureFlag.mockResolvedValue("variant-a");
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: "phc_test_key" }));
@@ -95,7 +95,7 @@ describe("getPostHogFeatureFlag", () => {
     mocks.getFeatureFlag.mockResolvedValue(undefined);
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: "phc_test_key" }));
@@ -112,7 +112,7 @@ describe("getPostHogFeatureFlag", () => {
     mocks.getFeatureFlag.mockRejectedValue(new Error("network error"));
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({
+    vi.doMock("@forma/logger", () => ({
       logger: { warn: mocks.loggerWarn },
     }));
     vi.doMock("@/lib/constants", () => ({ POSTHOG_KEY: "phc_test_key" }));

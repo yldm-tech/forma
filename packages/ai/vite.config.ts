@@ -12,7 +12,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "formbricksAi",
+      name: "formaAi",
       fileName: "index",
       formats: ["es"],
     },
@@ -26,7 +26,7 @@ export default defineConfig({
         "@ai-sdk/google-vertex",
         "@ai-sdk/openai-compatible",
         "@aws-sdk/credential-providers",
-        "@formbricks/logger",
+        "@forma/logger",
         "node:crypto",
       ],
     },

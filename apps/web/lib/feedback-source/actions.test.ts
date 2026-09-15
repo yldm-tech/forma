@@ -29,7 +29,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("server-only", () => ({}));
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     feedbackDirectory: { findUnique: mocks.feedbackDirectoryFindUnique },
     feedbackSource: { findUnique: mocks.feedbackSourceFindUnique },
@@ -62,7 +62,7 @@ vi.mock("./access", () => ({
   assertFeedbackSourceDirectoryAccess: mocks.assertFeedbackSourceDirectoryAccess,
 }));
 vi.mock("./import", () => ({ importHistoricalResponses: mocks.importHistoricalResponses }));
-vi.mock("./mappings", () => ({ resolveFormbricksMappingsInput: vi.fn() }));
+vi.mock("./mappings", () => ({ resolveFormaMappingsInput: vi.fn() }));
 vi.mock("./service", () => ({
   createFeedbackSourceWithMappings: mocks.createFeedbackSourceWithMappings,
   deleteFeedbackSource: mocks.deleteFeedbackSource,
@@ -90,8 +90,8 @@ describe("feedback source mutation safeguards", () => {
     mocks.getFeedbackSourceWithMappingsById.mockResolvedValue({
       id: feedbackSourceId,
       feedbackDirectoryId,
-      type: "formbricks_survey",
-      formbricksMappings: [],
+      type: "forma_survey",
+      formaMappings: [],
     });
     mocks.createFeedbackSourceWithMappings.mockResolvedValue({
       id: feedbackSourceId,

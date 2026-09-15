@@ -1,9 +1,9 @@
 import "server-only";
 import { cache as reactCache } from "react";
 import Stripe from "stripe";
-import { createCacheKey } from "@formbricks/cache";
-import { logger } from "@formbricks/logger";
-import type { TCloudBillingInterval } from "@formbricks/types/organizations";
+import { createCacheKey } from "@forma/cache";
+import { logger } from "@forma/logger";
+import type { TCloudBillingInterval } from "@forma/types/organizations";
 import { cache } from "@/lib/cache";
 import { env } from "@/lib/env";
 import { hashString } from "@/lib/hash-string";
@@ -103,8 +103,7 @@ const getPriceProduct = (price: Stripe.Price): Stripe.Product | Stripe.DeletedPr
 const getPricePlan = (price: Stripe.Price): TStandardCloudPlan | null => {
   const product = getPriceProduct(price);
   const plan =
-    price.metadata?.formbricks_plan ??
-    (!product || product.deleted ? undefined : product.metadata?.formbricks_plan);
+    price.metadata?.forma_plan ?? (!product || product.deleted ? undefined : product.metadata?.forma_plan);
 
   if (!plan || !STANDARD_CLOUD_PLANS.has(plan as TStandardCloudPlan)) {
     return null;
@@ -120,7 +119,7 @@ const normalizeInterval = (interval: string | null | undefined): TCloudBillingIn
 };
 
 const getPriceInterval = (price: Stripe.Price): TCloudBillingInterval | null => {
-  const metadataInterval = normalizeInterval(price.metadata?.formbricks_interval);
+  const metadataInterval = normalizeInterval(price.metadata?.forma_interval);
   if (metadataInterval) {
     return metadataInterval;
   }
@@ -129,7 +128,7 @@ const getPriceInterval = (price: Stripe.Price): TCloudBillingInterval | null => 
 };
 
 const getPriceKind = (price: Stripe.Price): TStripePriceKind | null => {
-  const metadataKind = price.metadata?.formbricks_price_kind;
+  const metadataKind = price.metadata?.forma_price_kind;
   if (metadataKind === "base" || metadataKind === "responses" || metadataKind === "workflow_runs") {
     return metadataKind;
   }

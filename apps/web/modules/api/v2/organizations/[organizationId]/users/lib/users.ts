@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
-import { OrganizationRole, Prisma, TeamUserRole } from "@formbricks/database/prisma";
-import { TUser } from "@formbricks/database/zod/users";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { OrganizationRole, Prisma, TeamUserRole } from "@forma/database/prisma";
+import { TUser } from "@forma/database/zod/users";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";

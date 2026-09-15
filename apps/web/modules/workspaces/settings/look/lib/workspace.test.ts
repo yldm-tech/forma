@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, Workspace } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, Workspace } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { getWorkspaceById } from "./workspace";
 
 vi.mock("@/lib/utils/validate", () => ({ validateInputs: vi.fn() }));
-vi.mock("@formbricks/database", () => ({ prisma: { workspace: { findUnique: vi.fn() } } }));
-vi.mock("@formbricks/logger", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@forma/database", () => ({ prisma: { workspace: { findUnique: vi.fn() } } }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn() } }));
 
 vi.mock("react", async () => {
   const actualReact = await vi.importActual("react");

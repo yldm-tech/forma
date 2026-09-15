@@ -11,12 +11,12 @@ const setTestEnv = (overrides: Record<string, string | undefined> = {}) => {
     NODE_ENV: "test",
     DATABASE_URL: "https://example.com/db",
     ENCRYPTION_KEY: "12345678901234567890123456789012",
-    HUB_API_URL: "https://hub.formbricks.local",
+    HUB_API_URL: "https://hub.forma.local",
     HUB_API_KEY: "test-hub-api-key",
-    CUBEJS_API_URL: "https://cube.formbricks.local",
+    CUBEJS_API_URL: "https://cube.forma.local",
     CUBEJS_API_SECRET: "cube-secret",
-    CUBEJS_JWT_AUDIENCE: "formbricks-cube-test",
-    CUBEJS_JWT_ISSUER: "formbricks-web-test",
+    CUBEJS_JWT_AUDIENCE: "forma-cube-test",
+    CUBEJS_JWT_ISSUER: "forma-web-test",
     ...overrides,
   };
 };
@@ -44,14 +44,14 @@ describe("cube-config", () => {
     });
 
     const payload = jwt.verify(config.token, "cube-secret", {
-      audience: "formbricks-cube-test",
-      issuer: "formbricks-web-test",
+      audience: "forma-cube-test",
+      issuer: "forma-web-test",
     }) as jwt.JwtPayload;
 
-    expect(config.apiUrl).toBe("https://cube.formbricks.local/cubejs-api/v1");
+    expect(config.apiUrl).toBe("https://cube.forma.local/cubejs-api/v1");
     expect(payload).toMatchObject({
-      aud: "formbricks-cube-test",
-      iss: "formbricks-web-test",
+      aud: "forma-cube-test",
+      iss: "forma-web-test",
       tenantId: "frd-1",
       feedbackDirectoryId: "frd-1",
       workspaceId: "workspace-1",
@@ -78,8 +78,8 @@ describe("cube-config", () => {
     } as unknown as Parameters<typeof getCubeApiConfig>[0]);
 
     const payload = jwt.verify(config.token, "cube-secret", {
-      audience: "formbricks-cube-test",
-      issuer: "formbricks-web-test",
+      audience: "forma-cube-test",
+      issuer: "forma-web-test",
     }) as jwt.JwtPayload;
 
     expect(payload.tenantId).toBe("frd-1");
@@ -89,12 +89,12 @@ describe("cube-config", () => {
 
   test("preserves a full Cube API URL when it already contains /cubejs-api/v1", async () => {
     setTestEnv({
-      CUBEJS_API_URL: "https://cube.formbricks.local/cubejs-api/v1/",
+      CUBEJS_API_URL: "https://cube.forma.local/cubejs-api/v1/",
     });
 
     const { getCubeApiCredentials } = await import("./cube-config");
 
-    expect(getCubeApiCredentials().apiUrl).toBe("https://cube.formbricks.local/cubejs-api/v1");
+    expect(getCubeApiCredentials().apiUrl).toBe("https://cube.forma.local/cubejs-api/v1");
   });
 
   test("fails at env validation when CUBEJS_API_URL is missing", async () => {

@@ -1,17 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import {
-  OrganizationRole,
-  Prisma,
-  type Team,
-  type TeamUser,
-  TeamUserRole,
-} from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { OrganizationRole, Prisma, type Team, type TeamUser, TeamUserRole } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { createTeamMembership } from "./team";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     team: {
       findUnique: vi.fn(),

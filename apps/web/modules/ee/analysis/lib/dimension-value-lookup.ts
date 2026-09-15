@@ -1,4 +1,4 @@
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { FIELD_TYPE_OPTIONS } from "@/modules/ee/unify-feedback/lib/types";
 
 export const QUESTION_LABEL_DIMENSION_ID = "FeedbackRecords.fieldLabel";

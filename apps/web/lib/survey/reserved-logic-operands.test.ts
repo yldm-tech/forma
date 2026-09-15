@@ -1,7 +1,7 @@
 import { mockSurvey } from "@/app/api/(internal)/pipeline/lib/__mocks__/survey-follow-up.mock";
 import { describe, expect, test } from "vitest";
-import type { TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { ZSurvey } from "@formbricks/types/surveys/types";
+import type { TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { ZSurvey } from "@forma/types/surveys/types";
 import { mockSurveyWithLogic } from "@/lib/survey/__mock__/survey.mock";
 
 /**
@@ -14,7 +14,7 @@ import { mockSurveyWithLogic } from "@/lib/survey/__mock__/survey.mock";
  * picker offers produced `Conditional Logic: Hidden field ID <name> does not exist`, and the "usable
  * in logic" half of ENG-1840 did not work at all.
  *
- * Red on main: `pnpm --filter=@formbricks/web test lib/survey/reserved-logic-operands.test.ts`.
+ * Red on main: `pnpm --filter=@forma/web test lib/survey/reserved-logic-operands.test.ts`.
  *
  * These live in apps/web rather than packages/types for the same reason as
  * `legacy-field-names.test.ts` — packages/types cannot import from apps/web, and the complete

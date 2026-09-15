@@ -5,7 +5,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { type ReactNode, createElement } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { TWorkflowResource } from "@formbricks/workflows";
+import type { TWorkflowResource } from "@forma/workflows";
 import {
   closeWorkflowNodeConfigModalAtom,
   hydrateWorkflowEditorAtom,

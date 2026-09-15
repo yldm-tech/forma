@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TResponseUpdateInput } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { TResponseUpdateInput } from "@forma/types/responses";
 import { getOrganization } from "../organization/service";
 import { getResponseDownloadFile, responseSelection, updateResponse } from "./service";
 import { calculateTtcTotal, getResponsesJson } from "./utils";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       findMany: vi.fn(),

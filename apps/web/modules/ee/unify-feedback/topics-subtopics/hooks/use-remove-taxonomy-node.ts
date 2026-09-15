@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 import { type TTaxonomyStateResponse, removeTaxonomyNode } from "../lib/api-client";
 import { type TTaxonomyScopeSelection, removeNodeFromStateData, taxonomyKeys } from "../lib/query";
 

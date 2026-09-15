@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { RESPONSES_API_URL, SURVEYS_API_URL } from "./api/constants";
 import { test } from "./lib/fixtures";
 import { loginAndGetApiKey } from "./lib/utils";

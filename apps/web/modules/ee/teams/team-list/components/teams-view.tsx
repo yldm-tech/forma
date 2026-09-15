@@ -1,7 +1,7 @@
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { TeamsTable } from "@/modules/ee/teams/team-list/components/teams-table";
 import { getTeams } from "@/modules/ee/teams/team-list/lib/team";
@@ -36,14 +36,14 @@ export const TeamsView = async ({
 
   const buttons: [ModalButton, ModalButton] = [
     {
-      text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-      href: IS_FORMBRICKS_CLOUD
+      text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+      href: IS_FORMA_CLOUD
         ? `/organizations/${organizationId}/settings/billing`
         : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
     },
     {
       text: t("common.learn_more"),
-      href: "https://formbricks.com/docs/self-hosting/license",
+      href: "https://forma.ylam.ai/docs/self-hosting/license",
     },
   ];
 

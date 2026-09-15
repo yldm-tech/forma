@@ -1,6 +1,6 @@
 name: Build Cloud Deployment Images
 
-# This workflow builds Formbricks Docker images for ECR deployment:
+# This workflow builds Forma Docker images for ECR deployment:
 # - workflow_call: Used by releases with explicit SemVer versions
 # - workflow_dispatch: Auto-detects version from current branch or uses override
 

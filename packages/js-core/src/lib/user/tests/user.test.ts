@@ -1,6 +1,6 @@
 import { type MockInstance, beforeEach, describe, expect, test, vi } from "vitest";
 import { Config } from "@/lib/common/config";
-import { emitFormbricksEvent, onFormbricksEvent, resetFormbricksEventSubscribers } from "@/lib/common/events";
+import { emitFormaEvent, onFormaEvent, resetFormaEventSubscribers } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { tearDown } from "@/lib/common/setup";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
@@ -260,15 +260,15 @@ describe("user.ts", () => {
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
 
       const handler = vi.fn();
-      onFormbricksEvent("formbricks_survey_shown", handler);
+      onFormaEvent("forma_survey_shown", handler);
 
       const result = logout();
       expect(result.ok).toBe(true);
 
-      emitFormbricksEvent("formbricks_survey_shown", { surveyId: "survey_1" });
+      emitFormaEvent("forma_survey_shown", { surveyId: "survey_1" });
       expect(handler).toHaveBeenCalledWith({ surveyId: "survey_1" });
 
-      resetFormbricksEventSubscribers();
+      resetFormaEventSubscribers();
     });
 
     test("clears the Embedded Data bag — the previous user's context must not leak (ENG-1844)", () => {

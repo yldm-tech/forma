@@ -3,8 +3,8 @@
 import { Header, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { TSegmentWithSurveyRefs } from "@formbricks/types/segment";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { TSegmentWithSurveyRefs } from "@forma/types/segment";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/modules/ui/components/table";
 import { EditSegmentModal } from "./edit-segment-modal";
 import { buildSegmentActivitySummaryFromSegments } from "./segment-activity-utils";

@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { MainNavigation } from "@/app/(app)/workspaces/[workspaceId]/components/MainNavigation";
 import { TopControlBar } from "@/app/(app)/workspaces/[workspaceId]/components/TopControlBar";
-import { IS_DEVELOPMENT, IS_FORMBRICKS_CLOUD, IS_FORMBRICKS_SURVEYS_CONFIGURED } from "@/lib/constants";
+import { IS_DEVELOPMENT, IS_FORMA_CLOUD, IS_FORMA_SURVEYS_CONFIGURED } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getPostHogFeatureFlag } from "@/lib/posthog/get-feature-flag";
@@ -76,9 +76,9 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
 
   const { features, lastChecked, isPendingDowngrade, active, status } = license;
   const isMultiOrgEnabled = features?.isMultiOrgEnabled ?? false;
-  const isTrialing = IS_FORMBRICKS_CLOUD && organization.billing?.stripe?.subscriptionStatus === "trialing";
+  const isTrialing = IS_FORMA_CLOUD && organization.billing?.stripe?.subscriptionStatus === "trialing";
   // Hobby (free) plan only — excludes trial and paid (Pro/Scale) orgs.
-  const isHobby = IS_FORMBRICKS_CLOUD && organization.billing?.stripe?.plan === "hobby";
+  const isHobby = IS_FORMA_CLOUD && organization.billing?.stripe?.plan === "hobby";
 
   const [
     organizationWorkspacesLimit,
@@ -121,7 +121,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
   return (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden">
       {/* Hide the limits-reached toast for Hobby users in the response-warning test variant — the modal replaces it with richer copy + CTAs. */}
-      {IS_FORMBRICKS_CLOUD && !isTrialing && !(isHobby && responseWarningVariant === "test") && (
+      {IS_FORMA_CLOUD && !isTrialing && !(isHobby && responseWarningVariant === "test") && (
         <LimitsReachedBanner organization={organization} responseCount={responseCount} />
       )}
 
@@ -151,7 +151,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
           organization={organization}
           user={user}
           workspace={{ id: workspace.id, name: workspace.name }}
-          isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+          isFormaCloud={IS_FORMA_CLOUD}
           isDevelopment={IS_DEVELOPMENT}
           membershipRole={membership.role}
           publicDomain={publicDomain}
@@ -160,7 +160,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
           isAccessControlAllowed={isAccessControlAllowed}
           responseCount={responseCount}
           newTrialBannerVariant={newTrialBannerVariant}
-          isFormbricksSurveysConfigured={IS_FORMBRICKS_SURVEYS_CONFIGURED}
+          isFormaSurveysConfigured={IS_FORMA_SURVEYS_CONFIGURED}
           trialDaysRemaining={trialDaysRemaining}
         />
         <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">
@@ -168,7 +168,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
             currentOrganizationId={organization.id}
             isMultiOrgEnabled={isMultiOrgEnabled}
             organizationWorkspacesLimit={organizationWorkspacesLimit}
-            isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+            isFormaCloud={IS_FORMA_CLOUD}
             isLicenseActive={active}
             isOwnerOrManager={isOwnerOrManager}
             isAccessControlAllowed={isAccessControlAllowed}

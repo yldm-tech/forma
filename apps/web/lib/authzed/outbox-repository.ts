@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import {
   AUTHZED_OUTBOX_TARGET_TYPES,
   type TAuthzedOutboxEvent,

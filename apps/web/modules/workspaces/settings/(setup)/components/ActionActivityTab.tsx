@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TActionClass } from "@formbricks/types/action-classes";
+import { TActionClass } from "@forma/types/action-classes";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { ErrorComponent } from "@/modules/ui/components/error-component";

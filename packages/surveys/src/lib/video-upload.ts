@@ -1,4 +1,4 @@
-import { extractYoutubeId } from "@formbricks/survey-ui/youtube-id";
+import { extractYoutubeId } from "@forma/survey-ui/youtube-id";
 
 export { extractYoutubeId };
 

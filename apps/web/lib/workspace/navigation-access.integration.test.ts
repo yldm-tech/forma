@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import type { TOrganizationRole } from "@forma/types/memberships";
 import { synchronizeAuthzedIntegrationFixture } from "@/integration/authzed";
 import { resetDb } from "@/integration/reset-db";
 import { canUserNavigateWorkspace } from "@/lib/workspace/auth";

@@ -1,7 +1,7 @@
-import { TResponseData } from "@formbricks/types/responses";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElementTypeEnum, TSurveyFileUploadElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TResponseData } from "@forma/types/responses";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElementTypeEnum, TSurveyFileUploadElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 
 export const surveyId = "clq5n7p1q0000m7z0h5p6g3r2";
 export const workspaceId = "u8qa6u0tlxb6160pi2jb8s4p";

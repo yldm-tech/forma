@@ -1,6 +1,6 @@
 import "server-only";
-import { TResponseData } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TResponseData } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
 import { responses } from "@/app/lib/api/response";
 import { verifyTokenForLinkSurvey } from "@/lib/jwt";
 

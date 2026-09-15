@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { TContactAttribute } from "@formbricks/types/contact-attribute";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { TContactAttribute } from "@forma/types/contact-attribute";
+import { DatabaseError } from "@forma/types/errors";
 import {
   getContactAttributes,
   getContactAttributesWithKeyInfo,
@@ -10,7 +10,7 @@ import {
   hasUserIdAttribute,
 } from "./contact-attributes";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     contactAttribute: {
       findMany: vi.fn(),

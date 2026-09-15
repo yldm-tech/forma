@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { ZResponse } from "@formbricks/database/zod/responses";
-import { ZResponse as ZV1Response } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { ZResponse } from "@forma/database/zod/responses";
+import { ZResponse as ZV1Response } from "@forma/types/responses";
 import { resetDb } from "@/integration/reset-db";
 import { getResponse as getV1Response } from "@/lib/response/service";
 import {

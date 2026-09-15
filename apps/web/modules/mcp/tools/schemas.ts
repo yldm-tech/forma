@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ZSurveyFilters, ZSurveyStatus, ZSurveyType } from "@formbricks/types/surveys/types";
+import { ZId } from "@forma/types/common";
+import { ZSurveyFilters, ZSurveyStatus, ZSurveyType } from "@forma/types/surveys/types";
 import {
   MAX_FEEDBACK_RECORDS_PER_BATCH,
   ZV3FeedbackRecordCreateBodyFields,
@@ -195,7 +195,7 @@ export const ZMcpDeleteSurveyInput = z
 // call with a placeholder key would now fail here where v1 dropped it — costly out of proportion, because
 // this is the discovery tool every workspace-scoped tool takes its `workspaceId` from, so losing it looks
 // like the whole server being broken. Raised in review on #8859; no such client is confirmed, and our own
-// QA only exercises Claude Code, so treat a report of "the Formbricks MCP server won't connect" from
+// QA only exercises Claude Code, so treat a report of "the Forma MCP server won't connect" from
 // another client as a reason to look here first.
 export const ZMcpListWorkspacesInput = z.object({}).strict();
 

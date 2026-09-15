@@ -1,5 +1,5 @@
 import "server-only";
-import type { User } from "@formbricks/database/prisma";
+import type { User } from "@forma/database/prisma";
 
 type TAccountDeletionPasswordAuthData = Pick<User, "identityProvider">;
 

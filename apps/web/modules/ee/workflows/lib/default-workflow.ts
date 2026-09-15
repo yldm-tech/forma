@@ -1,4 +1,4 @@
-import type { TWorkflowDefinition } from "@formbricks/workflows";
+import type { TWorkflowDefinition } from "@forma/workflows";
 
 // New workflows start with an empty canvas: the user adds the trigger (and actions) from the
 // canvas pickers instead of getting pre-seeded default nodes.

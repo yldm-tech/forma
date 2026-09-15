@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurveyElement } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurveyElement } from "@forma/types/surveys/elements";
 import { validators } from "./validators";
 
 // Mock translation function - just return the key for testing

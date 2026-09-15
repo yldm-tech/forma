@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { posthogServerClient } from "./server";
 
 // Arrays are allowed: PostHog stores them as list properties and can break down on their elements

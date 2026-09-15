@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import { WORKFLOW_ACTIONS } from "@formbricks/workflows";
+import { WORKFLOW_ACTIONS } from "@forma/workflows";
 import { cn } from "@/lib/cn";
 import { trackWorkflowEvent } from "@/modules/ee/workflows/lib/analytics";
 import { WORKFLOW_CLIENT_EVENTS } from "@/modules/ee/workflows/lib/analytics-events";

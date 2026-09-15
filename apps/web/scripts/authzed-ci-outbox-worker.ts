@@ -1,7 +1,7 @@
 import "server-only";
 import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { closeAuthzedClient } from "@/lib/authzed/client";
 import { processAuthzedProjectionDeliveryJob } from "@/lib/authzed/outbox-processor";
 import { runAuthzedCiOutboxWorker } from "./authzed-ci-outbox-worker-runner";

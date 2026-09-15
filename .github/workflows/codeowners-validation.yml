@@ -47,7 +47,7 @@ jobs:
       # and extra owners on the single line.
       - name: Enforce single-team ownership
         run: |
-          expected='*  @formbricks/engineering'
+          expected='*  @forma/engineering'
           rules="$(grep -vE '^[[:space:]]*(#|$)' .github/CODEOWNERS || true)"
           count="$(printf '%s' "$rules" | grep -c . || true)"
           # Compare on collapsed, trimmed whitespace so incidental spacing does

@@ -14,7 +14,7 @@ import { ZIsoDateTime } from "./common";
  * API resource shapes returned by the v3 Workflows endpoints. These are the serializer outputs:
  * dates are ISO 8601 strings, derived projections (`triggerType`, `surveyId`, `lastRun`) are
  * always present, and nullable fields are emitted explicitly rather than omitted. They are
- * intentionally distinct from row shapes in `@formbricks/database`.
+ * intentionally distinct from row shapes in `@forma/database`.
  */
 
 export const ZWorkflowRunSummary = z

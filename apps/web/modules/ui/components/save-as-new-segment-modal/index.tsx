@@ -5,8 +5,8 @@ import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@formbricks/types/segment";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@forma/types/segment";
+import { TSurvey } from "@forma/types/surveys/types";
 import { Button } from "@/modules/ui/components/button";
 import {
   Dialog,

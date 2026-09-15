@@ -4,7 +4,7 @@ import { TriangleAlertIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TOrganization } from "@formbricks/types/organizations";
+import { TOrganization } from "@forma/types/organizations";
 
 interface LimitsReachedBannerProps {
   organization: TOrganization;

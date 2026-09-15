@@ -1,11 +1,11 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { prisma } from "@formbricks/database";
-import { PipelineTriggers, Prisma, type Webhook } from "@formbricks/database/prisma";
-import { type JobHandler, type TResponsePipelineJobData, UnrecoverableError } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
-import { type TLinkedEmbeddedField } from "@formbricks/types/embedded-data-resolver";
-import { type TUserLocale, ZUserLocale } from "@formbricks/types/user";
+import { prisma } from "@forma/database";
+import { PipelineTriggers, Prisma, type Webhook } from "@forma/database/prisma";
+import { type JobHandler, type TResponsePipelineJobData, UnrecoverableError } from "@forma/jobs";
+import { logger } from "@forma/logger";
+import { type TLinkedEmbeddedField } from "@forma/types/embedded-data-resolver";
+import { type TUserLocale, ZUserLocale } from "@forma/types/user";
 import { DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS, POSTHOG_KEY } from "@/lib/constants";
 import { generateStandardWebhookSignature } from "@/lib/crypto";
 import { selectSurveyEmbeddedDataLinks, withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";

@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { type ApiKey } from "@formbricks/database/prisma";
-import { ZOrganizationAccess } from "@formbricks/types/api-key";
-import { ZApiKeyPermission } from "@formbricks/types/auth";
-import { ZWorkspace } from "@formbricks/types/workspace";
+import { type ApiKey } from "@forma/database/prisma";
+import { ZOrganizationAccess } from "@forma/types/api-key";
+import { ZApiKeyPermission } from "@forma/types/auth";
+import { ZWorkspace } from "@forma/types/workspace";
 
 export const ZApiKeyWorkspacePermission = z.object({
   workspaceId: z.string(),

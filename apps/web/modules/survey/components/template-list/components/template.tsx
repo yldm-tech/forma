@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TTemplate, TTemplateFilter } from "@formbricks/types/templates";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TTemplate, TTemplateFilter } from "@forma/types/templates";
 import { cn } from "@/lib/cn";
 import { replacePresetPlaceholders } from "@/lib/utils/templates";
 import { Button } from "@/modules/ui/components/button";

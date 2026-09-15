@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { DatabaseError } from "@formbricks/types/errors";
+import { DatabaseError } from "@forma/types/errors";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getContactAttributeKeys } from "@/modules/ee/contacts/lib/contact-attribute-keys";
@@ -24,7 +24,7 @@ vi.mock("@/modules/ee/license-check/lib/utils", () => ({
   getIsContactsEnabled: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       error: vi.fn(),

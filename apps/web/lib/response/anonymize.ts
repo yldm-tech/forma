@@ -2,8 +2,8 @@ import {
   RESERVED_FIELD_CATALOG,
   type TReservedFieldPrivacy,
   redactUrlQuery,
-} from "@formbricks/types/embedded-data-resolver";
-import { type TResponseMeta } from "@formbricks/types/responses";
+} from "@forma/types/embedded-data-resolver";
+import { type TResponseMeta } from "@forma/types/responses";
 
 /**
  * `privacy` by reserved field name, so the policy below is a lookup rather than a list it has to keep

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import type { TWorkflowStatus } from "@formbricks/workflows";
+import type { TWorkflowStatus } from "@forma/workflows";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { ConfirmationModal } from "@/modules/ui/components/confirmation-modal";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";

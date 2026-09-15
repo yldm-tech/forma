@@ -1,9 +1,9 @@
 import { TFunction } from "i18next";
 import { toast } from "react-hot-toast";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TI18nString } from "@formbricks/types/i18n";
-import { ZSegmentFilters } from "@formbricks/types/segment";
-import { TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
+import { TI18nString } from "@forma/types/i18n";
+import { ZSegmentFilters } from "@forma/types/segment";
+import { TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import {
   TSurveyAddressElement,
   TSurveyCTAElement,
@@ -16,20 +16,20 @@ import {
   TSurveyOpenTextElement,
   TSurveyPictureSelectionElement,
   TSurveyRatingElement,
-} from "@formbricks/types/surveys/elements";
-import { validateElementLabels } from "@formbricks/types/surveys/elements-validation";
+} from "@forma/types/surveys/elements";
+import { validateElementLabels } from "@forma/types/surveys/elements-validation";
 import {
   TSurvey,
   TSurveyEndScreenCard,
   TSurveyLanguage,
   TSurveyRedirectUrlCard,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import {
   TValidateIdErrorCode,
   validateCardFieldsForAllLanguages,
   validateQuestionLabels,
-} from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/validation";
 import { isAppSurveyMissingTriggersToPublish } from "@/lib/survey/utils";
 import { checkForEmptyFallBackValue } from "@/lib/utils/recall";
 import * as validation from "./validation";

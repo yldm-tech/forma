@@ -12,229 +12,229 @@
   "globalEnv": ["MIGRATE_DATABASE_URL", "SHADOW_DATABASE_URL"],
   "globalPassThroughEnv": ["SEED_API_KEY"],
   "tasks": {
-    "@formbricks/ai#build": {
-      "dependsOn": ["@formbricks/logger#build"],
+    "@forma/ai#build": {
+      "dependsOn": ["@forma/logger#build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/ai#lint": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/ai#lint": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/ai#test": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/ai#test": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/ai#test:coverage": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/ai#test:coverage": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/ai#typecheck": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/ai#typecheck": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/cache#build": {
-      "dependsOn": ["@formbricks/logger#build"],
+    "@forma/cache#build": {
+      "dependsOn": ["@forma/logger#build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/cache#go": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/cache#go": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/cache#lint": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/cache#lint": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/cache#test": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/cache#test": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/cache#test:coverage": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/cache#test:coverage": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/cache#typecheck": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/cache#typecheck": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/database#build": {
-      "dependsOn": ["^build", "@formbricks/database#generate"],
+    "@forma/database#build": {
+      "dependsOn": ["^build", "@forma/database#generate"],
       "env": ["DATABASE_URL"],
       "outputs": ["dist/**", "generated/prisma/**"]
     },
-    "@formbricks/database#generate": {
+    "@forma/database#generate": {
       "dependsOn": ["^generate"],
       "env": ["DATABASE_URL"],
       "outputs": ["generated/prisma/**"]
     },
-    "@formbricks/database#lint": {
-      "dependsOn": ["@formbricks/logger#build", "@formbricks/database#build"]
+    "@forma/database#lint": {
+      "dependsOn": ["@forma/logger#build", "@forma/database#build"]
     },
-    "@formbricks/database#test": {
-      "dependsOn": ["@formbricks/i18n-utils#build"]
+    "@forma/database#test": {
+      "dependsOn": ["@forma/i18n-utils#build"]
     },
-    "@formbricks/database#test:coverage": {
-      "dependsOn": ["@formbricks/i18n-utils#build"]
+    "@forma/database#test:coverage": {
+      "dependsOn": ["@forma/i18n-utils#build"]
     },
-    "@formbricks/database#typecheck": {
-      "dependsOn": ["@formbricks/logger#build", "@formbricks/database#build"]
+    "@forma/database#typecheck": {
+      "dependsOn": ["@forma/logger#build", "@forma/database#build"]
     },
-    "@formbricks/i18n-utils#build": {
+    "@forma/i18n-utils#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/i18n-utils#lint": {
+    "@forma/i18n-utils#lint": {
       "dependsOn": ["^lint"]
     },
-    "@formbricks/i18n-utils#test": {
-      "dependsOn": ["@formbricks/i18n-utils#build"]
+    "@forma/i18n-utils#test": {
+      "dependsOn": ["@forma/i18n-utils#build"]
     },
-    "@formbricks/jobs#build": {
-      "dependsOn": ["@formbricks/logger#build"],
+    "@forma/jobs#build": {
+      "dependsOn": ["@forma/logger#build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/jobs#lint": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/jobs#lint": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/jobs#test": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/jobs#test": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/jobs#test:coverage": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/jobs#test:coverage": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/jobs#typecheck": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/jobs#typecheck": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/js-core#build": {
+    "@forma/js-core#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/js-core#go": {
+    "@forma/js-core#go": {
       "cache": false,
-      "dependsOn": ["@formbricks/database#db:setup"],
+      "dependsOn": ["@forma/database#db:setup"],
       "persistent": true
     },
-    "@formbricks/logger#build": {
+    "@forma/logger#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/storage#build": {
-      "dependsOn": ["@formbricks/logger#build"],
+    "@forma/storage#build": {
+      "dependsOn": ["@forma/logger#build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/storage#go": {
+    "@forma/storage#go": {
       "cache": false,
-      "dependsOn": ["@formbricks/storage#build"],
+      "dependsOn": ["@forma/storage#build"],
       "persistent": true
     },
-    "@formbricks/storage#lint": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/storage#lint": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/storage#test": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/storage#test": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/storage#test:coverage": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/storage#test:coverage": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/storage#typecheck": {
-      "dependsOn": ["@formbricks/logger#build"]
+    "@forma/storage#typecheck": {
+      "dependsOn": ["@forma/logger#build"]
     },
-    "@formbricks/survey-ui#build": {
+    "@forma/survey-ui#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/survey-ui#build:dev": {
+    "@forma/survey-ui#build:dev": {
       "dependsOn": ["^build:dev"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/survey-ui#go": {
+    "@forma/survey-ui#go": {
       "cache": false,
-      "dependsOn": ["@formbricks/survey-ui#build"],
+      "dependsOn": ["@forma/survey-ui#build"],
       "persistent": true
     },
-    "@formbricks/surveys#build": {
-      "dependsOn": ["^build", "@formbricks/survey-ui#build"],
+    "@forma/surveys#build": {
+      "dependsOn": ["^build", "@forma/survey-ui#build"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/surveys#build:dev": {
-      "dependsOn": ["^build:dev", "@formbricks/i18n-utils#build", "@formbricks/survey-ui#build:dev"],
+    "@forma/surveys#build:dev": {
+      "dependsOn": ["^build:dev", "@forma/i18n-utils#build", "@forma/survey-ui#build:dev"],
       "outputs": ["dist/**"]
     },
-    "@formbricks/surveys#go": {
+    "@forma/surveys#go": {
       "cache": false,
-      "dependsOn": ["@formbricks/survey-ui#build", "@formbricks/surveys#build"],
+      "dependsOn": ["@forma/survey-ui#build", "@forma/surveys#build"],
       "persistent": true
     },
-    "@formbricks/surveys#test": {
-      "dependsOn": ["@formbricks/i18n-utils#build", "@formbricks/survey-ui#build"]
+    "@forma/surveys#test": {
+      "dependsOn": ["@forma/i18n-utils#build", "@forma/survey-ui#build"]
     },
-    "@formbricks/surveys#test:coverage": {
-      "dependsOn": ["@formbricks/i18n-utils#build", "@formbricks/survey-ui#build"]
+    "@forma/surveys#test:coverage": {
+      "dependsOn": ["@forma/i18n-utils#build", "@forma/survey-ui#build"]
     },
-    "@formbricks/surveys#typecheck": {
-      "dependsOn": ["@formbricks/i18n-utils#build", "@formbricks/survey-ui#build"]
+    "@forma/surveys#typecheck": {
+      "dependsOn": ["@forma/i18n-utils#build", "@forma/survey-ui#build"]
     },
-    "@formbricks/web#dev": {
+    "@forma/web#dev": {
       "cache": false,
       "dependsOn": [
-        "@formbricks/ai#build",
-        "@formbricks/cache#build",
-        "@formbricks/database#build",
-        "@formbricks/jobs#build",
-        "@formbricks/logger#build",
-        "@formbricks/storage#build"
+        "@forma/ai#build",
+        "@forma/cache#build",
+        "@forma/database#build",
+        "@forma/jobs#build",
+        "@forma/logger#build",
+        "@forma/storage#build"
       ],
       "persistent": true
     },
-    "@formbricks/web#go": {
+    "@forma/web#go": {
       "cache": false,
       "dependsOn": [
-        "@formbricks/ai#build",
-        "@formbricks/cache#build",
-        "@formbricks/database#build",
-        "@formbricks/database#db:setup",
-        "@formbricks/jobs#build",
-        "@formbricks/logger#build",
-        "@formbricks/storage#build"
+        "@forma/ai#build",
+        "@forma/cache#build",
+        "@forma/database#build",
+        "@forma/database#db:setup",
+        "@forma/jobs#build",
+        "@forma/logger#build",
+        "@forma/storage#build"
       ],
       "persistent": true
     },
-    "@formbricks/web#test": {
+    "@forma/web#test": {
       "dependsOn": [
-        "@formbricks/ai#build",
-        "@formbricks/logger#build",
-        "@formbricks/database#build",
-        "@formbricks/storage#build",
-        "@formbricks/cache#build",
-        "@formbricks/jobs#build",
-        "@formbricks/surveys#build"
+        "@forma/ai#build",
+        "@forma/logger#build",
+        "@forma/database#build",
+        "@forma/storage#build",
+        "@forma/cache#build",
+        "@forma/jobs#build",
+        "@forma/surveys#build"
       ]
     },
-    "@formbricks/web#test:coverage": {
+    "@forma/web#test:coverage": {
       "dependsOn": [
-        "@formbricks/ai#build",
-        "@formbricks/logger#build",
-        "@formbricks/database#build",
-        "@formbricks/storage#build",
-        "@formbricks/cache#build",
-        "@formbricks/jobs#build",
-        "@formbricks/surveys#build"
+        "@forma/ai#build",
+        "@forma/logger#build",
+        "@forma/database#build",
+        "@forma/storage#build",
+        "@forma/cache#build",
+        "@forma/jobs#build",
+        "@forma/surveys#build"
       ]
     },
-    "@formbricks/web#typecheck": {
+    "@forma/web#typecheck": {
       "dependsOn": [
-        "@formbricks/ai#build",
-        "@formbricks/cache#build",
-        "@formbricks/database#build",
-        "@formbricks/jobs#build",
-        "@formbricks/logger#build",
-        "@formbricks/storage#build",
-        "@formbricks/surveys#build"
+        "@forma/ai#build",
+        "@forma/cache#build",
+        "@forma/database#build",
+        "@forma/jobs#build",
+        "@forma/logger#build",
+        "@forma/storage#build",
+        "@forma/surveys#build"
       ]
     },
-    "@formbricks/workflows#build": {
+    "@forma/workflows#build": {
       "outputs": ["dist/**"]
     },
-    "@formbricks/workflows#lint": {
+    "@forma/workflows#lint": {
       "dependsOn": []
     },
-    "@formbricks/workflows#test": {
+    "@forma/workflows#test": {
       "dependsOn": []
     },
-    "@formbricks/workflows#test:coverage": {
+    "@forma/workflows#test:coverage": {
       "dependsOn": []
     },
-    "@formbricks/workflows#typecheck": {
+    "@forma/workflows#typecheck": {
       "dependsOn": []
     },
     "build": {
@@ -320,7 +320,7 @@
     },
     "db:setup": {
       "cache": false,
-      "dependsOn": ["@formbricks/logger#build", "@formbricks/database#build"],
+      "dependsOn": ["@forma/logger#build", "@forma/database#build"],
       "outputs": []
     },
     "db:start": {
@@ -353,7 +353,7 @@
       "persistent": true
     },
     "storybook#storybook": {
-      "dependsOn": ["@formbricks/logger#build"]
+      "dependsOn": ["@forma/logger#build"]
     },
     "test": {
       "cache": false,
@@ -364,7 +364,7 @@
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["@formbricks/database#generate", "^typecheck"],
+      "dependsOn": ["@forma/database#generate", "^typecheck"],
       "outputs": []
     }
   },

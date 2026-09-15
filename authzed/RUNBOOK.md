@@ -13,7 +13,7 @@ recoverable delivery contract. BullMQ only wakes the worker; queue state and lea
 
 Everything below exists to make that visible and recoverable.
 
-See also: [direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) for the approved release and rollback contract,
+See also: [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) for the approved release and rollback contract,
 [README](./README.md) for the projection development contract, and
 [AuthZed Operations](../docs/self-hosting/advanced/authzed-operations.mdx) for the public self-hosted operator
 contract.
@@ -38,8 +38,8 @@ the graph. On the direct-authority artifact, operational AuthZed failures fail p
 ```bash
 pnpm authzed:health     # 0 healthy, 1 otherwise
 pnpm authzed:schema check   # 0 matched, 2 drifted, 1 failed
-formbricks-authzed outbox status  # 0 healthy, 2 warning/critical, 1 failed
-formbricks-authzed upgrade check  # 0 direct-authority ready, 2 blocked, 1 failed
+forma-authzed outbox status  # 0 healthy, 2 warning/critical, 1 failed
+forma-authzed upgrade check  # 0 direct-authority ready, 2 blocked, 1 failed
 ```
 
 Note `status: "disabled"` from the health command exits **1**. A deployment that believes AuthZed is on
@@ -50,23 +50,23 @@ records `disabled` as its own outcome rather than skipping.
 
 All metrics carry only bounded attributes — never an organization, user, or relationship identifier.
 
-| Metric                                                               | Attributes                                                                  | Read it as                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `formbricks_authzed_projection_total`                                | `operation`, `projection`, `status`                                         | Projection outcomes. `status` is `projected` / `failed` / `disabled`.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `formbricks_authzed_projection_duration_seconds`                     | same                                                                        | Projection latency. It sits on the request path, so a rise here is user-visible. `disabled` outcomes are deliberately excluded — their duration is a structural zero, not a measurement.                                                                                                                                                                                                                                                                                                                                         |
-| `formbricks_authzed_request_failures_total`                          | `operation`, `code`, `retryable`                                            | Requests that exhausted their retry budget — _any_ facade call, including schema operations and reads, and one failed write can carry a whole batch. So a sample is one terminal request failure, **not** one dropped relationship. For "did projection drift get introduced?", use `formbricks_authzed_projection_total{status="failed"}`.                                                                                                                                                                                      |
-| `formbricks_authzed_request_retries_total`                           | `operation`, `code`                                                         | Retries scheduled. Elevated but not failing = degraded, not down.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `formbricks_authzed_authorization_decisions_total`                   | `action`, `actor_type`, `error_code`, `outcome`, `resource_type`, `surface` | Authoritative SpiceDB allow, deny, and operational-error outcomes. `error_code` is `none` unless the outcome is `operational_error`; no actor, resource, or organization identifier is attached.                                                                                                                                                                                                                                                                                                                                 |
-| `formbricks_authzed_authorization_decision_duration_seconds`         | `action`, `actor_type`, `outcome`, `resource_type`, `surface`               | Authoritative scalar or list-decision latency. Use it for the direct-authority p95 and p99 rollout gates.                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `formbricks_authzed_authorization_checks_per_request`                | `surface`                                                                   | How many central authorization operations one request made. Scalar `can()`/`assertCan()` calls and narrow list observations each count once. Watch the upper percentiles for a page regressing into one operation per row; a rising p99 on a list surface is the N+1 signal. Buckets start at 0.5 so "made no decisions" stays distinct from "made exactly one" — most healthy requests sit in the second bucket. No threshold is suggested yet: it needs a production baseline first. See [`PERFORMANCE.md`](./PERFORMANCE.md). |
-| `formbricks_authzed_projection_outbox_delivery_total`                | `status`                                                                    | Durable outbox events delivered or failed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `formbricks_authzed_projection_outbox_delivery_duration_seconds`     | `status`                                                                    | Duration of one claimed delivery batch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `formbricks_authzed_projection_revocation_delivery_duration_seconds` | none                                                                        | Time from a committed authorization revocation until its successful SpiceDB delivery. The 15-, 45-, and 60-second boundaries align with warning, critical, and fail-closed thresholds.                                                                                                                                                                                                                                                                                                                                           |
-| `formbricks_authzed_projection_outbox_status`                        | `state`                                                                     | Current pending, dead-letter, 15-second warning, and 45-second critical counts.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `formbricks_authzed_projection_outbox_oldest_pending_age_seconds`    | none                                                                        | Current age of the oldest pending event.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `formbricks_authzed_reconciliation_audit_total`                      | `status`                                                                    | Six-hour applying audit outcomes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `formbricks_authzed_reconciliation_drift_total`                      | `kind`                                                                      | Attributable drift and operational failures observed by scheduled audits.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `formbricks_authzed_reconciliation_repair_total`                     | `status`                                                                    | Attributable relationships repaired or left failed by scheduled reconciliation; `status` is `repaired` or `failed`.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Metric                                                          | Attributes                                                                  | Read it as                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `forma_authzed_projection_total`                                | `operation`, `projection`, `status`                                         | Projection outcomes. `status` is `projected` / `failed` / `disabled`.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `forma_authzed_projection_duration_seconds`                     | same                                                                        | Projection latency. It sits on the request path, so a rise here is user-visible. `disabled` outcomes are deliberately excluded — their duration is a structural zero, not a measurement.                                                                                                                                                                                                                                                                                                                                         |
+| `forma_authzed_request_failures_total`                          | `operation`, `code`, `retryable`                                            | Requests that exhausted their retry budget — _any_ facade call, including schema operations and reads, and one failed write can carry a whole batch. So a sample is one terminal request failure, **not** one dropped relationship. For "did projection drift get introduced?", use `forma_authzed_projection_total{status="failed"}`.                                                                                                                                                                                           |
+| `forma_authzed_request_retries_total`                           | `operation`, `code`                                                         | Retries scheduled. Elevated but not failing = degraded, not down.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `forma_authzed_authorization_decisions_total`                   | `action`, `actor_type`, `error_code`, `outcome`, `resource_type`, `surface` | Authoritative SpiceDB allow, deny, and operational-error outcomes. `error_code` is `none` unless the outcome is `operational_error`; no actor, resource, or organization identifier is attached.                                                                                                                                                                                                                                                                                                                                 |
+| `forma_authzed_authorization_decision_duration_seconds`         | `action`, `actor_type`, `outcome`, `resource_type`, `surface`               | Authoritative scalar or list-decision latency. Use it for the direct-authority p95 and p99 rollout gates.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `forma_authzed_authorization_checks_per_request`                | `surface`                                                                   | How many central authorization operations one request made. Scalar `can()`/`assertCan()` calls and narrow list observations each count once. Watch the upper percentiles for a page regressing into one operation per row; a rising p99 on a list surface is the N+1 signal. Buckets start at 0.5 so "made no decisions" stays distinct from "made exactly one" — most healthy requests sit in the second bucket. No threshold is suggested yet: it needs a production baseline first. See [`PERFORMANCE.md`](./PERFORMANCE.md). |
+| `forma_authzed_projection_outbox_delivery_total`                | `status`                                                                    | Durable outbox events delivered or failed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `forma_authzed_projection_outbox_delivery_duration_seconds`     | `status`                                                                    | Duration of one claimed delivery batch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `forma_authzed_projection_revocation_delivery_duration_seconds` | none                                                                        | Time from a committed authorization revocation until its successful SpiceDB delivery. The 15-, 45-, and 60-second boundaries align with warning, critical, and fail-closed thresholds.                                                                                                                                                                                                                                                                                                                                           |
+| `forma_authzed_projection_outbox_status`                        | `state`                                                                     | Current pending, dead-letter, 15-second warning, and 45-second critical counts.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `forma_authzed_projection_outbox_oldest_pending_age_seconds`    | none                                                                        | Current age of the oldest pending event.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `forma_authzed_reconciliation_audit_total`                      | `status`                                                                    | Six-hour applying audit outcomes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `forma_authzed_reconciliation_drift_total`                      | `kind`                                                                      | Attributable drift and operational failures observed by scheduled audits.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `forma_authzed_reconciliation_repair_total`                     | `status`                                                                    | Attributable relationships repaired or left failed by scheduled reconciliation; `status` is `repaired` or `failed`.                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Exported through the readers already configured in `instrumentation-node.ts`: Prometheus when
 `PROMETHEUS_ENABLED=1` (scraped by the chart's ServiceMonitor), OTLP when
@@ -138,7 +138,7 @@ clean while authorization state nothing accounts for is still present.
 
 **A non-zero `invalid` needs a human.** These are cross-organization source rows in PostgreSQL: the join
 tables carry independent foreign keys and no same-organization constraint, so the row is representable
-even though nothing in Formbricks creates one. The backfill will never project or prune them. Establish
+even though nothing in Forma creates one. The backfill will never project or prune them. Establish
 how the row was written, then correct or delete it in PostgreSQL — after which a re-run reports clean.
 
 **2. Converge what PostgreSQL says should exist.**
@@ -237,7 +237,7 @@ Either way, re-run before concluding anything.
   `manage_access` over another tenant's organization — so check the field rather than assuming.
 
   Then re-run step 2 to confirm the correct edge is present, and work out how it was written — nothing in
-  Formbricks creates one.
+  Forma creates one.
 
   **Only `--scope=all` can find one.** The escalation is an edge on _another_ tenant's resource naming
   the organization you are investigating, and a `--organization-id` run reads only the resources
@@ -256,7 +256,7 @@ Either way, re-run before concluding anything.
 > the CLI rewrites is not necessarily the one your dev server talks to.
 
 `AUTHZED_SYSTEM_KEY` is **not** usable for this. It is documented as a stable namespace and defaults to
-`formbricks` everywhere, so it cannot tell staging from production.
+`forma` everywhere, so it cannot tell staging from production.
 
 **"No prune" does not mean "no deletes."** Converging a membership inherently deletes the roles it does
 not hold. What `--prune` adds is permission to reconcile records observed _only_ in SpiceDB.
@@ -300,10 +300,10 @@ Source mutations commit a PostgreSQL outbox item atomically. SpiceDB outage does
 successful business mutation; delivery retries from PostgreSQL and BullMQ is only the recurring trigger. When
 the service recovers:
 
-1. Run `formbricks-authzed health` and verify datastore migrations.
-2. Inspect `formbricks-authzed outbox status` and correct the operational cause.
-3. Run `formbricks-authzed outbox replay` when dead letters are understood, then
-   `formbricks-authzed outbox drain`. A dead letter can only be reached by an event that failed ten times on
+1. Run `forma-authzed health` and verify datastore migrations.
+2. Inspect `forma-authzed outbox status` and correct the operational cause.
+3. Run `forma-authzed outbox replay` when dead letters are understood, then
+   `forma-authzed outbox drain`. A dead letter can only be reached by an event that failed ten times on
    its own, non-retryably, with a code an event can actually cause (`authzed_projection_invalid_source`,
    `authzed_invalid_request`). An unreachable SpiceDB, a rejected credential and an unmapped internal error
    all fail to qualify, so no outage produces a dead letter however long it lasts — treat any dead letter as
@@ -314,14 +314,14 @@ the service recovers:
 5. Keep direct-authority cutover blocked while a revocation is pending, dead-lettered, or older than its SLA.
 
 For a self-hosted major upgrade, investigate and replay any dead letters separately before starting the gate.
-`formbricks-authzed upgrade prepare` drains the outbox, reconciles the graph, and runs a final audit, but it
+`forma-authzed upgrade prepare` drains the outbox, reconciles the graph, and runs a final audit, but it
 deliberately blocks rather than replaying dead letters whose cause has not been understood. Always follow it with
 the read-only `upgrade check`; do not treat a completed write phase as proof that concurrent source changes left
 the graph clean.
 
 In the direct-authority artifact, a SpiceDB, datastore, resolver, configuration, freshness, or unsupported-result
 failure is not an ordinary denial and never falls back. The protected operation receives a sanitized operational
-failure and fails closed. Formbricks `/health`, startup, readiness, and liveness remain independent so unrelated
+failure and fails closed. Forma `/health`, startup, readiness, and liveness remain independent so unrelated
 workloads are not restarted.
 
 ## 6. Historical comparison controls (not a release strategy)
@@ -337,7 +337,7 @@ Historical comparison evidence is preserved in the project records, not as an ex
 
 ## 7. Direct-authority cutover
 
-The full approval contract is the [direct AuthZed cutover and rollback contract](https://linear.app/formbricks/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad). This section is the operator's execution checklist.
+The full approval contract is the [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad). This section is the operator's execution checklist.
 
 ### Freeze the bridge artifact
 
@@ -409,47 +409,47 @@ starting points — tune non-gate alerts to deployment size.
 
 ```promql
 # Critical: authoritative operations are failing, not denying.
-sum(rate(formbricks_authzed_authorization_decisions_total{outcome="operational_error"}[5m]))
+sum(rate(forma_authzed_authorization_decisions_total{outcome="operational_error"}[5m]))
 /
-sum(rate(formbricks_authzed_authorization_decisions_total[5m])) > 0.001
+sum(rate(forma_authzed_authorization_decisions_total[5m])) > 0.001
 # for: 5m
 
 # Warning/Critical: direct-authority latency exceeds the rollout SLO.
-histogram_quantile(0.95, sum(rate(formbricks_authzed_authorization_decision_duration_seconds_bucket[5m])) by (le)) > 0.25
+histogram_quantile(0.95, sum(rate(forma_authzed_authorization_decision_duration_seconds_bucket[5m])) by (le)) > 0.25
 # for: 15m
-histogram_quantile(0.99, sum(rate(formbricks_authzed_authorization_decision_duration_seconds_bucket[5m])) by (le)) > 1
+histogram_quantile(0.99, sum(rate(forma_authzed_authorization_decision_duration_seconds_bucket[5m])) by (le)) > 1
 # for: 5m
 
 # Warning at 15s; critical at 45s. At 60s the request-path freshness guard fails closed.
-formbricks_authzed_projection_outbox_status{state="revocation_warning"} > 0
-formbricks_authzed_projection_outbox_status{state="revocation_critical"} > 0
+forma_authzed_projection_outbox_status{state="revocation_warning"} > 0
+forma_authzed_projection_outbox_status{state="revocation_critical"} > 0
 
 # Critical: a dead letter or failed repair blocks cutover.
-formbricks_authzed_projection_outbox_status{state="dead_lettered"} > 0
-sum(increase(formbricks_authzed_reconciliation_repair_total{status="failed"}[7h])) > 0
+forma_authzed_projection_outbox_status{state="dead_lettered"} > 0
+sum(increase(forma_authzed_reconciliation_repair_total{status="failed"}[7h])) > 0
 
 # Warning: scheduled audits still see attributable drift after repair.
-sum(increase(formbricks_authzed_reconciliation_audit_total{status!="reconciled"}[7h])) > 0
+sum(increase(forma_authzed_reconciliation_audit_total{status!="reconciled"}[7h])) > 0
 
 # Warning: projections are failing. Drift is accumulating and a backfill will be needed.
-sum(rate(formbricks_authzed_projection_total{status="failed"}[5m])) > 0
+sum(rate(forma_authzed_projection_total{status="failed"}[5m])) > 0
 # for: 15m
 
 # Critical: SpiceDB is unreachable rather than slow.
-sum(rate(formbricks_authzed_request_failures_total{code="authzed_unavailable"}[5m])) > 0
+sum(rate(forma_authzed_request_failures_total{code="authzed_unavailable"}[5m])) > 0
 # for: 10m
 
 # Warning: degraded, not down. Often connection-pool pressure — check pgxpool_empty_acquire.
-sum(rate(formbricks_authzed_request_retries_total[5m]))
-  / sum(rate(formbricks_authzed_projection_total[5m])) > 0.1
+sum(rate(forma_authzed_request_retries_total[5m]))
+  / sum(rate(forma_authzed_projection_total[5m])) > 0.1
 # for: 15m
 
 # Critical: AuthZed is switched off where it is expected to be on.
-sum(rate(formbricks_authzed_projection_total{status="disabled"}[15m])) > 0
+sum(rate(forma_authzed_projection_total{status="disabled"}[15m])) > 0
 # for: 30m
 
 # Warning: projection latency is on the request path.
-histogram_quantile(0.95, sum(rate(formbricks_authzed_projection_duration_seconds_bucket[5m])) by (le)) > 0.5
+histogram_quantile(0.95, sum(rate(forma_authzed_projection_duration_seconds_bucket[5m])) by (le)) > 0.5
 # for: 15m
 ```
 
@@ -471,6 +471,6 @@ that belongs with the AuthZed deployment contract rather than the application.
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Backfill reports `failures` that persist across runs     | Capture the `code` values and the run's JSON. A non-retryable code (`authzed_unauthenticated`, `authzed_permission_denied`, `authzed_invalid_request`) is a configuration problem, not a transient one. |
 | Orphan count exceeds the cap and the endpoint is correct | Do not raise the cap. Establish why first — a wrong database or an in-progress restore both look like this.                                                                                             |
-| `unmanaged` relationships reported                       | Something other than Formbricks is writing to this SpiceDB, or the schema moved ahead of its projector. Never pruned; investigate before enforcing.                                                     |
+| `unmanaged` relationships reported                       | Something other than Forma is writing to this SpiceDB, or the schema moved ahead of its projector. Never pruned; investigate before enforcing.                                                          |
 | Schema check reports `drifted`                           | `pnpm authzed:schema apply --expected-current-digest <remoteDigest>`. Relationship repair against a drifted schema is not meaningful.                                                                   |
 | Durable delivery or a clean graph cannot be restored     | Block cutover. If already authoritative, roll back to the pinned bridge digest, drain/replay, and require a clean audit before another attempt.                                                         |

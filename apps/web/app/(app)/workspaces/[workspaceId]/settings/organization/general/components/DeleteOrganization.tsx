@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TOrganization } from "@formbricks/types/organizations";
+import { TOrganization } from "@forma/types/organizations";
 import { deleteOrganizationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/general/actions";
-import { FORMBRICKS_ENVIRONMENT_ID_LS } from "@/lib/localStorage";
+import { FORMA_ENVIRONMENT_ID_LS } from "@/lib/localStorage";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
@@ -41,7 +41,7 @@ export const DeleteOrganization = ({
       }
       toast.success(t("workspace.settings.general.organization_deleted_successfully"));
       if (typeof localStorage !== "undefined") {
-        localStorage.removeItem(FORMBRICKS_ENVIRONMENT_ID_LS);
+        localStorage.removeItem(FORMA_ENVIRONMENT_ID_LS);
       }
       router.push("/");
     } catch (err) {

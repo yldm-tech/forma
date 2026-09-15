@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Organization, Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Organization, Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 import { getFirstOrganization } from "./organization";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     organization: {
       findFirst: vi.fn(),

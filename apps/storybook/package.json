@@ -12,8 +12,8 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "5.0.2",
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@storybook/addon-a11y": "10.3.6",
     "@storybook/addon-docs": "10.3.6",
     "@storybook/addon-links": "10.3.6",

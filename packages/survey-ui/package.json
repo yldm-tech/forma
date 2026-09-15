@@ -1,9 +1,9 @@
 {
-  "name": "@formbricks/survey-ui",
+  "name": "@forma/survey-ui",
   "license": "MIT",
   "version": "1.0.4",
   "description": "React UI components for building surveys and forms - includes NPS, rating scales, multi-select, file upload, and more. Built with Radix UI and Tailwind CSS.",
-  "homepage": "https://formbricks.com",
+  "homepage": "https://forma.ylam.ai",
   "type": "module",
   "keywords": [
     "react",
@@ -15,22 +15,22 @@
     "rating",
     "questionnaire",
     "feedback",
-    "formbricks",
+    "forma",
     "tailwindcss",
     "typescript",
     "accessible"
   ],
   "author": {
-    "name": "Formbricks",
-    "url": "https://formbricks.com"
+    "name": "Forma",
+    "url": "https://forma.ylam.ai"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/formbricks/formbricks",
+    "url": "https://github.com/yldm-tech/forma",
     "directory": "packages/survey-ui"
   },
   "bugs": {
-    "url": "https://github.com/formbricks/formbricks/issues"
+    "url": "https://github.com/yldm-tech/forma/issues"
   },
   "sideEffects": [
     "**/*.css"
@@ -91,8 +91,8 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@storybook/react": "catalog:",
     "@storybook/react-vite": "catalog:",
     "@tailwindcss/postcss": "catalog:",

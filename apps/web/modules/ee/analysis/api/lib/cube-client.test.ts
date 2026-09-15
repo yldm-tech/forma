@@ -18,7 +18,7 @@ vi.mock("@cubejs-client/core", () => ({
   })),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: mockLoggerError,
     warn: mockLoggerWarn,
@@ -54,14 +54,14 @@ describe("executeTenantScopedQuery", () => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/formbricks?schema=public");
+    vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/forma?schema=public");
     vi.stubEnv("ENCRYPTION_KEY", "12345678901234567890123456789012");
-    vi.stubEnv("HUB_API_URL", "https://hub.formbricks.local");
+    vi.stubEnv("HUB_API_URL", "https://hub.forma.local");
     vi.stubEnv("HUB_API_KEY", "test-hub-api-key");
     vi.stubEnv("CUBEJS_API_URL", "https://cube.example.com");
     vi.stubEnv("CUBEJS_API_SECRET", "cube-secret");
-    vi.stubEnv("CUBEJS_JWT_AUDIENCE", "formbricks-cube-test");
-    vi.stubEnv("CUBEJS_JWT_ISSUER", "formbricks-web-test");
+    vi.stubEnv("CUBEJS_JWT_AUDIENCE", "forma-cube-test");
+    vi.stubEnv("CUBEJS_JWT_ISSUER", "forma-web-test");
     mockLoad.mockResolvedValue({ tablePivot: mockTablePivot });
     mockQueueAuditEventWithoutRequest.mockResolvedValue(undefined);
     mockTablePivot.mockReturnValue([{ id: "1", count: 42 }]);
@@ -82,8 +82,8 @@ describe("executeTenantScopedQuery", () => {
     const cubejs = await getCubeJsMock();
     const token = cubejs.mock.calls[0][0] as string;
     const payload = jwt.verify(token, "cube-secret", {
-      audience: "formbricks-cube-test",
-      issuer: "formbricks-web-test",
+      audience: "forma-cube-test",
+      issuer: "forma-web-test",
     }) as jwt.JwtPayload;
 
     expect(cubejs).toHaveBeenCalledWith(expect.any(String), {
@@ -107,7 +107,7 @@ describe("executeTenantScopedQuery", () => {
 
     // The client resolves a cell as `row[measure] ?? fillWithValue ?? 0`, so passing null falls
     // through to 0. Only a non-nullish sentinel survives to be mapped back to null.
-    expect(mockTablePivot).toHaveBeenCalledWith({ fillWithValue: "__formbricks_null__" });
+    expect(mockTablePivot).toHaveBeenCalledWith({ fillWithValue: "__forma_null__" });
   });
 
   test("maps the sentinel back to null so an unasked measure is not reported as zero", async () => {
@@ -116,7 +116,7 @@ describe("executeTenantScopedQuery", () => {
       dimensions: ["FeedbackRecords.sourceName"],
     };
     mockTablePivot.mockReturnValue([
-      { "FeedbackRecords.sourceName": "Pre-match", "FeedbackRecords.npsScore": "__formbricks_null__" },
+      { "FeedbackRecords.sourceName": "Pre-match", "FeedbackRecords.npsScore": "__forma_null__" },
       { "FeedbackRecords.sourceName": "After-match", "FeedbackRecords.npsScore": "72.92" },
       { "FeedbackRecords.sourceName": "Accessibility", "FeedbackRecords.npsScore": "0.00" },
     ]);
@@ -134,8 +134,8 @@ describe("executeTenantScopedQuery", () => {
   test("leaves a dimension that genuinely holds the sentinel string alone", async () => {
     mockTablePivot.mockReturnValue([
       {
-        "FeedbackRecords.valueText": "__formbricks_null__",
-        "FeedbackRecords.count": "__formbricks_null__",
+        "FeedbackRecords.valueText": "__forma_null__",
+        "FeedbackRecords.count": "__forma_null__",
       },
     ]);
     const { executeTenantScopedQuery } = await import("./cube-client");
@@ -150,12 +150,12 @@ describe("executeTenantScopedQuery", () => {
     // A respondent can type anything into an open text answer, including this sentinel. Only the
     // measure cell was filled by the pivot, so only that one may become null.
     expect(result).toEqual([
-      { "FeedbackRecords.valueText": "__formbricks_null__", "FeedbackRecords.count": null },
+      { "FeedbackRecords.valueText": "__forma_null__", "FeedbackRecords.count": null },
     ]);
   });
 
   test("leaves every column alone when the query selects no measures", async () => {
-    const rows = [{ "FeedbackRecords.valueText": "__formbricks_null__" }];
+    const rows = [{ "FeedbackRecords.valueText": "__forma_null__" }];
     mockTablePivot.mockReturnValue(rows);
     const { executeTenantScopedQuery } = await import("./cube-client");
     const result = await executeTenantScopedQuery({
@@ -173,10 +173,10 @@ describe("executeTenantScopedQuery", () => {
     mockTablePivot.mockImplementation((pivotConfig?: { fillMissingDates?: boolean }) => {
       const real = [
         { [DAY]: "2026-01-01", "FeedbackRecords.npsScore": "72.92" },
-        { [DAY]: "2026-01-02", "FeedbackRecords.npsScore": "__formbricks_null__" },
+        { [DAY]: "2026-01-02", "FeedbackRecords.npsScore": "__forma_null__" },
       ];
       if (pivotConfig?.fillMissingDates === false) return real;
-      return [...real, { [DAY]: "2026-01-03", "FeedbackRecords.npsScore": "__formbricks_null__" }];
+      return [...real, { [DAY]: "2026-01-03", "FeedbackRecords.npsScore": "__forma_null__" }];
     });
 
     const { executeTenantScopedQuery } = await import("./cube-client");
@@ -207,8 +207,8 @@ describe("executeTenantScopedQuery", () => {
         ...real,
         {
           [DAY]: "2026-01-02",
-          "FeedbackRecords.count": "__formbricks_null__",
-          "FeedbackRecords.npsScore": "__formbricks_null__",
+          "FeedbackRecords.count": "__forma_null__",
+          "FeedbackRecords.npsScore": "__forma_null__",
         },
       ];
     });
@@ -234,7 +234,7 @@ describe("executeTenantScopedQuery", () => {
     mockTablePivot.mockImplementation((pivotConfig?: { fillMissingDates?: boolean }) => {
       const real = [{ [DAY]: "2026-01-01", "FeedbackRecords.count": 12 }];
       if (pivotConfig?.fillMissingDates === false) return real;
-      return [...real, { [DAY]: "2026-01-02", "FeedbackRecords.count": "__formbricks_null__" }];
+      return [...real, { [DAY]: "2026-01-02", "FeedbackRecords.count": "__forma_null__" }];
     });
 
     const { executeTenantScopedQuery } = await import("./cube-client");
@@ -253,7 +253,7 @@ describe("executeTenantScopedQuery", () => {
   });
 
   test("still restores nulls for a time dimension used only as a filter, with no granularity", async () => {
-    mockTablePivot.mockReturnValue([{ "FeedbackRecords.npsScore": "__formbricks_null__" }]);
+    mockTablePivot.mockReturnValue([{ "FeedbackRecords.npsScore": "__forma_null__" }]);
     const { executeTenantScopedQuery } = await import("./cube-client");
     const result = await executeTenantScopedQuery({
       ...scopedInput,
@@ -263,7 +263,7 @@ describe("executeTenantScopedQuery", () => {
       },
     });
 
-    expect(mockTablePivot).toHaveBeenCalledWith({ fillWithValue: "__formbricks_null__" });
+    expect(mockTablePivot).toHaveBeenCalledWith({ fillWithValue: "__forma_null__" });
     expect(result).toEqual([{ "FeedbackRecords.npsScore": null }]);
   });
 
@@ -335,9 +335,9 @@ describe("executeTenantScopedQuery", () => {
   test("fails at env validation when Cube env is missing", async () => {
     vi.unstubAllEnvs();
     vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/formbricks?schema=public");
+    vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/forma?schema=public");
     vi.stubEnv("ENCRYPTION_KEY", "12345678901234567890123456789012");
-    vi.stubEnv("HUB_API_URL", "https://hub.formbricks.local");
+    vi.stubEnv("HUB_API_URL", "https://hub.forma.local");
     vi.stubEnv("HUB_API_KEY", "test-hub-api-key");
     vi.stubEnv("CUBEJS_API_URL", undefined);
     vi.stubEnv("CUBEJS_API_SECRET", undefined);

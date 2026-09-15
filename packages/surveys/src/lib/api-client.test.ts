@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { FILE_UPLOAD_ERROR_NAMES } from "@formbricks/types/errors";
-import { STORAGE_ERROR_CODES } from "@formbricks/types/storage";
+import { FILE_UPLOAD_ERROR_NAMES } from "@forma/types/errors";
+import { STORAGE_ERROR_CODES } from "@forma/types/storage";
 import { ApiClient } from "./api-client";
 
 describe("ApiClient", () => {

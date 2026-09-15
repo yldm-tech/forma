@@ -1,10 +1,10 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ZId, ZString } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ZId, ZString } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 
 export const updateOrganizationEmailLogoUrl = async (

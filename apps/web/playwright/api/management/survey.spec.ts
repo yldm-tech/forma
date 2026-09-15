@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { test } from "../../lib/fixtures";
 import { loginAndGetApiKey } from "../../lib/utils";
 import { SURVEYS_API_URL } from "../constants";

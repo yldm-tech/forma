@@ -7,8 +7,8 @@ import { useTranslation } from "react-i18next";
 import {
   TIntegrationGoogleSheets,
   TIntegrationGoogleSheetsConfigData,
-} from "@formbricks/types/integration/google-sheet";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/integration/google-sheet";
+import { TUserLocale } from "@forma/types/user";
 import { deleteIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
 import { timeSince } from "@/lib/time";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";

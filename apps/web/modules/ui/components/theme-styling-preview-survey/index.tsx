@@ -3,9 +3,9 @@
 import { MotionConfig, Variants, motion } from "framer-motion";
 import { Fragment, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getLinkSurveyCardMaxWidth } from "@formbricks/types/styling";
-import { TSurvey, TSurveyType } from "@formbricks/types/surveys/types";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { TSurvey, TSurveyType } from "@forma/types/surveys/types";
+import { TWorkspace } from "@forma/types/workspace";
 import { cn } from "@/lib/cn";
 import { toJsWorkspaceStateSurvey } from "@/lib/survey/client-utils";
 import { CardlessPreviewLogo } from "@/modules/ui/components/cardless-preview-logo";

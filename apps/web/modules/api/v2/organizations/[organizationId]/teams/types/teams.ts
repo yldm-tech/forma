@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZTeam } from "@formbricks/database/zod/teams";
+import { ZTeam } from "@forma/database/zod/teams";
 import { ZGetFilter } from "@/modules/api/v2/types/api-filter";
 
 export const ZGetTeamsFilter = ZGetFilter.refine(

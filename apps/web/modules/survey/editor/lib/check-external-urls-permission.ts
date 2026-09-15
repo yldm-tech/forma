@@ -1,5 +1,5 @@
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 import { getExternalUrlsPermission } from "@/modules/survey/lib/permission";
 import { getOrganizationBilling } from "@/modules/survey/lib/survey";

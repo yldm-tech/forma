@@ -107,7 +107,7 @@ catalog:
   zod: 4.3.6
   zod-openapi: 5.4.6
   "@prisma/client": 7.8.0
-  # redis 5.x. apps/web was on 4.7.1 while @formbricks/cache was on 5.11.0, and because
+  # redis 5.x. apps/web was on 4.7.1 while @forma/cache was on 5.11.0, and because
   # apps/web has no nested copy its `import type { RedisClientType } from "redis"` in
   # lib/cache/index.ts resolved to the hoisted v4 type — then used to describe the v5
   # client that getCacheService() actually returns. Aligning here removes that crossover.
@@ -380,7 +380,7 @@ overrides:
   # vite-plugin-dts>@vue/language-core (dev) are on the same line.
   brace-expansion@2: 2.1.4
   # load-bearing: @sentry/nextjs (runtime, apps/web `dependencies`, via @fastify/otel>@sentry/node) and
-  # react-email (runtime, @formbricks/email `dependencies`) resolve the vulnerable 5.x line, alongside
+  # react-email (runtime, @forma/email `dependencies`) resolve the vulnerable 5.x line, alongside
   # vite-plugin-dts, typescript-eslint and storybook (dev).
   brace-expansion@5: 5.0.9
   # === Closed by ENG-2343 (kept as a record, like the section above) ===
@@ -404,7 +404,7 @@ sharedWorkspaceLockfile: true
 access: public
 enablePrePostScripts: true
 # Flat, npm-style node_modules. Deliberate for now: several packages still rely on hoisted
-# (undeclared) dependencies — e.g. @formbricks/js-core reaches into sibling packages (ENG-1681)
+# (undeclared) dependencies — e.g. @forma/js-core reaches into sibling packages (ENG-1681)
 # and react/react-dom are hoisted from the workspace root (ENG-1693). Moving to the strict
 # `isolated` linker is the long-term goal (ENG-1674); fix the undeclared deps first.
 # `shamefullyHoist` above is left untouched here — it becomes meaningful only under the isolated
@@ -422,7 +422,7 @@ minimumReleaseAge: 4320
 # pinned explicitly so a future default flip can't silently weaken the cooldown).
 trustLockfile: false
 minimumReleaseAgeExclude:
-  # First-party SDK (published by Formbricks' own CI) — exempt all versions from the release-age gate so
+  # First-party SDK (published by Forma' own CI) — exempt all versions from the release-age gate so
   # a fresh hub bump isn't blocked. Version-pinned scoped entries (e.g. '@formbricks/hub@0.9.0') are not
   # reliably matched by the exclude, so match by name.
   - "@formbricks/hub"

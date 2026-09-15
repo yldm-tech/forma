@@ -1,5 +1,5 @@
 import "server-only";
-import { ZId } from "@formbricks/types/common";
+import { ZId } from "@forma/types/common";
 import { can } from "../authorization";
 import { validateInputs } from "../utils/validate";
 

@@ -25,7 +25,7 @@ describe("AuthZed client facade", () => {
     envMock.AUTHZED_CONSISTENCY = undefined;
     envMock.AUTHZED_ENDPOINT = "spicedb:50051";
     envMock.AUTHZED_INSECURE = "true";
-    envMock.AUTHZED_SYSTEM_KEY = "formbricks";
+    envMock.AUTHZED_SYSTEM_KEY = "forma";
     envMock.AUTHZED_TOKEN = "private-token";
     sdkMocks.newClient.mockReturnValue({
       close: sdkMocks.close,
@@ -82,7 +82,7 @@ describe("AuthZed client facade", () => {
     const client = getAuthzedClient();
 
     expect(client.consistency).toBe("fully_consistent");
-    expect(client.systemKey).toBe("formbricks");
+    expect(client.systemKey).toBe("forma");
     expect(sdkMocks.newClient).toHaveBeenCalledWith(
       " token-with-significant-spacing ",
       "spicedb:50051",
@@ -168,7 +168,7 @@ describe("AuthZed client facade", () => {
     expect(second).not.toBe(first);
   });
 
-  test("returns only the Formbricks schema wrapper through the resilience pipeline", async () => {
+  test("returns only the Forma schema wrapper through the resilience pipeline", async () => {
     sdkMocks.readSchema.mockResolvedValue({
       readAt: { token: "revision" },
       schemaText: "definition user {}",
@@ -502,7 +502,7 @@ describe("AuthZed client facade", () => {
     expect(retryMocks.execute).toHaveBeenCalledWith("write_schema", expect.any(Function));
   });
 
-  test("translates Formbricks relationship updates without exposing SDK responses", async () => {
+  test("translates Forma relationship updates without exposing SDK responses", async () => {
     sdkMocks.writeRelationships.mockResolvedValue({ writtenAt: { token: "private-revision" } });
 
     await expect(

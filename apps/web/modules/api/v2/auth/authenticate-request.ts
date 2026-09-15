@@ -1,5 +1,5 @@
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import { TAuthenticationApiKey } from "@forma/types/auth";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import {
   type AuthenticateApiKeyOptions,
   authenticateApiKeyFromHeaders,

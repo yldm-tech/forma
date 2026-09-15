@@ -4,15 +4,12 @@ import { ColumnDef } from "@tanstack/react-table";
 import { TFunction } from "i18next";
 import { CircleHelpIcon, EyeOffIcon, MailIcon, TagIcon } from "lucide-react";
 import Link from "next/link";
-import {
-  getComputedEmbeddedFields,
-  getIngestedEmbeddedFields,
-} from "@formbricks/types/embedded-data-resolver";
-import { TResponseTableData } from "@formbricks/types/responses";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TUserLocale } from "@formbricks/types/user";
+import { getComputedEmbeddedFields, getIngestedEmbeddedFields } from "@forma/types/embedded-data-resolver";
+import { TResponseTableData } from "@forma/types/responses";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TUserLocale } from "@forma/types/user";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { extractChoiceIdsFromResponse } from "@/lib/response/utils";
 import { getContactIdentifier } from "@/lib/utils/contact";
@@ -304,7 +301,7 @@ export const generateResponseTableColumns = (
               <span>{t("workspace.surveys.responses.how_to_identify_users")}</span>
               <Link
                 className="underline underline-offset-2 hover:text-slate-900"
-                href="https://formbricks.com/docs/app-surveys/user-identification"
+                href="https://forma.ylam.ai/docs/app-surveys/user-identification"
                 target="_blank"
                 rel="noopener noreferrer">
                 {t("common.app_survey")}

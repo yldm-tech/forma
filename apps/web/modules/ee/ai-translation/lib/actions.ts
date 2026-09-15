@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
+import { ZId } from "@forma/types/common";
 import { assertOrganizationAIConfigured, getOrganizationAIConfig } from "@/lib/ai/service";
 import { assertCan } from "@/lib/authorization";
 import { authenticatedActionClient } from "@/lib/utils/action-client";

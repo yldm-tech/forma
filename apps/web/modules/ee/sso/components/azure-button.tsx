@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { FORMBRICKS_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
+import { FORMA_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
 import { authClient } from "@/modules/auth/lib/auth-client";
 import { getSsoReturnToUrl } from "@/modules/ee/sso/lib/utils";
 import { Button } from "@/modules/ui/components/button";
@@ -26,7 +26,7 @@ export const AzureButton = ({
   const { t } = useTranslation();
   const handleLogin = useCallback(async () => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(FORMBRICKS_LOGGED_IN_WITH_LS, "Azure");
+      localStorage.setItem(FORMA_LOGGED_IN_WITH_LS, "Azure");
     }
     const returnToUrlWithSource = getSsoReturnToUrl(returnToUrl, source);
 

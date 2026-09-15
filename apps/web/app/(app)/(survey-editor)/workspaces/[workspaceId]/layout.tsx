@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AuthenticationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthenticationError, ResourceNotFoundError } from "@forma/types/errors";
 import { getWorkspace } from "@/lib/workspace/service";
 import { workspaceIdLayoutChecks } from "@/modules/workspaces/lib/utils";
 

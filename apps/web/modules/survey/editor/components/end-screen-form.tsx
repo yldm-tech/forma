@@ -3,8 +3,8 @@
 import { PlusIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurvey, TSurveyEndScreenCard, TSurveyRedirectUrlCard } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TSurvey, TSurveyEndScreenCard, TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes, getLocalizedValue } from "@/lib/i18n/utils";
 import { headlineToRecall, recallToHeadline } from "@/lib/utils/recall";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";
@@ -145,7 +145,7 @@ export const EndScreenForm = ({
                 updateSurvey({
                   buttonLabel: { default: t("workspace.surveys.edit.create_your_own_survey") },
                   buttonLink:
-                    "https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=default_ending_cta",
+                    "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
                 });
               }
               setshowEndingCardCTA(!showEndingCardCTA);
@@ -215,7 +215,7 @@ export const EndScreenForm = ({
                           id="buttonLink"
                           name="buttonLink"
                           className={`relative text-black caret-black ${!isExternalUrlsAllowed ? "cursor-not-allowed opacity-50" : ""}`}
-                          placeholder="https://formbricks.com"
+                          placeholder="https://forma.ylam.ai"
                           value={
                             recallToHeadline(
                               {

@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/cache", () => ({
+vi.mock("@forma/cache", () => ({
   createCacheKey: {
     custom: (namespace: string, ...parts: string[]) => `${namespace}:${parts.join(":")}`,
   },
@@ -20,7 +20,7 @@ vi.mock("@formbricks/cache", () => ({
 // factory here keeps these tests about what the profile queries and what it does on failure.
 vi.mock("@/lib/cache", () => ({ cache: { withCache: mocks.withCache } }));
 
-vi.mock("@formbricks/logger", () => ({ logger: { warn: mocks.warn } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: mocks.warn } }));
 
 vi.mock("@/modules/ee/analysis/api/lib/cube-client", () => ({
   executeTenantScopedQuery: mocks.executeTenantScopedQuery,

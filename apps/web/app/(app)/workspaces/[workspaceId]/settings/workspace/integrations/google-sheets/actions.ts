@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
-import { TIntegrationGoogleSheets } from "@formbricks/types/integration/google-sheet";
+import { ZId } from "@forma/types/common";
+import { ResourceNotFoundError } from "@forma/types/errors";
+import { TIntegrationGoogleSheets } from "@forma/types/integration/google-sheet";
 import { assertCan } from "@/lib/authorization";
 import { getSpreadsheetNameById, validateGoogleSheetsConnection } from "@/lib/googleSheet/service";
 import { getIntegrationByType } from "@/lib/integration/service";

@@ -1,4 +1,4 @@
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { TOrganizationBilling } from "@forma/types/organizations";
 
 type TBillingInput = Pick<TOrganizationBilling, "usageCycleAnchor">;
 

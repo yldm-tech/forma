@@ -1,22 +1,18 @@
 import "server-only";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { InvalidInputError } from "@formbricks/types/errors";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TSegment } from "@formbricks/types/segment";
-import { IMAGE_FILE_EXTENSIONS } from "@formbricks/types/storage";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import {
-  TSurveyElement,
-  TSurveyElementTypeEnum,
-  TSurveyPictureChoice,
-} from "@formbricks/types/surveys/elements";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { InvalidInputError } from "@forma/types/errors";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSegment } from "@forma/types/segment";
+import { IMAGE_FILE_EXTENSIONS } from "@forma/types/storage";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum, TSurveyPictureChoice } from "@forma/types/surveys/elements";
 import {
   TSurvey,
   TSurveyQuestion,
   TSurveyQuestionTypeEnum,
   TSurveyStatus,
   TSurveyType,
-} from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/types";
 import { withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
 import { isValidVideoUrl } from "@/lib/utils/video-upload";
 import { isValidImageFile } from "@/modules/storage/utils";
@@ -42,7 +38,7 @@ export const isAppSurveyMissingTriggersToPublish = (
  */
 const INVALID_IMAGE_HINT = `The URL must end in a supported image extension (${IMAGE_FILE_EXTENSIONS.join(
   ", "
-)}). For CDN or extension-less links, upload the image to Formbricks or use a direct image URL.`;
+)}). For CDN or extension-less links, upload the image to Forma or use a direct image URL.`;
 
 export const transformPrismaSurvey = <T extends TSurvey | TJsWorkspaceStateSurvey>(surveyPrisma: any): T => {
   let segment: TSegment | null = null;

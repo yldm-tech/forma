@@ -8,10 +8,10 @@
     "jsxImportSource": "preact",
     "paths": {
       "@/*": ["./src/*"],
-      "@formbricks/survey-ui": ["../survey-ui"]
+      "@forma/survey-ui": ["../survey-ui"]
     },
     "resolveJsonModule": true
   },
-  "extends": "@formbricks/config-typescript/js-library.json",
+  "extends": "@forma/config-typescript/js-library.json",
   "include": ["src", "../types/surveys.d.ts"]
 }

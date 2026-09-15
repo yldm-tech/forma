@@ -1,8 +1,8 @@
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { logger } from "@formbricks/logger";
-import { type TWorkflowTriggerRunPayload, ZWorkflowTriggerRunPayload } from "@formbricks/workflows";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { logger } from "@forma/logger";
+import { type TWorkflowTriggerRunPayload, ZWorkflowTriggerRunPayload } from "@forma/workflows";
 import { isDatabasePoolExhaustionError } from "@/lib/jobs/pool-exhaustion";
 import { recordWorkflowRunCreatedMeterEvent } from "@/modules/ee/billing/lib/metering";
 import { getIsWorkflowsEnabled } from "@/modules/ee/license-check/lib/utils";
@@ -29,7 +29,7 @@ interface EnqueueResponseCompletedWorkflowRunsInput {
   response: RunnerResponse;
   workspaceId: string;
   organizationId: string;
-  // Passed through for workflow-run metering (ENG-1936). Null/absent off Formbricks Cloud or when the
+  // Passed through for workflow-run metering (ENG-1936). Null/absent off Forma Cloud or when the
   // org has no Stripe customer — the meter helper no-ops in those cases.
   stripeCustomerId?: string | null;
   dispatch: DispatchWorkflowRun;

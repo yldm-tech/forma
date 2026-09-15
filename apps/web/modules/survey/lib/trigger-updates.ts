@@ -1,4 +1,4 @@
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 
 interface TriggerActionClass {
   id: string;

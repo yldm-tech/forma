@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZSurveyWithoutQuestionType } from "@formbricks/database/zod/surveys";
+import { ZSurveyWithoutQuestionType } from "@forma/database/zod/surveys";
 
 export const ZGetSurveysFilter = z
   .object({

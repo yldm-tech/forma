@@ -1,7 +1,7 @@
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { ApiErrorResponse, RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@formbricks/types/errors";
-import { TQuotaFullResponse } from "@formbricks/types/quota";
-import { TResponseUpdate } from "@formbricks/types/responses";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { ApiErrorResponse, RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
+import { TQuotaFullResponse } from "@forma/types/quota";
+import { TResponseUpdate } from "@forma/types/responses";
 import { RECAPTCHA_VERIFICATION_ERROR_CODE } from "@/lib/constants";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 import { ApiClient } from "./api-client";
@@ -108,7 +108,7 @@ export class ResponseQueue {
   }
 
   private logOfflinePersistenceError(message: string, error: unknown) {
-    console.error(`Formbricks: ${message}`, {
+    console.error(`Forma: ${message}`, {
       error,
       surveyId: this.config.surveyId,
     });
@@ -516,14 +516,14 @@ export class ResponseQueue {
         }
 
         if (attempts > 0) {
-          console.log(`Formbricks: Response sent successfully after ${attempts + 1} attempts`);
+          console.log(`Forma: Response sent successfully after ${attempts + 1} attempts`);
         }
 
         return { success: true, quotaFullResponse: quotaFullResponse ?? undefined };
       }
 
       if (this.isRecaptchaError(res.error)) {
-        console.error("Formbricks: Recaptcha verification failed", {
+        console.error("Forma: Recaptcha verification failed", {
           error: res.error,
           responseId: this.surveyState.responseId,
         });
@@ -533,7 +533,7 @@ export class ResponseQueue {
       // Permanent 4xx rejection — don't retry (backoff or manual Retry would just loop on the
       // same rejection). Signal the caller to drop the item from the queue.
       if (this.isTerminalClientError(res.error)) {
-        console.error("Formbricks: Response rejected permanently, dropping from queue", {
+        console.error("Forma: Response rejected permanently, dropping from queue", {
           error: res.error,
           responseId: this.surveyState.responseId,
           queueLength: this.queue.length,
@@ -545,7 +545,7 @@ export class ResponseQueue {
         };
       }
 
-      console.error(`Formbricks: Response send failed`, {
+      console.error(`Forma: Response send failed`, {
         attempt: attempts + 1,
         maxAttempts: this.config.retryAttempts,
         error: res.error,
@@ -559,7 +559,7 @@ export class ResponseQueue {
       attempts++;
     }
 
-    console.error(`Formbricks: Failed to send response after ${this.config.retryAttempts} attempts`, {
+    console.error(`Forma: Failed to send response after ${this.config.retryAttempts} attempts`, {
       queueLength: this.queue.length,
       responseId: this.surveyState.responseId,
       surveyId: this.surveyState.surveyId,
@@ -691,7 +691,7 @@ export class ResponseQueue {
 
       return ok(true);
     } catch (error) {
-      console.error("Formbricks: Error sending response", error);
+      console.error("Forma: Error sending response", error);
       return err({
         code: "internal_server_error",
         message: "An error occurred while sending the response.",

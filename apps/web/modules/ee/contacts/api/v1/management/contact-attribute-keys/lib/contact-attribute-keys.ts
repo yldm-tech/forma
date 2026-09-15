@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { DatabaseError, InvalidInputError, OperationNotAllowedError } from "@formbricks/types/errors";
-import { formatSnakeCaseToTitleCase } from "@formbricks/types/safe-identifier";
+import { prisma } from "@forma/database";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { DatabaseError, InvalidInputError, OperationNotAllowedError } from "@forma/types/errors";
+import { formatSnakeCaseToTitleCase } from "@forma/types/safe-identifier";
 import { MAX_ATTRIBUTE_CLASSES_PER_ENVIRONMENT } from "@/lib/constants";
 import { isPrismaKnownRequestError, isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { TContactAttributeKeyCreateInput } from "@/modules/ee/contacts/api/v1/management/contact-attribute-keys/[contactAttributeKeyId]/types/contact-attribute-keys";

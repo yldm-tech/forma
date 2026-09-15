@@ -25,7 +25,7 @@ vi.mock("@/modules/auth/lib/proxy-session", () => ({
   getProxySession: mockGetProxySession,
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findUnique: mockUserFindUnique,
@@ -33,7 +33,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     info: vi.fn(),
     warn: mockLoggerWarn,

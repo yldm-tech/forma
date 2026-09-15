@@ -13,12 +13,12 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "formbricksCache",
+      name: "formaCache",
       fileName: "index",
       formats: ["es", "cjs"],
     },
     rollupOptions: {
-      external: ["redis", "@formbricks/logger", "zod"],
+      external: ["redis", "@forma/logger", "zod"],
     },
   },
   plugins: [

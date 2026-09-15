@@ -1,6 +1,6 @@
-# `@formbricks/config-typescript`
+# `@forma/config-typescript`
 
-Shared `tsconfig` presets for the Formbricks monorepo. Every package/app `tsconfig.json` extends exactly one of these:
+Shared `tsconfig` presets for the Forma monorepo. Every package/app `tsconfig.json` extends exactly one of these:
 
 | Config               | Contents                                                                                                              | Used by                                                                                 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |

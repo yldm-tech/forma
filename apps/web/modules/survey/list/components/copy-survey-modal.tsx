@@ -7,7 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { getWritableWorkspacesAction } from "@/app/(app)/workspaces/[workspaceId]/actions";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { copySurveyToOtherWorkspaceAction } from "@/modules/survey/list/actions";

@@ -1,5 +1,5 @@
-import { Response, Survey } from "@formbricks/database/prisma";
-import { TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+import { Response, Survey } from "@forma/database/prisma";
+import { TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 
 export const workspaceId = "u8qa6u0tlxb6160pi2jb8s4p";
 

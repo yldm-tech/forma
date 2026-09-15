@@ -1,6 +1,6 @@
-import { logger } from "@formbricks/logger";
-import { OrganizationAccessType } from "@formbricks/types/api-key";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import { OrganizationAccessType } from "@forma/types/api-key";
+import { TAuthenticationApiKey } from "@forma/types/auth";
 import { can } from "@/lib/authorization";
 import { getOrganizationAuthorizationActionForAccessType } from "@/lib/authorization/permission-action";
 

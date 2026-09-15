@@ -5,7 +5,7 @@ const prismaUserFindUnique = vi.fn();
 const capturePostHogEvent = vi.fn();
 const updateUserLastLoginAt = vi.fn();
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     membership: {
       count: prismaMembershipCount,
@@ -56,7 +56,7 @@ describe("finalizeSuccessfulSignIn", () => {
     const postHogCapture = vi.fn();
     const updateLastLoginAt = vi.fn().mockResolvedValue(new Date());
 
-    vi.doMock("@formbricks/database", () => ({
+    vi.doMock("@forma/database", () => ({
       prisma: {
         membership: {
           count: membershipCount,

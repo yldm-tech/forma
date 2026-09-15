@@ -1,8 +1,8 @@
 import "server-only";
 import cubejs, { type Query } from "@cubejs-client/core";
 import { randomUUID } from "node:crypto";
-import { logger } from "@formbricks/logger";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import { logger } from "@forma/logger";
+import type { TChartQuery } from "@forma/types/analysis";
 import { expandPresetDateRanges } from "@/modules/ee/analysis/lib/date-presets";
 import { isRatioMeasure } from "@/modules/ee/analysis/lib/schema-definition";
 import type { TChartDataRow } from "@/modules/ee/analysis/types/analysis";
@@ -77,7 +77,7 @@ const queueCubeQueryAuditEvent = ({
  * with responses but no NPS answer among them. Pivoting a second time with `fillMissingDates: false`
  * lists the buckets that are real, which is enough to tell the two apart.
  */
-const NULL_FILL_SENTINEL = "__formbricks_null__";
+const NULL_FILL_SENTINEL = "__forma_null__";
 
 const restoreNullMeasures = (
   rows: TChartDataRow[],

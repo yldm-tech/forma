@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   loggerError: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: mocks.loggerError },
 }));
 
@@ -64,9 +64,9 @@ const createPrice = ({
   unit_amount: kind === "responses" ? 0 : interval === "monthly" ? 1000 : 10000,
   ...(kind === "responses" ? { tiers: RESPONSE_PRICE_TIERS, tiers_mode: tiersMode } : {}),
   metadata: {
-    formbricks_plan: plan,
-    formbricks_price_kind: kind,
-    formbricks_interval: interval,
+    forma_plan: plan,
+    forma_price_kind: kind,
+    forma_interval: interval,
   },
   recurring: {
     usage_type: kind === "base" ? "licensed" : "metered",
@@ -76,7 +76,7 @@ const createPrice = ({
     id: `prod_${plan}`,
     active: true,
     metadata: {
-      formbricks_plan: plan,
+      forma_plan: plan,
     },
   },
 });
@@ -91,12 +91,12 @@ const createWorkflowRunsPrice = (id: string) => ({
   tiers: RESPONSE_PRICE_TIERS,
   tiers_mode: "graduated",
   metadata: {
-    formbricks_plan: "scale",
-    formbricks_price_kind: "workflow_runs",
-    formbricks_interval: "monthly",
+    forma_plan: "scale",
+    forma_price_kind: "workflow_runs",
+    forma_interval: "monthly",
   },
   recurring: { usage_type: "metered", interval: "month" },
-  product: { id: "prod_scale", active: true, metadata: { formbricks_plan: "scale" } },
+  product: { id: "prod_scale", active: true, metadata: { forma_plan: "scale" } },
 });
 
 const STANDARD_CATALOG_PRICES = [

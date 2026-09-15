@@ -95,7 +95,7 @@ describe("createTrackNoCodeActionWithContext", () => {
     await trackNoCodeActionWithContext("noCodeAction");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      `🧱 Formbricks - Error in no-code pageView action 'noCodeAction': Network error`,
+      `🧱 Forma - Error in no-code pageView action 'noCodeAction': Network error`,
       {
         code: "network_error",
         message: "Network error",

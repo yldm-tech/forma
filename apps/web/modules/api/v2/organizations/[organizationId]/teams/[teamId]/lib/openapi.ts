@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ZodOpenApiOperationObject } from "zod-openapi";
-import { ZTeam } from "@formbricks/database/zod/teams";
+import { ZTeam } from "@forma/database/zod/teams";
 import { ZTeamIdSchema } from "@/modules/api/v2/organizations/[organizationId]/teams/[teamId]/types/teams";
 import { ZTeamInput } from "@/modules/api/v2/organizations/[organizationId]/teams/types/teams";
 import { ZOrganizationIdSchema } from "@/modules/api/v2/organizations/[organizationId]/types/organizations";

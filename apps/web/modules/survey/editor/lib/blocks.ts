@@ -1,9 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
 import { TFunction } from "i18next";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import { createI18nString } from "@/lib/i18n/utils";
 
 // ============================================

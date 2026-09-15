@@ -1,6 +1,6 @@
 export const mockUserId = "user_123";
 export const mockWorkspaceId = "ew9ba7urnv7u3eo11k5c1z0r";
-export const mockAppUrl = "https://app.formbricks.com";
+export const mockAppUrl = "https://app.forma.ylam.ai";
 export const mockAttributes = {
   name: "John Doe",
   email: "john@example.com",

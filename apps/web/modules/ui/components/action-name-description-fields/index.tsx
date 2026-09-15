@@ -1,6 +1,6 @@
 import { Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { TActionClassInput } from "@formbricks/types/action-classes";
+import { TActionClassInput } from "@forma/types/action-classes";
 import { FormControl, FormError, FormField, FormItem, FormLabel } from "@/modules/ui/components/form";
 import { Input } from "@/modules/ui/components/input";
 

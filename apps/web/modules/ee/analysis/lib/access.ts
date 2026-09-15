@@ -1,6 +1,6 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import { AuthorizationError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { AuthorizationError } from "@forma/types/errors";
 import { assertCan, can } from "@/lib/authorization";
 import {
   getFeedbackDirectoryAssignmentAuthorizationAction,

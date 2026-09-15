@@ -18,7 +18,7 @@ describe("offline-storage (IndexedDB)", () => {
     // Clear all data between tests by deleting the database
     // This also triggers onversionchange on any open connection, resetting the cached dbInstance
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.deleteDatabase("formbricks-offline");
+      const req = indexedDB.deleteDatabase("forma-offline");
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
@@ -291,7 +291,7 @@ describe("offline-storage graceful degradation", () => {
     // Reset the cached dbInstance by deleting the database
     // (triggers onversionchange → close → dbInstance = null)
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.deleteDatabase("formbricks-offline");
+      const req = indexedDB.deleteDatabase("forma-offline");
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Fragment, type JSX, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurveyEditorTabs } from "@formbricks/types/surveys/types";
+import { TSurveyEditorTabs } from "@forma/types/surveys/types";
 import { cn } from "@/lib/cn";
 
 interface Tab {

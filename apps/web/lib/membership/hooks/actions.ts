@@ -1,7 +1,7 @@
 "use server";
 
 import "server-only";
-import { AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { getOrganizationByWorkspaceId } from "../../organization/service";
 import { getMembershipByUserIdOrganizationId } from "../service";
 

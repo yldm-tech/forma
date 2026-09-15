@@ -1,6 +1,6 @@
 import * as crypto from "node:crypto";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 // Import after unmocking
 import {
   constantTimeEqual,
@@ -21,7 +21,7 @@ const SECRET_HASH_TEST_TIMEOUT_MS = 45_000;
 vi.unmock("crypto");
 
 // Mock the logger
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     warn: vi.fn(),
   },

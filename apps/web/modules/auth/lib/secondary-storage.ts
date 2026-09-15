@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "redis";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { env } from "@/lib/env";
 
 /**
@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
  *
  * Stores sessions (alongside the DB — see `session.storeSessionInDatabase` in auth.ts),
  * verification records, and rate-limit counters. A dedicated connection keeps Better Auth's
- * storage independent of the @formbricks/cache CacheService (which wraps its own client with
+ * storage independent of the @forma/cache CacheService (which wraps its own client with
  * serialization/namespacing we don't want for raw BA values).
  *
  * Connects lazily on first use; a failed connect is not memoized so the next call can retry.

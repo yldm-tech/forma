@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 
 export interface SurveyContextType {
   survey: TSurvey;

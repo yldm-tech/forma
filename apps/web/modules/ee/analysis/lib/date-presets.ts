@@ -1,5 +1,5 @@
 import { formatDate } from "date-fns";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { isSubDayDateRangePreset, resolveDateRangePreset } from "@/lib/date-ranges";
 
 // Cube's native "last N days" / "this month" / etc. strings exclude today; we expand them to the

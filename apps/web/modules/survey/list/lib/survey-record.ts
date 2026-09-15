@@ -1,5 +1,5 @@
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 import type { TSurvey } from "@/modules/survey/list/types/surveys";
 
 export const surveySelect = {

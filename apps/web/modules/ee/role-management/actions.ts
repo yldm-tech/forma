@@ -1,18 +1,18 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZId, ZUuid } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { ZId, ZUuid } from "@forma/types/common";
 import {
   AuthenticationError,
   OperationNotAllowedError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
-import { ZMembershipUpdateInput } from "@formbricks/types/memberships";
+} from "@forma/types/errors";
+import { ZMembershipUpdateInput } from "@forma/types/memberships";
 import { assertCan, can } from "@/lib/authorization";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getOrganization } from "@/lib/organization/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
@@ -61,7 +61,7 @@ export const updateInviteAction = authenticatedActionClient.inputSchema(ZUpdateI
     });
     await applyRateLimit(rateLimitConfigs.actions.stateMutation, organizationId);
 
-    if (!IS_FORMBRICKS_CLOUD && parsedInput.data.role === "billing") {
+    if (!IS_FORMA_CLOUD && parsedInput.data.role === "billing") {
       throw new ValidationError("Billing role is not allowed");
     }
 
@@ -118,7 +118,7 @@ export const updateMembershipAction = authenticatedActionClient.inputSchema(ZUpd
     });
     await applyRateLimit(rateLimitConfigs.actions.stateMutation, parsedInput.organizationId);
 
-    if (!IS_FORMBRICKS_CLOUD && parsedInput.data.role === "billing") {
+    if (!IS_FORMA_CLOUD && parsedInput.data.role === "billing") {
       throw new ValidationError("Billing role is not allowed");
     }
 

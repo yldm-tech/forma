@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, type PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, type PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   createFeedbackSourceWithMappings,
   deleteFeedbackSource,
@@ -13,7 +13,7 @@ import {
   updateFeedbackSourceWithMappings,
 } from "./service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     feedbackSource: {
       findMany: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("@formbricks/database", () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
-    feedbackSourceFormbricksMapping: {
+    feedbackSourceFormaMapping: {
       create: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -39,7 +39,7 @@ vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
@@ -54,7 +54,7 @@ const mockFeedbackSource = {
   createdAt: NOW,
   updatedAt: NOW,
   name: "Test FeedbackSource",
-  type: "formbricks_survey" as const,
+  type: "forma_survey" as const,
   status: "active" as const,
   importMode: "completedOnly" as const,
   workspaceId: ENV_ID,
@@ -66,7 +66,7 @@ const mockFeedbackSource = {
 const mockFeedbackSourceWithMappingsFromDb = {
   ...mockFeedbackSource,
   creator: null,
-  formbricksMappings: [
+  formaMappings: [
     {
       id: "mapping-1",
       createdAt: NOW,
@@ -84,7 +84,7 @@ const mockFeedbackSourceWithMappingsFromDb = {
 const mockFeedbackSourceWithMappings = {
   ...mockFeedbackSource,
   creatorName: null,
-  formbricksMappings: mockFeedbackSourceWithMappingsFromDb.formbricksMappings,
+  formaMappings: mockFeedbackSourceWithMappingsFromDb.formaMappings,
   fieldMappings: [],
 };
 
@@ -235,8 +235,8 @@ describe("getFeedbackSourcesToReconcile", () => {
     expect(prisma.feedbackSource.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          type: "formbricks_survey",
-          formbricksMappings: { some: { surveyId: SURVEY_ID } },
+          type: "forma_survey",
+          formaMappings: { some: { surveyId: SURVEY_ID } },
         },
       })
     );
@@ -251,7 +251,7 @@ describe("getFeedbackSourcesBySurveyId", () => {
     vi.clearAllMocks();
   });
 
-  test("returns active formbricks feedbackSources linked to the survey", async () => {
+  test("returns active forma feedbackSources linked to the survey", async () => {
     vi.mocked(prisma.feedbackSource.findMany).mockResolvedValue([
       mockFeedbackSourceWithMappingsFromDb,
     ] as never);
@@ -261,9 +261,9 @@ describe("getFeedbackSourcesBySurveyId", () => {
     expect(prisma.feedbackSource.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          type: "formbricks_survey",
+          type: "forma_survey",
           status: "active",
-          formbricksMappings: { some: { surveyId: SURVEY_ID } },
+          formaMappings: { some: { surveyId: SURVEY_ID } },
         },
       })
     );
@@ -436,7 +436,7 @@ describe("createFeedbackSourceWithMappings", () => {
         create: vi.fn(),
         findUniqueOrThrow: vi.fn(),
       },
-      feedbackSourceFormbricksMapping: {
+      feedbackSourceFormaMapping: {
         create: vi.fn(),
       },
       feedbackSourceFieldMapping: {
@@ -458,7 +458,7 @@ describe("createFeedbackSourceWithMappings", () => {
 
     const result = await createFeedbackSourceWithMappings(ENV_ID, {
       name: "New",
-      type: "formbricks_survey",
+      type: "forma_survey",
       feedbackDirectoryId: FRD_ID,
     });
 
@@ -466,13 +466,13 @@ describe("createFeedbackSourceWithMappings", () => {
       expect.objectContaining({
         data: {
           name: "New",
-          type: "formbricks_survey",
+          type: "forma_survey",
           workspaceId: ENV_ID,
           feedbackDirectoryId: FRD_ID,
         },
       })
     );
-    expect(tx.feedbackSourceFormbricksMapping.create).not.toHaveBeenCalled();
+    expect(tx.feedbackSourceFormaMapping.create).not.toHaveBeenCalled();
     expect(tx.feedbackSourceFieldMapping.create).not.toHaveBeenCalled();
     expect(result).toEqual(mockFeedbackSourceWithMappings);
   });
@@ -486,7 +486,7 @@ describe("createFeedbackSourceWithMappings", () => {
 
     await createFeedbackSourceWithMappings(ENV_ID, {
       name: "New",
-      type: "formbricks_survey",
+      type: "forma_survey",
       feedbackDirectoryId: FRD_ID,
       importMode: "all",
     });
@@ -499,17 +499,17 @@ describe("createFeedbackSourceWithMappings", () => {
     );
   });
 
-  test("creates feedbackSource with formbricks mappings", async () => {
+  test("creates feedbackSource with forma mappings", async () => {
     const tx = setupTransaction();
     tx.feedbackSource.create.mockResolvedValue({ id: FEEDBACK_SOURCE_ID, workspaceId: ENV_ID });
-    tx.feedbackSourceFormbricksMapping.create.mockResolvedValue({});
+    tx.feedbackSourceFormaMapping.create.mockResolvedValue({});
     tx.feedbackSource.findUniqueOrThrow.mockResolvedValue(mockFeedbackSourceWithMappingsFromDb);
 
     await createFeedbackSourceWithMappings(
       ENV_ID,
-      { name: "FB", type: "formbricks_survey", feedbackDirectoryId: FRD_ID },
+      { name: "FB", type: "forma_survey", feedbackDirectoryId: FRD_ID },
       {
-        type: "formbricks_survey",
+        type: "forma_survey",
         elementScope: "all",
         mappings: [
           { surveyId: SURVEY_ID, elementId: "el-1", hubFieldType: "text" },
@@ -523,8 +523,8 @@ describe("createFeedbackSourceWithMappings", () => {
     expect(tx.feedbackSource.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ elementScope: "all" }) })
     );
-    expect(tx.feedbackSourceFormbricksMapping.create).toHaveBeenCalledTimes(2);
-    expect(tx.feedbackSourceFormbricksMapping.create).toHaveBeenCalledWith(
+    expect(tx.feedbackSourceFormaMapping.create).toHaveBeenCalledTimes(2);
+    expect(tx.feedbackSourceFormaMapping.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           feedbackSourceId: FEEDBACK_SOURCE_ID,
@@ -543,7 +543,7 @@ describe("createFeedbackSourceWithMappings", () => {
     tx.feedbackSourceFieldMapping.create.mockResolvedValue({});
     tx.feedbackSource.findUniqueOrThrow.mockResolvedValue({
       ...mockFeedbackSource,
-      formbricksMappings: [],
+      formaMappings: [],
       fieldMappings: [],
     });
 
@@ -583,13 +583,13 @@ describe("createFeedbackSourceWithMappings", () => {
     await expect(
       createFeedbackSourceWithMappings(ENV_ID, {
         name: "Dup",
-        type: "formbricks_survey",
+        type: "forma_survey",
         feedbackDirectoryId: FRD_ID,
       })
     ).rejects.toThrow(new InvalidInputError("FEEDBACK_SOURCE_NAME_DUPLICATE"));
   });
 
-  test("throws FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE on mapping unique violation", async () => {
+  test("throws FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE on mapping unique violation", async () => {
     vi.mocked(prisma.$transaction).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("Unique constraint", {
         code: "P2002",
@@ -605,10 +605,10 @@ describe("createFeedbackSourceWithMappings", () => {
     await expect(
       createFeedbackSourceWithMappings(ENV_ID, {
         name: "Dup mapping",
-        type: "formbricks_survey",
+        type: "forma_survey",
         feedbackDirectoryId: FRD_ID,
       })
-    ).rejects.toThrow(new InvalidInputError("FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE"));
+    ).rejects.toThrow(new InvalidInputError("FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE"));
   });
 
   test("throws FEEDBACK_SOURCE_FIELD_MAPPING_DUPLICATE on field mapping unique violation", async () => {
@@ -650,7 +650,7 @@ describe("createFeedbackSourceWithMappings", () => {
     await expect(
       createFeedbackSourceWithMappings(ENV_ID, {
         name: "Dup",
-        type: "formbricks_survey",
+        type: "forma_survey",
         feedbackDirectoryId: FRD_ID,
       })
     ).rejects.toThrow(new InvalidInputError("FEEDBACK_SOURCE_NAME_DUPLICATE"));
@@ -692,13 +692,13 @@ describe("createFeedbackSourceWithMappings", () => {
 
   test("throws DatabaseError on an unrelated foreign-key violation", async () => {
     vi.mocked(prisma.$transaction).mockRejectedValue(
-      makeForeignKeyError("FeedbackSourceFormbricksMapping_surveyId_workspaceId_fkey")
+      makeForeignKeyError("FeedbackSourceFormaMapping_surveyId_workspaceId_fkey")
     );
 
     await expect(
       createFeedbackSourceWithMappings(ENV_ID, {
         name: "Bad survey",
-        type: "formbricks_survey",
+        type: "forma_survey",
         feedbackDirectoryId: FRD_ID,
       })
     ).rejects.toThrow(DatabaseError);
@@ -755,7 +755,7 @@ describe("updateFeedbackSourceWithMappings", () => {
         updateMany: vi.fn(applyStatus),
         findUniqueOrThrow: vi.fn(),
       },
-      feedbackSourceFormbricksMapping: {
+      feedbackSourceFormaMapping: {
         create: vi.fn(),
         deleteMany: vi.fn(),
       },
@@ -784,15 +784,15 @@ describe("updateFeedbackSourceWithMappings", () => {
         data: expect.objectContaining({ name: "Updated" }),
       })
     );
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).not.toHaveBeenCalled();
+    expect(tx.feedbackSourceFormaMapping.deleteMany).not.toHaveBeenCalled();
     expect(tx.feedbackSourceFieldMapping.deleteMany).not.toHaveBeenCalled();
     expect(result).toEqual(mockFeedbackSourceWithMappings);
   });
 
-  test("replaces formbricks mappings when provided", async () => {
+  test("replaces forma mappings when provided", async () => {
     const tx = setupTransaction();
-    tx.feedbackSourceFormbricksMapping.deleteMany.mockResolvedValue({ count: 1 });
-    tx.feedbackSourceFormbricksMapping.create.mockResolvedValue({});
+    tx.feedbackSourceFormaMapping.deleteMany.mockResolvedValue({ count: 1 });
+    tx.feedbackSourceFormaMapping.create.mockResolvedValue({});
     tx.feedbackSource.findUniqueOrThrow.mockResolvedValue(mockFeedbackSourceWithMappingsFromDb);
 
     await updateFeedbackSourceWithMappings(
@@ -800,16 +800,16 @@ describe("updateFeedbackSourceWithMappings", () => {
       ENV_ID,
       { name: "Updated" },
       {
-        type: "formbricks_survey",
+        type: "forma_survey",
         elementScope: "all",
         mappings: [{ surveyId: SURVEY_ID, elementId: "el-new", hubFieldType: "nps" }],
       }
     );
 
-    expect(tx.feedbackSourceFormbricksMapping.deleteMany).toHaveBeenCalledWith({
+    expect(tx.feedbackSourceFormaMapping.deleteMany).toHaveBeenCalledWith({
       where: { feedbackSourceId: FEEDBACK_SOURCE_ID, workspaceId: ENV_ID },
     });
-    expect(tx.feedbackSourceFormbricksMapping.create).toHaveBeenCalledTimes(1);
+    expect(tx.feedbackSourceFormaMapping.create).toHaveBeenCalledTimes(1);
     // Re-derived on every save in the same transaction as the rows: this is also what gives sources
     // created before the column existed their real scope.
     expect(tx.feedbackSource.update).toHaveBeenCalledWith(
@@ -823,13 +823,13 @@ describe("updateFeedbackSourceWithMappings", () => {
   // dark forever, reachable only through the unrelated pause/resume toggle.
   const seedUpdateTransaction = () => {
     const tx = setupTransaction();
-    tx.feedbackSourceFormbricksMapping.deleteMany.mockResolvedValue({ count: 1 });
-    tx.feedbackSourceFormbricksMapping.create.mockResolvedValue({});
+    tx.feedbackSourceFormaMapping.deleteMany.mockResolvedValue({ count: 1 });
+    tx.feedbackSourceFormaMapping.create.mockResolvedValue({});
     tx.feedbackSource.findUniqueOrThrow.mockResolvedValue(mockFeedbackSourceWithMappingsFromDb);
     return tx;
   };
-  const formbricksMappings = {
-    type: "formbricks_survey" as const,
+  const formaMappings = {
+    type: "forma_survey" as const,
     elementScope: "all" as const,
     mappings: [{ surveyId: SURVEY_ID, elementId: "el-new", hubFieldType: "nps" as const }],
   };
@@ -837,12 +837,7 @@ describe("updateFeedbackSourceWithMappings", () => {
   test("returns an errored source to active when a re-map gives it rows again", async () => {
     const tx = seedUpdateTransaction();
 
-    await updateFeedbackSourceWithMappings(
-      FEEDBACK_SOURCE_ID,
-      ENV_ID,
-      { name: "Updated" },
-      formbricksMappings
-    );
+    await updateFeedbackSourceWithMappings(FEEDBACK_SOURCE_ID, ENV_ID, { name: "Updated" }, formaMappings);
 
     // updateMany, not update: `status` in the where of the main update would miss every healthy
     // source and throw P2025 on the normal save path.
@@ -860,7 +855,7 @@ describe("updateFeedbackSourceWithMappings", () => {
       FEEDBACK_SOURCE_ID,
       ENV_ID,
       { name: "Updated", status: "paused" },
-      formbricksMappings
+      formaMappings
     );
 
     expect(tx.feedbackSource.updateMany).not.toHaveBeenCalled();
@@ -876,13 +871,13 @@ describe("updateFeedbackSourceWithMappings", () => {
   });
 
   test("replaces field mappings when provided", async () => {
-    // Starts errored: a csv save must not clear a flag only the formbricks reconciler can set.
+    // Starts errored: a csv save must not clear a flag only the forma reconciler can set.
     const tx = setupTransaction("error");
     tx.feedbackSourceFieldMapping.deleteMany.mockResolvedValue({ count: 1 });
     tx.feedbackSourceFieldMapping.create.mockResolvedValue({});
     tx.feedbackSource.findUniqueOrThrow.mockResolvedValue({
       ...mockFeedbackSource,
-      formbricksMappings: [],
+      formaMappings: [],
       fieldMappings: [],
     });
 
@@ -902,7 +897,7 @@ describe("updateFeedbackSourceWithMappings", () => {
     expect(tx.feedbackSourceFieldMapping.create).toHaveBeenCalledTimes(1);
     // The outcome, not the persistence call: an errored source is still errored afterwards.
     //
-    // `status: "error"` is written by exactly one thing, the formbricks mapping reconciler, so saving
+    // `status: "error"` is written by exactly one thing, the forma mapping reconciler, so saving
     // FIELD mappings cannot be repairing an error it could have caused — and the update action accepts
     // fieldMappings regardless of source type. `persistedStatus` follows both `update` and `updateMany`,
     // so this still holds if the clear moves between them.
@@ -938,7 +933,7 @@ describe("updateFeedbackSourceWithMappings", () => {
     ).rejects.toThrow(new InvalidInputError("FEEDBACK_SOURCE_NAME_DUPLICATE"));
   });
 
-  test("throws FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE on formbricks mapping unique violation", async () => {
+  test("throws FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE on forma mapping unique violation", async () => {
     vi.mocked(prisma.$transaction).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("Unique constraint", {
         code: "P2002",
@@ -952,7 +947,7 @@ describe("updateFeedbackSourceWithMappings", () => {
     );
 
     await expect(updateFeedbackSourceWithMappings(FEEDBACK_SOURCE_ID, ENV_ID, { name: "x" })).rejects.toThrow(
-      new InvalidInputError("FEEDBACK_SOURCE_FORMBRICKS_MAPPING_DUPLICATE")
+      new InvalidInputError("FEEDBACK_SOURCE_FORMA_MAPPING_DUPLICATE")
     );
   });
 

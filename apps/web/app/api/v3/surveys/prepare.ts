@@ -1,4 +1,4 @@
-import type { TSurvey as TInternalSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey as TInternalSurvey } from "@forma/types/surveys/types";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 import { surveyToV3Distribution, surveyToV3Targeting } from "./distribution";
 import { getV3SurveyDefaultLanguage, getV3SurveyLanguages } from "./language";

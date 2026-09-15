@@ -3,8 +3,8 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TActionClass } from "@formbricks/types/action-classes";
-import { TUserLocale } from "@formbricks/types/user";
+import { TActionClass } from "@forma/types/action-classes";
+import { TUserLocale } from "@forma/types/user";
 import { timeSince } from "@/lib/time";
 import { SettingsTable, type TSettingsTableColumn } from "@/modules/ui/components/settings-table";
 import { ACTION_TYPE_ICON_LOOKUP } from "@/modules/workspaces/settings/(setup)/app-connection/utils";

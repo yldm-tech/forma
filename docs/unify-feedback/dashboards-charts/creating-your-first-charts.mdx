@@ -4,7 +4,7 @@ description: "Go from a survey template to a shareable NPS dashboard, and learn 
 icon: "rocket"
 ---
 
-Charts in Formbricks are not built on survey responses. They are built on **Feedback Records**, which is why a
+Charts in Forma are not built on survey responses. They are built on **Feedback Records**, which is why a
 brand-new workspace shows an empty Analysis page even when your surveys already have hundreds of responses.
 
 This guide walks the whole path once: from the NPS template to a dashboard your team can read at a glance.
@@ -30,7 +30,7 @@ That normalization is what makes records reportable:
 
 - **One shape across sources.** NPS from a survey, a CSV upload, or the API all become `nps` records, so a single
   chart can cover all of them.
-- **Measures that know what a score means.** Because the record is typed, Formbricks can offer `NPS: Score`,
+- **Measures that know what a score means.** Because the record is typed, Forma can offer `NPS: Score`,
   `CSAT: Score` or `NPS: Detractors` as ready-made measures instead of asking you to build the math yourself.
 - **Comparisons across surveys.** Two surveys pointed at the same dataset can sit on the same chart and the same
   time axis.
@@ -87,12 +87,12 @@ Three things have to exist, in this order. Skipping the first is the most common
     <Frame>
       <img
         src="/images/unify-feedback/dashboards-charts/add-feedback-source.webp"
-        alt="Add feedback source dialog offering Formbricks surveys, CSV import, API ingestion and MCP server"
+        alt="Add feedback source dialog offering Forma surveys, CSV import, API ingestion and MCP server"
       />
     </Frame>
 
-    Pick **Formbricks surveys**, then **Select questions**, choose your survey and tick the questions you want to
-    report on. Formbricks detects each question's type for you, so an NPS question becomes an `nps` record without
+    Pick **Forma surveys**, then **Select questions**, choose your survey and tick the questions you want to
+    report on. Forma detects each question's type for you, so an NPS question becomes an `nps` record without
     any mapping work.
 
     Leave **Import historical responses** on to backfill the responses you already collected. With it off, only

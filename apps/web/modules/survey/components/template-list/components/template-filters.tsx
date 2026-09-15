@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TTemplateFilter } from "@formbricks/types/templates";
+import { TTemplateFilter } from "@forma/types/templates";
 import { cn } from "@/lib/cn";
 import { getChannelMapping, getIndustryMapping, getRoleMapping } from "../lib/utils";
 

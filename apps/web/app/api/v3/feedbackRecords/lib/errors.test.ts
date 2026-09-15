@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { EMBEDDINGS_UNAVAILABLE_DETAIL, handleUnexpectedError, hubErrorToProblemResponse } from "./errors";
 
 vi.mock("server-only", () => ({}));

@@ -1,4 +1,4 @@
-import type { TResponseUpdate } from "@formbricks/types/responses";
+import type { TResponseUpdate } from "@forma/types/responses";
 
 /**
  * The `meta` the renderer contributes to a response: the browser-runtime context it can observe,

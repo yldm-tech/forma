@@ -11,7 +11,7 @@ test.describe("Invite, accept and remove organization member", async () => {
   });
 
   test("Invite organization member", async ({ page }) => {
-    const inviteEmail = `org-invite-${Date.now()}@formbricks.com`;
+    const inviteEmail = `org-invite-${Date.now()}@forma.ylam.ai`;
 
     await test.step("Invite User", async () => {
       const workspaceId = /\/workspaces\/([^/]+)\//.exec(page.url())?.[1];
@@ -34,7 +34,7 @@ test.describe("Invite, accept and remove organization member", async () => {
 
       await page.getByRole("button", { name: "Invite", exact: true }).click();
 
-      await expect(page.locator(".formbricks__toast__success")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator(".forma__toast__success")).toBeVisible({ timeout: 15000 });
     });
 
     await test.step("Copy invite Link", async () => {

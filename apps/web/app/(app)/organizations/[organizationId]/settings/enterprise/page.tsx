@@ -5,7 +5,7 @@ import { EnterpriseLicenseFeaturesTable } from "@/app/(app)/workspaces/[workspac
 import { EnterpriseLicenseStatus } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/enterprise/components/EnterpriseLicenseStatus";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { GRACE_PERIOD_MS, getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
@@ -24,11 +24,11 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   // block refuses everyone anyway, so all it chooses is whether a billing-role user gets a 302 to
   // their billing home or a 404. Expressing it centrally would need a "billing role only"
   // capability, and inventing one would encode a role name as a permission.
-  if (isBilling && IS_FORMBRICKS_CLOUD) {
-    redirect(getOrganizationBillingPath(params.organizationId, IS_FORMBRICKS_CLOUD));
+  if (isBilling && IS_FORMA_CLOUD) {
+    redirect(getOrganizationBillingPath(params.organizationId, IS_FORMA_CLOUD));
   }
 
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     return notFound();
   }
 
@@ -60,7 +60,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   const workspaceId = layoutData?.currentWorkspace?.id ?? "";
 
   const paidFeatures = [
-    t("workspace.settings.enterprise.hide_powered_by_formbricks"),
+    t("workspace.settings.enterprise.hide_powered_by_forma"),
     t("workspace.settings.enterprise.whitelabel_email_follow_ups"),
     t("workspace.settings.enterprise.teams_and_access_roles"),
     t("workspace.settings.enterprise.contacts_and_segments"),
@@ -124,7 +124,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
             </svg>
             <div className="mx-auto text-center lg:mx-0 lg:flex-auto lg:py-16 lg:text-left">
               <h2 className="text-2xl font-bold text-white sm:text-3xl">
-                {t("workspace.settings.enterprise.unlock_the_full_power_of_formbricks_free_for_30_days")}
+                {t("workspace.settings.enterprise.unlock_the_full_power_of_forma_free_for_30_days")}
               </h2>
               <p className="text-md mt-6 leading-8 text-slate-300">
                 {t("workspace.settings.enterprise.keep_full_control_over_your_data_privacy_and_security")}
@@ -182,7 +182,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
                   {t("workspace.settings.enterprise.enterprise_features")}
                 </h2>
                 <Link
-                  href="https://formbricks.com/docs/self-hosting/advanced/license"
+                  href="https://forma.ylam.ai/docs/self-hosting/advanced/license"
                   target="_blank"
                   rel="noopener noreferrer nofollow"
                   referrerPolicy="no-referrer"

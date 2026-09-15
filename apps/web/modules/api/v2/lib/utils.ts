@@ -1,7 +1,7 @@
 // @ts-nocheck // We can remove this when we update the prisma client and the typescript version
 // if we don't add this we get build errors with prisma due to type-nesting
 import { ZodCustomIssue, ZodIssue } from "zod";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { TApiAuditLog } from "@/app/lib/api/with-api-logging";
 import { AUDIT_LOG_ENABLED } from "@/lib/constants";
 import { responses } from "@/modules/api/v2/lib/response";

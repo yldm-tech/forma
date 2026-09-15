@@ -1,5 +1,5 @@
 import { use } from "react";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { AnalysisPageLayout } from "@/modules/ee/analysis/components/analysis-page-layout";
 import { getFeedbackDataAvailability } from "@/modules/ee/analysis/lib/feedback-data-availability";
@@ -47,14 +47,14 @@ export const DashboardsListPage = async ({ workspaceId }: Readonly<DashboardsLis
             feature="dashboards"
             buttons={[
               {
-                text: IS_FORMBRICKS_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: IS_FORMBRICKS_CLOUD
+                text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+                href: IS_FORMA_CLOUD
                   ? `/organizations/${organization.id}/settings/billing`
                   : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
               },
               {
                 text: t("common.learn_more"),
-                href: "https://formbricks.com/docs/unify-feedback/features/dashboards-and-charts",
+                href: "https://forma.ylam.ai/docs/unify-feedback/features/dashboards-and-charts",
               },
             ]}
           />

@@ -1,5 +1,5 @@
-import { normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { type TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { type TSurveyLanguage } from "@forma/types/surveys/types";
 
 /**
  * The canonical form of a language code, falling back to the code itself when it has no canonical

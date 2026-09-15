@@ -2,13 +2,13 @@ import {
   RESERVED_FIELD_CATALOG,
   type TLinkedEmbeddedField,
   getDeclaredEmbeddedFields,
-} from "@formbricks/types/embedded-data-resolver";
-import { type TI18nString } from "@formbricks/types/i18n";
-import { TResponseData, TResponseDataValue, TResponseVariables } from "@formbricks/types/responses";
-import { formatFieldNameToTitleCase } from "@formbricks/types/safe-identifier";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyRecallItem } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/embedded-data-resolver";
+import { type TI18nString } from "@forma/types/i18n";
+import { TResponseData, TResponseDataValue, TResponseVariables } from "@forma/types/responses";
+import { formatFieldNameToTitleCase } from "@forma/types/safe-identifier";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";

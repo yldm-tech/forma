@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import type { TFeedbackSourceFieldMapping } from "@formbricks/types/feedback-source";
+import type { TFeedbackSourceFieldMapping } from "@forma/types/feedback-source";
 import { EnrichmentStatus } from "@/modules/ee/unify-feedback/enrichment-status/components/enrichment-status";
 import { EnrichmentStatusQueryClientProvider } from "@/modules/ee/unify-feedback/enrichment-status/query-client-provider";
 import type { FeedbackRecordData } from "@/modules/hub/types";

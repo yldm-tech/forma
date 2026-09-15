@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { InvalidInputError } from "@formbricks/types/errors";
-import { TFeedbackSourceWithMappings } from "@formbricks/types/feedback-source";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { InvalidInputError } from "@forma/types/errors";
+import { TFeedbackSourceWithMappings } from "@forma/types/feedback-source";
+import { TSurvey } from "@forma/types/surveys/types";
 import { importHistoricalResponses } from "./import";
 
 vi.mock("../response/service", () => ({
@@ -19,7 +19,7 @@ vi.mock("./transform", () => ({
   transformResponseToFeedbackRecords: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@formbricks/logger", () => ({
 const { getResponses } = vi.mocked(await import("../response/service"));
 const { reconcileFeedbackRecords } = vi.mocked(await import("./reconcile"));
 const { transformResponseToFeedbackRecords } = vi.mocked(await import("./transform"));
-const { logger } = await import("@formbricks/logger");
+const { logger } = await import("@forma/logger");
 
 const ENV_ID = "clxxxxxxxxxxxxxxxx001";
 const FEEDBACK_SOURCE_ID = "clxxxxxxxxxxxxxxxx002";
@@ -42,7 +42,7 @@ const mockFeedbackSource: TFeedbackSourceWithMappings = {
   createdAt: NOW,
   updatedAt: NOW,
   name: "Test FeedbackSource",
-  type: "formbricks_survey",
+  type: "forma_survey",
   status: "active",
   importMode: "completedOnly",
   elementScope: "specific" as const,
@@ -51,7 +51,7 @@ const mockFeedbackSource: TFeedbackSourceWithMappings = {
   lastSyncAt: null,
   createdBy: null,
   creatorName: null,
-  formbricksMappings: [
+  formaMappings: [
     {
       id: "mapping-1",
       createdAt: NOW,
@@ -73,7 +73,7 @@ describe("importHistoricalResponses", () => {
     vi.clearAllMocks();
   });
 
-  test("throws InvalidInputError for non-formbricks feedbackSource", async () => {
+  test("throws InvalidInputError for non-forma feedbackSource", async () => {
     const csvFeedbackSource = { ...mockFeedbackSource, type: "csv" as const };
 
     await expect(importHistoricalResponses(csvFeedbackSource, mockSurvey)).rejects.toThrow(InvalidInputError);
@@ -194,10 +194,10 @@ describe("importHistoricalResponses", () => {
   test("counts only this survey's mappings towards skipped", async () => {
     const twoSurveySource: TFeedbackSourceWithMappings = {
       ...mockFeedbackSource,
-      formbricksMappings: [
-        mockFeedbackSource.formbricksMappings[0],
+      formaMappings: [
+        mockFeedbackSource.formaMappings[0],
         {
-          ...mockFeedbackSource.formbricksMappings[0],
+          ...mockFeedbackSource.formaMappings[0],
           id: "mapping-2",
           surveyId: "clxxxxxxxxxxxxxxxx009",
           elementId: "el-2",

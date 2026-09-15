@@ -6,7 +6,7 @@ import { z } from "zod";
  * `sourceId` is intentionally NOT `.min(1)`: the empty string is the canonical "no source" bucket
  * for feedback ingested without an attributed source (Hub canonicalizes "no source" to ""), so the
  * scope must accept and forward it. `runId`/`nodeId` are Hub UUIDs, while `workspaceId`/`directoryId`
- * are Formbricks cuid2 ids.
+ * are Forma cuid2 ids.
  */
 
 const workspaceId = z.cuid2();

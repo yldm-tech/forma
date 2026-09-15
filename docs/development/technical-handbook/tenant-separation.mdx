@@ -1,18 +1,18 @@
 ---
 title: "Tenant Separation"
-description: "How Formbricks handles tenant separation on Formbricks Cloud"
+description: "How Forma handles tenant separation on Forma Cloud"
 icon: "people-arrows"
 ---
 
-Formbricks Cloud is designed to support multiple tenants, each with their own set of surveys and data. This page describes the different ways to configure and use Formbricks for multi-tenancy.
+Forma Cloud is designed to support multiple tenants, each with their own set of surveys and data. This page describes the different ways to configure and use Forma for multi-tenancy.
 
 <Note>
-This documentation only applies to Formbricks Cloud instances. On-premise deployments handle tenant separation differently based on your specific setup and requirements.
+This documentation only applies to Forma Cloud instances. On-premise deployments handle tenant separation differently based on your specific setup and requirements.
 </Note>
 
-## Multi-Tenancy in Formbricks Cloud
+## Multi-Tenancy in Forma Cloud
 
-Formbricks Cloud is architected as a true multi-tenant system where each organization contains one or more isolated Workspaces while sharing the underlying infrastructure. This approach allows multiple organizations to use the platform independently without visibility into each other's data.
+Forma Cloud is architected as a true multi-tenant system where each organization contains one or more isolated Workspaces while sharing the underlying infrastructure. This approach allows multiple organizations to use the platform independently without visibility into each other's data.
 
 ### Organizational Structure
 
@@ -39,7 +39,7 @@ graph TD
     Workspace2 --> Segment2[Segments]
 ```
 
-The multi-tenant architecture in Formbricks Cloud is built around three key levels of isolation:
+The multi-tenant architecture in Forma Cloud is built around three key levels of isolation:
 
 ### 1. Organization-Level Isolation
 
@@ -79,7 +79,7 @@ Team access is scoped per Workspace:
 
 ## Data Security in the Multi-Tenant Model
 
-Formbricks ensures data security in its multi-tenant Workspace model through:
+Forma ensures data security in its multi-tenant Workspace model through:
 
 - **Database Layer Isolation**: 
   - Foreign key constraints enforce data isolation
@@ -100,5 +100,5 @@ Formbricks ensures data security in its multi-tenant Workspace model through:
   - Organization-level limits based on billing plan
 
 
-This multi-layered approach to tenant separation ensures that organizations can safely use Formbricks Cloud with complete data privacy and isolation from other tenants.
+This multi-layered approach to tenant separation ensures that organizations can safely use Forma Cloud with complete data privacy and isolation from other tenants.
 

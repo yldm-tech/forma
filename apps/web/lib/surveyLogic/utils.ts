@@ -12,18 +12,18 @@ import {
   listShadowingNames,
   mergeReservedValues,
   projectReservedValues,
-} from "@formbricks/types/embedded-data-resolver";
-import { TJsWorkspaceStateSurvey } from "@formbricks/types/js";
-import { TResponseData, TResponseVariables } from "@formbricks/types/responses";
+} from "@forma/types/embedded-data-resolver";
+import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TResponseData, TResponseVariables } from "@forma/types/responses";
 import {
   TSurveyBlockLogic,
   TSurveyBlockLogicAction,
   TSurveyBlockLogicActionObjective,
-} from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TConditionGroup, TSingleCondition } from "@formbricks/types/surveys/logic";
-import { evaluateConditionGroup } from "@formbricks/types/surveys/logic-evaluation";
-import { TActionCalculate, TSurveyLogicAction } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TConditionGroup, TSingleCondition } from "@forma/types/surveys/logic";
+import { evaluateConditionGroup } from "@forma/types/surveys/logic-evaluation";
+import { TActionCalculate, TSurveyLogicAction } from "@forma/types/surveys/types";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 

@@ -1,4 +1,4 @@
-import type { WorkflowAnalyticsOperation } from "@formbricks/workflows/server";
+import type { WorkflowAnalyticsOperation } from "@forma/workflows/server";
 
 /**
  * PostHog event names for the Workflows feature (ENG-2851). One module, imported by the server

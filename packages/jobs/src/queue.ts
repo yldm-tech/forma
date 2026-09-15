@@ -1,6 +1,6 @@
 import { type Job, type JobsOptions, Queue } from "bullmq";
 import type IORedis from "ioredis";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { closeRedisConnection, createProducerConnection, getRedisUrlFromEnv } from "@/src/connection";
 import {
   JOBS_DEFAULT_JOB_OPTIONS,
@@ -28,15 +28,15 @@ export interface JobsQueueHandle {
 }
 
 interface TGlobalJobsQueueState {
-  formbricksJobsQueue: Queue | undefined;
-  formbricksJobsProducerConnection: IORedis | undefined;
-  formbricksJobsQueueInitializing: Promise<JobsQueueHandle> | undefined;
+  formaJobsQueue: Queue | undefined;
+  formaJobsProducerConnection: IORedis | undefined;
+  formaJobsQueueInitializing: Promise<JobsQueueHandle> | undefined;
 }
 
 const globalForJobsQueue = globalThis as unknown as TGlobalJobsQueueState;
 
-let queueSingleton = globalForJobsQueue.formbricksJobsQueue;
-let connectionSingleton = globalForJobsQueue.formbricksJobsProducerConnection;
+let queueSingleton = globalForJobsQueue.formaJobsQueue;
+let connectionSingleton = globalForJobsQueue.formaJobsProducerConnection;
 
 const hasActiveConnection = (connection?: IORedis): connection is IORedis =>
   connection !== undefined && connection.status !== "end";
@@ -73,23 +73,23 @@ export const getJobsQueue = async (): Promise<JobsQueueHandle> => {
   }
 
   if (
-    globalForJobsQueue.formbricksJobsQueue &&
-    hasActiveConnection(globalForJobsQueue.formbricksJobsProducerConnection)
+    globalForJobsQueue.formaJobsQueue &&
+    hasActiveConnection(globalForJobsQueue.formaJobsProducerConnection)
   ) {
-    queueSingleton = globalForJobsQueue.formbricksJobsQueue;
-    connectionSingleton = globalForJobsQueue.formbricksJobsProducerConnection;
+    queueSingleton = globalForJobsQueue.formaJobsQueue;
+    connectionSingleton = globalForJobsQueue.formaJobsProducerConnection;
 
     return {
-      queue: globalForJobsQueue.formbricksJobsQueue,
-      connection: globalForJobsQueue.formbricksJobsProducerConnection,
+      queue: globalForJobsQueue.formaJobsQueue,
+      connection: globalForJobsQueue.formaJobsProducerConnection,
     };
   }
 
-  if (globalForJobsQueue.formbricksJobsQueueInitializing) {
-    return await globalForJobsQueue.formbricksJobsQueueInitializing;
+  if (globalForJobsQueue.formaJobsQueueInitializing) {
+    return await globalForJobsQueue.formaJobsQueueInitializing;
   }
 
-  globalForJobsQueue.formbricksJobsQueueInitializing = (async (): Promise<JobsQueueHandle> => {
+  globalForJobsQueue.formaJobsQueueInitializing = (async (): Promise<JobsQueueHandle> => {
     const connection = createProducerConnection({ redisUrl: getRedisUrlFromEnv() });
     const queue = createJobsQueue({ connection });
 
@@ -107,8 +107,8 @@ export const getJobsQueue = async (): Promise<JobsQueueHandle> => {
 
     queueSingleton = queue;
     connectionSingleton = connection;
-    globalForJobsQueue.formbricksJobsQueue = queue;
-    globalForJobsQueue.formbricksJobsProducerConnection = connection;
+    globalForJobsQueue.formaJobsQueue = queue;
+    globalForJobsQueue.formaJobsProducerConnection = connection;
 
     return {
       queue,
@@ -117,9 +117,9 @@ export const getJobsQueue = async (): Promise<JobsQueueHandle> => {
   })();
 
   try {
-    return await globalForJobsQueue.formbricksJobsQueueInitializing;
+    return await globalForJobsQueue.formaJobsQueueInitializing;
   } finally {
-    globalForJobsQueue.formbricksJobsQueueInitializing = undefined;
+    globalForJobsQueue.formaJobsQueueInitializing = undefined;
   }
 };
 
@@ -384,7 +384,7 @@ export const resetJobsQueueFactory = async (): Promise<void> => {
 
   queueSingleton = undefined;
   connectionSingleton = undefined;
-  globalForJobsQueue.formbricksJobsQueue = undefined;
-  globalForJobsQueue.formbricksJobsProducerConnection = undefined;
-  globalForJobsQueue.formbricksJobsQueueInitializing = undefined;
+  globalForJobsQueue.formaJobsQueue = undefined;
+  globalForJobsQueue.formaJobsProducerConnection = undefined;
+  globalForJobsQueue.formaJobsQueueInitializing = undefined;
 };

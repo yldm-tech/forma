@@ -1,15 +1,15 @@
 ---
 title: "Job Runner"
-description: "Configure and operate the BullMQ background-job worker in self-hosted Formbricks"
+description: "Configure and operate the BullMQ background-job worker in self-hosted Forma"
 icon: "gears"
 ---
 
-Formbricks uses a shared BullMQ Job Runner for asynchronous work such as response processing, survey
-scheduling, and [Workflows](/workflows/overview). Formbricks starts the worker inside the web
+Forma uses a shared BullMQ Job Runner for asynchronous work such as response processing, survey
+scheduling, and [Workflows](/workflows/overview). Forma starts the worker inside the web
 application by default, so a standard self-hosted deployment does not need a separate worker container.
 
 <Note>
-  Every Formbricks web process starts one worker with a concurrency of one by default. You can tune these
+  Every Forma web process starts one worker with a concurrency of one by default. You can tune these
   values with environment variables after you have measured your workload.
 </Note>
 
@@ -18,7 +18,7 @@ application by default, so a standard self-hosted deployment does not need a sep
 The web application creates jobs and consumes them from a shared Redis-backed queue:
 
 - Queue name: `background-jobs`
-- Redis key prefix: `{formbricks:jobs}`
+- Redis key prefix: `{forma:jobs}`
 - Worker startup: Next.js server instrumentation
 - Default workers per web process: `1`
 - Default concurrent jobs per worker: `1`
@@ -46,14 +46,14 @@ Current workloads on the shared queue include:
 | Usage telemetry   | `usage-telemetry.process`                        | Sends the instance's daily usage update.                       |
 | Workflows         | `workflow-run.process`, `workflow-run.reconcile` | Executes workflow runs and recovers stalled runs.              |
 
-These are current examples rather than a fixed list. Future Formbricks features can use the same Job Runner for
+These are current examples rather than a fixed list. Future Forma features can use the same Job Runner for
 additional background work.
 
 ## Configure the Job Runner
 
 <Steps>
   <Step title="Connect Redis">
-    Set `REDIS_URL` to a Redis instance reachable by every Formbricks web replica.
+    Set `REDIS_URL` to a Redis instance reachable by every Forma web replica.
 
     ```env
     REDIS_URL=redis://redis:6379
@@ -73,7 +73,7 @@ additional background work.
     BULLMQ_WORKER_CONCURRENCY=1
     ```
 
-    Restart every Formbricks web process after changing these values.
+    Restart every Forma web process after changing these values.
 
   </Step>
 
@@ -124,7 +124,7 @@ See [SMTP Configuration](/self-hosting/configuration/smtp) for the complete setu
 ### Retry and recovery behavior
 
 <Warning>
-  Workflow delivery supports retries and recovery; it is not an exactly-once guarantee. Formbricks uses
+  Workflow delivery supports retries and recovery; it is not an exactly-once guarantee. Forma uses
   deterministic job IDs and guarded workflow run and step transitions to make redispatch safe, but operators
   should still expect jobs to be retried after transient failures.
 </Warning>
@@ -138,7 +138,7 @@ worker handoff:
 - Each reconciliation sweep processes at most 250 queued and 250 running candidates. Larger backlogs drain
   over subsequent sweeps.
 
-When reconciliation changes runs, Formbricks writes `Workflow run reconciliation acted` with structured
+When reconciliation changes runs, Forma writes `Workflow run reconciliation acted` with structured
 counts for redispatched, aged-out, and recovered runs.
 
 ### Troubleshoot workflow jobs
@@ -152,9 +152,9 @@ If workflow runs stay queued after the Job Runner is healthy:
 
 ## Use a custom external worker
 
-The default in-process worker is the supported setup. Formbricks does not ship a standalone worker command or
+The default in-process worker is the supported setup. Forma does not ship a standalone worker command or
 container. The external-worker flags are only for custom deployments that provide their own consumer and
-register the complete Formbricks application job handlers.
+register the complete Forma application job handlers.
 
 In such a custom deployment, configure the web/API processes to keep enqueueing without starting local
 workers:
@@ -167,13 +167,13 @@ REDIS_URL=redis://redis:6379
 
 <Warning>
   `BULLMQ_EXTERNAL_WORKER_ENABLED=1` only keeps queueing enabled. It does not provide, start, or deploy a
-  worker. Only use this configuration after your custom consumer registers the complete Formbricks job
+  worker. Only use this configuration after your custom consumer registers the complete Forma job
   handlers and is already consuming the same queue. Otherwise, background jobs will remain queued.
 </Warning>
 
 ## Troubleshoot the Job Runner
 
-Formbricks writes structured logs to stdout and stderr. Search the `msg` field for these exact messages:
+Forma writes structured logs to stdout and stderr. Search the `msg` field for these exact messages:
 
 | Log message                                                                                        | What to check                                                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -181,7 +181,7 @@ Formbricks writes structured logs to stdout and stderr. Search the `msg` field f
 | `BullMQ Redis connection error`                                                                    | Verify `REDIS_URL`, DNS, network access, Redis credentials, and TLS settings.                                                                                                                                                                                                                  |
 | `BullMQ queue error`                                                                               | The producer queue emitted an error. Review the attached `err` field; usually the same causes as above.                                                                                                                                                                                        |
 | `Failed to start BullMQ runtime`                                                                   | Review the attached `err` field, then confirm Redis is reachable from the web process.                                                                                                                                                                                                         |
-| `BullMQ worker registration failed`                                                                | Worker startup failed. Formbricks schedules another attempt after 30 seconds.                                                                                                                                                                                                                  |
+| `BullMQ worker registration failed`                                                                | Worker startup failed. Forma schedules another attempt after 30 seconds.                                                                                                                                                                                                                  |
 | `BullMQ worker registration retry scheduled`                                                       | A startup retry is pending. Fix the underlying Redis or configuration error before it runs.                                                                                                                                                                                                    |
 | `BullMQ recurring job registration failed`                                                         | Recurring schedules could not be registered. Check Redis connectivity.                                                                                                                                                                                                                         |
 | `BullMQ recurring job registration retry scheduled`                                                | A recurring-schedule registration retry is pending for 30 seconds.                                                                                                                                                                                                                             |

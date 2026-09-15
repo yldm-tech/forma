@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { getActionClasses } from "@/lib/actionClass/service";
 import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
@@ -24,7 +24,7 @@ import { V3SurveyWritePermissionError } from "./write-permissions";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/database", () => {
+vi.mock("@forma/database", () => {
   const prisma = {
     language: {
       upsert: vi.fn(),
@@ -93,7 +93,7 @@ vi.mock("@/modules/survey/scheduling/lib/survey-scheduling", () => ({
   reconcileDueSurveySchedules: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     withContext: vi.fn(() => ({
       error: vi.fn(),

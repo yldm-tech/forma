@@ -209,7 +209,7 @@ export const checkMigrationDrift = async ({
 }: MigrationDriftCheckOptions): Promise<number> => {
   validateShadowDatabaseEnvironment(environment);
 
-  const temporaryMigrationsDir = await fs.mkdtemp(path.join(os.tmpdir(), "formbricks-prisma-migrations-"));
+  const temporaryMigrationsDir = await fs.mkdtemp(path.join(os.tmpdir(), "forma-prisma-migrations-"));
 
   try {
     await stagePrismaMigrationHistory(migrationsDir, temporaryMigrationsDir);

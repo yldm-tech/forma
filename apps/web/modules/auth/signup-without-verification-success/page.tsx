@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getEmailFromEmailToken } from "@/lib/jwt";
 import { getTranslate } from "@/lingodotdev/server";

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TLogo } from "@formbricks/types/styling";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TLogo } from "@forma/types/styling";
 import { ClientLogo } from "@/modules/ui/components/client-logo";
 
-const CARDLESS_PREVIEW_LOGO_SLOT_ID = "formbricks-cardless-preview-logo-slot";
+const CARDLESS_PREVIEW_LOGO_SLOT_ID = "forma-cardless-preview-logo-slot";
 
 interface CardlessPreviewLogoProps {
   workspaceLogo: Workspace["logo"] | null;

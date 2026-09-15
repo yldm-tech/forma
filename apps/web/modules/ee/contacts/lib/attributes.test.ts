@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import { prisma } from "@forma/database";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import { getContactAttributeKeys } from "@/modules/ee/contacts/lib/contact-attribute-keys";
 import {
   getContactAttributes,
@@ -27,7 +27,7 @@ vi.mock("@/modules/ee/contacts/lib/contact-attributes", async () => {
     hasUserIdAttribute: vi.fn(),
   };
 });
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     $transaction: vi.fn(),
     contactAttribute: { upsert: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
@@ -513,7 +513,7 @@ describe("updateAttributes", () => {
       vi.mocked(getContactAttributeKeys).mockResolvedValue(attributeKeys);
       vi.mocked(getContactAttributes).mockResolvedValue({ name: "Jane", email: "jane@example.com" });
       vi.mocked(hasEmailAttribute).mockResolvedValue(false);
-      // The driver-adapter deadlock shape seen in Sentry (FORMBRICKS-19P).
+      // The driver-adapter deadlock shape seen in Sentry (FORMA-19P).
       vi.mocked(prisma.$transaction)
         .mockRejectedValueOnce(new Error("deadlock detected"))
         .mockResolvedValueOnce(undefined);

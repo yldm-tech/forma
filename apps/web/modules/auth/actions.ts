@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { InvalidInputError } from "@formbricks/types/errors";
-import { ZUserEmail } from "@formbricks/types/user";
+import { InvalidInputError } from "@forma/types/errors";
+import { ZUserEmail } from "@forma/types/user";
 import { createEmailToken } from "@/lib/jwt";
 import { getUserByEmail } from "@/lib/user/service";
 import { actionClient } from "@/lib/utils/action-client";

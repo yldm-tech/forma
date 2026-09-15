@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { auth } from "@/modules/auth/lib/auth";
@@ -28,7 +28,7 @@ vi.mock("@/modules/ee/audit-logs/lib/handler", async (importOriginal) => {
 
 /**
  * Integration coverage for email verification + password reset (ENG-1054) against a real Postgres.
- * Exercises the Better Auth email callbacks (which reuse the Formbricks mailer — captured here): the
+ * Exercises the Better Auth email callbacks (which reuse the Forma mailer — captured here): the
  * single-use password-reset token (getAndDelete), the bcrypt re-hash + revokeSessionsOnPasswordReset on
  * reset, and the idempotent stateless-JWT verify-email.
  */

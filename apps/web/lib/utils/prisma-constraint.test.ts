@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Prisma, type PrismaClientKnownRequestError } from "@formbricks/database/prisma";
+import { Prisma, type PrismaClientKnownRequestError } from "@forma/database/prisma";
 import { getUniqueConstraintFields, isUniqueConstraintError } from "./prisma-constraint";
 
 const knownError = (code: string, meta?: Record<string, unknown>): PrismaClientKnownRequestError =>

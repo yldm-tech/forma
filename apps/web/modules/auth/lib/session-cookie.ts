@@ -3,13 +3,13 @@ import { constantTimeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
 
 /**
- * Better Auth session cookie names — `cookiePrefix: "formbricks"` + `useSecureCookies: true`
+ * Better Auth session cookie names — `cookiePrefix: "forma"` + `useSecureCookies: true`
  * (modules/auth/lib/auth.ts `advanced`) yield the browser-enforced `__Secure-` prefix on HTTPS; the
  * unprefixed form covers non-secure dev. (ENG-1054 cutover — replaces the NextAuth cookie names.)
  */
 export const BETTER_AUTH_SESSION_COOKIE_NAMES = [
-  "__Secure-formbricks.session_token",
-  "formbricks.session_token",
+  "__Secure-forma.session_token",
+  "forma.session_token",
 ] as const;
 
 type TCookieStore = {

@@ -24,7 +24,7 @@ content:
       invertedRange:
         summary: Feedback store — a range filter supplied backwards
         value:
-          type: https://hub.formbricks.com/problems/validation
+          type: https://hub.forma.ylam.ai/problems/validation
           title: Validation Failed
           status: 400
           code: validation

@@ -1,9 +1,9 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma, Response } from "@formbricks/database/prisma";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { prisma } from "@forma/database";
+import { Prisma, Response } from "@forma/database/prisma";
+import { TContactAttributes } from "@forma/types/contact-attribute";
+import { Result, err, ok } from "@forma/types/error-handlers";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { calculateTtcTotal, normalizeResponseLanguage } from "@/lib/response/utils";
 import { getContactByUserId } from "@/modules/api/v2/management/responses/lib/contact";
 import {
@@ -155,7 +155,7 @@ export const createResponse = async (
       data: prismaData,
     });
 
-    if (IS_FORMBRICKS_CLOUD) {
+    if (IS_FORMA_CLOUD) {
       const responsesCountResult = await getMonthlyOrganizationResponseCount(organizationIdResult.data);
       if (!responsesCountResult.ok) {
         return err(responsesCountResult.error as ApiErrorResponseV2);

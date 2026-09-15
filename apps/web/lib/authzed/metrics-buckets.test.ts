@@ -22,7 +22,7 @@ import { afterEach, describe, expect, test } from "vitest";
  * to ignore it.
  */
 
-const HISTOGRAM_NAME = "formbricks_authzed_projection_duration_seconds";
+const HISTOGRAM_NAME = "forma_authzed_projection_duration_seconds";
 
 const recordOneProjection = async () => {
   const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);

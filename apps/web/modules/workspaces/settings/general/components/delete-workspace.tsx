@@ -1,5 +1,5 @@
-import { AuthenticationError } from "@formbricks/types/errors";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { AuthenticationError } from "@forma/types/errors";
+import { TWorkspace } from "@forma/types/workspace";
 import { getUserWorkspaces } from "@/lib/workspace/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getSession } from "@/modules/auth/lib/session";

@@ -13,7 +13,7 @@ describe("server - posthog clients", () => {
     const loggerError = opts.loggerError ?? vi.fn();
 
     vi.doMock("server-only", () => ({}));
-    vi.doMock("@formbricks/logger", () => ({ logger: { error: loggerError } }));
+    vi.doMock("@forma/logger", () => ({ logger: { error: loggerError } }));
     vi.doMock("posthog-node", () => ({
       PostHog: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
         this.capture = vi.fn();

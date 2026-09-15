@@ -7,7 +7,7 @@
  * readable in the page source, so those credentials were exposed to every member who could open the
  * page, and to anything with access to that HTML (browser extensions, HAR captures, a shared screen).
  * A refresh token in particular grants access to the connected Google/Airtable account well outside
- * Formbricks, and long after the member's Formbricks access is revoked.
+ * Forma, and long after the member's Forma access is revoked.
  *
  * The client only needs the non-secret parts: `config.data` (the survey→destination mappings),
  * `config.email`, and a few display/presence fields inside `key` (`bot_id`, `workspace_name`,

@@ -44,7 +44,7 @@ vi.mock("@/lib/jwt", async (importOriginal) => {
   };
 });
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     user: {
       findUnique: mockUserFindUnique,
@@ -68,7 +68,7 @@ vi.mock("@/lib/authorization", () => ({
   can: mockCan,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

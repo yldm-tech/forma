@@ -6,7 +6,7 @@ import {
   InvalidPasswordResetTokenError,
   OperationNotAllowedError,
   PASSWORD_COMPROMISED_ERROR_CODE,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { auth } from "@/modules/auth/lib/auth";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";

@@ -1,5 +1,5 @@
 // https://github.com/airbnb/javascript/#naming--uppercase
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { DEFAULT_BRAND_COLOR } from "@/lib/brand-color";
 import { ensureReadable, getReadableTextColor, mixColor } from "@/lib/utils/colors";
 

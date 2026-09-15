@@ -1,6 +1,6 @@
 import "server-only";
 import { NextRequest } from "next/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { HUB_API_KEY, HUB_API_URL, IS_PRODUCTION } from "@/lib/constants";
 import { authorizeGatewayRequest } from "@/modules/gateway-auth/lib/request";
 import { feedbackRecordsGatewayAuthorizer } from "@/modules/hub/feedback-records-gateway";

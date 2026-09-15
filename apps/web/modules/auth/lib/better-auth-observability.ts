@@ -3,8 +3,8 @@ import { BetterAuthError } from "@better-auth/core/error";
 import * as Sentry from "@sentry/nextjs";
 import type { BetterAuthOptions } from "better-auth";
 import { isAPIError } from "better-auth/api";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { IS_PRODUCTION, SENTRY_DSN } from "@/lib/constants";
 import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
 import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
@@ -205,7 +205,7 @@ const getSafeWarningErrorContext = (cause: Error): { errorType: string; errorCod
  * - The state cookie's `maxAge` is 300s while the verification record lives 10 minutes, so a user who
  *   spends 5–10 minutes at the identity provider loses the cookie first and lands here. Benign, and
  *   probably common — **so this change likely leaves residual noise behind**; it closes the reported
- *   `verification not found` shape (FORMBRICKS-16G), not the whole class.
+ *   `verification not found` shape (FORMA-16G), not the whole class.
  * - It is also where a `BETTER_AUTH_SECRET` divergence across replicas surfaces, because the signed
  *   cookie cannot be verified with a different secret. That is a genuine outage and must keep paging.
  * - And it is the shape a forged or mixed-up callback takes.
@@ -315,7 +315,7 @@ const captureInternalAuthFault = (
 
   // ENG-2259: Better Auth's router logs a non-APIError as `(e.name, e)` and discards the endpoint
   // (`better-auth/dist/api/index.mjs:210`), so a bare capture arrives with no transaction, URL or
-  // route — which is why FORMBRICKS-183 sat at ~242 events untriageable. Tags don't affect grouping,
+  // route — which is why FORMA-183 sat at ~242 events untriageable. Tags don't affect grouping,
   // so the issue stays one issue with `auth.path` as a facet.
   Sentry.captureException(cause, {
     tags: {
@@ -331,7 +331,7 @@ const captureInternalAuthFault = (
 };
 
 /**
- * Route Better Auth's logger to @formbricks/logger and capture GENUINE internal faults to Sentry in
+ * Route Better Auth's logger to @forma/logger and capture GENUINE internal faults to Sentry in
  * production — replaces auth.ts's placeholder logger (and the route's Sentry.captureException on auth
  * failures).
  *
@@ -340,7 +340,7 @@ const captureInternalAuthFault = (
  *   1. OAuth callback rejections logged as a bare string code (`logger.error("account_not_linked")`,
  *      `"unable_to_create_user"`, `"unable_to_get_user_info"`, … via `redirectOnError`) — no Error
  *      object; these are client-facing redirects, e.g. our blocked-domain / SSO provisioning gate
- *      rejecting a sign-up. These were the top volume in Sentry (FORMBRICKS-16Q); the SSO gate now
+ *      rejecting a sign-up. These were the top volume in Sentry (FORMA-16Q); the SSO gate now
  *      rejects by throwing an APIError, which this branch skips by design (ENG-2537).
  *   2. Credential-path rejections thrown as a Better Auth `APIError` (`FAILED_TO_CREATE_USER`,
  *      `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`, invalid-input codes) — a 4xx-equivalent response, not a
@@ -366,7 +366,7 @@ export const betterAuthLogger: NonNullable<BetterAuthOptions["logger"]> = {
     const contextLogger = logger.withContext({
       source: "better-auth",
       // Self-hosters have no Sentry, so the label has to reach the application log too — otherwise
-      // their copy of this fault stays as untriageable as FORMBRICKS-183 was.
+      // their copy of this fault stays as untriageable as FORMA-183 was.
       ...(request && { authPath: request.path, httpMethod: request.method }),
       // The suppressed state rejections survive only in the log, so the code has to be queryable there
       // (ENG-2471). Recorded for every state error, not only the suppressed ones.

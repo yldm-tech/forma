@@ -5,7 +5,7 @@ import jackson from "@/modules/ee/auth/saml/lib/jackson";
 export const GET = async (req: Request) => {
   const jacksonInstance = await jackson();
   if (!jacksonInstance) {
-    return responses.forbiddenResponse("SAML SSO is not enabled in your Formbricks license");
+    return responses.forbiddenResponse("SAML SSO is not enabled in your Forma license");
   }
   const { oauthController } = jacksonInstance;
   const token = extractAuthToken(req);

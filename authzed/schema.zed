@@ -1,9 +1,9 @@
 use typechecking
 
 /**
- * Canonical Formbricks authorization schema.
+ * Canonical Forma authorization schema.
  *
- * This schema is a technical migration of the CURRENT Formbricks authorization
+ * This schema is a technical migration of the CURRENT Forma authorization
  * system to SpiceDB. It models exactly what the application enforces today and
  * deliberately contains no future capabilities: a principal must never gain or
  * lose access by moving a check from the application code to this schema.
@@ -54,7 +54,7 @@ definition organization {
     relation member: user
 
     /**
-     * Billing-only role (`Membership.role = billing`, Formbricks Cloud only).
+     * Billing-only role (`Membership.role = billing`, Forma Cloud only).
      * Sees billing surfaces exclusively; excluded from all product data.
      */
     relation billing: user
@@ -266,7 +266,7 @@ definition survey {
     permission manage: user | api_key = workspace->manage
 
     /**
-     * Delete through the Formbricks web application and V3 API. Both currently
+     * Delete through the Forma web application and V3 API. Both currently
      * use the workspace readWrite gate rather than the manage gate.
      */
     permission delete: user | api_key = workspace->write

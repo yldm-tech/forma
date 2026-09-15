@@ -1,13 +1,13 @@
 import { createId } from "@paralleldrive/cuid2";
 import { TFunction } from "i18next";
-import { TSurveyQuotaLogic } from "@formbricks/types/quota";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyQuotaLogic } from "@forma/types/quota";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   TConditionGroup,
   TSingleCondition,
   TSurveyLogicConditionsOperator,
-} from "@formbricks/types/surveys/logic";
-import { TSurvey } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/logic";
+import { TSurvey } from "@forma/types/surveys/types";
 import {
   addConditionBelow,
   createGroupFromResource,

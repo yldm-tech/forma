@@ -2,7 +2,7 @@
 /**
  * Publish guard: this package must be released with `pnpm publish`, never `npm publish`.
  *
- * @formbricks/survey-ui is the one workspace package that is actually published (see its
+ * @forma/survey-ui is the one workspace package that is actually published (see its
  * README). Its runtime `dependencies` are declared as `"catalog:"`, resolved from the
  * `catalog:` block in pnpm-workspace.yaml (ENG-1689). pnpm rewrites those to concrete
  * versions when it packs the tarball; npm does not — it would ship `"clsx": "catalog:"`
@@ -39,7 +39,7 @@ const unresolvable = Object.entries({ ...manifest.dependencies, ...manifest.peer
   .map(([name, spec]) => `    ${name}: "${spec}"`);
 
 console.error(`
-✗ Refusing to publish @formbricks/survey-ui with this client.
+✗ Refusing to publish @forma/survey-ui with this client.
 
   Detected: ${userAgent || "no npm_config_user_agent (unrecognised client)"}
   Required: pnpm
@@ -49,6 +49,6 @@ console.error(`
 
 ${unresolvable.length > 0 ? unresolvable.join("\n") : "    (none right now — but keep the guard: the deps are catalogued)"}
 
-  Run:  pnpm publish --filter @formbricks/survey-ui
+  Run:  pnpm publish --filter @forma/survey-ui
 `);
 process.exit(1);

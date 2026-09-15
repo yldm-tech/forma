@@ -18,7 +18,7 @@ vi.mock("@/modules/auth/lib/auth", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { info: vi.fn(), error: vi.fn() },
 }));
 

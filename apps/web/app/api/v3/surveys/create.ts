@@ -1,6 +1,6 @@
 import "server-only";
-import { ZSurveyCreateInput } from "@formbricks/types/surveys/types";
-import type { TSurvey, TSurveyCreateInput } from "@formbricks/types/surveys/types";
+import { ZSurveyCreateInput } from "@forma/types/surveys/types";
+import type { TSurvey, TSurveyCreateInput } from "@forma/types/surveys/types";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
 import type { TV3Authentication } from "@/app/api/v3/lib/types";
 import { getActionClasses } from "@/lib/actionClass/service";

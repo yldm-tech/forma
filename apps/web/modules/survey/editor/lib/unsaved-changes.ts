@@ -1,4 +1,4 @@
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurvey } from "@forma/types/surveys/types";
 import { isDeepEqual } from "@/lib/utils/object";
 
 /** Stands in for `updatedAt` on both sides of a comparison, so its real value never decides one. */

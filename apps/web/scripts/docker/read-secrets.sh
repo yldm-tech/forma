@@ -4,7 +4,7 @@ set -eu
 
 # Build-time fallbacks used only when Docker secrets are unavailable (for example
 # in forked PR validations where repository secrets are not exposed).
-DEFAULT_DATABASE_URL="postgresql://test:test@localhost:5432/formbricks"
+DEFAULT_DATABASE_URL="postgresql://test:test@localhost:5432/forma"
 DEFAULT_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef"
 DEFAULT_REDIS_URL="redis://localhost:6379"
 DEFAULT_HUB_API_URL="http://localhost:4000"

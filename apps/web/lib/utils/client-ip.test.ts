@@ -4,7 +4,7 @@ import * as nextHeaders from "next/headers";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   BETTER_AUTH_IP_ADDRESS_CONFIG,
-  FORMBRICKS_CLIENT_IP_HEADER,
+  FORMA_CLIENT_IP_HEADER,
   UNTRUSTED_CLIENT_IP,
   getClientIpFromHeaders,
   resolveClientIp,
@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
@@ -115,7 +115,7 @@ describe("getClientIpFromHeaders", () => {
   });
 
   test("returns the canonical identity from the private Proxy header", async () => {
-    mockHeaders({ [FORMBRICKS_CLIENT_IP_HEADER]: "2001:DB8:abcd:12::99" });
+    mockHeaders({ [FORMA_CLIENT_IP_HEADER]: "2001:DB8:abcd:12::99" });
 
     await expect(getClientIpFromHeaders()).resolves.toBe("2001:0db8:abcd:0012:0000:0000:0000:0000");
   });
@@ -133,7 +133,7 @@ describe("getClientIpFromHeaders", () => {
   test.each(["not-an-ip", "203.0.113.7:443", "203.0.113.7, 198.51.100.4"])(
     "rejects a non-canonical private header value: %s",
     async (clientIp) => {
-      mockHeaders({ [FORMBRICKS_CLIENT_IP_HEADER]: clientIp });
+      mockHeaders({ [FORMA_CLIENT_IP_HEADER]: clientIp });
       await expect(getClientIpFromHeaders()).resolves.toBe(UNTRUSTED_CLIENT_IP);
     }
   );
@@ -152,12 +152,12 @@ describe("getClientIpFromHeaders", () => {
 describe("Better Auth IP configuration", () => {
   test("resolves only the single-value private Proxy header with the shared IPv6 prefix", () => {
     const requestHeaders = buildHeaders({
-      [FORMBRICKS_CLIENT_IP_HEADER]: "2001:0db8:abcd:0012:0000:0000:0000:0000",
+      [FORMA_CLIENT_IP_HEADER]: "2001:0db8:abcd:0012:0000:0000:0000:0000",
       "x-forwarded-for": "198.51.100.4, 203.0.113.7",
     });
 
     expect(BETTER_AUTH_IP_ADDRESS_CONFIG).toEqual({
-      ipAddressHeaders: [FORMBRICKS_CLIENT_IP_HEADER],
+      ipAddressHeaders: [FORMA_CLIENT_IP_HEADER],
       ipv6Subnet: 64,
     });
     expect(getIP(requestHeaders, { advanced: { ipAddress: BETTER_AUTH_IP_ADDRESS_CONFIG } } as never)).toBe(
@@ -169,7 +169,7 @@ describe("Better Auth IP configuration", () => {
 describe("client IP diagnostics", () => {
   const loadFresh = async () => {
     vi.resetModules();
-    const { logger } = await import("@formbricks/logger");
+    const { logger } = await import("@forma/logger");
     const { resolveClientIp: freshResolveClientIp } = await import("./client-ip");
     return { logger, freshResolveClientIp };
   };

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import {
   ActionClass,
   ApiKey,
@@ -15,9 +15,9 @@ import {
   Team,
   Webhook,
   Workspace,
-} from "@formbricks/database/prisma";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TSurveyQuota } from "@formbricks/types/quota";
+} from "@forma/database/prisma";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
+import { TSurveyQuota } from "@forma/types/quota";
 import { validateInputs } from "@/lib/utils/validate";
 import { getQuota as getQuotaService } from "@/modules/ee/quotas/lib/quotas";
 import {
@@ -46,7 +46,7 @@ vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     actionClass: {
       findUnique: vi.fn(),

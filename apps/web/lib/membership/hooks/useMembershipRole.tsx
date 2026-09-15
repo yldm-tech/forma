@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { getMembershipByUserIdOrganizationIdAction } from "./actions";
 
 export const useMembershipRole = (workspaceId: string, userId: string) => {

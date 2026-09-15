@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, UnknownError } from "@formbricks/types/errors";
-import { TMembership } from "@formbricks/types/memberships";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, UnknownError } from "@forma/types/errors";
+import { TMembership } from "@forma/types/memberships";
 import { reconcileOrganizationMembership } from "../authzed/organization-membership";
 import { createMembership, getMembershipByUserIdOrganizationId } from "./service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     membership: {
       findUnique: vi.fn(),

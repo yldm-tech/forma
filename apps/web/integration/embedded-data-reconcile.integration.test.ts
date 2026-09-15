@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
-import { toDesiredEmbeddedFields } from "@formbricks/types/embedded-data-mapping";
+import { prisma } from "@forma/database";
+import { toDesiredEmbeddedFields } from "@forma/types/embedded-data-mapping";
 import { resetDb } from "@/integration/reset-db";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
 
@@ -10,7 +10,7 @@ import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
  * The reconcile is the only thing keeping the tables in step with what the editor saved, and every
  * rule it enforces is about database state: the unique constraint on `(surveyId, storageKey)`, the
  * cascade when a survey goes, and the ordering needed for a replaced field. The unit suite mocks
- * `@formbricks/database`, so none of that is visible there.
+ * `@forma/database`, so none of that is visible there.
  */
 
 const seedSurvey = async (): Promise<{ surveyId: string; workspaceId: string }> => {

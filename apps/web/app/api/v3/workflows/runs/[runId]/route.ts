@@ -3,9 +3,9 @@
  * Unknown / cross-workspace run ids return 403 (not 404) to avoid leaking existence.
  *
  * Thin adapter: the wrapper validates the path param with the contract schema, then delegates to
- * the framework-agnostic handler in `@formbricks/workflows/server`.
+ * the framework-agnostic handler in `@forma/workflows/server`.
  */
-import { ZWorkflowRunIdInput } from "@formbricks/workflows";
+import { ZWorkflowRunIdInput } from "@forma/workflows";
 import { withV3ApiWrapper } from "@/app/api/v3/lib/api-wrapper";
 import { buildWorkflowApiContext, workflowsHandlers } from "../../lib/context";
 

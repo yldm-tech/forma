@@ -1,9 +1,9 @@
 import "server-only";
-import { validateBlockResponses } from "@formbricks/surveys/validation";
-import { TResponseData } from "@formbricks/types/responses";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyQuestion } from "@formbricks/types/surveys/types";
-import { TValidationErrorMap } from "@formbricks/types/surveys/validation-rules";
+import { validateBlockResponses } from "@forma/surveys/validation";
+import { TResponseData } from "@forma/types/responses";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyQuestion } from "@forma/types/surveys/types";
+import { TValidationErrorMap } from "@forma/types/surveys/validation-rules";
 import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 import { ApiErrorDetails } from "@/modules/api/v2/types/api-error";

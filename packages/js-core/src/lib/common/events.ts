@@ -2,11 +2,11 @@
  * The SDK's outbound event bus (ENG-1846 / ENG-1814): lifecycle signals the host page can react to —
  * fire GA/GTM tags, link session replays, run frequency capping off what was actually shown, and
  * (most importantly) know when the SDK is ready, which is what makes a consent-delayed `setup()`
- * integrable without polling for `window.formbricks`.
+ * integrable without polling for `window.forma`.
  *
  * One name set, two surfaces:
  *
- * 1. **`formbricks.on(name, handler)`** — the subscription surface for host JavaScript. Handlers are
+ * 1. **`forma.on(name, handler)`** — the subscription surface for host JavaScript. Handlers are
  *    isolated (a throwing host handler is logged, never propagated into the SDK's critical paths)
  *    and can be registered before `setup()`.
  * 2. **A `window.dataLayer.push` — via the standard GTM idiom** (`window.dataLayer = window.dataLayer
@@ -17,7 +17,7 @@
  * The same underscored name is used on both surfaces — the constants hold the full literal so the
  * string a customer's GTM trigger (or `on()` call) matches is greppable here.
  *
- * The payload is nested under a `formbricks` key on the dataLayer (instead of spread flat) because
+ * The payload is nested under a `forma` key on the dataLayer (instead of spread flat) because
  * GTM's Data Layer Variables read a *merged* model: a flat `action` or `finished` would persist
  * across pushes and collide with the host's own keys — `action` in particular is one of the most
  * common keys in any ecommerce dataLayer. `on()` handlers receive the payload object directly.
@@ -29,38 +29,38 @@
  * What each event carries. The single source of truth for both surfaces, so the dataLayer push and
  * the `on()` handler types cannot drift apart.
  */
-export interface TFormbricksEventPayloads {
-  formbricks_setup_successful: { workspaceId: string };
-  formbricks_action_tracked: { action: string };
-  formbricks_survey_shown: { surveyId: string };
+export interface TFormaEventPayloads {
+  forma_setup_successful: { workspaceId: string };
+  forma_action_tracked: { action: string };
+  forma_survey_shown: { surveyId: string };
   /**
    * Fired on the first answer (`finished: false`, once per survey) and again when the finished
    * response has been sent (`finished: true`). `responseId` is the server-acknowledged id — real,
    * not client-minted — absent only offline/preview.
    */
-  formbricks_response_submitted: { surveyId: string; responseId?: string; finished: boolean };
-  /** Dismissed OR finished — the display is over either way; a `formbricks_response_submitted` with
+  forma_response_submitted: { surveyId: string; responseId?: string; finished: boolean };
+  /** Dismissed OR finished — the display is over either way; a `forma_response_submitted` with
    * `finished: true` for the same `surveyId` is what tells those apart. Correlate on the id, not on
    * arrival order: that event is ack-gated, so it can follow this one, or never arrive at all if the
    * response fails to save. Fires once per rendered survey. */
-  formbricks_survey_closed: { surveyId: string };
+  forma_survey_closed: { surveyId: string };
 }
 
-export type TFormbricksEventName = keyof TFormbricksEventPayloads;
+export type TFormaEventName = keyof TFormaEventPayloads;
 
-export const FORMBRICKS_EVENTS = {
-  setupSuccessful: "formbricks_setup_successful",
-  actionTracked: "formbricks_action_tracked",
-  surveyShown: "formbricks_survey_shown",
-  responseSubmitted: "formbricks_response_submitted",
-  surveyClosed: "formbricks_survey_closed",
-} as const satisfies Record<string, TFormbricksEventName>;
+export const FORMA_EVENTS = {
+  setupSuccessful: "forma_setup_successful",
+  actionTracked: "forma_action_tracked",
+  surveyShown: "forma_survey_shown",
+  responseSubmitted: "forma_response_submitted",
+  surveyClosed: "forma_survey_closed",
+} as const satisfies Record<string, TFormaEventName>;
 
 /**
  * Every key the event contract can carry, `null` where an event does not set it. The dataLayer push
  * always carries the FULL set because GTM's data model merges pushes recursively — a partial push
- * would let a previous event's `formbricks.responseId` or `formbricks.finished` bleed into a later
- * event's reads (survey A's `responseId` resolving under survey B's `formbricks_survey_shown`).
+ * would let a previous event's `forma.responseId` or `forma.finished` bleed into a later
+ * event's reads (survey A's `responseId` resolving under survey B's `forma_survey_shown`).
  * Pushing `null` overwrites the merged value; omitting the key would not. `on()` handlers have no
  * merge semantics, so they receive only the event's own keys.
  */
@@ -73,30 +73,30 @@ const EMPTY_DATALAYER_PAYLOAD: Record<string, null> = {
 };
 
 // Handlers are stored type-erased: a Set cannot hold differently-parameterised function types, and
-// the typed `onFormbricksEvent` signature is what guarantees a handler only ever receives the
+// the typed `onFormaEvent` signature is what guarantees a handler only ever receives the
 // payload of the event it subscribed to.
-const subscribers = new Map<TFormbricksEventName, Set<(payload: unknown) => void>>();
+const subscribers = new Map<TFormaEventName, Set<(payload: unknown) => void>>();
 
 /**
  * Subscribe to one event. Works before `setup()` (the registry is module state, no SDK boot
  * required) and survives `logout()`. Returns the matching unsubscribe function.
  */
-export const onFormbricksEvent = <E extends TFormbricksEventName>(
+export const onFormaEvent = <E extends TFormaEventName>(
   event: E,
-  handler: (payload: TFormbricksEventPayloads[E]) => void
+  handler: (payload: TFormaEventPayloads[E]) => void
 ): (() => void) => {
   const handlers = subscribers.get(event) ?? new Set<(payload: unknown) => void>();
   handlers.add(handler as (payload: unknown) => void);
   subscribers.set(event, handlers);
 
   return () => {
-    offFormbricksEvent(event, handler);
+    offFormaEvent(event, handler);
   };
 };
 
-export const offFormbricksEvent = <E extends TFormbricksEventName>(
+export const offFormaEvent = <E extends TFormaEventName>(
   event: E,
-  handler: (payload: TFormbricksEventPayloads[E]) => void
+  handler: (payload: TFormaEventPayloads[E]) => void
 ): void => {
   const handlers = subscribers.get(event);
   if (!handlers) return;
@@ -108,11 +108,11 @@ export const offFormbricksEvent = <E extends TFormbricksEventName>(
 };
 
 /** Test-only: drop every subscription so suites start from a clean registry. */
-export const resetFormbricksEventSubscribers = (): void => {
+export const resetFormaEventSubscribers = (): void => {
   subscribers.clear();
 };
 
-const notifySubscribers = (event: TFormbricksEventName, payload: unknown): void => {
+const notifySubscribers = (event: TFormaEventName, payload: unknown): void => {
   const handlers = subscribers.get(event);
   if (!handlers?.size) return;
 
@@ -124,14 +124,14 @@ const notifySubscribers = (event: TFormbricksEventName, payload: unknown): void 
     try {
       handler(payload);
     } catch (error) {
-      console.error(`Formbricks: a "${event}" event handler threw`, error);
+      console.error(`Forma: a "${event}" event handler threw`, error);
     }
   });
 };
 
-export const emitFormbricksEvent = <E extends TFormbricksEventName>(
+export const emitFormaEvent = <E extends TFormaEventName>(
   event: E,
-  payload: TFormbricksEventPayloads[E]
+  payload: TFormaEventPayloads[E]
 ): void => {
   // js-core is imported by SSR bundles; emitting is meaningless off the browser.
   if (typeof window === "undefined") return;
@@ -153,9 +153,9 @@ export const emitFormbricksEvent = <E extends TFormbricksEventName>(
     const definedPayload = Object.fromEntries(
       Object.entries<unknown>(payload).filter(([, value]) => value !== undefined)
     );
-    window.dataLayer.push({ event, formbricks: { ...EMPTY_DATALAYER_PAYLOAD, ...definedPayload } });
+    window.dataLayer.push({ event, forma: { ...EMPTY_DATALAYER_PAYLOAD, ...definedPayload } });
   } catch (error) {
-    console.error(`Formbricks: failed to push "${event}" to the dataLayer`, error);
+    console.error(`Forma: failed to push "${event}" to the dataLayer`, error);
   }
 
   notifySubscribers(event, payload);

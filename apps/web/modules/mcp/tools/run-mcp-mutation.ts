@@ -1,5 +1,5 @@
 import type { CallToolResult } from "@modelcontextprotocol/server";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { buildV3AuditLog, queueV3AuditLog } from "@/app/api/v3/lib/audit";
 import { getMcpResourceUrl } from "@/modules/auth/lib/oauth-urls";
 import { type TMcpToolContext, getMcpAuthentication, getMcpRequestId, getMcpToolAuthInfo } from "../auth";
@@ -39,7 +39,7 @@ export async function runMcpMutation(
   // logAuditEvent catches the failure and downgrades it to a logger.error — so a bare path silently
   // drops the whole event, which is why no MCP mutation was ever audited (ENG-2173). This is the same
   // absolute URL the OAuth protected-resource metadata advertises, so the two agree by construction
-  // and it stays correct on a sub-path deployment (WEBAPP_URL=https://host/formbricks).
+  // and it stays correct on a sub-path deployment (WEBAPP_URL=https://host/forma).
   const auditLog = buildV3AuditLog(authentication, action, resource, getMcpResourceUrl());
 
   try {

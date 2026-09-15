@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
 import { assertCan } from "@/lib/authorization";
 import { getOrganization } from "@/lib/organization/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";

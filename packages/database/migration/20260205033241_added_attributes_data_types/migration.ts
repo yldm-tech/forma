@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 import type { KeyTypeAnalysis, MigrationStats } from "./types";
 

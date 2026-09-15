@@ -1,8 +1,8 @@
 import { CalendarClockIcon, CheckCircle2Icon, HelpCircleIcon, PauseCircleIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TSurveyClosedMessage } from "@formbricks/types/surveys/types";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TSurveyClosedMessage } from "@forma/types/surveys/types";
 import { getTranslate } from "@/lingodotdev/server";
 import { Button } from "@/modules/ui/components/button";
 import footerLogo from "../lib/footerlogo.svg";
@@ -65,7 +65,7 @@ export const SurveyInactive = async ({
         <p className="text-lg leading-10 text-slate-500">{description}</p>
         {showCTA && (
           <Button className="mt-2" asChild>
-            <Link href="https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=create_your_own_cta">
+            <Link href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=create_your_own_cta">
               {t("s.create_your_own")}
             </Link>
           </Button>
@@ -73,7 +73,7 @@ export const SurveyInactive = async ({
       </div>
       {(!workspace || workspace.linkSurveyBranding) && (
         <div>
-          <Link href="https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=powered_by_badge">
+          <Link href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge">
             <Image src={footerLogo} alt="Brand logo" className="mx-auto w-40" />
           </Link>
         </div>

@@ -6,7 +6,7 @@ type TranslationValue = string;
 
 const translations: Record<TranslationKey, TranslationValue> = {
   "common.continue": "Continue",
-  "common.powered_by_formbricks": "Powered by Formbricks",
+  "common.powered_by_forma": "Powered by Forma",
   "emails.accept": "Accept",
   "emails.click_or_drag_to_upload_files": "Click or drag to upload files.",
   "emails.delete_account_email_confirm_deletion": "Confirm account deletion",
@@ -14,30 +14,30 @@ const translations: Record<TranslationKey, TranslationValue> = {
     "If you did not request this, please ignore this email and your account will remain active.",
   "emails.delete_account_email_heading": "Confirm your account deletion",
   "emails.delete_account_email_link_valid_for_minutes": "The link is valid for {minutes} minutes.",
-  "emails.delete_account_email_subject": "Confirm your Formbricks account deletion",
+  "emails.delete_account_email_subject": "Confirm your Forma account deletion",
   "emails.delete_account_email_text":
-    "You have requested to delete your Formbricks account. To confirm, please click the button below:",
+    "You have requested to delete your Forma account. To confirm, please click the button below:",
   "emails.delete_account_email_warning":
     "This will permanently delete your account and all associated data. This action cannot be undone.",
   "emails.email_customization_preview_email_heading": "Hey {userName}",
-  "emails.email_customization_preview_email_subject": "Formbricks Email Customization Preview",
+  "emails.email_customization_preview_email_subject": "Forma Email Customization Preview",
   "emails.email_customization_preview_email_text":
     "This is an email preview to show you which logo will be rendered in the emails.",
   "emails.email_footer_text_1": "Have a great day!",
-  "emails.email_footer_text_2": "The Formbricks Team",
-  "emails.email_template_text_1": "This email was sent via Formbricks.",
+  "emails.email_footer_text_2": "The Forma Team",
+  "emails.email_template_text_1": "This email was sent via Forma.",
   "emails.embed_survey_preview_email_didnt_request": "Didn't request this?",
   "emails.embed_survey_preview_email_workspace_id": "Workspace ID",
   "emails.embed_survey_preview_email_fight_spam":
-    "Help us fight spam and forward this mail to hola@formbricks.com",
+    "Help us fight spam and forward this mail to hola@forma.ylam.ai",
   "emails.embed_survey_preview_email_heading": "Preview Email Embed",
-  "emails.embed_survey_preview_email_subject": "Formbricks Email Survey Preview",
+  "emails.embed_survey_preview_email_subject": "Forma Email Survey Preview",
   "emails.embed_survey_preview_email_text": "This is how the code snippet looks embedded into an email:",
   "emails.forgot_password_email_change_password": "Change password",
   "emails.forgot_password_email_did_not_request": "If you didn't request this, please ignore this email.",
   "emails.forgot_password_email_heading": "Change password",
   "emails.forgot_password_email_link_valid_for_24_hours": "The link is valid for {minutes} minutes.",
-  "emails.forgot_password_email_subject": "Reset your Formbricks password",
+  "emails.forgot_password_email_subject": "Reset your Forma password",
   "emails.forgot_password_email_text":
     "You have requested a link to change your password. You can do this by clicking the link below:",
   "emails.hidden_field": "Hidden field",
@@ -49,13 +49,13 @@ const translations: Record<TranslationKey, TranslationValue> = {
   "emails.invite_email_button_label": "Join organization",
   "emails.invite_email_heading": "Hey {inviteeName}",
   "emails.invite_email_text":
-    "Your colleague {inviterName} invited you to join them at Formbricks. To accept the invitation, please click the link below:",
-  "emails.invite_member_email_subject": "You're invited to collaborate on Formbricks!",
+    "Your colleague {inviterName} invited you to join them at Forma. To accept the invitation, please click the link below:",
+  "emails.invite_member_email_subject": "You're invited to collaborate on Forma!",
   "emails.new_email_verification_text": "To verify your new email address, please click the button below:",
   "emails.number_variable": "Number variable",
   "emails.password_changed_email_heading": "Password changed",
   "emails.password_changed_email_text": "Your password has been changed successfully.",
-  "emails.password_reset_notify_email_subject": "Your Formbricks password has been changed",
+  "emails.password_reset_notify_email_subject": "Your Forma password has been changed",
   "emails.privacy_policy": "Privacy Policy",
   "emails.reject": "Reject",
   "emails.render_email_response_value_file_upload_response_link_not_included":
@@ -67,8 +67,7 @@ const translations: Record<TranslationKey, TranslationValue> = {
   "emails.sso_recovery_factors_removed_email_review_security": "Review security settings",
   "emails.sso_recovery_factors_removed_email_sign_in_hint":
     "You can keep signing in with single sign-on. To use a password or two-factor authentication again, set them up in your security settings.",
-  "emails.sso_recovery_factors_removed_email_subject":
-    "Sign-in factors were removed from your Formbricks account",
+  "emails.sso_recovery_factors_removed_email_subject": "Sign-in factors were removed from your Forma account",
   "emails.sso_recovery_factors_removed_email_text":
     "You just signed in with single sign-on for the first time. Because your email address had never been verified, we removed the sign-in factors that were set on the account before:",
   "emails.sso_recovery_factors_removed_email_two_factor": "Two-factor authentication was removed.",
@@ -94,10 +93,10 @@ const translations: Record<TranslationKey, TranslationValue> = {
     "If it has expired please request a new token here:",
   "emails.verification_email_link_valid_for_24_hours": "The link is valid for 24 hours.",
   "emails.verification_email_request_new_verification": "Request new verification",
-  "emails.verification_email_subject": "Please verify your email to use Formbricks",
+  "emails.verification_email_subject": "Please verify your email to use Forma",
   "emails.verification_email_survey_name": "Survey name",
   "emails.verification_email_take_survey": "Take survey",
-  "emails.verification_email_text": "To start using Formbricks please verify your email below:",
+  "emails.verification_email_text": "To start using Forma please verify your email below:",
   "emails.verification_email_thanks": "Thanks for validating your email!",
   "emails.verification_email_to_fill_survey": "To fill out the survey please click on the button below:",
   "emails.verification_email_verify_email": "Verify email",

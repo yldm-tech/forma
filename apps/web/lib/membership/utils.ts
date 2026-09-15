@@ -1,4 +1,4 @@
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 
 export const getAccessFlags = (role?: TOrganizationRole) => {
   const isOwner = role === "owner";

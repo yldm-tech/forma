@@ -2,8 +2,8 @@
 
 import { EyeOffIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { type TLinkedEmbeddedField } from "@formbricks/types/embedded-data-resolver";
-import { TResponseData } from "@formbricks/types/responses";
+import { type TLinkedEmbeddedField } from "@forma/types/embedded-data-resolver";
+import { TResponseData } from "@forma/types/responses";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";
 
 interface HiddenFieldsProps {

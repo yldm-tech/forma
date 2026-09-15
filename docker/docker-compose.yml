@@ -1,19 +1,19 @@
-x-formbricks-database: &formbricks-database
-  DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/formbricks?schema=public"
+x-forma-database: &forma-database
+  DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?schema=public"
 
 x-environment: &environment
   environment: &app-environment
     ######################################################## REQUIRED ########################################################
 
-    # The url of your Formbricks instance used in the admin panel
+    # The url of your Forma instance used in the admin panel
     # Set this to your public-facing URL, e.g., example http://localhost:3000 or https://example.com
     WEBAPP_URL:
 
     # Required for next-auth. Should be the same as WEBAPP_URL
     NEXTAUTH_URL:
 
-    # PostgreSQL DB for Formbricks to connect to
-    <<: *formbricks-database
+    # PostgreSQL DB for Forma to connect to
+    <<: *forma-database
 
     # NextJS Auth
     # @see: https://next-auth.js.org/configuration/options#nextauth_secret
@@ -32,7 +32,7 @@ x-environment: &environment
     # To use external Redis/Valkey: remove the redis service below and update this URL
     REDIS_URL: redis://redis:6379
 
-    # Formbricks Hub (port 8080): API key required. Use e.g. openssl rand -hex 32
+    # Forma Hub (port 8080): API key required. Use e.g. openssl rand -hex 32
     HUB_API_KEY: ${HUB_API_KEY:-}
 
     # Taxonomy service credentials are consumed by Hub/taxonomy only. Keep these
@@ -51,24 +51,24 @@ x-environment: &environment
     TAXONOMY_MAX_RECORDS: ""
     AWS_BEARER_TOKEN_BEDROCK: ""
 
-    # Base URL the Formbricks app uses to reach Hub. Defaults to the internal Hub service.
+    # Base URL the Forma app uses to reach Hub. Defaults to the internal Hub service.
     HUB_API_URL: ${HUB_API_URL:-http://hub:8080}
 
-    # Hub database URL (optional). Default: same Postgres as Formbricks. Set only if Hub uses a separate DB.
+    # Hub database URL (optional). Default: same Postgres as Forma. Set only if Hub uses a separate DB.
     # HUB_DATABASE_URL:
 
-    # Cube semantic-layer API used by Formbricks analytics. Required.
+    # Cube semantic-layer API used by Forma analytics. Required.
     CUBEJS_API_URL: ${CUBEJS_API_URL:-http://cube:4000}
     CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-}
-    CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-formbricks-web}
-    CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-formbricks-cube}
+    CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-forma-web}
+    CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-forma-cube}
 
     # Set the minimum log level(debug, info, warn, error, fatal)
     # LOG_LEVEL: info
 
     ############################################# OPTIONAL (ENTERPRISE EDITION) #############################################
 
-    # Enterprise License Key (More info at: https://formbricks.com/docs/self-hosting/license)
+    # Enterprise License Key (More info at: https://forma.ylam.ai/docs/self-hosting/license)
     # Required to access Enterprise-only features
     # ENTERPRISE_LICENSE_KEY:
 
@@ -168,7 +168,7 @@ x-environment: &environment
     # OIDC_SIGNING_ALGORITHM:
 
     # Set the below to SAML Provider if you want to enable SAML
-    # SAML_DATABASE_URL: "postgresql://<user>:<password>@postgres:5432/formbricks-saml?sslmode=disable"
+    # SAML_DATABASE_URL: "postgresql://<user>:<password>@postgres:5432/forma-saml?sslmode=disable"
 
     ########################################## OPTIONAL (THIRD PARTY INTEGRATIONS) ###########################################
 
@@ -204,7 +204,7 @@ x-environment: &environment
 
     ########################################## OPTIONAL (SERVER CONFIGURATION) ###########################################
 
-    # Set the below to 1 to disable Rate Limiting across Formbricks
+    # Set the below to 1 to disable Rate Limiting across Forma
     # RATE_LIMITING_DISABLED: 1
 
     # Set the below to 1 to disable telemetry reporting (ignored when EE license is active)
@@ -213,7 +213,7 @@ x-environment: &environment
     # Set the below to send OpenTelemetry data via OTLP to your collector
     # OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
     # OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-    # OTEL_SERVICE_NAME: formbricks
+    # OTEL_SERVICE_NAME: forma
     # OTEL_RESOURCE_ATTRIBUTES: deployment.environment=development
     # Set the below to 1 to also export Pino logs via OTLP (needs OTEL_EXPORTER_OTLP_ENDPOINT)
     # OTEL_LOGS_ENABLED: 1
@@ -257,7 +257,7 @@ services:
       - postgres:/var/lib/postgresql
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: formbricks
+      POSTGRES_DB: forma
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
       interval: 5s
@@ -332,9 +332,9 @@ services:
       retries: 30
       start_period: 10s
 
-  # Run Formbricks Prisma migrations before Hub writes tables to the shared database.
-  formbricks-migrate:
-    image: ghcr.io/formbricks/formbricks:latest
+  # Run Forma Prisma migrations before Hub writes tables to the shared database.
+  forma-migrate:
+    image: ghcr.io/yldm-tech/forma:latest
     restart: "no"
     env_file:
       - path: .env
@@ -349,9 +349,9 @@ services:
         condition: service_healthy
     <<: *environment
 
-  formbricks:
+  forma:
     restart: always
-    image: ghcr.io/formbricks/formbricks:latest
+    image: ghcr.io/yldm-tech/forma:latest
     env_file:
       - path: .env
         required: false
@@ -372,7 +372,7 @@ services:
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
       AUTHZED_ENDPOINT: ${AUTHZED_ENDPOINT:-spicedb:50051}
       AUTHZED_TOKEN: ${AUTHZED_TOKEN:?AUTHZED_TOKEN is required}
-      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-formbricks}
+      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-forma}
       AUTHZED_INSECURE: ${AUTHZED_INSECURE:-true}
       AUTHZED_CONSISTENCY: ${AUTHZED_CONSISTENCY:-fully_consistent}
 
@@ -380,13 +380,13 @@ services:
   # the normal stack. Example: docker compose --profile authzed-ops run --rm authzed-ops health
   authzed-ops:
     profiles: ["authzed-ops"]
-    image: ghcr.io/formbricks/formbricks:latest
-    entrypoint: ["formbricks-authzed"]
+    image: ghcr.io/yldm-tech/forma:latest
+    entrypoint: ["forma-authzed"]
     command: ["health"]
     environment:
-      # Backfill is the only operation that reads Formbricks PostgreSQL. The other required values are
+      # Backfill is the only operation that reads Forma PostgreSQL. The other required values are
       # inert placeholders for the shared server environment validator and are not application secrets.
-      <<: *formbricks-database
+      <<: *forma-database
       ENCRYPTION_KEY: authzed-ops-unused
       CUBEJS_API_SECRET: authzed-ops-unused
       CUBEJS_API_URL: http://localhost
@@ -397,7 +397,7 @@ services:
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
       AUTHZED_ENDPOINT: ${AUTHZED_ENDPOINT:-spicedb:50051}
       AUTHZED_TOKEN: ${AUTHZED_TOKEN:?AUTHZED_TOKEN is required}
-      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-formbricks}
+      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-forma}
       AUTHZED_INSECURE: ${AUTHZED_INSECURE:-true}
       AUTHZED_CONSISTENCY: ${AUTHZED_CONSISTENCY:-fully_consistent}
     depends_on:
@@ -406,16 +406,16 @@ services:
       spicedb:
         condition: service_healthy
 
-  # Idempotently prepares a fresh authorization datastore without making Formbricks startup, health,
-  # readiness, or liveness depend on SpiceDB. Existing installations are gated by formbricks.sh and
+  # Idempotently prepares a fresh authorization datastore without making Forma startup, health,
+  # readiness, or liveness depend on SpiceDB. Existing installations are gated by forma.sh and
   # the explicit v6 migration acknowledgement before this release is started.
   authzed-initialize:
-    image: ghcr.io/formbricks/formbricks:latest
+    image: ghcr.io/yldm-tech/forma:latest
     restart: "no"
-    entrypoint: ["formbricks-authzed"]
+    entrypoint: ["forma-authzed"]
     command: ["upgrade", "prepare"]
     environment:
-      <<: *formbricks-database
+      <<: *forma-database
       ENCRYPTION_KEY: authzed-initialize-unused
       CUBEJS_API_SECRET: authzed-initialize-unused
       CUBEJS_API_URL: http://localhost
@@ -426,11 +426,11 @@ services:
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
       AUTHZED_ENDPOINT: ${AUTHZED_ENDPOINT:-spicedb:50051}
       AUTHZED_TOKEN: ${AUTHZED_TOKEN:?AUTHZED_TOKEN is required}
-      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-formbricks}
+      AUTHZED_SYSTEM_KEY: ${AUTHZED_SYSTEM_KEY:-forma}
       AUTHZED_INSECURE: ${AUTHZED_INSECURE:-true}
       AUTHZED_CONSISTENCY: ${AUTHZED_CONSISTENCY:-fully_consistent}
     depends_on:
-      formbricks-migrate:
+      forma-migrate:
         condition: service_completed_successfully
       spicedb:
         condition: service_healthy
@@ -440,7 +440,7 @@ services:
   # Operators who want an immutable pin can set HUB_IMAGE_REF in docker/.env to either ":<tag>"
   # (e.g. ":0.3.0") or "@sha256:<digest>". hub and hub-migrate share the same value — no drift.
   hub-migrate:
-    image: ghcr.io/formbricks/hub${HUB_IMAGE_REF:-:latest}
+    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
@@ -448,15 +448,15 @@ services:
         'if [ -x /usr/local/bin/goose ] && [ -x /usr/local/bin/river ]; then /usr/local/bin/goose -dir /app/migrations postgres "$$DATABASE_URL" up && /usr/local/bin/river migrate-up --database-url "$$DATABASE_URL"; else echo ''Migration tools (goose/river) not in image.''; exit 1; fi',
       ]
     environment:
-      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/formbricks?sslmode=disable}
+      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable}
     depends_on:
-      formbricks-migrate:
+      forma-migrate:
         condition: service_completed_successfully
 
-  # Formbricks Hub API (ghcr.io/formbricks/hub). Set HUB_API_KEY. By default shares the Formbricks database; set HUB_DATABASE_URL to use a separate DB.
+  # Forma Hub API (ghcr.io/yldm-tech/hub). Set HUB_API_KEY. By default shares the Forma database; set HUB_DATABASE_URL to use a separate DB.
   hub:
     restart: always
-    image: ghcr.io/formbricks/hub${HUB_IMAGE_REF:-:latest}
+    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -464,7 +464,7 @@ services:
         condition: service_healthy
     environment:
       API_KEY: ${HUB_API_KEY:-}
-      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/formbricks?sslmode=disable}
+      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable}
       TAXONOMY_SERVICE_URL: ${TAXONOMY_SERVICE_URL:-}
       TAXONOMY_SERVICE_TOKEN: ${TAXONOMY_SERVICE_TOKEN:-}
       HUB_INTERNAL_API_TOKEN: ${HUB_INTERNAL_API_TOKEN:-}
@@ -473,7 +473,7 @@ services:
   taxonomy:
     restart: always
     profiles: ["taxonomy"]
-    image: ghcr.io/formbricks/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
+    image: ghcr.io/yldm-tech/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
     depends_on:
       hub:
         condition: service_started
@@ -558,7 +558,7 @@ services:
       retries: 40
       start_period: 10m
 
-  # Cube semantic-layer API used by Formbricks analytics dashboards.
+  # Cube semantic-layer API used by Forma analytics dashboards.
   cube:
     restart: always
     image: cubejs/cube:v1.6.6
@@ -579,13 +579,13 @@ services:
     environment:
       CUBEJS_DB_TYPE: postgres
       CUBEJS_DB_HOST: ${CUBEJS_DB_HOST:-postgres}
-      CUBEJS_DB_NAME: ${CUBEJS_DB_NAME:-formbricks}
+      CUBEJS_DB_NAME: ${CUBEJS_DB_NAME:-forma}
       CUBEJS_DB_USER: ${CUBEJS_DB_USER:-postgres}
       CUBEJS_DB_PASS: ${CUBEJS_DB_PASS:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}
       CUBEJS_DB_PORT: ${CUBEJS_DB_PORT:-5432}
       CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-}
-      CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-formbricks-web}
-      CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-formbricks-cube}
+      CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-forma-web}
+      CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-forma-cube}
       CUBEJS_DEFAULT_API_SCOPES: meta,data
       CUBEJS_EXTERNAL_DEFAULT: ${CUBEJS_EXTERNAL_DEFAULT:-false}
       CUBEJS_CACHE_AND_QUEUE_DRIVER: memory

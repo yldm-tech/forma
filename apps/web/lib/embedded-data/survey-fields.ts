@@ -1,6 +1,6 @@
 import "server-only";
-import { Prisma } from "@formbricks/database/prisma";
-import { type TLinkedEmbeddedField } from "@formbricks/types/embedded-data-resolver";
+import { Prisma } from "@forma/database/prisma";
+import { type TLinkedEmbeddedField } from "@forma/types/embedded-data-resolver";
 
 /**
  * The join that makes the `EmbeddedData` / `SurveyEmbeddedData` tables the read source of truth

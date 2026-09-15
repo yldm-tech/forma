@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import type { TWorkflowStatus } from "@formbricks/workflows";
+import type { TWorkflowStatus } from "@forma/workflows";
 import { Badge } from "@/modules/ui/components/badge";
 import { getWorkflowStatusBadge } from "../lib/display";
 

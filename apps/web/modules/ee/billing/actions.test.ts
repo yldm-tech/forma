@@ -30,7 +30,7 @@ vi.mock("@/lib/utils/action-client", () => ({
 }));
 
 vi.mock("@/lib/constants", () => ({
-  WEBAPP_URL: "https://app.formbricks.com",
+  WEBAPP_URL: "https://app.forma.ylam.ai",
   POSTHOG_KEY: undefined,
 }));
 
@@ -227,7 +227,7 @@ describe("billing actions", () => {
     expect(mocks.createSetupCheckoutSession).toHaveBeenCalledWith(
       "cus_1",
       "sub_1",
-      "https://app.formbricks.com/organizations/org_1/settings/billing",
+      "https://app.forma.ylam.ai/organizations/org_1/settings/billing",
       "org_1",
       {
         targetPlan: "pro",
@@ -261,7 +261,7 @@ describe("billing actions", () => {
     expect(mocks.createSetupCheckoutSession).toHaveBeenCalledWith(
       "cus_1",
       "sub_1",
-      "https://app.formbricks.com/organizations/org_1/settings/billing",
+      "https://app.forma.ylam.ai/organizations/org_1/settings/billing",
       "org_1",
       undefined
     );

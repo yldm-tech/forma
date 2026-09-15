@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { ENCRYPTION_KEY, WEBAPP_URL } from "@/lib/constants";
 import { symmetricEncrypt } from "@/lib/crypto";
@@ -52,7 +52,7 @@ const sessionTokenCookie = (response: Response): string => {
   const cookie = response.headers
     .getSetCookie()
     .map((setCookie) => setCookie.split(";")[0])
-    .find((pair) => pair.startsWith("formbricks.session_token="));
+    .find((pair) => pair.startsWith("forma.session_token="));
   expect(cookie).toBeTruthy();
   return cookie!;
 };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import { debounce } from "@/lib/utils/debounce";
 import { getContactsAction } from "../actions";
 import { TContactTableData, TContactWithAttributes } from "../types/contact";

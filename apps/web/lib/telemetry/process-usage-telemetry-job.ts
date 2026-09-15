@@ -1,6 +1,6 @@
 import "server-only";
-import type { JobHandler, TUsageTelemetryJobData } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
+import type { JobHandler, TUsageTelemetryJobData } from "@forma/jobs";
+import { logger } from "@forma/logger";
 import { sendTelemetryEvents } from "@/lib/telemetry/usage-update";
 
 /**

@@ -1,12 +1,12 @@
 ---
 title: "Open ID Connect"
-description: "Configure Open ID Connect for secure Single Sign-On with your Formbricks instance. Implement enterprise-grade authentication for your survey platform with Open ID Connect."
+description: "Configure Open ID Connect for secure Single Sign-On with your Forma instance. Implement enterprise-grade authentication for your survey platform with Open ID Connect."
 icon: "key"
 ---
 
-<Note>OpenID Connect is part of the Formbricks [Enterprise Edition](/self-hosting/advanced/license)</Note>
+<Note>OpenID Connect is part of the Forma [Enterprise Edition](/self-hosting/advanced/license)</Note>
 
-Integrating your own OIDC (OpenID Connect) instance with your Formbricks instance allows users to log in using their OIDC credentials, ensuring a secure and streamlined user experience. Please follow the steps below to set up OIDC for your Formbricks instance.
+Integrating your own OIDC (OpenID Connect) instance with your Forma instance allows users to log in using their OIDC credentials, ensuring a secure and streamlined user experience. Please follow the steps below to set up OIDC for your Forma instance.
 
 - Configure your OIDC provider & get the following variables:
 
@@ -27,7 +27,7 @@ Integrating your own OIDC (OpenID Connect) instance with your Formbricks instanc
   **Using Microsoft Entra ID?** Configure it through the dedicated [Azure AD
   provider](/self-hosting/configuration/auth-sso/azure-ad-oauth) rather than here — it maps Entra's
   profile correctly. If you do point `OIDC_ISSUER` at a multi-tenant authority
-  (`login.microsoftonline.com/common` or `/organizations`), Formbricks skips OpenID discovery for it
+  (`login.microsoftonline.com/common` or `/organizations`), Forma skips OpenID discovery for it
   and logs a warning at startup: those authorities advertise a placeholder issuer instead of a real
   one, so id_tokens cannot be verified against it and sign-in would otherwise fail.
 </Note>
@@ -39,15 +39,15 @@ Integrating your own OIDC (OpenID Connect) instance with your Formbricks instanc
   - v5.2 and later (current): `{WEBAPP_URL}/api/auth/oauth2/callback/openid`
 
   Upgrading from v5.2 or later needs no change — the callback URL is pinned and does not move with
-  Formbricks' authentication library. See the [migration guide](/self-hosting/advanced/migration).
+  Forma' authentication library. See the [migration guide](/self-hosting/advanced/migration).
 </Warning>
 
 - Update these environment variables in your `docker-compose.yml` or pass it directly to the running container.
 
-An example configuration for a FusionAuth OpenID Connect in Formbricks would look like:
+An example configuration for a FusionAuth OpenID Connect in Forma would look like:
 
 
-```yml Formbricks Env for FusionAuth OIDC
+```yml Forma Env for FusionAuth OIDC
 OIDC_CLIENT_ID=59cada54-56d4-4aa8-a5e7-5823bbe0e5b7
 OIDC_CLIENT_SECRET=4f4dwP0ZoOAqMW8fM9290A7uIS3E8Xg29xe1umhlB_s
 OIDC_ISSUER=http://localhost:9011 
@@ -58,6 +58,6 @@ OIDC_SIGNING_ALGORITHM=HS256
 
 - Set an environment variable `OIDC_DISPLAY_NAME` to the display name of your OIDC provider.
 
-- Restart your Formbricks instance.
+- Restart your Forma instance.
 
 - You're all set! Users can now sign up & log in using their OIDC credentials.

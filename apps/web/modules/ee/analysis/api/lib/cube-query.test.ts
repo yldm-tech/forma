@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import type { TChartQuery } from "@formbricks/types/analysis";
+import type { TChartQuery } from "@forma/types/analysis";
 import { getCubeQueryAuditSummary, validateCubeQueryMembers } from "./cube-query";
 
 vi.mock("server-only", () => ({}));

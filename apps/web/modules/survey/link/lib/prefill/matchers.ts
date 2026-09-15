@@ -1,4 +1,4 @@
-import { TSurveyElementChoice } from "@formbricks/types/surveys/elements";
+import { TSurveyElementChoice } from "@forma/types/surveys/elements";
 
 /**
  * Match a value against element choices by ID first, then by label

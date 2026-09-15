@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/__mocks__/database";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { createOrganization } from "@/lib/organization/service";
 import { ensureCloudStripeSetupForOrganization } from "@/modules/ee/billing/lib/organization-billing";
 import { createWorkspace } from "@/modules/workspaces/settings/lib/workspace";
 import { ensureDefaultOrganization } from "./default-organization";
 
-vi.mock("@formbricks/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
 vi.mock("@/lib/organization/service", () => ({ createOrganization: vi.fn() }));
 vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
   ensureCloudStripeSetupForOrganization: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock("@/modules/workspaces/settings/lib/workspace", () => ({ createWorkspace:
 const constantsOverrides = vi.hoisted(() => ({
   DEFAULT_ORGANIZATION_ID: "default-org" as string | undefined,
   DEFAULT_ORGANIZATION_ROLE: undefined as string | undefined,
-  IS_FORMBRICKS_CLOUD: false as boolean,
+  IS_FORMA_CLOUD: false as boolean,
 }));
 vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/constants")>();
@@ -28,8 +28,8 @@ vi.mock("@/lib/constants", async (importOriginal) => {
     get DEFAULT_ORGANIZATION_ROLE() {
       return constantsOverrides.DEFAULT_ORGANIZATION_ROLE;
     },
-    get IS_FORMBRICKS_CLOUD() {
-      return constantsOverrides.IS_FORMBRICKS_CLOUD;
+    get IS_FORMA_CLOUD() {
+      return constantsOverrides.IS_FORMA_CLOUD;
     },
   };
 });
@@ -38,7 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   constantsOverrides.DEFAULT_ORGANIZATION_ID = "default-org";
   constantsOverrides.DEFAULT_ORGANIZATION_ROLE = undefined;
-  constantsOverrides.IS_FORMBRICKS_CLOUD = false;
+  constantsOverrides.IS_FORMA_CLOUD = false;
   vi.mocked(createOrganization).mockReset();
   vi.mocked(createWorkspace).mockResolvedValue({ id: "ws-1" } as never);
 });
@@ -105,20 +105,20 @@ describe("ensureDefaultOrganization — creating the organization", () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
-  test("skips Stripe setup when not on Formbricks Cloud", async () => {
+  test("skips Stripe setup when not on Forma Cloud", async () => {
     await ensureDefaultOrganization("Ada");
     expect(ensureCloudStripeSetupForOrganization).not.toHaveBeenCalled();
   });
 
-  test("runs Stripe setup on Formbricks Cloud", async () => {
-    constantsOverrides.IS_FORMBRICKS_CLOUD = true;
+  test("runs Stripe setup on Forma Cloud", async () => {
+    constantsOverrides.IS_FORMA_CLOUD = true;
     vi.mocked(ensureCloudStripeSetupForOrganization).mockResolvedValue(undefined as never);
     await ensureDefaultOrganization("Ada");
     expect(ensureCloudStripeSetupForOrganization).toHaveBeenCalledWith("default-org");
   });
 
   test("a failing Stripe setup is logged, not fatal — the user still gets the org", async () => {
-    constantsOverrides.IS_FORMBRICKS_CLOUD = true;
+    constantsOverrides.IS_FORMA_CLOUD = true;
     vi.mocked(ensureCloudStripeSetupForOrganization).mockRejectedValue(new Error("stripe down"));
     expect(await ensureDefaultOrganization("Ada")).toEqual({
       organizationId: "default-org",

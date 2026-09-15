@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { AuthenticationError } from "@formbricks/types/errors";
+import { AuthenticationError } from "@forma/types/errors";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getUser } from "@/lib/user/service";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
@@ -74,7 +74,7 @@ const Page = async () => {
         cta={
           <Button asChild variant="secondary" size="sm">
             <a
-              href="https://formbricks.com/docs/platform/mcp/overview"
+              href="https://forma.ylam.ai/docs/platform/mcp/overview"
               target="_blank"
               rel="noopener noreferrer">
               {t("auth.oauth.mcp_docs_link")}

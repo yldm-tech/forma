@@ -15,7 +15,7 @@ import {
   SmartphoneIcon,
   TimerIcon,
 } from "lucide-react";
-import { formatFieldNameToTitleCase } from "@formbricks/types/safe-identifier";
+import { formatFieldNameToTitleCase } from "@forma/types/safe-identifier";
 
 /**
  * The human-readable label for a reserved field (ENG-2540).

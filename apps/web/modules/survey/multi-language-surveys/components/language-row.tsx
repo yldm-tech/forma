@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { Language } from "@formbricks/database/prisma-browser";
-import { TUserLocale } from "@formbricks/types/user";
+import { Language } from "@forma/database/prisma-browser";
+import { TUserLocale } from "@forma/types/user";
 import { Button } from "@/modules/ui/components/button";
 import { Input } from "@/modules/ui/components/input";
 import { LanguageSelect } from "./language-select";

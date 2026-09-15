@@ -1,27 +1,27 @@
 /* eslint-disable @typescript-eslint/no-namespace -- using namespaces is required for prisma-json-types-generator */
-import { type TActionClassNoCodeConfig } from "@formbricks/types/action-classes";
-import type { TChartConfig, TChartQuery, TWidgetLayout } from "@formbricks/types/analysis";
-import type { TOrganizationAccess } from "@formbricks/types/api-key";
-import { type TEmbeddedDataDefaultValue } from "@formbricks/types/embedded-data";
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { type TIntegrationConfig } from "@formbricks/types/integration";
+import { type TActionClassNoCodeConfig } from "@forma/types/action-classes";
+import type { TChartConfig, TChartQuery, TWidgetLayout } from "@forma/types/analysis";
+import type { TOrganizationAccess } from "@forma/types/api-key";
+import { type TEmbeddedDataDefaultValue } from "@forma/types/embedded-data";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { type TIntegrationConfig } from "@forma/types/integration";
 import {
   type TOrganizationBilling,
   type TOrganizationBillingPlanLimits,
   type TOrganizationStripeBilling,
   type TOrganizationWhitelabel,
-} from "@formbricks/types/organizations";
-import type { TSurveyQuotaLogic } from "@formbricks/types/quota";
+} from "@forma/types/organizations";
+import type { TSurveyQuotaLogic } from "@forma/types/quota";
 import {
   type TResponseContactAttributes,
   type TResponseData,
   type TResponseMeta,
   type TResponseTtc,
   type TResponseVariables,
-} from "@formbricks/types/responses";
-import { type TBaseFilters } from "@formbricks/types/segment";
-import { type TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import type { TSurveyFollowUpAction, TSurveyFollowUpTrigger } from "@formbricks/types/surveys/follow-up";
+} from "@forma/types/responses";
+import { type TBaseFilters } from "@forma/types/segment";
+import { type TSurveyBlock } from "@forma/types/surveys/blocks";
+import type { TSurveyFollowUpAction, TSurveyFollowUpTrigger } from "@forma/types/surveys/follow-up";
 import {
   type TSurveyClosedMessage,
   type TSurveyEnding,
@@ -35,9 +35,9 @@ import {
   type TSurveyVariables,
   type TSurveyWelcomeCard,
   type TSurveyWorkspaceOverwrites,
-} from "@formbricks/types/surveys/types";
-import type { TUserLocale, TUserNotificationSettings } from "@formbricks/types/user";
-import { type TLogo, type TWorkspaceConfig, type TWorkspaceStyling } from "@formbricks/types/workspace";
+} from "@forma/types/surveys/types";
+import type { TUserLocale, TUserNotificationSettings } from "@forma/types/user";
+import { type TLogo, type TWorkspaceConfig, type TWorkspaceStyling } from "@forma/types/workspace";
 import type {
   TWorkflowDefinition,
   TWorkflowExecutableDefinition,
@@ -45,7 +45,7 @@ import type {
   TWorkflowRunLogInput,
   TWorkflowRunLogOutput,
   TWorkflowTriggerRunPayload,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 
 declare global {
   namespace PrismaJson {

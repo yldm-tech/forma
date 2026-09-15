@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { copySurveyLink } from "./client-utils";
 
 describe("copySurveyLink", () => {
-  const surveyUrl = "https://app.formbricks.com/s/someSurveyId";
+  const surveyUrl = "https://app.forma.ylam.ai/s/someSurveyId";
 
   test("should return the surveyUrl with suId when singleUseId is provided", () => {
     const singleUseId = "someSingleUseId";

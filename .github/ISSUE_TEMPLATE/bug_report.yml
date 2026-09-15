@@ -1,7 +1,7 @@
 name: Bug report
 description: "Found a bug? Please fill out the sections below. \U0001F44D"
 type: bug
-projects: "formbricks/8"
+projects: "forma/8"
 labels: ["bug"]
 body:
   - type: textarea
@@ -21,7 +21,7 @@ body:
   - type: textarea
     id: other-information
     attributes:
-      label: Other information (incl. screenshots, Formbricks version, steps to reproduce,...)
+      label: Other information (incl. screenshots, Forma version, steps to reproduce,...)
     validations:
       required: false
   - type: dropdown
@@ -29,5 +29,5 @@ body:
     attributes:
       label: Your Environment
       options:
-        - Formbricks Cloud (app.formbricks.com)
-        - Self-hosted Formbricks
+        - Forma Cloud (app.forma.ylam.ai)
+        - Self-hosted Forma

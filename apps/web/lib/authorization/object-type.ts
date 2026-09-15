@@ -9,6 +9,6 @@ const SPICEDB_OBJECT_TYPE_MAP = {
   feedbackDirectoryAssignment: "feedback_directory_assignment",
 } as const satisfies Partial<Record<TAuthorizationObjectType, string>>;
 
-/** Map Formbricks-owned authorization names to their SpiceDB schema definitions. */
+/** Map Forma-owned authorization names to their SpiceDB schema definitions. */
 export const getSpicedbObjectType = (type: TAuthorizationObjectType): string =>
   SPICEDB_OBJECT_TYPE_MAP[type as keyof typeof SPICEDB_OBJECT_TYPE_MAP] ?? type;

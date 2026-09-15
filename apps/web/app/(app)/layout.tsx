@@ -1,12 +1,12 @@
-import { FormbricksProvider } from "@/app/formbricks/components/formbricks-provider";
+import { FormaProvider } from "@/app/forma/components/forma-provider";
 import { PlainChat } from "@/app/plain/components/plain-chat";
 import { getIsActiveCustomer } from "@/app/plain/lib/customer";
 import { computePlainEmailHash } from "@/app/plain/lib/identity";
 import { PostHogIdentify } from "@/app/posthog/PostHogIdentify";
 import {
-  FORMBRICKS_APP_URL,
-  FORMBRICKS_WORKSPACE_ID,
-  IS_FORMBRICKS_SURVEYS_CONFIGURED,
+  FORMA_APP_URL,
+  FORMA_WORKSPACE_ID,
+  IS_FORMA_SURVEYS_CONFIGURED,
   IS_PLAIN_CHAT_CONFIGURED,
   PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID,
   PLAIN_APP_ID,
@@ -53,10 +53,10 @@ const AppLayout = async ({ children }: Readonly<{ children: React.ReactNode }>) 
           activeCustomerLabelTypeId={plainActiveCustomerLabelTypeId}
         />
       )}
-      {IS_FORMBRICKS_SURVEYS_CONFIGURED && FORMBRICKS_WORKSPACE_ID && (
-        <FormbricksProvider
-          workspaceId={FORMBRICKS_WORKSPACE_ID}
-          appUrl={FORMBRICKS_APP_URL}
+      {IS_FORMA_SURVEYS_CONFIGURED && FORMA_WORKSPACE_ID && (
+        <FormaProvider
+          workspaceId={FORMA_WORKSPACE_ID}
+          appUrl={FORMA_APP_URL}
           userId={user?.id}
           userEmail={user?.email}
           userName={user?.name}

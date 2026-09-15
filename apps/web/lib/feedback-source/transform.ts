@@ -1,7 +1,7 @@
 import "server-only";
-import { TFeedbackSourceFormbricksMapping, THubFieldType } from "@formbricks/types/feedback-source";
-import { TResponse, TResponseData, TResponseDataValue } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/constants";
+import { TFeedbackSourceFormaMapping, THubFieldType } from "@forma/types/feedback-source";
+import { TResponse, TResponseData, TResponseDataValue } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import type {
   TSurveyElement,
   TSurveyElementChoice,
@@ -9,9 +9,9 @@ import type {
   TSurveyMatrixElementChoice,
   TSurveyMultipleChoiceElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
+} from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { getLanguageCode, getLocalizedValue } from "@/lib/i18n/utils";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 import type { FeedbackRecordCreateParams } from "@/modules/hub";
@@ -172,7 +172,7 @@ const buildBaseFields = (
 
   return {
     collected_at: getCollectedAt(response),
-    source_type: "formbricks_survey",
+    source_type: "forma_survey",
     submission_id: response.id,
     tenant_id: tenantId,
     source_id: survey.id,
@@ -188,7 +188,7 @@ const buildBaseFields = (
 
 const expandMatrixToRecords = (
   element: TSurveyMatrixElement,
-  mapping: TFeedbackSourceFormbricksMapping,
+  mapping: TFeedbackSourceFormaMapping,
   value: TResponseDataValue,
   baseFields: BaseRecordFields,
   lookupLanguage: string
@@ -237,7 +237,7 @@ const expandMatrixToRecords = (
 
 const expandRankingToRecords = (
   element: TSurveyRankingElement,
-  mapping: TFeedbackSourceFormbricksMapping,
+  mapping: TFeedbackSourceFormaMapping,
   value: TResponseDataValue,
   baseFields: BaseRecordFields,
   lookupLanguage: string
@@ -285,7 +285,7 @@ const expandRankingToRecords = (
  */
 const expandMultiChoiceToRecords = (
   element: TSurveyMultipleChoiceElement,
-  mapping: TFeedbackSourceFormbricksMapping,
+  mapping: TFeedbackSourceFormaMapping,
   value: TResponseDataValue,
   baseFields: BaseRecordFields,
   lookupLanguage: string
@@ -362,7 +362,7 @@ const normalizeElementValue = (
 };
 
 /**
- * Transform a Formbricks survey response into FeedbackRecord payloads.
+ * Transform a Forma survey response into FeedbackRecord payloads.
  * Called from the pipeline handler when a response is created/finished.
  *
  * Matrix, ranking, and multi-select questions expand into one record per row/item/option,
@@ -371,7 +371,7 @@ const normalizeElementValue = (
 export function transformResponseToFeedbackRecords(
   response: TResponse,
   survey: Pick<TSurvey, "id" | "name" | "type" | "blocks" | "languages">,
-  mappings: TFeedbackSourceFormbricksMapping[],
+  mappings: TFeedbackSourceFormaMapping[],
   tenantId: string
 ): FeedbackRecordCreateParams[] {
   const responseData = response.data;

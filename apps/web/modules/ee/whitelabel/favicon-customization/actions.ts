@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { ZId, ZStorageUrl } from "@formbricks/types/common";
+import { ZId, ZStorageUrl } from "@forma/types/common";
 import { assertCan } from "@/lib/authorization";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";

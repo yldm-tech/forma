@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { assertCan } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { DEFAULT_LOCALE, IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { DEFAULT_LOCALE, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getUserLocale } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
@@ -69,7 +69,7 @@ export const APIKeysPage = async (props: Readonly<{ params: Promise<{ organizati
           organizationId={organization.id}
           locale={locale ?? DEFAULT_LOCALE}
           workspaces={workspaces}
-          isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+          isFormaCloud={IS_FORMA_CLOUD}
         />
       </SettingsCard>
     </PageContentWrapper>

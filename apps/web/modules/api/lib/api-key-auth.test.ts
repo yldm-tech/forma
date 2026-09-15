@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   authenticateApiKeyFromHeaders,
   getApiKeyFromHeaders,
@@ -8,7 +8,7 @@ import {
 
 const mocks = vi.hoisted(() => ({ getApiKeyWithPermissions: vi.fn() }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn() },
 }));
 vi.mock("@/modules/organization/settings/api-keys/lib/api-key", () => ({

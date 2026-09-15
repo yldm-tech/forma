@@ -1,5 +1,5 @@
-import { ZDisplayCreateInput } from "@formbricks/types/displays";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZDisplayCreateInput } from "@forma/types/displays";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { handleApiError } from "@/app/lib/api/handle-api-error";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { responses } from "@/app/lib/api/response";

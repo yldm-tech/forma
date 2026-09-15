@@ -65,28 +65,28 @@ jobs:
           set -euo pipefail
 
           echo "Updating Chart.yaml with version: ${VERSION}"
-          yq -i ".version = \"${VERSION}\"" charts/formbricks/Chart.yaml
-          yq -i ".appVersion = \"${VERSION}\"" charts/formbricks/Chart.yaml
+          yq -i ".version = \"${VERSION}\"" charts/forma/Chart.yaml
+          yq -i ".appVersion = \"${VERSION}\"" charts/forma/Chart.yaml
 
           echo "✅ Successfully updated Chart.yaml"
 
-      - name: Validate default Formbricks image tag
+      - name: Validate default Forma image tag
         env:
           VERSION: ${{ env.VERSION }}
         run: |
           set -euo pipefail
 
-          rendered="$(helm template qa charts/formbricks \
-            --set formbricks.webappUrl=https://qa.example.com \
+          rendered="$(helm template qa charts/forma \
+            --set forma.webappUrl=https://qa.example.com \
             --show-only templates/deployment.yaml \
             --show-only templates/migration-job.yaml)"
 
-          expected_image="ghcr.io/formbricks/formbricks:${VERSION}"
+          expected_image="ghcr.io/yldm-tech/forma:${VERSION}"
           image_count="$(grep -c "image: ${expected_image}$" <<< "$rendered" || true)"
           if [[ "$image_count" -ne 3 ]]; then
             printf 'Expected %s in web Deployment and both migration containers; found %s matches\n' \
               "$expected_image" "$image_count"
-            grep "image: ghcr.io/formbricks/formbricks:" <<< "$rendered" || true
+            grep "image: ghcr.io/yldm-tech/forma:" <<< "$rendered" || true
             exit 1
           fi
 
@@ -98,7 +98,7 @@ jobs:
           trap 'rm -f "$values_file"' EXIT
 
           cat > "$values_file" <<'YAML'
-          formbricks:
+          forma:
             webappUrl: https://qa.example.com
 
           externalSecret:
@@ -108,15 +108,15 @@ jobs:
                 data:
                   AI_OPENAI_COMPATIBLE_API_KEY:
                     remoteRef:
-                      key: formbricks/qwen-vllm
+                      key: forma/qwen-vllm
                       property: apiKey
                   AI_OPENAI_COMPATIBLE_HEADERS_JSON:
                     remoteRef:
-                      key: formbricks/qwen-vllm
+                      key: forma/qwen-vllm
                       property: headersJson
                   AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON:
                     remoteRef:
-                      key: formbricks/qwen-vllm
+                      key: forma/qwen-vllm
                       property: queryParamsJson
 
           deployment:
@@ -129,21 +129,21 @@ jobs:
               AI_OPENAI_COMPATIBLE_API_KEY:
                 valueFrom:
                   secretKeyRef:
-                    name: formbricks-ai-secrets
+                    name: forma-ai-secrets
                     key: AI_OPENAI_COMPATIBLE_API_KEY
               AI_OPENAI_COMPATIBLE_HEADERS_JSON:
                 valueFrom:
                   secretKeyRef:
-                    name: formbricks-ai-secrets
+                    name: forma-ai-secrets
                     key: AI_OPENAI_COMPATIBLE_HEADERS_JSON
               AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON:
                 valueFrom:
                   secretKeyRef:
-                    name: formbricks-ai-secrets
+                    name: forma-ai-secrets
                     key: AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON
           YAML
 
-          rendered="$(helm template qa charts/formbricks \
+          rendered="$(helm template qa charts/forma \
             -f "$values_file" \
             --show-only templates/deployment.yaml \
             --show-only templates/externalsecrets.yaml)"
@@ -159,7 +159,7 @@ jobs:
             "value: \"vllm\"" \
             "name: AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS" \
             "value: \"1\"" \
-            "name: formbricks-ai-secrets"; do
+            "name: forma-ai-secrets"; do
             if ! grep -F "$expected" <<< "$rendered" >/dev/null; then
               echo "Expected Helm render to contain: $expected"
               exit 1
@@ -189,7 +189,7 @@ jobs:
           trap 'rm -f "$values_file"' EXIT
 
           cat > "$values_file" <<'YAML'
-          formbricks:
+          forma:
             webappUrl: https://qa.example.com
 
           taxonomy:
@@ -201,7 +201,7 @@ jobs:
               contextWindowTokens: "65536"
           YAML
 
-          rendered="$(helm template qa charts/formbricks \
+          rendered="$(helm template qa charts/forma \
             -f "$values_file" \
             --show-only templates/hub-deployment.yaml \
             --show-only templates/taxonomy-secret.yaml \
@@ -209,12 +209,12 @@ jobs:
             --show-only templates/taxonomy-deployment.yaml)"
 
           for expected in \
-            "name: formbricks-taxonomy" \
-            "image: \"ghcr.io/formbricks/taxonomy:v0.1.0\"" \
+            "name: forma-taxonomy" \
+            "image: \"ghcr.io/yldm-tech/taxonomy:v0.1.0\"" \
             "name: TAXONOMY_SERVICE_URL" \
-            "value: \"http://formbricks-taxonomy:8000\"" \
+            "value: \"http://forma-taxonomy:8000\"" \
             "name: HUB_INTERNAL_API_URL" \
-            "value: \"http://formbricks-hub:8080\"" \
+            "value: \"http://forma-hub:8080\"" \
             "name: TAXONOMY_LLM_PROVIDER" \
             "value: \"openai-compatible\"" \
             "name: TAXONOMY_LLM_MODEL" \
@@ -236,9 +236,9 @@ jobs:
           set -euo pipefail
 
           echo "Packaging Helm chart version: ${VERSION}"
-          helm package ./charts/formbricks
+          helm package ./charts/forma
 
-          echo "✅ Successfully packaged formbricks-${VERSION}.tgz"
+          echo "✅ Successfully packaged forma-${VERSION}.tgz"
 
       - name: Push Helm chart to GitHub Container Registry
         env:
@@ -246,7 +246,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Pushing Helm chart to registry: formbricks-${VERSION}.tgz"
-          helm push "formbricks-${VERSION}.tgz" oci://ghcr.io/formbricks/helm-charts
+          echo "Pushing Helm chart to registry: forma-${VERSION}.tgz"
+          helm push "forma-${VERSION}.tgz" oci://ghcr.io/yldm-tech/helm-charts
 
           echo "✅ Successfully pushed Helm chart to registry"

@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
 import { cache } from "@/lib/cache";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { AuthenticatedActionClientCtx } from "@/lib/utils/action-client/types/context";
@@ -42,7 +42,7 @@ export const recheckLicenseAction = authenticatedActionClient
       await applyRateLimit(rateLimitConfigs.actions.licenseRecheck, ctx.user.id);
 
       // Only allow on self-hosted instances
-      if (IS_FORMBRICKS_CLOUD) {
+      if (IS_FORMA_CLOUD) {
         throw new OperationNotAllowedError("License recheck is only available on self-hosted instances");
       }
 

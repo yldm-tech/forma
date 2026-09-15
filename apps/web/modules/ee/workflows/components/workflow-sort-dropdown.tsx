@@ -3,7 +3,7 @@
 import { TFunction } from "i18next";
 import { ChevronDownIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { TWorkflowSortBy } from "@formbricks/workflows";
+import type { TWorkflowSortBy } from "@forma/workflows";
 import {
   DropdownMenu,
   DropdownMenuContent,

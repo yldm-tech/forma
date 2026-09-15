@@ -16,7 +16,7 @@ export {
 export { generateText } from "./text";
 export { generateObject } from "./object";
 export { streamObject } from "./stream-object";
-export type { TAIProvider } from "@formbricks/types/ai";
+export type { TAIProvider } from "@forma/types/ai";
 export type {
   AIConfigurationStatus,
   AILanguageModel,

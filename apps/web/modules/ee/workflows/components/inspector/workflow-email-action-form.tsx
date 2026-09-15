@@ -8,7 +8,7 @@ import {
   type TWorkflowSendEmailActionNode,
   type TWorkflowSendEmailContentField,
   getBlankSendEmailContentFields,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { WorkflowEmailRecipientField } from "@/modules/ee/workflows/components/inspector/workflow-email-recipient-field";
 import {
   WorkflowFieldError,

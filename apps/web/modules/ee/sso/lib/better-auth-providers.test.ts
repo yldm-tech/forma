@@ -8,7 +8,7 @@ vi.mock("./sso-request-context", () => ({ captureSsoIdentity }));
 
 // The module warns at import time when a pseudo-tenant is configured (ENG-2750); capture it.
 const { loggerWarn } = vi.hoisted(() => ({ loggerWarn: vi.fn() }));
-vi.mock("@formbricks/logger", () => ({ logger: { warn: loggerWarn } }));
+vi.mock("@forma/logger", () => ({ logger: { warn: loggerWarn } }));
 
 // The pinned SSO callback URL is built from `getAuthIssuerUrl()`, which reads `@/lib/env` directly rather
 // than the constants mocked below — it has to, because that helper encodes Better Auth's own base-URL
@@ -16,7 +16,7 @@ vi.mock("@formbricks/logger", () => ({ logger: { warn: loggerWarn } }));
 // still validates, and pin only the auth URL so the expected callback URL is deterministic.
 vi.mock("@/lib/env", async () => {
   const actual = await vi.importActual<{ env: Record<string, unknown> }>("@/lib/env");
-  return { env: { ...actual.env, BETTER_AUTH_URL: "https://app.formbricks.test" } };
+  return { env: { ...actual.env, BETTER_AUTH_URL: "https://app.forma.test" } };
 });
 
 // The module computes ssoSocialProviders / ssoGenericOAuthConfig at IMPORT time from `@/lib/constants`,
@@ -63,7 +63,7 @@ const BASE: MockConstants = {
   OIDC_CLIENT_SECRET: undefined,
   OIDC_ISSUER: undefined,
   SAML_OAUTH_ENABLED: false,
-  WEBAPP_URL: "https://app.formbricks.test",
+  WEBAPP_URL: "https://app.forma.test",
 };
 
 const loadProviders = async (overrides: Partial<MockConstants> = {}) => {
@@ -235,9 +235,9 @@ describe("better-auth SSO providers", () => {
       });
 
       expect(m.ssoGenericOAuthConfig.map((c) => [c.providerId, c.redirectURI])).toEqual([
-        ["azuread", "https://app.formbricks.test/api/auth/oauth2/callback/azuread"],
-        ["openid", "https://app.formbricks.test/api/auth/oauth2/callback/openid"],
-        ["saml", "https://app.formbricks.test/api/auth/oauth2/callback/saml"],
+        ["azuread", "https://app.forma.test/api/auth/oauth2/callback/azuread"],
+        ["openid", "https://app.forma.test/api/auth/oauth2/callback/openid"],
+        ["saml", "https://app.forma.test/api/auth/oauth2/callback/saml"],
       ]);
     });
 
@@ -695,7 +695,7 @@ describe("better-auth SSO providers", () => {
       const m = await loadProviders({
         ENTERPRISE_LICENSE_KEY: "lic",
         SAML_OAUTH_ENABLED: true,
-        WEBAPP_URL: "https://app.formbricks.test",
+        WEBAPP_URL: "https://app.forma.test",
       });
       const saml = m.ssoGenericOAuthConfig.find((c) => c.providerId === "saml");
       if (!saml) throw new Error("saml provider not registered");
@@ -703,9 +703,9 @@ describe("better-auth SSO providers", () => {
         clientId: "dummy",
         clientSecret: "dummy",
         pkce: true,
-        authorizationUrl: "https://app.formbricks.test/api/auth/saml/authorize",
-        tokenUrl: "https://app.formbricks.test/api/auth/saml/token",
-        userInfoUrl: "https://app.formbricks.test/api/auth/saml/userinfo",
+        authorizationUrl: "https://app.forma.test/api/auth/saml/authorize",
+        tokenUrl: "https://app.forma.test/api/auth/saml/token",
+        userInfoUrl: "https://app.forma.test/api/auth/saml/userinfo",
       });
       // authorizationUrlParams also carries the hardcoded SAML_TENANT/SAML_PRODUCT constants. Vitest's
       // module mock surfaces those primitive `const` exports as undefined in unit tests (they resolve
@@ -771,7 +771,7 @@ describe("Azure identity comes from Graph, not an unverified id_token (#9017 rev
     const { memoryAdapter } = await import("better-auth/adapters/memory");
     const { genericOAuth } = await import("better-auth/plugins");
     const auth = betterAuth({
-      baseURL: "https://app.formbricks.test",
+      baseURL: "https://app.forma.test",
       secret: "sso-provider-contract-secret-0123456789",
       database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
       plugins: [genericOAuth({ config: m.ssoGenericOAuthConfig })],
@@ -873,7 +873,7 @@ describe("OIDC identity comes from Graph when pointed at Microsoft (#9023 review
     const { memoryAdapter } = await import("better-auth/adapters/memory");
     const { genericOAuth } = await import("better-auth/plugins");
     const auth = betterAuth({
-      baseURL: "https://app.formbricks.test",
+      baseURL: "https://app.forma.test",
       secret: "sso-oidc-contract-secret-0123456789ab",
       database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
       plugins: [genericOAuth({ config: m.ssoGenericOAuthConfig })],
@@ -971,7 +971,7 @@ describe("per-sign-in profile sync", () => {
     SAML_OAUTH_ENABLED: true,
   };
 
-  test("is on for every SSO provider, so a directory rename reaches Formbricks", async () => {
+  test("is on for every SSO provider, so a directory rename reaches Forma", async () => {
     const m = await loadProviders(ALL_ON);
     // Named by provider so a missed one is identifiable from the failure, not just a count.
     expect(m.ssoGenericOAuthConfig.map((c) => [c.providerId, c.overrideUserInfo])).toEqual([

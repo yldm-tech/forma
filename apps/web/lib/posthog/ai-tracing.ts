@@ -1,7 +1,7 @@
 import "server-only";
 import { withTracing } from "@posthog/ai/vercel";
-import type { AIResolvedLanguageModel } from "@formbricks/ai";
-import { logger } from "@formbricks/logger";
+import type { AIResolvedLanguageModel } from "@forma/ai";
+import { logger } from "@forma/logger";
 import type { AITracingFeature } from "./ai-tracing-feature";
 import { posthogTracingClient } from "./server";
 

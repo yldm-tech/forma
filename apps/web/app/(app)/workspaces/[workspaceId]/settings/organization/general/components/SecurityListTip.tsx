@@ -13,7 +13,7 @@ export const SecurityListTip = () => {
         <p className="text-sm">
           {t("workspace.settings.general.security_list_tip")}{" "}
           <Link
-            href="https://formbricks.com/security?utm_source=formbricks-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-formbricks-security-updates"
+            href="https://forma.ylam.ai/security?utm_source=forma-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-forma-security-updates"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-blue-700">

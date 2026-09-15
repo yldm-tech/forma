@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { DatabaseError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { DatabaseError } from "@forma/types/errors";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { responses } from "@/app/lib/api/response";

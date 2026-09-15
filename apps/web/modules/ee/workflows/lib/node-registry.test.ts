@@ -4,7 +4,7 @@ import type {
   TWorkflowIfElseNode,
   TWorkflowResponseCompletedTriggerNode,
   TWorkflowSendEmailActionNode,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 import { getNodeRegistryEntry, getNodeRegistryKind } from "./node-registry";
 
 const t = ((key: string, options?: Record<string, unknown>) =>

@@ -9,7 +9,7 @@ import {
   type TResponsePipelineJobData,
   type TWorkflowRunJobData,
   recurringJobs,
-} from "@formbricks/jobs";
+} from "@forma/jobs";
 import { processAuthzedProjectionDeliveryJob } from "@/lib/authzed/outbox-processor";
 import { processAuthzedScheduledReconciliationJob } from "@/lib/authzed/scheduled-reconciliation";
 import { USAGE_TELEMETRY_DAILY_CRON_PATTERN, USAGE_TELEMETRY_TIME_ZONE } from "@/lib/telemetry/constants";
@@ -53,7 +53,7 @@ interface RecurringJobRegistration {
 
 /**
  * The app's half of each recurring job: when it runs (env-derived timing) and what runs. The job name,
- * schedule identity and payload live with the declaration in `@formbricks/jobs`, so neither the name nor
+ * schedule identity and payload live with the declaration in `@forma/jobs`, so neither the name nor
  * the identity is ever spelled out here — which is what keeps the schedule and its handler in step.
  *
  * Keyed by `TRecurringJobKey` deliberately: declaring a new job in `recurringJobDescriptors` without

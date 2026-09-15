@@ -4,12 +4,12 @@ import { getBulkInvitePermission } from "@/modules/ee/license-check/lib/utils";
 import { applyInviteRateLimit, getInviteRateLimitConfig } from "./invite-rate-limit";
 
 const constants = vi.hoisted(() => ({
-  isFormbricksCloud: false,
+  isFormaCloud: false,
 }));
 
 vi.mock("@/lib/constants", () => ({
-  get IS_FORMBRICKS_CLOUD() {
-    return constants.isFormbricksCloud;
+  get IS_FORMA_CLOUD() {
+    return constants.isFormaCloud;
   },
   INVITE_RATE_LIMIT_PER_24_HOURS: 75,
 }));
@@ -25,7 +25,7 @@ vi.mock("@/modules/core/rate-limit/helpers", () => ({
 describe("getInviteRateLimitConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    constants.isFormbricksCloud = false;
+    constants.isFormaCloud = false;
   });
 
   test("uses the configured instance limit on self-hosted deployments", async () => {
@@ -40,7 +40,7 @@ describe("getInviteRateLimitConfig", () => {
   });
 
   test("uses the default limit on cloud without the bulk-invite entitlement", async () => {
-    constants.isFormbricksCloud = true;
+    constants.isFormaCloud = true;
     vi.mocked(getBulkInvitePermission).mockResolvedValueOnce(false);
 
     const config = await getInviteRateLimitConfig("org_1");
@@ -50,7 +50,7 @@ describe("getInviteRateLimitConfig", () => {
   });
 
   test("raises the cloud limit for organizations with the bulk-invite entitlement", async () => {
-    constants.isFormbricksCloud = true;
+    constants.isFormaCloud = true;
     vi.mocked(getBulkInvitePermission).mockResolvedValueOnce(true);
 
     const config = await getInviteRateLimitConfig("org_1");

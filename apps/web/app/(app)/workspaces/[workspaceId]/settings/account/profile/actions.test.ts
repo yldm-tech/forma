@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
+import { OperationNotAllowedError } from "@forma/types/errors";
 import { updateUserAction } from "./actions";
 
 const mocks = vi.hoisted(() => ({

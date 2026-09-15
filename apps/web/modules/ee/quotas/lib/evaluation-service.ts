@@ -1,9 +1,9 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma, Response } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { TEmbeddedValueResponse } from "@formbricks/types/embedded-data-resolver";
-import { TSurveyQuota } from "@formbricks/types/quota";
+import { prisma } from "@forma/database";
+import { Prisma, Response } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { TEmbeddedValueResponse } from "@forma/types/embedded-data-resolver";
+import { TSurveyQuota } from "@forma/types/quota";
 import { toJsWorkspaceStateSurvey } from "@/lib/survey/client-utils";
 import { getSurvey } from "@/lib/survey/service";
 import { buildServerEmbeddedValues } from "@/lib/surveyLogic/utils";

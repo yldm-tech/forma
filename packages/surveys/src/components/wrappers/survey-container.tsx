@@ -1,7 +1,7 @@
 import { type ComponentChildren } from "preact";
 import { type MutableRef, useEffect } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { type TOverlay, type TPlacement } from "@formbricks/types/common";
+import { type TOverlay, type TPlacement } from "@forma/types/common";
 import { ensureLiveRegion } from "@/lib/live-region";
 import { SURVEY_INSTRUCTIONS_ID } from "@/lib/survey-page";
 import { useFocusTrap } from "@/lib/use-focus-trap";
@@ -234,7 +234,7 @@ export function SurveyContainer({
     return (
       <div // NOSONAR(typescript:S6819) - a native <form> would nest inside the host page's own form
         id="fbjs"
-        className="formbricks-form"
+        className="forma-form"
         style={{ height: "100%", width: "100%" }}
         dir={dir}
         lang={lang ?? undefined}
@@ -248,7 +248,7 @@ export function SurveyContainer({
   }
 
   return (
-    <div id="fbjs" className="formbricks-form" dir={dir} lang={lang ?? undefined}>
+    <div id="fbjs" className="forma-form" dir={dir} lang={lang ?? undefined}>
       <div
         // In-dialog updates (question changes after a submit) should wait for the reader to finish
         // speaking instead of interrupting it. A survey is never urgent enough for assertive speech.

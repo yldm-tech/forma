@@ -9,8 +9,8 @@ import {
   InvalidPasswordResetTokenError,
   OperationNotAllowedError,
   PASSWORD_COMPROMISED_ERROR_CODE,
-} from "@formbricks/types/errors";
-import { ZUserPassword } from "@formbricks/types/user";
+} from "@forma/types/errors";
+import { ZUserPassword } from "@forma/types/user";
 import { PASSWORD_RESET_DISABLED } from "@/lib/constants";
 import { actionClient } from "@/lib/utils/action-client";
 import { auth } from "@/modules/auth/lib/auth";

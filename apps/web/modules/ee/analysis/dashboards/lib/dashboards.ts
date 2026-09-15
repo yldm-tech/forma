@@ -1,8 +1,8 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { TWidgetLayout } from "@formbricks/types/analysis";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { TWidgetLayout } from "@forma/types/analysis";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   isPrismaKnownRequestError,
   isUniqueConstraintError,

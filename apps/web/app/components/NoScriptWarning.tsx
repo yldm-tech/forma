@@ -1,4 +1,4 @@
-import type { TUserLocale } from "@formbricks/types/user";
+import type { TUserLocale } from "@forma/types/user";
 import { getTranslate } from "@/lingodotdev/server";
 
 interface NoScriptWarningProps {

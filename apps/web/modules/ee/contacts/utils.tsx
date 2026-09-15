@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
 import { Calendar1Icon, HashIcon, TagIcon } from "lucide-react";
-import { TContactAttributeDataType } from "@formbricks/types/contact-attribute-key";
+import { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
 
 export const getContactAttributeDataTypeIcon = (dataType: TContactAttributeDataType) => {
   switch (dataType) {

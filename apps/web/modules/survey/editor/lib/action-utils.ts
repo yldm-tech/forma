@@ -7,7 +7,7 @@ import {
   TActionClassInput,
   TActionClassInputCode,
   ZActionClassInput,
-} from "@formbricks/types/action-classes";
+} from "@forma/types/action-classes";
 import { isValidCssSelector } from "@/app/lib/actionClass/actionClass";
 
 /**

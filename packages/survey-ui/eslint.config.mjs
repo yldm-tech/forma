@@ -1,5 +1,5 @@
 import globals from "globals";
-import react from "@formbricks/config-eslint/react";
+import react from "@forma/config-eslint/react";
 
 export default [
   // carried over from the legacy .eslintrc ignorePatterns

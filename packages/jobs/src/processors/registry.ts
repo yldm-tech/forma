@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { AnyBackgroundJobDefinition, JobHandlerOverrides } from "@/src/contracts";
 import { backgroundJobDefinitions, getBackgroundJobDefinition } from "@/src/definitions";
 

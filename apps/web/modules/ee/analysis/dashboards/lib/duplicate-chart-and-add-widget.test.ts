@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 import { duplicateChart } from "@/modules/ee/analysis/charts/lib/charts";
 import { addChartToDashboard } from "./dashboards";
 import { duplicateChartAndAddWidget } from "./duplicate-chart-and-add-widget";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     dashboard: {
       findFirst: vi.fn(),

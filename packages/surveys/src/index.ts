@@ -1,5 +1,5 @@
 import { h, render } from "preact";
-import { SurveyContainerProps } from "@formbricks/types/formbricks-surveys";
+import { SurveyContainerProps } from "@forma/types/forma-surveys";
 import { RenderSurvey } from "@/components/general/render-survey";
 import { I18nProvider } from "@/components/i18n/provider";
 import { FILE_PICK_EVENT } from "@/lib/constants";
@@ -75,7 +75,7 @@ export const renderSurvey = (props: SurveyContainerProps) => {
     }
   } else {
     const modalContainer = document.createElement("div");
-    modalContainer.id = "formbricks-modal-container";
+    modalContainer.id = "forma-modal-container";
     document.body.appendChild(modalContainer);
 
     render(
@@ -99,13 +99,13 @@ export const onFilePick = (files: { name: string; type: string; base64: string }
   globalThis.dispatchEvent(fileUploadEvent);
 };
 
-// Initialize the global formbricksSurveys object if it doesn't exist
+// Initialize the global formaSurveys object if it doesn't exist
 if (globalThis.window !== undefined) {
-  (globalThis.window as any).formbricksSurveys = {
+  (globalThis.window as any).formaSurveys = {
     renderSurveyInline,
     renderSurveyModal,
     renderSurvey,
     onFilePick,
     setNonce: setStyleNonce,
-  } as typeof globalThis.window.formbricksSurveys;
+  } as typeof globalThis.window.formaSurveys;
 }

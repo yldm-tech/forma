@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
-import { TooManyRequestsError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import { TooManyRequestsError } from "@forma/types/errors";
 import { authenticateRequest } from "@/app/api/v1/auth";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { withAuthorizationSurface } from "@/lib/authorization/context";

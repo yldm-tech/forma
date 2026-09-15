@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TDateOperator, TSegmentFilterValue, TTimeUnit } from "@formbricks/types/segment";
+import { TDateOperator, TSegmentFilterValue, TTimeUnit } from "@forma/types/segment";
 import { cn } from "@/lib/cn";
 import { formatLocalDay, parseStoredDay } from "@/lib/utils/datetime";
 import { toUTCDateString } from "@/modules/ee/contacts/segments/lib/date-utils";

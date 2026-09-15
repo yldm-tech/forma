@@ -1,6 +1,6 @@
 // Generates a parallel Prisma client whose `emailVerified` is Boolean and `Account.type` is optional
 // — i.e. the POST-CUTOVER shape Better Auth reads/writes (ENG-1054). The integration harness aliases
-// @formbricks/database to a shim backed by this client so BA's real user/account creation works
+// @forma/database to a shim backed by this client so BA's real user/account creation works
 // against a real Postgres before the live schema is flipped. Derived from the multi-file schema in
 // packages/database/schema/ so it never drifts. Output (generated/prisma-test) is gitignored. Run via
 // `pnpm test:integration`.

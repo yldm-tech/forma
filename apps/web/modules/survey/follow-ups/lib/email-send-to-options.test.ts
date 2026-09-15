@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
 import {
   type EmailSendToOption,
   buildEmailSendToOptions,
@@ -21,7 +21,7 @@ vi.mock("@/lib/utils/recall", () => ({
   recallToHeadline: mockRecallToHeadline,
 }));
 
-vi.mock("@formbricks/types/surveys/validation", () => ({
+vi.mock("@forma/types/surveys/validation", () => ({
   getTextContent: mockGetTextContent,
 }));
 

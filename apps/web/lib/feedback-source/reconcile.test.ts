@@ -13,12 +13,12 @@ vi.mock("@/modules/hub", () => ({
   updateFeedbackRecord: (...args: unknown[]) => mockUpdateFeedbackRecord(...args),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 const { reconcileFeedbackRecords, UPDATE_FIELD_KEYS } = await import("./reconcile");
-const { logger } = await import("@formbricks/logger");
+const { logger } = await import("@forma/logger");
 
 const TENANT_ID = "clxxxxxxxxxxxxxxxx004";
 const OTHER_TENANT_ID = "clxxxxxxxxxxxxxxxx999";
@@ -27,7 +27,7 @@ const record = (overrides: Partial<FeedbackRecordCreateParams> = {}): FeedbackRe
   ({
     tenant_id: TENANT_ID,
     submission_id: "response-1",
-    source_type: "formbricks",
+    source_type: "forma",
     field_id: "q1",
     field_type: "text",
     value_text: "red",

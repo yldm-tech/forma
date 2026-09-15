@@ -1,8 +1,8 @@
 import { CheckCircle2Icon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { TSurveySingleUse } from "@formbricks/types/surveys/types";
+import { Workspace } from "@forma/database/prisma-browser";
+import { TSurveySingleUse } from "@forma/types/surveys/types";
 import { getTranslate } from "@/lingodotdev/server";
 import footerLogo from "../lib/footerlogo.svg";
 
@@ -30,7 +30,7 @@ export const SurveyCompletedMessage = async ({
       </div>
       {(!workspace || workspace.linkSurveyBranding) && (
         <div>
-          <Link href="https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=survey_completed">
+          <Link href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=survey_completed">
             <Image src={footerLogo} alt="Brand logo" className="mx-auto w-40" />
           </Link>
         </div>

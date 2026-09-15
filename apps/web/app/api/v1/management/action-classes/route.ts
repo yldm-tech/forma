@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { TActionClass, ZActionClassInput } from "@formbricks/types/action-classes";
+import { logger } from "@forma/logger";
+import { TActionClass, ZActionClassInput } from "@forma/types/action-classes";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { handleApiError } from "@/app/lib/api/handle-api-error";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";

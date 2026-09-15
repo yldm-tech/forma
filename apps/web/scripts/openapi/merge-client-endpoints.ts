@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as yaml from "yaml";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 
 // Define the v1 (now v2) client endpoints to be merged
 const v1ClientEndpoints = {
@@ -65,8 +65,8 @@ const v1ClientEndpoints = {
       tags: ["Client API - Response"],
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks Client",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma Client",
         },
       ],
     },
@@ -98,8 +98,8 @@ const v1ClientEndpoints = {
       tags: ["Client API - Response"],
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks Client",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma Client",
         },
       ],
     },
@@ -131,8 +131,8 @@ const v1ClientEndpoints = {
       tags: ["Client API - Display"],
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks Client",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma Client",
         },
       ],
     },
@@ -141,7 +141,7 @@ const v1ClientEndpoints = {
     get: {
       security: [],
       description:
-        "Retrieves the environment state to be used in Formbricks SDKs. **Cache Behavior**: This endpoint uses server-side caching with a **5-minute TTL (Time To Live)**. Any changes to surveys, action classes, workspace settings, or other environment data will take up to 5 minutes to reflect in the API response. This caching is implemented to improve performance for high-frequency SDK requests.",
+        "Retrieves the environment state to be used in Forma SDKs. **Cache Behavior**: This endpoint uses server-side caching with a **5-minute TTL (Time To Live)**. Any changes to surveys, action classes, workspace settings, or other environment data will take up to 5 minutes to reflect in the API response. This caching is implemented to improve performance for high-frequency SDK requests.",
       parameters: [
         {
           in: "path",
@@ -166,8 +166,8 @@ const v1ClientEndpoints = {
       tags: ["Client API - Environment"],
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks Client",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma Client",
         },
       ],
     },
@@ -199,8 +199,8 @@ const v1ClientEndpoints = {
       tags: ["Client API - User"],
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks Client",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma Client",
         },
       ],
     },
@@ -295,7 +295,7 @@ const v1ClientEndpoints = {
                     },
                     updatedFileName: "file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg",
                     fileUrl:
-                      "https://app.formbricks.com/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg",
+                      "https://app.forma.ylam.ai/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg",
                   },
                 },
               },
@@ -343,8 +343,8 @@ const v1ClientEndpoints = {
       },
       servers: [
         {
-          url: "https://app.formbricks.com/api/v2",
-          description: "Formbricks API Server",
+          url: "https://app.forma.ylam.ai/api/v2",
+          description: "Forma API Server",
         },
       ],
     },

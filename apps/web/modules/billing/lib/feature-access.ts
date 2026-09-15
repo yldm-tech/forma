@@ -1,5 +1,5 @@
 import "server-only";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import {
   hasOrganizationEntitlement,
   hasOrganizationEntitlementWithLicenseGuard,
@@ -9,7 +9,7 @@ export const hasCloudEntitlement = async (
   organizationId: string,
   featureLookupKey: string
 ): Promise<boolean> => {
-  if (!IS_FORMBRICKS_CLOUD) return false;
+  if (!IS_FORMA_CLOUD) return false;
   return hasOrganizationEntitlement(organizationId, featureLookupKey);
 };
 
@@ -17,6 +17,6 @@ export const hasCloudEntitlementWithLicenseGuard = async (
   organizationId: string,
   featureLookupKey: string
 ): Promise<boolean> => {
-  if (!IS_FORMBRICKS_CLOUD) return false;
+  if (!IS_FORMA_CLOUD) return false;
   return hasOrganizationEntitlementWithLicenseGuard(organizationId, featureLookupKey);
 };

@@ -1,7 +1,7 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { err, ok } from "@forma/types/error-handlers";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { segmentFilterToPrismaQuery } from "@/modules/ee/contacts/segments/lib/filter/prisma-query";
 import { getContactAttributeKeys } from "./contact-attribute-key";

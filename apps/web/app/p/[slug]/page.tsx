@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getSurveyBySlug } from "@/modules/survey/lib/slug";
 
 interface PrettyUrlPageProps {
@@ -11,7 +11,7 @@ export default async function PrettyUrlPage(props: PrettyUrlPageProps) {
   const { slug } = await props.params;
   const searchParams = await props.searchParams;
 
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     return notFound();
   }
 

@@ -1,5 +1,5 @@
-import { logger } from "@formbricks/logger";
-import { ZUploadPublicFileRequest } from "@formbricks/types/storage";
+import { logger } from "@forma/logger";
+import { ZUploadPublicFileRequest } from "@forma/types/storage";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { checkAuth } from "@/app/api/v1/management/storage/lib/utils";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";

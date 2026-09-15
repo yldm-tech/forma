@@ -16,13 +16,13 @@ export const WidgetStatusIndicator = ({ workspace }: WidgetStatusIndicatorProps)
   const stati = {
     notImplemented: {
       icon: AlertTriangleIcon,
-      title: t("workspace.app-connection.formbricks_sdk_not_connected"),
-      subtitle: t("workspace.app-connection.formbricks_sdk_not_connected_description"),
+      title: t("workspace.app-connection.forma_sdk_not_connected"),
+      subtitle: t("workspace.app-connection.forma_sdk_not_connected_description"),
     },
     running: {
       icon: CheckIcon,
       title: t("workspace.app-connection.receiving_data"),
-      subtitle: t("workspace.app-connection.formbricks_sdk_connected"),
+      subtitle: t("workspace.app-connection.forma_sdk_connected"),
     },
   };
 

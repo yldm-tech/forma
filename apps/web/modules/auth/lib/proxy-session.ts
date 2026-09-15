@@ -1,4 +1,4 @@
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { getSessionTokenFromCookieStore } from "./session-cookie";
 
 type TCookieStore = {

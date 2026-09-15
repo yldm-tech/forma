@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { isSafeMediaUrl } from "@formbricks/survey-ui";
+import { isSafeMediaUrl } from "@forma/survey-ui";
 import { ExpandIcon } from "@/components/icons/expand-icon";
 import { ImageDownIcon } from "@/components/icons/image-down-icon";
 import { cn } from "@/lib/utils";

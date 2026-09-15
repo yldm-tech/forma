@@ -29,7 +29,7 @@ on:
       - main
     paths:
       - .github/workflows/linear-release.yml
-      - .github/workflows/formbricks-release.yml
+      - .github/workflows/forma-release.yml
       - .github/workflows/linear-release-smoke.yml
 
 permissions:

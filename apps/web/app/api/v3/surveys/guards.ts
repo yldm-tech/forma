@@ -1,4 +1,4 @@
-import type { TI18nString } from "@formbricks/types/i18n";
+import type { TI18nString } from "@forma/types/i18n";
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

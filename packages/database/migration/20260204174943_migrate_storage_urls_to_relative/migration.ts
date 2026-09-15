@@ -3,7 +3,7 @@
  *
  * This migration converts URLs like:
  *   http://localhost:3000/storage/env123/public/image.png
- *   https://app.formbricks.com/storage/env123/public/image.png
+ *   https://app.forma.ylam.ai/storage/env123/public/image.png
  *
  * To relative paths:
  *   /storage/env123/public/image.png
@@ -19,7 +19,7 @@
  * - Organization: whitelabel
  * - Response: data (file upload responses)
  */
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { Prisma } from "../../src/prisma";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 import type {

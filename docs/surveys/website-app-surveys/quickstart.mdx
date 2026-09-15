@@ -1,26 +1,26 @@
 ---
 title: "Setup Web & Mobile SDK connection"
-description: "App surveys deliver 6–10x higher conversion rates compared to email surveys. If you are new to Formbricks, follow the steps in this guide to launch a survey in your web or mobile app (React Native) within 10–15 minutes."
+description: "App surveys deliver 6–10x higher conversion rates compared to email surveys. If you are new to Forma, follow the steps in this guide to launch a survey in your web or mobile app (React Native) within 10–15 minutes."
 icon: "rocket"
 sidebarTitle: "SDK Setup"
 ---
 
 <Steps>
-  <Step title="Create a free Formbricks Cloud account">
-    While you can [self-host](/self-hosting/overview) Formbricks, the quickest and easiest way to get started is with the free Cloud plan. Just [sign up here](https://app.formbricks.com/auth/signup) and click through the onboarding.
+  <Step title="Create a free Forma Cloud account">
+    While you can [self-host](/self-hosting/overview) Forma, the quickest and easiest way to get started is with the free Cloud plan. Just [sign up here](https://app.forma.ylam.ai/auth/signup) and click through the onboarding.
   </Step>
 
   <Step title="Open Web & Mobile SDK">
-    In your workspace, go to **Settings** and open **Web & Mobile SDK** under **Workspace**. **Workspace details** holds the two values the SDK needs — your **Workspace ID** and your **SDK Connection URL** — and the **Connection status** card tells you whether Formbricks has heard from your app yet.
+    In your workspace, go to **Settings** and open **Web & Mobile SDK** under **Workspace**. **Workspace details** holds the two values the SDK needs — your **Workspace ID** and your **SDK Connection URL** — and the **Connection status** card tells you whether Forma has heard from your app yet.
 
-    ![The Web & Mobile SDK settings page with a grey Connection status card reading "Formbricks SDK is not yet connected", the Workspace details card and the How to install card](/images/surveys/website-app-surveys/quickstart/web-and-mobile-sdk.webp)
+    ![The Web & Mobile SDK settings page with a grey Connection status card reading "Forma SDK is not yet connected", the Workspace details card and the How to install card](/images/surveys/website-app-surveys/quickstart/web-and-mobile-sdk.webp)
 
     <Note>
       Not the person who will add the SDK? The banner at the top of the page invites a technical team member into the organization so they can do this step for you.
     </Note>
   </Step>
 
-  <Step title="Add the Formbricks SDK to your app">
+  <Step title="Add the Forma SDK to your app">
     Under **How to install**, expand the method that matches your stack:
 
     | Method | Covers |
@@ -38,9 +38,9 @@ sidebarTitle: "SDK Setup"
   </Step>
 
   <Step title="Confirm the connection">
-    Open the website or launch the app you added the SDK to, then come back to **Web & Mobile SDK** and hit **Re-check**. Once Formbricks has the first data point, the **Connection status** card turns green:
+    Open the website or launch the app you added the SDK to, then come back to **Web & Mobile SDK** and hit **Re-check**. Once Forma has the first data point, the **Connection status** card turns green:
 
-    ![The Connection status card, green, reading "Receiving data" and "Formbricks SDK is connected"](/images/surveys/website-app-surveys/quickstart/connection-status.webp)
+    ![The Connection status card, green, reading "Receiving data" and "Forma SDK is connected"](/images/surveys/website-app-surveys/quickstart/connection-status.webp)
 
     <Note>
       Still grey? The card only re-reads the status on **Re-check** or a page reload, so give the SDK a moment and check again. If it stays grey on the web, turn on [Debug Mode](/surveys/website-app-surveys/framework-guides#activate-debug-mode) and read your browser console. On mobile, check your platform's log output instead — the Xcode console, Logcat, or your Metro or Flutter console.
@@ -54,7 +54,7 @@ sidebarTitle: "SDK Setup"
   </Step>
 
   <Step title="Create trigger to show survey">
-    Still in the **Settings** tab, scroll to **Survey Trigger** and click **Add action**. On the **Capture new action** tab, name the action, choose **Page View** and click **Create action**. The survey now appears whenever the Formbricks widget detects a page load.
+    Still in the **Settings** tab, scroll to **Survey Trigger** and click **Add action**. On the **Capture new action** tab, name the action, choose **Page View** and click **Create action**. The survey now appears whenever the Forma widget detects a page load.
 
     ![The Add action dialog on the Capture new action tab, with the No code action type and Page View selected](/images/surveys/website-app-surveys/quickstart/page-view-action.webp)
   </Step>
@@ -75,7 +75,7 @@ sidebarTitle: "SDK Setup"
 </Step>
 
 <Step title="Understand caching behavior">
-  For better scalability, we cache the request the SDK makes to the server. This allows you to use Formbricks
+  For better scalability, we cache the request the SDK makes to the server. This allows you to use Forma
   on websites with millions of visitors without high hosting cost.
   <Note>
     **Important**: Any changes to surveys, action classes, or Workspace settings will
@@ -88,7 +88,7 @@ sidebarTitle: "SDK Setup"
 </Step>
 
   <Step title="Check browser compatibility">
-    Formbricks is designed to work with all modern browsers. Please ensure your users are using a supported version:
+    Forma is designed to work with all modern browsers. Please ensure your users are using a supported version:
 
     | Browser | Minimum Version | Release Date |
     | :--- | :--- | :--- |
@@ -102,4 +102,4 @@ sidebarTitle: "SDK Setup"
   </Step>
 </Steps>
 
-Need help? Join us in [**GitHub Discussions**](https://github.com/formbricks/formbricks/discussions), and we'll be happy to assist!
+Need help? Join us in [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions), and we'll be happy to assist!

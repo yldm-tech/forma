@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SurveyContainerProps } from "@formbricks/types/formbricks-surveys";
+import { SurveyContainerProps } from "@forma/types/forma-surveys";
 import { IS_DEVELOPMENT_BUILD } from "@/lib/env-client";
 import { executeRecaptcha, loadRecaptchaScript } from "@/modules/ui/components/survey/recaptcha";
 
-const createContainerId = () => `formbricks-survey-container`;
+const createContainerId = () => `forma-survey-container`;
 
 // Module-level flag to prevent concurrent script loads across component instances
 let isLoadingScript = false;
 
 declare global {
   interface Window {
-    formbricksSurveys: {
+    formaSurveys: {
       renderSurveyInline: (props: SurveyContainerProps) => void;
       renderSurveyModal: (props: SurveyContainerProps) => void;
       renderSurvey: (props: SurveyContainerProps) => void;
@@ -30,7 +30,7 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
   );
 
   const renderInline = useCallback(
-    () => window.formbricksSurveys.renderSurvey({ ...props, containerId, getRecaptchaToken, mode: "inline" }),
+    () => window.formaSurveys.renderSurvey({ ...props, containerId, getRecaptchaToken, mode: "inline" }),
     [containerId, props, getRecaptchaToken]
   );
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
@@ -69,7 +69,7 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
     }
 
     const loadScript = async () => {
-      if (!window.formbricksSurveys) {
+      if (!window.formaSurveys) {
         try {
           if (props.isSpamProtectionEnabled && props.recaptchaSiteKey) {
             await loadRecaptchaScript(props.recaptchaSiteKey);

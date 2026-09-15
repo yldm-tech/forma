@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { validateElementLabels } from "@formbricks/types/surveys/elements-validation";
+import { validateElementLabels } from "@forma/types/surveys/elements-validation";
 import {
   ZV3CreateSurveyBody,
   ZV3PatchSurveyBody,
@@ -259,7 +259,7 @@ describe("ZV3CreateSurveyBody", () => {
     );
   });
 
-  test.each(["https://formbricks.com/docs", "http://localhost:3000/docs", "mailto:support@example.com"])(
+  test.each(["https://forma.ylam.ai/docs", "http://localhost:3000/docs", "mailto:support@example.com"])(
     "accepts a cta buttonUrl with the safe scheme %j",
     (buttonUrl) => {
       expect(ZV3CreateSurveyBody.safeParse(ctaCreateBody(buttonUrl)).success).toBe(true);

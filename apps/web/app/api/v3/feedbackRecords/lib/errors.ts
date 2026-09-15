@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
-import type { logger } from "@formbricks/logger";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import type { logger } from "@forma/logger";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   type InvalidParam,
   problemBadGateway,

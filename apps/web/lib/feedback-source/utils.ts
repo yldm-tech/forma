@@ -1,8 +1,5 @@
-import type {
-  TFeedbackSourceFieldMappingCreateInput,
-  THubFieldType,
-} from "@formbricks/types/feedback-source";
-import { ZHubFieldType } from "@formbricks/types/feedback-source";
+import type { TFeedbackSourceFieldMappingCreateInput, THubFieldType } from "@forma/types/feedback-source";
+import { ZHubFieldType } from "@forma/types/feedback-source";
 import {
   CSV_HIDDEN_STATIC_MAPPINGS,
   CSV_PROTECTED_TARGET_IDS,

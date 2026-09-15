@@ -1,5 +1,5 @@
-import { TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { TSurveyStyling } from "@forma/types/surveys/types";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { getContrastRatio, mixColor } from "@/lib/utils/colors";
 
 // Subtle-but-compliant palette — keeps the muted look of the old slate-500 footer while

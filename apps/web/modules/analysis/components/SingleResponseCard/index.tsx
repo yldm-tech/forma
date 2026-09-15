@@ -3,10 +3,10 @@
 import { ReactNode, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TResponse, TResponseWithQuotas } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
-import { TUser, TUserLocale } from "@formbricks/types/user";
+import { TResponse, TResponseWithQuotas } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
+import { TUser, TUserLocale } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { DecrementQuotasCheckbox } from "@/modules/ui/components/decrement-quotas-checkbox";

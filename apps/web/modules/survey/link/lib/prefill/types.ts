@@ -1,4 +1,4 @@
-import { TSurveyElementChoice, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementChoice, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 
 type TInvalidResult = {
   isValid: false;

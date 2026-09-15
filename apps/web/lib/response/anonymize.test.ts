@@ -3,8 +3,8 @@ import {
   RESERVED_FIELD_CATALOG,
   type TReservedFieldCatalogEntry,
   projectReservedValues,
-} from "@formbricks/types/embedded-data-resolver";
-import { type TResponseMeta } from "@formbricks/types/responses";
+} from "@forma/types/embedded-data-resolver";
+import { type TResponseMeta } from "@forma/types/responses";
 import { parseRecallInfo } from "@/lib/utils/recall";
 import { applyAnonymizePolicy } from "./anonymize";
 
@@ -98,8 +98,8 @@ describe("applyAnonymizePolicy", () => {
     };
 
     vi.resetModules();
-    vi.doMock("@formbricks/types/embedded-data-resolver", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("@formbricks/types/embedded-data-resolver")>();
+    vi.doMock("@forma/types/embedded-data-resolver", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@forma/types/embedded-data-resolver")>();
       return {
         ...actual,
         RESERVED_FIELD_CATALOG: [...actual.RESERVED_FIELD_CATALOG, newlyAddedEntry, newlyAddedRedactedEntry],
@@ -124,7 +124,7 @@ describe("applyAnonymizePolicy", () => {
       expect(anonymized).toHaveProperty("landingUrl", "https://example.com/checkout");
       expect(anonymized.source).toBe("link");
     } finally {
-      vi.doUnmock("@formbricks/types/embedded-data-resolver");
+      vi.doUnmock("@forma/types/embedded-data-resolver");
       vi.resetModules();
     }
   });

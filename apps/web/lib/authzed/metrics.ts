@@ -21,7 +21,7 @@ import { metrics } from "@opentelemetry/api";
  * exit code.
  *
  * **A deliberate deviation from the semantic conventions, which prescribe dots as namespace delimiters
- * (`formbricks.authzed.projection.duration`) and say a unit need not appear in the name.** This app
+ * (`forma.authzed.projection.duration`) and say a unit need not appear in the name.** This app
  * configures the Prometheus reader *and* an OTLP reader at once, and the two derive a series name
  * differently: the Prometheus exporter sanitizes dots to underscores and appends no unit, while OTLP's
  * Prometheus translation appends the unit unless the name already carries it. Under the conventional
@@ -31,10 +31,10 @@ import { metrics } from "@opentelemetry/api";
  * on. Revisit if the Prometheus reader is ever dropped.
  */
 
-const meter = metrics.getMeter("formbricks.authzed");
+const meter = metrics.getMeter("forma.authzed");
 
 /** Projection outcomes, by operation and projector. Includes `disabled` so a misconfigured deployment is visible. */
-const projectionTotal = meter.createCounter("formbricks_authzed_projection_total", {
+const projectionTotal = meter.createCounter("forma_authzed_projection_total", {
   description: "AuthZed relationship projections by outcome",
 });
 
@@ -51,7 +51,7 @@ const projectionTotal = meter.createCounter("formbricks_authzed_projection_total
  * `..._duration_seconds` through a collector, which is how the runbook's histogram query came to match
  * nothing on the scrape path.
  */
-const projectionDuration = meter.createHistogram("formbricks_authzed_projection_duration_seconds", {
+const projectionDuration = meter.createHistogram("forma_authzed_projection_duration_seconds", {
   // The SDK's default boundaries are `[0, 5, 10, 25, … 10000]` — a millisecond scale. Recording seconds
   // against them puts every healthy projection in the single `(0, 5]` bucket, and `histogram_quantile`
   // interpolates within a bucket: a p95 over observations that are all ~100ms reports something close to
@@ -71,21 +71,21 @@ const projectionDuration = meter.createHistogram("formbricks_authzed_projection_
  * The signal that distinguishes a blip from an outage: a sustained rate here means relationships are
  * being dropped and a backfill will be needed once the cause is resolved.
  */
-const requestFailuresTotal = meter.createCounter("formbricks_authzed_request_failures_total", {
+const requestFailuresTotal = meter.createCounter("forma_authzed_request_failures_total", {
   description: "AuthZed requests that failed after exhausting retries",
 });
 
 /** Retries scheduled. Elevated but non-failing means SpiceDB is degraded rather than down. */
-const requestRetriesTotal = meter.createCounter("formbricks_authzed_request_retries_total", {
+const requestRetriesTotal = meter.createCounter("forma_authzed_request_retries_total", {
   description: "AuthZed requests retried after a retryable failure",
 });
 
-const outboxDeliveryTotal = meter.createCounter("formbricks_authzed_projection_outbox_delivery_total", {
+const outboxDeliveryTotal = meter.createCounter("forma_authzed_projection_outbox_delivery_total", {
   description: "Authorization projection outbox events processed by outcome",
 });
 
 const outboxDeliveryDuration = meter.createHistogram(
-  "formbricks_authzed_projection_outbox_delivery_duration_seconds",
+  "forma_authzed_projection_outbox_delivery_duration_seconds",
   {
     advice: {
       explicitBucketBoundaries: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30],
@@ -95,20 +95,20 @@ const outboxDeliveryDuration = meter.createHistogram(
   }
 );
 
-const reconciliationAuditTotal = meter.createCounter("formbricks_authzed_reconciliation_audit_total", {
+const reconciliationAuditTotal = meter.createCounter("forma_authzed_reconciliation_audit_total", {
   description: "Scheduled authorization relationship audits by outcome",
 });
 
-const reconciliationDriftTotal = meter.createCounter("formbricks_authzed_reconciliation_drift_total", {
+const reconciliationDriftTotal = meter.createCounter("forma_authzed_reconciliation_drift_total", {
   description: "Attributable relationship differences observed by scheduled audits",
 });
 
-const reconciliationRepairTotal = meter.createCounter("formbricks_authzed_reconciliation_repair_total", {
+const reconciliationRepairTotal = meter.createCounter("forma_authzed_reconciliation_repair_total", {
   description: "Attributable relationship repair results from scheduled reconciliation",
 });
 
 const revocationDeliveryDuration = meter.createHistogram(
-  "formbricks_authzed_projection_revocation_delivery_duration_seconds",
+  "forma_authzed_projection_revocation_delivery_duration_seconds",
   {
     advice: {
       explicitBucketBoundaries: [0.1, 0.5, 1, 2.5, 5, 10, 15, 30, 45, 60, 120, 300],
@@ -118,13 +118,13 @@ const revocationDeliveryDuration = meter.createHistogram(
   }
 );
 
-const outboxStatus = meter.createGauge("formbricks_authzed_projection_outbox_status", {
+const outboxStatus = meter.createGauge("forma_authzed_projection_outbox_status", {
   description: "Point-in-time authorization projection outbox counts by bounded state",
   unit: "{event}",
 });
 
 const outboxOldestPendingAge = meter.createGauge(
-  "formbricks_authzed_projection_outbox_oldest_pending_age_seconds",
+  "forma_authzed_projection_outbox_oldest_pending_age_seconds",
   {
     description: "Point-in-time age of the oldest pending authorization projection event",
     unit: "s",

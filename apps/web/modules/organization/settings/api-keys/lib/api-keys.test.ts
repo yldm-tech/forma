@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { ApiKey, ApiKeyPermission, Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, OperationNotAllowedError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ApiKey, ApiKeyPermission, Prisma } from "@forma/database/prisma";
+import { DatabaseError, OperationNotAllowedError } from "@forma/types/errors";
 import { reconcileApiKeyRelationships } from "@/lib/authzed/api-key";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { TApiKeyWithEnvironmentPermission } from "../types/api-keys";
@@ -42,7 +42,7 @@ const mockApiKeyWithEnvironments: TApiKeyWithEnvironmentPermission = {
 };
 
 // Mock modules before tests
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     apiKey: {
       findFirst: vi.fn(),

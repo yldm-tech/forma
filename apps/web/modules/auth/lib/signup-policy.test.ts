@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { SIGNUP_DISABLED_ERROR_CODE } from "@formbricks/types/errors";
+import { SIGNUP_DISABLED_ERROR_CODE } from "@forma/types/errors";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { isSignupDomainAllowed } from "@/modules/auth/lib/signup-request-context";
 import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";

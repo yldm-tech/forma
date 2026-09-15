@@ -1,4 +1,4 @@
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 
 // Table names are from a hardcoded const array, not user input.

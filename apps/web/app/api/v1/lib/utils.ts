@@ -1,7 +1,7 @@
-import { Prisma } from "@formbricks/database/prisma";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
-import { type TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import { TResponseInput } from "@formbricks/types/responses";
+import { Prisma } from "@forma/database/prisma";
+import { TContactAttributes } from "@forma/types/contact-attribute";
+import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
+import { TResponseInput } from "@forma/types/responses";
 import { normalizeResponseLanguage } from "@/lib/response/utils";
 
 /**

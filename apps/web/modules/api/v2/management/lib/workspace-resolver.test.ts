@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiKeyPermission } from "@formbricks/database/prisma";
+import { ApiKeyPermission } from "@forma/database/prisma";
 import { can } from "@/lib/authorization";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
 import { resolveBodyIdsV2 } from "./workspace-resolver";

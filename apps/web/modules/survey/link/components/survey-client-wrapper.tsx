@@ -2,11 +2,11 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Workspace } from "@formbricks/database/prisma-browser";
-import { getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { TResponseData } from "@formbricks/types/responses";
-import { TSurvey, TSurveyStyling } from "@formbricks/types/surveys/types";
-import { TWorkspaceStyling } from "@formbricks/types/workspace";
+import { Workspace } from "@forma/database/prisma-browser";
+import { getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TResponseData } from "@forma/types/responses";
+import { TSurvey, TSurveyStyling } from "@forma/types/surveys/types";
+import { TWorkspaceStyling } from "@forma/types/workspace";
 import { toJsWorkspaceStateSurvey } from "@/lib/survey/client-utils";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { CustomScriptsInjector } from "@/modules/survey/link/components/custom-scripts-injector";
@@ -42,7 +42,7 @@ interface SurveyClientWrapperProps {
   IMPRINT_URL?: string;
   PRIVACY_URL?: string;
   TERMS_URL?: string;
-  IS_FORMBRICKS_CLOUD: boolean;
+  IS_FORMA_CLOUD: boolean;
   pinAuthToken?: string;
 }
 
@@ -68,7 +68,7 @@ export const SurveyClientWrapper = ({
   IMPRINT_URL,
   PRIVACY_URL,
   TERMS_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   pinAuthToken,
 }: SurveyClientWrapperProps) => {
   const searchParams = useSearchParams();
@@ -215,7 +215,7 @@ export const SurveyClientWrapper = ({
   // cannot do this: the step lives in the renderer's state, which the server never sees.
   //
   // The base is the server-rendered title, captured once on mount, so the author's custom link
-  // metadata title and the "| Formbricks" template are respected without reimplementing
+  // metadata title and the "| Forma" template are respected without reimplementing
   // getBasicSurveyMetadata's priority chain here. Restored on unmount for the same reason the
   // lang/dir effect restores: a client-side navigation away must not leave a stale title behind.
   //
@@ -238,7 +238,7 @@ export const SurveyClientWrapper = ({
   return (
     <>
       {/* Inject custom scripts for tracking/analytics (self-hosted only) */}
-      {!IS_FORMBRICKS_CLOUD && !isPreview && (
+      {!IS_FORMA_CLOUD && !isPreview && (
         <CustomScriptsInjector
           workspaceScripts={workspace.customHeadScripts}
           surveyScripts={survey.customHeadScripts}
@@ -256,7 +256,7 @@ export const SurveyClientWrapper = ({
         handleResetSurvey={handleResetSurvey}
         isEmbed={isEmbed}
         publicDomain={publicDomain}
-        IS_FORMBRICKS_CLOUD={IS_FORMBRICKS_CLOUD}
+        IS_FORMA_CLOUD={IS_FORMA_CLOUD}
         IMPRINT_URL={IMPRINT_URL}
         PRIVACY_URL={PRIVACY_URL}
         TERMS_URL={TERMS_URL}

@@ -39,13 +39,13 @@ Field ids follow one rule everywhere — the editor and the management API refus
 Single Hidden Field:
 
 ```
-https://formbricks.com/s/clin34bjy?screen=pricing
+https://forma.ylam.ai/s/clin34bjy?screen=pricing
 ```
 
 Multiple Hidden Fields:
 
 ```
-https://formbricks.com/s/clin34bjy?screen=landing_page&job=Founder
+https://forma.ylam.ai/s/clin34bjy?screen=landing_page&job=Founder
 ```
 
 ## Set Hidden Fields via SDK
@@ -53,7 +53,7 @@ https://formbricks.com/s/clin34bjy?screen=landing_page&job=Founder
 Attach the values once and every survey displayed afterwards picks them up, until you remove the key or the page reloads:
 
 ```js
-formbricks.setEmbeddedData({ my_field: "value" });
+forma.setEmbeddedData({ my_field: "value" });
 ```
 
 This works in the JavaScript SDK and in the React Native, iOS, Android and Flutter SDKs. See
@@ -63,7 +63,7 @@ This works in the JavaScript SDK and in the React Native, iOS, Android and Flutt
 The older per-trigger form still works, and an explicit value there still wins over an ambient one:
 
 ```js
-formbricks.track("action_name", { hiddenFields: { my_field: "value" } });
+forma.track("action_name", { hiddenFields: { my_field: "value" } });
 ```
 
 ## View Hidden Fields in Responses

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { updateSingleUseLinksAction } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/actions";
 import { DisableLinkModal } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/disable-link-modal";
 import { DocumentationLinks } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/documentation-links";
@@ -373,19 +373,19 @@ export const AnonymousLinksTab = ({
           links={[
             {
               title: t("workspace.surveys.share.anonymous_links.single_use_links"),
-              href: "https://formbricks.com/docs/surveys/link-surveys/single-use-links",
+              href: "https://forma.ylam.ai/docs/surveys/link-surveys/single-use-links",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.data_prefilling"),
-              href: "https://formbricks.com/docs/surveys/link-surveys/data-prefilling",
+              href: "https://forma.ylam.ai/docs/surveys/link-surveys/data-prefilling",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.source_tracking"),
-              href: "https://formbricks.com/docs/surveys/link-surveys/source-tracking",
+              href: "https://forma.ylam.ai/docs/surveys/link-surveys/source-tracking",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.custom_start_point"),
-              href: "https://formbricks.com/docs/surveys/link-surveys/start-at-block",
+              href: "https://forma.ylam.ai/docs/surveys/link-surveys/start-at-block",
             },
           ]}
         />

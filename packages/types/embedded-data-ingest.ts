@@ -53,7 +53,7 @@ export interface TIngestFlag {
 /**
  * Why an incoming key did not become a stored value. Never an error — a bad key must not block a
  * response — but always reported, so the call site can log it against its own logger. That is also
- * why this module carries no logging of its own: `@formbricks/types` is imported by the renderer, the
+ * why this module carries no logging of its own: `@forma/types` is imported by the renderer, the
  * SDKs and the server, and each has a different one.
  *
  * - `unknown_key` — no ingested field declares it (rules 1 and 2: `computed` fields are written by

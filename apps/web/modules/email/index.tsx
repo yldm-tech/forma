@@ -13,15 +13,15 @@ import {
   renderResponseFinishedEmail,
   renderSsoRecoveryFactorsRemovedEmail,
   renderVerificationEmail,
-} from "@formbricks/email";
-import { TEmailTemplateLegalProps } from "@formbricks/email/src/types/email";
-import { logger } from "@formbricks/logger";
-import type { TLinkSurveyEmailData } from "@formbricks/types/email";
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
-import type { TResponse } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import type { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserEmail, TUserLocale } from "@formbricks/types/user";
+} from "@forma/email";
+import { TEmailTemplateLegalProps } from "@forma/email/src/types/email";
+import { logger } from "@forma/logger";
+import type { TLinkSurveyEmailData } from "@forma/types/email";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
+import type { TResponse } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSurvey } from "@forma/types/surveys/types";
+import { TUserEmail, TUserLocale } from "@forma/types/user";
 import {
   DEBUG,
   IMPRINT_ADDRESS,
@@ -107,7 +107,7 @@ export const sendEmail = async (emailData: SendEmailDataProps): Promise<boolean>
     } as SMTPTransport.Options);
 
     const emailDefaults = {
-      from: `${MAIL_FROM_NAME ?? "Formbricks"} <${MAIL_FROM ?? "noreply@formbricks.com"}>`,
+      from: `${MAIL_FROM_NAME ?? "Forma"} <${MAIL_FROM ?? "noreply@forma.ylam.ai"}>`,
     };
     await transporter.sendMail({
       ...emailDefaults,

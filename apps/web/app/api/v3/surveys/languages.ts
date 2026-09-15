@@ -1,9 +1,9 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError } from "@formbricks/types/errors";
-import type { TSurveyLanguage } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError } from "@forma/types/errors";
+import type { TSurveyLanguage } from "@forma/types/surveys/types";
 import type { TV3SurveyDocument } from "./schemas";
 
 export type TV3SurveyLanguageRequest = {

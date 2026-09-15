@@ -1,7 +1,7 @@
 "use client";
 
 import { InfiniteData, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TSurveyStatus } from "@formbricks/types/surveys/types";
+import type { TSurveyStatus } from "@forma/types/surveys/types";
 import { surveyKeys, updateSurveyInInfiniteData } from "@/modules/survey/list/lib/query";
 import { TSurveyListPage, updateSurveyStatus } from "@/modules/survey/list/lib/v3-surveys-client";
 

@@ -7,19 +7,19 @@ import {
   mockWorkspaceId,
 } from "./__mocks__/data.mock";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
 import {
   DatabaseError,
   OperationNotAllowedError,
   ResourceNotFoundError,
   ValidationError,
-} from "@formbricks/types/errors";
-import { TWorkspace } from "@formbricks/types/workspace";
+} from "@forma/types/errors";
+import { TWorkspace } from "@forma/types/workspace";
 import { getWorkspace } from "@/lib/workspace/service";
 import { createLanguage, deleteLanguage, updateLanguage } from "../service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     language: {
       create: vi.fn(),

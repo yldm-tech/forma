@@ -1,7 +1,7 @@
 import { createLocalAccountIssuer } from "@better-auth/core/db";
 import { authenticator } from "otplib";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 import { hashSecret, symmetricEncrypt } from "@/lib/crypto";
@@ -86,7 +86,7 @@ describe("2FA secret re-encode (real Postgres)", () => {
     expect(challenge.status).toBe(200);
     expect(await prisma.session.count()).toBe(0);
 
-    // the user's CURRENT authenticator code (from the original Formbricks secret) completes the challenge
+    // the user's CURRENT authenticator code (from the original Forma secret) completes the challenge
     await auth.api.verifyTOTP({
       body: { code: authenticator.generate(fbSecret) },
       headers: { cookie: allCookies(challenge) },

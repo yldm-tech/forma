@@ -9,9 +9,9 @@ import {
   TSurveyElementChoice,
   TSurveyMultipleChoiceElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyLanguage } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { createI18nString } from "@/lib/i18n/utils";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";

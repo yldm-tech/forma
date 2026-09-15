@@ -1,5 +1,5 @@
-import { WORKFLOW_TRIGGERS } from "@formbricks/workflows";
-import type { TWorkflowExecutableDefinition } from "@formbricks/workflows";
+import { WORKFLOW_TRIGGERS } from "@forma/workflows";
+import type { TWorkflowExecutableDefinition } from "@forma/workflows";
 
 /** An enabled workflow with its current published version's executable definition. */
 export interface WorkflowMatchCandidate {

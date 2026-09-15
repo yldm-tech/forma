@@ -1,5 +1,5 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { TFollowUpEmailToUser } from "@/modules/survey/editor/types/survey-follow-up";
 
 export const getTeamMemberDetails = reactCache(async (teamIds: string[]): Promise<TFollowUpEmailToUser[]> => {

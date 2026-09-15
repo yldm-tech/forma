@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import type { TChartConfig, TChartQuery } from "@formbricks/types/analysis";
+import type { TChartConfig, TChartQuery } from "@forma/types/analysis";
 import {
   AdvancedChartBuilder,
   type ChartQueryState,

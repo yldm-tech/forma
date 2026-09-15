@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TIntegrationGoogleSheets } from "@formbricks/types/integration/google-sheet";
+import { TIntegrationGoogleSheets } from "@forma/types/integration/google-sheet";
 import { GoogleSheetWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/google-sheets/components/GoogleSheetWrapper";
 import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
 import {

@@ -1,6 +1,6 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { TResponse, TResponseInput } from "@formbricks/types/responses";
+import { prisma } from "@forma/database";
+import { TResponse, TResponseInput } from "@forma/types/responses";
 import { updateResponse } from "@/lib/response/service";
 import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
 

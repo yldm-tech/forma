@@ -2,11 +2,11 @@
 
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { ActionClass, Prisma } from "@formbricks/database/prisma";
-import { TActionClass, TActionClassInput, ZActionClassInput } from "@formbricks/types/action-classes";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError, UniqueConstraintError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ActionClass, Prisma } from "@forma/database/prisma";
+import { TActionClass, TActionClassInput, ZActionClassInput } from "@forma/types/action-classes";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError, UniqueConstraintError } from "@forma/types/errors";
 import { ITEMS_PER_PAGE } from "../constants";
 import { getUniqueConstraintFields, isUniqueConstraintError } from "../utils/prisma-constraint";
 import { validateInputs } from "../utils/validate";

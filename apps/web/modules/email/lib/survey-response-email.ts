@@ -6,12 +6,12 @@ import {
   ProcessedResponseElement,
   ProcessedVariable,
   renderFollowUpEmail,
-} from "@formbricks/email";
-import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { TResponse } from "@formbricks/types/responses";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/email";
+import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TResponse } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { DEFAULT_LOCALE, IMPRINT_ADDRESS, IMPRINT_URL, PRIVACY_URL, TERMS_URL } from "@/lib/constants";
 import { getElementResponseMapping } from "@/lib/responses";
 import { buildServerEmbeddedValues } from "@/lib/surveyLogic/utils";
@@ -27,7 +27,7 @@ import { resolveStorageUrl } from "@/modules/storage/utils";
  * Recall values are escaped as they are substituted (`escapeValues`). The allowlist below legitimately
  * permits `<a href>` for author-written body HTML, so the sanitizer cannot tell that markup apart from
  * markup a respondent smuggled in through an open-text answer — without escaping, an anonymous
- * respondent could place an arbitrary clickable link into a Formbricks-branded email sent to the
+ * respondent could place an arbitrary clickable link into a Forma-branded email sent to the
  * survey owner.
  *
  * `ul`/`ol`/`li` are on the list because `sanitize-html` drops a disallowed tag but keeps its text:

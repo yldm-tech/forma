@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { TCreateWorkflowInput } from "@formbricks/workflows";
+import type { TCreateWorkflowInput } from "@forma/workflows";
 import { V3ApiError } from "@/modules/api/lib/v3-client";
 import {
   archiveWorkflow,

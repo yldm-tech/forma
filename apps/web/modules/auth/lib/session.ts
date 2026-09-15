@@ -1,8 +1,8 @@
 import "server-only";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { prisma } from "@formbricks/database";
-import type { Session } from "@formbricks/types/auth";
+import { prisma } from "@forma/database";
+import type { Session } from "@forma/types/auth";
 import { auth } from "@/modules/auth/lib/auth";
 
 /**

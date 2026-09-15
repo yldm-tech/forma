@@ -1,7 +1,7 @@
 ---
 title: "Embedded Data"
 sidebarTitle: "Overview"
-description: "Everything on a response that is not an answer to a question: values you pass in, values the survey calculates, and the context Formbricks captures on its own."
+description: "Everything on a response that is not an answer to a question: values you pass in, values the survey calculates, and the context Forma captures on its own."
 icon: "database"
 ---
 
@@ -31,7 +31,7 @@ Every Embedded Data field has exactly one source, and the source decides who is 
 | ------------ | -------------------------------------------- | ------------------------- | ------------------------------------- |
 | **Ingested** | the outside world: URL params or the SDK     | Hidden Fields             | `string`                              |
 | **Computed** | the survey itself, through logic actions      | Variables                 | `string`, `number`                    |
-| **Reserved** | Formbricks, automatically, on every response | not authored at all       | `string`, `number`, `boolean`, `date` |
+| **Reserved** | Forma, automatically, on every response | not authored at all       | `string`, `number`, `boolean`, `date` |
 
 Ingested fields are the only ones anything outside the survey can write. Computed fields are set by logic while the respondent answers, and reserved fields are read-only auto-capture, so a URL param or an SDK call naming one of them is dropped and logged rather than stored.
 
@@ -70,7 +70,7 @@ A field also carries a **type** that decides how its value is read back and comp
 
 - **Hidden fields** are `string`. Anything you pass is stored as text.
 - **Variables** are text or number, and the initial value you set in the editor is the default the field falls back to.
-- **Reserved fields** are typed by Formbricks, and several of them are genuinely numeric: `viewportWidth < 768` is a numeric comparison in logic, not a comparison of digit strings.
+- **Reserved fields** are typed by Forma, and several of them are genuinely numeric: `viewportWidth < 768` is a numeric comparison in logic, not a comparison of digit strings.
 
 <Note>
   Typing hidden fields (`number`, `boolean`, `date`), giving them a default, and locking a field so nothing
@@ -123,7 +123,7 @@ The same contract runs in the browser when the survey is displayed, and again on
 When two sources offer the same field on the same response, the more explicit one wins:
 
 1. a question's answer, always, for its own key;
-2. an explicit `formbricks.track("action", { hiddenFields: { plan: "pro" } })` value;
+2. an explicit `forma.track("action", { hiddenFields: { plan: "pro" } })` value;
 3. the ambient bag set with `setEmbeddedData()`, or the URL parameter on a link survey;
 4. the field's default value;
 5. otherwise the field is unset.
@@ -139,7 +139,7 @@ Once a value is on a response it behaves like any other response data:
 - Filter and group **responses** by it.
 - **Export** it as a stable, typed column in CSV and Excel.
 
-Mid-survey surfaces (recall inside a running survey, logic conditions) can only use values that exist while the respondent is still answering. Server-derived reserved fields such as `country` or `durationSeconds` are only known once the response reaches Formbricks, so they are available on the response but not offered to a running survey. The [Reserved Fields](/surveys/embedded-data/reserved-fields) page marks which is which.
+Mid-survey surfaces (recall inside a running survey, logic conditions) can only use values that exist while the respondent is still answering. Server-derived reserved fields such as `country` or `durationSeconds` are only known once the response reaches Forma, so they are available on the response but not offered to a running survey. The [Reserved Fields](/surveys/embedded-data/reserved-fields) page marks which is which.
 
 ## Next Steps
 

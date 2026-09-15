@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma, WidgetPlacement, Workspace } from "@formbricks/database/prisma";
-import { DatabaseError, ValidationError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, WidgetPlacement, Workspace } from "@forma/database/prisma";
+import { DatabaseError, ValidationError } from "@forma/types/errors";
 import {
   lookupAuthorizedOrganizationIds,
   lookupAuthorizedWorkspaceIds,
@@ -20,7 +20,7 @@ import {
   getWorkspacesByIds,
 } from "./service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
       findUnique: vi.fn(),

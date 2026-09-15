@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { test } from "./lib/fixtures";
 
 test("keeps the current organization when opening account settings", async ({ page, users }) => {

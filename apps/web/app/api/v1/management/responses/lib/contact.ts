@@ -1,7 +1,7 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { TContactAttributes } from "@formbricks/types/contact-attribute";
+import { prisma } from "@forma/database";
+import { TContactAttributes } from "@forma/types/contact-attribute";
 
 export const getContactByUserId = reactCache(
   async (

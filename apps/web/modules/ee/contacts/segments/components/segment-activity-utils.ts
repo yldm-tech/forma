@@ -1,5 +1,5 @@
-import { TBaseFilters, TSegmentWithSurveyRefs } from "@formbricks/types/segment";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TBaseFilters, TSegmentWithSurveyRefs } from "@forma/types/segment";
+import { TSurvey } from "@forma/types/surveys/types";
 
 type TSurveySummary = Pick<TSurvey, "id" | "name" | "status">;
 type TReferencingSegmentSurveyGroup = {

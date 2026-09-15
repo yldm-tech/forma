@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError, ValidationError } from "@formbricks/types/errors";
+import { OperationNotAllowedError, ValidationError } from "@forma/types/errors";
 import { updateMembershipAction } from "./actions";
 
 const mocks = vi.hoisted(() => ({
@@ -19,18 +19,18 @@ vi.mock("@/lib/authorization", () => ({
   can: mocks.can,
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   // The last-owner guard runs the owner-count re-check and the update inside one transaction;
   // the fake just invokes the callback with a stand-in tx so both still hit the mocks below.
   prisma: { $transaction: vi.fn((callback: (tx: unknown) => unknown) => callback({})) },
 }));
 
-vi.mock("@formbricks/database/prisma", () => ({
+vi.mock("@forma/database/prisma", () => ({
   Prisma: { TransactionIsolationLevel: { Serializable: "Serializable" } },
 }));
 
 vi.mock("@/lib/constants", () => ({
-  IS_FORMBRICKS_CLOUD: true,
+  IS_FORMA_CLOUD: true,
   USER_MANAGEMENT_MINIMUM_ROLE: "manager",
 }));
 

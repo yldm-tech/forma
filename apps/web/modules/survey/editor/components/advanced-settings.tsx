@@ -1,6 +1,6 @@
-import { TSurveyBlockLogic } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import { OptionIds } from "@/modules/survey/editor/components/option-ids";
 import { UpdateElementId } from "@/modules/survey/editor/components/update-element-id";
 

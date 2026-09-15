@@ -1,5 +1,5 @@
 # ==============================================================================
-#  Formbricks — Code Owners
+#  Forma — Code Owners
 # ==============================================================================
 #
 #  ONE RULE, ON PURPOSE. Every pull request gets exactly ONE reviewer.
@@ -22,7 +22,7 @@
 #  five measured 1.8.
 #
 #  A TEAM owner is the only thing GitHub will thin, so one team owns everything.
-#  @formbricks/engineering is configured under
+#  @forma/engineering is configured under
 #  Organization -> Teams -> engineering -> Settings -> Code review with:
 #
 #    * How many team members should be assigned to review?  =  1
@@ -60,4 +60,4 @@
 #  https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 # ==============================================================================
 
-*  @formbricks/engineering
+*  @forma/engineering

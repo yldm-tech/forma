@@ -2,10 +2,10 @@
 
 import { headers } from "next/headers";
 import { z } from "zod";
-import type { IdentityProvider } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
-import { ZUserEmail } from "@formbricks/types/user";
+import type { IdentityProvider } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { OperationNotAllowedError } from "@forma/types/errors";
+import { ZUserEmail } from "@forma/types/user";
 import { EMAIL_AUTH_ENABLED, PASSWORD_RESET_DISABLED, WEBAPP_URL } from "@/lib/constants";
 import { hasCredentialAccount } from "@/lib/user/password";
 import { actionClient } from "@/lib/utils/action-client";

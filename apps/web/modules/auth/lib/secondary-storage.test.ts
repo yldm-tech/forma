@@ -14,7 +14,7 @@ const mockClient = {
 
 vi.mock("redis", () => ({ createClient: vi.fn(() => mockClient) }));
 vi.mock("@/lib/env", () => ({ env: { REDIS_URL: "redis://localhost:6379" } }));
-vi.mock("@formbricks/logger", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn() } }));
 
 describe("redisSecondaryStorage", () => {
   beforeEach(() => {

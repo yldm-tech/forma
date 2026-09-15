@@ -1,5 +1,5 @@
-import { LANGUAGE_CANONICAL_MAP, normalizeLanguageCode } from "@formbricks/i18n-utils/canonical";
-import { logger } from "@formbricks/logger";
+import { LANGUAGE_CANONICAL_MAP, normalizeLanguageCode } from "@forma/i18n-utils/canonical";
+import { logger } from "@forma/logger";
 import type { MigrationScript } from "../../src/scripts/migration-runner";
 import type { LanguageRow, MigrationStats, SurveyContentRow, SurveyLanguageRow } from "./types";
 import { planLanguageMerges, planSurveyLanguageMoves, rewriteI18nKeys, toCanonical } from "./utils";

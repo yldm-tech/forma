@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import type { DataMigrationContext, MigrationScript } from "../../src/scripts/migration-runner";
 
 type TxClient = DataMigrationContext["tx"];

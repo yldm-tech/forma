@@ -5,6 +5,6 @@ export const loggerMocks = {
   warn: vi.fn(),
 };
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: loggerMocks,
 }));

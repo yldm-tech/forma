@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey } from "@forma/types/surveys/types";
 import type { TSurvey as TSurveyListRecord } from "@/modules/survey/list/types/surveys";
 import {
   V3SurveyLanguageError,

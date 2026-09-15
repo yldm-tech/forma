@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import {
   INVITE_TOKEN_INVALID_ERROR_CODE,
   InvalidInputError,
@@ -10,9 +10,9 @@ import {
   SIGNUP_DISABLED_ERROR_CODE,
   SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE,
   UnknownError,
-} from "@formbricks/types/errors";
-import { ZUser, ZUserEmail, ZUserLocale, ZUserName, ZUserPassword } from "@formbricks/types/user";
-import { IS_FORMBRICKS_CLOUD, IS_TURNSTILE_CONFIGURED, TURNSTILE_SECRET_KEY } from "@/lib/constants";
+} from "@forma/types/errors";
+import { ZUser, ZUserEmail, ZUserLocale, ZUserName, ZUserPassword } from "@forma/types/user";
+import { IS_FORMA_CLOUD, IS_TURNSTILE_CONFIGURED, TURNSTILE_SECRET_KEY } from "@/lib/constants";
 import { verifyInviteToken } from "@/lib/jwt";
 import { createMembership } from "@/lib/membership/service";
 import { createOrganization, getOrganization } from "@/lib/organization/service";
@@ -272,7 +272,7 @@ async function handleOrganizationCreation(ctx: ActionClientCtx, user: TCreatedUs
   });
 
   // Stripe setup must run AFTER membership is created so the owner email is available
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     ensureCloudStripeSetupForOrganization(organization.id).catch((error) => {
       logger.error(
         { error, organizationId: organization.id },
@@ -387,7 +387,7 @@ export const createUserAction = actionClient.inputSchema(ZCreateUserAction).acti
 
     await assertSignupPolicyAllows(inviteToken, inviteMatch);
 
-    // Formbricks Cloud only: reject personal/free/disposable email domains before any user is created.
+    // Forma Cloud only: reject personal/free/disposable email domains before any user is created.
     // Invited users are exempt unless SIGNUP_DOMAIN_CHECK_ON_INVITES is enabled.
     if (await isSignupEmailDomainBlocked(parsedInput.email, async () => inviteMatch === "valid")) {
       throw new InvalidInputError(SIGNUP_EMAIL_DOMAIN_BLOCKED_ERROR_CODE);
@@ -443,7 +443,7 @@ export const createUserAction = actionClient.inputSchema(ZCreateUserAction).acti
 
       await subscribeUserToMailingList({
         email: user.email,
-        isFormbricksCloud: IS_FORMBRICKS_CLOUD,
+        isFormaCloud: IS_FORMA_CLOUD,
         subscribeToSecurityUpdates: parsedInput.subscribeToSecurityUpdates,
         subscribeToProductUpdates: parsedInput.subscribeToProductUpdates,
       });

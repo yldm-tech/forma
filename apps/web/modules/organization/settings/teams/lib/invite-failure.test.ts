@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test, vi } from "vitest";
-import { InvalidInputError, ValidationError } from "@formbricks/types/errors";
+import { InvalidInputError, ValidationError } from "@forma/types/errors";
 import {
   formatInviteFailureMessage,
   formatInviteFailureMessages,

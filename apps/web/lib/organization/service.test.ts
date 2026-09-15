@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { lookupAuthorizedOrganizationIds } from "@/lib/authorization/resource-list";
 import { reconcileApiKeyRelationships } from "@/lib/authzed/api-key";
 import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import { deleteOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { updateUser } from "@/lib/user/service";
 import { getWorkspaces } from "@/lib/workspace/service";
 import {
@@ -25,7 +25,7 @@ import {
   updateOrganization,
 } from "./service";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     $transaction: vi.fn(),
     organization: {
@@ -195,9 +195,9 @@ describe("Organization Service", () => {
     test("should create organization with default billing settings", async () => {
       const expectedBilling = {
         limits: {
-          workspaces: IS_FORMBRICKS_CLOUD ? 1 : 3,
+          workspaces: IS_FORMA_CLOUD ? 1 : 3,
           monthly: {
-            responses: IS_FORMBRICKS_CLOUD ? 250 : 1500,
+            responses: IS_FORMA_CLOUD ? 250 : 1500,
           },
         },
         stripeCustomerId: null,
@@ -226,9 +226,9 @@ describe("Organization Service", () => {
           billing: {
             create: {
               limits: {
-                workspaces: IS_FORMBRICKS_CLOUD ? 1 : 3,
+                workspaces: IS_FORMA_CLOUD ? 1 : 3,
                 monthly: {
-                  responses: IS_FORMBRICKS_CLOUD ? 250 : 1500,
+                  responses: IS_FORMA_CLOUD ? 250 : 1500,
                   workflowRuns: null,
                 },
               },
@@ -423,7 +423,7 @@ describe("Organization Service", () => {
       expect(reconcileApiKeyRelationships).toHaveBeenCalledWith({
         apiKeyIds: ["api-key-1"],
       });
-      if (IS_FORMBRICKS_CLOUD) {
+      if (IS_FORMA_CLOUD) {
         expect(cleanupStripeCustomer).toHaveBeenCalledWith("cus_123");
       }
     });

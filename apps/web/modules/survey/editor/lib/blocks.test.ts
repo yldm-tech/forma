@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import {
   addBlock,
   addElementToBlock,

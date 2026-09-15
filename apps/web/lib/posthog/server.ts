@@ -1,6 +1,6 @@
 import "server-only";
 import { type BeforeSendFn, PostHog } from "posthog-node";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { IS_PRODUCTION, POSTHOG_KEY } from "@/lib/constants";
 
 const POSTHOG_HOST = "https://eu.i.posthog.com";

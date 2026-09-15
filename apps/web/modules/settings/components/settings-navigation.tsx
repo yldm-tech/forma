@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useTransition } from "react";
 import { useTranslation } from "react-i18next";
-import type { TOrganizationRole } from "@formbricks/types/memberships";
-import type { TUser } from "@formbricks/types/user";
+import type { TOrganizationRole } from "@forma/types/memberships";
+import type { TUser } from "@forma/types/user";
 import {
   getOrganizationsForSwitcherAction,
   getWorkspacesForSwitcherAction,
@@ -21,9 +21,9 @@ interface SettingsNavigationProps {
   organizationId: string;
   organizationName: string;
   membershipRole?: TOrganizationRole;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   publicDomain: string;
-  isFormbricksSurveysConfigured: boolean;
+  isFormaSurveysConfigured: boolean;
   // Where the back arrow returns to (the surveys list of the current workspace).
   backUrl: string;
 }
@@ -38,9 +38,9 @@ export const SettingsNavigation = ({
   organizationId,
   organizationName,
   membershipRole,
-  isFormbricksCloud,
+  isFormaCloud,
   publicDomain,
-  isFormbricksSurveysConfigured,
+  isFormaSurveysConfigured,
   backUrl,
 }: Readonly<SettingsNavigationProps>) => {
   const router = useRouter();
@@ -88,7 +88,7 @@ export const SettingsNavigation = ({
           organizationId={organizationId}
           organizationName={organizationName}
           membershipRole={membershipRole}
-          isFormbricksCloud={isFormbricksCloud}
+          isFormaCloud={isFormaCloud}
           isCollapsed={false}
           isTextVisible={false}
           hideWorkspaceSection={!workspaceId}
@@ -114,7 +114,7 @@ export const SettingsNavigation = ({
         user={user}
         organizationId={organizationId}
         publicDomain={publicDomain}
-        isFormbricksSurveysConfigured={isFormbricksSurveysConfigured}
+        isFormaSurveysConfigured={isFormaSurveysConfigured}
       />
     </aside>
   );

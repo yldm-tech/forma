@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { JobExecutionContext } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
+import type { JobExecutionContext } from "@forma/jobs";
+import { logger } from "@forma/logger";
 import { sendTelemetryEvents } from "@/lib/telemetry/usage-update";
 import { processUsageTelemetryJob } from "./process-usage-telemetry-job";
 
@@ -8,7 +8,7 @@ vi.mock("@/lib/telemetry/usage-update", () => ({
   sendTelemetryEvents: vi.fn(),
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     debug: vi.fn(),
     error: vi.fn(),

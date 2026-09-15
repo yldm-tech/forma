@@ -1,5 +1,5 @@
 import "server-only";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 
 /** Default/max page size for v3 reference-collection list endpoints (action classes, attribute keys). */
 export const V3_LIST_DEFAULT_LIMIT = 50;

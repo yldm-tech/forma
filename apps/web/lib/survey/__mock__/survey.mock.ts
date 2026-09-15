@@ -1,20 +1,12 @@
-import { Prisma } from "@formbricks/database/prisma";
-import { TActionClass } from "@formbricks/types/action-classes";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import {
-  type TLinkedEmbeddedField,
-  deriveLegacyEmbeddedData,
-} from "@formbricks/types/embedded-data-resolver";
-import { TOrganization } from "@formbricks/types/organizations";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import {
-  TSurvey,
-  TSurveyCreateInput,
-  TSurveyLanguage,
-  TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
-import { TUser } from "@formbricks/types/user";
-import { TWorkspace } from "@formbricks/types/workspace";
+import { Prisma } from "@forma/database/prisma";
+import { TActionClass } from "@forma/types/action-classes";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { type TLinkedEmbeddedField, deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { TOrganization } from "@forma/types/organizations";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyCreateInput, TSurveyLanguage, TSurveyWelcomeCard } from "@forma/types/surveys/types";
+import { TUser } from "@forma/types/user";
+import { TWorkspace } from "@forma/types/workspace";
 import { selectSurvey } from "../service";
 
 const selectContact = {
@@ -201,7 +193,7 @@ const baseSurveyProperties = {
   publishOn: null,
   closeOn: null,
   archivedAt: null,
-  redirectUrl: "https://github.com/formbricks/formbricks",
+  redirectUrl: "https://github.com/yldm-tech/forma",
   recontactDays: 3,
   displayLimit: 3,
   welcomeCard: mockWelcomeCard,

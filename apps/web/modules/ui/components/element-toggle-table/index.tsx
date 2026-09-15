@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElement } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyElement } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";
 import { Switch } from "@/modules/ui/components/switch";
 

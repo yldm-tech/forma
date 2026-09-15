@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { createBrevoCustomer } from "@/modules/auth/lib/brevo";
 import { markEmailJustVerified } from "./email-verification-request-context";

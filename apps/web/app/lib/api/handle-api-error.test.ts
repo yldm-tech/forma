@@ -11,7 +11,7 @@ import {
   UniqueConstraintError,
   UnknownError,
   ValidationError,
-} from "@formbricks/types/errors";
+} from "@forma/types/errors";
 import { GENERIC_API_ERROR_MESSAGE, handleApiError } from "./handle-api-error";
 
 const CORS_HEADER = "Access-Control-Allow-Origin";

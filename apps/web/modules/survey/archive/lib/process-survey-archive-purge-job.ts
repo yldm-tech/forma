@@ -1,8 +1,8 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import type { JobHandler, TSurveyArchivePurgeJobData } from "@formbricks/jobs";
-import { logger } from "@formbricks/logger";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import type { JobHandler, TSurveyArchivePurgeJobData } from "@forma/jobs";
+import { logger } from "@forma/logger";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { queueAuditEventWithoutRequest } from "@/modules/ee/audit-logs/lib/handler";
 import {
   SURVEY_ARCHIVE_PURGE_BATCH_SIZE,

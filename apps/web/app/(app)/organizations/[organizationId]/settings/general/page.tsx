@@ -8,7 +8,7 @@ import { isInstanceAIConfigured } from "@/lib/ai/service";
 import {
   ENTERPRISE_LICENSE_REQUEST_FORM_URL,
   FB_LOGO_URL,
-  IS_FORMBRICKS_CLOUD,
+  IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
 } from "@/lib/constants";
 import { getUser } from "@/lib/user/service";
@@ -61,7 +61,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
           </Alert>
         </div>
       )}
-      {!IS_FORMBRICKS_CLOUD && <SecurityListTip />}
+      {!IS_FORMA_CLOUD && <SecurityListTip />}
       <SettingsCard
         title={t("workspace.settings.general.organization_settings")}
         description={t("workspace.settings.general.organization_settings_description")}>
@@ -75,7 +75,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
           membershipRole={currentUserRole}
           isInstanceAIConfigured={isInstanceAIConfigured()}
           hasAIPermission={hasAIPermission}
-          isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+          isFormaCloud={IS_FORMA_CLOUD}
           enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
         />
       </SettingsCard>
@@ -84,7 +84,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
         hasWhiteLabelPermission={hasWhiteLabelPermission}
         workspaceId={layoutData?.currentWorkspace?.id ?? ""}
         isReadOnly={!isOwnerOrManager}
-        isFormbricksCloud={IS_FORMBRICKS_CLOUD}
+        isFormaCloud={IS_FORMA_CLOUD}
         fbLogoUrl={FB_LOGO_URL}
         user={user}
         isStorageConfigured={IS_STORAGE_CONFIGURED}
@@ -107,7 +107,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
 
       <div className="space-y-2">
         <IdBadge id={organization.id} label={t("common.organization_id")} variant="column" />
-        <IdBadge id={packageJson.version} label={t("common.formbricks_version")} variant="column" />
+        <IdBadge id={packageJson.version} label={t("common.forma_version")} variant="column" />
       </div>
     </PageContentWrapper>
   );

@@ -1,7 +1,7 @@
-import { prisma } from "@formbricks/database";
-import { Prisma, Webhook } from "@formbricks/database/prisma";
-import { ZId, ZOptionalNumber } from "@formbricks/types/common";
-import { DatabaseError, InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma, Webhook } from "@forma/database/prisma";
+import { ZId, ZOptionalNumber } from "@forma/types/common";
+import { DatabaseError, InvalidInputError } from "@forma/types/errors";
 import { TWebhookInput, ZWebhookInput } from "@/app/api/v1/webhooks/types/webhooks";
 import { ITEMS_PER_PAGE } from "@/lib/constants";
 import { generateWebhookSecret } from "@/lib/crypto";

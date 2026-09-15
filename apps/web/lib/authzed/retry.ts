@@ -1,7 +1,7 @@
 import "server-only";
 import { randomInt } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { AUTHZED_MAX_ATTEMPTS, AUTHZED_RETRY_BASE_DELAYS_MS, AUTHZED_RETRY_JITTER_RATIO } from "./constants";
 import { mapAuthzedError } from "./errors";
 import { recordAuthzedRequestFailure, recordAuthzedRequestRetry } from "./metrics";

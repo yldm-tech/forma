@@ -39,7 +39,7 @@ const createNoCodeClickAction = async ({
   await page.locator("[name='noCodeConfig.elementSelector.cssSelector']").fill(selector);
   await page.getByRole("button", { name: "Create action", exact: true }).click();
 
-  const successToast = await page.waitForSelector(".formbricks__toast__success");
+  const successToast = await page.waitForSelector(".forma__toast__success");
   expect(successToast).toBeTruthy();
 
   const actionButton = page.getByTitle(name);
@@ -94,7 +94,7 @@ const createNoCodePageViewAction = async ({
   // User clicks the Create Action button
   await page.getByRole("button", { name: "Create action", exact: true }).click();
 
-  const successToast = await page.waitForSelector(".formbricks__toast__success");
+  const successToast = await page.waitForSelector(".forma__toast__success");
   expect(successToast).toBeTruthy();
 
   const actionButton = page.getByTitle(name);
@@ -134,7 +134,7 @@ const createNoCodeAction = async ({
   // User clicks the Create Action button
   await page.getByRole("button", { name: "Create action", exact: true }).click();
 
-  const successToast = await page.waitForSelector(".formbricks__toast__success");
+  const successToast = await page.waitForSelector(".forma__toast__success");
   expect(successToast).toBeTruthy();
 
   const actionButton = page.getByTitle(name);
@@ -173,7 +173,7 @@ const createCodeAction = async ({
 
   await page.getByRole("button", { name: "Create action", exact: true }).click();
 
-  const successToast = await page.waitForSelector(".formbricks__toast__success", { timeout: 15000 });
+  const successToast = await page.waitForSelector(".forma__toast__success", { timeout: 15000 });
   expect(successToast).toBeTruthy();
 
   // Wait for the action to be fully created and committed to the database

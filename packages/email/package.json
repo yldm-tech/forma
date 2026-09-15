@@ -1,8 +1,8 @@
 {
-  "name": "@formbricks/email",
+  "name": "@forma/email",
   "version": "1.0.0",
   "private": true,
-  "description": "Email templates for Formbricks with React Email preview server",
+  "description": "Email templates for Forma with React Email preview server",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -23,7 +23,7 @@
     "clean": "rimraf .turbo node_modules coverage dist"
   },
   "dependencies": {
-    "@formbricks/types": "workspace:*",
+    "@forma/types": "workspace:*",
     "@react-email/components": "1.0.12",
     "@react-email/render": "2.0.6",
     "clsx": "catalog:",
@@ -33,8 +33,8 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@formbricks/config-eslint": "workspace:*",
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-eslint": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

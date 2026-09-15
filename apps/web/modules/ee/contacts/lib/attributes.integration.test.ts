@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { resetDb } from "@/integration/reset-db";
 import { updateAttributes } from "@/modules/ee/contacts/lib/attributes";
 

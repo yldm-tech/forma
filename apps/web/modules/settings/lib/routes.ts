@@ -14,5 +14,5 @@ export const workspaceSettingsPath = (workspaceId: string, slug: string): string
 
 // Where billing-role users (and other "you can't see this settings page" cases) get sent. Billing is an
 // organization-level concern, so it resolves to the org-scoped billing/enterprise page.
-export const getOrganizationBillingPath = (organizationId: string, isFormbricksCloud: boolean): string =>
-  organizationSettingsPath(organizationId, isFormbricksCloud ? "billing" : "enterprise");
+export const getOrganizationBillingPath = (organizationId: string, isFormaCloud: boolean): string =>
+  organizationSettingsPath(organizationId, isFormaCloud ? "billing" : "enterprise");

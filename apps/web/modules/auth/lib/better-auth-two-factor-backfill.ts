@@ -1,7 +1,7 @@
 import "server-only";
 import { isAPIError } from "better-auth/api";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
 import { buildReencodedTwoFactorData } from "@/modules/auth/lib/cutover/reencode-two-factor";
 import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
 

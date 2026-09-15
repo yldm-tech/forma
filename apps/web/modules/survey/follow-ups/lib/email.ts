@@ -1,7 +1,7 @@
-import { TResponse } from "@formbricks/types/responses";
-import { TSurveyFollowUp } from "@formbricks/types/surveys/follow-up";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+import { TResponse } from "@forma/types/responses";
+import { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { sendEmail } from "@/modules/email";
 import { buildSurveyResponseEmailHtml } from "@/modules/email/lib/survey-response-email";
 

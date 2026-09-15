@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 
 /**

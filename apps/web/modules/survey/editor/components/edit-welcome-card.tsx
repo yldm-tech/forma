@@ -9,8 +9,8 @@ import {
   TSurveyEndScreenCard,
   TSurveyRedirectUrlCard,
   TSurveyWelcomeCard,
-} from "@formbricks/types/surveys/types";
-import { TUserLocale } from "@formbricks/types/user";
+} from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { ElementFormInput } from "@/modules/survey/components/element-form-input";
 import { FileInput } from "@/modules/ui/components/file-input";

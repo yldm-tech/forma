@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 // The repair data migration under test (auto-discovered by the migration runner at deploy).
 import { repairAccountIssuer } from "../../../packages/database/migration/20260821165535_repair_account_issuer/migration";

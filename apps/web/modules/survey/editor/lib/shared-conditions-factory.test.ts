@@ -1,13 +1,13 @@
 import { createId } from "@paralleldrive/cuid2";
 import { TFunction } from "i18next";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { TSurveyQuotaLogic } from "@formbricks/types/quota";
+import { TSurveyQuotaLogic } from "@forma/types/quota";
 import {
   TConditionGroup,
   TSingleCondition,
   TSurveyLogicConditionsOperator,
-} from "@formbricks/types/surveys/logic";
-import { TSurvey, TSurveyQuestionTypeEnum } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/logic";
+import { TSurvey, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import {
   ConditionsUpdateCallbacks,
   SharedConditionsFactoryParams,

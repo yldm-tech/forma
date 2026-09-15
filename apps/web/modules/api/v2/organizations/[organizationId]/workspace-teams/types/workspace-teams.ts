@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZWorkspaceTeam } from "@formbricks/database/zod/workspace-teams";
+import { ZWorkspaceTeam } from "@forma/database/zod/workspace-teams";
 import { ZGetFilter } from "@/modules/api/v2/types/api-filter";
 
 // Backwards compatibility: accept `projectId` as alias for `workspaceId`

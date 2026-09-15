@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { InvalidInputError } from "@forma/types/errors";
 import { verifyPassword } from "@/modules/auth/lib/utils";
 import { getCredentialPasswordHash, hasCredentialAccount, verifyUserPassword } from "./password";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     account: {
       findUnique: vi.fn(),

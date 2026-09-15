@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
+import { ZId } from "@forma/types/common";
 
 export const ZTeamPermission = z.enum(["read", "readWrite", "manage"]);
 export type TTeamPermission = z.infer<typeof ZTeamPermission>;

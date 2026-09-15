@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { MAX_RESPONSE_TTC } from "@formbricks/types/responses";
+import { MAX_RESPONSE_TTC } from "@forma/types/responses";
 import { ZResponseInputV2 } from "./response";
 
 describe("ZResponseInputV2 ttc sanitization", () => {

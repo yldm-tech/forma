@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 
 export interface SwitcherItem {

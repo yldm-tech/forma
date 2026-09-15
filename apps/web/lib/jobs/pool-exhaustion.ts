@@ -1,5 +1,5 @@
-import { Prisma } from "@formbricks/database/prisma";
-import { DatabaseError } from "@formbricks/types/errors";
+import { Prisma } from "@forma/database/prisma";
+import { DatabaseError } from "@forma/types/errors";
 
 /**
  * True when an error is a transient database connection-pool exhaustion (Prisma `P2024`, or a

@@ -4,7 +4,7 @@ import { LockIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { FORMBRICKS_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
+import { FORMA_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
 import { authClient } from "@/modules/auth/lib/auth-client";
 import { doesSamlConnectionExistAction } from "@/modules/ee/sso/actions";
 import { getSsoReturnToUrl } from "@/modules/ee/sso/lib/utils";
@@ -22,7 +22,7 @@ export const SamlButton = ({ returnToUrl, lastUsed, source }: Readonly<SamlButto
 
   const handleLogin = async () => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(FORMBRICKS_LOGGED_IN_WITH_LS, "Saml");
+      localStorage.setItem(FORMA_LOGGED_IN_WITH_LS, "Saml");
     }
     setIsLoading(true);
     const doesSamlConnectionExist = await doesSamlConnectionExistAction();

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderSsoRecoveryFactorsRemovedEmail } from "@formbricks/email";
+import { renderSsoRecoveryFactorsRemovedEmail } from "@forma/email";
 
 const t = (key: string): string => {
   const translations: Record<string, string> = {
@@ -13,8 +13,8 @@ const t = (key: string): string => {
     "emails.sso_recovery_factors_removed_email_did_not_expect":
       "If you did not just sign in, contact support.",
     "emails.email_footer_text_1": "Have a great day!",
-    "emails.email_footer_text_2": "The Formbricks Team",
-    "emails.email_template_text_1": "This email was sent via Formbricks.",
+    "emails.email_footer_text_2": "The Forma Team",
+    "emails.email_template_text_1": "This email was sent via Forma.",
   };
   return translations[key] ?? key;
 };
@@ -28,7 +28,7 @@ const t = (key: string): string => {
 describe("renderSsoRecoveryFactorsRemovedEmail", () => {
   const render = (overrides: { passwordRemoved: boolean; twoFactorRemoved: boolean }) =>
     renderSsoRecoveryFactorsRemovedEmail({
-      securitySettingsLink: "https://app.formbricks.com/account/settings/profile",
+      securitySettingsLink: "https://app.forma.ylam.ai/account/settings/profile",
       t,
       ...overrides,
     });
@@ -63,7 +63,7 @@ describe("renderSsoRecoveryFactorsRemovedEmail", () => {
   test("links to the account page that actually hosts both factors", async () => {
     const html = await render({ passwordRemoved: true, twoFactorRemoved: true });
 
-    expect(html).toContain("https://app.formbricks.com/account/settings/profile");
+    expect(html).toContain("https://app.forma.ylam.ai/account/settings/profile");
     expect(html).not.toContain("/settings/security");
   });
 });

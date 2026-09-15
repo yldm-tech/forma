@@ -1,12 +1,12 @@
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { ZSurveyEndings } from "@formbricks/types/surveys/types";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { ZSurveyEndings } from "@forma/types/surveys/types";
 import {
   type WorkflowApiContext,
   type WorkflowAuditDetail,
   createWorkflowsHandlers,
   createWorkflowsService,
-} from "@formbricks/workflows/server";
+} from "@forma/workflows/server";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { problemForbidden } from "@/app/api/v3/lib/response";
 import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
@@ -18,11 +18,11 @@ import { getIsWorkflowsEnabled } from "@/modules/ee/license-check/lib/utils";
 import { buildRecordAnalytics } from "./analytics";
 
 /**
- * Adapter glue between the Next.js v3 routes and the framework-agnostic `@formbricks/workflows`
+ * Adapter glue between the Next.js v3 routes and the framework-agnostic `@forma/workflows`
  * handlers. The package owns business logic, validation, serialization, and error mapping; this
  * file injects the app's concrete `prisma`/`logger` and binds an `authorize` capability to the
  * authenticated request. The real Prisma client structurally satisfies the package's narrow
- * `WorkflowsDb` port, so no cast is needed; the package never imports `@formbricks/database`.
+ * `WorkflowsDb` port, so no cast is needed; the package never imports `@forma/database`.
  */
 const service = createWorkflowsService({ prisma });
 
@@ -34,7 +34,7 @@ const getUserId = (authentication: TV3Authentication): string | null =>
 
 /**
  * Confirm a workflow trigger's referenced survey + ending cards exist in the workspace. Injected so
- * `@formbricks/workflows` stays survey-agnostic. Scoped by the survey's `(id, workspaceId)` composite
+ * `@forma/workflows` stays survey-agnostic. Scoped by the survey's `(id, workspaceId)` composite
  * key; ending ids come from the survey's `endings`, parsed through `ZSurveyEndings` so the JSON
  * column is validated (not accessed untyped) before reading ids.
  */
@@ -94,7 +94,7 @@ const buildRecordAudit =
   };
 
 /**
- * Recipient allowlist for `send_email` actions. Injected so `@formbricks/workflows` stays
+ * Recipient allowlist for `send_email` actions. Injected so `@forma/workflows` stays
  * tenancy-agnostic: given literal recipient emails, returns the subset whose owners cannot access
  * this workspace. Enable/test use it to block a workflow from silently forwarding response data to
  * an arbitrary external inbox (ENG-2029) or to someone whose access to this workspace was revoked
@@ -122,7 +122,7 @@ export const buildWorkflowApiContext = (
   instance,
   logger: logger.withContext({ requestId }),
   // HMAC key for redacting PII markers in audit snapshots; reuses the app's audit/encryption secret
-  // so markers aren't offline-guessable. Injected as data to keep `@formbricks/workflows` agnostic.
+  // so markers aren't offline-guessable. Injected as data to keep `@forma/workflows` agnostic.
   auditRedactionKey: ENCRYPTION_KEY,
   // Workspace access first, then the workflows entitlement (Cloud plan / self-hosted EE license)
   // for the resolved organization. Every v3 route handler and MCP tool authorizes through this

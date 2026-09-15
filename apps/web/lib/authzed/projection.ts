@@ -1,5 +1,5 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { isAuthzedEnabled } from "./config";
 import { AuthzedError, type TAuthzedErrorCode, mapAuthzedError } from "./errors";
 import { recordAuthzedProjection } from "./metrics";

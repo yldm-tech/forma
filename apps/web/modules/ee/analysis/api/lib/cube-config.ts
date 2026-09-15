@@ -5,8 +5,8 @@ import { env } from "@/lib/env";
 
 export const CUBE_API_TOKEN_TTL_SECONDS = 5 * 60;
 export const CUBE_QUERY_SCOPE = "xm:cube:query";
-export const DEFAULT_CUBE_JWT_AUDIENCE = "formbricks-cube";
-export const DEFAULT_CUBE_JWT_ISSUER = "formbricks-web";
+export const DEFAULT_CUBE_JWT_AUDIENCE = "forma-cube";
+export const DEFAULT_CUBE_JWT_ISSUER = "forma-web";
 
 export type TCubeQuerySource =
   | "charts.aiDataProfile"

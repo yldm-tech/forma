@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { TAuthenticationApiKey } from "@forma/types/auth";
 import { type ApiErrorResult, handleApiError } from "@/app/lib/api/handle-api-error";
 import { responses } from "@/app/lib/api/response";
 import {

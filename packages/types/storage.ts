@@ -62,7 +62,7 @@ export const ALLOWED_FILE_EXTENSIONS: TAllowedFileExtension[] = [...ALLOWED_FILE
  * drift apart.
  *
  * Kept a strict subset of the upload allowlist — `satisfies` enforces this at compile time — so any
- * URL that passes image validation is always something the user can actually upload to Formbricks.
+ * URL that passes image validation is always something the user can actually upload to Forma.
  * `svg` is deliberately excluded: we don't sanitize SVGs, so allowing them would be an XSS vector.
  */
 export const IMAGE_FILE_EXTENSIONS = [

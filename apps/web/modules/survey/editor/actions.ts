@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ZActionClassInput } from "@formbricks/types/action-classes";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { TSurvey, TSurveyVariable, ZSurvey } from "@formbricks/types/surveys/types";
+import { ZActionClassInput } from "@forma/types/action-classes";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { TSurvey, TSurveyVariable, ZSurvey } from "@forma/types/surveys/types";
 import { assertCan } from "@/lib/authorization";
 import {
-  IS_FORMBRICKS_SURVEYS_CONFIGURED,
+  IS_FORMA_SURVEYS_CONFIGURED,
   POSTHOG_KEY,
   UNSPLASH_ACCESS_KEY,
   UNSPLASH_ALLOWED_DOMAINS,
@@ -312,7 +312,7 @@ export const updateSurveyAction = authenticatedActionClient.inputSchema(ZSurvey)
     // in-app surveys config so it's a true no-op (no extra count query) when the widget
     // isn't enabled, mirroring the POSTHOG_KEY gate above.
     let isSecondPublish = false;
-    if (isPublish && IS_FORMBRICKS_SURVEYS_CONFIGURED) {
+    if (isPublish && IS_FORMA_SURVEYS_CONFIGURED) {
       const publishedCount = await getSurveyCount(result.workspaceId, {
         status: ["inProgress", "paused", "completed"],
         createdBy: { userId: ctx.user.id, value: ["you"] },
@@ -409,7 +409,7 @@ export const getImagesFromUnsplashAction = authenticatedActionClient
           id: result.id,
           alt_description: result.alt_description,
           urls: {
-            regularWithAttribution: `${result.urls.regular}&dpr=2&authorLink=${authorLink}&authorName=${authorName}&utm_source=formbricks&utm_medium=referral`,
+            regularWithAttribution: `${result.urls.regular}&dpr=2&authorLink=${authorLink}&authorName=${authorName}&utm_source=forma&utm_medium=referral`,
             download: result.links.download_location,
           },
         };

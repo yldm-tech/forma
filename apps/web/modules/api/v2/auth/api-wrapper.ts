@@ -1,6 +1,6 @@
 import { ZodRawShape, z } from "zod";
-import { logger } from "@formbricks/logger";
-import { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import { TAuthenticationApiKey } from "@forma/types/auth";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
 import { TApiAuditLog } from "@/app/lib/api/with-api-logging";
 import { withAuthorizationSurface } from "@/lib/authorization/context";

@@ -5,11 +5,11 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 readonly COMPOSE_FILE="${REPO_ROOT}/docker-compose.dev.yml"
-readonly PROJECT_NAME="formbricks-authzed-smoke-${$}"
+readonly PROJECT_NAME="forma-authzed-smoke-${$}"
 readonly AUTHZED_TOKEN="0000000000000000000000000000000000000000000000000000000000000001"
 readonly AUTHZED_DATABASE_PASSWORD="0000000000000000000000000000000000000000000000000000000000000002"
 readonly WRONG_AUTHZED_TOKEN="0000000000000000000000000000000000000000000000000000000000000003"
-readonly SCHEMA_LOG_SENTINEL="Canonical Formbricks authorization schema."
+readonly SCHEMA_LOG_SENTINEL="Canonical Forma authorization schema."
 readonly RELATIONSHIP_USER_SENTINEL="application-graph-alice"
 readonly RELATIONSHIP_API_KEY_SENTINEL="application-api-key-writer"
 readonly RELATIONSHIP_RESOURCE_SENTINEL="application-graph-smoke"
@@ -76,14 +76,14 @@ authzed_cli() {
     AUTHZED_ENABLED=true \
     AUTHZED_ENDPOINT="localhost:${spicedb_port}" \
     AUTHZED_INSECURE=true \
-    AUTHZED_SYSTEM_KEY=formbricks \
+    AUTHZED_SYSTEM_KEY=forma \
     AUTHZED_TOKEN="${token}" \
     CUBEJS_API_SECRET=authzed-smoke-cube-secret \
-    CUBEJS_API_URL=https://cube.formbricks.local \
-    DATABASE_URL=https://database.formbricks.local/formbricks \
+    CUBEJS_API_URL=https://cube.forma.local \
+    DATABASE_URL=https://database.forma.local/forma \
     ENCRYPTION_KEY=authzed-smoke-encryption-key \
     HUB_API_KEY=authzed-smoke-hub-key \
-    HUB_API_URL=https://hub.formbricks.local \
+    HUB_API_URL=https://hub.forma.local \
     LOG_LEVEL=fatal \
     NODE_ENV="${AUTHZED_SMOKE_NODE_ENV:-test}" \
     NODE_OPTIONS=--conditions=react-server \

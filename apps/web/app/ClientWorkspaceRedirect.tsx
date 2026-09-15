@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { FORMBRICKS_WORKSPACE_ID_LS } from "@/lib/localStorage";
+import { FORMA_WORKSPACE_ID_LS } from "@/lib/localStorage";
 
 interface ClientWorkspaceRedirectProps {
   userWorkspaceIds: string[];
@@ -16,12 +16,12 @@ const ClientWorkspaceRedirect = ({ userWorkspaceIds }: ClientWorkspaceRedirectPr
       return;
     }
 
-    const lastWorkspaceId = localStorage.getItem(FORMBRICKS_WORKSPACE_ID_LS);
+    const lastWorkspaceId = localStorage.getItem(FORMA_WORKSPACE_ID_LS);
 
     if (lastWorkspaceId && userWorkspaceIds.includes(lastWorkspaceId)) {
       router.push(`/workspaces/${lastWorkspaceId}`);
     } else {
-      localStorage.removeItem(FORMBRICKS_WORKSPACE_ID_LS);
+      localStorage.removeItem(FORMA_WORKSPACE_ID_LS);
       router.push(`/workspaces/${userWorkspaceIds[0]}`);
     }
   }, [userWorkspaceIds, router]);

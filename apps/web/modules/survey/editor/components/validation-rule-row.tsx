@@ -2,18 +2,18 @@
 
 import { InfoIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TAllowedFileExtension } from "@formbricks/types/storage";
+import { TAllowedFileExtension } from "@forma/types/storage";
 import {
   TSurveyElement,
   TSurveyElementTypeEnum,
   TSurveyOpenTextElementInputType,
-} from "@formbricks/types/surveys/elements";
+} from "@forma/types/surveys/elements";
 import {
   TAddressField,
   TContactInfoField,
   TValidationRule,
   TValidationRuleType,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { cn } from "@/lib/cn";
 import { Button } from "@/modules/ui/components/button";
 import { RULE_TYPE_CONFIG } from "../lib/validation-rules-config";

@@ -52,7 +52,7 @@ checksums:
     auth/login/login_to_your_account: 88f0beb509622ce2f3a22128a9ec9ba5
     auth/login/login_with_email: 8596217b9cec74845ebfe02d6d82e67a
     auth/login/lost_access: 917c4665b99c37377ed522ba53249006
-    auth/login/new_to_formbricks: 1a1d45aca05bb21eb8f795d7d62dc4e3
+    auth/login/new_to_forma: 1a1d45aca05bb21eb8f795d7d62dc4e3
     auth/login/oauth_account_not_linked_description: 74627dc30666699b21de093d16d83312
     auth/login/oauth_account_not_linked_title: 2eb8e132ed37b3b87c1dec392c224933
     auth/login/oauth_generic_error_description: 25b857a74723e3878c16ebc21d28da7a
@@ -74,7 +74,7 @@ checksums:
     auth/oauth/consent_failed: d6c92762fac20817ff0ec8d9cbc0412c
     auth/oauth/consent_revoked: f1c243aaacd7c466b9986e484b93247b
     auth/oauth/deny_access: ba3ac7dc12f362da277df5c9ba21e752
-    auth/oauth/formbricks_website: 95c2f69c6b6428e1aa6c26f4dd427e22
+    auth/oauth/forma_website: 95c2f69c6b6428e1aa6c26f4dd427e22
     auth/oauth/invalid_oauth_request: 02936ced8cd4df963282fe5d413f6900
     auth/oauth/invalid_oauth_request_description: 39322e962c0c20c766ae82d0b8917ebb
     auth/oauth/localhost_redirect_warning: e0368262d25dc98ea02158eebd0066c1
@@ -287,8 +287,8 @@ checksums:
     common/finish: ffa7a10f71182b48fefed7135bee24fa
     common/finished_at: 05d2fa31cf3b2e2255729ec7898240c2
     common/first_name: cf040a5d6a9fd696be400380cc99f54b
-    common/formbricks_homepage: 95a78e9e1812a97221d1f69015561e68
-    common/formbricks_version: d9967c797f3e49ca0cae78bc0ebd19cb
+    common/forma_homepage: 95a78e9e1812a97221d1f69015561e68
+    common/forma_version: d9967c797f3e49ca0cae78bc0ebd19cb
     common/full_name: f45991923345e8322c9ff8cd6b7e2b16
     common/gathering_responses: c5914490ed81bd77f13d411739f0c9ef
     common/general: b891e8f15579fc5d97bcaf3637f5ae59
@@ -407,7 +407,7 @@ checksums:
     common/placeholder: 88c2c168aff12ca70148fcb5f6b4c7b1
     common/please_select_at_least_one_survey: fb1cbeb670480115305e23444c347e50
     common/please_select_at_least_one_trigger: e88e64a1010a039745e80ed2e30951fe
-    common/powered_by_formbricks: 1c3e19894583292bfaf686cac84a4960
+    common/powered_by_forma: 1c3e19894583292bfaf686cac84a4960
     common/preview: 3173ee1f0f1d4e50665ca4a84c38e15d
     common/privacy: 7459744a63ef8af4e517a09024bd7c08
     common/product_manager: dfeadc96e6d3de22a884ee97974b505e
@@ -468,7 +468,7 @@ checksums:
     common/selected_questions: beffe92d5272d99a0022f004e6a6ad73
     common/send_test_email: 2fd3ea40199b9589132ac826a5b0f3f5
     common/session_not_found: e9622df3170dbfd9636403bb0c22295b
-    common/set_up_formbricks_sdk: f4b6202f1a6cba2d61b87ae06f38338d
+    common/set_up_forma_sdk: f4b6202f1a6cba2d61b87ae06f38338d
     common/settings: 8df6777277469c1fd88cc18dde2f1cc3
     common/share_feedback: f3c14bfa149fde4035b6965cb8d3e993
     common/show: 16dfe5dc481240cd2819a6394f90df92
@@ -696,7 +696,7 @@ checksums:
     setup/intro/paragraph_1: 41e6a1e7c9a4a1922c7064a89f6733fd
     setup/intro/paragraph_2: 5b3cce4d8c75bab4d671e2af7fc7ee9f
     setup/intro/paragraph_3: 5568badc9cbb2e5571a38340c63e7c8e
-    setup/intro/welcome_to_formbricks: 561427153e3effa108f54407dfc2126f
+    setup/intro/welcome_to_forma: 561427153e3effa108f54407dfc2126f
     setup/invite/add_another_member: 02947deaa4710893794f3cc6e160c2b4
     setup/invite/continue: 3cfba90b4600131e82fc4260c568d044
     setup/invite/failed_to_invite: dc5ce0dcdf0df978f1102b729dc15584
@@ -1920,9 +1920,9 @@ checksums:
     workspace/app-connection/environment_id_legacy: d5c701874d34b4591e780755f7ac7a58
     workspace/app-connection/environment_id_legacy_alert: 09ac96821ff99fad4590c661503fa0cd
     workspace/app-connection/environment_id_legacy_alert_link: 25c529078a115d1ff044a321dd8ee01b
-    workspace/app-connection/formbricks_sdk_connected: 29e8a40ad6a7fdb5af5ee9451a70a9aa
-    workspace/app-connection/formbricks_sdk_not_connected: 557c534e665750978ba6edb0eacb428e
-    workspace/app-connection/formbricks_sdk_not_connected_description: e05ef840100a9778f234ecd95eee595f
+    workspace/app-connection/forma_sdk_connected: 29e8a40ad6a7fdb5af5ee9451a70a9aa
+    workspace/app-connection/forma_sdk_not_connected: 557c534e665750978ba6edb0eacb428e
+    workspace/app-connection/forma_sdk_not_connected_description: e05ef840100a9778f234ecd95eee595f
     workspace/app-connection/how_to_setup: 5d85745ba02a687fd8995255fcda9f48
     workspace/app-connection/how_to_setup_description: f918ef5972c55abeffe2159ed52e59e8
     workspace/app-connection/install_method_ai: 3dad85ff99f887b97c9d07db3e53d93f
@@ -2074,7 +2074,7 @@ checksums:
     workspace/contacts/upload_contacts_modal_preview: 2ea999d47068d8d626cde456ae0ac44a
     workspace/contacts/upload_contacts_modal_upload_btn: 47b7f3bcf478a7d8dc258d2efc80af37
     workspace/contacts/upload_contacts_success: cd5d6b6d587586dd4f944868c92835bc
-    workspace/formbricks_logo: b7ee57de32c8b13463cc8ca8643eddd4
+    workspace/forma_logo: b7ee57de32c8b13463cc8ca8643eddd4
     workspace/general/cannot_delete_only_workspace: 853f32a75d92b06eaccc0d43d767c183
     workspace/general/cooldown_period_updated_successfully: 55ff7f3874ea30a1961107c495407696
     workspace/general/custom_scripts: a6a06a2e20764d76d3e22e5e17d98dbb
@@ -2162,7 +2162,7 @@ checksums:
     workspace/integrations/notion/link_database: 877df9eb2e6b1e071f419a2d495c6b8e
     workspace/integrations/notion/link_new_database: dd0a6d419bebce80a4f820826d2de37e
     workspace/integrations/notion/link_notion_database: b952ea593758ae76a00a2022e00c93eb
-    workspace/integrations/notion/map_formbricks_fields_to_notion_property: ba600b4f12337312a019b4011a4025f6
+    workspace/integrations/notion/map_forma_fields_to_notion_property: ba600b4f12337312a019b4011a4025f6
     workspace/integrations/notion/no_databases_found: 6414b0818ff29c3ee71790ceb66e7bec
     workspace/integrations/notion/notion_integration: 16802cfcb079492f4b608617e6bb7cd2
     workspace/integrations/notion/notion_integration_description: a06f071006dc4a228956bb6dce3f5e3f
@@ -2344,10 +2344,10 @@ checksums:
     workspace/look/enable_custom_styling_description: c640ce557046d87b2944118dbc7aaffe
     workspace/look/failed_to_remove_logo: c3b5aa87d945f7ea83e029d1ee90d310
     workspace/look/failed_to_update_logo: f8c9f8fe947f559dc698a3439d73f0c5
-    workspace/look/formbricks_branding: 98dad6e31b03d235725c4d95065e36ff
-    workspace/look/formbricks_branding_hidden: fda9ba81f8d7fdaacf8dc1642034e145
-    workspace/look/formbricks_branding_settings_description: 5bb39206c6412c703895593f465a01f9
-    workspace/look/formbricks_branding_shown: 6c9861cf8f95e8a68c5c64b2630d96cd
+    workspace/look/forma_branding: 98dad6e31b03d235725c4d95065e36ff
+    workspace/look/forma_branding_hidden: fda9ba81f8d7fdaacf8dc1642034e145
+    workspace/look/forma_branding_settings_description: 5bb39206c6412c703895593f465a01f9
+    workspace/look/forma_branding_shown: 6c9861cf8f95e8a68c5c64b2630d96cd
     workspace/look/generate_theme_btn: 0345bf322c191e70d01fd6607ec5c2f8
     workspace/look/generate_theme_confirmation: f119dbb85fb2bda1c0bcdc581724ef3b
     workspace/look/generate_theme_header: 4df5f30a20cf78e248465915f222fd1b
@@ -2364,8 +2364,8 @@ checksums:
     workspace/look/replace_logo: b69a290f789ae2dfeb067c463482c824
     workspace/look/reset_styling: f25db45ece8637d660bd9d455c9b0265
     workspace/look/reset_styling_confirmation: 9ebc0403ebb8a51ed93ec2711db85796
-    workspace/look/show_formbricks_branding_in: 80fabfec9b34a13c0445d02b923216ed
-    workspace/look/show_powered_by_formbricks: a0e96edadec8ef326423feccc9d06be7
+    workspace/look/show_forma_branding_in: 80fabfec9b34a13c0445d02b923216ed
+    workspace/look/show_powered_by_forma: a0e96edadec8ef326423feccc9d06be7
     workspace/look/styling_updated_successfully: b8b74b50dde95abcd498633e9d0c891f
     workspace/look/suggest_colors: ddc4543b416ab774007b10a3434343cd
     workspace/look/suggested_colors_applied_please_save: a440b8e29a327822a94d9bbf8c52e2ed
@@ -2686,7 +2686,7 @@ checksums:
     workspace/settings/enterprise/full_feature_trial_description: 1599bdcb87d115ffa551a6e574909468
     workspace/settings/enterprise/full_feature_trial_title: e013945e21c4b80b063b567807c9de64
     workspace/settings/enterprise/get_an_enterprise_license_to_get_access_to_all_features: afd3c00f19097e88ed051800979eea44
-    workspace/settings/enterprise/hide_powered_by_formbricks: 2c7d9016686c38f4b6801953e1884352
+    workspace/settings/enterprise/hide_powered_by_forma: 2c7d9016686c38f4b6801953e1884352
     workspace/settings/enterprise/insights_dashboards: 04e267e196068634607d701fb7346d30
     workspace/settings/enterprise/keep_full_control_over_your_data_privacy_and_security: 43aa041cc3e2b2fdd35d2d34659a6b7a
     workspace/settings/enterprise/license_features_table_access: 550606d4a12bdf108c1b12b925ca1b3a
@@ -2727,7 +2727,7 @@ checksums:
     workspace/settings/enterprise/teams_and_access_roles: ecde7a5204109c220a358d46210c869d
     workspace/settings/enterprise/two_factor_authentication: bc68ddd9c3c82225ef641f097e0940db
     workspace/settings/enterprise/unify_feedback_inbox: e56481905ea1cf0e47dc30cf0fac6d22
-    workspace/settings/enterprise/unlock_the_full_power_of_formbricks_free_for_30_days: a96f8df102a5d1f0367f3f82ac1f344b
+    workspace/settings/enterprise/unlock_the_full_power_of_forma_free_for_30_days: a96f8df102a5d1f0367f3f82ac1f344b
     workspace/settings/enterprise/white_glove_onboarding: 79d5f04ad3decd659e63f5cf61628ea0
     workspace/settings/enterprise/whitelabel_email_follow_ups: 4d62c861b60c5dceb6ad72cd5d1186d7
     workspace/settings/enterprise/workflows: b0c9c8615a9ba7d9cb73e767290a7f72
@@ -3161,7 +3161,7 @@ checksums:
     workspace/surveys/edit/conditional_logic: 8da827c6111ff1638af11d37f5a72bf7
     workspace/surveys/edit/confirm_default_language: 67ee675555346c972ae1b5a630351645
     workspace/surveys/edit/confirm_survey_changes: 98228b8f52285a04df33ee59b9b04648
-    workspace/surveys/edit/connect_formbricks_and_launch_surveys: 0ac69df50129e1aaf5ba4013ee4bda9b
+    workspace/surveys/edit/connect_forma_and_launch_surveys: 0ac69df50129e1aaf5ba4013ee4bda9b
     workspace/surveys/edit/contact_fields: 0d4e3f4d2eb3481aabe3ac60a692fa74
     workspace/surveys/edit/contains: 41c8c25407527a5336404313f4c8d650
     workspace/surveys/edit/continue_to_settings: b9853a7eedb3ae295088268fe5a44824
@@ -3281,7 +3281,7 @@ checksums:
     workspace/surveys/edit/follow_ups_modal_trigger_type_response: 8b0e49e76ba09241f512201871bef0f2
     workspace/surveys/edit/follow_ups_modal_updated_successfull_toast: 61204fada3231f4f1fe3866e87e1130a
     workspace/surveys/edit/follow_ups_new: 224c779d252b3e75086e4ed456ba2548
-    workspace/surveys/edit/formbricks_sdk_is_not_connected: 35165b0cac182a98408007a378cc677e
+    workspace/surveys/edit/forma_sdk_is_not_connected: 35165b0cac182a98408007a378cc677e
     workspace/surveys/edit/four_points: b289628a6b8a6cd0f7d17a14ca6cd7bf
     workspace/surveys/edit/heading: 79e9dfa461f38a239d34b9833ca103f1
     workspace/surveys/edit/hidden_field_added_successfully: 76c289ee9b9b0a271a5cbb278aec8c60
@@ -3808,7 +3808,7 @@ checksums:
     workspace/surveys/share/send_email/embed_code_copied_to_clipboard: 94dfaa227e6e533bef7d6305961568f0
     workspace/surveys/share/send_email/embed_code_copied_to_clipboard_failed: 106f735e3237b1ae1c9186bb76a74faf
     workspace/surveys/share/send_email/embed_code_tab: 08f559317cc34a2cbfe4594fe9e475f4
-    workspace/surveys/share/send_email/formbricks_email_survey_preview: 3240ad34aac02860909e10187745070e
+    workspace/surveys/share/send_email/forma_email_survey_preview: 3240ad34aac02860909e10187745070e
     workspace/surveys/share/send_email/nav_title: d42c7c6710f749cb2075f51794083b8c
     workspace/surveys/share/send_email/send_preview: 0ce6fba95d2a2abc4b1007ccab625a4b
     workspace/surveys/share/send_email/send_preview_email: 400341cb44b6e23fa77f70f0db718d8f
@@ -3837,7 +3837,7 @@ checksums:
     workspace/surveys/summary/completed_tooltip: fdb268d9ed33284f73ab098b6175f1aa
     workspace/surveys/summary/configure_alerts: 05cc642cd9398034d7e68589d22d97cf
     workspace/surveys/summary/congrats: 378f06fe96289e527153f8201088ff74
-    workspace/surveys/summary/connect_your_website_or_app_with_formbricks_to_get_started: 4e894ebba7635b5b075895eb37f84251
+    workspace/surveys/summary/connect_your_website_or_app_with_forma_to_get_started: 4e894ebba7635b5b075895eb37f84251
     workspace/surveys/summary/csat_satisfied: 4d6121afdc705a70465a230d6d1f6217
     workspace/surveys/summary/csat_satisfied_tooltip: 3a69a76559a40fbbdff14525d83b459c
     workspace/surveys/summary/current_count: 6a3e59de8559e88e991e0aeafa9cfeec
@@ -4025,7 +4025,7 @@ checksums:
     workspace/unify/csv_unmapped_columns_explainer: 58cdfc3c06c141f156288dc434f8e0ca
     workspace/unify/data_origin: 9a62ac5378411b0b7735c01dbeeb454f
     workspace/unify/default_source_name_csv: ef4060fef24c4fec064987b9d2a9fa4b
-    workspace/unify/default_source_name_formbricks: 9088b01e1085b1cf42412597ebeea051
+    workspace/unify/default_source_name_forma: 9088b01e1085b1cf42412597ebeea051
     workspace/unify/delete_feedback_record: 86d7262c000cfb1f91ea373036cd3616
     workspace/unify/delete_feedback_record_confirmation: 389f5a27a76d825d8751cc8fa20589ea
     workspace/unify/delete_feedback_records_confirmation: 9867caf985bfd77e4df9be2164298dd5
@@ -4044,7 +4044,7 @@ checksums:
     workspace/unify/enum: 96fc644f35edd6b1c09d1d503f078acc
     workspace/unify/error_source_directory_not_assigned: 74aa6d4705a984b37f0ad84f1b40b6dc
     workspace/unify/error_source_field_mapping_duplicate: 4e507ae4a99f53dfa75d849d32566bf2
-    workspace/unify/error_source_formbricks_mapping_duplicate: 48524e22fa33bd0b2829f7aea49c711b
+    workspace/unify/error_source_forma_mapping_duplicate: 48524e22fa33bd0b2829f7aea49c711b
     workspace/unify/error_source_name_duplicate: 56a1a05212e87dff21261d1db90fdb11
     workspace/unify/error_source_name_required: b2d5f79f6126e23128d7bef0c1736ff2
     workspace/unify/error_source_questions_required: d7d8e388959ab83a9195ba63bebf6516
@@ -4078,7 +4078,7 @@ checksums:
     workspace/unify/field_type_label_number: 2789f8391f63e7200a5521078aab017d
     workspace/unify/field_type_label_rating: c9fa231054678af1362b7f9c6ab35e23
     workspace/unify/field_type_label_text: 4ddccc1974775ed7357f9beaf9361cec
-    workspace/unify/formbricks_surveys: de765c51751a795336498cd0a6c3f86b
+    workspace/unify/forma_surveys: de765c51751a795336498cd0a6c3f86b
     workspace/unify/go_to_feedback_directories: 0262585f8a811222eee931648e86b84a
     workspace/unify/historical_import_complete: f46f98bf4db63bf2993bfb234dc95f62
     workspace/unify/import_csv_data: f05e1d1ed88d528256efe5702df46646
@@ -4107,7 +4107,7 @@ checksums:
     workspace/unify/no_feedback_directory_linked_member_description: d264980a1c061654575c0a26d6df9bd4
     workspace/unify/no_feedback_directory_linked_title: fe0bd0df23a14e2cbf3be5355b49ad66
     workspace/unify/no_feedback_records: 4b72636a55afb4dcf977161ad5a15467
-    workspace/unify/no_formbricks_surveys_available_description: 2218334806910168bdfb6f283f31b963
+    workspace/unify/no_forma_surveys_available_description: 2218334806910168bdfb6f283f31b963
     workspace/unify/no_sources_connected: 0e8a5612530bfc82091091f40f95012f
     workspace/unify/not_enriched: a120747f948eea14c99c0ff98720e0b9
     workspace/unify/or_drag_and_drop: 6c7d6b05d39dcbfc710d35fcab25cb8c
@@ -4139,7 +4139,7 @@ checksums:
     workspace/unify/source: 45309626f464f4bda161ee783a4c8c80
     workspace/unify/source_connect_csv_description: 8db7e23acbfa89920694d61ac9585b44
     workspace/unify/source_connect_feedback_record_mcp_description: 9558338c0757b4b5b9aba8c0c85dc097
-    workspace/unify/source_connect_formbricks_description: 2d7aa0bb9b9f9251184c0e60ee409a8a
+    workspace/unify/source_connect_forma_description: 2d7aa0bb9b9f9251184c0e60ee409a8a
     workspace/unify/source_connector_name: 2b865c1b971463fb17c599058dbed68b
     workspace/unify/source_created_successfully: b04ab49a6ca938dd7c46bfb124cf4925
     workspace/unify/source_deleted_successfully: 4ef727e15effca6390190c08219a9176

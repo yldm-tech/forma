@@ -1,6 +1,6 @@
 ---
 title: Language-Specific
-description: This document outlines the language-specific conventions for the Formbricks codebase, providing guidelines for writing code in TypeScript/JavaScript.
+description: This document outlines the language-specific conventions for the Forma codebase, providing guidelines for writing code in TypeScript/JavaScript.
 icon: code
 ---
 
@@ -60,7 +60,7 @@ extends: [
      1. Mocks (for testing)
      2. Server-only imports
      3. Third-party modules
-     4. Internal `@formbricks/*` modules
+     4. Internal `@forma/*` modules
      5. Local aliases (`~/*`)
      6. Relative imports
 
@@ -141,24 +141,24 @@ s.requires_arc = true
 
 2. **Architecture Patterns**
 
-   - **Singleton Pattern**: Main SDK class (`Formbricks`) with static interface
+   - **Singleton Pattern**: Main SDK class (`Forma`) with static interface
    - **Manager Pattern**: Specialized managers (`UserManager`, `SurveyManager`, `PresentSurveyManager`)
-   - **Builder Pattern**: Configuration objects (`FormbricksConfig.Builder`)
+   - **Builder Pattern**: Configuration objects (`FormaConfig.Builder`)
    - **Protocol-Oriented Programming**: Service protocols for dependency injection and testing
 
 3. **Error Handling**
 
-   - Custom error enums with descriptive cases (`FormbricksSDKErrorType`)
+   - Custom error enums with descriptive cases (`FormaSDKErrorType`)
    - Error types conform to `LocalizedError` protocol
    - Structured error propagation with completion handlers
    - Defensive programming with guard statements and early returns
 
 4. **Naming Conventions**
 
-   - Classes: PascalCase (`FormbricksConfig`, `UserManager`)
+   - Classes: PascalCase (`FormaConfig`, `UserManager`)
    - Properties/Methods: camelCase (`workspaceId`, `setUserId`)
    - Constants: camelCase with descriptive names
-   - Protocol names: Descriptive with "Protocol" suffix (`FormbricksServiceProtocol`)
+   - Protocol names: Descriptive with "Protocol" suffix (`FormaServiceProtocol`)
 
 5. **Code Organization**
 
@@ -194,24 +194,24 @@ We follow standard Swift formatting conventions:
 
 ```swift
 // Class definitions
-@objc(Formbricks) public class Formbricks: NSObject {
+@objc(Forma) public class Forma: NSObject {
 
 // Property declarations with access control
 static internal var isInitialized: Bool = false
 private let userManager: UserManager
 
 // Method signatures with clear parameter labels
-@objc public static func setup(with config: FormbricksConfig, force: Bool = false)
+@objc public static func setup(with config: FormaConfig, force: Bool = false)
 
 // Guard statements for early returns
 guard !isInitialized else {
-    let error = FormbricksSDKError(type: .sdkIsAlreadyInitialized)
-    Formbricks.logger?.error(error.message)
+    let error = FormaSDKError(type: .sdkIsAlreadyInitialized)
+    Forma.logger?.error(error.message)
     return
 }
 
 // Enum cases with descriptive names
-public enum FormbricksSDKErrorType: Int {
+public enum FormaSDKErrorType: Int {
     case sdkIsNotInitialized
     case invalidAppUrl
     case networkError
@@ -231,7 +231,7 @@ Our Android SDK codebase with Kotlin follows modern Android development practice
 
 2. **Kotlin Language Features**
 
-   - **Object singletons** for stateless utilities and managers (`Formbricks`, `Logger`, `SDKError`)
+   - **Object singletons** for stateless utilities and managers (`Forma`, `Logger`, `SDKError`)
    - **Data classes** for models with automatic equals/hashCode/toString (`Survey`, `User`)
    - **Sealed classes** for representing restricted hierarchies
    - **Extension functions** for utility methods (`Guard.kt`, `DateExtensions.kt`)

@@ -6,8 +6,8 @@
  * config into the bundle. Same arrangement as `./url-helpers`, and `./utils` re-exports from here so
  * existing server-side imports keep working.
  */
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
-import { TSurveyElementTypeEnum, TSurveyFileUploadElement } from "@formbricks/types/surveys/elements";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
+import { TSurveyElementTypeEnum, TSurveyFileUploadElement } from "@forma/types/surveys/elements";
 
 /**
  * The minimum an element must expose to be recognised as a file upload.

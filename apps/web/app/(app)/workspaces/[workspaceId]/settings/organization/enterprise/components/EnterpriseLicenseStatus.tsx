@@ -157,7 +157,7 @@ export const EnterpriseLicenseStatus = ({
               contactLink: (
                 <a
                   className="font-medium text-slate-700 underline hover:text-slate-900"
-                  href="mailto:hola@formbricks.com"
+                  href="mailto:hola@forma.ylam.ai"
                 />
               ),
             }}

@@ -1,9 +1,9 @@
 /**
  * V3 API auth — session (browser) or API key with workspace-scoped access.
  */
-import { logger } from "@formbricks/logger";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
-import { AuthorizationError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { logger } from "@forma/logger";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
+import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { type TAuthorizationActor, assertCan, can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationAction } from "@/lib/authorization/permission-action";
 import type { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";

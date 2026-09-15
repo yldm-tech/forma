@@ -5,7 +5,7 @@ import {
   ZWorkflowRunStatus,
   ZWorkflowSortBy,
   ZWorkflowStatus,
-} from "@formbricks/workflows";
+} from "@forma/workflows";
 
 // Every schema here rejects undeclared arguments, for the reasons documented at the top of
 // `./schemas.ts` (ENG-2256): an undeclared argument must fail loudly rather than be silently dropped.

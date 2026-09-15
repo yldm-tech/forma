@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { OperationNotAllowedError } from "@formbricks/types/errors";
-import { ZSurveySlug } from "@formbricks/types/surveys/types";
+import { OperationNotAllowedError } from "@forma/types/errors";
+import { ZSurveySlug } from "@forma/types/surveys/types";
 import { assertCan } from "@/lib/authorization";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { getWorkspaceIdFromSurveyId } from "@/lib/utils/helper";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
@@ -19,7 +19,7 @@ const ZUpdateSurveySlugAction = z.object({
 export const updateSurveySlugAction = authenticatedActionClient
   .inputSchema(ZUpdateSurveySlugAction)
   .action(async ({ ctx, parsedInput }) => {
-    if (IS_FORMBRICKS_CLOUD) {
+    if (IS_FORMA_CLOUD) {
       throw new OperationNotAllowedError("Pretty URLs are only available on self-hosted instances");
     }
 
@@ -40,7 +40,7 @@ const ZRemoveSurveySlugAction = z.object({
 export const removeSurveySlugAction = authenticatedActionClient
   .inputSchema(ZRemoveSurveySlugAction)
   .action(async ({ ctx, parsedInput }) => {
-    if (IS_FORMBRICKS_CLOUD) {
+    if (IS_FORMA_CLOUD) {
       throw new OperationNotAllowedError("Pretty URLs are only available on self-hosted instances");
     }
 

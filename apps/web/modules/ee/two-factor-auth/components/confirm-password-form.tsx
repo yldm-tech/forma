@@ -5,7 +5,7 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { ZUserPassword } from "@formbricks/types/user";
+import { ZUserPassword } from "@forma/types/user";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { setupTwoFactorAuthAction } from "@/modules/ee/two-factor-auth/actions";
 import { Button } from "@/modules/ui/components/button";

@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 /**
  * Vitest globalSetup for the Better Auth integration harness (ENG-1054).
  *
- * Provisions an isolated, BA-shaped copy of the Formbricks schema in a throwaway database:
- *  1. copy the dev DB's schema (schema-only) into `formbricks_ba_test`, then
+ * Provisions an isolated, BA-shaped copy of the Forma schema in a throwaway database:
+ *  1. copy the dev DB's schema (schema-only) into `forma_ba_test`, then
  *  2. apply the two cutover adjustments Better Auth needs — `emailVerified` Date→Boolean and
  *     `Account.type` nullable.
  *
@@ -28,14 +28,14 @@ const safeEnv = (value: string, pattern: RegExp, name: string): string => {
 };
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const CONTAINER = safeEnv(
-  process.env.TEST_DB_CONTAINER ?? "formbricks-postgres-1",
+  process.env.TEST_DB_CONTAINER ?? "forma-postgres-1",
   NAME_PATTERN,
   "TEST_DB_CONTAINER"
 );
-const SOURCE_DB = safeEnv(process.env.TEST_DB_SOURCE ?? "formbricks", NAME_PATTERN, "TEST_DB_SOURCE");
-const TEST_DB = safeEnv(process.env.TEST_DB_NAME ?? "formbricks_ba_test", NAME_PATTERN, "TEST_DB_NAME");
+const SOURCE_DB = safeEnv(process.env.TEST_DB_SOURCE ?? "forma", NAME_PATTERN, "TEST_DB_SOURCE");
+const TEST_DB = safeEnv(process.env.TEST_DB_NAME ?? "forma_ba_test", NAME_PATTERN, "TEST_DB_NAME");
 const REDIS_CONTAINER = safeEnv(
-  process.env.TEST_REDIS_CONTAINER ?? "formbricks-valkey-1",
+  process.env.TEST_REDIS_CONTAINER ?? "forma-valkey-1",
   NAME_PATTERN,
   "TEST_REDIS_CONTAINER"
 );
@@ -44,7 +44,7 @@ const REDIS_TEST_DB = safeEnv(process.env.TEST_REDIS_DB ?? "15", /^\d+$/, "TEST_
 const sh = (cmd: string): string => execSync(cmd, { stdio: "pipe" }).toString();
 
 export default function setup(): void {
-  // CI provisions formbricks_ba_test out-of-band (the workflow creates the DB, runs the migrations,
+  // CI provisions forma_ba_test out-of-band (the workflow creates the DB, runs the migrations,
   // and applies the two ALTERs below) because GitHub Actions service containers aren't reachable via
   // `docker exec`. When that's already done, skip the docker-based clone + redis flush; per-test
   // isolation still comes from resetDb (TRUNCATE), and a fresh CI Valkey starts empty. Local dev (flag

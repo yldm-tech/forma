@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { synchronizeAuthzedIntegrationFixture } from "@/integration/authzed";
 import { resetDb } from "@/integration/reset-db";
 import { can } from "@/lib/authorization";

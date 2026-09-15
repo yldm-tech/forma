@@ -9,7 +9,7 @@ changes on `main` before the direct-cutover work began.
 - Main parent: `12b8aa1a3d4128b7c989a5ebd5fb39b1f5084276`.
 - Current `main` is authoritative for product behavior, security fixes, package infrastructure, and
   generated configuration.
-- `epic/authzed` is authoritative for the Formbricks authorization contract, SpiceDB schema, client,
+- `epic/authzed` is authoritative for the Forma authorization contract, SpiceDB schema, client,
   projection, repair, deployment, and operations implementation.
 - The synchronization is a real merge commit so `main` remains an ancestor of the epic. It must not
   be squash-merged into `epic/authzed`.

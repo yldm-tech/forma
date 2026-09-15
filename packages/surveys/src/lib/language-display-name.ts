@@ -1,17 +1,17 @@
-import type { Iso639Code } from "@formbricks/i18n-utils";
+import type { Iso639Code } from "@forma/i18n-utils";
 
 /**
- * Native-script display names for every ISO 639 code Formbricks supports.
+ * Native-script display names for every ISO 639 code Forma supports.
  *
  * Each language is shown in its own script (e.g. "Deutsch", "français", "日本語")
  * so users can recognise their language regardless of the current UI locale.
  *
  * The `Iso639Code` key type is derived from the `iso639Languages` array in
- * @formbricks/i18n-utils via `as const satisfies`, so adding or removing a
+ * @forma/i18n-utils via `as const satisfies`, so adding or removing a
  * language there will cause a compile-time error here until this map is updated.
  *
  * ~5 KB — still ~71 KB smaller than the old 14-locale static list from
- * @formbricks/i18n-utils that was previously bundled.
+ * @forma/i18n-utils that was previously bundled.
  */
 const NATIVE_NAMES: Record<Iso639Code, string> = {
   aa: "Afar",

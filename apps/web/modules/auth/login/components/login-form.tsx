@@ -9,7 +9,7 @@ import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { cn } from "@/lib/cn";
-import { FORMBRICKS_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
+import { FORMA_LOGGED_IN_WITH_LS } from "@/lib/localStorage";
 import { buildAttributionQuerySuffix } from "@/modules/auth/lib/attribution";
 import { authClient } from "@/modules/auth/lib/auth-client";
 import { getOAuthErrorVariant } from "@/modules/auth/lib/oauth-error";
@@ -133,7 +133,7 @@ export const LoginForm = ({
 
   const onSubmit: SubmitHandler<TLoginForm> = async (data) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(FORMBRICKS_LOGGED_IN_WITH_LS, "Email");
+      localStorage.setItem(FORMA_LOGGED_IN_WITH_LS, "Email");
     }
     try {
       // Step 2 — the user is answering a two-factor challenge. Better Auth issued a partial
@@ -193,7 +193,7 @@ export const LoginForm = ({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setLastLoggedInWith(localStorage.getItem(FORMBRICKS_LOGGED_IN_WITH_LS) || "");
+      setLastLoggedInWith(localStorage.getItem(FORMA_LOGGED_IN_WITH_LS) || "");
     }
   }, []);
 
@@ -350,7 +350,7 @@ export const LoginForm = ({
 
         {publicSignUpEnabled && !totpLogin && isMultiOrgEnabled && (
           <div className="mt-9 text-center text-xs">
-            <span className="leading-5 text-slate-500">{t("auth.login.new_to_formbricks")}</span>
+            <span className="leading-5 text-slate-500">{t("auth.login.new_to_forma")}</span>
             <br />
             <Link
               href={signupHref}

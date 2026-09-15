@@ -1,7 +1,7 @@
 import "server-only";
 import { getSessionFromCtx } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { WEBAPP_URL } from "@/lib/constants";
 import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
 import { auditVerificationSessionWithheld } from "./better-auth-observability";
@@ -58,7 +58,7 @@ const grantSessionToSignupBrowser = async (
  * `emailVerification.autoSignInAfterVerification` used to be `true`, on the reasoning that "clicking
  * the signed link proves email ownership". It does — but it does not prove the clicker chose the
  * account's password, and those are different facts. An attacker could register an address that had no
- * account yet, with a password of their choosing; Formbricks mailed the victim a verification link; and
+ * account yet, with a password of their choosing; Forma mailed the victim a verification link; and
  * the victim's click signed the VICTIM into an account whose password the ATTACKER still held, in an
  * organization the attacker had provisioned (`handlePostUserCreation` runs at sign-up time). That is
  * textbook account pre-hijacking.

@@ -1,14 +1,14 @@
 import "server-only";
 import { after } from "next/server";
-import { prisma } from "@formbricks/database";
-import { logger } from "@formbricks/logger";
-import { ZId } from "@formbricks/types/common";
+import { prisma } from "@forma/database";
+import { logger } from "@forma/logger";
+import { ZId } from "@forma/types/common";
 import {
   TFeedbackSourceElementScope,
-  TFeedbackSourceFormbricksMapping,
+  TFeedbackSourceFormaMapping,
   THubFieldType,
-} from "@formbricks/types/feedback-source";
-import { TSurveyBlock } from "@formbricks/types/surveys/blocks";
+} from "@forma/types/feedback-source";
+import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { validateInputs } from "../utils/validate";
 import { getFeedbackSourcesToReconcile } from "./service";
 import { type TSurveyElementIndex, indexSurveyElements } from "./survey-elements";
@@ -34,7 +34,7 @@ export const isEmptyReconciliation = (reconciliation: TFeedbackSourceReconciliat
   reconciliation.toDelete.length === 0 &&
   reconciliation.toUpdate.length === 0;
 
-type TMappingElementId = Pick<TFeedbackSourceFormbricksMapping, "surveyId" | "elementId" | "hubFieldType">;
+type TMappingElementId = Pick<TFeedbackSourceFormaMapping, "surveyId" | "elementId" | "hubFieldType">;
 
 type TMappingHubFieldType = { elementId: string; hubFieldType: THubFieldType };
 
@@ -96,7 +96,7 @@ const collectUnmappedElements = (
  * Which of the classified rows actually get deleted.
  *
  * A source with zero rows for a survey is unrecoverable: every other write path requires min(1), and
- * getFeedbackSourcesToReconcile matches on `formbricksMappings: { some: { surveyId } }`, so the source
+ * getFeedbackSourcesToReconcile matches on `formaMappings: { some: { surveyId } }`, so the source
  * would never be found for this survey again. Where the only rows left are inert, keeping them costs
  * nothing and preserves that handle — a pending create rescues the source too, so the hold only
  * applies when nothing is being added.
@@ -138,11 +138,11 @@ const resolveDeletions = (
 };
 
 /**
- * Diff one survey's stored formbricksMappings against that survey's current blocks and produce a
+ * Diff one survey's stored formaMappings against that survey's current blocks and produce a
  * minimal reconciliation delta.
  *
  * - Elements retyped to a type with no Hub field → `toDelete`, always (the creation path in
- *   `resolveFormbricksMappingsInput` refuses to map these, so keeping the row would let an element
+ *   `resolveFormaMappingsInput` refuses to map these, so keeping the row would let an element
  *   the product explicitly excludes keep publishing under a stale hubFieldType)
  * - Elements removed from the survey → `toDelete`, unless that would leave the survey with no rows
  *   at all; see `resolveDeletions`
@@ -215,7 +215,7 @@ export const applyReconciliationToFeedbackSource = async (
 
     await prisma.$transaction(async (tx) => {
       if (toDelete.length > 0) {
-        await tx.feedbackSourceFormbricksMapping.deleteMany({
+        await tx.feedbackSourceFormaMapping.deleteMany({
           where: { feedbackSourceId, workspaceId, surveyId, elementId: { in: toDelete } },
         });
       }
@@ -233,14 +233,14 @@ export const applyReconciliationToFeedbackSource = async (
       }
 
       for (const [hubFieldType, elementIds] of elementIdsByHubFieldType) {
-        await tx.feedbackSourceFormbricksMapping.updateMany({
+        await tx.feedbackSourceFormaMapping.updateMany({
           where: { feedbackSourceId, workspaceId, surveyId, elementId: { in: elementIds } },
           data: { hubFieldType },
         });
       }
 
       if (toCreate.length > 0) {
-        await tx.feedbackSourceFormbricksMapping.createMany({
+        await tx.feedbackSourceFormaMapping.createMany({
           data: toCreate.map(({ elementId, hubFieldType }) => ({
             feedbackSourceId,
             workspaceId,
@@ -256,7 +256,7 @@ export const applyReconciliationToFeedbackSource = async (
       }
 
       // A source stripped of its last mapping has nothing left to publish, and reconciliation can
-      // never find it again (its lookup matches on `formbricksMappings: { some: { surveyId } }`), so
+      // never find it again (its lookup matches on `formaMappings: { some: { surveyId } }`), so
       // it would sit in the sources table looking healthy while silently doing nothing. Flag it: the
       // `error` badge already renders, and the status also takes it out of the publish path until
       // someone re-maps it.
@@ -278,7 +278,7 @@ export const applyReconciliationToFeedbackSource = async (
       }
 
       if (toDelete.length > 0) {
-        const remainingMappings = await tx.feedbackSourceFormbricksMapping.count({
+        const remainingMappings = await tx.feedbackSourceFormaMapping.count({
           where: { feedbackSourceId, workspaceId },
         });
 
@@ -336,7 +336,7 @@ export const reconcileFeedbackSourcesForSurvey = async (
       .map((source) => ({
         source,
         reconciliation: reconcileMappingsAgainstSurvey(
-          source.formbricksMappings,
+          source.formaMappings,
           blocks,
           surveyId,
           source.elementScope

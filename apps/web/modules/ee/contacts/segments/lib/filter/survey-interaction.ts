@@ -4,7 +4,7 @@ import {
   TSegmentSurveyInteractionFilter,
   TSegmentSurveyInteractionFilterValue,
   TSurveyInteractionOperator,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { isResourceFilter } from "@/modules/ee/contacts/segments/lib/utils";
 import { subtractTimeUnit } from "../date-utils";
 

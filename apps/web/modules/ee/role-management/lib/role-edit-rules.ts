@@ -1,4 +1,4 @@
-import type { TOrganizationRole } from "@formbricks/types/memberships";
+import type { TOrganizationRole } from "@forma/types/memberships";
 
 export interface TRoleEditContext {
   isUserManagementDisabledFromUi: boolean;

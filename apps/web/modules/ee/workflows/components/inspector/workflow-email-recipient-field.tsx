@@ -3,7 +3,7 @@
 import { EyeOffIcon, MailIcon, TriangleAlertIcon, UserIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { cn } from "@/lib/cn";
 import {
   WorkflowFieldError,

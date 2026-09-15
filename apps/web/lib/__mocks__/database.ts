@@ -1,10 +1,10 @@
 import { beforeEach, vi } from "vitest";
 import { mockDeep, mockReset } from "vitest-mock-extended";
-import { PrismaClient } from "@formbricks/database/prisma";
+import { PrismaClient } from "@forma/database/prisma";
 
 export const prisma = mockDeep<PrismaClient>();
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   __esModule: true,
   prisma,
 }));

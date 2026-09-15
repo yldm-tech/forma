@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { MAX_RESPONSE_TTC } from "@formbricks/types/responses";
+import { MAX_RESPONSE_TTC } from "@forma/types/responses";
 import { getValidatedResponseUpdateInput } from "./validated-response-update-input";
 
 describe("getValidatedResponseUpdateInput", () => {

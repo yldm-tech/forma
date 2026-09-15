@@ -1,14 +1,14 @@
 import { fileUploadQuestion, openTextQuestion, responseData, workspaceId } from "./__mocks__/utils.mock";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Response } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { okVoid } from "@formbricks/types/error-handlers";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
+import { Response } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { okVoid } from "@forma/types/error-handlers";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
 import { deleteFile } from "@/modules/storage/service";
 import { findAndDeleteUploadedFilesInResponse } from "../utils";
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },

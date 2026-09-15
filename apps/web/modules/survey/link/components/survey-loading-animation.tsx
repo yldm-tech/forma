@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import Logo from "@/images/powered-by-formbricks.svg";
+import Logo from "@/images/powered-by-forma.svg";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/modules/ui/components/loading-spinner";
 
@@ -99,7 +99,7 @@ export const SurveyLoadingAnimation = ({
       });
     });
 
-    const targetNode = document.getElementById("formbricks-survey-container");
+    const targetNode = document.getElementById("forma-survey-container");
     if (targetNode) {
       observer.observe(targetNode, { childList: true });
     }

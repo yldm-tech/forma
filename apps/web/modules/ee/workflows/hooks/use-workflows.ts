@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import type { TWorkflowSortBy, TWorkflowStatus } from "@formbricks/workflows";
+import type { TWorkflowSortBy, TWorkflowStatus } from "@forma/workflows";
 import { listWorkflows } from "../lib/api-client";
 import { flattenWorkflowPages, workflowKeys } from "../lib/query";
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TSurveyEnding } from "@formbricks/types/surveys/types";
+import { TSurveyEnding } from "@forma/types/surveys/types";
 import { getEndingCardTypeChangePatch } from "./ending-card";
 
 const redirectCard: TSurveyEnding = {

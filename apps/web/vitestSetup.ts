@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import ResizeObserver from "resize-observer-polyfill";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { ValidationError } from "@formbricks/types/errors";
+import { ValidationError } from "@forma/types/errors";
 
 // mock our useSignOut hook directly to avoid auth issues in tests
 vi.mock("@/modules/auth/hooks/use-sign-out", () => ({
@@ -83,10 +83,8 @@ vi.mock("@/modules/auth/actions/sign-out", () => ({
 
 // mock prisma client
 
-vi.mock("@formbricks/database/prisma", async () => {
-  const actual = await vi.importActual<typeof import("@formbricks/database/prisma")>(
-    "@formbricks/database/prisma"
-  );
+vi.mock("@forma/database/prisma", async () => {
+  const actual = await vi.importActual<typeof import("@forma/database/prisma")>("@forma/database/prisma");
 
   return {
     ...actual,
@@ -200,7 +198,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
 
   return {
     ...actual,
-    IS_FORMBRICKS_CLOUD: false,
+    IS_FORMA_CLOUD: false,
     ENCRYPTION_KEY: "mock-encryption-key",
     ENTERPRISE_LICENSE_KEY: "mock-enterprise-license-key",
     GITHUB_ID: "mock-github-id",

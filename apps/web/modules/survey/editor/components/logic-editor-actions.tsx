@@ -3,18 +3,18 @@
 import { createId } from "@paralleldrive/cuid2";
 import { CopyIcon, CornerDownRightIcon, EllipsisVerticalIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getDeclaredComputedFields } from "@formbricks/types/embedded-data-resolver";
+import { getDeclaredComputedFields } from "@forma/types/embedded-data-resolver";
 import {
   TSurveyBlock,
   TSurveyBlockLogic,
   TSurveyBlockLogicAction,
   TSurveyBlockLogicActionObjective,
-} from "@formbricks/types/surveys/blocks";
+} from "@forma/types/surveys/blocks";
 import {
   TActionNumberVariableCalculateOperator,
   TActionTextVariableCalculateOperator,
-} from "@formbricks/types/surveys/logic";
-import { TSurvey } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/logic";
+import { TSurvey } from "@forma/types/surveys/types";
 import { getUpdatedActionBody } from "@/lib/surveyLogic/utils";
 import {
   getActionObjectiveOptions,

@@ -1,6 +1,6 @@
 import "server-only";
 import jwt from "jsonwebtoken";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { BETTER_AUTH_SECRET, NEXTAUTH_SECRET } from "@/lib/constants";
 
 const PIN_TOKEN_PURPOSE = "link_survey_pin";

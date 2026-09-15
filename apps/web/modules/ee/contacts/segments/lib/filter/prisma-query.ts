@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { err, ok } from "@forma/types/error-handlers";
 import {
   DATE_OPERATORS,
   TBaseFilters,
@@ -16,7 +16,7 @@ import {
   TSegmentSegmentFilter,
   TSegmentSurveyInteractionFilter,
   ZRelativeDateValue,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import { isResourceFilter } from "@/modules/ee/contacts/segments/lib/utils";
 import { endOfDay, startOfDay, subtractTimeUnit } from "../date-utils";
 import { getSegment } from "../segments";

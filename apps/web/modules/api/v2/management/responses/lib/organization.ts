@@ -1,7 +1,7 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { err, ok } from "@formbricks/types/error-handlers";
-import { TOrganizationBilling } from "@formbricks/types/organizations";
+import { prisma } from "@forma/database";
+import { err, ok } from "@forma/types/error-handlers";
+import { TOrganizationBilling } from "@forma/types/organizations";
 import { getBillingUsageCycleWindow } from "@/lib/utils/billing";
 
 export const getOrganizationIdFromWorkspaceId = reactCache(async (workspaceId: string) => {

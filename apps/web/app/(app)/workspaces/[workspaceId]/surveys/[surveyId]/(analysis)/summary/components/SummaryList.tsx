@@ -2,11 +2,11 @@
 
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { TI18nString } from "@formbricks/types/i18n";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveySummary } from "@formbricks/types/surveys/types";
-import { getTextContent } from "@formbricks/types/surveys/validation";
-import { TUserLocale } from "@formbricks/types/user";
+import { TI18nString } from "@forma/types/i18n";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { TUserLocale } from "@forma/types/user";
 import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { EmptyAppSurveys } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/EmptyInAppSurveys";
 import {

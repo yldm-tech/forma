@@ -1,8 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  type TFeedbackSourceFieldMappingCreateInput,
-  ZHubFieldType,
-} from "@formbricks/types/feedback-source";
+import { type TFeedbackSourceFieldMappingCreateInput, ZHubFieldType } from "@forma/types/feedback-source";
 import {
   formatCsvMissingMappedSourceColumns,
   formatMissingRequiredCsvFieldMappingsMessage,

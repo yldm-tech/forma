@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TActionClass } from "@formbricks/types/action-classes";
+import { TActionClass } from "@forma/types/action-classes";
 import { ModalWithTabs } from "@/modules/ui/components/modal-with-tabs";
 import { ACTION_TYPE_ICON_LOOKUP } from "@/modules/workspaces/settings/(setup)/app-connection/utils";
 import { ActionActivityTab } from "./ActionActivityTab";

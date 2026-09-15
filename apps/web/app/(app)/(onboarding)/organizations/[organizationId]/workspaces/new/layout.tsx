@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { ResourceNotFoundError } from "@formbricks/types/errors";
+import { ResourceNotFoundError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { IS_FORMBRICKS_CLOUD } from "@/lib/constants";
+import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getSession } from "@/modules/auth/lib/session";
@@ -51,7 +51,7 @@ const OnboardingLayout = async (props: {
     throw new ResourceNotFoundError(t("common.organization"), params.organizationId);
   }
 
-  if (IS_FORMBRICKS_CLOUD) {
+  if (IS_FORMA_CLOUD) {
     // Refresh trial/plan state after users return from onboarding billing actions.
     await invalidateOrganizationBillingCache(organization.id);
   }

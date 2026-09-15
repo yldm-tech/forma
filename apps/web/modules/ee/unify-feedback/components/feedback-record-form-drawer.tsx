@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { getLanguageLabel } from "@formbricks/i18n-utils/utils";
+import { getLanguageLabel } from "@forma/i18n-utils/utils";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
   EMOTIONS_DIMENSION_ID,

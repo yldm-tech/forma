@@ -1,8 +1,8 @@
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { logger } from "@formbricks/logger";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { logger } from "@forma/logger";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { verifyInviteToken } from "@/lib/jwt";
 import { InviteWithCreator } from "@/modules/auth/signup/types/invites";
 

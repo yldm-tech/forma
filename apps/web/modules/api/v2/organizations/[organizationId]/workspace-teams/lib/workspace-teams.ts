@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { prisma } from "@formbricks/database";
-import { WorkspaceTeam } from "@formbricks/database/prisma";
-import { Result, err, ok } from "@formbricks/types/error-handlers";
+import { prisma } from "@forma/database";
+import { WorkspaceTeam } from "@forma/database/prisma";
+import { Result, err, ok } from "@forma/types/error-handlers";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { getWorkspaceTeamsQuery } from "@/modules/api/v2/organizations/[organizationId]/workspace-teams/lib/utils";

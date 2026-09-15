@@ -33,7 +33,7 @@ export const getMcpOauthProviderOptions = (): TOauthProviderOptions => ({
   resources: [
     {
       identifier: getMcpResourceUrl(),
-      name: "Formbricks MCP",
+      name: "Forma MCP",
       allowedScopes: [...MCP_OAUTH_SCOPES],
     },
   ],

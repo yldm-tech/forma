@@ -3,8 +3,8 @@
 import { SquareDashedTopSolid } from "lucide-react";
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { TCardArrangementOptions } from "@formbricks/types/styling";
-import { TSurveyType } from "@formbricks/types/surveys/types";
+import { TCardArrangementOptions } from "@forma/types/styling";
+import { TSurveyType } from "@forma/types/surveys/types";
 import { CasualCardArrangementIcon } from "@/modules/ui/components/icons/casual-card-arrangement-icon";
 import { SimpleCardsArrangementIcon } from "@/modules/ui/components/icons/simple-card-arrangement-icon";
 import { StraightCardArrangementIcon } from "@/modules/ui/components/icons/straight-card-arrangement-icon";

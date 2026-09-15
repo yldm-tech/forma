@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { type SyntheticEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TUserLocale } from "@formbricks/types/user";
+import type { TUserLocale } from "@forma/types/user";
 import type { TSurveyGenerationDraftSnapshot } from "@/app/api/internal/surveys/generate/lib/events";
 import type { TV3CreateSurveyBody } from "@/app/api/v3/surveys/schemas";
 import {

@@ -140,7 +140,7 @@ export class UpdateQueue {
 
             if (Object.keys(currentUpdates.attributes ?? {}).length > 0 && !effectiveUserId) {
               const errorMessage =
-                "Formbricks can't set attributes without a userId! Please set a userId first with the setUserId function";
+                "Forma can't set attributes without a userId! Please set a userId first with the setUserId function";
               logger.error(errorMessage);
               this.clearUpdates();
             }

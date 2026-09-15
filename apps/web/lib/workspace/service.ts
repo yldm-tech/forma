@@ -1,10 +1,10 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { ZId, ZOptionalNumber, ZString } from "@formbricks/types/common";
-import { DatabaseError, ValidationError } from "@formbricks/types/errors";
-import type { TWorkspace } from "@formbricks/types/workspace";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { ZId, ZOptionalNumber, ZString } from "@forma/types/common";
+import { DatabaseError, ValidationError } from "@forma/types/errors";
+import type { TWorkspace } from "@forma/types/workspace";
 import {
   lookupAuthorizedOrganizationIds,
   lookupAuthorizedWorkspaceIds,

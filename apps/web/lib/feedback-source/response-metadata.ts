@@ -1,6 +1,6 @@
 import "server-only";
-import type { TResponse } from "@formbricks/types/responses";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TResponse } from "@forma/types/responses";
+import type { TSurvey } from "@forma/types/surveys/types";
 
 /**
  * Response- and survey-level context published on every FeedbackRecord's `metadata` (ENG-1554).

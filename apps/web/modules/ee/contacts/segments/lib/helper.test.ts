@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { InvalidInputError } from "@forma/types/errors";
 import {
   MAX_SEGMENT_SURVEY_INTERACTION_IDS_PER_TREE,
   TBaseFilters,
   TSegmentWithSurveyRefs,
-} from "@formbricks/types/segment";
+} from "@forma/types/segment";
 import {
   assertSurveyInteractionSurveyIds,
   checkForRecursiveSegmentFilter,
@@ -14,7 +14,7 @@ import { getSegment } from "@/modules/ee/contacts/segments/lib/segments";
 
 const mockSurveyFindMany = vi.fn();
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     survey: {
       findMany: (...args: unknown[]) => mockSurveyFindMany(...args),

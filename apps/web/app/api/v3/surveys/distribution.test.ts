@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { TSurvey } from "@formbricks/types/surveys/types";
+import type { TSurvey } from "@forma/types/surveys/types";
 import { surveyToV3Distribution, surveyToV3Targeting, v3DistributionToScalars } from "./distribution";
 import type { TV3SurveyDistribution } from "./schemas";
 

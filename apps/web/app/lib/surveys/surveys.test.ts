@@ -2,11 +2,11 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { TFunction } from "i18next";
 import { afterEach, describe, expect, test } from "vitest";
-import { deriveLegacyEmbeddedData } from "@formbricks/types/embedded-data-resolver";
-import { type TSurveyElement, TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey, TSurveyLanguage } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
-import { TLanguage } from "@formbricks/types/workspace";
+import { deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
+import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
+import { TLanguage } from "@forma/types/workspace";
 import {
   DateRange,
   SelectedFilterValue,
@@ -1289,7 +1289,7 @@ describe("surveys", () => {
         filter: [
           {
             elementType: { type: "Meta", label: "url", id: "url" },
-            filterType: { filterValue: "Contains", filterComboBoxValue: "formbricks.com" },
+            filterType: { filterValue: "Contains", filterComboBoxValue: "forma.ylam.ai" },
           },
           {
             elementType: { type: "Meta", label: "source", id: "source" },
@@ -1300,7 +1300,7 @@ describe("surveys", () => {
 
       const result = getFormattedFilters(survey, selectedFilter, dateRange);
 
-      expect(result.reserved?.url).toEqual({ op: "contains", value: "formbricks.com" });
+      expect(result.reserved?.url).toEqual({ op: "contains", value: "forma.ylam.ai" });
       expect(result.reserved?.source).toEqual({ op: "equals", value: "newsletter" });
     });
 

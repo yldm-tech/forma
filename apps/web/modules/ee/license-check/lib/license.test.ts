@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Mock } from "vitest";
-import { prisma } from "@formbricks/database";
+import { prisma } from "@forma/database";
 import { getInstanceId, getInstanceInfo } from "@/lib/instance";
 import {
   TEnterpriseLicenseDetails,
@@ -15,7 +15,7 @@ const { envMock } = vi.hoisted(() => ({
     ENTERPRISE_LICENSE_KEY: "test-license-key",
     ENVIRONMENT: "production",
 
-    FORMBRICKS_COM_URL: "https://app.formbricks.com",
+    FORMA_COM_URL: "https://app.forma.ylam.ai",
     HTTPS_PROXY: undefined,
     HTTP_PROXY: undefined,
     NODE_ENV: "test",
@@ -40,7 +40,7 @@ vi.mock("@/lib/cache", () => ({
 }));
 
 // Mock the createCacheKey functions
-vi.mock("@formbricks/cache", () => ({
+vi.mock("@forma/cache", () => ({
   createCacheKey: {
     license: {
       status: (identifier: string) => `fb:license:${identifier}:status`,
@@ -54,7 +54,7 @@ vi.mock("@formbricks/cache", () => ({
   },
 }));
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     response: {
       count: vi.fn(),
@@ -73,7 +73,7 @@ const mockLogger = {
   debug: vi.fn(),
 };
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: mockLogger,
 }));
 
@@ -87,7 +87,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...(typeof actual === "object" && actual !== null ? actual : {}),
-    IS_FORMBRICKS_CLOUD: false, // Default to self-hosted for most tests
+    IS_FORMA_CLOUD: false, // Default to self-hosted for most tests
     // Keep false so the normal instanceId + guard logic is exercised. No real
     // network calls are made: global.fetch and getInstanceId() are both mocked
     // at the top of this file, so the license server is never actually reached.
@@ -483,7 +483,7 @@ describe("License Core Logic", () => {
         env: {
           ENTERPRISE_LICENSE_KEY: "",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -515,7 +515,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -549,7 +549,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -580,7 +580,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -611,7 +611,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -678,7 +678,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -736,7 +736,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -794,7 +794,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -833,7 +833,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -858,7 +858,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -1009,7 +1009,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: "test-license-key",
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -1055,7 +1055,7 @@ describe("License Core Logic", () => {
         env: {
           ENTERPRISE_LICENSE_KEY: undefined,
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -1078,7 +1078,7 @@ describe("License Core Logic", () => {
           ENTERPRISE_LICENSE_KEY: testLicenseKey,
           ENVIRONMENT: "production",
 
-          FORMBRICKS_COM_URL: "https://app.formbricks.com",
+          FORMA_COM_URL: "https://app.forma.ylam.ai",
           HTTPS_PROXY: undefined,
           HTTP_PROXY: undefined,
         },
@@ -1521,7 +1521,7 @@ describe("License Core Logic", () => {
 
       // Verify the staging endpoint was called
       expect(fetch).toHaveBeenCalledWith(
-        "https://staging.ee.formbricks.com/api/licenses/check",
+        "https://staging.ee.forma.ylam.ai/api/licenses/check",
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },

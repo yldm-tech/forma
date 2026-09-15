@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import * as jobs from "./index";
 
-describe("@formbricks/jobs public API", () => {
+describe("@forma/jobs public API", () => {
   test("exports the supported public entry points without leaking registry internals", () => {
     expect(jobs.enqueueTestLogJob).toBeTypeOf("function");
     expect(jobs.enqueueResponsePipelineJob).toBeTypeOf("function");

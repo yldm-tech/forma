@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
-import { ok } from "@formbricks/types/error-handlers";
-import { TTag } from "@formbricks/types/tags";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
+import { ok } from "@forma/types/error-handlers";
+import { TTag } from "@forma/types/tags";
 import { TagError } from "@/modules/workspaces/settings/types/tag";
 import { deleteTag, mergeTags, updateTagName } from "./tag";
 
@@ -21,7 +21,7 @@ const newTag: TTag = {
   name: "Tag2",
 };
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     tag: {
       delete: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock("@formbricks/database", () => ({
   },
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
     info: vi.fn(),

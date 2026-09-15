@@ -1,6 +1,6 @@
 name: Build Community Testing Images
 
-# This workflow builds experimental/testing versions of Formbricks for self-hosting customers
+# This workflow builds experimental/testing versions of Forma for self-hosting customers
 # to test fixes and features before official releases. Images are pushed to GHCR with
 # timestamped experimental versions for easy identification and testing.
 

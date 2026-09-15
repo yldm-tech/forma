@@ -23,7 +23,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { TOrganizationRole } from "@formbricks/types/memberships";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { cn } from "@/lib/cn";
 import { getAccessFlags } from "@/lib/membership/utils";
 import {
@@ -47,7 +47,7 @@ interface SettingsSidebarContentProps {
   organizationId: string;
   organizationName: string;
   membershipRole?: TOrganizationRole;
-  isFormbricksCloud: boolean;
+  isFormaCloud: boolean;
   isCollapsed: boolean;
   isTextVisible: boolean;
   // Hidden when the user has no workspace (org/account settings still render).
@@ -269,7 +269,7 @@ export const SettingsSidebarContent = ({
   organizationId,
   organizationName,
   membershipRole,
-  isFormbricksCloud,
+  isFormaCloud,
   isCollapsed,
   isTextVisible,
   hideWorkspaceSection = false,
@@ -389,21 +389,21 @@ export const SettingsSidebarContent = ({
       label: t("common.domain"),
       href: organizationSettingsPath(organizationId, "domain"),
       icon: <GlobeIcon className={iconClassName} />,
-      hidden: isFormbricksCloud,
+      hidden: isFormaCloud,
     },
     {
       id: "org-billing",
       label: t("common.billing"),
       href: organizationSettingsPath(organizationId, "billing"),
       icon: <CreditCardIcon className={iconClassName} />,
-      hidden: !isFormbricksCloud,
+      hidden: !isFormaCloud,
     },
     {
       id: "org-enterprise",
       label: t("common.enterprise_license"),
       href: organizationSettingsPath(organizationId, "enterprise"),
       icon: <ShieldIcon className={iconClassName} />,
-      hidden: isFormbricksCloud,
+      hidden: isFormaCloud,
       disabled: isMember || isBilling,
     },
   ];

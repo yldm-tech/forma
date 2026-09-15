@@ -3,7 +3,7 @@
 // Note that this config is also required when running locally.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 import * as Sentry from "@sentry/nextjs";
-import { logger } from "@formbricks/logger";
+import { logger } from "@forma/logger";
 import { SENTRY_DSN, SENTRY_ENVIRONMENT, SENTRY_RELEASE } from "@/lib/constants";
 
 if (SENTRY_DSN) {

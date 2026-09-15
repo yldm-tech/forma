@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { Prisma, type PrismaClientKnownRequestError } from "@formbricks/database/prisma";
-import { PrismaErrorType } from "@formbricks/database/types/error";
+import { Prisma, type PrismaClientKnownRequestError } from "@forma/database/prisma";
+import { PrismaErrorType } from "@forma/database/types/error";
 import {
   isPrismaKnownRequestError,
   isTransactionConflictError,

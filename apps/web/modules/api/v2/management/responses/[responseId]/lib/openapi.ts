@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ZodOpenApiOperationObject } from "zod-openapi";
-import { ZResponse } from "@formbricks/database/zod/responses";
-import { ZResponseUpdateInput } from "@formbricks/types/responses";
+import { ZResponse } from "@forma/database/zod/responses";
+import { ZResponseUpdateInput } from "@forma/types/responses";
 import { ZResponseIdSchema } from "@/modules/api/v2/management/responses/[responseId]/types/responses";
 import { makePartialSchema } from "@/modules/api/v2/types/openapi-response";
 

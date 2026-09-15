@@ -1,5 +1,5 @@
 /**
- * Shared by all three copies of the video-URL helpers — this package, `@formbricks/surveys`, and
+ * Shared by all three copies of the video-URL helpers — this package, `@forma/surveys`, and
  * `apps/web`. Those three modules are deliberately parallel (three build targets), but this scan is
  * subtle enough that three copies would be three chances to get the greedy/backtracking/line
  * semantics wrong, so it lives here and they import it.

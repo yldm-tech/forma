@@ -18,7 +18,7 @@ vi.mock("@posthog/mcp", async (importOriginal) => ({
   instrument: mocks.instrument,
 }));
 
-vi.mock("@formbricks/logger", () => ({
+vi.mock("@forma/logger", () => ({
   logger: { warn: mocks.loggerWarn },
 }));
 
@@ -168,7 +168,7 @@ describe("instrumentMcpServerWithTracing with null client", () => {
       ...(await importOriginal<typeof import("@posthog/mcp")>()),
       instrument: mocks.instrument,
     }));
-    vi.doMock("@formbricks/logger", () => ({ logger: { warn: mocks.loggerWarn } }));
+    vi.doMock("@forma/logger", () => ({ logger: { warn: mocks.loggerWarn } }));
     vi.doMock("./server", () => ({ posthogTracingClient: null }));
 
     const { instrumentMcpServerWithTracing: instrumentWithNullClient } = await import("./mcp-tracing");

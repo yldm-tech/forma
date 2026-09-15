@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import type { Session, TAuthenticationApiKey } from "@formbricks/types/auth";
+import type { Session, TAuthenticationApiKey } from "@forma/types/auth";
 import { responses } from "@/app/lib/api/response";
 import { can } from "@/lib/authorization";
 import { checkAuth } from "./utils";

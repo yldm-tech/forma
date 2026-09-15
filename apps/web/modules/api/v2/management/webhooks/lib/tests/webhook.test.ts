@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
-import { prisma } from "@formbricks/database";
-import { WebhookSource } from "@formbricks/database/prisma";
-import { InvalidInputError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { WebhookSource } from "@forma/database/prisma";
+import { InvalidInputError } from "@forma/types/errors";
 import { validateWebhookUrl } from "@/lib/utils/validate-webhook-url";
 import { TGetWebhooksFilter, TWebhookInput } from "@/modules/api/v2/management/webhooks/types/webhooks";
 import { createWebhook, getWebhooks } from "../webhook";
 
-vi.mock("@formbricks/database", () => ({
+vi.mock("@forma/database", () => ({
   prisma: {
     $transaction: vi.fn(),
     webhook: {

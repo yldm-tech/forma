@@ -1,4 +1,4 @@
-import { TSurveyEndScreenCard, TSurveyEnding, TSurveyRedirectUrlCard } from "@formbricks/types/surveys/types";
+import { TSurveyEndScreenCard, TSurveyEnding, TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
 import { createI18nString } from "@/lib/i18n/utils";
 
 /**

@@ -11,8 +11,8 @@ import {
 import Link from "next/link";
 import { ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { TActionClass } from "@formbricks/types/action-classes";
-import { TSegment } from "@formbricks/types/segment";
+import { TActionClass } from "@forma/types/action-classes";
+import { TSegment } from "@forma/types/segment";
 import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { useSurvey } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/context/survey-context";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
@@ -21,23 +21,23 @@ import { DocumentationLinksSection } from "./documentation-links-section";
 
 const createDocumentationLinks = (t: ReturnType<typeof useTranslation>["t"]) => [
   {
-    href: "https://formbricks.com/docs/surveys/website-app-surveys/framework-guides#html",
+    href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#html",
     title: t("workspace.surveys.summary.in_app.html_embed"),
   },
   {
-    href: "https://formbricks.com/docs/surveys/website-app-surveys/framework-guides#react-js",
+    href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#react-js",
     title: t("workspace.surveys.summary.in_app.javascript_sdk"),
   },
   {
-    href: "https://formbricks.com/docs/surveys/website-app-surveys/framework-guides#swift",
+    href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#swift",
     title: t("workspace.surveys.summary.in_app.ios_sdk"),
   },
   {
-    href: "https://formbricks.com/docs/surveys/website-app-surveys/framework-guides#android",
+    href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#android",
     title: t("workspace.surveys.summary.in_app.kotlin_sdk"),
   },
   {
-    href: "https://formbricks.com/docs/surveys/website-app-surveys/framework-guides#react-native",
+    href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#react-native",
     title: t("workspace.surveys.summary.in_app.react_native_sdk"),
   },
 ];
@@ -165,7 +165,7 @@ export const AppTab = () => {
           {!workspace.appSetupCompleted && (
             <AlertButton asChild>
               <Link href={`/workspaces/${workspace?.id}/settings/workspace/app-connection`}>
-                {t("common.set_up_formbricks_sdk")}
+                {t("common.set_up_forma_sdk")}
               </Link>
             </AlertButton>
           )}

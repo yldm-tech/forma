@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
-import { TSurvey } from "@formbricks/types/surveys/types";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurvey } from "@forma/types/surveys/types";
 import { parseRecallInfo } from "@/lib/utils/recall";
 import { convertResponseValue, getElementResponseMapping, processResponseData } from "./responses";
 

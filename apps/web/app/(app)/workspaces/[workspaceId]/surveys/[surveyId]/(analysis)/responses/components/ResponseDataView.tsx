@@ -3,12 +3,12 @@
 import { TFunction } from "i18next";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@formbricks/types/embedded-data-resolver";
-import { TSurveyQuota } from "@formbricks/types/quota";
-import { TResponseDataValue, TResponseTableData, TResponseWithQuotas } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
-import { TUser, TUserLocale } from "@formbricks/types/user";
+import { getComputedEmbeddedFields, getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TSurveyQuota } from "@forma/types/quota";
+import { TResponseDataValue, TResponseTableData, TResponseWithQuotas } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
+import { TUser, TUserLocale } from "@forma/types/user";
 import { ResponseTable } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/responses/components/ResponseTable";
 import { getReservedColumnValues } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/responses/lib/utils";
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";

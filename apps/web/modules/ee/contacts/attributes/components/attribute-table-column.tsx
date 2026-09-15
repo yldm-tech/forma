@@ -3,8 +3,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { TFunction } from "i18next";
 import { CalendarIcon, HashIcon, TagIcon } from "lucide-react";
-import { TContactAttributeKey } from "@formbricks/types/contact-attribute-key";
-import { TUserLocale } from "@formbricks/types/user";
+import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
+import { TUserLocale } from "@forma/types/user";
 import { timeSince } from "@/lib/time";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { Badge } from "@/modules/ui/components/badge";

@@ -3,11 +3,11 @@
 import { ArrowDownUpIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TDisplay } from "@formbricks/types/displays";
-import { TResponseWithQuotas } from "@formbricks/types/responses";
-import { TSurvey } from "@formbricks/types/surveys/types";
-import { TTag } from "@formbricks/types/tags";
-import { TUser, TUserLocale } from "@formbricks/types/user";
+import { TDisplay } from "@forma/types/displays";
+import { TResponseWithQuotas } from "@forma/types/responses";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TTag } from "@forma/types/tags";
+import { TUser, TUserLocale } from "@forma/types/user";
 import { IS_PRODUCTION_BUILD } from "@/lib/env-client";
 import { useMembershipRole } from "@/lib/membership/hooks/useMembershipRole";
 import { getAccessFlags } from "@/lib/membership/utils";

@@ -1,9 +1,9 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import { TWidgetLayout, ZWidgetLayout } from "@formbricks/types/analysis";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import { TWidgetLayout, ZWidgetLayout } from "@forma/types/analysis";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
 import { duplicateChart } from "@/modules/ee/analysis/charts/lib/charts";
 import { addChartToDashboard } from "./dashboards";

@@ -1,5 +1,5 @@
 {
-  "name": "@formbricks/types",
+  "name": "@forma/types",
   "version": "0.0.0",
   "private": true,
   "exports": {
@@ -21,7 +21,7 @@
     "node-html-parser": "7.1.0"
   },
   "devDependencies": {
-    "@formbricks/config-typescript": "workspace:*",
+    "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

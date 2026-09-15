@@ -5,8 +5,8 @@ import {
   TSurveyMatrixElement,
   TSurveyMultipleChoiceElement,
   TSurveyRankingElement,
-} from "@formbricks/types/surveys/elements";
-import { TShuffleOption } from "@formbricks/types/surveys/types";
+} from "@forma/types/surveys/elements";
+import { TShuffleOption } from "@forma/types/surveys/types";
 import {
   Select,
   SelectContent,

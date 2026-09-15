@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { TSegmentWithSurveyRefs } from "@formbricks/types/segment";
+import { TSegmentWithSurveyRefs } from "@forma/types/segment";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { Label } from "@/modules/ui/components/label";

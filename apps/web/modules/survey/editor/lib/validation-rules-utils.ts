@@ -1,4 +1,4 @@
-import { TSurveyElementTypeEnum, TSurveyOpenTextElementInputType } from "@formbricks/types/surveys/elements";
+import { TSurveyElementTypeEnum, TSurveyOpenTextElementInputType } from "@forma/types/surveys/elements";
 import {
   APPLICABLE_RULES,
   MAX_RELATIVE_DATE_AMOUNT,
@@ -7,7 +7,7 @@ import {
   TRelativeDateBound,
   TValidationRule,
   TValidationRuleType,
-} from "@formbricks/types/surveys/validation-rules";
+} from "@forma/types/surveys/validation-rules";
 import { formatLocalDay, parseLocalDay } from "@/lib/utils/datetime";
 
 const stringRules: TValidationRuleType[] = [

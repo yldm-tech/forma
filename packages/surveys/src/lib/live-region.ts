@@ -11,7 +11,7 @@
  */
 
 // Shipped id contract with the SDK (packages/js-core/src/lib/common/constants.ts) — must never change.
-const LIVE_REGION_ID = "formbricks-live-region";
+const LIVE_REGION_ID = "forma-live-region";
 
 export const ensureLiveRegion = (): HTMLElement => {
   const existingRegion = document.getElementById(LIVE_REGION_ID);

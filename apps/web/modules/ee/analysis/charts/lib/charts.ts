@@ -1,8 +1,8 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { ZChartConfig, ZChartQuery } from "@formbricks/types/analysis";
-import { ZId } from "@formbricks/types/common";
-import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { prisma } from "@forma/database";
+import { ZChartConfig, ZChartQuery } from "@forma/types/analysis";
+import { ZId } from "@forma/types/common";
+import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { isPrismaKnownRequestError, isUniqueConstraintError } from "@/lib/utils/prisma-error";
 import { validateInputs } from "@/lib/utils/validate";
 import { validateCubeQueryMembers } from "@/modules/ee/analysis/api/lib/cube-query";

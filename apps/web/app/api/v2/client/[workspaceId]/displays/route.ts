@@ -1,4 +1,4 @@
-import { InvalidInputError, ResourceNotFoundError } from "@formbricks/types/errors";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import {
   TDisplayCreateInputV2,
   ZDisplayCreateInputV2,

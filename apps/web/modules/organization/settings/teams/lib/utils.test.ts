@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TMember } from "@formbricks/types/memberships";
+import { TMember } from "@forma/types/memberships";
 import { TInvite } from "@/modules/organization/settings/teams/types/invites";
 import { hasMoreThanOneActiveOwner, isInviteExpired } from "./utils";
 

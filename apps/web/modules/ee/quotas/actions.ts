@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ZId } from "@formbricks/types/common";
-import { OperationNotAllowedError, ResourceNotFoundError } from "@formbricks/types/errors";
-import { ZSurveyQuotaInput } from "@formbricks/types/quota";
+import { ZId } from "@forma/types/common";
+import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { ZSurveyQuotaInput } from "@forma/types/quota";
 import { assertCan } from "@/lib/authorization";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { AuthenticatedActionClientCtx } from "@/lib/utils/action-client/types/context";

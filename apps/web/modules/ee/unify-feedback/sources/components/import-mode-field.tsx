@@ -2,13 +2,13 @@
 
 import { Control } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { TFeedbackSourceImportMode } from "@formbricks/types/feedback-source";
+import { TFeedbackSourceImportMode } from "@forma/types/feedback-source";
 import { FormControl, FormField, FormItem, FormLabel } from "@/modules/ui/components/form";
 import { RadioGroup, RadioGroupItem } from "@/modules/ui/components/radio-group";
-import { TFormbricksFeedbackSourceForm } from "../types";
+import { TFormaFeedbackSourceForm } from "../types";
 
 interface ImportModeFieldProps {
-  control: Control<TFormbricksFeedbackSourceForm>;
+  control: Control<TFormaFeedbackSourceForm>;
 }
 
 /**

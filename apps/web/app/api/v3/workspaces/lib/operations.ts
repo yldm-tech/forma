@@ -1,6 +1,6 @@
 import "server-only";
-import { logger } from "@formbricks/logger";
-import type { TAuthenticationApiKey } from "@formbricks/types/auth";
+import { logger } from "@forma/logger";
+import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { getV3AuthorizationActor } from "@/app/api/v3/lib/auth";
 import { problemInternalError, problemUnauthorized, successListResponse } from "@/app/api/v3/lib/response";
 import type { TV3Authentication } from "@/app/api/v3/lib/types";

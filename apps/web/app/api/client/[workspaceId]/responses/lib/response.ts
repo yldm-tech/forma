@@ -1,10 +1,10 @@
 import "server-only";
-import { prisma } from "@formbricks/database";
-import { Prisma } from "@formbricks/database/prisma";
-import type { TContactAttributes } from "@formbricks/types/contact-attribute";
-import type { TIngestFlag } from "@formbricks/types/embedded-data-ingest";
-import type { TResponse } from "@formbricks/types/responses";
-import type { TTag } from "@formbricks/types/tags";
+import { prisma } from "@forma/database";
+import { Prisma } from "@forma/database/prisma";
+import type { TContactAttributes } from "@forma/types/contact-attribute";
+import type { TIngestFlag } from "@forma/types/embedded-data-ingest";
+import type { TResponse } from "@forma/types/responses";
+import type { TTag } from "@forma/types/tags";
 import { normalizeResponseLanguage } from "@/lib/response/utils";
 import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
 
