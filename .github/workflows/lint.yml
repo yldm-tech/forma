@@ -35,6 +35,28 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: ./.github/actions/dangerous-git-checkout
 
+      # The step below diffs against the PR base and main, both of which have to be local first.
+      # The checkout deliberately leaves no credentials in .git/config — it checks out PR-controlled
+      # code that later steps execute — and this repository is private, so an unauthenticated fetch
+      # gets `could not read Username for 'https://github.com'`. Fetch here instead: this step runs
+      # no PR code, and `git -c` passes the token per-command rather than writing it to disk.
+      - name: Fetch base and main for the migration diff
+        env:
+          GIT_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GIT_TOKEN}" | base64 -w0)"
+
+          git -c http.extraheader="${auth_header}" fetch --no-tags --depth=1 origin main
+          git update-ref refs/remotes/origin/main FETCH_HEAD
+
+          if [[ -n "${BASE_SHA}" ]] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            git -c http.extraheader="${auth_header}" fetch --no-tags --depth=1 origin "${BASE_SHA}"
+          fi
+
       - name: Install pnpm
         uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
 
@@ -75,8 +97,10 @@ jobs:
             exit 1
           fi
 
+          # Fetched by the step above, which is the only one holding a credential.
           if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git fetch --no-tags --depth=1 origin "${base_sha}"
+            echo "::error::Base commit ${base_sha} is not present locally."
+            exit 1
           fi
 
           mapfile -d '' base_migration_files < <(
@@ -99,8 +123,7 @@ jobs:
           # PR base and main, so intersect the two diffs. For an ordinary PR into main the base is
           # on main and the two sets are identical, which leaves that path behaving exactly as
           # before.
-          git fetch --no-tags --depth=1 origin main
-          main_sha="$(git rev-parse FETCH_HEAD)"
+          main_sha="$(git rev-parse refs/remotes/origin/main)"
 
           mapfile -d '' main_migration_files < <(
             git diff --diff-filter=ACMR --name-only -z "${main_sha}" HEAD -- \
