@@ -330,7 +330,7 @@ precedence over `hub.embeddings.background.httpDisableKeepAlives` during chart u
 Embedding backfills are opt-in and never render a Job unless `hub.embeddingBackfill.enabled=true`.
 Each deliberate run requires a new `runId`; start with `countOnly: true`, then use `tenantId` or
 `maxRecords` to limit canary waves before an unlimited run. The selected Hub image must include
-`/app/backfill-embeddings` (a release containing [forma/hub#121](https://github.com/yldm-tech/hub/pull/121));
+`/app/backfill-embeddings` (a release containing [forma/hub#121](https://github.com/formbricks/hub/pull/121));
 older images cannot run this Job.
 
 Hub exports the durable missing-record count as
@@ -808,7 +808,7 @@ tokens, provider response bodies, and collector URLs are never telemetry fields.
 | hub.extraVolumes                                                   | list   | `[]`                                                                        | Additional pod volumes for Hub API and worker.            |
 | hub.image.digest                                                   | string | `"sha256:9f4c109e6589993ef15708f834d57241ed3a73e3246e3565620777a66a231b59"` | When set, takes precedence over tag (immutable pin).      |
 | hub.image.pullPolicy                                               | string | `"IfNotPresent"`                                                            |                                                           |
-| hub.image.repository                                               | string | `"ghcr.io/yldm-tech/hub"`                                                  |                                                           |
+| hub.image.repository                                               | string | `"ghcr.io/formbricks/hub"`                                                  |                                                           |
 | hub.image.tag                                                      | string | `"0.8.5"`                                                                   | Fallback when digest is empty.                            |
 | hub.migration.activeDeadlineSeconds                                | int    | `900`                                                                       |                                                           |
 | hub.migration.backoffLimit                                         | int    | `3`                                                                         |                                                           |
@@ -957,7 +957,7 @@ tokens, provider response bodies, and collector URLs are never telemetry fields.
 | taxonomy.hubClientMaxAttempts                                      | string | `"3"`                                                                       | Maximum idempotent Hub callback/fetch attempts.            |
 | taxonomy.hubReaperIntervalSeconds                                  | string | `"60"`                                                                      | Interval between Hub stale-run reaper passes.             |
 | taxonomy.hubStaleRunTimeoutSeconds                                 | string | `"1800"`                                                                    | Hub stale-run timeout; lower only with a callback-heartbeating taxonomy image. |
-| taxonomy.image.repository                                          | string | `"ghcr.io/yldm-tech/taxonomy"`                                             | Taxonomy service image repository.                        |
+| taxonomy.image.repository                                          | string | `"ghcr.io/formbricks/taxonomy"`                                             | Taxonomy service image repository.                        |
 | taxonomy.image.tag                                                 | string | `"v0.1.0"`                                                                  | Taxonomy service image tag.                               |
 | taxonomy.llm.baseUrl                                               | string | `""`                                                                        | Defaults to bundled vLLM router URL when `llm.enabled=true`; set for external LLMs. |
 | taxonomy.llm.bedrock.region                                        | string | `""`                                                                        | AWS region for Bedrock; alternatively set `taxonomy.env.AWS_REGION`. |

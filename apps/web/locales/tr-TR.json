@@ -2031,7 +2031,7 @@
       "install_method_react_step_1": "SDK'yı yükle: npm install @formbricks/js zod.",
       "install_method_react_step_2": "Aşağıdaki kod parçacığını kullanarak Forma'i uygulamanın en üst seviyesinde başlat.",
       "install_method_swift": "Swift",
-      "install_method_swift_step_1": "Xcode'da, File sonra Add Packages üzerinden https://github.com/yldm-tech/ios.git adresini kullanarak paketi ekle.",
+      "install_method_swift_step_1": "Xcode'da, File sonra Add Packages üzerinden https://github.com/formbricks/ios.git adresini kullanarak paketi ekle.",
       "install_method_swift_step_2": "Aşağıdaki kod parçacığını kullanarak SDK'yı Workspace ID'n ile başlat.",
       "install_method_vue": "Vue.js",
       "install_method_vue_step_1": "SDK'yı yükle: npm install @formbricks/js.",

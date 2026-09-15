@@ -2031,7 +2031,7 @@
       "install_method_react_step_1": "Instale o SDK: npm install @formbricks/js zod.",
       "install_method_react_step_2": "Inicialize o Forma no nível superior do seu app usando o trecho abaixo.",
       "install_method_swift": "Swift",
-      "install_method_swift_step_1": "No Xcode, adicione o pacote através de File e depois Add Packages, usando https://github.com/yldm-tech/ios.git.",
+      "install_method_swift_step_1": "No Xcode, adicione o pacote através de File e depois Add Packages, usando https://github.com/formbricks/ios.git.",
       "install_method_swift_step_2": "Inicialize o SDK com seu Workspace ID usando o snippet abaixo.",
       "install_method_vue": "Vue.js",
       "install_method_vue_step_1": "Instale o SDK: npm install @formbricks/js.",

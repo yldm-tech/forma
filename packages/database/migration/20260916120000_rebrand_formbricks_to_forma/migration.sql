@@ -9,11 +9,23 @@
 -- each one is renamed explicitly. The target names are exactly the `map:` values in
 -- schema/main.prisma (and, where there is no `map:`, exactly what Prisma derives from the new model
 -- name) — if the two ever disagree, check-migration-drift fails.
+--
+-- Wrapped in an explicit transaction: Prisma does not add one, and a rename that failed part way
+-- through would leave the table's name and its constraints' names disagreeing, which no rerun
+-- could repair. Every statement here is transactional DDL, RENAME VALUE included.
+
+BEGIN;
+
+-- Each statement takes ACCESS EXCLUSIVE on a small table. The timeout bounds how long that waits
+-- behind an open transaction rather than queueing reads and writes behind it indefinitely.
+SET LOCAL lock_timeout = '5s';
 
 -- Rename the enum value
 ALTER TYPE "FeedbackSourceType" RENAME VALUE 'formbricks_survey' TO 'forma_survey';
 
--- Rename the table
+-- Rename the table. Clients addressing it by its old name break, which is the point of the rebrand:
+-- the only reader is this repo's own Prisma client, regenerated from the schema in the same commit.
+-- squawk-ignore renaming-table
 ALTER TABLE "FeedbackSourceFormbricksMapping" RENAME TO "FeedbackSourceFormaMapping";
 
 -- Rename the primary-key index
@@ -35,3 +47,5 @@ ALTER TABLE "FeedbackSourceFormaMapping"
 ALTER TABLE "FeedbackSourceFormaMapping"
   RENAME CONSTRAINT "FeedbackSourceFormbricksMapping_surveyId_workspaceId_fkey"
   TO "FeedbackSourceFormaMapping_surveyId_workspaceId_fkey";
+
+COMMIT;

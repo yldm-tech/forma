@@ -2031,7 +2031,7 @@
       "install_method_react_step_1": "Telepítse az SDK-t: npm install @formbricks/js zod.",
       "install_method_react_step_2": "Készítse elő a Forma platformot az alkalmazása felső szintjén az alábbi kódrészlet használatával.",
       "install_method_swift": "Swift",
-      "install_method_swift_step_1": "Az Xcode programban adja hozzá a csomagot a Fájl, majd a Csomagok hozzáadása menüponttal, a https://github.com/yldm-tech/ios.git használatával.",
+      "install_method_swift_step_1": "Az Xcode programban adja hozzá a csomagot a Fájl, majd a Csomagok hozzáadása menüponttal, a https://github.com/formbricks/ios.git használatával.",
       "install_method_swift_step_2": "Készítse elő az SDK-t a munkaterület-azonosítójával az alábbi kódrészlet használatával.",
       "install_method_vue": "Vue.js",
       "install_method_vue_step_1": "Telepítse az SDK-t: npm install @formbricks/js.",

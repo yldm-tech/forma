@@ -2031,7 +2031,7 @@
       "install_method_react_step_1": "安装 SDK：npm install @formbricks/js zod。",
       "install_method_react_step_2": "使用下面的代码片段，在应用的顶层初始化 Forma。",
       "install_method_swift": "Swift",
-      "install_method_swift_step_1": "在 Xcode 中，通过「文件」然后「添加软件包」添加软件包，使用 https://github.com/yldm-tech/ios.git。",
+      "install_method_swift_step_1": "在 Xcode 中，通过「文件」然后「添加软件包」添加软件包，使用 https://github.com/formbricks/ios.git。",
       "install_method_swift_step_2": "使用下面的代码片段通过你的工作区 ID 初始化 SDK。",
       "install_method_vue": "Vue.js",
       "install_method_vue_step_1": "安装 SDK：npm install @formbricks/js。",

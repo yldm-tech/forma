@@ -2031,7 +2031,7 @@
       "install_method_react_step_1": "Instalează SDK-ul: npm install @formbricks/js zod.",
       "install_method_react_step_2": "Inițializează Forma la nivelul superior al aplicației tale folosind fragmentul de cod de mai jos.",
       "install_method_swift": "Swift",
-      "install_method_swift_step_1": "În Xcode, adaugă pachetul prin File, apoi Add Packages, folosind https://github.com/yldm-tech/ios.git.",
+      "install_method_swift_step_1": "În Xcode, adaugă pachetul prin File, apoi Add Packages, folosind https://github.com/formbricks/ios.git.",
       "install_method_swift_step_2": "Inițializează SDK-ul cu ID-ul tău de Workspace folosind fragmentul de mai jos.",
       "install_method_vue": "Vue.js",
       "install_method_vue_step_1": "Instalează SDK-ul: npm install @formbricks/js.",

@@ -136,7 +136,7 @@ Paste this snippet into your <head> on every page:
 3. Drive it via static API: await Forma.track("event"), Forma.setUserId("uid"), etc.
 
 ## iOS (Swift)
-1. Add via Swift Package Manager: https://github.com/yldm-tech/ios.git
+1. Add via Swift Package Manager: https://github.com/formbricks/ios.git
 2. Initialize on app launch:
 
   import FormaSDK

@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/postcss";
 // them to #fbjs. They MUST run after Tailwind has compiled, so the Tailwind
 // PostCSS plugin is processed here (not via @tailwindcss/vite) to guarantee
 // ordering. See packages/vite-plugins/postcss-scope-fbjs.cjs and
-// https://github.com/yldm-tech/js/issues/46.
+// https://github.com/formbricks/js/issues/46.
 import scopeFbjs from "../vite-plugins/postcss-scope-fbjs.cjs";
 
 export default {

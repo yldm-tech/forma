@@ -615,7 +615,7 @@ Forma v5 expects Hub to be part of the self-hosted stack.
 
 <Note>
   Hub-specific source code and standalone deployment assets live in the
-  [Forma Hub repository](https://github.com/yldm-tech/hub). For a normal Forma v5 upgrade, use that
+  [Forma Hub repository](https://github.com/formbricks/hub). For a normal Forma v5 upgrade, use that
   repository as reference material only; the canonical migration steps stay in these Forma docs.
 </Note>
 
@@ -1474,12 +1474,12 @@ docker compose up -d
 <Tip>To find the Docker network name for your Postgres database, run `docker network ls`.</Tip>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:latest && \
+docker pull ghcr.io/formbricks/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.7" \
-  ghcr.io/yldm-tech/data-migrations:v2.7.0
+  ghcr.io/formbricks/data-migrations:v2.7.0
 
 ```
 
@@ -1542,12 +1542,12 @@ docker compose up -d
 <Info>To find the Docker network name for your Postgres database, run the command:</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:latest && \
+docker pull ghcr.io/formbricks/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.6" \
-  ghcr.io/yldm-tech/data-migrations:v2.6.0
+  ghcr.io/formbricks/data-migrations:v2.6.0
 ```
 
 The command above will migrate your data to the latest schema. This is an important step to update your existing data to the new structure. Changes will only be made if the script runs successfully. You can run the script multiple times without issues.
@@ -1609,12 +1609,12 @@ docker compose up -d
 <Info>To find your Docker Network name for your Postgres Database, find it using `docker network ls`</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:latest && \
+docker pull ghcr.io/formbricks/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.5" \
-  ghcr.io/yldm-tech/data-migrations:v2.5.3
+  ghcr.io/formbricks/data-migrations:v2.5.3
 ```
 
 The command will migrate your data to the latest schema, ensuring your existing data is updated to the new structure. Changes will only be made if the script runs successfully, and you can safely run the script multiple times.
@@ -1676,12 +1676,12 @@ Now let's migrate the data to the latest schema:
 To find your Docker Network name for your Postgres Database, find it using `docker network ls`
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:v2.4.3 && \
+docker pull ghcr.io/formbricks/data-migrations:v2.4.3 && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.4" \
-  ghcr.io/yldm-tech/data-migrations:v2.4.3
+  ghcr.io/formbricks/data-migrations:v2.4.3
 ```
 
 The command above will migrate your data to the latest schema. This is an important step to update your data structure. Changes are only applied if the script runs successfully. You can run the script multiple times without issues.
@@ -1746,12 +1746,12 @@ docker compose up -d
 <Info>To find your Docker Network name for your Postgres Database, find it using `docker network ls`</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:v2.3.0 && \
+docker pull ghcr.io/formbricks/data-migrations:v2.3.0 && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.3" \
-  ghcr.io/yldm-tech/data-migrations:v2.3.0
+  ghcr.io/formbricks/data-migrations:v2.3.0
 
 ```
 
@@ -1812,12 +1812,12 @@ docker compose up -d
 <Info>To find your Docker Network name for your Postgres Database, find it using `docker network ls`</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:v2.2 && \
+docker pull ghcr.io/formbricks/data-migrations:v2.2 && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.2" \
-  ghcr.io/yldm-tech/data-migrations:v2.2
+  ghcr.io/formbricks/data-migrations:v2.2
 ```
 
 The command above will migrate your data to the latest schema. This is an important step to update your existing data. Changes will only be made if the script runs successfully. You can safely run the script multiple times.
@@ -1884,12 +1884,12 @@ docker compose up -d
 <Info>To find your Docker network name for the Postgres database, run the following `docker network ls`</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:v2.1.0 && \
+docker pull ghcr.io/formbricks/data-migrations:v2.1.0 && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.1" \
-  ghcr.io/yldm-tech/data-migrations:v2.1.0
+  ghcr.io/formbricks/data-migrations:v2.1.0
 ```
 
 Once the migration script runs successfully, your data will be migrated to the latest schema. The script is designed to run safely multiple times, so you don’t need to worry if it’s executed more than once. After completing the migration, you can continue to access your Forma instance at the same URL as before.
@@ -1970,12 +1970,12 @@ docker compose up -d
 <Info>To find your Docker Network name for your Postgres Database, find it using `docker network ls`</Info>
 
 ```bash
-docker pull ghcr.io/yldm-tech/data-migrations:v2.0.3 && \
+docker pull ghcr.io/formbricks/data-migrations:v2.0.3 && \
 docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v2.0" \
-  ghcr.io/yldm-tech/data-migrations:v2.0.3
+  ghcr.io/formbricks/data-migrations:v2.0.3
 ```
 
 The above command will migrate your data to the latest schema. This is a crucial step to migrate your existing data to the new structure. Only if the script runs successful, changes are made to the database. The script can safely run multiple times.
@@ -2076,7 +2076,7 @@ docker run --rm \
   --network=forma_default \
   -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
   -e UPGRADE_TO_VERSION="v1.6" \
-  ghcr.io/yldm-tech/data-migrations:v1.6.1
+  ghcr.io/formbricks/data-migrations:v1.6.1
 
 ```
 

@@ -30,7 +30,7 @@ That's it! After running the command and providing the required information, vis
 
 ## Forma Hub and Cube
 
-The stack includes the [Forma Hub](https://github.com/yldm-tech/hub) API (`ghcr.io/yldm-tech/hub`) and the bundled Cube service. Hub and Cube share the same database as Forma by default and both start as part of the baseline `docker compose up`.
+The stack includes the [Forma Hub](https://github.com/formbricks/hub) API (`ghcr.io/formbricks/hub`) and the bundled Cube service. Hub and Cube share the same database as Forma by default and both start as part of the baseline `docker compose up`.
 
 - **Migrations**: A `forma-migrate` service runs Forma Prisma migrations before `hub-migrate` writes Hub tables to the shared database. `hub-migrate` then runs Hub's database migrations (goose + river) before the Hub API starts. Both migration services run on every `docker compose up` and are idempotent.
 - **Production** (`docker/docker-compose.yml`): Set `POSTGRES_PASSWORD` to a unique random value and set
@@ -202,7 +202,7 @@ TAXONOMY_LLM_BASE_URL=http://vllm:8000/v1
 TAXONOMY_LLM_API_KEY=<api-key-or-dummy-value>
 ```
 
-Replace `:v0.1.0` with the current released `ghcr.io/yldm-tech/taxonomy` image tag for your Forma version. Production installs should pin a release tag instead of relying on `:latest`.
+Replace `:v0.1.0` with the current released `ghcr.io/formbricks/taxonomy` image tag for your Forma version. Production installs should pin a release tag instead of relying on `:latest`.
 
 If you run your own OpenAI-compatible endpoint, keep only the `taxonomy` profile and point `TAXONOMY_LLM_BASE_URL` at that `/v1` endpoint. The selected model must reliably return strict JSON because taxonomy generation validates an exact 5-level tree.
 
@@ -245,7 +245,7 @@ docker compose --profile taxonomy exec -T taxonomy python -c 'import os, urllib.
 
 The taxonomy service remains internal to the compose network by default. For production workloads, `TAXONOMY_MAX_RECORDS` defaults to `50000`. Override it only as an advanced safety limit after sizing CPU, memory, and LLM capacity.
 
-For local unreleased taxonomy testing, build the taxonomy image as `ghcr.io/yldm-tech/taxonomy:local`, set `TAXONOMY_IMAGE_REF=:local` and `COMPOSE_PROFILES=taxonomy` in `.env`, and start the stack.
+For local unreleased taxonomy testing, build the taxonomy image as `ghcr.io/formbricks/taxonomy:local`, set `TAXONOMY_IMAGE_REF=:local` and `COMPOSE_PROFILES=taxonomy` in `.env`, and start the stack.
 
 The one-click installer does not prompt for taxonomy settings. One-click users can enable the beta later by editing `./forma/.env`, adding the variables above, and restarting with `docker compose up -d`.
 

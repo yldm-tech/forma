@@ -1957,7 +1957,7 @@ checksums:
     workspace/app-connection/install_method_react_step_1: 960b34682c8194440dafdc4dc9e6af90
     workspace/app-connection/install_method_react_step_2: 1add01e977d744019268374a5959d97c
     workspace/app-connection/install_method_swift: 6ee99221208add301beade9742c075f0
-    workspace/app-connection/install_method_swift_step_1: 522a1cacdd8bb0760d8fb713d4e4f05b
+    workspace/app-connection/install_method_swift_step_1: 16022167f6062614f7a0ecf0a08c2e36
     workspace/app-connection/install_method_swift_step_2: 716e6afe5c97981672df5cff7a6cd5f1
     workspace/app-connection/install_method_vue: 712b71b30503940db54517b40192c528
     workspace/app-connection/install_method_vue_step_1: cddd84f14ccb2e740d7f07aa6aacaf4a

@@ -218,7 +218,7 @@ services:
   # Keep hub, hub-migrate, and any future hub-worker on the same tag — they share one image and
   # drift breaks migrations or job processing.
   hub-migrate:
-    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
@@ -231,9 +231,9 @@ services:
       hub-db-create:
         condition: service_completed_successfully
 
-  # Forma Hub API (ghcr.io/yldm-tech/hub). Uses a dedicated local Hub database by default.
+  # Forma Hub API (ghcr.io/formbricks/hub). Uses a dedicated local Hub database by default.
   hub:
-    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -297,7 +297,7 @@ services:
 
   # Hub worker processes async jobs enqueued by the API, including embeddings.
   hub-worker:
-    image: ghcr.io/yldm-tech/hub:${HUB_IMAGE_TAG:-0.8.5}
+    image: ghcr.io/formbricks/hub:${HUB_IMAGE_TAG:-0.8.5}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -312,7 +312,7 @@ services:
 
   # Optional AI taxonomy beta service. Enable with COMPOSE_PROFILES=taxonomy.
   taxonomy:
-    image: ghcr.io/yldm-tech/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
+    image: ghcr.io/formbricks/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
     profiles: ["taxonomy"]
     depends_on:
       hub:

@@ -440,7 +440,7 @@ services:
   # Operators who want an immutable pin can set HUB_IMAGE_REF in docker/.env to either ":<tag>"
   # (e.g. ":0.3.0") or "@sha256:<digest>". hub and hub-migrate share the same value — no drift.
   hub-migrate:
-    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
+    image: ghcr.io/formbricks/hub${HUB_IMAGE_REF:-:latest}
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
@@ -453,10 +453,10 @@ services:
       forma-migrate:
         condition: service_completed_successfully
 
-  # Forma Hub API (ghcr.io/yldm-tech/hub). Set HUB_API_KEY. By default shares the Forma database; set HUB_DATABASE_URL to use a separate DB.
+  # Forma Hub API (ghcr.io/formbricks/hub). Set HUB_API_KEY. By default shares the Forma database; set HUB_DATABASE_URL to use a separate DB.
   hub:
     restart: always
-    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
+    image: ghcr.io/formbricks/hub${HUB_IMAGE_REF:-:latest}
     depends_on:
       hub-migrate:
         condition: service_completed_successfully
@@ -473,7 +473,7 @@ services:
   taxonomy:
     restart: always
     profiles: ["taxonomy"]
-    image: ghcr.io/yldm-tech/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
+    image: ghcr.io/formbricks/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
     depends_on:
       hub:
         condition: service_started
