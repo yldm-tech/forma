@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useTranslation } from "react-i18next";
 import { TOrganizationRole } from "@forma/types/memberships";
 import { TOrganization } from "@forma/types/organizations";
-import { TUser } from "@forma/types/user";
 import {
   getOrganizationsForSwitcherAction,
   getWorkspacesForSwitcherAction,
@@ -20,7 +19,6 @@ import { useLatestStableRelease } from "@/app/(app)/workspaces/[workspaceId]/lib
 import { cn } from "@/lib/cn";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
 import { getAccessFlags } from "@/lib/membership/utils";
-import { UserDropdown } from "@/modules/settings/components/user-dropdown";
 import { useSwitcherData } from "@/modules/settings/hooks/use-switcher-data";
 import { Badge } from "@/modules/ui/components/badge";
 import { GoBackButton } from "@/modules/ui/components/go-back-button";
@@ -29,13 +27,11 @@ import { CreateWorkspaceModal } from "@/modules/workspaces/components/create-wor
 import { WorkspaceLimitModal } from "@/modules/workspaces/components/workspace-limit-modal";
 
 interface NavigationProps {
-  user: TUser;
   organization: TOrganization;
   workspace: { id: string; name: string };
   isFormaCloud: boolean;
   isDevelopment: boolean;
   membershipRole?: TOrganizationRole;
-  publicDomain: string;
   organizationWorkspacesLimit: number;
   isLicenseActive: boolean;
   isAccessControlAllowed: boolean;
@@ -70,12 +66,10 @@ const sectionLabelWithBeta = (label: React.ReactNode) => (
 
 export const MainNavigation = ({
   organization,
-  user,
   workspace,
   membershipRole,
   isFormaCloud,
   isDevelopment,
-  publicDomain,
   organizationWorkspacesLimit,
   isLicenseActive,
   isAccessControlAllowed,
@@ -372,20 +366,11 @@ export const MainNavigation = ({
             )}
 
             <div className="flex flex-col">
-              {/* Organization and workspace switching lives in the top bar's breadcrumb
-                  (`WorkspaceAndOrgSwitch`), which renders on every page through `WorkspaceLayout`
-                  and `settings-shell`, and states the relationship — org › workspace — that two
-                  stacked dropdowns here could only imply. Keeping both meant two places to change
-                  and two fetches of the same switcher data. Creating a workspace lives there too. */}
-
-              <UserDropdown
-                user={user}
-                organizationId={organization.id}
-                publicDomain={publicDomain}
-                isCollapsed={isCollapsed}
-                isTextVisible={isTextVisible}
-                className="rounded-br-xl"
-              />
+              {/* Nothing here any more. Switching organization and workspace is the top bar's
+                  breadcrumb (`WorkspaceAndOrgSwitch`), which states the relationship — org ›
+                  workspace — that stacked dropdowns could only imply; the account menu is the
+                  avatar at the top right. Both render on every page through `WorkspaceLayout` and
+                  `settings-shell`. */}
             </div>
           </div>
         </aside>
