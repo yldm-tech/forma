@@ -1,70 +1,42 @@
+import { notFound } from "next/navigation";
 import { ReactNode } from "react";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
-import { getTranslate } from "@/lingodotdev/server";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
-import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 import { ContactsSecondaryNavigation } from "./contacts-secondary-navigation";
 
 interface ContactsPageLayoutProps {
   pageTitle: string;
   activeId: string;
   workspaceId: string;
-  organizationId: string;
   isContactsEnabled: boolean;
   isReadOnly: boolean;
   cta?: ReactNode;
   children: ReactNode;
-  upgradePromptTitle?: string;
-  upgradePromptDescription?: string;
-  upgradeFeature?: string;
 }
 
 export const ContactsPageLayout = async ({
   pageTitle,
   activeId,
   workspaceId,
-  organizationId,
   isContactsEnabled,
   isReadOnly,
   cta,
   children,
-  upgradePromptTitle,
-  upgradePromptDescription,
-  upgradeFeature = "contacts",
 }: ContactsPageLayoutProps) => {
-  const t = await getTranslate();
-  const organizationBillingPath = `/organizations/${organizationId}/settings/billing`;
+  // Not entitled: this installation does not have contacts, so the route does not exist for it. The
+  // nav already omits the entry, which leaves old links and bookmarks — and answering those with a
+  // page whose only content is an upsell reads as a broken product rather than a smaller one.
+  if (!isContactsEnabled) {
+    notFound();
+  }
 
   return (
     <PageContentWrapper>
-      <PageHeader pageTitle={pageTitle} cta={isContactsEnabled && !isReadOnly ? cta : undefined}>
+      <PageHeader pageTitle={pageTitle} cta={isReadOnly ? undefined : cta}>
         <ContactsSecondaryNavigation activeId={activeId} workspaceId={workspaceId} />
       </PageHeader>
 
-      {isContactsEnabled ? (
-        children
-      ) : (
-        <div className="flex items-center justify-center">
-          <UpgradePrompt
-            title={upgradePromptTitle ?? t("workspace.contacts.unlock_contacts_title")}
-            description={upgradePromptDescription ?? t("workspace.contacts.unlock_contacts_description")}
-            feature={upgradeFeature}
-            buttons={[
-              {
-                text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                href: IS_FORMA_CLOUD ? organizationBillingPath : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-              },
-              {
-                text: t("common.learn_more"),
-                href: IS_FORMA_CLOUD
-                  ? organizationBillingPath
-                  : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_contacts",
-              },
-            ]}
-          />
-        </div>
-      )}
+      {children}
     </PageContentWrapper>
   );
 };

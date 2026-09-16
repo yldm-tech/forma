@@ -31,7 +31,6 @@ export const SegmentsPage = async ({ params: paramsProps }: { params: Promise<{ 
       pageTitle={t("common.contacts")}
       activeId="segments"
       workspaceId={params.workspaceId}
-      organizationId={organization.id}
       isContactsEnabled={isContactsEnabled}
       isReadOnly={isReadOnly}
       cta={
@@ -40,10 +39,7 @@ export const SegmentsPage = async ({ params: paramsProps }: { params: Promise<{ 
           segments={filteredSegments}
           workspaceId={workspace.id}
         />
-      }
-      upgradePromptTitle={t("workspace.segments.unlock_segments_title")}
-      upgradePromptDescription={t("workspace.segments.unlock_segments_description")}
-      upgradeFeature="segments">
+      }>
       <SegmentTable
         allSegments={segments}
         segments={filteredSegments}
