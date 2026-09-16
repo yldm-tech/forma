@@ -52,6 +52,7 @@ export const captureSignIn = async ({
   }
 
   try {
+    // tenant-scope-exempt: how many organizations this user belongs to, scoped by userId — spanning them is the metric
     const membershipCountPromise = prisma.membership.count({ where: { userId } });
     const resolvedPreviousLastLoginAt =
       previousLastLoginAt === undefined

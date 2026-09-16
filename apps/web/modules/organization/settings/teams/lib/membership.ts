@@ -201,6 +201,7 @@ export const getMembershipsByUserId = reactCache(
     validateInputs([userId, ZString], [page, ZOptionalNumber]);
 
     try {
+      // tenant-scope-exempt: the caller's own memberships, scoped by userId — the point is to span their organizations
       const memberships = await prisma.membership.findMany({
         where: {
           userId,

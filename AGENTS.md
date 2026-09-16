@@ -177,7 +177,7 @@ Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonl
 
 ## Database & Prisma Performance
 
-- Multi-tenancy: All data must be scoped by Organization or Environment.
+- Multi-tenancy: All data must be scoped by Organization or Environment. `pnpm lint` enforces this through `scripts/check-tenant-scoping.mjs`: a read or bulk write against a model carrying a tenant column fails the build unless the enclosing function constrains that column, takes tenant ids, or scopes through an id that is itself tenant-scoped. The models come from the Prisma schema, so adding one enrolls it. A query that is legitimately global — telemetry, the API-key lookup authentication is built on, a background sweep — carries `// tenant-scope-exempt: <reason>` on the line above, which puts each exception in a diff a reviewer can challenge. The check cannot see whether the caller was entitled to an id it was handed; that guarantee still lives at the call site.
 - Soft Deletion: Check for `isActive` or `deletedAt` fields; use proper filtering.
 - Never use `skip`/`offset` with `prisma.response.count()`; only use `where`.
 - Separate count and data queries and run in parallel (`Promise.all`).

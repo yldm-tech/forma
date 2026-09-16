@@ -294,6 +294,7 @@ const sendTelemetry = async (lastSent: number): Promise<boolean> => {
         (SELECT COUNT(*) FROM "WorkflowRun" WHERE "isDryRun" = false AND status = 'failed' AND "finishedAt" > ${new Date(lastSent || 0)}) as "workflowRunFailedCountSinceLastUpdate"
     `,
     // Keep these as separate queries since they need DISTINCT which is harder to optimize
+    // tenant-scope-exempt: instance-wide telemetry — counting integration types across every tenant is the measurement
     prisma.integration.findMany({ select: { type: true }, distinct: ["type"] }),
     prisma.account.findMany({ select: { provider: true }, distinct: ["provider"] }),
     getWorkflowNodeTypesInUse(),
