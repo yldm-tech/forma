@@ -131,6 +131,10 @@ jobs:
           # reads this at build time — so setting it only in `.env` would let a cached non-E2E build
           # be replayed here. Same reason e2e.yml passes it twice.
           E2E_TESTING: "1"
+          # This job wants the build artifact, not a second opinion on the types: `Run Typecheck`
+          # already runs tsc over the same sources on this PR. The in-build type pass is where the
+          # build peaks, and it was getting the runner reclaimed right after "Compiled successfully".
+          NEXT_SKIP_TYPE_CHECK: "1"
         run: pnpm build --filter=@forma/web...
         shell: bash
 

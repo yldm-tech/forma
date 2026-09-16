@@ -34,6 +34,12 @@ RUN chmod +x /tmp/read-secrets.sh
 ARG NODE_OPTIONS="--max_old_space_size=8192"
 ENV NODE_OPTIONS=${NODE_OPTIONS}
 
+# Off by default, so a real image build still type-checks. CI's image-validation job sets it: that
+# job wants to know the image builds, and the PR's own `Run Typecheck` has already run tsc over the
+# same sources. The in-build type pass is the memory peak, and it was getting the runner reclaimed.
+ARG NEXT_SKIP_TYPE_CHECK=""
+ENV NEXT_SKIP_TYPE_CHECK=${NEXT_SKIP_TYPE_CHECK}
+
 # Target architecture - automatically provided by Docker in multi-platform builds
 # but needs explicit declaration for some build systems (like Depot)
 ARG TARGETARCH

@@ -92,6 +92,15 @@ const nextConfig = {
     ],
   },
   turbopack: {},
+  // `next build` type-checks the whole app after compiling it, and that phase is where the build
+  // peaks: on a 16 GiB CI runner it was enough to get the runner reclaimed mid-build, every time,
+  // right after "Compiled successfully". `@forma/web#typecheck` already runs `tsc` over the same
+  // sources as its own gate, with the package builds it depends on declared in turbo.json, so a job
+  // that only needs the build artifact can set this and skip the second pass. Unset everywhere else,
+  // which keeps a plain `pnpm build` type-checking exactly as before.
+  typescript: {
+    ignoreBuildErrors: process.env.NEXT_SKIP_TYPE_CHECK === "1",
+  },
   experimental: {
     proxyClientMaxBodySize: "16mb",
   },
