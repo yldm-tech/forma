@@ -34,14 +34,7 @@ export type InvalidParam = {
   code?: InvalidParamCode;
   identifier?: string;
   referenceType?:
-    | "block"
-    | "element"
-    | "ending"
-    | "hiddenField"
-    | "language"
-    | "variable"
-    | "variableName"
-    | "recall";
+    "block" | "element" | "ending" | "hiddenField" | "language" | "variable" | "variableName" | "recall";
   missingId?: string;
   firstUsedAt?: string;
   conflictsWith?: string;

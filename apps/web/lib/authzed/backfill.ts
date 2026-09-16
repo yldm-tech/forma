@@ -301,25 +301,29 @@ const toRepairTargets = (refs: ReadonlyArray<TAuthzedSourceRef>): TReconcileTarg
  */
 const toSourceRefs = (source: TAuthzedOrganizationSource): ReadonlyArray<TAuthzedSourceRef> => {
   return [
-    ...source.memberships.map(
-      ({ organizationId, userId }): TAuthzedSourceRef => ({ kind: "membership", organizationId, userId })
-    ),
+    ...source.memberships.map(({ organizationId, userId }): TAuthzedSourceRef => ({
+      kind: "membership",
+      organizationId,
+      userId,
+    })),
     ...source.teamIds.map((teamId): TAuthzedSourceRef => ({ kind: "team", teamId })),
-    ...source.teamMemberships.map(
-      ({ teamId, userId }): TAuthzedSourceRef => ({ kind: "teamMembership", teamId, userId })
-    ),
+    ...source.teamMemberships.map(({ teamId, userId }): TAuthzedSourceRef => ({
+      kind: "teamMembership",
+      teamId,
+      userId,
+    })),
     ...source.workspaceIds.map((workspaceId): TAuthzedSourceRef => ({ kind: "workspace", workspaceId })),
-    ...source.workspaceTeamGrants.map(
-      ({ teamId, workspaceId }): TAuthzedSourceRef => ({ kind: "workspaceTeamGrant", teamId, workspaceId })
-    ),
+    ...source.workspaceTeamGrants.map(({ teamId, workspaceId }): TAuthzedSourceRef => ({
+      kind: "workspaceTeamGrant",
+      teamId,
+      workspaceId,
+    })),
     ...source.apiKeyIds.map((apiKeyId): TAuthzedSourceRef => ({ apiKeyId, kind: "apiKey" })),
-    ...source.apiKeyWorkspaceGrants.map(
-      ({ apiKeyId, workspaceId }): TAuthzedSourceRef => ({
-        apiKeyId,
-        kind: "apiKeyWorkspaceGrant",
-        workspaceId,
-      })
-    ),
+    ...source.apiKeyWorkspaceGrants.map(({ apiKeyId, workspaceId }): TAuthzedSourceRef => ({
+      apiKeyId,
+      kind: "apiKeyWorkspaceGrant",
+      workspaceId,
+    })),
   ];
 };
 
@@ -792,20 +796,16 @@ const toWorkspaceSourceRefs = (
   }
 
   return [
-    ...source.workspaceTeamGrants.map(
-      ({ teamId, workspaceId: grantWorkspaceId }): TAuthzedSourceRef => ({
-        kind: "workspaceTeamGrant",
-        teamId,
-        workspaceId: grantWorkspaceId,
-      })
-    ),
-    ...source.apiKeyWorkspaceGrants.map(
-      ({ apiKeyId, workspaceId: grantWorkspaceId }): TAuthzedSourceRef => ({
-        apiKeyId,
-        kind: "apiKeyWorkspaceGrant",
-        workspaceId: grantWorkspaceId,
-      })
-    ),
+    ...source.workspaceTeamGrants.map(({ teamId, workspaceId: grantWorkspaceId }): TAuthzedSourceRef => ({
+      kind: "workspaceTeamGrant",
+      teamId,
+      workspaceId: grantWorkspaceId,
+    })),
+    ...source.apiKeyWorkspaceGrants.map(({ apiKeyId, workspaceId: grantWorkspaceId }): TAuthzedSourceRef => ({
+      apiKeyId,
+      kind: "apiKeyWorkspaceGrant",
+      workspaceId: grantWorkspaceId,
+    })),
     { kind: "workspace", workspaceId },
   ];
 };

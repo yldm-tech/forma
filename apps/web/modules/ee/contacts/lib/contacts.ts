@@ -630,8 +630,7 @@ const handleDuplicateContact = async (
 };
 
 export type TCreateContactsFromCSVResult =
-  | { contacts: TContact[] }
-  | { validationErrors: TCsvAttributeValidationError[] };
+  { contacts: TContact[] } | { validationErrors: TCsvAttributeValidationError[] };
 
 export const createContactsFromCSV = async (
   csvData: Record<string, string>[],

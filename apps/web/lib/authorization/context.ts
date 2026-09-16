@@ -36,13 +36,7 @@ import { recordAuthorizationChecksPerRequest } from "./metrics";
  * render to scope to.
  */
 export type TAuthorizationSurface =
-  | "server_action"
-  | "page"
-  | "api_v1"
-  | "api_v2"
-  | "api_v3"
-  | "mcp"
-  | "feedback_gateway";
+  "server_action" | "page" | "api_v1" | "api_v2" | "api_v3" | "mcp" | "feedback_gateway";
 
 type TAuthorizationContext = {
   checksIssued: number;

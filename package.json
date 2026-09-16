@@ -52,8 +52,8 @@
     "dev:setup": "bash scripts/setup-dev-env.sh"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.11.3",
-    "@azure/playwright": "1.1.5",
+    "@axe-core/playwright": "4.13.0",
+    "@azure/playwright": "1.1.6",
     "@forma/config-eslint": "workspace:*",
     "@playwright/test": "catalog:",
     "@redocly/cli": "1.34.17",
@@ -68,7 +68,7 @@
     "prettier-plugin-tailwindcss": "catalog:",
     "rimraf": "catalog:",
     "tsx": "catalog:",
-    "turbo": "2.9.14"
+    "turbo": "2.10.12"
   },
   "engines": {
     "node": ">=20.19.0 <21 || >=22.12.0 <23 || >=24.0.0 <25"

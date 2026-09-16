@@ -212,8 +212,7 @@ export const mockStorageUploads = async (page: Page): Promise<void> => {
       }
 
       const payload = route.request().postDataJSON() as
-        | { fileName?: string; surveyId?: string; elementId?: string }
-        | undefined;
+        { fileName?: string; surveyId?: string; elementId?: string } | undefined;
       const fileName = payload?.fileName ?? "uploaded-file.bin";
       const requestUrl = new URL(route.request().url());
       const appOrigin = requestUrl.origin;

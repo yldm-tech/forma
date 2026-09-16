@@ -34,13 +34,7 @@ export interface SurveyInlineProps extends SurveyBaseProps {
 }
 
 export type TActionClassPageUrlRule =
-  | "exactMatch"
-  | "contains"
-  | "startsWith"
-  | "endsWith"
-  | "notMatch"
-  | "notContains"
-  | "matchesRegex";
+  "exactMatch" | "contains" | "startsWith" | "endsWith" | "notMatch" | "notContains" | "matchesRegex";
 
 export type TActionClassNoCodeConfig =
   | {

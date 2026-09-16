@@ -1,8 +1,7 @@
 import "server-only";
 
 export type TAuthzedSchemaCliCommand =
-  | Readonly<{ action: "check" }>
-  | Readonly<{ action: "apply"; expectedCurrentDigest?: string }>;
+  Readonly<{ action: "check" }> | Readonly<{ action: "apply"; expectedCurrentDigest?: string }>;
 
 /** Parse schema CLI arguments without loading the AuthZed client or environment configuration. */
 export const parseAuthzedSchemaCliCommand = (

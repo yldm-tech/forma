@@ -1,8 +1,7 @@
 import "server-only";
 
 export type TAuthzedUpgradeCliCommand =
-  | Readonly<{ action: "check" }>
-  | Readonly<{ action: "prepare"; expectedCurrentDigest?: string }>;
+  Readonly<{ action: "check" }> | Readonly<{ action: "prepare"; expectedCurrentDigest?: string }>;
 
 const SCHEMA_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 

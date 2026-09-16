@@ -16,8 +16,7 @@ type TJsonBodyValidationSuccess<TData> = {
 };
 
 export type TParseAndValidateJsonBodyResult<TData> =
-  | TJsonBodyValidationError
-  | TJsonBodyValidationSuccess<TData>;
+  TJsonBodyValidationError | TJsonBodyValidationSuccess<TData>;
 
 type TParseAndValidateJsonBodyOptions<TSchema extends z.ZodTypeAny> = {
   request: Request;

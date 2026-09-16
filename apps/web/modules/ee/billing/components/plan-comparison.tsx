@@ -31,8 +31,7 @@ export interface TPlanColumn {
 type ComparisonValue = boolean | string;
 
 type ComparisonDisplayRow =
-  | { type: "feature"; label: string; values: ComparisonValue[] }
-  | { type: "section"; label: string };
+  { type: "feature"; label: string; values: ComparisonValue[] } | { type: "section"; label: string };
 
 // Vertical compartment line + horizontal padding shared by every plan-column cell.
 const PLAN_CELL = "border-l border-slate-100 px-3 sm:px-5";

@@ -291,8 +291,7 @@ const buildEndings = () => [
 
 /** The two fixture question lists this file can create a survey from. */
 type FixtureQuestionList =
-  | ReturnType<typeof buildKitchenSinkQuestions>
-  | ReturnType<typeof buildAnsweredStatesQuestions>;
+  ReturnType<typeof buildKitchenSinkQuestions> | ReturnType<typeof buildAnsweredStatesQuestions>;
 
 /**
  * Creates a published link survey directly through Prisma from a legacy `questions`

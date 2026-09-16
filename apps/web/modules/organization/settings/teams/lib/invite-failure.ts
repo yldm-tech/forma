@@ -2,11 +2,7 @@ import type { TFunction } from "i18next";
 import { InvalidInputError, ValidationError } from "@forma/types/errors";
 
 export type TBulkInviteFailureReason =
-  | "invite_already_exists"
-  | "user_already_member"
-  | "duplicate_team_ids"
-  | "invalid_team_ids"
-  | "unknown";
+  "invite_already_exists" | "user_already_member" | "duplicate_team_ids" | "invalid_team_ids" | "unknown";
 
 export type TBulkInviteResult = {
   email: string;

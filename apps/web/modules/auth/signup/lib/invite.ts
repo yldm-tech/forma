@@ -98,11 +98,7 @@ export const getIsValidInviteToken = reactCache(async (inviteId: string): Promis
 
 /** Outcome of matching an invite token to the address being registered. */
 export type InviteMatch =
-  | "valid"
-  | "missing"
-  | "email_mismatch"
-  | "invalid_or_expired"
-  | "verification_error";
+  "valid" | "missing" | "email_mismatch" | "invalid_or_expired" | "verification_error";
 
 /**
  * Resolve whether `inviteToken` is a valid, non-expired invite whose email matches `email`

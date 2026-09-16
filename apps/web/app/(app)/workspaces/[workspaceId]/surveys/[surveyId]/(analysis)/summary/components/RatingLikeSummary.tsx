@@ -22,9 +22,7 @@ import { ElementSummaryHeader } from "./ElementSummaryHeader";
 import { RatingScaleLegend } from "./RatingScaleLegend";
 
 type RatingLikeElementSummary =
-  | TSurveyElementSummaryCes
-  | TSurveyElementSummaryCsat
-  | TSurveyElementSummaryRating;
+  TSurveyElementSummaryCes | TSurveyElementSummaryCsat | TSurveyElementSummaryRating;
 
 interface RatingLikeSummaryProps {
   elementSummary: RatingLikeElementSummary;

@@ -25,8 +25,7 @@ type TRouteResult = ApiErrorResult;
 type TExistingResponseResult = { existingResponse: TResponse } | TRouteResult;
 type TSurveyResult = { survey: TSurvey } | TRouteResult;
 type TUpdatedResponseResult =
-  | { updatedResponse: Awaited<ReturnType<typeof updateResponseWithQuotaEvaluation>> }
-  | TRouteResult;
+  { updatedResponse: Awaited<ReturnType<typeof updateResponseWithQuotaEvaluation>> } | TRouteResult;
 
 export type TPutRouteParams = {
   params: Promise<{

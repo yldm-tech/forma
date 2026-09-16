@@ -39,14 +39,7 @@ export interface WorkflowAuditDetail {
 
 /** The lifecycle operations the analytics sink is told about. `patch` is deliberately absent. */
 export type WorkflowAnalyticsOperation =
-  | "created"
-  | "duplicated"
-  | "enabled"
-  | "disabled"
-  | "archived"
-  | "unarchived"
-  | "deleted"
-  | "tested";
+  "created" | "duplicated" | "enabled" | "disabled" | "archived" | "unarchived" | "deleted" | "tested";
 
 /**
  * Product-analytics detail a handler surfaces to the adapter after a successful operation
