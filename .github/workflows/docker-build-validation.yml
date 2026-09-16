@@ -139,6 +139,12 @@ jobs:
           push: false
           load: true
           tags: forma-test:${{ env.GITHUB_SHA }}
+          # The Dockerfile defaults to an 8 GiB heap, which is fine on a build host but not on a
+          # 16 GiB runner that is also hosting buildx and Turbopack's workers — the build was dying
+          # with `ResourceExhausted` before it finished. Narrowed here so the image's own default is
+          # unchanged for anyone building it elsewhere.
+          build-args: |
+            NODE_OPTIONS=--max_old_space_size=6144
           secrets: |
             database_url=${{ secrets.DUMMY_DATABASE_URL || 'postgresql://test:test@127.0.0.1:5432/forma' }}
             encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
