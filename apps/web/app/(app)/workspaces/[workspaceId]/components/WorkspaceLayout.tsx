@@ -76,6 +76,10 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
 
   const { features, lastChecked, isPendingDowngrade, active, status } = license;
   const isMultiOrgEnabled = features?.isMultiOrgEnabled ?? false;
+  // Nav entries for features this installation cannot serve. Showing them routes the user to a page
+  // whose only content is an upsell, so the product reads as broken rather than as smaller.
+  const isContactsEnabled = features?.contacts ?? false;
+  const areWorkflowsEnabled = features?.workflows ?? false;
   const isTrialing = IS_FORMA_CLOUD && organization.billing?.stripe?.subscriptionStatus === "trialing";
   // Hobby (free) plan only — excludes trial and paid (Pro/Scale) orgs.
   const isHobby = IS_FORMA_CLOUD && organization.billing?.stripe?.plan === "hobby";
@@ -158,6 +162,8 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
           organizationWorkspacesLimit={organizationWorkspacesLimit}
           isLicenseActive={active}
           isAccessControlAllowed={isAccessControlAllowed}
+          isContactsEnabled={isContactsEnabled}
+          areWorkflowsEnabled={areWorkflowsEnabled}
           responseCount={responseCount}
           newTrialBannerVariant={newTrialBannerVariant}
           trialDaysRemaining={trialDaysRemaining}

@@ -25,6 +25,7 @@ import { MainNavigationHeader } from "@/app/(app)/workspaces/[workspaceId]/compo
 import { MainNavigationNotices } from "@/app/(app)/workspaces/[workspaceId]/components/MainNavigationNotices";
 import { NavigationLink } from "@/app/(app)/workspaces/[workspaceId]/components/NavigationLink";
 import { SettingsSidebarContent } from "@/app/(app)/workspaces/[workspaceId]/components/SettingsSidebarContent";
+import { getVisibleNavigationSections } from "@/app/(app)/workspaces/[workspaceId]/lib/navigation-visibility";
 import { useLatestStableRelease } from "@/app/(app)/workspaces/[workspaceId]/lib/use-latest-stable-release";
 import { cn } from "@/lib/cn";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
@@ -55,6 +56,8 @@ interface NavigationProps {
   organizationWorkspacesLimit: number;
   isLicenseActive: boolean;
   isAccessControlAllowed: boolean;
+  isContactsEnabled: boolean;
+  areWorkflowsEnabled: boolean;
   responseCount: number;
   newTrialBannerVariant: string | boolean;
   // Whole days left in the trial, or null when there is no trial to count down. Computed by the
@@ -132,6 +135,8 @@ export const MainNavigation = ({
   organizationWorkspacesLimit,
   isLicenseActive,
   isAccessControlAllowed,
+  isContactsEnabled,
+  areWorkflowsEnabled,
   responseCount,
   newTrialBannerVariant,
   trialDaysRemaining,
@@ -194,6 +199,7 @@ export const MainNavigation = ({
               pathname?.includes("/contacts") ||
               pathname?.includes("/segments") ||
               pathname?.includes("/attributes"),
+            isHidden: !isContactsEnabled,
             disabled: isMembershipPending || isBilling,
           },
         ],
@@ -211,13 +217,18 @@ export const MainNavigation = ({
             href: `/workspaces/${workspace.id}/workflows`,
             icon: WorkflowIcon,
             isActive: pathname?.startsWith(`/workspaces/${workspace.id}/workflows`),
-            isHidden: false,
+            isHidden: !areWorkflowsEnabled,
             disabled: isMembershipPending || isBilling,
           },
         ],
       },
     ],
-    [t, workspace.id, pathname, isMembershipPending, isBilling]
+    [t, workspace.id, pathname, isMembershipPending, isBilling, isContactsEnabled, areWorkflowsEnabled]
+  );
+
+  const visibleNavigationSections = useMemo(
+    () => getVisibleNavigationSections(mainNavigationSections),
+    [mainNavigationSections]
   );
 
   const settingsNavigationItem = useMemo(
@@ -412,7 +423,7 @@ export const MainNavigation = ({
 
               {/* Main Nav */}
               <ul className="space-y-2">
-                {mainNavigationSections.map((section) => (
+                {visibleNavigationSections.map((section) => (
                   <li key={section.id}>
                     {!isCollapsed && !isTextVisible && (
                       <p className="px-4 pt-2 pb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
