@@ -27,14 +27,9 @@ concurrency:
 
 jobs:
   sync-labels:
-    runs-on: ubuntu-latest
+    runs-on: yldm-linux
     timeout-minutes: 5
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
-        with:
-          egress-policy: audit
-
       - name: Sync labels from PR body sections
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:

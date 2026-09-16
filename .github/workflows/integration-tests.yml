@@ -37,7 +37,7 @@ permissions:
 jobs:
   integration:
     name: Better Auth integration tests
-    runs-on: ubuntu-latest
+    runs-on: yldm-linux
     timeout-minutes: 30
     services:
       postgres:
@@ -58,11 +58,6 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
-        with:
-          egress-policy: audit
-
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false # no later step needs git auth (dangerous-git-checkout re-auths)

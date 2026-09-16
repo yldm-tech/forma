@@ -293,7 +293,12 @@ Do not:
 ## GitHub Actions
 
 - Always set minimal `permissions` for `GITHUB_TOKEN`.
-- On `ubuntu-latest`, add `step-security/harden-runner` as the first step.
+- `runs-on: yldm-linux` — the org's self-hosted pool, the same one `yldm-tech/fluxa` uses. Do not
+  reach for `ubuntu-latest`: GitHub's hosted runners kept being reclaimed part-way through this
+  repo's Next.js build, which surfaces as `The runner has received a shutdown signal` rather than
+  anything you can act on.
+- No `step-security/harden-runner`. It audits egress on GitHub-hosted runners; its eBPF probe does
+  not work inside the LXC these runners live in, and the rest of the org does not run it either.
 
 ## Quality Checklist
 

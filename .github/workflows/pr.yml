@@ -55,15 +55,11 @@ jobs:
 
   validate-authzed-schema:
     name: Validate AuthZed Schema
-    runs-on: ubuntu-latest
+    runs-on: yldm-linux
     timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0
-        with:
-          egress-policy: audit
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -94,16 +90,12 @@ jobs:
         api-v3-contract-tests,
       ]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: yldm-linux
     permissions:
       contents: read
       checks: write
       statuses: write
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0
-        with:
-          egress-policy: audit
       - name: fail if conditional jobs failed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'skipped') || contains(needs.*.result, 'cancelled')
         run: exit 1
