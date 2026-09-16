@@ -43,7 +43,7 @@ vi.mock("./lib/response", () => ({
   getResponses: mockGetResponses,
 }));
 
-vi.mock("@/app/lib/pipelines", () => ({
+vi.mock("@/lib/pipelines", () => ({
   sendToPipeline: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { handleApiError } from "@/app/lib/api/handle-api-error";
-import { responses } from "@/app/lib/api/response";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { handleApiError } from "@/lib/api/handle-api-error";
+import { responses } from "@/lib/api/response";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getResponseIdByDisplayId } from "./lib/response";
 

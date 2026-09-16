@@ -1,4 +1,4 @@
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { extractAuthToken } from "@/modules/ee/auth/saml/api/userinfo/lib/utils";
 import jackson from "@/modules/ee/auth/saml/lib/jackson";
 

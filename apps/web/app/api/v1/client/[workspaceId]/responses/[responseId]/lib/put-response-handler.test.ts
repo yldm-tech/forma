@@ -6,7 +6,7 @@ import {
   RESPONSE_ALREADY_FINISHED_ERROR_CODE,
   ResourceNotFoundError,
 } from "@forma/types/errors";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { putResponseHandler } from "./put-response-handler";
 
 const mocks = vi.hoisted(() => ({
@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   verifyLinkSurveyPinToken: vi.fn(),
 }));
 
-vi.mock("@/app/lib/pipelines", () => ({
+vi.mock("@/lib/pipelines", () => ({
   sendToPipeline: mocks.sendToPipeline,
 }));
 

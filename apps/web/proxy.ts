@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "@forma/logger";
-import { isPublicDomainConfigured, isRequestFromPublicDomain } from "@/app/middleware/domain-utils";
-import { isAuthProtectedRoute, isRouteAllowedForDomain } from "@/app/middleware/endpoint-validator";
 import { TRUSTED_PROXY_HOP_COUNT, WEBAPP_URL } from "@/lib/constants";
 import { FORMA_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
+import { isPublicDomainConfigured, isRequestFromPublicDomain } from "@/lib/middleware/domain-utils";
+import { isAuthProtectedRoute, isRouteAllowedForDomain } from "@/lib/middleware/endpoint-validator";
 import { FORMA_CLIENT_IP_HEADER, resolveClientIp } from "@/lib/utils/client-ip";
 import { getValidatedCallbackUrl } from "@/lib/utils/url";
 import { getProxySession } from "@/modules/auth/lib/proxy-session";

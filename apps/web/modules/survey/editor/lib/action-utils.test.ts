@@ -17,11 +17,11 @@ import {
 } from "./action-utils";
 
 // Mock the CSS selector validation function
-vi.mock("@/app/lib/actionClass/actionClass", () => ({
+vi.mock("@/lib/actionClass/actionClass", () => ({
   isValidCssSelector: vi.fn(),
 }));
 
-const { isValidCssSelector } = await import("@/app/lib/actionClass/actionClass");
+const { isValidCssSelector } = await import("@/lib/actionClass/actionClass");
 
 // Mock translation function
 const mockT = vi.fn((key: string, params?: any) => {

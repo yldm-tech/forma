@@ -1,18 +1,18 @@
 import { NextRequest } from "next/server";
 import { logger } from "@forma/logger";
 import type { Session, TAuthenticationApiKey } from "@forma/types/auth";
-import { authenticateRequest } from "@/app/api/v1/auth";
-import { reportApiError } from "@/app/lib/api/api-error-reporter";
-import { getRateLimitErrorResponse } from "@/app/lib/api/client-rate-limit";
-import { responses } from "@/app/lib/api/response";
+import { reportApiError } from "@/lib/api/api-error-reporter";
+import { authenticateRequest } from "@/lib/api/auth";
+import { getRateLimitErrorResponse } from "@/lib/api/client-rate-limit";
+import { responses } from "@/lib/api/response";
+import { withAuthorizationSurface } from "@/lib/authorization/context";
+import { AUDIT_LOG_ENABLED } from "@/lib/constants";
 import {
   AuthenticationMethod,
   isClientSideApiRoute,
   isIntegrationRoute,
   isManagementApiRoute,
-} from "@/app/middleware/endpoint-validator";
-import { withAuthorizationSurface } from "@/lib/authorization/context";
-import { AUDIT_LOG_ENABLED } from "@/lib/constants";
+} from "@/lib/middleware/endpoint-validator";
 import { getApiKeyFromHeaders } from "@/modules/api/lib/api-key-auth";
 import { getSession } from "@/modules/auth/lib/session";
 import {

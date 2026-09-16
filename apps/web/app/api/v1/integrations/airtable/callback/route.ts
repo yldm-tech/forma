@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { logger } from "@forma/logger";
-import { responses } from "@/app/lib/api/response";
-import { withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
 import { fetchAirtableAuthToken } from "@/lib/airtable/service";
+import { responses } from "@/lib/api/response";
+import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { AIRTABLE_CLIENT_ID, WEBAPP_URL } from "@/lib/constants";
 import { createOrUpdateIntegration, getIntegrationByType } from "@/lib/integration/service";
 import {

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { Result, err, ok } from "@forma/types/error-handlers";
-import { authenticateRequest } from "@/app/api/v1/auth";
+import { authenticateRequest } from "@/lib/api/auth";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { getSession } from "@/modules/auth/lib/session";

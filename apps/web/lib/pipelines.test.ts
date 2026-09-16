@@ -3,8 +3,8 @@ import { PipelineTriggers } from "@forma/database/prisma";
 import { TResponsePipelineJobData, getBackgroundJobProducer } from "@forma/jobs";
 import { logger } from "@forma/logger";
 import { TResponse } from "@forma/types/responses";
-import { sendToPipeline } from "@/app/lib/pipelines";
 import { getJobsQueueingConfig } from "@/lib/jobs/config";
+import { sendToPipeline } from "@/lib/pipelines";
 import { findMatchingLocale } from "@/lib/utils/locale";
 
 const mockEnqueueResponsePipeline = vi.fn();

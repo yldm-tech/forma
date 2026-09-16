@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import type { Session, TAuthenticationApiKey } from "@forma/types/auth";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { can } from "@/lib/authorization";
 import { checkAuth } from "./utils";
 
@@ -11,7 +11,7 @@ const mockUnauthorizedResponse = new Response("Unauthorized", { status: 401 });
 
 vi.mock("@/lib/authorization", () => ({ can: vi.fn() }));
 
-vi.mock("@/app/lib/api/response", () => ({
+vi.mock("@/lib/api/response", () => ({
   responses: {
     badRequestResponse: vi.fn(() => mockBadRequestResponse),
     notAuthenticatedResponse: vi.fn(() => mockNotAuthenticatedResponse),

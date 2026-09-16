@@ -1,9 +1,9 @@
 import { type NextRequest } from "next/server";
 import { logger } from "@forma/logger";
 import { ZDeleteFileRequest, ZDownloadFileRequest } from "@forma/types/storage";
-import { responses } from "@/app/lib/api/response";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
 import { authorizePrivateDownload } from "@/app/storage/[workspaceId]/[accessType]/[...filePath]/lib/auth";
+import { responses } from "@/lib/api/response";
+import { transformErrorToDetails } from "@/lib/api/validator";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getSession } from "@/modules/auth/lib/session";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";

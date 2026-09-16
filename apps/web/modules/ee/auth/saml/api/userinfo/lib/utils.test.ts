@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { extractAuthToken } from "./utils";
 
-vi.mock("@/app/lib/api/response", () => ({
+vi.mock("@/lib/api/response", () => ({
   responses: {
     unauthorizedResponse: vi.fn().mockReturnValue(new Error("Unauthorized")),
   },

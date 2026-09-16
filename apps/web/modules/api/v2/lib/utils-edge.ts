@@ -1,5 +1,5 @@
 // Function is this file can be used in edge runtime functions, like api routes.
-import { reportApiError } from "@/app/lib/api/api-error-reporter";
+import { reportApiError } from "@/lib/api/api-error-reporter";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 
 const getStatusFromApiError = (error: ApiErrorResponseV2): number => {

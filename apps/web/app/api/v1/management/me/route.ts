@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { prisma } from "@forma/database";
 import { getSessionUser } from "@/app/api/v1/management/me/lib/utils";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { CONTROL_HASH } from "@/lib/constants";
 import { hashSha256, parseApiKeyV2, verifySecret } from "@/lib/crypto";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";

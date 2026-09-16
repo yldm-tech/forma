@@ -2,7 +2,7 @@ import { TResponseUpdateInput, ZResponseUpdateInput } from "@forma/types/respons
 import {
   TParseAndValidateJsonBodyResult,
   parseAndValidateJsonBody,
-} from "@/app/lib/api/parse-and-validate-json-body";
+} from "@/lib/api/parse-and-validate-json-body";
 
 export type TValidatedResponseUpdateInputResult =
   { response: Response } | { responseUpdateInput: TResponseUpdateInput };

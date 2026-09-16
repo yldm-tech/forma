@@ -1,4 +1,4 @@
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 
 export const extractAuthToken = (req: Request) => {
   const authHeader = req.headers.get("authorization");

@@ -4,8 +4,8 @@ import {
   TIntegrationSlackConfigData,
   TIntegrationSlackCredential,
 } from "@forma/types/integration/slack";
-import { responses } from "@/app/lib/api/response";
-import { withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { responses } from "@/lib/api/response";
+import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, SLACK_REDIRECT_URI, WEBAPP_URL } from "@/lib/constants";
 import { createOrUpdateIntegration, getIntegrationByType } from "@/lib/integration/service";
 import {

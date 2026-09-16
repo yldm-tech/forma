@@ -40,7 +40,7 @@ vi.mock("@forma/logger", () => ({
   },
 }));
 vi.mock("./data");
-vi.mock("@/app/lib/api/api-backwards-compat", () => ({
+vi.mock("@/lib/api/api-backwards-compat", () => ({
   addLegacyProjectOverwritesToList: vi.fn((surveys: unknown[]) =>
     surveys.map((survey) => {
       const typedSurvey = survey as Record<string, unknown>;

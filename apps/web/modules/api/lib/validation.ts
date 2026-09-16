@@ -4,7 +4,7 @@ import { TResponseData } from "@forma/types/responses";
 import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { TSurveyQuestion } from "@forma/types/surveys/types";
 import { TValidationErrorMap } from "@forma/types/surveys/validation-rules";
-import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
+import { transformQuestionsToBlocks } from "@/lib/api/survey-transformation";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
 import { ApiErrorDetails } from "@/modules/api/v2/types/api-error";
 

@@ -1,8 +1,8 @@
 import { logger } from "@forma/logger";
 import { ZUploadPrivateFileRequest } from "@forma/types/storage";
-import { parseAndValidateJsonBody } from "@/app/lib/api/parse-and-validate-json-body";
-import { responses } from "@/app/lib/api/response";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body";
+import { responses } from "@/lib/api/response";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { MAX_FILE_UPLOAD_SIZES } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { getSurvey } from "@/lib/survey/service";

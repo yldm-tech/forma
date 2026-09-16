@@ -142,7 +142,8 @@ Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonl
 
 ## Architecture & Patterns
 
-- Next.js app router lives in `apps/web/app` with route groups like `(app)` and `(auth)`. Services live in `apps/web/lib`, feature modules in `apps/web/modules`.
+- Next.js app router lives in `apps/web/app` with route groups like `(app)` and `(auth)`. Services live in `apps/web/lib`, feature modules in `apps/web/modules`. The dependency runs one way — `app` and `modules` depend on `lib`, never the reverse — and ESLint enforces the `lib` half: production code under `lib/` may not import from `@/app/*`. Specs under `lib/` are exempt, since reaching for a fixture beside the route it was written for is not production code depending upward. Anything under `app/` that is not a route is a library in the wrong place; put it in `lib/` (or, if only one route uses it, in that route's own `lib/`) rather than importing upward to reach it.
+- `modules/` is not yet covered by that rule: 67 of its files still import from `app/`, mostly route components under `(app)/workspaces` and helpers under `api/v3`. That is a design problem rather than a misplacement — the components would have to move into `modules/`, or the dependency be inverted — so do not add new ones.
 - Server actions are legacy — do not add new ones. New backend work belongs in an `/api/v3` route consumed from the client with TanStack Query, with server data living in the query cache rather than mirrored into `useState` or Jotai. The existing server actions wrap service calls and return `{ data }` or `{ error }` consistently; keep that contract when changing them.
 - Context providers should guard against missing provider usage and use cleanup patterns that snapshot refs inside `useEffect` to avoid React hooks warnings
 

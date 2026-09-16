@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
-import { CUSTOM_SURVEY_TEMPLATE_ID } from "@/app/lib/templates";
-import { XM_TEMPLATE_IDS } from "@/app/lib/xm-template-ids";
+import { CUSTOM_SURVEY_TEMPLATE_ID } from "@/lib/templates";
 import { getWorkspace } from "@/lib/workspace/service";
+import { XM_TEMPLATE_IDS } from "@/lib/xm-template-ids";
 import { getTranslate } from "@/lingodotdev/server";
 import { createV3SurveyResponse } from "../../lib/operations";
 import { createTrustedTemplateSurveyResponse } from "./template-create";

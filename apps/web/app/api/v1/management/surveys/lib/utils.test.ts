@@ -6,14 +6,14 @@ import {
   TSurveyCreateInputWithWorkspaceId,
   TSurveyQuestionTypeEnum,
 } from "@forma/types/surveys/types";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
 import { getExternalUrlsPermission } from "@/modules/survey/lib/permission";
 import { checkFeaturePermissions } from "./utils";
 
 // Mock dependencies
-vi.mock("@/app/lib/api/response", () => ({
+vi.mock("@/lib/api/response", () => ({
   responses: {
     forbiddenResponse: vi.fn((message) => new Response(message, { status: 403 })),
   },

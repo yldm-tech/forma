@@ -16,12 +16,12 @@ vi.mock("@/modules/auth/lib/proxy-session", () => ({
   getProxySession: mockGetProxySession,
 }));
 
-vi.mock("@/app/middleware/domain-utils", () => ({
+vi.mock("@/lib/middleware/domain-utils", () => ({
   isPublicDomainConfigured: mockIsPublicDomainConfigured,
   isRequestFromPublicDomain: mockIsRequestFromPublicDomain,
 }));
 
-vi.mock("@/app/middleware/endpoint-validator", () => ({
+vi.mock("@/lib/middleware/endpoint-validator", () => ({
   isAuthProtectedRoute: (url: string) => url.startsWith("/environments"),
   isRouteAllowedForDomain: vi.fn(() => true),
 }));

@@ -3,9 +3,9 @@ import {
   TDisplayCreateInputV2,
   ZDisplayCreateInputV2,
 } from "@/app/api/v2/client/[workspaceId]/displays/types/display";
-import { reportApiError } from "@/app/lib/api/api-error-reporter";
-import { parseAndValidateJsonBody } from "@/app/lib/api/parse-and-validate-json-body";
-import { responses } from "@/app/lib/api/response";
+import { reportApiError } from "@/lib/api/api-error-reporter";
+import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body";
+import { responses } from "@/lib/api/response";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";

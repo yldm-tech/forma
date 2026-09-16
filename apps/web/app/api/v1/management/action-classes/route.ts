@@ -1,12 +1,12 @@
 import { logger } from "@forma/logger";
 import { TActionClass, ZActionClassInput } from "@forma/types/action-classes";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
-import { handleApiError } from "@/app/lib/api/handle-api-error";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
 import { createActionClass } from "@/lib/actionClass/service";
+import { handleApiError } from "@/lib/api/handle-api-error";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { getActionClasses } from "./lib/action-classes";

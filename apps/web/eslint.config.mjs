@@ -125,6 +125,29 @@ const config = [
       "no-restricted-syntax": "off",
     },
   },
+  {
+    // `lib/` is the bottom layer: routes and feature modules depend on it, and it must not depend back. The dependency used to run both ways because `app/lib/` and `app/middleware/` were libraries that happened to sit inside the App Router tree, so anything wanting them had to import from `app/`. They now live here, and this keeps them from drifting back.
+    //
+    // Tests are exempt: reaching for a fixture or mock that lives beside the route it was written for is a different thing from production code depending upward, and five specs legitimately do it.
+    //
+    // `modules/` is not covered yet — 67 files there still import from `app/`, mostly route components under `(app)/workspaces` and helpers under `api/v3`. That is a design problem rather than a misplacement, so it needs its own change before a rule like this can be turned on for that directory.
+    files: ["lib/**/*.ts", "lib/**/*.tsx"],
+    ignores: ["lib/**/*.test.ts", "lib/**/*.test.tsx", "lib/**/*.integration.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/app/*", "@/app"],
+              message:
+                "lib/ must not import from app/. Routes and modules depend on lib/, not the other way round — move the shared code into lib/ instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default config;

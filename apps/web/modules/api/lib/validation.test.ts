@@ -14,7 +14,7 @@ const mockTransformQuestionsToBlocks = vi.fn();
 const mockGetElementsFromBlocks = vi.fn();
 const mockValidateBlockResponses = vi.fn();
 
-vi.mock("@/app/lib/api/survey-transformation", () => ({
+vi.mock("@/lib/api/survey-transformation", () => ({
   transformQuestionsToBlocks: (...args: unknown[]) => mockTransformQuestionsToBlocks(...args),
 }));
 

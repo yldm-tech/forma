@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { TooManyRequestsError } from "@forma/types/errors";
-import { DEFAULT_REQUEST_BODY_LIMIT_BYTES } from "@/app/lib/api/request-body";
+import { DEFAULT_REQUEST_BODY_LIMIT_BYTES } from "@/lib/api/request-body";
 import { withV3ApiWrapper } from "./api-wrapper";
 
 const { mockAuthenticateRequest, mockGetSession } = vi.hoisted(() => ({
@@ -35,7 +35,7 @@ vi.mock("@/modules/auth/lib/session", () => ({
   getSession: mockGetSession,
 }));
 
-vi.mock("@/app/api/v1/auth", () => ({
+vi.mock("@/lib/api/auth", () => ({
   authenticateRequest: mockAuthenticateRequest,
 }));
 
@@ -47,7 +47,7 @@ vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
   queueAuditEvent: mockQueueAuditEvent,
 }));
 
-vi.mock("@/app/lib/api/with-api-logging", () => ({
+vi.mock("@/lib/api/with-api-logging", () => ({
   buildAuditLogBaseObject: mockBuildAuditLogBaseObject,
 }));
 

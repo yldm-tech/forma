@@ -15,7 +15,10 @@ import {
 } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/response-filter-context";
 import { getSurveyFilterDataAction } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/actions";
 import { ElementFilterComboBox } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/ElementFilterComboBox";
-import { NO_VALUE_FILTER_OPERATORS, generateElementAndFilterOptions } from "@/app/lib/surveys/surveys";
+import {
+  NO_VALUE_FILTER_OPERATORS,
+  generateElementAndFilterOptions,
+} from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { Button } from "@/modules/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/modules/ui/components/popover";

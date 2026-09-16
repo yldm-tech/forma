@@ -14,7 +14,7 @@ vi.mock("@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha", () => ({
   verifyRecaptchaToken: vi.fn(),
 }));
 
-vi.mock("@/app/lib/api/response", () => ({
+vi.mock("@/lib/api/response", () => ({
   responses: {
     badRequestResponse: vi.fn((message) => new Response(message, { status: 400 })),
     notFoundResponse: vi.fn((message) => new Response(message, { status: 404 })),

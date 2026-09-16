@@ -2,7 +2,7 @@
 // if we don't add this we get build errors with prisma due to type-nesting
 import { ZodCustomIssue, ZodIssue } from "zod";
 import { logger } from "@forma/logger";
-import { TApiAuditLog } from "@/app/lib/api/with-api-logging";
+import { TApiAuditLog } from "@/lib/api/with-api-logging";
 import { AUDIT_LOG_ENABLED } from "@/lib/constants";
 import { responses } from "@/modules/api/v2/lib/response";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";

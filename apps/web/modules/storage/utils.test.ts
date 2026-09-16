@@ -90,7 +90,7 @@ describe("storage utils", () => {
   describe("getErrorResponseFromStorageError", () => {
     test("returns appropriate responses for each storage error code", async () => {
       // Spy on real module; keep behavior isolated to this test
-      const responseMod = await import("@/app/lib/api/response");
+      const responseMod = await import("@/lib/api/response");
       const spyNotFound = vi
         .spyOn(responseMod.responses, "notFoundResponse")
         .mockImplementation(

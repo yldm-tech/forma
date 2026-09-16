@@ -1,5 +1,5 @@
 import type { TAuthenticationApiKey } from "@forma/types/auth";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { findWorkspaceByIdOrLegacyEnvId } from "@/lib/utils/resolve-client-id";
