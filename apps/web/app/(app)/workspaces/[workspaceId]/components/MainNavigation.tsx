@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  BarChart3Icon,
   Building2Icon,
   ChevronRightIcon,
   FoldersIcon,
   Loader2,
   MessageCircle,
-  MessageSquareTextIcon,
   PlusIcon,
   SettingsIcon,
   UserIcon,
@@ -59,7 +57,6 @@ interface NavigationProps {
   isAccessControlAllowed: boolean;
   responseCount: number;
   newTrialBannerVariant: string | boolean;
-  isFormaSurveysConfigured: boolean;
   // Whole days left in the trial, or null when there is no trial to count down. Computed by the
   // server layout: deriving it here would mean reading `Date.now()` during render, which diverges
   // between the server pass and hydration and then goes stale as the tab sits open (ENG-2366).
@@ -137,7 +134,6 @@ export const MainNavigation = ({
   isAccessControlAllowed,
   responseCount,
   newTrialBannerVariant,
-  isFormaSurveysConfigured,
   trialDaysRemaining,
 }: Readonly<NavigationProps>) => {
   const router = useRouter();
@@ -198,30 +194,6 @@ export const MainNavigation = ({
               pathname?.includes("/contacts") ||
               pathname?.includes("/segments") ||
               pathname?.includes("/attributes"),
-            disabled: isMembershipPending || isBilling,
-          },
-        ],
-      },
-      {
-        id: "unify-feedback",
-        // Same policy as "Ask" above: product section labels stay English in every locale.
-        // Was "Unify" until ENG-2742 settled on Ask / Analyze / Act as the three pillars.
-        name: sectionLabelWithBeta("Analyze"),
-        items: [
-          {
-            name: t("workspace.unify.feedback_data"),
-            href: `/workspaces/${workspace.id}/unify/sources`,
-            icon: MessageSquareTextIcon,
-            isActive: pathname?.includes("/unify/"),
-            isHidden: false,
-            disabled: isMembershipPending || isBilling,
-          },
-          {
-            name: t("common.analysis"),
-            href: `/workspaces/${workspace.id}/dashboards`,
-            icon: BarChart3Icon,
-            isActive: pathname?.includes("/dashboards") || pathname?.includes("/charts"),
-            isHidden: false,
             disabled: isMembershipPending || isBilling,
           },
         ],
@@ -592,7 +564,6 @@ export const MainNavigation = ({
                 isCollapsed={isCollapsed}
                 isTextVisible={isTextVisible}
                 className="rounded-br-xl"
-                isFormaSurveysConfigured={isFormaSurveysConfigured}
               />
             </div>
           </div>

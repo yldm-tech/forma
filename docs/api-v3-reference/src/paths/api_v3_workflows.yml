@@ -35,7 +35,7 @@ get:
         default: 20
       description: >-
         Page size (max 100). v3 has three list maxima rather than one norm: 250 on responses,
-        surveys and the reference lists, 1000 on `feedbackRecords`, and 100 here. The workflows
+        surveys and the reference lists, and 100 here. The workflows
         bound lives in the shared `packages/workflows` contracts, owned alongside the feature rather
         than by this spec, which is why it did not move with the others. Documented at the value
         actually enforced; tracked separately.

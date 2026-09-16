@@ -1,12 +1,8 @@
-import { FormaProvider } from "@/app/forma/components/forma-provider";
 import { PlainChat } from "@/app/plain/components/plain-chat";
 import { getIsActiveCustomer } from "@/app/plain/lib/customer";
 import { computePlainEmailHash } from "@/app/plain/lib/identity";
 import { PostHogIdentify } from "@/app/posthog/PostHogIdentify";
 import {
-  FORMA_APP_URL,
-  FORMA_WORKSPACE_ID,
-  IS_FORMA_SURVEYS_CONFIGURED,
   IS_PLAIN_CHAT_CONFIGURED,
   PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID,
   PLAIN_APP_ID,
@@ -51,15 +47,6 @@ const AppLayout = async ({ children }: Readonly<{ children: React.ReactNode }>) 
           userId={user?.id}
           emailHash={user?.email ? computePlainEmailHash(user.email) : null}
           activeCustomerLabelTypeId={plainActiveCustomerLabelTypeId}
-        />
-      )}
-      {IS_FORMA_SURVEYS_CONFIGURED && FORMA_WORKSPACE_ID && (
-        <FormaProvider
-          workspaceId={FORMA_WORKSPACE_ID}
-          appUrl={FORMA_APP_URL}
-          userId={user?.id}
-          userEmail={user?.email}
-          userName={user?.name}
         />
       )}
       <ToasterClient />

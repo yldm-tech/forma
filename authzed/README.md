@@ -172,7 +172,7 @@ Deletes, and updates that are not provably grants, are classified as revocations
 The classifier is deny-by-default: an unmapped target type, an unmapped column,
 or any enum move is a revocation. Only three transitions are treated as grants,
 each because the projectors' own write shape proves the relationship set can only
-grow — reactivating a user, unarchiving a feedback directory that stays in its
+grow — reactivating a user that stays in its
 organization, and any membership update that leaves `role` unchanged (the
 projected snapshot ignores `accepted`, so accepting an invite writes identical
 relationships).
@@ -306,55 +306,6 @@ cannot see. API-key principals are routed through the central interface; the
 direct-authority release contract is now owned by ENG-2448 and
 the [direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
 
-## Feedback Dataset projection
-
-The product term **Feedback Dataset** maps to Prisma `FeedbackDirectory`. PostgreSQL remains the source
-of truth for each directory, its owning organization, archive state, and its
-`FeedbackDirectoryWorkspace` assignments.
-
-- A directory projects `feedback_directory#organization@organization`.
-- An active same-organization assignment projects a three-edge subgraph linking the directory, an opaque
-  `feedback_directory_assignment`, and the assigned workspace.
-- The assignment object ID is a deterministic `fdwa_`-prefixed SHA-256 digest of the length-framed
-  directory/workspace pair. Source IDs and the generated ID never appear in projection logs.
-- Archived assignments are not active grants. Reconciliation removes all three stored edges.
-- A directory and workspace belonging to different organizations is invalid source state. It is reported
-  for manual investigation and never projected.
-
-Directory administrators inherit from `organization.manage`. Team members and API keys inherit through
-the exact assigned workspace. The assignment resource ensures that an operation scoped to workspace A
-cannot use access granted through workspace B. Directory-wide checks can union all active assignments for
-gateway operations that do not carry workspace context.
-
-Projection runs after the PostgreSQL mutation commits and remains best-effort. Creation, assignment
-replacement, archive/restore, workspace deletion, and organization deletion reconcile captured previous
-and current pairs. The repair command covers existing rows, missing edges, stale archived edges, parent
-drift, and exact three-edge permission drift.
-
-Feedback records, feedback sources, charts, workflows, contacts, attributes, and segments do not receive
-standalone Phase 1 SpiceDB resources. Charts and workflows inherit workspace authorization. Chart
-`createdBy` is metadata rather than authorization ownership, and record-level tenant/integrity checks
-remain in the application and Hub layers.
-
-### Feedback Dataset authorization routing
-
-Current feedback access is routed through the central Forma authorization interface without changing
-its effective rules:
-
-- dataset administration checks `organization.manage`;
-- workspace-scoped records, taxonomy, sources, CSV imports, chart queries, and server-rendered Unify
-  entry points check the exact `feedbackDirectoryAssignment` resource;
-- directory-wide gateway reads and creates check `feedbackDirectory.read` or
-  `feedbackDirectory.write` across all active assignments;
-- existing-record mutations still require organization management for users and an exclusively assigned
-  dataset plus the existing workspace permission for API keys;
-- archive, entitlement, OAuth-scope, Hub tenant, source ownership, and record-integrity checks remain in
-  the application layer and execute in their existing order.
-
-Authenticated feedback-gateway requests carry the bounded `feedback_gateway` telemetry surface. Public and
-unauthenticated gateway traffic is never authorized as an authenticated actor. The surface only attributes
-authoritative metrics; it does not select an evaluator.
-
 ## Resource parent resolution during the current-model migration
 
 The initial migration deliberately does not project one relationship for every
@@ -400,8 +351,6 @@ contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-
 | `WorkspaceTeam.permission` (`read`/`readWrite`/`manage`)             | `workspace` relations `reader_team`/`writer_team`/`manager_team` (subject `team#member`) |
 | `ApiKeyWorkspace.permission` (`read`/`write`/`manage`)               | `workspace` relations `reader`/`writer`/`manager` (subject `api_key`)                    |
 | `ApiKey.organizationAccess.accessControl` (`read`/`write`)           | `organization` relations `api_key_reader`/`api_key_writer`                               |
-| `FeedbackDirectory.organizationId`                                   | `feedback_directory#organization@organization`                                           |
-| Active `FeedbackDirectoryWorkspace`                                  | Three-edge `feedback_directory_assignment` graph to the exact workspace                  |
 | `Survey.workspaceId` / `Dashboard.workspaceId` / `Response.surveyId` | `survey`/`dashboard` relation `workspace`; `response` relation `survey`                  |
 
 Resource permissions preserve the operation-specific gates that exist today:

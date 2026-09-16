@@ -5,7 +5,6 @@ import { reconcileApiKeyRelationships } from "./api-key";
 import { isAuthzedEnabled } from "./config";
 import { AUTHZED_MAX_PARALLEL_RELATIONSHIP_DELETES } from "./constants";
 import { AUTHZED_ERROR_CODES } from "./errors";
-import { reconcileFeedbackDirectoryRelationships } from "./feedback-directory";
 import {
   recordAuthzedOutboxDelivery,
   recordAuthzedOutboxStatus,
@@ -239,16 +238,6 @@ const buildDeliveryGroups = (grouped: TGroupedEvents): ReadonlyArray<TDeliveryGr
           ),
         }),
     },
-    {
-      events: collect("feedback_directory", "feedback_directory_assignment"),
-      run: (events) =>
-        runChunkedProjection(reconcileFeedbackDirectoryRelationships, {
-          assignments: secondaryTargets(byType(events, "feedback_directory_assignment")).map(
-            ({ primaryId, secondaryId }) => ({ feedbackDirectoryId: primaryId, workspaceId: secondaryId })
-          ),
-          feedbackDirectoryIds: byType(events, "feedback_directory").map(({ primaryId }) => primaryId),
-        }),
-    },
   ];
 
   return groups.filter(({ events }) => events.length > 0);
@@ -333,9 +322,9 @@ const failureOutcome = (
 /**
  * Deliver one group, halving it to isolate the culprit when the failure could be a single event's.
  *
- * Without this, one cross-tenant assignment row fails every feedback-directory event in every batch
- * for as long as it exists. With it, the poison event is alone by the time it is charged a permanent
- * failure — which is the precondition for dead-lettering ever being attributable.
+ * Without this, one poison row fails every event in its group in every batch for as long as it
+ * exists. With it, the poison event is alone by the time it is charged a permanent failure — which is
+ * the precondition for dead-lettering ever being attributable.
  */
 const deliverGroup = async (
   group: TDeliveryGroup,

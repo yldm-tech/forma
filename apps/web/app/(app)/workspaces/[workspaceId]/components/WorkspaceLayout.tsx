@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { ResourceNotFoundError } from "@forma/types/errors";
 import { MainNavigation } from "@/app/(app)/workspaces/[workspaceId]/components/MainNavigation";
 import { TopControlBar } from "@/app/(app)/workspaces/[workspaceId]/components/TopControlBar";
-import { IS_DEVELOPMENT, IS_FORMA_CLOUD, IS_FORMA_SURVEYS_CONFIGURED } from "@/lib/constants";
+import { IS_DEVELOPMENT, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getPostHogFeatureFlag } from "@/lib/posthog/get-feature-flag";
@@ -160,7 +160,6 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
           isAccessControlAllowed={isAccessControlAllowed}
           responseCount={responseCount}
           newTrialBannerVariant={newTrialBannerVariant}
-          isFormaSurveysConfigured={IS_FORMA_SURVEYS_CONFIGURED}
           trialDaysRemaining={trialDaysRemaining}
         />
         <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">

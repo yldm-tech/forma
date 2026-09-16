@@ -51,14 +51,6 @@ export type {
   Team,
   TeamUser,
   WorkspaceTeam,
-  Chart,
-  Dashboard,
-  DashboardWidget,
-  FeedbackSource,
-  FeedbackSourceFormaMapping,
-  FeedbackSourceFieldMapping,
-  FeedbackDirectory,
-  FeedbackDirectoryWorkspace,
   Workflow,
   WorkflowVersion,
   WorkflowRun,
@@ -85,7 +77,6 @@ export namespace Prisma {
     GlobalOmitOptions = {},
   > = PrismaNamespaceTypes.TypeMap<ExtArgs, GlobalOmitOptions>;
   export type ActionClassSelect = PrismaModelTypes.ActionClassSelect;
-  export type ChartFindManyArgs = PrismaModelTypes.ChartFindManyArgs;
   export type ContactAttributeKeyCreateInput = PrismaModelTypes.ContactAttributeKeyCreateInput;
   export type ContactAttributeKeyCreateWithoutWorkspaceInput =
     PrismaModelTypes.ContactAttributeKeyCreateWithoutWorkspaceInput;
@@ -97,17 +88,9 @@ export namespace Prisma {
   export type ContactInclude = PrismaModelTypes.ContactInclude;
   export type ContactSelect = PrismaModelTypes.ContactSelect;
   export type ContactWhereInput = PrismaModelTypes.ContactWhereInput;
-  export type DashboardFindManyArgs = PrismaModelTypes.DashboardFindManyArgs;
   export type DateTimeFilter = PrismaModelTypes.DateTimeFilter;
   export type DateTimeNullableFilter = PrismaModelTypes.DateTimeNullableFilter;
   export type DisplaySelect = PrismaModelTypes.DisplaySelect;
-  export type FeedbackDirectoryUpdateInput = PrismaModelTypes.FeedbackDirectoryUpdateInput;
-  export type FeedbackDirectoryWorkspaceUpdateManyWithoutFeedbackDirectoryNestedInput =
-    PrismaModelTypes.FeedbackDirectoryWorkspaceUpdateManyWithoutFeedbackDirectoryNestedInput;
-  export type FeedbackSourceGetPayload<
-    S extends boolean | null | undefined | PrismaModelTypes.FeedbackSourceDefaultArgs,
-  > = PrismaModelTypes.FeedbackSourceGetPayload<S>;
-  export type FeedbackSourceSelect = PrismaModelTypes.FeedbackSourceSelect;
   export type FloatNullableFilter = PrismaModelTypes.FloatNullableFilter;
   export type LanguageCreateWithoutWorkspaceInput = PrismaModelTypes.LanguageCreateWithoutWorkspaceInput;
   export type LanguageSelect = PrismaModelTypes.LanguageSelect;

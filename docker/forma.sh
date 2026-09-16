@@ -291,10 +291,8 @@ serialize_dotenv_value() {
 write_generated_env_file() (
   local env_file="${1:-.env}"
   local postgres_password="${2:-}"
-  local hub_api_key="${3:-}"
-  local cubejs_api_secret="${4:-}"
-  local authzed_token="${5:-}"
-  local authzed_database_password="${6:-}"
+  local authzed_token="${3:-}"
+  local authzed_database_password="${4:-}"
   local serialized_postgres_password
   local postgres_password_url_encoded
   local tmp_file
@@ -312,12 +310,6 @@ write_generated_env_file() (
   if [ -z "$postgres_password" ]; then
     postgres_password=$(openssl rand -hex 32)
   fi
-  if [ -z "$hub_api_key" ]; then
-    hub_api_key=$(openssl rand -hex 32)
-  fi
-  if [ -z "$cubejs_api_secret" ]; then
-    cubejs_api_secret=$(openssl rand -hex 32)
-  fi
   if [ -z "$authzed_token" ]; then
     authzed_token=$(openssl rand -hex 32)
   fi
@@ -332,17 +324,13 @@ write_generated_env_file() (
 
   if [ -f "$env_file" ]; then
     awk '
-      !/^[[:space:]]*(export[[:space:]]+)?(POSTGRES_PASSWORD|POSTGRES_PASSWORD_URL_ENCODED|HUB_API_KEY|CUBEJS_API_SECRET|CUBEJS_JWT_ISSUER|CUBEJS_JWT_AUDIENCE)[[:space:]]*=/
+      !/^[[:space:]]*(export[[:space:]]+)?(POSTGRES_PASSWORD|POSTGRES_PASSWORD_URL_ENCODED)[[:space:]]*=/
     ' "$env_file" >"$tmp_file"
   fi
 
   cat <<EOF >>"$tmp_file"
 POSTGRES_PASSWORD=$serialized_postgres_password
 POSTGRES_PASSWORD_URL_ENCODED=$postgres_password_url_encoded
-HUB_API_KEY=$hub_api_key
-CUBEJS_API_SECRET=$cubejs_api_secret
-CUBEJS_JWT_ISSUER=forma-web
-CUBEJS_JWT_AUDIENCE=forma-cube
 EOF
 
   append_if_missing "AUTHZED_TOKEN" "$authzed_token"
@@ -358,14 +346,12 @@ EOF
 
 write_base_env_file() {
   local env_file="${1:-.env}"
-  local hub_key="$2"
-  local cube_secret="$3"
-  local authzed_token="$4"
-  local authzed_database_password="$5"
+  local authzed_token="$2"
+  local authzed_database_password="$3"
 
   umask 077
   : >"$env_file"
-  write_generated_env_file "$env_file" "" "$hub_key" "$cube_secret" "$authzed_token" "$authzed_database_password"
+  write_generated_env_file "$env_file" "" "$authzed_token" "$authzed_database_password"
 }
 
 add_forma_traefik_labels() {
@@ -390,14 +376,8 @@ in_forma && /^  [A-Za-z0-9_-]+:/ && !/^  forma:$/ { in_forma = 0 }
             print "      - \"traefik.http.routers.forma.tls.certresolver=default\""
         }
         print "      - \"traefik.http.services.forma.loadbalancer.server.port=3000\""
-        print "      - \"traefik.http.routers.feedback-records-token.rule=Host(`" domain_name "`) && Path(`/api/v3/feedbackRecords/token`)\""
-        print "      - \"traefik.http.routers.feedback-records-token.entrypoints=websecure\""
-        print "      - \"traefik.http.routers.feedback-records-token.tls=true\""
         if (https_setup == "y") {
-            print "      - \"traefik.http.routers.feedback-records-token.tls.certresolver=default\""
         }
-        print "      - \"traefik.http.routers.feedback-records-token.service=forma\""
-        print "      - \"traefik.http.routers.feedback-records-token.priority=200\""
         if (hsts_enabled == "y") {
             print "      - \"traefik.http.middlewares.hstsHeader.headers.stsSeconds=31536000\""
             print "      - \"traefik.http.middlewares.hstsHeader.headers.forceSTSHeader=true\""
@@ -406,10 +386,6 @@ in_forma && /^  [A-Za-z0-9_-]+:/ && !/^  forma:$/ { in_forma = 0 }
         } else {
             print "      - \"traefik.http.routers.forma_http.entrypoints=web\""
             print "      - \"traefik.http.routers.forma_http.rule=Host(`" domain_name "`)\""
-            print "      - \"traefik.http.routers.feedback-records-token-http.rule=Host(`" domain_name "`) && Path(`/api/v3/feedbackRecords/token`)\""
-            print "      - \"traefik.http.routers.feedback-records-token-http.entrypoints=web\""
-            print "      - \"traefik.http.routers.feedback-records-token-http.service=forma\""
-            print "      - \"traefik.http.routers.feedback-records-token-http.priority=200\""
         }
         inserted = 1
     }
@@ -786,10 +762,6 @@ EOT
     "https://raw.githubusercontent.com/yldm-tech/forma/${authzed_bootstrap_commit}/docker/authzed-postgres-bootstrap.sh"
   printf '%s  %s\n' "$authzed_bootstrap_sha256" authzed-postgres-bootstrap.sh | sha256sum --check --status -
   chmod 700 authzed-postgres-bootstrap.sh
-  mkdir -p cube/schema
-  echo "📥 Downloading Cube.js configuration for XM Suite v5 analytics..."
-  curl -fsSL -o cube/cube.js https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/cube/cube.js
-  curl -fsSL -o cube/schema/FeedbackRecords.js https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/cube/schema/FeedbackRecords.js
 
   echo "🚙 Updating docker-compose.yml with your custom inputs..."
   sed -i "/WEBAPP_URL:/s|WEBAPP_URL:.*|WEBAPP_URL: \"https://$domain_name\"|" docker-compose.yml
@@ -804,21 +776,17 @@ EOT
   cron_secret=$(openssl rand -hex 32) && sed -i "/CRON_SECRET:$/s/CRON_SECRET:.*/CRON_SECRET: $cron_secret/" docker-compose.yml	
   echo "🚗 CRON_SECRET updated successfully!"
 
-  hub_api_key=$(openssl rand -hex 32)
-  cubejs_api_secret=$(openssl rand -hex 32)
   authzed_token=$(openssl rand -hex 32)
   authzed_database_password=$(openssl rand -hex 32)
   write_generated_env_file \
     ".env" \
     "$existing_postgres_password" \
-    "$hub_api_key" \
-    "$cubejs_api_secret" \
     "$authzed_token" \
     "$authzed_database_password"
   if [ -n "$existing_postgres_password" ]; then
     echo "🚗 Preserved the existing PostgreSQL password and AuthZed credentials while refreshing .env."
   else
-    echo "🚗 Generated PostgreSQL, Hub, Cube, and AuthZed secrets in .env successfully!"
+    echo "🚗 Generated PostgreSQL and AuthZed secrets in .env successfully!"
   fi
   
   if [[ -n $mail_from ]]; then
@@ -868,61 +836,6 @@ EOT
   if ! add_forma_traefik_labels "docker-compose.yml" "$domain_name" "$hsts_enabled" "$https_setup"; then
     exit 1
   fi
-
-  # Step 1b: Add FeedbackRecords gateway labels to the Hub service.
-  awk -v domain_name="$domain_name" -v hsts_enabled="$hsts_enabled" -v https_setup="$https_setup" '
-BEGIN { in_hub = 0; inserted = 0 }
-/^  hub:/ { in_hub = 1 }
-in_hub && /^  [A-Za-z0-9_-]+:/ && !/^  hub:/ { in_hub = 0 }
-{
-    if (in_hub && !inserted && $0 ~ /^    environment:/) {
-        print "    labels:"
-        print "      - \"traefik.enable=true\""
-        print "      - \"traefik.http.services.feedback-records-hub.loadbalancer.server.port=8080\""
-        print "      - \"traefik.http.routers.feedback-records-v3.rule=Host(`" domain_name "`) && PathPrefix(`/api/v3/feedbackRecords`)\""
-        print "      - \"traefik.http.routers.feedback-records-v3.entrypoints=websecure\""
-        print "      - \"traefik.http.routers.feedback-records-v3.tls=true\""
-        if (https_setup == "y") {
-            print "      - \"traefik.http.routers.feedback-records-v3.tls.certresolver=default\""
-        }
-        print "      - \"traefik.http.routers.feedback-records-v3.service=feedback-records-hub\""
-        print "      - \"traefik.http.routers.feedback-records-v3.priority=100\""
-        print "      - \"traefik.http.routers.feedback-records-v3.middlewares=feedback-records-auth,feedback-records-v3-rewrite,feedback-records-hub-headers\""
-        print "      - \"traefik.http.routers.feedback-records-sdk.rule=Host(`" domain_name "`) && PathPrefix(`/v1/feedback-records`)\""
-        print "      - \"traefik.http.routers.feedback-records-sdk.entrypoints=websecure\""
-        print "      - \"traefik.http.routers.feedback-records-sdk.tls=true\""
-        if (https_setup == "y") {
-            print "      - \"traefik.http.routers.feedback-records-sdk.tls.certresolver=default\""
-        }
-        print "      - \"traefik.http.routers.feedback-records-sdk.service=feedback-records-hub\""
-        print "      - \"traefik.http.routers.feedback-records-sdk.priority=100\""
-        print "      - \"traefik.http.routers.feedback-records-sdk.middlewares=feedback-records-auth,feedback-records-hub-headers\""
-        if (hsts_enabled != "y") {
-            print "      - \"traefik.http.routers.feedback-records-v3-http.rule=Host(`" domain_name "`) && PathPrefix(`/api/v3/feedbackRecords`)\""
-            print "      - \"traefik.http.routers.feedback-records-v3-http.entrypoints=web\""
-            print "      - \"traefik.http.routers.feedback-records-v3-http.service=feedback-records-hub\""
-            print "      - \"traefik.http.routers.feedback-records-v3-http.priority=100\""
-            print "      - \"traefik.http.routers.feedback-records-v3-http.middlewares=feedback-records-auth,feedback-records-v3-rewrite,feedback-records-hub-headers\""
-            print "      - \"traefik.http.routers.feedback-records-sdk-http.rule=Host(`" domain_name "`) && PathPrefix(`/v1/feedback-records`)\""
-            print "      - \"traefik.http.routers.feedback-records-sdk-http.entrypoints=web\""
-            print "      - \"traefik.http.routers.feedback-records-sdk-http.service=feedback-records-hub\""
-            print "      - \"traefik.http.routers.feedback-records-sdk-http.priority=100\""
-            print "      - \"traefik.http.routers.feedback-records-sdk-http.middlewares=feedback-records-auth,feedback-records-hub-headers\""
-        }
-        print "      - \"traefik.http.middlewares.feedback-records-auth.forwardauth.address=http://forma:3000/api/traefik-auth/feedback-records\""
-        print "      - \"traefik.http.middlewares.feedback-records-auth.forwardauth.forwardbody=true\""
-        print "      - \"traefik.http.middlewares.feedback-records-auth.forwardauth.maxbodysize=1048576\""
-        print "      - \"traefik.http.middlewares.feedback-records-auth.forwardauth.preserverequestmethod=true\""
-        print "      - \"traefik.http.middlewares.feedback-records-v3-rewrite.replacepathregex.regex=^/api/v3/feedbackRecords(.*)\""
-        print "      - \"traefik.http.middlewares.feedback-records-v3-rewrite.replacepathregex.replacement=/v1/feedback-records$${1}\""
-        print "      - \"traefik.http.middlewares.feedback-records-hub-headers.headers.customrequestheaders.Authorization=Bearer ${HUB_API_KEY}\""
-        print "      - \"traefik.http.middlewares.feedback-records-hub-headers.headers.customrequestheaders.X-API-Key=\""
-        print "      - \"traefik.http.middlewares.feedback-records-hub-headers.headers.customrequestheaders.Cookie=\""
-        inserted = 1
-    }
-    print
-}
-' docker-compose.yml >tmp.yml && mv tmp.yml docker-compose.yml
 
   # Step 2: Ensure forma waits for rustfs-init to complete successfully (mapping depends_on)
   if [[ $rustfs_storage == "y" ]]; then

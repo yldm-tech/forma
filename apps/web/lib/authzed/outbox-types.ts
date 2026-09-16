@@ -3,8 +3,6 @@ import "server-only";
 export const AUTHZED_OUTBOX_TARGET_TYPES = [
   "api_key",
   "api_key_workspace",
-  "feedback_directory",
-  "feedback_directory_assignment",
   "membership",
   "organization",
   "team",

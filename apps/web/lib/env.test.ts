@@ -8,10 +8,6 @@ const setTestEnv = (overrides: Record<string, string | undefined> = {}) => {
     NODE_ENV: "test",
     DATABASE_URL: "https://example.com/db",
     ENCRYPTION_KEY: "12345678901234567890123456789012",
-    HUB_API_URL: "https://hub.forma.local",
-    HUB_API_KEY: "test-hub-api-key",
-    CUBEJS_API_URL: "https://cube.forma.local",
-    CUBEJS_API_SECRET: "cube-secret",
     AUTHZED_CONSISTENCY: undefined,
     AUTHZED_ENABLED: undefined,
     AUTHZED_ENDPOINT: undefined,
@@ -480,67 +476,6 @@ describe("env", () => {
     });
 
     await expect(import("./env")).rejects.toThrow("AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON");
-  });
-
-  test("uses the configured Cube environment variables", async () => {
-    setTestEnv();
-    const { env } = await import("./env");
-
-    expect(env.CUBEJS_API_URL).toBe("https://cube.forma.local");
-    expect(env.CUBEJS_API_SECRET).toBe("cube-secret");
-  });
-
-  test("accepts Cube JWT issuer and audience configuration", async () => {
-    setTestEnv({
-      CUBEJS_JWT_AUDIENCE: "forma-cube",
-      CUBEJS_JWT_ISSUER: "forma-web",
-    });
-
-    const { env } = await import("./env");
-
-    expect(env.CUBEJS_JWT_AUDIENCE).toBe("forma-cube");
-    expect(env.CUBEJS_JWT_ISSUER).toBe("forma-web");
-  });
-
-  test("fails to load when the Cube API secret is missing", async () => {
-    setTestEnv({
-      CUBEJS_API_SECRET: undefined,
-    });
-
-    await expect(import("./env")).rejects.toThrow("Invalid environment variables");
-  });
-
-  test("fails to load when the Cube API secret is empty", async () => {
-    setTestEnv({
-      CUBEJS_API_SECRET: "",
-    });
-
-    await expect(import("./env")).rejects.toThrow("Invalid environment variables");
-  });
-
-  test("fails to load when the Cube API URL is missing", async () => {
-    setTestEnv({
-      CUBEJS_API_URL: undefined,
-    });
-
-    await expect(import("./env")).rejects.toThrow("Invalid environment variables");
-  });
-
-  test("fails to load when the Cube API URL is empty", async () => {
-    setTestEnv({
-      CUBEJS_API_URL: "",
-    });
-
-    await expect(import("./env")).rejects.toThrow("Invalid environment variables");
-  });
-
-  test("fails to load when the Cube API URL is invalid", async () => {
-    setTestEnv({
-      CUBEJS_API_URL: "not-a-url",
-      CUBEJS_API_SECRET: "cube-secret",
-    });
-
-    await expect(import("./env")).rejects.toThrow("Invalid environment variables");
   });
 
   test("uses the default survey scheduling configuration when env vars are not set", async () => {

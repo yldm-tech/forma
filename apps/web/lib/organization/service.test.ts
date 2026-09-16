@@ -4,7 +4,6 @@ import { Prisma } from "@forma/database/prisma";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { lookupAuthorizedOrganizationIds } from "@/lib/authorization/resource-list";
 import { reconcileApiKeyRelationships } from "@/lib/authzed/api-key";
-import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import { deleteOrganizationRelationships } from "@/lib/authzed/organization-membership";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { IS_FORMA_CLOUD } from "@/lib/constants";
@@ -62,9 +61,6 @@ vi.mock("@/lib/authzed/organization-membership", () => ({
 vi.mock("@/lib/authzed/api-key", () => ({
   reconcileApiKeyRelationships: vi.fn(),
 }));
-vi.mock("@/lib/authzed/feedback-directory", () => ({
-  reconcileFeedbackDirectoryRelationships: vi.fn(),
-}));
 vi.mock("@/lib/authzed/team-workspace", () => ({
   reconcileTeamWorkspaceRelationships: vi.fn(),
 }));
@@ -72,13 +68,6 @@ vi.mock("@/lib/authzed/team-workspace", () => ({
 vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
   ensureCloudStripeSetupForOrganization: vi.fn().mockResolvedValue(undefined),
   cleanupStripeCustomer: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@/modules/hub/service", () => ({
-  deleteHubTenantData: vi.fn().mockResolvedValue({
-    data: { deletedFeedbackRecords: 0, deletedEmbeddings: 0, deletedWebhooks: 0 },
-    error: null,
-  }),
 }));
 
 describe("Organization Service", () => {
@@ -413,7 +402,6 @@ describe("Organization Service", () => {
         workspaces: [],
         teams: [],
         apiKeys: [{ id: "api-key-1" }],
-        feedbackDirectories: [],
       } as any);
 
       await deleteOrganization("org1");
@@ -426,40 +414,6 @@ describe("Organization Service", () => {
       if (IS_FORMA_CLOUD) {
         expect(cleanupStripeCustomer).toHaveBeenCalledWith("cus_123");
       }
-    });
-
-    test("should purge Hub-owned data for each feedback directory", async () => {
-      const { deleteHubTenantData } = await import("@/modules/hub/service");
-      vi.mocked(prisma.organization.delete).mockResolvedValue({
-        id: "org1",
-        name: "Test Org",
-        billing: null,
-        memberships: [],
-        workspaces: [{ id: "workspace-1" }],
-        teams: [{ id: "team-1" }],
-        apiKeys: [{ id: "api-key-1" }, { id: "api-key-2" }],
-        feedbackDirectories: [
-          { id: "frd_1", workspaces: [{ workspaceId: "workspace-1" }] },
-          { id: "frd_2", workspaces: [] },
-        ],
-      } as any);
-
-      await deleteOrganization("org1");
-
-      expect(deleteHubTenantData).toHaveBeenCalledTimes(2);
-      expect(deleteHubTenantData).toHaveBeenCalledWith("frd_1");
-      expect(deleteHubTenantData).toHaveBeenCalledWith("frd_2");
-      expect(reconcileTeamWorkspaceRelationships).toHaveBeenCalledWith({
-        teamIds: ["team-1"],
-        workspaceIds: ["workspace-1"],
-      });
-      expect(reconcileApiKeyRelationships).toHaveBeenCalledWith({
-        apiKeyIds: ["api-key-1", "api-key-2"],
-      });
-      expect(reconcileFeedbackDirectoryRelationships).toHaveBeenCalledWith({
-        assignments: [{ feedbackDirectoryId: "frd_1", workspaceId: "workspace-1" }],
-        feedbackDirectoryIds: ["frd_1", "frd_2"],
-      });
     });
   });
 

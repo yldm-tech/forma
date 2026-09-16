@@ -60,10 +60,7 @@ const emptySource: TAuthzedOrganizationSource = {
   apiKeyIds: [],
   apiKeyWorkspaceGrants: [],
   expectedRelationships: [],
-  feedbackDirectoryAssignments: [],
-  feedbackDirectoryIds: [],
   invalidApiKeyWorkspaceGrants: [],
-  invalidFeedbackDirectoryAssignments: [],
   invalidWorkspaceTeamGrants: [],
   memberships: [],
   teamIds: [],
@@ -157,9 +154,7 @@ const run = async (): Promise<void> => {
       readWorkspaceSource: async () => ({
         apiKeyWorkspaceGrants: [],
         expectedRelationships: [],
-        feedbackDirectoryAssignments: [],
         invalidApiKeyWorkspaceGrants: [],
-        invalidFeedbackDirectoryAssignments: [],
         invalidWorkspaceTeamGrants: [],
         organizationId: null,
         workspaceExists: false,
@@ -186,9 +181,7 @@ const run = async (): Promise<void> => {
       },
       {
         apply: {
-          deleteFeedbackDirectoryAssignmentResources: record,
           reconcileApiKeys: record,
-          reconcileFeedbackDirectories: record,
           reconcileMemberships: record,
           reconcileTeamWorkspace: record,
         },

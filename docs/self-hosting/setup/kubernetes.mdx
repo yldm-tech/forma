@@ -7,11 +7,6 @@ icon: "circle-nodes"
 Deploy Forma on Kubernetes using the current OCI Helm chart published from the `charts/forma`
 directory in the Forma repository.
 
-<Info>
-  Forma v5 self-hosting expects Hub to be part of the runtime. The chart handles that by default. Use the
-  [migration guide](/self-hosting/advanced/migration#v5) before upgrading an existing 4.x deployment.
-</Info>
-
 ## Prerequisites
 
 Ensure you have the following before proceeding:
@@ -49,8 +44,6 @@ helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
     By default, the chart deploys:
 
     - the Forma application
-    - Forma Hub
-    - Cube
     - PostgreSQL
     - Redis
     - generated Kubernetes Secrets
@@ -105,7 +98,6 @@ redis:
 
 If your cluster already uses an external secret manager, enable `externalSecret` and point it at your existing
 SecretStore. Ensure the resulting app secret exposes the values your deployment needs, including `DATABASE_URL`,
-`REDIS_URL`, and `HUB_API_KEY`.
 
 ### AuthZed / SpiceDB
 
@@ -158,13 +150,6 @@ through an Ingress.
 
 ## 3. v5-Specific Deployment Notes
 
-### Hub Is Mandatory
-
-Forma v5 does not support `hub.enabled=false`. Keep the default `hub.enabled=true` behavior in place.
-
-Use `hub.image.tag`, `hub.resources`, and `hub.existingSecret` only when you need to pin or customize the Hub
-deployment details.
-
 ### Envoy Bundle Modes
 
 The chart supports three edge patterns for the v5-covered routes:
@@ -216,21 +201,10 @@ your values file.
 Two autoscaling defaults are easy to miss:
 
 - **`maxReplicas: 10` can exceed what the node pool can hold.** Each app pod requests 1 vCPU, so the ceiling
-  needs about 10 allocatable vCPU for the app alone, on top of the platform reserve and the Hub, Cube and
   SpiceDB pods. A smaller pool leaves the extra replicas `Pending` — an HPA does not lower its own ceiling.
 - **The HPA scales on CPU and memory utilization only.** Queue depth is not one of its metrics, so a job
   backlog can grow while both targets sit under their thresholds and no replica is added. Backlog-driven
   scaling needs a queue-depth metric published to the metrics API and added to the HPA yourself.
-
-### Cube
-
-Cube is part of the baseline Forma v5 stack and is bundled with the chart by default
-(`cube.enabled: true`). To run an external Cube cluster instead:
-
-- set `cube.enabled: false` to skip the bundled Cube deployment
-- point the app at your external endpoint via `deployment.env.CUBEJS_API_URL`
-- supply `CUBEJS_API_SECRET` via `deployment.env` or `deployment.envFrom` if you disable generated
-  secrets
 
 ### Optional Bundled Qwen/vLLM For AI
 
@@ -258,66 +232,6 @@ llm:
 Keep `llm.enabled: false` when you use Google Vertex, Azure, AWS Bedrock, or an externally managed
 OpenAI-compatible endpoint. Configure those providers through `deployment.env`.
 
-### Optional AI Taxonomy Beta
-
-The Helm chart can optionally deploy the standalone taxonomy service. This is disabled by default and does not
-force the bundled Qwen/vLLM runtime.
-
-To deploy taxonomy and reuse the bundled Qwen/vLLM runtime:
-
-```yaml
-llm:
-  enabled: true
-
-taxonomy:
-  enabled: true
-```
-
-With this setup, taxonomy uses the in-cluster vLLM router for cluster labeling and 5-level taxonomy generation.
-The chart also injects `TAXONOMY_SERVICE_URL`, `TAXONOMY_SERVICE_TOKEN`, and `HUB_INTERNAL_API_TOKEN` into Hub API.
-
-To use your own OpenAI-compatible LLM endpoint instead, keep `llm.enabled: false` and set the taxonomy LLM values:
-
-```yaml
-taxonomy:
-  enabled: true
-  llm:
-    model: qwen3-14b-awq
-    baseUrl: http://my-llm-gateway:8000/v1
-    existingSecret: taxonomy-llm-secret
-```
-
-The `taxonomy-llm-secret` secret must contain `TAXONOMY_LLM_API_KEY`. If your endpoint does not enforce
-authentication, store a non-empty dummy value.
-
-To use Gemini on Vertex AI instead, keep `llm.enabled: false`, create a secret containing
-`TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON`, and configure the Vertex provider:
-
-```yaml
-taxonomy:
-  enabled: true
-  llm:
-    provider: vertex-gemini
-    model: gemini-2.5-flash
-    vertex:
-      project: forma-cloud
-      location: europe-west3
-      existingSecret: taxonomy-vertex-secret
-```
-
-The service account in `TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON` must be allowed to call Vertex AI for the selected
-project and location.
-
-After startup, run the authenticated preflight check from inside the taxonomy pod:
-
-```sh
-kubectl exec -n forma deploy/forma-taxonomy -- \
-  python -c 'import os, urllib.request; req = urllib.request.Request("http://127.0.0.1:8000/v1/preflight", headers={"Authorization": "Bearer " + os.environ["TAXONOMY_SERVICE_TOKEN"]}); print(urllib.request.urlopen(req, timeout=10).read().decode())'
-```
-
-The taxonomy service is internal-only by default. Kubernetes probes use public `/health`; `/v1/preflight` is for
-operator validation and requires the internal taxonomy bearer token.
-
 ## 4. Upgrade The Deployment
 
 For normal chart upgrades:
@@ -330,12 +244,8 @@ helm upgrade forma oci://ghcr.io/yldm-tech/helm-charts/forma \
 
 For a Forma 4.x to 5.0 migration, confirm the following before running the upgrade:
 
-- Hub remains enabled
-- `HUB_API_KEY` is present
 - your edge rate-limiting plan is in place
 - any required `AI_*` variables are added
-- `CUBEJS_API_SECRET` is configured (the generated app secret supplies it by default; provide an external
-  endpoint if you set `cube.enabled: false`)
 
 ## 5. Key Values
 
@@ -343,14 +253,11 @@ For a Forma 4.x to 5.0 migration, confirm the following before running the upgra
 | -------------------------------- | -------------------------------------------------------------- |
 | `forma.webappUrl`           | Public base URL for the Forma app                         |
 | `deployment.image.tag`           | Forma image tag override                                  |
-| `hub.enabled`                    | Must stay `true` in Forma v5                              |
-| `hub.image.tag`                  | Hub image tag override                                         |
 | `envoy.enabled`                  | Enables chart-managed Envoy Gateway resources                  |
 | `envoy.controller.enabled`       | Installs the bundled Envoy controller when `true`              |
 | `envoyRedis.enabled`             | Deploys a dedicated Redis backend for Envoy rate limiting      |
 | `llm.enabled`                    | Deploys the optional bundled Qwen/vLLM runtime                 |
 | `llm.autoConfigureApp`           | Injects Forma OpenAI-compatible env vars for bundled Qwen |
-| `taxonomy.enabled`               | Deploys the optional standalone AI taxonomy service            |
 | `postgresql.externalDatabaseUrl` | Uses an external PostgreSQL service instead of in-cluster      |
 | `redis.externalRedisUrl`         | Uses an external Redis/Valkey service instead of in-cluster    |
 

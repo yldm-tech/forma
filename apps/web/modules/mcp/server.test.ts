@@ -11,7 +11,6 @@ vi.mock("@/lib/posthog/mcp-tracing", () => ({
   instrumentMcpServerWithTracing: vi.fn(),
 }));
 
-vi.mock("./tools/feedback-records", () => ({ registerFeedbackRecordTools: vi.fn() }));
 vi.mock("./tools/surveys", () => ({ registerSurveyTools: vi.fn() }));
 vi.mock("./tools/workflows", () => ({ registerWorkflowTools: vi.fn() }));
 vi.mock("./tools/workspaces", () => ({ registerWorkspaceTools: vi.fn() }));

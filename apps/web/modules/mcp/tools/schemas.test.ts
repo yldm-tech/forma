@@ -136,9 +136,6 @@ const EXPECTED_FREE_FORM_PATHS: Record<string, string[]> = {
   ],
   ZMcpPatchSurveyInput: ["ZMcpPatchSurveyInput.data"],
   ZMcpValidateSurveyInput: ["ZMcpValidateSurveyInput.data"],
-  ZMcpCreateFeedbackRecordInput: ["ZMcpCreateFeedbackRecordInput.metadata"],
-  ZMcpCreateFeedbackRecordsInput: ["ZMcpCreateFeedbackRecordsInput.records[].metadata"],
-  ZMcpUpdateFeedbackRecordInput: ["ZMcpUpdateFeedbackRecordInput.metadata"],
 };
 
 describe("MCP tool input schemas reject undeclared arguments (ENG-2256)", () => {

@@ -73,12 +73,6 @@ Surveys, dashboards, and responses inherit access through their workspace:
 - Response updates, tags, and web-application deletion follow workspace write;
   legacy management deletion follows workspace manage.
 
-Feedback Datasets use `FeedbackDirectory` as their application resource. Organization owners and
-managers administer every dataset in their organization. Team members and API keys receive dataset
-read/write/manage through `FeedbackDirectoryWorkspace` and their existing permission on that exact
-workspace. The `feedbackDirectoryAssignment` resource therefore requires both the directory ID and a
-`workspaceId`; directory-wide gateway operations use the aggregate `feedbackDirectory` resource.
-
 The downstream SpiceDB schema names these definitions `feedback_directory` and
 `feedback_directory_assignment`. Product code must continue using the camel-case application names and
 must not depend on that downstream naming convention.
@@ -277,7 +271,7 @@ fails when a new model or target has not been reviewed. The inventory distinguis
 resources, relationship/grant sources, workspace-inherited resources, parent-derived integrity data,
 authentication/application concerns, and explicit public/out-of-scope data.
 
-Charts and workflows remain workspace-inherited. Feedback records remain protected by their
+Workflows remain workspace-inherited. Their access is protected by their
 dataset/workspace authorization decision plus application-level tenant and integrity validation.
 
 ## Explicit exclusions

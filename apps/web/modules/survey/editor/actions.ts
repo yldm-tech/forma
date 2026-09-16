@@ -7,12 +7,7 @@ import { ZId } from "@forma/types/common";
 import { OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
 import { TSurvey, TSurveyVariable, ZSurvey } from "@forma/types/surveys/types";
 import { assertCan } from "@/lib/authorization";
-import {
-  IS_FORMA_SURVEYS_CONFIGURED,
-  POSTHOG_KEY,
-  UNSPLASH_ACCESS_KEY,
-  UNSPLASH_ALLOWED_DOMAINS,
-} from "@/lib/constants";
+import { POSTHOG_KEY, UNSPLASH_ACCESS_KEY, UNSPLASH_ALLOWED_DOMAINS } from "@/lib/constants";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import {
@@ -31,7 +26,6 @@ import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/ut
 import { getElementsFromBlocks } from "@/modules/survey/lib/client-utils";
 import { checkSpamProtectionPermission } from "@/modules/survey/lib/permission";
 import { getOrganizationBilling, getSurvey } from "@/modules/survey/lib/survey";
-import { getSurveyCount } from "@/modules/survey/list/lib/survey";
 import { getWorkspace, getWorkspaceLanguages } from "./lib/workspace";
 
 type SurveyEditDiffContext = {
@@ -305,24 +299,9 @@ export const updateSurveyAction = authenticatedActionClient.inputSchema(ZSurvey)
       }
     }
 
-    // Detect the acting user's second published survey so the editor can fire an in-app
-    // code action. Computed here (only on a genuine draft→publish) to reuse the auth and
-    // ids this action already resolved and avoid an extra client round-trip. Scoped to
-    // the current user's own surveys so it's correct in shared workspaces. Gated on the
-    // in-app surveys config so it's a true no-op (no extra count query) when the widget
-    // isn't enabled, mirroring the POSTHOG_KEY gate above.
-    let isSecondPublish = false;
-    if (isPublish && IS_FORMA_SURVEYS_CONFIGURED) {
-      const publishedCount = await getSurveyCount(result.workspaceId, {
-        status: ["inProgress", "paused", "completed"],
-        createdBy: { userId: ctx.user.id, value: ["you"] },
-      });
-      isSecondPublish = publishedCount === 2;
-    }
-
     revalidatePath(`/workspaces/${result.workspaceId}/surveys/${result.id}`);
 
-    return { ...result, isSecondPublish };
+    return result;
   })
 );
 

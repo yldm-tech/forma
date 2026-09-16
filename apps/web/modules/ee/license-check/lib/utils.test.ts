@@ -13,8 +13,6 @@ import {
   getIsAISmartToolsEnabled,
   getIsAuditLogsEnabled,
   getIsContactsEnabled,
-  getIsDashboardsEnabled,
-  getIsFeedbackDirectoriesEnabled,
   getIsMultiOrgEnabled,
   getIsQuotasEnabled,
   getIsSamlSsoEnabled,
@@ -274,34 +272,6 @@ describe("License Utils", () => {
       expect(result).toBe(false);
     });
 
-    test("uses cloud feedback record directories entitlement", async () => {
-      vi.mocked(constants).IS_FORMA_CLOUD = true;
-      vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
-
-      const result = await getIsFeedbackDirectoriesEnabled("org_1");
-
-      expect(result).toBe(true);
-      expect(hasOrganizationEntitlementWithLicenseGuard).toHaveBeenCalledWith(
-        "org_1",
-        CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.FEEDBACK_DIRECTORIES
-      );
-      expect(getEnterpriseLicense).not.toHaveBeenCalled();
-    });
-
-    test("uses cloud dashboards entitlement", async () => {
-      vi.mocked(constants).IS_FORMA_CLOUD = true;
-      vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
-
-      const result = await getIsDashboardsEnabled("org_1");
-
-      expect(result).toBe(true);
-      expect(hasOrganizationEntitlementWithLicenseGuard).toHaveBeenCalledWith(
-        "org_1",
-        CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.DASHBOARDS
-      );
-      expect(getEnterpriseLicense).not.toHaveBeenCalled();
-    });
-
     test("uses cloud workflows entitlement", async () => {
       vi.mocked(constants).IS_FORMA_CLOUD = true;
       vi.mocked(hasOrganizationEntitlementWithLicenseGuard).mockResolvedValueOnce(true);
@@ -322,39 +292,25 @@ describe("License Utils", () => {
         ...defaultLicense,
         features: {
           ...defaultFeatures,
-          feedbackDirectories: true,
-          dashboards: true,
           workflows: true,
         },
       });
 
-      const [frd, dashboards, workflows] = await Promise.all([
-        getIsFeedbackDirectoriesEnabled("org_1"),
-        getIsDashboardsEnabled("org_1"),
-        getIsWorkflowsEnabled("org_1"),
-      ]);
+      const [workflows] = await Promise.all([getIsWorkflowsEnabled("org_1")]);
 
-      expect(frd).toBe(true);
-      expect(dashboards).toBe(true);
       expect(workflows).toBe(true);
       expect(hasOrganizationEntitlementWithLicenseGuard).not.toHaveBeenCalled();
     });
 
-    test("returns false for self-hosted FRD / dashboards / workflows when not enabled", async () => {
+    test("returns false for self-hosted workflows when not enabled", async () => {
       vi.mocked(constants).IS_FORMA_CLOUD = false;
       vi.mocked(getEnterpriseLicense).mockResolvedValue({
         ...defaultLicense,
         features: defaultFeatures,
       });
 
-      const [frd, dashboards, workflows] = await Promise.all([
-        getIsFeedbackDirectoriesEnabled("org_1"),
-        getIsDashboardsEnabled("org_1"),
-        getIsWorkflowsEnabled("org_1"),
-      ]);
+      const [workflows] = await Promise.all([getIsWorkflowsEnabled("org_1")]);
 
-      expect(frd).toBe(false);
-      expect(dashboards).toBe(false);
       expect(workflows).toBe(false);
       expect(hasOrganizationEntitlementWithLicenseGuard).not.toHaveBeenCalled();
     });

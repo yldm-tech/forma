@@ -32,36 +32,14 @@ x-environment: &environment
     # To use external Redis/Valkey: remove the redis service below and update this URL
     REDIS_URL: redis://redis:6379
 
-    # Forma Hub (port 8080): API key required. Use e.g. openssl rand -hex 32
-    HUB_API_KEY: ${HUB_API_KEY:-}
-
-    # Taxonomy service credentials are consumed by Hub/taxonomy only. Keep these
-    # empty here so a shared docker/.env file cannot leak them into the web app.
-    TAXONOMY_SERVICE_URL: ""
-    TAXONOMY_SERVICE_TOKEN: ""
-    HUB_INTERNAL_API_TOKEN: ""
-    TAXONOMY_LLM_PROVIDER: ""
-    TAXONOMY_LLM_MODEL: ""
-    TAXONOMY_LLM_BASE_URL: ""
-    TAXONOMY_LLM_API_KEY: ""
-    TAXONOMY_VERTEX_PROJECT: ""
-    TAXONOMY_VERTEX_LOCATION: ""
-    TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON: ""
-    TAXONOMY_BEDROCK_MODEL: ""
-    TAXONOMY_MAX_RECORDS: ""
     AWS_BEARER_TOKEN_BEDROCK: ""
 
     # Base URL the Forma app uses to reach Hub. Defaults to the internal Hub service.
-    HUB_API_URL: ${HUB_API_URL:-http://hub:8080}
 
     # Hub database URL (optional). Default: same Postgres as Forma. Set only if Hub uses a separate DB.
     # HUB_DATABASE_URL:
 
     # Cube semantic-layer API used by Forma analytics. Required.
-    CUBEJS_API_URL: ${CUBEJS_API_URL:-http://cube:4000}
-    CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-}
-    CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-forma-web}
-    CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-forma-cube}
 
     # Set the minimum log level(debug, info, warn, error, fatal)
     # LOG_LEVEL: info
@@ -360,8 +338,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      cube:
-        condition: service_healthy
     ports:
       - 3000:3000
     volumes:
@@ -388,10 +364,6 @@ services:
       # inert placeholders for the shared server environment validator and are not application secrets.
       <<: *forma-database
       ENCRYPTION_KEY: authzed-ops-unused
-      CUBEJS_API_SECRET: authzed-ops-unused
-      CUBEJS_API_URL: http://localhost
-      HUB_API_KEY: authzed-ops-unused
-      HUB_API_URL: http://localhost
       REDIS_URL: redis://localhost
       LOG_LEVEL: fatal
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
@@ -417,10 +389,6 @@ services:
     environment:
       <<: *forma-database
       ENCRYPTION_KEY: authzed-initialize-unused
-      CUBEJS_API_SECRET: authzed-initialize-unused
-      CUBEJS_API_URL: http://localhost
-      HUB_API_KEY: authzed-initialize-unused
-      HUB_API_URL: http://localhost
       REDIS_URL: redis://localhost
       LOG_LEVEL: fatal
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
@@ -435,76 +403,6 @@ services:
       spicedb:
         condition: service_healthy
 
-  # Run Hub DB migrations (goose + river) before the API starts. Uses same image; migrations are idempotent.
-  # Default tracks :latest so self-host updates (compose pull) advance Hub alongside the app image.
-  # Operators who want an immutable pin can set HUB_IMAGE_REF in docker/.env to either ":<tag>"
-  # (e.g. ":0.3.0") or "@sha256:<digest>". hub and hub-migrate share the same value — no drift.
-  hub-migrate:
-    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
-    restart: "no"
-    entrypoint: ["sh", "-c"]
-    command:
-      [
-        'if [ -x /usr/local/bin/goose ] && [ -x /usr/local/bin/river ]; then /usr/local/bin/goose -dir /app/migrations postgres "$$DATABASE_URL" up && /usr/local/bin/river migrate-up --database-url "$$DATABASE_URL"; else echo ''Migration tools (goose/river) not in image.''; exit 1; fi',
-      ]
-    environment:
-      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable}
-    depends_on:
-      forma-migrate:
-        condition: service_completed_successfully
-
-  # Forma Hub API (ghcr.io/yldm-tech/hub). Set HUB_API_KEY. By default shares the Forma database; set HUB_DATABASE_URL to use a separate DB.
-  hub:
-    restart: always
-    image: ghcr.io/yldm-tech/hub${HUB_IMAGE_REF:-:latest}
-    depends_on:
-      hub-migrate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-    environment:
-      API_KEY: ${HUB_API_KEY:-}
-      DATABASE_URL: ${HUB_DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable}
-      TAXONOMY_SERVICE_URL: ${TAXONOMY_SERVICE_URL:-}
-      TAXONOMY_SERVICE_TOKEN: ${TAXONOMY_SERVICE_TOKEN:-}
-      HUB_INTERNAL_API_TOKEN: ${HUB_INTERNAL_API_TOKEN:-}
-
-  # Optional AI taxonomy beta service. Enable with COMPOSE_PROFILES=taxonomy.
-  taxonomy:
-    restart: always
-    profiles: ["taxonomy"]
-    image: ghcr.io/yldm-tech/taxonomy${TAXONOMY_IMAGE_REF:-:latest}
-    depends_on:
-      hub:
-        condition: service_started
-    environment:
-      APP_ENV: production
-      TAXONOMY_SERVICE_TOKEN: ${TAXONOMY_SERVICE_TOKEN:-}
-      HUB_INTERNAL_API_URL: http://hub:8080
-      HUB_INTERNAL_API_TOKEN: ${HUB_INTERNAL_API_TOKEN:-}
-      TAXONOMY_LLM_PROVIDER: ${TAXONOMY_LLM_PROVIDER:-openai-compatible}
-      TAXONOMY_LLM_MODEL: ${TAXONOMY_LLM_MODEL:-}
-      TAXONOMY_LLM_BASE_URL: ${TAXONOMY_LLM_BASE_URL:-}
-      TAXONOMY_LLM_API_KEY: ${TAXONOMY_LLM_API_KEY:-}
-      TAXONOMY_VERTEX_PROJECT: ${TAXONOMY_VERTEX_PROJECT:-}
-      TAXONOMY_VERTEX_LOCATION: ${TAXONOMY_VERTEX_LOCATION:-}
-      TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON: ${TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON:-}
-      AWS_REGION: ${AWS_REGION:-}
-      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
-
-  # Optional bundled Qwen/vLLM OpenAI-compatible runtime. Enable with COMPOSE_PROFILES=qwen.
   vllm:
     restart: always
     profiles: ["qwen"]
@@ -557,53 +455,6 @@ services:
       timeout: 10s
       retries: 40
       start_period: 10m
-
-  # Cube semantic-layer API used by Forma analytics dashboards.
-  cube:
-    restart: always
-    image: cubejs/cube:v1.6.6
-    command:
-      - sh
-      - -c
-      - |
-        if [ -z "$$CUBEJS_API_SECRET" ]; then
-          echo "CUBEJS_API_SECRET is required for Cube JWT authentication" >&2
-          exit 1
-        fi
-        exec cubejs server
-    depends_on:
-      hub-migrate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-    environment:
-      CUBEJS_DB_TYPE: postgres
-      CUBEJS_DB_HOST: ${CUBEJS_DB_HOST:-postgres}
-      CUBEJS_DB_NAME: ${CUBEJS_DB_NAME:-forma}
-      CUBEJS_DB_USER: ${CUBEJS_DB_USER:-postgres}
-      CUBEJS_DB_PASS: ${CUBEJS_DB_PASS:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}
-      CUBEJS_DB_PORT: ${CUBEJS_DB_PORT:-5432}
-      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-}
-      CUBEJS_JWT_ISSUER: ${CUBEJS_JWT_ISSUER:-forma-web}
-      CUBEJS_JWT_AUDIENCE: ${CUBEJS_JWT_AUDIENCE:-forma-cube}
-      CUBEJS_DEFAULT_API_SCOPES: meta,data
-      CUBEJS_EXTERNAL_DEFAULT: ${CUBEJS_EXTERNAL_DEFAULT:-false}
-      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
-    volumes:
-      - ./cube/cube.js:/cube/conf/cube.js:ro
-      - ./cube/schema:/cube/conf/model:ro
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://127.0.0.1:4000/readyz', (res) => { res.resume(); process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
 
 volumes:
   postgres:

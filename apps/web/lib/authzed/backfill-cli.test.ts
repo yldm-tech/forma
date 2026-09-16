@@ -9,10 +9,7 @@ vi.mock("./api-key", () => ({ reconcileApiKeyRelationships: vi.fn() }));
 vi.mock("./backfill", () => ({ runAuthzedBackfill: vi.fn() }));
 vi.mock("./client", () => ({ closeAuthzedClient: vi.fn(), getAuthzedClient: vi.fn() }));
 vi.mock("./config", () => ({ isAuthzedEnabled: vi.fn() }));
-vi.mock("./feedback-directory", () => ({
-  deleteFeedbackDirectoryAssignmentRelationships: vi.fn(),
-  reconcileFeedbackDirectoryRelationships: vi.fn(),
-}));
+vi.mock("./feedback-directory", () => ({}));
 vi.mock("./organization-membership", () => ({ reconcileOrganizationMemberships: vi.fn() }));
 vi.mock("./team-workspace", () => ({ reconcileTeamWorkspaceRelationships: vi.fn() }));
 
@@ -280,11 +277,6 @@ describe("runAuthzedBackfillCli", () => {
     await expect(apply.reconcileMemberships({})).resolves.toEqual({ passes: 0, status: "projected" });
     await expect(apply.reconcileTeamWorkspace({})).resolves.toEqual({ passes: 0, status: "projected" });
     await expect(apply.reconcileApiKeys({})).resolves.toEqual({ passes: 0, status: "projected" });
-    await expect(apply.reconcileFeedbackDirectories({})).resolves.toEqual({ passes: 0, status: "projected" });
-    await expect(apply.deleteFeedbackDirectoryAssignmentResources([])).resolves.toEqual({
-      passes: 0,
-      status: "projected",
-    });
   });
 
   test("translates a named workspace into a single-workspace scope", async () => {

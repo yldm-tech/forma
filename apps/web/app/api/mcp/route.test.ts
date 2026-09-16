@@ -290,16 +290,6 @@ describe("POST /api/mcp", () => {
       "archive_workflow",
       "unarchive_workflow",
       "list_workspaces",
-      "list_feedback_datasets",
-      "list_feedback_records",
-      "count_feedback_records",
-      "get_feedback_record",
-      "create_feedback_record",
-      "create_feedback_records",
-      "update_feedback_record",
-      "delete_feedback_record",
-      "search_feedback_records",
-      "find_similar_feedback_records",
     ]);
     const tools = new Map(message.result.tools.map((tool: { name: string }) => [tool.name, tool]));
     expect(Object.keys((tools.get("create_survey") as any).inputSchema.properties)).toEqual(

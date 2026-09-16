@@ -168,14 +168,6 @@ export const getAccessControlPermission = async (organizationId: string): Promis
   return getCustomPlanFeaturePermission(organizationId, "accessControl");
 };
 
-export const getIsFeedbackDirectoriesEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "feedbackDirectories");
-};
-
-export const getIsDashboardsEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "dashboards");
-};
-
 export const getIsWorkflowsEnabled = async (organizationId: string): Promise<boolean> => {
   return getCustomPlanFeaturePermission(organizationId, "workflows");
 };

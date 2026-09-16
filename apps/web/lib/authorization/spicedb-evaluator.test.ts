@@ -25,11 +25,9 @@ beforeEach(() => {
     actorValid: true,
     organizationId: "org-1",
     permissionResource:
-      resource.type === "survey" || resource.type === "dashboard" || resource.type === "response"
+      resource.type === "survey" || resource.type === "response"
         ? { type: "workspace", id: "workspace-1" }
-        : resource.type === "feedbackDirectoryAssignment"
-          ? { type: resource.type, id: "assignment-1" }
-          : resource,
+        : resource,
   }));
   checkPermission.mockResolvedValue({ allowed: true });
 });
@@ -42,22 +40,13 @@ describe("spicedbEvaluator", () => {
           checkPermission.mockClear();
           const action = `${resourceType}.${permission}` as TAuthorizationAction;
 
-          const resource =
-            resourceType === "feedbackDirectoryAssignment"
-              ? {
-                  type: resourceType,
-                  feedbackDirectoryId: "directory-1",
-                  workspaceId: "workspace-1",
-                }
-              : { type: resourceType, id: "resource-1" };
+          const resource = { type: resourceType, id: "resource-1" };
 
           await expect(
             spicedbEvaluator.can({ type: actorType, id: "actor-1" }, action, resource as never)
           ).resolves.toBe(true);
 
           const derivedPermission = {
-            "dashboard.read": "read",
-            "dashboard.write": "write",
             "response.export": "read",
             "response.manage": "manage",
             "response.read": "read",
@@ -76,15 +65,8 @@ describe("spicedbEvaluator", () => {
             resource: isDerived
               ? { objectId: "workspace-1", objectType: "workspace" }
               : {
-                  objectId: resourceType === "feedbackDirectoryAssignment" ? "assignment-1" : "resource-1",
-                  objectType:
-                    resourceType === "apiKey"
-                      ? "api_key"
-                      : resourceType === "feedbackDirectory"
-                        ? "feedback_directory"
-                        : resourceType === "feedbackDirectoryAssignment"
-                          ? "feedback_directory_assignment"
-                          : resourceType,
+                  objectId: "resource-1",
+                  objectType: resourceType === "apiKey" ? "api_key" : resourceType,
                 },
             subject: { objectId: "actor-1", objectType: actorType === "apiKey" ? "api_key" : "user" },
           });

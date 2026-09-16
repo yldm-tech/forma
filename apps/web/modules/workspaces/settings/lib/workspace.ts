@@ -11,7 +11,6 @@ import {
   ValidationError,
 } from "@forma/types/errors";
 import { TWorkspace, TWorkspaceUpdateInput, ZWorkspaceUpdateInput } from "@forma/types/workspace";
-import { reconcileFeedbackDirectoryRelationships } from "@/lib/authzed/feedback-directory";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { DEFAULT_LOCALE } from "@/lib/constants";
@@ -219,10 +218,6 @@ export const createWorkspace = async (
 type TWorkspaceDeletionDbClient = typeof prisma | Prisma.TransactionClient;
 
 const deleteWorkspaceRecord = async (db: TWorkspaceDeletionDbClient, workspaceId: string) => {
-  const feedbackDirectoryAssignments = await db.feedbackDirectoryWorkspace.findMany({
-    where: { workspaceId },
-    select: { feedbackDirectoryId: true, workspaceId: true },
-  });
   const workspace = await db.workspace.delete({
     where: {
       id: workspaceId,
@@ -230,18 +225,15 @@ const deleteWorkspaceRecord = async (db: TWorkspaceDeletionDbClient, workspaceId
     select: selectWorkspace,
   });
 
-  return { feedbackDirectoryAssignments, workspace };
+  return { workspace };
 };
 
 const completeWorkspaceDeletion = async (
   workspaceId: string,
-  { feedbackDirectoryAssignments, workspace }: Awaited<ReturnType<typeof deleteWorkspaceRecord>>
+  { workspace }: Awaited<ReturnType<typeof deleteWorkspaceRecord>>
 ) => {
   await runPostCommitProjection("workspace_delete", () =>
     reconcileTeamWorkspaceRelationships({ workspaceIds: [workspaceId] })
-  );
-  await runPostCommitProjection("workspace_delete_feedback_directory_cleanup", () =>
-    reconcileFeedbackDirectoryRelationships({ assignments: feedbackDirectoryAssignments })
   );
 
   const s3Result = await deleteFilesByWorkspaceId(workspaceId, []);

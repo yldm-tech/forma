@@ -28,7 +28,6 @@ const {
   mockSendTelemetryEvents,
   mockValidateAndResolveWebhookUrl,
 } = vi.hoisted(() => {
-  process.env.HUB_API_URL ??= "https://hub.test";
   const dispatcherDestroy = vi.fn().mockResolvedValue(undefined);
 
   return {

@@ -232,7 +232,7 @@ describe("column class props never change a cell's display", () => {
     const files = collectSourceFiles(path.join(appRoot, "modules"));
 
     // A silently empty walk would make the test above pass for the wrong reason.
-    expect(files.some((file) => file.endsWith("feedback-directory-table.tsx"))).toBe(true);
+    expect(files.some((file) => file.endsWith("teams-table.tsx"))).toBe(true);
     expect(files.some((file) => file.endsWith("column-classes.ts"))).toBe(true);
   });
 });

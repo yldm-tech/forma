@@ -5,8 +5,6 @@ type TAuthorizationObjectType = TAuthorizationActor["type"] | TAuthorizationReso
 
 const SPICEDB_OBJECT_TYPE_MAP = {
   apiKey: "api_key",
-  feedbackDirectory: "feedback_directory",
-  feedbackDirectoryAssignment: "feedback_directory_assignment",
 } as const satisfies Partial<Record<TAuthorizationObjectType, string>>;
 
 /** Map Forma-owned authorization names to their SpiceDB schema definitions. */

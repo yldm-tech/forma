@@ -108,19 +108,6 @@ describe("@forma/cache cacheKeys", () => {
       });
     });
 
-    describe("hub namespace", () => {
-      test("should create feedback record tenant key", () => {
-        const key = createCacheKey.hub.feedbackRecordTenant("0194d8a0-3d55-7ff4-9f62-8d02c3fbcfe8");
-        expect(key).toBe("fb:hub:0194d8a0-3d55-7ff4-9f62-8d02c3fbcfe8:feedback_record_tenant");
-      });
-
-      test("should throw error for empty feedback record id", () => {
-        expect(() => createCacheKey.hub.feedbackRecordTenant("")).toThrow(
-          "Invalid Cache key: Parts cannot be empty"
-        );
-      });
-    });
-
     describe("custom namespace", () => {
       test("should create custom key with subResource", () => {
         const key = createCacheKey.custom("analytics", "user-456", "daily-stats");
@@ -180,7 +167,6 @@ describe("@forma/cache cacheKeys", () => {
         createCacheKey.organization.billing("org-1"),
         createCacheKey.license.status("org-1"),
         createCacheKey.license.previous_result("org-1"),
-        createCacheKey.hub.feedbackRecordTenant("record-1"),
         createCacheKey.rateLimit.core("api", "user-1", 123456),
         createCacheKey.custom("analytics", "temp-1"),
         createCacheKey.custom("analytics", "temp-1", "sub"),
@@ -200,7 +186,6 @@ describe("@forma/cache cacheKeys", () => {
         createCacheKey.workspace.state("env-123"),
         createCacheKey.organization.billing("org-456"),
         createCacheKey.license.status("license-789"),
-        createCacheKey.hub.feedbackRecordTenant("record-321"),
         createCacheKey.rateLimit.core("api", "user-101", 1640995200),
         createCacheKey.custom("analytics", "analytics-102", "daily"),
       ];
@@ -218,7 +203,6 @@ describe("@forma/cache cacheKeys", () => {
       expect(() => createCacheKey.workspace.state("")).toThrow(errorMessage);
       expect(() => createCacheKey.organization.billing("")).toThrow(errorMessage);
       expect(() => createCacheKey.license.status("")).toThrow(errorMessage);
-      expect(() => createCacheKey.hub.feedbackRecordTenant("")).toThrow(errorMessage);
       expect(() => createCacheKey.rateLimit.core("", "user", 123)).toThrow(errorMessage);
       expect(() => createCacheKey.custom("analytics", "")).toThrow(errorMessage);
     });

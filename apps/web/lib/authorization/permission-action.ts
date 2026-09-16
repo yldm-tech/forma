@@ -4,13 +4,7 @@ import type { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/t
 import type { TAuthorizationAction } from "./contract";
 
 type TWorkspaceAction = Extract<TAuthorizationAction, `workspace.${string}`>;
-type TFeedbackDirectoryAction = Extract<TAuthorizationAction, `feedbackDirectory.${string}`>;
-type TFeedbackDirectoryAssignmentAction = Extract<
-  TAuthorizationAction,
-  `feedbackDirectoryAssignment.${string}`
->;
 
-export type TFeedbackDirectoryPermission = "read" | "write" | "manage";
 export type TAuthorizationHttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
@@ -37,15 +31,3 @@ export const getOrganizationAuthorizationActionForAccessType = (
   accessType: OrganizationAccessType
 ): Extract<TAuthorizationAction, `organization.${string}`> =>
   accessType === OrganizationAccessType.Write ? "organization.manage_access" : "organization.read_access";
-
-export const getFeedbackDirectoryAuthorizationAction = (
-  permission: TFeedbackDirectoryPermission
-): TFeedbackDirectoryAction => `feedbackDirectory.${permission}`;
-
-export const getFeedbackDirectoryAssignmentAuthorizationAction = (
-  minPermission?: TTeamPermission
-): TFeedbackDirectoryAssignmentAction => {
-  if (minPermission === "manage") return "feedbackDirectoryAssignment.manage";
-  if (minPermission === "readWrite") return "feedbackDirectoryAssignment.write";
-  return "feedbackDirectoryAssignment.read";
-};

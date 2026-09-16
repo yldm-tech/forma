@@ -312,24 +312,6 @@ export const withAuditLogging = <
           case "quota":
             targetId = auditLoggingCtx.quotaId;
             break;
-          case "chart":
-            targetId = auditLoggingCtx.chartId;
-            break;
-          case "dashboard":
-            targetId = auditLoggingCtx.dashboardId;
-            break;
-          case "dashboardWidget":
-            targetId = auditLoggingCtx.dashboardWidgetId;
-            break;
-          case "feedbackDirectory":
-            targetId = auditLoggingCtx.feedbackDirectoryId;
-            break;
-          case "feedbackRecord":
-            targetId = auditLoggingCtx.feedbackRecordId;
-            break;
-          case "feedbackSource":
-            targetId = auditLoggingCtx.feedbackSourceId;
-            break;
           default:
             targetId = UNKNOWN_DATA;
             break;

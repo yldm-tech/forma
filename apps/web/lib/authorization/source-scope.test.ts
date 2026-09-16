@@ -2,9 +2,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   getApiKeyOrganizationId,
   getAuthorizationOrganizationId,
-  getDashboardAuthorizationWorkspaceScope,
-  getFeedbackDirectoryAssignmentAuthorizationScope,
-  getFeedbackDirectoryAuthorizationScope,
   getResponseAuthorizationWorkspaceScope,
   getSurveyAuthorizationWorkspaceScope,
   getTeamOrganizationId,
@@ -16,9 +13,6 @@ import { resolveAuthorizationScope } from "./source-scope";
 vi.mock("./resolvers", () => ({
   getApiKeyOrganizationId: vi.fn(),
   getAuthorizationOrganizationId: vi.fn(),
-  getDashboardAuthorizationWorkspaceScope: vi.fn(),
-  getFeedbackDirectoryAssignmentAuthorizationScope: vi.fn(),
-  getFeedbackDirectoryAuthorizationScope: vi.fn(),
   getResponseAuthorizationWorkspaceScope: vi.fn(),
   getSurveyAuthorizationWorkspaceScope: vi.fn(),
   getTeamOrganizationId: vi.fn(),
@@ -49,14 +43,10 @@ describe("resolveAuthorizationScope", () => {
     });
   });
 
-  test("resolves survey, dashboard, and response parent chains", async () => {
+  test("resolves survey and response parent chains", async () => {
     vi.mocked(getSurveyAuthorizationWorkspaceScope).mockResolvedValue({
       organizationId: "org-workspace-survey",
       workspaceId: "workspace-survey",
-    });
-    vi.mocked(getDashboardAuthorizationWorkspaceScope).mockResolvedValue({
-      organizationId: "org-workspace-dashboard",
-      workspaceId: "workspace-dashboard",
     });
     vi.mocked(getResponseAuthorizationWorkspaceScope).mockResolvedValue({
       organizationId: "org-workspace-response",
@@ -71,90 +61,12 @@ describe("resolveAuthorizationScope", () => {
       permissionResource: { type: "workspace", id: "workspace-survey" },
     });
     await expect(
-      resolveAuthorizationScope({ type: "user", id: "user-1" }, { type: "dashboard", id: "dashboard-1" })
-    ).resolves.toEqual({
-      actorValid: true,
-      organizationId: "org-workspace-dashboard",
-      permissionResource: { type: "workspace", id: "workspace-dashboard" },
-    });
-    await expect(
       resolveAuthorizationScope({ type: "user", id: "user-1" }, { type: "response", id: "response-1" })
     ).resolves.toEqual({
       actorValid: true,
       organizationId: "org-workspace-response",
       permissionResource: { type: "workspace", id: "workspace-response" },
     });
-  });
-
-  test("resolves directory and exact directory-workspace assignment resources", async () => {
-    vi.mocked(getFeedbackDirectoryAuthorizationScope).mockResolvedValue({
-      isArchived: false,
-      organizationId: "org-1",
-      workspaceIds: ["workspace-1"],
-    });
-    vi.mocked(getFeedbackDirectoryAssignmentAuthorizationScope).mockResolvedValue({
-      assignmentId: "fdwa-1",
-      organizationId: "org-1",
-      workspaceId: "workspace-1",
-    });
-
-    await expect(
-      resolveAuthorizationScope(
-        { type: "user", id: "user-1" },
-        { type: "feedbackDirectory", id: "directory-1" }
-      )
-    ).resolves.toEqual({
-      actorValid: true,
-      organizationId: "org-1",
-      permissionResource: { type: "feedbackDirectory", id: "directory-1" },
-    });
-    await expect(
-      resolveAuthorizationScope(
-        { type: "user", id: "user-1" },
-        {
-          type: "feedbackDirectoryAssignment",
-          feedbackDirectoryId: "directory-1",
-          workspaceId: "workspace-1",
-        }
-      )
-    ).resolves.toEqual({
-      actorValid: true,
-      organizationId: "org-1",
-      permissionResource: {
-        type: "feedbackDirectoryAssignment",
-        id: "fdwa-1",
-      },
-    });
-    expect(getFeedbackDirectoryAssignmentAuthorizationScope).toHaveBeenCalledWith(
-      "directory-1",
-      "workspace-1"
-    );
-  });
-
-  test("denies archived directories and invalid exact assignments", async () => {
-    vi.mocked(getFeedbackDirectoryAuthorizationScope).mockResolvedValue({
-      isArchived: true,
-      organizationId: "org-1",
-      workspaceIds: ["workspace-1"],
-    });
-    vi.mocked(getFeedbackDirectoryAssignmentAuthorizationScope).mockResolvedValue(null);
-
-    await expect(
-      resolveAuthorizationScope(
-        { type: "user", id: "user-1" },
-        { type: "feedbackDirectory", id: "directory-1" }
-      )
-    ).resolves.toBeNull();
-    await expect(
-      resolveAuthorizationScope(
-        { type: "user", id: "user-1" },
-        {
-          type: "feedbackDirectoryAssignment",
-          feedbackDirectoryId: "directory-1",
-          workspaceId: "workspace-1",
-        }
-      )
-    ).resolves.toBeNull();
   });
 
   test("denies missing resources after resolving actor and resource in parallel", async () => {

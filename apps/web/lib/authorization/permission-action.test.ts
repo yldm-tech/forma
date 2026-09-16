@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { OrganizationAccessType } from "@forma/types/api-key";
 import {
-  getFeedbackDirectoryAssignmentAuthorizationAction,
-  getFeedbackDirectoryAuthorizationAction,
   getOrganizationAuthorizationActionForAccessType,
   getWorkspaceAuthorizationAction,
   getWorkspaceAuthorizationActionForMethod,
@@ -33,22 +31,5 @@ describe("semantic authorization action mapping", () => {
     [OrganizationAccessType.Write, "organization.manage_access"],
   ] as const)("maps organization access %s", (accessType, action) => {
     expect(getOrganizationAuthorizationActionForAccessType(accessType)).toBe(action);
-  });
-
-  test.each([
-    ["read", "feedbackDirectory.read"],
-    ["write", "feedbackDirectory.write"],
-    ["manage", "feedbackDirectory.manage"],
-  ] as const)("maps directory %s to the central vocabulary", (permission, action) => {
-    expect(getFeedbackDirectoryAuthorizationAction(permission)).toBe(action);
-  });
-
-  test.each([
-    [undefined, "feedbackDirectoryAssignment.read"],
-    ["read", "feedbackDirectoryAssignment.read"],
-    ["readWrite", "feedbackDirectoryAssignment.write"],
-    ["manage", "feedbackDirectoryAssignment.manage"],
-  ] as const)("maps assignment %s to the central vocabulary", (permission, action) => {
-    expect(getFeedbackDirectoryAssignmentAuthorizationAction(permission)).toBe(action);
   });
 });

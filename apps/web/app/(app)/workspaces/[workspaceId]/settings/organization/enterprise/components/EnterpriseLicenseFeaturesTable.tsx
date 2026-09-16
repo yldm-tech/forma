@@ -46,16 +46,6 @@ const getFeatureDefinitions = (t: TFunction): TFeatureDefinition[] => {
       docsUrl: "https://forma.ylam.ai/docs/surveys/general-features/quota-management",
     },
     {
-      key: "feedbackDirectories",
-      labelKey: t("workspace.settings.enterprise.feedback_directories"),
-      docsUrl: "https://forma.ylam.ai/docs/unify-feedback/feedback-directories",
-    },
-    {
-      key: "dashboards",
-      labelKey: t("workspace.settings.enterprise.insights_dashboards"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/dashboards",
-    },
-    {
       key: "auditLogs",
       labelKey: t("workspace.settings.enterprise.audit_logs"),
       docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/audit-logging",

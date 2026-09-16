@@ -10,7 +10,6 @@ import {
   readWorkspaceSource,
 } from "./backfill-source";
 import { AUTHZED_BACKFILL_ORGANIZATION_PAGE_SIZE, AUTHZED_TARGET_CHUNK_SIZE } from "./constants";
-import { getFeedbackDirectoryAssignmentObjectId } from "./feedback-directory-assignment-id";
 
 vi.mock("node:crypto", async (importOriginal) => importOriginal());
 
@@ -18,8 +17,6 @@ vi.mock("@forma/database", () => ({
   prisma: {
     apiKey: { findMany: vi.fn() },
     apiKeyWorkspace: { findMany: vi.fn() },
-    feedbackDirectory: { findMany: vi.fn() },
-    feedbackDirectoryWorkspace: { findMany: vi.fn() },
     membership: { findMany: vi.fn() },
     organization: { count: vi.fn(), findMany: vi.fn() },
     team: { findMany: vi.fn() },
@@ -37,8 +34,6 @@ const setEmptySource = (): void => {
   vi.mocked(prisma.workspace.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.workspace.findUnique).mockResolvedValue(null as never);
   vi.mocked(prisma.apiKey.findMany).mockResolvedValue([] as never);
-  vi.mocked(prisma.feedbackDirectory.findMany).mockResolvedValue([] as never);
-  vi.mocked(prisma.feedbackDirectoryWorkspace.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.teamUser.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.workspaceTeam.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.apiKeyWorkspace.findMany).mockResolvedValue([] as never);
@@ -163,10 +158,7 @@ describe("readOrganizationSource", () => {
         expect.objectContaining({ relation: "api_key_reader" }),
         expect.objectContaining({ relation: "api_key_writer" }),
       ]),
-      feedbackDirectoryAssignments: [],
-      feedbackDirectoryIds: [],
       invalidApiKeyWorkspaceGrants: [],
-      invalidFeedbackDirectoryAssignments: [],
       invalidWorkspaceTeamGrants: [],
       memberships: [{ organizationId: ORGANIZATION_ID, userId: "user-1" }],
       teamIds: ["team-1"],
@@ -215,64 +207,6 @@ describe("readOrganizationSource", () => {
     expect(source.invalidApiKeyWorkspaceGrants).toEqual([{ apiKeyId: "key-1", workspaceId: "foreign-ws" }]);
   });
 
-  test("enumerates active feedback datasets and all three exact assignment edges", async () => {
-    vi.mocked(prisma.feedbackDirectory.findMany).mockResolvedValue([
-      {
-        id: "directory-active",
-        isArchived: false,
-        organizationId: ORGANIZATION_ID,
-        workspaces: [
-          { workspace: { organizationId: ORGANIZATION_ID }, workspaceId: "workspace-1" },
-          { workspace: { organizationId: "other-org" }, workspaceId: "workspace-cross-org" },
-        ],
-      },
-      {
-        id: "directory-archived",
-        isArchived: true,
-        organizationId: ORGANIZATION_ID,
-        workspaces: [{ workspace: { organizationId: ORGANIZATION_ID }, workspaceId: "workspace-2" }],
-      },
-    ] as never);
-
-    const source = await readOrganizationSource(ORGANIZATION_ID);
-    const assignmentId = getFeedbackDirectoryAssignmentObjectId("directory-active", "workspace-1");
-
-    expect(source.feedbackDirectoryIds).toEqual(["directory-active", "directory-archived"]);
-    expect(source.feedbackDirectoryAssignments).toEqual([
-      { feedbackDirectoryId: "directory-active", workspaceId: "workspace-1" },
-      { feedbackDirectoryId: "directory-archived", workspaceId: "workspace-2" },
-    ]);
-    expect(source.invalidFeedbackDirectoryAssignments).toEqual([
-      { feedbackDirectoryId: "directory-active", workspaceId: "workspace-cross-org" },
-    ]);
-    expect(source.expectedRelationships).toEqual(
-      expect.arrayContaining([
-        {
-          relation: "assignment",
-          resource: { objectId: "directory-active", objectType: "feedback_directory" },
-          subject: { objectId: assignmentId, objectType: "feedback_directory_assignment" },
-        },
-        {
-          relation: "directory",
-          resource: { objectId: assignmentId, objectType: "feedback_directory_assignment" },
-          subject: { objectId: "directory-active", objectType: "feedback_directory" },
-        },
-        {
-          relation: "workspace",
-          resource: { objectId: assignmentId, objectType: "feedback_directory_assignment" },
-          subject: { objectId: "workspace-1", objectType: "workspace" },
-        },
-      ])
-    );
-    expect(
-      source.expectedRelationships.some(
-        ({ resource }) =>
-          resource.objectType === "feedback_directory_assignment" &&
-          resource.objectId === getFeedbackDirectoryAssignmentObjectId("directory-archived", "workspace-2")
-      )
-    ).toBe(false);
-  });
-
   test("reads a workspace's owning organization so a failure can be attributed to a tenant", async () => {
     vi.mocked(prisma.workspace.findUnique).mockResolvedValue({
       organizationId: ORGANIZATION_ID,
@@ -292,9 +226,7 @@ describe("readOrganizationSource", () => {
         expect.objectContaining({ relation: "organization" }),
         expect.objectContaining({ relation: "reader_team" }),
       ]),
-      feedbackDirectoryAssignments: [],
       invalidApiKeyWorkspaceGrants: [],
-      invalidFeedbackDirectoryAssignments: [],
       invalidWorkspaceTeamGrants: [],
       organizationId: ORGANIZATION_ID,
       workspaceExists: true,
@@ -330,40 +262,6 @@ describe("readOrganizationSource", () => {
     expect(source.invalidApiKeyWorkspaceGrants).toEqual([{ apiKeyId: "foreign-key", workspaceId: "ws-1" }]);
   });
 
-  test("includes only active same-organization feedback dataset assignments in workspace repair", async () => {
-    vi.mocked(prisma.workspace.findUnique).mockResolvedValue({ organizationId: ORGANIZATION_ID } as never);
-    vi.mocked(prisma.feedbackDirectoryWorkspace.findMany).mockResolvedValue([
-      {
-        feedbackDirectory: { isArchived: false, organizationId: ORGANIZATION_ID },
-        feedbackDirectoryId: "directory-active",
-        workspaceId: "ws-1",
-      },
-      {
-        feedbackDirectory: { isArchived: true, organizationId: ORGANIZATION_ID },
-        feedbackDirectoryId: "directory-archived",
-        workspaceId: "ws-1",
-      },
-      {
-        feedbackDirectory: { isArchived: false, organizationId: "other-org" },
-        feedbackDirectoryId: "directory-cross-org",
-        workspaceId: "ws-1",
-      },
-    ] as never);
-
-    const source = await readWorkspaceSource("ws-1");
-
-    expect(source.feedbackDirectoryAssignments).toEqual([
-      { feedbackDirectoryId: "directory-active", workspaceId: "ws-1" },
-      { feedbackDirectoryId: "directory-archived", workspaceId: "ws-1" },
-    ]);
-    expect(source.invalidFeedbackDirectoryAssignments).toEqual([
-      { feedbackDirectoryId: "directory-cross-org", workspaceId: "ws-1" },
-    ]);
-    expect(
-      source.expectedRelationships.filter(({ resource }) => resource.objectType.startsWith("feedback"))
-    ).toHaveLength(3);
-  });
-
   test("reports a workspace with no row as absent rather than failing", async () => {
     // The case most worth repairing: the row is gone and its relationships are what should be removed.
     // Its grants are still read, because those rows can outlive the workspace.
@@ -380,10 +278,7 @@ describe("readOrganizationSource", () => {
       apiKeyIds: [],
       apiKeyWorkspaceGrants: [],
       expectedRelationships: [],
-      feedbackDirectoryAssignments: [],
-      feedbackDirectoryIds: [],
       invalidApiKeyWorkspaceGrants: [],
-      invalidFeedbackDirectoryAssignments: [],
       invalidWorkspaceTeamGrants: [],
       memberships: [],
       teamIds: [],
@@ -438,7 +333,7 @@ describe("findMismatchedParentEdges", () => {
     ).resolves.toEqual([]);
   });
 
-  test("checks all three child types in one batch per type", async () => {
+  test("checks every child type in one batch per type", async () => {
     await findMismatchedParentEdges([
       { childId: "team-1", childType: "team", organizationId: ORGANIZATION_ID, relation: "organization" },
       { childId: "ws-1", childType: "workspace", organizationId: ORGANIZATION_ID, relation: "organization" },
@@ -465,12 +360,6 @@ describe("findMissingSourceRefs", () => {
   const allKinds: ReadonlyArray<TAuthzedSourceRef> = [
     { apiKeyId: "key-1", kind: "apiKey" },
     { apiKeyId: "key-1", kind: "apiKeyWorkspaceGrant", workspaceId: "ws-1" },
-    { feedbackDirectoryId: "directory-1", kind: "feedbackDirectory" },
-    {
-      assignmentId: getFeedbackDirectoryAssignmentObjectId("directory-1", "ws-1"),
-      feedbackDirectoryId: "directory-1",
-      kind: "feedbackDirectoryAssignment",
-    },
     { kind: "membership", organizationId: ORGANIZATION_ID, userId: "user-1" },
     { kind: "team", teamId: "team-1" },
     { kind: "teamMembership", teamId: "team-1", userId: "user-1" },
@@ -482,10 +371,6 @@ describe("findMissingSourceRefs", () => {
     vi.mocked(prisma.apiKey.findMany).mockResolvedValue([{ id: "key-1" }] as never);
     vi.mocked(prisma.apiKeyWorkspace.findMany).mockResolvedValue([
       { apiKeyId: "key-1", workspaceId: "ws-1" },
-    ] as never);
-    vi.mocked(prisma.feedbackDirectory.findMany).mockResolvedValue([{ id: "directory-1" }] as never);
-    vi.mocked(prisma.feedbackDirectoryWorkspace.findMany).mockResolvedValue([
-      { feedbackDirectoryId: "directory-1", workspaceId: "ws-1" },
     ] as never);
     vi.mocked(prisma.membership.findMany).mockResolvedValue([
       { organizationId: ORGANIZATION_ID, userId: "user-1" },
@@ -503,32 +388,6 @@ describe("findMissingSourceRefs", () => {
   test("reports every kind of record that PostgreSQL does not hold", async () => {
     // Every query returns nothing, so every current source kind is missing.
     await expect(findMissingSourceRefs(allKinds)).resolves.toEqual(allKinds);
-  });
-
-  test("verifies hashed assignments from either observable edge without reversing the hash", async () => {
-    const assignmentId = getFeedbackDirectoryAssignmentObjectId("directory-1", "ws-1");
-    vi.mocked(prisma.feedbackDirectoryWorkspace.findMany).mockResolvedValue([
-      { feedbackDirectoryId: "directory-1", workspaceId: "ws-1" },
-    ] as never);
-
-    await expect(
-      findMissingSourceRefs([
-        {
-          assignmentId,
-          feedbackDirectoryId: "directory-1",
-          kind: "feedbackDirectoryAssignment",
-        },
-        { assignmentId, kind: "feedbackDirectoryAssignment", workspaceId: "ws-1" },
-      ])
-    ).resolves.toEqual([]);
-
-    expect(prisma.feedbackDirectoryWorkspace.findMany).toHaveBeenCalledWith({
-      where: {
-        feedbackDirectory: { isArchived: false },
-        OR: [{ feedbackDirectoryId: "directory-1" }, { workspaceId: "ws-1" }],
-      },
-      select: { feedbackDirectoryId: true, workspaceId: true },
-    });
   });
 
   test("distinguishes a present record from an absent one of the same kind", async () => {

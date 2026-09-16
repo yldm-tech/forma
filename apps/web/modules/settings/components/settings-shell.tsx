@@ -1,10 +1,6 @@
 import { TopControlBar } from "@/app/(app)/workspaces/[workspaceId]/components/TopControlBar";
 import { WorkspaceContextWrapper } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
-import {
-  ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMA_CLOUD,
-  IS_FORMA_SURVEYS_CONFIGURED,
-} from "@/lib/constants";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getPendingDowngradeSchedule } from "@/modules/ee/license-check/lib/license";
 import { SettingsNavigation } from "@/modules/settings/components/settings-navigation";
 import type { TSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
@@ -56,7 +52,6 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
           membershipRole={data.membershipRole}
           isFormaCloud={data.isFormaCloud}
           publicDomain={data.publicDomain}
-          isFormaSurveysConfigured={IS_FORMA_SURVEYS_CONFIGURED}
           backUrl={data.backUrl}
         />
         <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">
