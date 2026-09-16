@@ -153,6 +153,14 @@ Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonl
 - Do not use Next.js `unstable_cache()`.
 - Always use `createCacheKey.*` utilities for cache keys.
 
+## Enterprise features in development
+
+An install with no `ENTERPRISE_LICENSE_KEY` has every licensed feature enabled when `NODE_ENV` is `development`, or under `E2E_TESTING`. Production is untouched: without a key it stays locked exactly as before.
+
+The EE code under `apps/web/modules/ee/` carries its own licence (`modules/ee/LICENSE`), which gates *production* use on holding a subscription and in the same breath permits copying and modifying the software "for development and testing purposes, without requiring a subscription". This is that permission, taken literally and no further.
+
+Two details are load-bearing, both in `license-check/lib/license.ts`. The branch is gated positively on development or E2E rather than negatively on production, so an unset `NODE_ENV` stays locked instead of accidentally unlocking. And it sits inside the no-key branch, so setting a real key in development still runs the ordinary path — the licence logic itself remains testable. `license-development-unlock.test.ts` holds both: make the guard unconditional and it goes red.
+
 ## Environment Variables
 
 - In `apps/web`, application code must not read `process.env` directly. Server code reads `env` from `apps/web/lib/env.ts` (or the constants derived from it in `lib/constants.ts`); client components read `lib/env-client.ts`, which holds the one sanctioned client-side read. `next.config.mjs` imports `lib/env.ts`, so an invalid value fails the build or start instead of the first request that needs it.
