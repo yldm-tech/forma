@@ -7,7 +7,7 @@ Forma runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, 
 ## Build, Test & Development Commands
 
 - `pnpm install` — install workspace dependencies pinned by `pnpm-lock.yaml`.
-- `pnpm db:up` / `pnpm db:down` — start/stop the Docker services backing the app.
+- `pnpm db:up` / `pnpm db:down` — start/stop the Docker services backing the app. `db:up` also writes `authzed/schema.zed` into SpiceDB via `scripts/apply-authzed-schema.sh`, because docker compose only runs SpiceDB's datastore migration: it creates the tables and leaves it with no schema. Until the schema is written every permission check fails with `FAILED_PRECONDITION`, which the app surfaces as "Error loading resources" — a symptom that points nowhere near its cause. Do not gate that write on the gRPC health probe alone; it reports healthy as soon as the server accepts connections, which can precede a freshly migrated datastore accepting a schema write, so the script retries the write itself. The write is idempotent, so re-running `db:up` on a provisioned stack is a no-op.
 - `pnpm dev` — run all app and worker dev servers in parallel via Turborepo.
 - `pnpm build` — generate production builds for every package and app.
 - `pnpm lint` — apply the shared ESLint rules across the workspace.

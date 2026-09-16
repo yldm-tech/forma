@@ -50,7 +50,7 @@ You need [Node.js](https://nodejs.org/en) (see `.nvmrc`), [pnpm](https://pnpm.io
 
 ```bash
 pnpm install
-pnpm db:up      # start the backing services and write .env from .env.example
+pnpm db:up      # start the backing services, write .env from .env.example, load the SpiceDB schema
 pnpm dev        # run every app and worker
 ```
 
