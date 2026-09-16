@@ -6,7 +6,7 @@ import { createCacheKey } from "@forma/cache";
 import { prisma } from "@forma/database";
 import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
-import { COMMUNITY_WORKSPACE_LIMIT, E2E_TESTING } from "@/lib/constants";
+import { COMMUNITY_WORKSPACE_LIMIT, E2E_TESTING, IS_DEVELOPMENT } from "@/lib/constants";
 import { env } from "@/lib/env";
 import { hashString } from "@/lib/hash-string";
 import { getInstanceId } from "@/lib/instance";
@@ -534,12 +534,49 @@ export const fetchLicense = async (): Promise<TEnterpriseLicenseDetails | null> 
  * Accepts pre-fetched license details and applies fallback / grace-period rules.
  * Sets the in-process memoryCache as a side effect so subsequent requests benefit.
  */
+/**
+ * Every feature, for a local instance running without a key.
+ *
+ * The EE licence in `apps/web/modules/ee/LICENSE` gates *production* use on holding one, and says in the same breath that you "may copy and modify the Software for development and testing purposes, without requiring a subscription". This is that: an install with no key is fully usable while you work on it, and a production build is untouched.
+ *
+ * Gated positively on development or E2E rather than negatively on production, so an unset NODE_ENV stays locked rather than accidentally unlocking — the same shape `SIGNUP_ENABLED` already uses. It also sits inside the no-key branch on purpose: set a real key in development and the ordinary path runs, so the licence logic itself is still testable.
+ */
+const UNLICENSED_DEVELOPMENT_FEATURES: TEnterpriseLicenseFeatures = {
+  isMultiOrgEnabled: true,
+  contacts: true,
+  workspaces: null,
+  whitelabel: true,
+  removeBranding: true,
+  twoFactorAuth: true,
+  sso: true,
+  saml: true,
+  spamProtection: true,
+  aiSmartTools: true,
+  auditLogs: true,
+  accessControl: true,
+  quotas: true,
+  feedbackDirectories: true,
+  dashboards: true,
+  workflows: true,
+};
+
 const computeLicenseState = async (
   liveLicenseDetails: TEnterpriseLicenseDetails | null
 ): Promise<TEnterpriseLicenseResult> => {
   validateConfig();
 
   if (!env.ENTERPRISE_LICENSE_KEY || env.ENTERPRISE_LICENSE_KEY.length === 0) {
+    if (IS_DEVELOPMENT || E2E_TESTING) {
+      return {
+        active: true,
+        features: UNLICENSED_DEVELOPMENT_FEATURES,
+        lastChecked: new Date(),
+        isPendingDowngrade: false,
+        fallbackLevel: "default" as const,
+        status: "active" as const,
+      };
+    }
+
     return {
       active: false,
       features: null,
