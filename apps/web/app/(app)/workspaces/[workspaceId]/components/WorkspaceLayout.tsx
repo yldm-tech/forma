@@ -153,12 +153,10 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
       <div className="flex h-full">
         <MainNavigation
           organization={organization}
-          user={user}
           workspace={{ id: workspace.id, name: workspace.name }}
           isFormaCloud={IS_FORMA_CLOUD}
           isDevelopment={IS_DEVELOPMENT}
           membershipRole={membership.role}
-          publicDomain={publicDomain}
           organizationWorkspacesLimit={organizationWorkspacesLimit}
           isLicenseActive={active}
           isAccessControlAllowed={isAccessControlAllowed}
@@ -170,6 +168,8 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
         />
         <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">
           <TopControlBar
+            user={user}
+            publicDomain={publicDomain}
             currentOrganizationId={organization.id}
             isMultiOrgEnabled={isMultiOrgEnabled}
             organizationWorkspacesLimit={organizationWorkspacesLimit}

@@ -22,6 +22,14 @@ interface UserDropdownProps {
   isCollapsed?: boolean;
   isTextVisible?: boolean;
   className?: string;
+  /**
+   * Where this is rendered, which decides both the trigger's shape and which way the menu opens.
+   *
+   * `sidebar` is a full-width row with a top border, opening to the right — the shape the onboarding
+   * and settings sidebars still use. `topBar` is the avatar alone in the header's right corner,
+   * opening downward and right-aligned so it stays on screen.
+   */
+  placement?: "sidebar" | "topBar";
 }
 
 // The avatar/account trigger + menu (Account, Documentation, Share feedback, Log out) shown at the
@@ -35,6 +43,7 @@ export const UserDropdown = ({
   isCollapsed = false,
   isTextVisible = false,
   className,
+  placement = "sidebar",
 }: Readonly<UserDropdownProps>) => {
   const { t } = useTranslation();
   const router = useRouter();
@@ -54,9 +63,15 @@ export const UserDropdown = ({
     },
   ];
 
+  const isTopBar = placement === "topBar";
+  // In the top bar the trigger is the avatar and nothing else: a full-width row with a top border
+  // belongs to a sidebar, and would draw a line across the header here.
   const triggerClasses = cn(
-    "w-full border-t px-3 py-3 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-inset",
-    isCollapsed ? "flex items-center justify-center" : "",
+    "text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500",
+    isTopBar
+      ? "rounded-full hover:opacity-80 focus-visible:ring-offset-2"
+      : "w-full border-t px-3 py-3 hover:bg-slate-50 focus-visible:ring-inset",
+    !isTopBar && isCollapsed ? "flex items-center justify-center" : "",
     className
   );
   const iconClasses =
@@ -67,12 +82,16 @@ export const UserDropdown = ({
       <DropdownMenuTrigger asChild id="userDropdownTrigger" className={triggerClasses}>
         <button
           type="button"
-          aria-label={isCollapsed ? t("common.account_settings") : undefined}
-          className={cn("flex w-full items-center gap-3", isCollapsed && "justify-center")}>
+          aria-label={isTopBar || isCollapsed ? t("common.account_settings") : undefined}
+          className={cn(
+            "flex items-center gap-3",
+            isTopBar ? "justify-center" : "w-full",
+            !isTopBar && isCollapsed && "justify-center"
+          )}>
           <span className={iconClasses}>
             <ProfileAvatar userId={user.id} />
           </span>
-          {!isCollapsed && !isTextVisible && (
+          {!isTopBar && !isCollapsed && !isTextVisible && (
             <>
               <div className="grow overflow-hidden">
                 <p
@@ -95,9 +114,9 @@ export const UserDropdown = ({
 
       <DropdownMenuContent
         id="userDropdownInnerContentWrapper"
-        side="right"
-        sideOffset={10}
-        alignOffset={5}
+        side={isTopBar ? "bottom" : "right"}
+        sideOffset={isTopBar ? 8 : 10}
+        alignOffset={isTopBar ? 0 : 5}
         align="end">
         {dropdownNavigation.map((link) => (
           <Link

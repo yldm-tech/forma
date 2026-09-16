@@ -1,10 +1,14 @@
 "use client";
 
 import { TOrganizationRole } from "@forma/types/memberships";
+import { TUser } from "@forma/types/user";
 import { WorkspaceAndOrgSwitch } from "@/app/(app)/workspaces/[workspaceId]/components/workspace-and-org-switch";
+import { UserDropdown } from "@/modules/settings/components/user-dropdown";
 import { useWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 
 interface TopControlBarProps {
+  user: TUser;
+  publicDomain: string;
   currentOrganizationId: string;
   isMultiOrgEnabled: boolean;
   organizationWorkspacesLimit: number;
@@ -18,6 +22,8 @@ interface TopControlBarProps {
 }
 
 export const TopControlBar = ({
+  user,
+  publicDomain,
   currentOrganizationId,
   isMultiOrgEnabled,
   organizationWorkspacesLimit,
@@ -46,6 +52,16 @@ export const TopControlBar = ({
         isMembershipPending={isMembershipPending}
         isAccessControlAllowed={isAccessControlAllowed}
         showWorkspaceBreadcrumb={showWorkspaceBreadcrumb}
+      />
+
+      {/* The account menu sits here rather than at the foot of the sidebar: it is the one control
+          that belongs to the person rather than to whatever they are looking at, and the top right
+          is where that is looked for. */}
+      <UserDropdown
+        user={user}
+        organizationId={currentOrganizationId}
+        publicDomain={publicDomain}
+        placement="topBar"
       />
     </div>
   );

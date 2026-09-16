@@ -59,6 +59,8 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
               when there is a current workspace — a user with no workspace still gets the org settings. */}
           {data.currentWorkspace && (
             <TopControlBar
+              user={data.user}
+              publicDomain={data.publicDomain}
               currentOrganizationId={data.organization.id}
               isMultiOrgEnabled={data.isMultiOrgEnabled}
               organizationWorkspacesLimit={data.organizationWorkspacesLimit}
