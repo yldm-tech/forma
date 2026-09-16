@@ -172,7 +172,7 @@ Two details are load-bearing, both in `license-check/lib/license.ts`. The branch
 
 - All user-facing text must use the `t()` function from `react-i18next`.
 - Key naming: use lowercase with dots for nesting (e.g., `common.welcome`).
-- Translations are in `apps/web/locales/`. `en-US.json` is the source of truth.
+- Translations are in `apps/web/locales/`. `en-US.json` is the source of truth. The app ships English, Japanese and Chinese (Simplified and Traditional) — `AVAILABLE_LOCALES` in `lib/constants.ts`, the `targets` in `i18n.json`, and the files in `locales/` are the same list, and adding a language means adding it to all three. `ZUserLocale` is deliberately wider: it also types survey runtime languages, date-fns locale maps and email locales, so it is a superset of what the language picker offers rather than a mirror of it.
 - **Only ever add or edit strings in `en-US.json`.** Never hand-write, translate, or edit the other (non-English) locale files yourself — those are machine-generated from en-US by Lingo.dev.
 - After adding or changing an en-US string, run `pnpm i18n` to generate the translations for every other locale and validate keys. Lingo.dev also auto-translates from en-US on commit.
 

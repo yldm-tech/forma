@@ -220,23 +220,7 @@ export const STRIPE_API_VERSION = "2026-02-25.clover";
 export const MAX_ATTRIBUTE_CLASSES_PER_ENVIRONMENT = 150;
 
 export const DEFAULT_LOCALE = "en-US";
-export const AVAILABLE_LOCALES: TUserLocale[] = [
-  "de-DE",
-  "en-US",
-  "es-ES",
-  "fr-FR",
-  "hu-HU",
-  "ja-JP",
-  "nl-NL",
-  "pt-BR",
-  "pt-PT",
-  "ro-RO",
-  "ru-RU",
-  "sv-SE",
-  "tr-TR",
-  "zh-Hans-CN",
-  "zh-Hant-TW",
-];
+export const AVAILABLE_LOCALES: TUserLocale[] = ["en-US", "ja-JP", "zh-Hans-CN", "zh-Hant-TW"];
 
 export const PLAIN_APP_ID = env.PLAIN_APP_ID;
 export const PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID = env.PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID;
