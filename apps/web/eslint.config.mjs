@@ -53,6 +53,12 @@ const noDirectProcessEnv = [
   },
 ];
 
+// The shape a survey is read in, and the transform that turns that row into a TSurvey, are one definition each. A second copy of `selectSurvey` had grown in `modules/survey/lib/` and drifted — it was missing `archivedAt`, so a survey read through it was typed as carrying a field the query never selected. Both now live in `lib/survey/`, and this keeps a third from appearing anywhere else.
+const noDuplicateSurveyReadShape = ["selectSurvey", "transformPrismaSurvey"].map((name) => ({
+  selector: `ExportNamedDeclaration > VariableDeclaration > VariableDeclarator[id.name="${name}"]`,
+  message: `\`${name}\` is defined once, in lib/survey/. Import it instead of declaring another copy — the last duplicate drifted from the original and silently changed what a survey read returns.`,
+}));
+
 // Files that legitimately read process.env: the env modules themselves, everything that runs
 // before (or outside) the Next.js runtime the module is built for, and tests, which set up the
 // environment they exercise.
@@ -116,13 +122,20 @@ const config = [
       // Kept as a warning (not off): exhaustive-deps is the main guard against stale closures, and the
       // web lint script has no `--max-warnings 0`, so it surfaces violations without blocking.
       "react-hooks/exhaustive-deps": "warn",
-      "no-restricted-syntax": ["error", ...noDirectProcessEnv],
+      "no-restricted-syntax": ["error", ...noDirectProcessEnv, ...noDuplicateSurveyReadShape],
     },
   },
   {
     files: PROCESS_ENV_EXEMPT_FILES,
     rules: {
       "no-restricted-syntax": "off",
+    },
+  },
+  {
+    // Where the two definitions actually live. Deliberately not listing test globs: they are already exempt above, and repeating them here would switch the process.env selectors back on for every spec.
+    files: ["lib/survey/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...noDirectProcessEnv],
     },
   },
   {
