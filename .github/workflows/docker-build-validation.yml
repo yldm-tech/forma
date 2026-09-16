@@ -140,8 +140,8 @@ jobs:
           load: true
           tags: forma-test:${{ env.GITHUB_SHA }}
           secrets: |
-            database_url=${{ secrets.DUMMY_DATABASE_URL }}
-            encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY }}
+            database_url=${{ secrets.DUMMY_DATABASE_URL || 'postgresql://test:test@127.0.0.1:5432/forma' }}
+            encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
             redis_url=redis://localhost:6379
 
       - name: Verify Runtime Image Excludes npm
@@ -161,7 +161,10 @@ jobs:
         shell: bash
         env:
           GITHUB_SHA: ${{ github.sha }}
-          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY }}
+          # Falls back to the same literal the job env already carries: these are build-time
+          # placeholders by definition, and a fork without the repository secret configured would
+          # otherwise pass an empty string and fail env validation before the case under test runs.
+          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
         run: |
           set -euo pipefail
 
@@ -230,7 +233,7 @@ jobs:
         shell: bash
         env:
           GITHUB_SHA: ${{ github.sha }}
-          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY }}
+          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
         run: |
           set -euo pipefail
 
@@ -322,7 +325,7 @@ jobs:
         shell: bash
         env:
           GITHUB_SHA: ${{ github.sha }}
-          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY }}
+          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
         run: |
           set -euo pipefail
 
@@ -370,7 +373,7 @@ jobs:
         shell: bash
         env:
           GITHUB_SHA: ${{ github.sha }}
-          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY }}
+          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
         run: |
           set -euo pipefail
 
@@ -465,7 +468,7 @@ jobs:
         shell: bash
         env:
           GITHUB_SHA: ${{ github.sha }}
-          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY }}
+          DUMMY_ENCRYPTION_KEY: ${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
         run: |
           echo "🧪 Testing if the Docker image starts correctly..."
 
