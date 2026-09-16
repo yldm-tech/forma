@@ -4,6 +4,12 @@ description: "Forma Self-hosted version migration"
 icon: "arrow-right"
 ---
 
+<Warning>
+  This fork's database history is a single init baseline: upstream's 202 migrations were squashed when
+  Unify Feedback and Dashboards were removed. The upgrade paths below describe upstream releases and do
+  not apply to a database created from this fork.
+</Warning>
+
 ## v6
 
 Forma v6 replaces the legacy authorization evaluator with AuthZed SpiceDB. PostgreSQL remains the source
@@ -46,9 +52,7 @@ publication. Existing installations opt into v6 explicitly during that migration
 
 ## v5.4
 
-v5.4 carries one application-level breaking change, and it is narrow: it affects **API keys** used against
-the Feedback Records API or the MCP server. If you do not use Unify Feedback, or you only reach it through
-the UI, there is nothing to do for it. The release adds no new environment variables. It does ship
+v5.4 adds no new environment variables. It does ship
 **seven database migrations**, applied automatically during the upgrade. Six are quick — new columns and
 tables, two of them data migrations that run on their own. The seventh builds an index on the `Response`
 table, and it is the one that needs scheduling: it blocks response writes while it builds. Other
@@ -74,11 +78,9 @@ is the full list rather than a summary:
 
 | Migration | What it does | Impact |
 | --- | --- | --- |
-| `add_feedback_source_import_mode` | Adds `FeedbackSource.import_mode`, which controls whether a source's historical import includes partial responses. Existing sources take the `completedOnly` default, which aligns the historical import with the live ingestion path — that path only ever ran on finished responses, while the import used to pull partials too. Records already in Hub are left alone, so this shows up the next time you run an import: set a source to `all` if it should keep importing partial responses. | Instant |
 | `add_organization_display_time_zone` | Adds the nullable `Organization.displayTimeZone`, which formats response timestamps in file exports and in the payloads pushed to Google Sheets, Slack and Airtable (Notion is passed a raw date and is unaffected). | Instant |
 | `eng_2343_better_auth_17_resource_model` | The Better Auth 1.7 schema: the `oauthResource` tables, resource columns on OAuth tokens and consents, `alg`/`crv` on `jwks`, and `Account.issuer` with its backfill. Details in the Better Auth 1.7 section below. | Additive and fast. The issuer backfill is what keeps password sign-in working on 1.7, so it must not be skipped — it runs on its own, listed here so it is not mistaken for optional |
 | `eng_2343_backfill_oauth_resource_links` | Data migration linking existing MCP OAuth clients, refresh tokens and consents to this instance's `${WEBAPP_URL}/api/mcp` resource, so already-registered MCP clients survive the upgrade. It is a no-op only when the instance has no OAuth client at all, which in practice means a fresh install. | **Set `WEBAPP_URL` before upgrading if you use MCP OAuth.** The resource identifier is derived from it, so on an instance that has OAuth clients an unset or unparseable `WEBAPP_URL` fails this migration and stops the upgrade — set it and re-run |
-| `add_feedback_source_element_scope` | Adds `FeedbackSource.elementScope`, which controls whether a source picks up survey questions added later. Existing sources keep the current behaviour (`specific`). | Instant |
 | `add_response_survey_finished_index` | Adds an index on `Response(surveyId, finished)` so the survey list's response counts are served from the index instead of scanning the table. | **Blocks response writes while it builds — see the warning below** |
 | `repair_account_issuer` | Data migration rewriting `Account.issuer` rows that were written with a non-canonical value, which locked the affected Google SSO users into a sign-in loop. Idempotent; a no-op when nothing is wrong. | Fast |
 
@@ -197,47 +199,6 @@ security fixes that are not present in 8.1.1.
   </Tab>
 </Tabs>
 
-### Feedback Record Mutations by API Key (action required for some integrations)
-
-A feedback dataset can be assigned to more than one workspace, and the records inside it carry no workspace
-of their own. When a dataset is shared that way, a workspace-scoped permission cannot establish which
-workspace a given record belongs to. Two rules now follow from that:
-
-  feedback records in line with every other `DELETE` in the API, which has always required `manage`.
-- **A key cannot update or delete records in a shared dataset.** If a dataset is assigned to two or more
-  workspaces, an API key is refused regardless of its permission level, with a `403` explaining why.
-
-| Operation | Before | After |
-| --- | --- | --- |
-| `GET`, search, similar, count | `read` | unchanged |
-The same applies to the MCP tools `update_feedback_record` and `delete_feedback_record` when the client
-authenticates with an API key. The required MCP **scope** is unchanged — both remain `feedbackRecords:write`.
-
-<Note>
-  **Only API keys are affected.** Users signing in through the UI, OAuth/MCP connections, and SAML/OIDC
-  sessions authorize through their organization role instead, which is unchanged: organization owners and
-  managers can still update and delete feedback records, including in a shared dataset. Reading, searching
-  and creating records are unaffected for every principal.
-</Note>
-
-To find out whether any dataset on your instance is shared, and would therefore start refusing API-key
-mutations:
-
-```sql
-SELECT d.id, d.name, d."organizationId", COUNT(w."workspaceId") AS workspaces
-FROM "FeedbackDirectory" d
-JOIN "FeedbackDirectoryWorkspace" w ON w."feedbackDirectoryId" = d.id
-WHERE d."isArchived" = false
-GROUP BY d.id, d.name, d."organizationId"
-HAVING COUNT(w."workspaceId") > 1;
-```
-
-Most instances return no rows: a workspace is normally assigned a single dataset, so sharing only exists
-where an administrator deliberately assigned a second workspace. For any row that does come back, an
-integration that mutates records in that dataset has two ways forward — assign the dataset to a single
-workspace under **Settings → Organization → Datasets**, or have the integration authenticate as
-an organization owner or manager instead of with a workspace-scoped key.
-
 #### What to do before upgrading
 
 1. Run the query above. If it returns rows, decide how each affected integration should proceed.
@@ -245,7 +206,6 @@ an organization owner or manager instead of with a workspace-scoped key.
 3. After deploying, smoke test your feedback-record integrations. Two log lines identify an integration
    caught by the new rules — grep for `Feedback record mutation denied` (the MCP path, which names the
    reason) and for `Feedback records gateway authorization denied` (the REST path, which logs
-   `verdict: "deny"` alongside the `operation` and `feedbackDirectoryId`).
 
 #### Rollback
 
@@ -407,27 +367,15 @@ The new survey-scheduling feature runs on a fixed daily local time. All three ar
 - `PASSWORD_HIBP_CHECK_DISABLED` — set to `"1"` to disable the "Have I Been Pwned" breached-password
   check on sign-up and password reset (`"0"` or unset keeps it on).
 
-### Analytics (Cube)
-
-Two Cube-related deltas in v5.3. Neither changes the Cube schema, so there is **no schema refresh to run**:
-
-  chart). Cube Store is used only when you explicitly opt into external pre-aggregations — a safe default
-  for most self-hosters. Set it back to `true` only if you run external pre-aggregations.
-- **The Hub image moves to `0.8.1`.** The Helm chart pins `0.8.1`. Docker Compose instead resolves the Hub
-  image through `${HUB_IMAGE_REF:-:latest}`, so a plain `docker compose pull` fetches whatever `:latest`
-  currently is — set `HUB_IMAGE_REF=:0.8.1` in `docker/.env` before pulling for a deterministic upgrade.
-
 ### Upgrade Steps
 
 1. Back up your database.
 2. Set `TRUSTED_PROXY_HOP_COUNT` to the number of proxies in front of your instance (default `1`).
 3. Update your deployment assets to v5.3 **before** pulling images — `docker compose pull` reads your local
    Compose file, so fetch the v5.3 `docker-compose.yml` first (Helm users use the v5.3 chart). For a
-   deterministic Hub image on Compose, set `HUB_IMAGE_REF=:0.8.1` in `docker/.env`.
 4. Pull and restart (`docker compose pull && docker compose down && docker compose up -d`, or
    `helm upgrade` with the new chart / tag). Migrations apply automatically on startup.
-5. Smoke test: sign in (including 2FA), create and schedule a survey, and open the Feedback Records
-   dashboards / charts to confirm analytics render correctly.
+5. Smoke test: sign in (including 2FA), then create and schedule a survey.
 
 ### Rollback
 
@@ -503,7 +451,6 @@ None of the following is required to run v5.2. Add them only if you want the ass
 
 Hub `>= 0.8.0` can classify sentiment and emotion and translate feedback. These are **off** unless you set
 a provider and model, and they run in both the Hub API and the hub-worker, so set the variables on **both**
-services. Bump your Hub image to `>= 0.8.0` (via `HUB_IMAGE_REF`) to pick up these features.
 
 - `SENTIMENT_PROVIDER`, `SENTIMENT_MODEL`, `SENTIMENT_PROVIDER_API_KEY`
 - `EMOTIONS_PROVIDER`, `EMOTIONS_MODEL`, `EMOTIONS_PROVIDER_API_KEY`
@@ -516,15 +463,6 @@ Supported providers: `openai`, `google` (AI Studio, needs `*_PROVIDER_API_KEY`),
   A provider set **without** its required credentials crash-loops both Hub containers on startup — it does
   not degrade gracefully. Set the credentials, or leave the provider unset.
 </Warning>
-
-#### AI Taxonomy (beta)
-
-An optional standalone taxonomy service, enabled in Docker Compose with `COMPOSE_PROFILES=taxonomy`. It
-shares an internal token with Hub:
-
-  (`openai-compatible` by default; `bedrock` and `vertex-gemini` also supported)
-
-Use `COMPOSE_PROFILES=qwen,taxonomy` to back it with the bundled Qwen/vLLM service.
 
 #### Bundled Qwen / vLLM Runtime
 
@@ -564,10 +502,7 @@ deployment, review this section before starting the new version.
 
 ### What Changes In v5
 
-- **Forma Hub is now mandatory** for self-hosted Forma v5 deployments.
-- **Cube is now part of the baseline stack** alongside Hub. Docker, one-click, and Helm all bundle Cube by
-  default; `CUBEJS_API_SECRET` is required. Operators can disable the bundled Cube deployment in Helm to use
-  an external cluster instead.
+
 - **Edge rate limiting is now required** for specific public and API-key routes. Those routes are no longer
   throttled inside the application server.
 - **AI features are configured at the instance level** via `AI_*` environment variables.
@@ -586,27 +521,10 @@ Before you restart your instance on Forma v5:
 - identify your current deployment type: one-click, manual Docker Compose, or Kubernetes/Helm
 - confirm Redis/Valkey and your file storage setup are already healthy from your v4 baseline
 - identify whether file uploads use external S3-compatible storage or a legacy bundled MinIO service
-- budget approximately ~500 MB additional RAM headroom for the bundled Cube container (dashboards and analysis are part of the baseline now)
 - decide whether this instance needs optional AI features
 - verify whether you already run Envoy Gateway or another equivalent edge rate limiter for the covered routes
 
 ### Required Config And Infrastructure Changes
-
-#### Forma Hub
-
-Forma v5 expects Hub to be part of the self-hosted stack.
-
-- `HUB_API_KEY` is required
-- `HUB_API_URL` must point to the Hub service the Forma app can reach
-- `HUB_DATABASE_URL` is optional; when unset, Hub can share the same PostgreSQL database as Forma
-- bundled Docker and Helm assets run Hub database migrations automatically during startup or upgrade, and the
-  migration steps are idempotent
-
-<Note>
-  Hub-specific source code and standalone deployment assets live in the
-  [Forma Hub repository](https://github.com/yldm-tech/hub). For a normal Forma v5 upgrade, use that
-  repository as reference material only; the canonical migration steps stay in these Forma docs.
-</Note>
 
 #### Edge Rate Limiting
 
@@ -635,15 +553,6 @@ enterprise functionality.
 - Docker Compose operators can set `COMPOSE_PROFILES=qwen` to deploy the bundled Qwen/vLLM runtime
 - Keep the bundled runtime disabled when you configure Google Vertex, Azure, AWS Bedrock, or an external
   OpenAI-compatible endpoint manually
-
-#### Cube
-
-Cube is part of the baseline Forma v5 stack.
-
-- the Docker, one-click, and Helm deployments all bundle the `cube` service by default
-  generate the secret automatically for new installs
-- Helm operators who want to run an external Cube cluster can set `cube.enabled: false` and provide their
-  own endpoint via `deployment.env.CUBEJS_API_URL`
 
 ### Upgrade Steps By Deployment Type
 
@@ -703,18 +612,11 @@ Cube is part of the baseline Forma v5 stack.
     - set `POSTGRES_PASSWORD` in `forma/.env` to the exact password used by the existing PostgreSQL
       volume; do not generate a new value during the upgrade. If it contains URI-reserved characters, also set
       `POSTGRES_PASSWORD_URL_ENCODED` to its percent-encoded form
-    - add a non-empty `HUB_API_KEY` and reuse the same value wherever your deployment resolves Hub auth
-    - keep `HUB_API_URL` at `http://hub:8080` unless Hub runs elsewhere
     - include the bundled `forma-migrate`, `hub-migrate`, and `hub` services
-    - sync `forma/cube/cube.js` and `forma/cube/schema/FeedbackRecords.js` from the current
-      release and ensure `forma/.env` contains `CUBEJS_API_SECRET` (Cube is part of the baseline stack
-      in v5)
     - if your older setup still uses bundled MinIO for uploads, review that storage path separately before the
       first v5 restart; newer self-hosting updates move the bundled object-storage path to RustFS, while
       external S3-compatible storage keeps the same `S3_*` app contract
     - add any `AI_*` variables you need
-    - if you prefer to run an external Cube instance, point `CUBEJS_API_URL` at it and provide the matching
-      `CUBEJS_API_SECRET`; otherwise the bundled `cube` service runs against the local Postgres
 
     After the compose file is updated and your edge rate limiter is in place:
 
@@ -735,17 +637,11 @@ Cube is part of the baseline Forma v5 stack.
     - `POSTGRES_PASSWORD` contains the exact password used by the existing PostgreSQL volume; replacing the
       Compose file does not rotate the database password. If it contains URI-reserved characters, also set
       `POSTGRES_PASSWORD_URL_ENCODED` to its percent-encoded form
-    - `HUB_API_KEY` is configured and the same value is available wherever your deployment resolves Hub auth
-    - `HUB_API_URL` points to the Hub service the app can reach
     - the compose stack includes `forma-migrate`, `hub-migrate`, and `hub`
-    - the v5 stack also includes `cube`, `cube/cube.js`, and `cube/schema/FeedbackRecords.js`, with
-      `CUBEJS_API_SECRET` available through your `.env` or shell environment
     - if your legacy Compose file still includes bundled MinIO for uploads, treat that as a separate storage
       review when comparing files; newer bundled storage guidance uses RustFS, while external S3-compatible
       storage keeps the same `S3_*` app contract
     - any `AI_*` variables you need are set
-    - if you prefer to run an external Cube instance, point `CUBEJS_API_URL` at it and supply the matching
-      `CUBEJS_API_SECRET`; otherwise the bundled `cube` service runs against the local Postgres
 
     Then restart the stack:
 
@@ -777,8 +673,6 @@ Cube is part of the baseline Forma v5 stack.
       - `envoy.controller.enabled=false` when the cluster already has a compatible Envoy Gateway controller
     - if you use bundled Envoy rate limiting, enable a dedicated backend with `envoyRedis.enabled=true`
     - if you already have an equivalent edge rate limiter outside the chart, keep that protection in place
-    - `CUBEJS_API_SECRET` is provided (Cube is bundled by default at `cube.enabled: true`; set to `false`
-      and point `CUBEJS_API_URL` at your own endpoint if you prefer an external Cube cluster)
   </Tab>
 </Tabs>
 
@@ -791,21 +685,17 @@ After the upgrade:
 - verify any Hub-backed connector or feedback flows you use
 - verify covered routes are rate-limited at the edge layer
 - verify AI features only if you configured the required `AI_*` variables
-- verify dashboards and analysis flows against the bundled (or external) Cube endpoint
 
 ### Troubleshooting And Rollback
 
 Common upgrade issues:
 
-- **Missing `HUB_API_KEY`**: Forma cannot authenticate to Hub, and Hub itself may fail to start
-- **Bad `HUB_API_URL`**: the app starts, but Hub-backed features fail because the service cannot be reached
 - **No edge rate limiter in front of covered routes**: the v5 deployment runs, but those routes are no longer
   protected by the legacy in-app limiter
 - **Missing AI provider configuration**: AI features remain unavailable until `AI_PROVIDER`, `AI_MODEL`, and the
   matching provider settings are set correctly
   at boot, or — if env vars are present but Cube is unreachable — dashboards and analysis queries fail
   while the rest of the app stays healthy
-- **Cube healthcheck fails with `wget: not found`**: older v5 Docker Compose files used `wget` for the
   bundled Cube healthcheck, but `cubejs/cube:v1.6.6` does not include it. Sync the Cube healthcheck from the
   current Docker Compose file so it checks `/readyz` with Node instead.
 
