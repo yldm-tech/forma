@@ -145,7 +145,16 @@ export const selectSurvey = {
     },
   },
   segment: {
-    include: {
+    // Explicit rather than `include`: it lists every Segment scalar, so the shape is unchanged today, and a column added later does not start flowing into every survey read by accident.
+    select: {
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      workspaceId: true,
+      title: true,
+      description: true,
+      isPrivate: true,
+      filters: true,
       surveys: {
         select: {
           id: true,

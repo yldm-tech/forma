@@ -1,32 +1,8 @@
 import "server-only";
 import { Prisma } from "@forma/database/prisma";
-import { TJsWorkspaceStateSurvey } from "@forma/types/js";
-import { TSegment } from "@forma/types/segment";
 import { TSurvey, TSurveyFilterCriteria } from "@forma/types/surveys/types";
-import { withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
 
-export const transformPrismaSurvey = <T extends TSurvey | TJsWorkspaceStateSurvey>(surveyPrisma: any): T => {
-  let segment: TSegment | null = null;
-
-  if (surveyPrisma.segment) {
-    segment = {
-      ...surveyPrisma.segment,
-      surveys: surveyPrisma.segment.surveys.map((survey: { id: string }) => survey.id),
-    };
-  }
-
-  const transformedSurvey = {
-    // ENG-1837: swaps the raw `embeddedDataLinks` relation for the inlined `embeddedFields` the read
-    // seam consumes, so the Prisma relation shape never leaks onto TSurvey. A no-op for surveys read
-    // through a select without the join — those fall back to their legacy columns in the accessor.
-    ...withInlinedEmbeddedFields(surveyPrisma),
-    displayPercentage: Number(surveyPrisma.displayPercentage) || null,
-    segment,
-    customHeadScriptsMode: surveyPrisma.customHeadScriptsMode,
-  } as T;
-
-  return transformedSurvey;
-};
+export { transformPrismaSurvey } from "@/lib/survey/utils";
 
 // Status + archived (soft-delete) handling.
 // Archived surveys (archivedAt not null) are hidden by default. The "Archived" filter sets

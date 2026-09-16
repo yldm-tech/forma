@@ -1,109 +1,13 @@
+// `selectSurvey` and `transformPrismaSurvey` live in `lib/survey`: they describe how a survey is read, and a second copy here had already drifted — this one was missing `archivedAt`.
 import { cache as reactCache } from "react";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { TOrganizationBilling } from "@forma/types/organizations";
 import { TSurvey } from "@forma/types/surveys/types";
-import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
+import { selectSurvey } from "@/lib/survey/service";
 import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
 import { transformPrismaSurvey } from "@/modules/survey/lib/utils";
-
-export const selectSurvey = {
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  name: true,
-  type: true,
-  workspaceId: true,
-  createdBy: true,
-  status: true,
-  welcomeCard: true,
-  questions: true,
-  blocks: true,
-  endings: true,
-  hiddenFields: true,
-  variables: true,
-  displayOption: true,
-  recontactDays: true,
-  displayLimit: true,
-  autoClose: true,
-  delay: true,
-  displayPercentage: true,
-  autoComplete: true,
-  publishOn: true,
-  closeOn: true,
-  isVerifyEmailEnabled: true,
-  isCaptureIpEnabled: true,
-  isAnonymizeResponsesEnabled: true,
-  redirectUrl: true,
-  workspaceOverwrites: true,
-  styling: true,
-  surveyClosedMessage: true,
-  singleUse: true,
-  pin: true,
-  showLanguageSwitch: true,
-  recaptcha: true,
-  isBackButtonHidden: true,
-  isAutoProgressingEnabled: true,
-  metadata: true,
-  slug: true,
-  customHeadScripts: true,
-  customHeadScriptsMode: true,
-  languages: {
-    select: {
-      default: true,
-      enabled: true,
-      language: {
-        select: {
-          id: true,
-          createdAt: true,
-          updatedAt: true,
-          code: true,
-          workspaceId: true,
-          alias: true,
-        },
-      },
-    },
-  },
-  triggers: {
-    select: {
-      actionClass: {
-        select: {
-          id: true,
-          createdAt: true,
-          updatedAt: true,
-          workspaceId: true,
-          name: true,
-          description: true,
-          type: true,
-          key: true,
-          noCodeConfig: true,
-        },
-      },
-    },
-  },
-  segment: {
-    select: {
-      id: true,
-      createdAt: true,
-      updatedAt: true,
-      workspaceId: true,
-      title: true,
-      description: true,
-      isPrivate: true,
-      filters: true,
-      surveys: {
-        select: {
-          id: true,
-        },
-      },
-    },
-  },
-  followUps: true,
-  // ENG-1837: the definitions every reader resolves through, joined and inlined by
-  // `transformPrismaSurvey`. Read-only — the rows are written by `reconcileEmbeddedData`.
-  embeddedDataLinks: selectSurveyEmbeddedDataLinks,
-} satisfies Prisma.SurveySelect;
 
 export const getOrganizationBilling = reactCache(
   async (organizationId: string): Promise<TOrganizationBilling> => {
