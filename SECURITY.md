@@ -1,7 +1,7 @@
 # Security Policy of Forma
 
 This is the Forma security policy. Please report vulnerabilities
-privately via <security@forma.ylam.ai> rather than in public.
+privately via <security@ylam.ai> rather than in public.
 
 ## Introduction
 
@@ -53,7 +53,7 @@ In the interest of responsibly managing vulnerabilities, please adhere to the fo
 > Do not reveal the problem to others until it has been resolved.
 
 1. **Send a Detailed Report**:
-   - Send an email to [security@forma.ylam.ai](mailto:security@forma.ylam.ai).
+   - Send an email to [security@ylam.ai](mailto:security@ylam.ai).
    - Please do not open a GitHub issue for a vulnerability. The issue tracker is public, so filing there discloses the problem before a fix exists — which is what the line above asks you to avoid.
    - Include:
      - Problem description.

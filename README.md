@@ -75,7 +75,7 @@ the setup guides, and `docker/docker-compose.yml` for the production Compose sta
 
 ## Security
 
-Report vulnerabilities to security@forma.ylam.ai rather than opening a public issue. See
+Report vulnerabilities to security@ylam.ai rather than opening a public issue. See
 [`SECURITY.md`](./SECURITY.md).
 
 ## License
