@@ -80,7 +80,12 @@ export const UserDropdown = ({
                   className="ph-no-capture -mb-0.5 truncate text-sm font-bold text-slate-700">
                   {user?.name ? <span>{user?.name}</span> : <span>{user?.email}</span>}
                 </p>
-                <p className="text-sm text-slate-500">{t("common.account")}</p>
+                {/* The address, not the word "Account". Which account you are signed in as is the
+                    question this row answers, and the label restating its own type answered nothing.
+                    Falls back to the type when the name line is already showing the address. */}
+                <p className="ph-no-capture truncate text-sm text-slate-500">
+                  {user?.name && user?.email ? user.email : t("common.account")}
+                </p>
               </div>
               <ChevronRightIcon className="size-4 shrink-0 text-slate-600" strokeWidth={1.5} />
             </>
