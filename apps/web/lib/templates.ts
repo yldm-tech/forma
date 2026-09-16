@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TTemplate } from "@forma/types/templates";
+import { createI18nString } from "@/lib/i18n/utils";
 import {
   buildBlock,
   buildCTAElement,
@@ -15,9 +16,8 @@ import {
   buildRatingElement,
   createBlockChoiceJumpLogic,
   createBlockJumpLogic,
-} from "@/app/lib/survey-block-builder";
-import { buildSurvey, getDefaultSurveyPreset, hiddenFieldsDefault } from "@/app/lib/survey-builder";
-import { createI18nString } from "@/lib/i18n/utils";
+} from "@/lib/survey-block-builder";
+import { buildSurvey, getDefaultSurveyPreset, hiddenFieldsDefault } from "@/lib/survey-builder";
 
 export const CUSTOM_SURVEY_TEMPLATE_ID = "custom";
 

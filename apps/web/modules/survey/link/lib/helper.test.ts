@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { validateSurveySingleUseId } from "@/app/lib/singleUseSurveys";
 import { verifyTokenForLinkSurvey } from "@/lib/jwt";
+import { validateSurveySingleUseId } from "@/lib/singleUseSurveys";
 import { validateSurveySingleUseLinkParams } from "@/lib/utils/single-use-surveys";
 import { checkAndValidateSingleUseId, getEmailVerificationDetails } from "./helper";
 
@@ -10,7 +10,7 @@ vi.mock("@/lib/jwt", () => ({
   verifyTokenForLinkSurvey: vi.fn(),
 }));
 
-vi.mock("@/app/lib/singleUseSurveys", () => ({
+vi.mock("@/lib/singleUseSurveys", () => ({
   validateSurveySingleUseId: vi.fn(),
 }));
 vi.mock("@/lib/utils/single-use-surveys", () => ({

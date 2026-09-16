@@ -1,5 +1,5 @@
-import { responses } from "@/app/lib/api/response";
-import { TApiV1Authentication } from "@/app/lib/api/with-api-logging";
+import { responses } from "@/lib/api/response";
+import { TApiV1Authentication } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 
 export const checkAuth = async (authentication: TApiV1Authentication | undefined, workspaceId: string) => {

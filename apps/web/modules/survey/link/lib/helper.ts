@@ -1,6 +1,6 @@
 import "server-only";
-import { validateSurveySingleUseId } from "@/app/lib/singleUseSurveys";
 import { verifyTokenForLinkSurvey } from "@/lib/jwt";
+import { validateSurveySingleUseId } from "@/lib/singleUseSurveys";
 import { validateSurveySingleUseLinkParams } from "@/lib/utils/single-use-surveys";
 
 interface emailVerificationDetails {

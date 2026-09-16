@@ -4,8 +4,8 @@ import { PlusCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Workspace } from "@forma/database/prisma-browser";
 import { TTemplate } from "@forma/types/templates";
-import { customSurveyTemplate } from "@/app/lib/templates";
 import { cn } from "@/lib/cn";
+import { customSurveyTemplate } from "@/lib/templates";
 import { replacePresetPlaceholders } from "@/lib/utils/templates";
 import { Button } from "@/modules/ui/components/button";
 

@@ -1,8 +1,8 @@
 import { ZodRawShape, z } from "zod";
 import { logger } from "@forma/logger";
 import { TAuthenticationApiKey } from "@forma/types/auth";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { TApiAuditLog } from "@/app/lib/api/with-api-logging";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { TApiAuditLog } from "@/lib/api/with-api-logging";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { formatZodError, handleApiError } from "@/modules/api/v2/lib/utils";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";

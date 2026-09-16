@@ -2,8 +2,8 @@ import { logger } from "@forma/logger";
 import { ZId } from "@forma/types/common";
 import { ResourceNotFoundError } from "@forma/types/errors";
 import { getWorkspaceState } from "@/app/api/v1/client/[workspaceId]/environment/lib/environmentState";
-import { responses } from "@/app/lib/api/response";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { responses } from "@/lib/api/response";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 
 export const OPTIONS = async (): Promise<Response> => {

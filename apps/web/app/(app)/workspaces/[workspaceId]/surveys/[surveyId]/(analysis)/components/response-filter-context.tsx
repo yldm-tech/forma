@@ -6,7 +6,7 @@ import {
   ElementOptions,
 } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/ElementsComboBox";
 import { ElementFilterOptions } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/ResponseFilter";
-import { getTodayDate } from "@/app/lib/surveys/surveys";
+import { getTodayDate } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { type TDateRangePreset } from "@/lib/date-ranges";
 
 export interface FilterValue {

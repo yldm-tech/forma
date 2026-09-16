@@ -1,6 +1,7 @@
 import { TFunction } from "i18next";
 import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { type TSurvey, type TSurveyStyling } from "@forma/types/surveys/types";
+import { createI18nString } from "@/lib/i18n/utils";
 import {
   buildBlock,
   buildCTAElement,
@@ -9,8 +10,7 @@ import {
   buildNPSElement,
   buildOpenTextElement,
   buildRatingElement,
-} from "@/app/lib/survey-block-builder";
-import { createI18nString } from "@/lib/i18n/utils";
+} from "@/lib/survey-block-builder";
 
 const fixtureT = ((key: string) => key) as TFunction;
 

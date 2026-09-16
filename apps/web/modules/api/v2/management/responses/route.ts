@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { sendToPipeline } from "@/app/lib/pipelines";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
+import { sendToPipeline } from "@/lib/pipelines";
 import { applyAnonymizePolicy } from "@/lib/response/anonymize";
 import { getWorkspaceLegacyStoragePrefixes } from "@/lib/workspace/service";
 import { formatValidationErrorsForV2Api, validateResponseData } from "@/modules/api/lib/validation";

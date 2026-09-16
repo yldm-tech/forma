@@ -1,7 +1,7 @@
 import { logger } from "@forma/logger";
 import { TIntegrationNotionInput } from "@forma/types/integration/notion";
-import { responses } from "@/app/lib/api/response";
-import { withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { responses } from "@/lib/api/response";
+import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import {
   ENCRYPTION_KEY,
   NOTION_OAUTH_CLIENT_ID,

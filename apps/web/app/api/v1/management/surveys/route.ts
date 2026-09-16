@@ -6,22 +6,22 @@ import {
   addLegacyProjectOverwrites,
   addLegacyProjectOverwritesToList,
   normaliseProjectOverwritesToWorkspace,
-} from "@/app/lib/api/api-backwards-compat";
-import { handleApiError } from "@/app/lib/api/handle-api-error";
+} from "@/lib/api/api-backwards-compat";
+import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   addLegacyEnvironmentIdBestEffort,
   addLegacyEnvironmentIdToList,
-} from "@/app/lib/api/legacy-environment-id";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
+} from "@/lib/api/legacy-environment-id";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
 import {
   transformQuestionsToBlocks,
   validateSurveyInput,
   withDerivedQuestions,
   withoutInternalSurveyProjections,
-} from "@/app/lib/api/survey-transformation";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+} from "@/lib/api/survey-transformation";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";

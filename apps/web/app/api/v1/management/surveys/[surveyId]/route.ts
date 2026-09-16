@@ -2,27 +2,24 @@ import { logger } from "@forma/logger";
 import { TAuthenticationApiKey } from "@forma/types/auth";
 import { ResourceNotFoundError } from "@forma/types/errors";
 import { ZSurveyUpdateInput } from "@forma/types/surveys/types";
-import { handleErrorResponse } from "@/app/api/v1/auth";
 import { deleteSurvey } from "@/app/api/v1/management/surveys/[surveyId]/lib/surveys";
 import { checkFeaturePermissions } from "@/app/api/v1/management/surveys/lib/utils";
 import {
   addLegacyProjectOverwrites,
   normaliseProjectOverwritesToWorkspace,
-} from "@/app/lib/api/api-backwards-compat";
-import {
-  addLegacyEnvironmentId,
-  addLegacyEnvironmentIdBestEffort,
-} from "@/app/lib/api/legacy-environment-id";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
+} from "@/lib/api/api-backwards-compat";
+import { handleErrorResponse } from "@/lib/api/auth";
+import { addLegacyEnvironmentId, addLegacyEnvironmentIdBestEffort } from "@/lib/api/legacy-environment-id";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
 import {
   transformQuestionsToBlocks,
   validateSurveyInput,
   withDerivedQuestions,
   withoutInternalSurveyProjections,
-} from "@/app/lib/api/survey-transformation";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+} from "@/lib/api/survey-transformation";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";

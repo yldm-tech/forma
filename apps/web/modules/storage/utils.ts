@@ -8,7 +8,7 @@ import {
   ZAllowedFileExtension,
 } from "@forma/types/storage";
 import { TSurveyBlock } from "@forma/types/surveys/blocks";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { type TFileUploadCandidate, getSurveyFileUploadConfigs } from "./survey-file-upload-elements";

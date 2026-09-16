@@ -32,11 +32,11 @@ vi.mock("@/app/api/v2/client/[workspaceId]/responses/lib/utils", () => ({
   checkSurveyValidity: mocks.checkSurveyValidity,
 }));
 
-vi.mock("@/app/lib/api/api-error-reporter", () => ({
+vi.mock("@/lib/api/api-error-reporter", () => ({
   reportApiError: mocks.reportApiError,
 }));
 
-vi.mock("@/app/lib/pipelines", () => ({
+vi.mock("@/lib/pipelines", () => ({
   sendToPipeline: mocks.sendToPipeline,
 }));
 

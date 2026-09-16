@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
   verifyResponseRecaptcha: vi.fn(),
 }));
 
-vi.mock("@/app/lib/api/with-api-logging", () => ({
+vi.mock("@/lib/api/with-api-logging", () => ({
   withV1ApiWrapper: ({ handler }: { handler: unknown }) => handler,
 }));
 
@@ -38,7 +38,7 @@ vi.mock("@/app/api/client/[workspaceId]/responses/lib/single-use", () => ({
   validateSingleUseResponseInput: mocks.validateSingleUseResponseInput,
 }));
 
-vi.mock("@/app/lib/pipelines", () => ({
+vi.mock("@/lib/pipelines", () => ({
   sendToPipeline: mocks.sendToPipeline,
 }));
 

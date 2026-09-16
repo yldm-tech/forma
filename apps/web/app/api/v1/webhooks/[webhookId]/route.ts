@@ -1,11 +1,8 @@
 import { logger } from "@forma/logger";
 import { deleteWebhook, getWebhook } from "@/app/api/v1/webhooks/[webhookId]/lib/webhook";
-import {
-  addLegacyEnvironmentId,
-  addLegacyEnvironmentIdBestEffort,
-} from "@/app/lib/api/legacy-environment-id";
-import { responses } from "@/app/lib/api/response";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { addLegacyEnvironmentId, addLegacyEnvironmentIdBestEffort } from "@/lib/api/legacy-environment-id";
+import { responses } from "@/lib/api/response";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 

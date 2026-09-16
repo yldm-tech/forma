@@ -13,7 +13,7 @@ import { getResponsesAction } from "@/app/(app)/workspaces/[workspaceId]/surveys
 import { useResponseFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/response-filter-context";
 import { ResponseDataView } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/responses/components/ResponseDataView";
 import { CustomFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/CustomFilter";
-import { getFormattedFilters } from "@/app/lib/surveys/surveys";
+import { getFormattedFilters } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";
 

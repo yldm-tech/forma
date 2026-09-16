@@ -1,7 +1,7 @@
 import "server-only";
 import { TResponseData } from "@forma/types/responses";
 import { TSurvey } from "@forma/types/surveys/types";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { verifyTokenForLinkSurvey } from "@/lib/jwt";
 
 export const VERIFIED_EMAIL_RESPONSE_KEY = "verifiedEmail";

@@ -6,7 +6,7 @@ import { getOrganizationBillingByWorkspaceId } from "@/app/api/v2/client/[worksp
 import { verifyRecaptchaToken } from "@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha";
 import { checkSurveyValidity } from "@/app/api/v2/client/[workspaceId]/responses/lib/utils";
 import { TResponseInputV2 } from "@/app/api/v2/client/[workspaceId]/responses/types/response";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { symmetricDecrypt } from "@/lib/crypto";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { generateSurveySingleUseSignature } from "@/lib/utils/single-use-surveys";
@@ -22,7 +22,7 @@ vi.mock("@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha", () => ({
   verifyRecaptchaToken: vi.fn(),
 }));
 
-vi.mock("@/app/lib/api/response", () => ({
+vi.mock("@/lib/api/response", () => ({
   responses: {
     badRequestResponse: vi.fn((message) => new Response(message, { status: 400 })),
     notFoundResponse: vi.fn((message) => new Response(message, { status: 404 })),

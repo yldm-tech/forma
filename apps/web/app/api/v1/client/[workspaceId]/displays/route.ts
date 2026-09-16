@@ -1,10 +1,10 @@
 import { ZDisplayCreateInput } from "@forma/types/displays";
 import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
-import { handleApiError } from "@/app/lib/api/handle-api-error";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { handleApiError } from "@/lib/api/handle-api-error";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";

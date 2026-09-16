@@ -1,5 +1,5 @@
 import { ResourceNotFoundError, isExpectedError } from "@forma/types/errors";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 
 /**
  * Fixed, client-facing message returned for any unexpected or server-side (5xx) error.

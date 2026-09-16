@@ -5,7 +5,7 @@ import { TJsWorkspaceState } from "@forma/types/js";
 import {
   addLegacyProjectOverwritesToList,
   addLegacyProjectToEnvironmentState,
-} from "@/app/lib/api/api-backwards-compat";
+} from "@/lib/api/api-backwards-compat";
 import { cache } from "@/lib/cache";
 import { IS_RECAPTCHA_CONFIGURED, POSTHOG_KEY, RECAPTCHA_SITE_KEY } from "@/lib/constants";
 import { capturePostHogEvent } from "@/lib/posthog";

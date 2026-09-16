@@ -1,6 +1,6 @@
-import { handleErrorResponse } from "@/app/api/v1/auth";
-import { responses } from "@/app/lib/api/response";
-import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { handleErrorResponse } from "@/lib/api/auth";
+import { responses } from "@/lib/api/response";
+import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";

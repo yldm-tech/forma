@@ -1,9 +1,9 @@
 import { logger } from "@forma/logger";
-import { handleErrorResponse } from "@/app/api/v1/auth";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+import { handleErrorResponse } from "@/lib/api/auth";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 import { CONTACTS_API_V1_NOT_ENABLED_MESSAGE } from "@/modules/ee/contacts/lib/contacts-entitlement";

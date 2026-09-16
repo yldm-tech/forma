@@ -1,5 +1,5 @@
 import type { OAuthTokenReq } from "@boxyhq/saml-jackson";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import jackson from "@/modules/ee/auth/saml/lib/jackson";
 
 export const POST = async (req: Request) => {

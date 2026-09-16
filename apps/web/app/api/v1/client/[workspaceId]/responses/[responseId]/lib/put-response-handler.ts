@@ -3,10 +3,10 @@ import { RESPONSE_ALREADY_FINISHED_ERROR_CODE, ResourceNotFoundError } from "@fo
 import { TResponse, TResponseUpdateInput } from "@forma/types/responses";
 import { TSurveyElement } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
-import { type ApiErrorResult, handleApiError } from "@/app/lib/api/handle-api-error";
-import { responses } from "@/app/lib/api/response";
-import { THandlerParams } from "@/app/lib/api/with-api-logging";
-import { sendToPipeline } from "@/app/lib/pipelines";
+import { type ApiErrorResult, handleApiError } from "@/lib/api/handle-api-error";
+import { responses } from "@/lib/api/response";
+import { THandlerParams } from "@/lib/api/with-api-logging";
+import { sendToPipeline } from "@/lib/pipelines";
 import { applyIngestContractToResponseData } from "@/lib/response/ingest";
 import { getResponse } from "@/lib/response/service";
 import { getSurvey } from "@/lib/survey/service";

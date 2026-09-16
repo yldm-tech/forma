@@ -1,15 +1,15 @@
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { createWebhook, getWebhooks } from "@/app/api/v1/webhooks/lib/webhook";
 import { ZWebhookInput } from "@/app/api/v1/webhooks/types/webhooks";
-import { handleApiError } from "@/app/lib/api/handle-api-error";
+import { handleApiError } from "@/lib/api/handle-api-error";
 import {
   addLegacyEnvironmentIdBestEffort,
   addLegacyEnvironmentIdToList,
-} from "@/app/lib/api/legacy-environment-id";
-import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/app/lib/api/request-body";
-import { responses } from "@/app/lib/api/response";
-import { transformErrorToDetails } from "@/app/lib/api/validator";
-import { THandlerParams, withV1ApiWrapper } from "@/app/lib/api/with-api-logging";
+} from "@/lib/api/legacy-environment-id";
+import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
+import { responses } from "@/lib/api/response";
+import { transformErrorToDetails } from "@/lib/api/validator";
+import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
 

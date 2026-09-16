@@ -3,7 +3,7 @@ import { logger } from "@forma/logger";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getOrganizationBillingByWorkspaceId } from "@/app/api/v2/client/[workspaceId]/responses/lib/organization";
 import { verifyRecaptchaToken } from "@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
 

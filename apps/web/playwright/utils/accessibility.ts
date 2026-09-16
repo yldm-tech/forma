@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { type TSurveyEnding } from "@forma/types/surveys/types";
-import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
+import { transformQuestionsToBlocks } from "@/lib/api/survey-transformation";
 import { type UsersFixture } from "../fixtures/users";
 
 // The transform's own (legacy v1) question input type, derived from its signature so

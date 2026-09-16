@@ -1,7 +1,7 @@
 import { logger } from "@forma/logger";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TResponseInputV2 } from "@/app/api/v2/client/[workspaceId]/responses/types/response";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 import { symmetricDecrypt } from "@/lib/crypto";
 import { validateSurveySingleUseLinkParams } from "@/lib/utils/single-use-surveys";

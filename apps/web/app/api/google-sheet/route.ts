@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { NextRequest } from "next/server";
 import { logger } from "@forma/logger";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import {
   GOOGLE_SHEETS_CLIENT_ID,
   GOOGLE_SHEETS_CLIENT_SECRET,

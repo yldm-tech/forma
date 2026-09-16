@@ -8,7 +8,7 @@ import {
   TActionClassInputCode,
   ZActionClassInput,
 } from "@forma/types/action-classes";
-import { isValidCssSelector } from "@/app/lib/actionClass/actionClass";
+import { isValidCssSelector } from "@/lib/actionClass/actionClass";
 
 /**
  * Extract action class keys from code-type action classes

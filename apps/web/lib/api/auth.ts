@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { TAuthenticationApiKey } from "@forma/types/auth";
-import { type ApiErrorResult, handleApiError } from "@/app/lib/api/handle-api-error";
-import { responses } from "@/app/lib/api/response";
+import { type ApiErrorResult, handleApiError } from "@/lib/api/handle-api-error";
+import { responses } from "@/lib/api/response";
 import {
   type AuthenticateApiKeyOptions,
   authenticateApiKeyFromHeaders,

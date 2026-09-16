@@ -13,7 +13,7 @@ import {
   listV3Surveys,
   validateV3SurveyFromRawInput,
 } from "@/app/api/v3/surveys/lib/operations";
-import { DEFAULT_REQUEST_BODY_LIMIT_BYTES } from "@/app/lib/api/request-body";
+import { DEFAULT_REQUEST_BODY_LIMIT_BYTES } from "@/lib/api/request-body";
 import { authenticateApiKeyFromHeaders } from "@/modules/api/lib/api-key-auth";
 import { applyIPRateLimit, applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { POST } from "./route";

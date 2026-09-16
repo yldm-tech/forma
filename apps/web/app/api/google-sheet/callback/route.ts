@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { logger } from "@forma/logger";
 import { TIntegrationGoogleSheetsConfig } from "@forma/types/integration/google-sheet";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import {
   GOOGLE_SHEETS_CLIENT_ID,
   GOOGLE_SHEETS_CLIENT_SECRET,

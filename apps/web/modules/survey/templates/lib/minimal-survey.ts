@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
 import { TSurvey } from "@forma/types/surveys/types";
-import { getDefaultEndingCard, getDefaultWelcomeCard } from "@/app/lib/survey-builder";
+import { getDefaultEndingCard, getDefaultWelcomeCard } from "@/lib/survey-builder";
 
 export const getMinimalSurvey = (t: TFunction): TSurvey => ({
   id: "someUniqueId1",

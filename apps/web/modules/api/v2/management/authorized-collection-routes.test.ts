@@ -16,7 +16,7 @@ const { mockAuthenticatedApiClient, mockSuccessResponse } = vi.hoisted(() => ({
 vi.mock("@/modules/api/v2/auth/authenticated-api-client", () => ({
   authenticatedApiClient: mockAuthenticatedApiClient,
 }));
-vi.mock("@/app/lib/pipelines", () => ({ sendToPipeline: vi.fn() }));
+vi.mock("@/lib/pipelines", () => ({ sendToPipeline: vi.fn() }));
 vi.mock("@/lib/authorization", () => ({ can: vi.fn() }));
 vi.mock("@/lib/authorization/permission-action", () => ({
   getWorkspaceAuthorizationActionForMethod: vi.fn(),

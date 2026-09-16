@@ -1,6 +1,6 @@
 import type { OAuthReq } from "@boxyhq/saml-jackson";
 import { NextRequest, NextResponse } from "next/server";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import jackson from "@/modules/ee/auth/saml/lib/jackson";
 import { getIsSamlSsoEnabled } from "@/modules/ee/license-check/lib/utils";
 

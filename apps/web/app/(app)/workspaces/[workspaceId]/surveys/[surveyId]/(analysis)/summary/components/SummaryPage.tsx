@@ -16,7 +16,7 @@ import ScrollToTop from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]
 import { SummaryDropOffs } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SummaryDropOffs";
 import { SummaryImpressions } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SummaryImpressions";
 import { CustomFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/CustomFilter";
-import { getFormattedFilters } from "@/app/lib/surveys/surveys";
+import { getFormattedFilters } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";
 import { QuotasSummary } from "@/modules/ee/quotas/components/quotas-summary";

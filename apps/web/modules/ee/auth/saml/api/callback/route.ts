@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { responses } from "@/app/lib/api/response";
+import { responses } from "@/lib/api/response";
 import jackson from "@/modules/ee/auth/saml/lib/jackson";
 
 interface SAMLCallbackBody {

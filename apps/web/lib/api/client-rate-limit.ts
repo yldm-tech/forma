@@ -1,6 +1,6 @@
 import { TooManyRequestsError } from "@forma/types/errors";
-import { reportApiError } from "@/app/lib/api/api-error-reporter";
-import { responses } from "@/app/lib/api/response";
+import { reportApiError } from "@/lib/api/api-error-reporter";
+import { responses } from "@/lib/api/response";
 
 const rateLimitMessage = "Maximum number of requests reached. Please try again later.";
 const unexpectedErrorMessage = "Something went wrong. Please try again.";

@@ -17,7 +17,7 @@ import {
   ValidationError,
   isExpectedError,
 } from "@forma/types/errors";
-import { RequestBodyTooLargeError } from "@/app/lib/api/request-body";
+import { RequestBodyTooLargeError } from "@/lib/api/request-body";
 import { getSession } from "@/modules/auth/lib/session";
 
 // Mock Sentry

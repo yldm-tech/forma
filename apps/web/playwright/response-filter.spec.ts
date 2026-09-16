@@ -3,7 +3,7 @@ import { type Page, expect } from "@playwright/test";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { type TSurveyEnding } from "@forma/types/surveys/types";
-import { transformQuestionsToBlocks } from "@/app/lib/api/survey-transformation";
+import { transformQuestionsToBlocks } from "@/lib/api/survey-transformation";
 import { test } from "./lib/fixtures";
 
 /**
