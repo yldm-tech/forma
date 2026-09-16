@@ -159,6 +159,7 @@ const loadDueTransitionCandidates = async (
 ): Promise<TSurveySchedulingCandidate[]> => {
   const { currentStatus, dueField } = getTransitionConfig(transition);
 
+  // tenant-scope-exempt: background scheduler sweeping every due survey; a tenant filter would leave the rest unprocessed
   return await prisma.survey.findMany({
     orderBy: [
       {

@@ -61,6 +61,7 @@ export const accountDeletionBeforeDelete: NonNullable<DeleteUserConfig["beforeDe
   for (const organization of soleOwnerOrganizations) {
     await deleteOrganization(organization.id);
   }
+  // tenant-scope-exempt: invites this user created, scoped by creatorId; deleting an account must clear them everywhere
   await prisma.invite.deleteMany({ where: { creatorId: user.id } });
 };
 

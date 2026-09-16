@@ -92,6 +92,7 @@ const validateV2ApiKey = async (v2Parsed: { secret: string }): Promise<ApiKeyDat
 
 const validateLegacyApiKey = async (apiKey: string): Promise<ApiKeyData | null> => {
   const hashedKey = hashSha256(apiKey);
+  // tenant-scope-exempt: resolves a key to its owner, so it cannot be scoped by the tenant it is about to establish
   const result = await prisma.apiKey.findFirst({
     where: { hashedKey },
     select: apiKeySelect,

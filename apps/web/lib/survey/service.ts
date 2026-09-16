@@ -233,6 +233,7 @@ export const getSurveysByActionClassId = reactCache(
 
     let surveysPrisma;
     try {
+      // tenant-scope-exempt: scoped through the action class, which is itself workspace-scoped; the caller must own that id
       surveysPrisma = await prisma.survey.findMany({
         where: {
           triggers: {
@@ -1107,6 +1108,7 @@ export const loadNewSegmentInSurvey = async (surveyId: string, newSegmentId: str
 
 export const getSurveysBySegmentId = reactCache(async (segmentId: string): Promise<TSurvey[]> => {
   try {
+    // tenant-scope-exempt: scoped through the segment, which is itself workspace-scoped; the caller must own that id
     const surveysPrisma = await prisma.survey.findMany({
       where: { segmentId },
       select: selectSurvey,

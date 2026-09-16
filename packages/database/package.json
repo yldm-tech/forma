@@ -68,7 +68,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "create-migration": "dotenv -e ../../.env -- tsx ./src/scripts/create-migration.ts"
+    "create-migration": "dotenv -e ../../.env -- tsx ./src/scripts/create-migration.ts",
+    "check:tenant-scoping": "tsx ./src/scripts/check-tenant-scoping.ts"
   },
   "dependencies": {
     "@forma/i18n-utils": "workspace:*",

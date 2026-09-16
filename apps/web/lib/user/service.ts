@@ -117,6 +117,7 @@ export const deleteUser = async (id: string): Promise<TUser> => {
       await deleteOrganization(organization.id);
     }
 
+    // tenant-scope-exempt: invites this user created, scoped by creatorId; deleting an account must clear them everywhere
     await prisma.invite.deleteMany({ where: { creatorId: id } });
 
     const deletedUser = await deleteUserById(id);

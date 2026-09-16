@@ -35,6 +35,7 @@ const setCompleteNotificationSettings = (
 };
 
 const getMemberships = async (userId: string): Promise<Membership[]> => {
+  // tenant-scope-exempt: the caller's own memberships, scoped by userId — the point is to span their organizations
   const memberships = await prisma.membership.findMany({
     where: {
       userId,
