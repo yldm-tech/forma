@@ -36,8 +36,7 @@ export class V3SurveyReferenceValidationError extends Error {
 }
 
 export type TV3SurveyReferenceValidationResult =
-  | { ok: true; invalidParams: [] }
-  | { ok: false; invalidParams: InvalidParam[] };
+  { ok: true; invalidParams: [] } | { ok: false; invalidParams: InvalidParam[] };
 
 function addDuplicateIdIssues(
   entries: { id: string; path: string }[],

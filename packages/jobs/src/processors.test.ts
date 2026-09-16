@@ -252,8 +252,7 @@ describe("@forma/jobs processor registry", () => {
     expect(overrideHandler).toHaveBeenCalledTimes(1);
 
     const firstCall = overrideHandler.mock.calls[0] as
-      | [TResponsePipelineJobData, JobExecutionContext]
-      | undefined;
+      [TResponsePipelineJobData, JobExecutionContext] | undefined;
 
     expect(firstCall).toBeDefined();
     if (!firstCall) {

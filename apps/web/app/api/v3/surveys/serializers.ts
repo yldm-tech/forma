@@ -36,12 +36,7 @@ export type TV3SurveyListItem = TV3SurveyListItemBase & {
 const DEFAULT_V3_SURVEY_LANGUAGE = "en-US";
 
 type TSerializedValue =
-  | string
-  | number
-  | boolean
-  | null
-  | TSerializedValue[]
-  | { [key: string]: TSerializedValue };
+  string | number | boolean | null | TSerializedValue[] | { [key: string]: TSerializedValue };
 
 export class V3SurveyLanguageError extends Error {
   constructor(

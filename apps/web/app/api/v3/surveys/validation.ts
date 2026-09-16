@@ -6,8 +6,7 @@ import type { TV3SurveyDocument } from "./schemas";
 import { V3_SURVEY_TRANSLATABLE_METADATA_KEYS } from "./translation-fields";
 
 export type TV3SurveyDocumentValidationResult =
-  | { valid: true; invalidParams: [] }
-  | { valid: false; invalidParams: InvalidParam[] };
+  { valid: true; invalidParams: [] } | { valid: false; invalidParams: InvalidParam[] };
 
 function getConfiguredTranslationLanguageCodes(document: TV3SurveyDocument): string[] {
   const defaultLanguage = document.defaultLanguage.toLowerCase();

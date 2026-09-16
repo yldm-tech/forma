@@ -102,8 +102,7 @@ export const createSignupIntentToken = (userId: string): string => {
  * `invalid` and `other_user` are the ones worth looking at. It cannot be recovered after the fact.
  */
 export type TSignupIntentRead =
-  | { userId: string; reason: "valid" }
-  | { userId: null; reason: "absent" | "invalid" };
+  { userId: string; reason: "valid" } | { userId: null; reason: "absent" | "invalid" };
 
 /**
  * Read the cookie. `absent` is no cookie at all (or no secrets configured); `invalid` covers malformed,

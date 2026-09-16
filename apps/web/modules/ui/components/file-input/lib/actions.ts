@@ -15,7 +15,10 @@ export const convertHeicToJpegAction = authenticatedActionClient
     const convert = (await import("heic-convert")).default;
 
     const arrayBuffer = await parsedInput.file.arrayBuffer();
-    const nodeBuffer = Buffer.from(arrayBuffer) as unknown as ArrayBufferLike;
+    // `@types/heic-convert` used to declare `buffer` as ArrayBufferLike, which a Buffer is not, so
+    // this needed a double cast to compile. The types now say Uint8Array — which Buffer is — and the
+    // cast can go.
+    const nodeBuffer = Buffer.from(arrayBuffer);
 
     const convertedBuffer = await convert({
       buffer: nodeBuffer,
@@ -23,7 +26,9 @@ export const convertHeicToJpegAction = authenticatedActionClient
       quality: 0.9,
     });
 
-    return new File([convertedBuffer], parsedInput.file.name.replace(/\.heic$/, ".jpg"), {
+    // Re-wrap rather than pass through: the declared Uint8Array is generic over ArrayBufferLike,
+    // which admits SharedArrayBuffer, and BlobPart does not.
+    return new File([new Uint8Array(convertedBuffer)], parsedInput.file.name.replace(/\.heic$/, ".jpg"), {
       type: "image/jpeg",
     });
   });

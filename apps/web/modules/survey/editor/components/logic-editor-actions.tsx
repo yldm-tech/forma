@@ -207,8 +207,7 @@ export function LogicEditorActions({
                         onChangeValue={(val: string | number | string[]) => {
                           handleValuesChange(idx, {
                             operator: val as
-                              | TActionTextVariableCalculateOperator
-                              | TActionNumberVariableCalculateOperator,
+                              TActionTextVariableCalculateOperator | TActionNumberVariableCalculateOperator,
                           });
                         }}
                         comboboxClasses="grow"
@@ -229,10 +228,7 @@ export function LogicEditorActions({
                         groupedOptions={getActionValueOptions(action.variableId, localSurvey, blockIdx, t)}
                         onChangeValue={(val, option, fromInput) => {
                           const fieldType = option?.meta?.type as
-                            | "static"
-                            | "variable"
-                            | "hiddenField"
-                            | "element";
+                            "static" | "variable" | "hiddenField" | "element";
 
                           if (!fromInput && fieldType !== "static") {
                             handleValuesChange(idx, {

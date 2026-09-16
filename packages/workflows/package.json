@@ -33,7 +33,7 @@
     "@types/js-yaml": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "js-yaml": "catalog:",
-    "publint": "0.3.21",
+    "publint": "0.3.24",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
