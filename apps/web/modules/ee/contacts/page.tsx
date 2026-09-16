@@ -31,7 +31,6 @@ export const ContactsPage = async ({ params: paramsProps }: { params: Promise<{ 
       pageTitle={t("common.contacts")}
       activeId="contacts"
       workspaceId={params.workspaceId}
-      organizationId={organization.id}
       isContactsEnabled={isContactsEnabled}
       isReadOnly={isReadOnly}
       cta={AddContactsButton}>
