@@ -7,7 +7,6 @@ import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TOrganization } from "@forma/types/organizations";
 import { TAllowedFileExtension } from "@forma/types/storage";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { isExternalImageSrc } from "@/lib/image-hosts";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
@@ -20,6 +19,7 @@ import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
 import { FileInput } from "@/modules/ui/components/file-input";
 import { Input } from "@/modules/ui/components/input";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { showStorageNotConfiguredToast } from "@/modules/ui/components/storage-not-configured-toast/lib/utils";
 import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 

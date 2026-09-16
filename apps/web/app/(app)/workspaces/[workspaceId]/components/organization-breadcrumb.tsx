@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/modules/ui/components/dropdown-menu";
-import { useOptionalWorkspaceContext } from "../context/workspace-context";
+import { useOptionalWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 
 interface OrganizationBreadcrumbProps {
   currentOrganizationId: string;

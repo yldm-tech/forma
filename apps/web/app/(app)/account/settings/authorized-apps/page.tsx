@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { AuthenticationError } from "@forma/types/errors";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getUser } from "@/lib/user/service";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { getTranslate } from "@/lingodotdev/server";
@@ -14,6 +13,7 @@ import { getSession } from "@/modules/auth/lib/session";
 import { Button } from "@/modules/ui/components/button";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/modules/ui/components/table";
 import { RevokeOAuthConsentButton } from "./components/RevokeOAuthConsentButton";
 

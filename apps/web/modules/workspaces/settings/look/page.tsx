@@ -1,5 +1,4 @@
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
 import {
   IS_FORMA_CLOUD,
@@ -16,6 +15,7 @@ import { BrandingSettingsCard } from "@/modules/ee/whitelabel/remove-branding/co
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { EditLogo } from "@/modules/workspaces/settings/look/components/edit-logo";
 import { EditPlacementForm } from "./components/edit-placement-form";

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { DocumentationLinks } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/documentation-links";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface DynamicPopupTabProps {
   surveyId: string;

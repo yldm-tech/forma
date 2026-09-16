@@ -3,8 +3,8 @@
 import { Unplug } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { Button } from "@/modules/ui/components/button";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 export const EmptyAppSurveys = () => {
   const { t } = useTranslation();

@@ -6,13 +6,13 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { TSurveyStatus } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { cn } from "@/lib/cn";
 import { timeSince } from "@/lib/time";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { SurveyTypeIndicator } from "@/modules/survey/list/components/survey-type-indicator";
 import { TSurveyListItem } from "@/modules/survey/list/types/survey-overview";
 import { SurveyStatusIndicator } from "@/modules/ui/components/survey-status-indicator";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { SurveyDropDownMenu } from "./survey-dropdown-menu";
 
 interface SurveyCardProps {

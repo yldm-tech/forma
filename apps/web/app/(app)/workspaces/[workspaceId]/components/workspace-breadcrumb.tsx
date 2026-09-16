@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/modules/ui/components
 import { ModalButton } from "@/modules/ui/components/upgrade-prompt";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/create-workspace-modal";
 import { WorkspaceLimitModal } from "@/modules/workspaces/components/workspace-limit-modal";
-import { useWorkspace } from "../context/workspace-context";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface WorkspaceBreadcrumbProps {
   currentWorkspaceId: string;

@@ -1,9 +1,9 @@
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { CustomScriptsForm } from "./components/custom-scripts-form";
 import { DeleteWorkspace } from "./components/delete-workspace";

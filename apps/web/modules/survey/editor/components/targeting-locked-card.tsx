@@ -4,8 +4,8 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { LockIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface TargetingLockedCardProps {
   isFormaCloud: boolean;

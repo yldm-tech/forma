@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { cn } from "@/lib/cn";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { deleteContactAction } from "@/modules/ee/contacts/actions";
@@ -32,6 +31,7 @@ import { getCommonPinningStyles } from "@/modules/ui/components/data-table/lib/u
 import { SearchBar } from "@/modules/ui/components/search-bar";
 import { Skeleton } from "@/modules/ui/components/skeleton";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/modules/ui/components/table";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { TContactTableData } from "../types/contact";
 import { generateContactTableColumns } from "./contact-table-column";
 

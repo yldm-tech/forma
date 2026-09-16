@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { SlackIcon } from "@/modules/ui/components/icons";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 export const IntegrationsTip = () => {
   const { t } = useTranslation();

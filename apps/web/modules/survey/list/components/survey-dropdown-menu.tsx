@@ -21,7 +21,6 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { logger } from "@forma/logger";
 import type { TSurveyStatus } from "@forma/types/surveys/types";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { cn } from "@/lib/cn";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
@@ -47,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/modules/ui/components/dropdown-menu";
 import { SurveyStatusIndicator } from "@/modules/ui/components/survey-status-indicator";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface SurveyDropDownMenuProps {
   survey: TSurveyListItem;

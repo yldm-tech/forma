@@ -1,12 +1,12 @@
 import { ResourceNotFoundError } from "@forma/types/errors";
 import { TOrganizationRole } from "@forma/types/memberships";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { TeamsTable } from "@/modules/ee/teams/team-list/components/teams-table";
 import { getTeams } from "@/modules/ee/teams/team-list/lib/team";
 import { getWorkspacesByOrganizationId } from "@/modules/ee/teams/team-list/lib/workspace";
 import { getMembersByOrganizationId } from "@/modules/organization/settings/teams/lib/membership";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 interface TeamsViewProps {

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { TOrganizationRole } from "@forma/types/memberships";
 import { TOrganization } from "@forma/types/organizations";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, INVITE_DISABLED, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { getBulkInvitePermission, getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
@@ -11,6 +10,7 @@ import { TOrganizationTeam } from "@/modules/ee/teams/team-list/types/team";
 import { EditMemberships } from "@/modules/organization/settings/teams/components/edit-memberships";
 import { OrganizationActions } from "@/modules/organization/settings/teams/components/edit-memberships/organization-actions";
 import { getMembershipsByUserId } from "@/modules/organization/settings/teams/lib/membership";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 interface MembersViewProps {
   membershipRole?: TOrganizationRole;

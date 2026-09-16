@@ -12,7 +12,7 @@ import type { TLicenseStatus } from "@/modules/ee/license-check/types/enterprise
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Badge } from "@/modules/ui/components/badge";
 import { Button } from "@/modules/ui/components/button";
-import { SettingsCard } from "../../../components/SettingsCard";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 interface EnterpriseLicenseStatusProps {
   status: TLicenseStatus;

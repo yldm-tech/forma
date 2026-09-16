@@ -2,7 +2,7 @@
 
 import { TOrganizationRole } from "@forma/types/memberships";
 import { WorkspaceAndOrgSwitch } from "@/app/(app)/workspaces/[workspaceId]/components/workspace-and-org-switch";
-import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
+import { useWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 
 interface TopControlBarProps {
   currentOrganizationId: string;

@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { TResponse } from "@forma/types/responses";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUser, TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { timeSince } from "@/lib/time";
 import { getContactIdentifier } from "@/lib/utils/contact";
 import { PersonAvatar } from "@/modules/ui/components/avatars";
@@ -14,6 +13,7 @@ import { Button } from "@/modules/ui/components/button";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { SurveyStatusIndicator } from "@/modules/ui/components/survey-status-indicator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { isSubmissionTimeMoreThan5Minutes } from "../util";
 
 interface SingleResponseCardHeaderProps {

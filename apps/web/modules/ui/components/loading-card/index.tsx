@@ -1,5 +1,5 @@
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 export const LoadingCard = ({
   title,

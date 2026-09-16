@@ -7,7 +7,6 @@ import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { EmptyAppSurveys } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/EmptyInAppSurveys";
 import {
   SelectedFilterValue,
@@ -34,6 +33,7 @@ import { OptionsType } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surve
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { SkeletonLoader } from "@/modules/ui/components/skeleton-loader";
+import { useWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 import { AddressSummary } from "./AddressSummary";
 
 interface SummaryListProps {

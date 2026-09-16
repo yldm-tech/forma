@@ -10,7 +10,6 @@ import { Trans, useTranslation } from "react-i18next";
 import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import type { TBaseFilter, TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@forma/types/segment";
 import type { TSurvey } from "@forma/types/surveys/types";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { cn } from "@/lib/cn";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -28,6 +27,7 @@ import { LoadSegmentModal } from "@/modules/ui/components/load-segment-modal";
 import { SaveAsNewSegmentModal } from "@/modules/ui/components/save-as-new-segment-modal";
 import { SegmentTitle } from "@/modules/ui/components/segment-title";
 import { TargetingIndicator } from "@/modules/ui/components/targeting-indicator";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { AddFilterModal } from "./add-filter-modal";
 import { SegmentEditor } from "./segment-editor";
 

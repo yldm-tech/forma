@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { assertCan } from "@/lib/authorization";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { DEFAULT_LOCALE, IS_FORMA_CLOUD } from "@/lib/constants";
@@ -11,6 +10,7 @@ import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { ApiKeyList } from "./components/api-key-list";
 
 export const APIKeysPage = async (props: Readonly<{ params: Promise<{ organizationId: string }> }>) => {
