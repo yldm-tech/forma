@@ -215,6 +215,8 @@ Which level, concretely:
 A journey across several surfaces means something like survey list → editor → public survey → response,
 where the behavior only exists once browser, survey bundle, and server are wired together.
 
+A committed test only counts if something runs it. `turbo run test` invokes `test` in workspaces, so a spec outside every workspace never executes while still reading as coverage — `scripts/setup-dev-env.test.ts` sat that way until `scripts/` was made a workspace. `pnpm lint` now fails on that through `scripts/check-tests-run.mjs`; put a new test inside a workspace that runs tests, or make its directory one.
+
 The spec filenames in `apps/web/playwright/` are the inventory of covered areas — check there before
 concluding an area has no spec.
 

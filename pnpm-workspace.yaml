@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "docker"
   - "packages/*"
+  - "scripts"
 
 allowBuilds:
   "@prisma/engines": true
