@@ -201,16 +201,6 @@ export const PlanComparisonTable = ({ columns }: Readonly<{ columns: TPlanColumn
     },
     {
       type: "feature",
-      label: t("workspace.settings.billing.comparison_row_unify_feedback"),
-      values: [false, false, "addon"],
-    },
-    {
-      type: "feature",
-      label: t("workspace.settings.billing.comparison_row_topic_labeling"),
-      values: [false, false, "addon"],
-    },
-    {
-      type: "feature",
       label: t("workspace.settings.billing.comparison_row_custom_dashboards"),
       values: [false, false, "addon"],
     },
