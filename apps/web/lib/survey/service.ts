@@ -169,6 +169,19 @@ export const selectSurvey = {
   embeddedDataLinks: selectSurveyEmbeddedDataLinks,
 } satisfies Prisma.SurveySelect;
 
+// A field TSurvey declares but `selectSurvey` never queries is `undefined` at runtime while the type says it is there: `transformPrismaSurvey` casts with `as T` and fills nothing. That is not hypothetical — a second copy of this select had dropped `archivedAt`, and every survey read through it carried a field the query never fetched. The cast stays, so this asserts the other half of the contract: every field on TSurvey is either selected here or derived by the transform.
+//
+// `embeddedFields` is the derived case: `withInlinedEmbeddedFields` computes it from the `embeddedDataLinks` relation, so it is a field of the result without being a column. Anything else that stops being selected fails the build, naming itself.
+type DerivedByTransform = "embeddedFields";
+
+type SurveyFieldsNeitherSelectedNorDerived = Exclude<
+  keyof TSurvey,
+  keyof Prisma.SurveyGetPayload<{ select: typeof selectSurvey }> | DerivedByTransform
+>;
+
+type AssertNone<T extends never> = T;
+export type SurveySelectCoversTSurvey = AssertNone<SurveyFieldsNeitherSelectedNorDerived>;
+
 const reconcilePersistedSurveySchedulingIfDue = async ({
   logSource,
   survey,
