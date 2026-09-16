@@ -7,22 +7,7 @@
   },
   "locale": {
     "source": "en-US",
-    "targets": [
-      "de-DE",
-      "es-ES",
-      "fr-FR",
-      "hu-HU",
-      "ja-JP",
-      "nl-NL",
-      "pt-BR",
-      "pt-PT",
-      "ro-RO",
-      "ru-RU",
-      "sv-SE",
-      "tr-TR",
-      "zh-Hans-CN",
-      "zh-Hant-TW"
-    ]
+    "targets": ["ja-JP", "zh-Hans-CN", "zh-Hant-TW"]
   },
   "version": 1.8
 }

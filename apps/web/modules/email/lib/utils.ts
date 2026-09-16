@@ -22,10 +22,20 @@ export const getRatingNumberOptionColor = (range: number, idx: number): string =
 const defaultLocale = "en-US";
 
 const getMessages = (locale: string): Record<string, string> => {
-  const messages = require(`@/locales/${locale}.json`) as {
-    emails: Record<string, string>;
-  };
-  return messages.emails;
+  // A stored locale can outlive its translation file — the app ships Chinese, Japanese and English,
+  // and a user who picked one of the locales that used to be offered still carries that value. A
+  // bare `require` would throw while sending their mail, so fall back to English instead.
+  try {
+    const messages = require(`@/locales/${locale}.json`) as {
+      emails: Record<string, string>;
+    };
+    return messages.emails;
+  } catch {
+    const fallback = require(`@/locales/${defaultLocale}.json`) as {
+      emails: Record<string, string>;
+    };
+    return fallback.emails;
+  }
 };
 
 export const translateEmailText = (
