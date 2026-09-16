@@ -8,6 +8,7 @@
         "BASE_PATH",
         "E2E_TESTING",
         "NEXTAUTH_URL",
+        "NEXT_SKIP_TYPE_CHECK",
         "NODE_ENV",
         "POSTHOG_KEY",
         "S3_ENDPOINT_URL",

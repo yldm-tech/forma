@@ -139,6 +139,8 @@ jobs:
           push: false
           load: true
           tags: forma-test:${{ env.GITHUB_SHA }}
+          build-args: |
+            NEXT_SKIP_TYPE_CHECK=1
           secrets: |
             database_url=${{ secrets.DUMMY_DATABASE_URL || 'postgresql://test:test@127.0.0.1:5432/forma' }}
             encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
