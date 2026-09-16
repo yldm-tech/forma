@@ -1,16 +1,6 @@
 import { z } from "zod";
 import { ZId } from "@forma/types/common";
 import { ZSurveyFilters, ZSurveyStatus, ZSurveyType } from "@forma/types/surveys/types";
-import {
-  MAX_FEEDBACK_RECORDS_PER_BATCH,
-  ZV3FeedbackRecordCreateBodyFields,
-  ZV3FeedbackRecordCreateBodyStrict,
-  ZV3FeedbackRecordFilters,
-  ZV3FeedbackRecordListFilters,
-  ZV3FeedbackRecordSearchFilters,
-  ZV3FeedbackRecordSimilarityFilters,
-  ZV3FeedbackRecordUpdateBodyFields,
-} from "@/app/api/v3/feedbackRecords/lib/schemas";
 
 /**
  * Every schema here is `.strict()`, so an argument a tool does not declare is a loud error instead of a
@@ -47,8 +37,6 @@ import {
  * `z.strictObject({...})` for the nested ones: `.strict()` returns a clone that drops `.describe()`, so
  * appending it after a `.describe()` silently deletes the description the model reads.
  *
- * Array *elements* count as nested objects too — see `ZMcpCreateFeedbackRecordsInput.records`, where the
- * strictness has to come from the element schema rather than the array.
  *
  * And do not turn on @posthog/mcp's `context` injection (`lib/posthog/mcp-tracing.ts` keeps it off): it
  * injects a `context` argument into every tool's advertised schema, which these schemas would reject.
@@ -199,107 +187,6 @@ export const ZMcpDeleteSurveyInput = z
 // another client as a reason to look here first.
 export const ZMcpListWorkspacesInput = z.object({}).strict();
 
-// Feedback records live in the Hub, addressed by a tenant that is always resolved server-side from the
-// caller's workspace + feedback dataset. No schema here accepts a tenant_id; the Hub's `tenant_id` is
-// surfaced outward as `dataset_id`.
-const datasetIdField = ZId.optional().describe(
-  "Feedback dataset to target. Optional when the workspace has exactly one active dataset; required when it has more than one. Use list_feedback_datasets to discover ids."
-);
-
-export const ZMcpListFeedbackDatasetsInput = z
-  .object({
-    workspaceId: ZId.describe("Workspace ID whose feedback datasets should be listed."),
-  })
-  .strict();
-
-export const ZMcpListFeedbackRecordsInput = ZV3FeedbackRecordListFilters.extend({
-  workspaceId: ZId.describe("Workspace ID whose feedback records should be listed."),
-  datasetId: datasetIdField,
-}).strict();
-
-export const ZMcpGetFeedbackRecordInput = z
-  .object({
-    workspaceId: ZId.describe("Workspace ID that owns the feedback record."),
-    feedbackRecordId: z.uuid().describe("Feedback record ID (UUID) to fetch."),
-    datasetId: datasetIdField,
-  })
-  .strict();
-
-// Extends the plain field object rather than the refined body, so the value/field_type rule is enforced
-// by the operations layer. (Before ENG-2256 that layer was also where a stripped unknown key surfaced,
-// as a missing value; a misspelled key is now rejected by the SDK before the handler runs, so the
-// operations layer only ever sees declared keys.)
-export const ZMcpCreateFeedbackRecordInput = ZV3FeedbackRecordCreateBodyFields.extend({
-  workspaceId: ZId.describe("Workspace ID to create the feedback record in."),
-  datasetId: datasetIdField,
-}).strict();
-
-export const ZMcpCountFeedbackRecordsInput = ZV3FeedbackRecordFilters.extend({
-  workspaceId: ZId.describe("Workspace ID whose feedback records should be counted."),
-  datasetId: datasetIdField,
-}).strict();
-
-// The refined body is used here, unlike the single-record tool: an element schema is not extended with
-// `workspaceId`/`datasetId` (those live on the outer object), so the refined form drops straight in and the
-// value/field_type rule is enforced per element by the schema itself. The single-record tool could do the
-// same — see the note there — it just doesn't need to.
-export const ZMcpCreateFeedbackRecordsInput = z
-  .object({
-    workspaceId: ZId.describe("Workspace ID to create the feedback records in."),
-    datasetId: datasetIdField,
-    records: z
-      // The strict variant: an unknown key *inside a record* must be rejected, not dropped. Without it
-      // the outer `.strict()` below covers only the top level, so a misspelled `user_id` in a batch
-      // import vanished silently — ENG-2256 in the one place it does the most damage.
-      .array(ZV3FeedbackRecordCreateBodyStrict)
-      .min(1)
-      .max(MAX_FEEDBACK_RECORDS_PER_BATCH)
-      .describe(
-        `Feedback records to create, 1–${MAX_FEEDBACK_RECORDS_PER_BATCH} per call. Every record is validated before any is written, so an invalid record fails the whole call rather than storing part of the batch.`
-      ),
-  })
-  .strict();
-
-// The plain field object again (not the refined one), so the at-least-one-field rule is enforced by the
-// operations layer. A choice, not a constraint: `refined.extend({...}).strict()` does work in Zod 4 —
-// verified, including that the refinement survives both calls — so this could equally be enforced here.
-// It is left in the operations layer because that is the one place both the MCP tools and the v3 REST
-// routes pass through, so the rule exists once.
-//
-// `.strict()` here has a sharper edge than on the other tools, and deliberately so: the update set is a
-// `.pick()` of eight mutable fields, so echoing back a record from `get_feedback_record` — the obvious
-// read-modify-write loop — is now rejected rather than having its provenance quietly ignored. That is the
-// ENG-2256 trade taken on purpose: a misspelled `value_text` would otherwise vanish and the "update" would
-// silently change nothing. The rejection is recoverable (Zod's `unrecognized_keys` names every offending
-// key) and the tool description tells the caller to strip them, so the loud version costs one retry where
-// the quiet version cost a lost correction. Note this is the opposite call to the one made for the shared
-// v3 REST body in `app/api/v3/feedbackRecords/lib/schemas.ts` — different clients: an agent re-reads the
-// advertised schema and the error text on every call, a REST integration does not.
-export const ZMcpUpdateFeedbackRecordInput = ZV3FeedbackRecordUpdateBodyFields.extend({
-  workspaceId: ZId.describe("Workspace ID that owns the feedback record."),
-  feedbackRecordId: z.uuid().describe("Feedback record ID (UUID) to update."),
-  datasetId: datasetIdField,
-}).strict();
-
-export const ZMcpDeleteFeedbackRecordInput = z
-  .object({
-    workspaceId: ZId.describe("Workspace ID that owns the feedback record."),
-    feedbackRecordId: z.uuid().describe("Feedback record ID (UUID) to delete permanently."),
-    datasetId: datasetIdField,
-  })
-  .strict();
-
-export const ZMcpSearchFeedbackRecordsInput = ZV3FeedbackRecordSearchFilters.extend({
-  workspaceId: ZId.describe("Workspace ID whose feedback records should be searched."),
-  datasetId: datasetIdField,
-}).strict();
-
-export const ZMcpFindSimilarFeedbackRecordsInput = ZV3FeedbackRecordSimilarityFilters.extend({
-  workspaceId: ZId.describe("Workspace ID that owns the feedback record."),
-  feedbackRecordId: z.uuid().describe("Feedback record ID (UUID) to find similar records for."),
-  datasetId: datasetIdField,
-}).strict();
-
 export type TMcpListSurveysInput = z.infer<typeof ZMcpListSurveysInput>;
 export type TMcpListWorkspacesInput = z.infer<typeof ZMcpListWorkspacesInput>;
 export type TMcpGetSurveyInput = z.infer<typeof ZMcpGetSurveyInput>;
@@ -307,13 +194,3 @@ export type TMcpCreateSurveyInput = z.infer<typeof ZMcpCreateSurveyInput>;
 export type TMcpPatchSurveyInput = z.infer<typeof ZMcpPatchSurveyInput>;
 export type TMcpValidateSurveyInput = z.infer<typeof ZMcpValidateSurveyInput>;
 export type TMcpDeleteSurveyInput = z.infer<typeof ZMcpDeleteSurveyInput>;
-export type TMcpListFeedbackDatasetsInput = z.infer<typeof ZMcpListFeedbackDatasetsInput>;
-export type TMcpListFeedbackRecordsInput = z.infer<typeof ZMcpListFeedbackRecordsInput>;
-export type TMcpGetFeedbackRecordInput = z.infer<typeof ZMcpGetFeedbackRecordInput>;
-export type TMcpCreateFeedbackRecordInput = z.infer<typeof ZMcpCreateFeedbackRecordInput>;
-export type TMcpCountFeedbackRecordsInput = z.infer<typeof ZMcpCountFeedbackRecordsInput>;
-export type TMcpCreateFeedbackRecordsInput = z.infer<typeof ZMcpCreateFeedbackRecordsInput>;
-export type TMcpUpdateFeedbackRecordInput = z.infer<typeof ZMcpUpdateFeedbackRecordInput>;
-export type TMcpDeleteFeedbackRecordInput = z.infer<typeof ZMcpDeleteFeedbackRecordInput>;
-export type TMcpSearchFeedbackRecordsInput = z.infer<typeof ZMcpSearchFeedbackRecordsInput>;
-export type TMcpFindSimilarFeedbackRecordsInput = z.infer<typeof ZMcpFindSimilarFeedbackRecordsInput>;

@@ -43,7 +43,6 @@ describe("scripts/setup-dev-env.sh AuthZed setup", () => {
         "ENCRYPTION_KEY=",
         "NEXTAUTH_SECRET=",
         "CRON_SECRET=",
-        "CUBEJS_API_SECRET=",
         "AUTHZED_TOKEN=",
         "AUTHZED_DATABASE_PASSWORD=",
         "",

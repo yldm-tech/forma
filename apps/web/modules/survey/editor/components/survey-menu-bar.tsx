@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Workspace } from "@forma/database/prisma-browser";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
-import forma from "@forma/js";
 import { TSegment } from "@forma/types/segment";
 import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import {
@@ -475,9 +474,7 @@ export const SurveyMenuBar = ({
 
       setIsSurveySaving(false);
       if (updatedSurveyResponse?.data) {
-        // isSecondPublish is a transient action flag, not part of the survey — strip it so it
-        // doesn't linger in editor state and get echoed back on the next update.
-        const { isSecondPublish: _isSecondPublish, ...updatedSurvey } = updatedSurveyResponse.data;
+        const updatedSurvey = updatedSurveyResponse.data;
         setLocalSurvey(updatedSurvey);
         lastSavedSurveyRef.current = structuredClone(updatedSurvey);
         toast.success(t("workspace.surveys.edit.changes_saved"));
@@ -563,13 +560,6 @@ export const SurveyMenuBar = ({
 
       isSurveyPublishingRef.current = false;
       setIsSurveyPublishing(false);
-
-      // When the user publishes their second survey, fire an in-app code action so a
-      // Forma survey can be triggered from the dashboard. The flag is computed
-      // server-side in updateSurveyAction, so there's no extra round-trip here.
-      if (publishResult.data.isSecondPublish) {
-        forma.track("second_survey_published").catch(() => undefined);
-      }
 
       // Set flag to prevent beforeunload warning during navigation
       isSuccessfullySavedRef.current = true;

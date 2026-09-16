@@ -19,7 +19,7 @@
   /* AI — the mark for generative features. Indigo rather than the brand teal on purpose: AI is a
      distinct modality, not brand chrome, and the brand tokens cannot carry it accessibly
      (brand-dark is 2.19:1 on white, under the 3:1 WCAG 1.4.11 floor for non-text). Indigo also
-     already reads as "AI generated" in the auto-mapped pill under unify-feedback.
+     already reads as "AI generated" in the auto-mapped pill.
      Two tokens because one value cannot serve both grounds — pick with AiIcon's `tone`. */
   --color-ai-dark: var(--color-indigo-700); /* on light surfaces — 8.09:1 on white */
   --color-ai: var(--color-indigo-100); /* on dark surfaces — 14.49:1 on slate-900 */

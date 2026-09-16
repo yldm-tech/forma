@@ -22,7 +22,6 @@ import { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
 import { TSurvey, TSurveyCreateInput, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { getActionClasses } from "@/lib/actionClass/service";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
-import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";
 import {
   getOrganizationByWorkspaceId,
   subscribeOrganizationMembersToSurveyResponses,
@@ -63,12 +62,6 @@ vi.mock("@/lib/organization/service", () => ({
 // Mock actionClass service
 vi.mock("@/lib/actionClass/service", () => ({
   getActionClasses: vi.fn(),
-}));
-
-// The reconciliation itself is covered in lib/feedback-source/mapping-reconciliation.test.ts; here we only pin
-// what updateSurveyInternal hands it and when.
-vi.mock("@/lib/feedback-source/mapping-reconciliation", () => ({
-  scheduleFeedbackSourceReconciliation: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -786,26 +779,6 @@ describe("Tests for updateSurvey", () => {
         prisma.survey.update.mockResolvedValueOnce({ ...mockSurveyOutput, blocks: persistedBlocks } as any);
 
         await updateSurveyInternal({ ...updateSurveyInput, status: "draft", blocks: [] } as any, true);
-
-        expect(scheduleFeedbackSourceReconciliation).toHaveBeenCalledWith(
-          updateSurveyInput.id,
-          mockSurveyOutput.workspaceId,
-          persistedBlocks
-        );
-      });
-
-      // Reconciliation runs after the survey row is committed, so it must not be able to turn a
-      // successful save into a user-visible error. The helper owns that guarantee (it never
-      // rejects — see reconcile.test.ts); this pins the ordering the guarantee depends on.
-      test("reconciles only after the survey row has been written", async () => {
-        prisma.survey.findUnique.mockResolvedValueOnce(mockSurveyOutput);
-        prisma.survey.update.mockResolvedValueOnce(mockSurveyOutput);
-
-        await updateSurvey(updateSurveyInput);
-
-        const updateOrder = vi.mocked(prisma.survey.update).mock.invocationCallOrder[0];
-        const reconcileOrder = vi.mocked(scheduleFeedbackSourceReconciliation).mock.invocationCallOrder[0];
-        expect(reconcileOrder).toBeGreaterThan(updateOrder);
       });
     });
   });

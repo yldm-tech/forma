@@ -23,7 +23,6 @@ interface SettingsNavigationProps {
   membershipRole?: TOrganizationRole;
   isFormaCloud: boolean;
   publicDomain: string;
-  isFormaSurveysConfigured: boolean;
   // Where the back arrow returns to (the surveys list of the current workspace).
   backUrl: string;
 }
@@ -40,7 +39,6 @@ export const SettingsNavigation = ({
   membershipRole,
   isFormaCloud,
   publicDomain,
-  isFormaSurveysConfigured,
   backUrl,
 }: Readonly<SettingsNavigationProps>) => {
   const router = useRouter();
@@ -110,12 +108,7 @@ export const SettingsNavigation = ({
           onOrganizationRetry={organizationSwitcher.retry}
         />
       </div>
-      <UserDropdown
-        user={user}
-        organizationId={organizationId}
-        publicDomain={publicDomain}
-        isFormaSurveysConfigured={isFormaSurveysConfigured}
-      />
+      <UserDropdown user={user} organizationId={organizationId} publicDomain={publicDomain} />
     </aside>
   );
 };

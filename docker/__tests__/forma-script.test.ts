@@ -26,8 +26,6 @@ const tempDirs: string[] = [];
 const dockerComposeOverrideKeys = [
   "POSTGRES_PASSWORD",
   "POSTGRES_PASSWORD_URL_ENCODED",
-  "HUB_DATABASE_URL",
-  "CUBEJS_DB_PASS",
   "AUTHZED_TOKEN",
   "AUTHZED_DATABASE_PASSWORD",
   "FORMA_UNSET_PASSWORD_SENTINEL",
@@ -292,15 +290,6 @@ afterEach(() => {
   }
 });
 
-describe("docker/docker-compose.yml Cube configuration", () => {
-  test("disables external pre-aggregations by default while allowing an operator override", () => {
-    const composeContents = readFileSync(dockerComposeTemplatePath, "utf8");
-    const cubeBlock = getServiceBlock(composeContents, "cube");
-
-    expect(cubeBlock).toContain("      CUBEJS_EXTERNAL_DEFAULT: ${CUBEJS_EXTERNAL_DEFAULT:-false}");
-  });
-});
-
 describe("Docker self-hosting credentials", () => {
   dockerComposeTest("rejects a missing PostgreSQL password", () => {
     expect(() => renderDockerCompose("")).toThrow(/POSTGRES_PASSWORD.*missing a value/);
@@ -310,7 +299,6 @@ describe("Docker self-hosting credentials", () => {
     const password = "url-safe-password";
     const config = renderDockerCompose(`POSTGRES_PASSWORD=${password}\n`);
     const formaDatabaseUrl = `postgresql://postgres:${password}@postgres:5432/forma?schema=public`;
-    const hubDatabaseUrl = `postgresql://postgres:${password}@postgres:5432/forma?sslmode=disable`;
     const postgresAdminUrl = `postgresql://postgres:${password}@postgres:5432/postgres?sslmode=disable`;
 
     expect(getRenderedServiceEnvironment(config, "postgres").POSTGRES_PASSWORD).toBe(password);
@@ -321,9 +309,6 @@ describe("Docker self-hosting credentials", () => {
     expect(getRenderedServiceEnvironment(config, "forma").DATABASE_URL).toBe(formaDatabaseUrl);
     expect(getRenderedServiceEnvironment(config, "authzed-ops").DATABASE_URL).toBe(formaDatabaseUrl);
     expect(getRenderedServiceEnvironment(config, "authzed-initialize").DATABASE_URL).toBe(formaDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "hub-migrate").DATABASE_URL).toBe(hubDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "hub").DATABASE_URL).toBe(hubDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "cube").CUBEJS_DB_PASS).toBe(password);
   });
 
   dockerComposeTest("renders encoded connection URLs while retaining the raw PostgreSQL password", () => {
@@ -333,7 +318,6 @@ describe("Docker self-hosting credentials", () => {
       `POSTGRES_PASSWORD=${rawPassword}\nPOSTGRES_PASSWORD_URL_ENCODED=${encodedPassword}\n`
     );
     const formaDatabaseUrl = `postgresql://postgres:${encodedPassword}@postgres:5432/forma?schema=public`;
-    const hubDatabaseUrl = `postgresql://postgres:${encodedPassword}@postgres:5432/forma?sslmode=disable`;
     const postgresAdminUrl = `postgresql://postgres:${encodedPassword}@postgres:5432/postgres?sslmode=disable`;
 
     expect(getRenderedServiceEnvironment(config, "postgres").POSTGRES_PASSWORD).toBe(rawPassword);
@@ -344,9 +328,6 @@ describe("Docker self-hosting credentials", () => {
     expect(getRenderedServiceEnvironment(config, "forma").DATABASE_URL).toBe(formaDatabaseUrl);
     expect(getRenderedServiceEnvironment(config, "authzed-ops").DATABASE_URL).toBe(formaDatabaseUrl);
     expect(getRenderedServiceEnvironment(config, "authzed-initialize").DATABASE_URL).toBe(formaDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "hub-migrate").DATABASE_URL).toBe(hubDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "hub").DATABASE_URL).toBe(hubDatabaseUrl);
-    expect(getRenderedServiceEnvironment(config, "cube").CUBEJS_DB_PASS).toBe(rawPassword);
   });
 
   test("writes generated credentials to a private local environment file", () => {
@@ -367,13 +348,9 @@ describe("Docker self-hosting credentials", () => {
     expect(serializedPostgresPassword).toMatch(/^"[a-f0-9]{64}"$/);
     expect(serializedSecondPostgresPassword).toMatch(/^"[a-f0-9]{64}"$/);
     expect(envContents).toContain(`POSTGRES_PASSWORD_URL_ENCODED=${postgresPassword}`);
-    expect(envContents).toMatch(/^HUB_API_KEY=[a-f0-9]{64}$/m);
-    expect(envContents).toMatch(/^CUBEJS_API_SECRET=[a-f0-9]{64}$/m);
     expect(envContents).toMatch(/^AUTHZED_TOKEN=[a-f0-9]{64}$/m);
     expect(envContents).toMatch(/^AUTHZED_DATABASE_PASSWORD=[a-f0-9]{64}$/m);
     expect(envContents).toContain(`
-CUBEJS_JWT_ISSUER=forma-web
-CUBEJS_JWT_AUDIENCE=forma-cube
 `);
     expect(secondPostgresPassword).not.toBe(postgresPassword);
     expect(statSync(envPath).mode & 0o777).toBe(0o600);
@@ -466,7 +443,7 @@ exit 1
       - POSTGRES_PASSWORD=legacy:p@ss/word?#
 `
     );
-    writeFileSync(envPath, "HUB_API_KEY=legacy-hub-key\nCUSTOM_SETTING=preserved\n");
+    writeFileSync(envPath, "CUSTOM_SETTING=preserved\n");
 
     const existingPassword = readExistingPostgresPassword(envPath, composePath);
     writeGeneratedEnvFile(envPath, existingPassword);
@@ -576,7 +553,6 @@ exit 1
 PUBLIC_URL=https://surveys.example.com
 CUSTOM_SECRET=keep-me
 POSTGRES_PASSWORD='legacy$PASSWORD_SENTINEL'
-export HUB_API_KEY=replace-me
 `)
     );
 
@@ -596,31 +572,6 @@ export HUB_API_KEY=replace-me
       renderedConfig,
       "postgres"
     ).POSTGRES_PASSWORD.replaceAll("$$", "$");
-    const renderedCubePassword = getRenderedServiceEnvironment(
-      renderedConfig,
-      "cube"
-    ).CUBEJS_DB_PASS.replaceAll("$$", "$");
-    const encodedPassword = "legacy%24PASSWORD_SENTINEL";
-
-    expect(quotedExistingPassword).toBe(password);
-    expect(firstEnvContents).toContain("# Operator-managed settings");
-    expect(firstEnvContents).toContain("PUBLIC_URL=https://surveys.example.com");
-    expect(firstEnvContents).toContain("CUSTOM_SECRET=keep-me");
-    expect(firstEnvContents).not.toContain("HUB_API_KEY=replace-me");
-    expect(firstEnvContents).toContain('POSTGRES_PASSWORD="legacy$$PASSWORD_SENTINEL"');
-    expect(firstEnvContents).toContain(`POSTGRES_PASSWORD_URL_ENCODED=${encodedPassword}`);
-    expect(firstEnvContents).toContain("AUTHZED_TOKEN=test-authzed-token");
-    expect(firstEnvContents).toContain("AUTHZED_DATABASE_PASSWORD=test-authzed-database-password");
-    expect(getDotenvValue(renderedEnvironment, "POSTGRES_PASSWORD")).toBe(password);
-    expect(renderedPostgresPassword).toBe(password);
-    expect(renderedCubePassword).toBe(password);
-    expect(getRenderedServiceEnvironment(renderedConfig, "forma").DATABASE_URL).toBe(
-      `postgresql://postgres:${encodedPassword}@postgres:5432/forma?schema=public`
-    );
-    expect(getRenderedServiceEnvironment(renderedConfig, "hub").DATABASE_URL).toBe(
-      `postgresql://postgres:${encodedPassword}@postgres:5432/forma?sslmode=disable`
-    );
-
     const existingPassword = readExistingPostgresPassword(envPath, composePath, {
       PASSWORD_SENTINEL: "rewritten",
     });
@@ -633,7 +584,6 @@ export HUB_API_KEY=replace-me
     expect(rerunEnvContents).toContain("PUBLIC_URL=https://surveys.example.com");
     expect(rerunEnvContents).toContain("CUSTOM_SECRET=keep-me");
     expect(rerunEnvContents.match(/^POSTGRES_PASSWORD=/gm)).toHaveLength(1);
-    expect(rerunEnvContents.match(/^HUB_API_KEY=/gm)).toHaveLength(1);
     expect(rerunEnvContents.match(/^AUTHZED_TOKEN=/gm)).toHaveLength(1);
     expect(rerunEnvContents.match(/^AUTHZED_DATABASE_PASSWORD=/gm)).toHaveLength(1);
     expect(statSync(envPath).mode & 0o777).toBe(0o600);
@@ -676,7 +626,7 @@ describe("docker/forma.sh AuthZed setup", () => {
       "bash",
       [
         "-lc",
-        'source "$1"; write_base_env_file "$2" hub-key cube-secret "$3" "$4"',
+        'source "$1"; write_base_env_file "$2" "$3" "$4"',
         "bash",
         formaScriptPath,
         envPath,
@@ -895,10 +845,6 @@ describe("docker/forma.sh Traefik label injection", () => {
     expect(formaBlock).toContain("traefik.http.routers.forma.entrypoints=websecure");
     expect(formaBlock).toContain("traefik.http.routers.forma.tls.certresolver=default");
     expect(formaBlock).toContain("traefik.http.services.forma.loadbalancer.server.port=3000");
-    expect(formaBlock).toContain(
-      "traefik.http.routers.feedback-records-token.rule=Host(`example.com`) && Path(`/api/v3/feedbackRecords/token`)"
-    );
-    expect(formaBlock).toContain("traefik.http.routers.feedback-records-token.tls.certresolver=default");
     expect(formaBlock).toContain("traefik.http.middlewares.hstsHeader.headers.stsSeconds=31536000");
     expect(formaBlock).not.toContain("traefik.http.routers.forma_http.entrypoints=web");
   });
@@ -913,7 +859,6 @@ describe("docker/forma.sh Traefik label injection", () => {
 
     expect(formaBlock).toContain("traefik.http.routers.forma.entrypoints=websecure");
     expect(formaBlock).toContain("traefik.http.routers.forma.tls=true");
-    expect(formaBlock).toContain("traefik.http.routers.feedback-records-token.tls=true");
     expect(formaBlock).toContain("traefik.http.middlewares.hstsHeader.headers.stsSeconds=31536000");
     expect(formaBlock).not.toContain("tls.certresolver=default");
   });
@@ -931,9 +876,6 @@ describe("docker/forma.sh Traefik label injection", () => {
     expect(formaBlock).toContain("    labels:");
     expect(formaBlock).toContain("traefik.http.routers.forma_http.entrypoints=web");
     expect(formaBlock).toContain("traefik.http.routers.forma_http.rule=Host(`example.com`)");
-    expect(formaBlock).toContain(
-      "traefik.http.routers.feedback-records-token-http.rule=Host(`example.com`) && Path(`/api/v3/feedbackRecords/token`)"
-    );
     expect(formaBlock).not.toContain("tls.certresolver=default");
     expect(formaBlock).not.toContain("traefik.http.middlewares.hstsHeader.headers.stsSeconds=31536000");
   });

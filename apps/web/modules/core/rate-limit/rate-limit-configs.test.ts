@@ -94,7 +94,6 @@ describe("rateLimitConfigs", () => {
         "v3",
         "mcpAuth",
         "v3SurveyGenerate",
-        "internalDatasetPurge",
         "client",
         "clientEnvironment",
       ]);
@@ -113,11 +112,6 @@ describe("rateLimitConfigs", () => {
         "inviteMember",
         "generateExampleResponses",
         "integrationMutation",
-        "feedbackSourceMutation",
-        "historicalResponseImport",
-        "chartCreation",
-        "feedbackDirectoryMutation",
-        "feedbackRecordDeletion",
         "stateMutation",
       ]);
 
@@ -133,11 +127,6 @@ describe("rateLimitConfigs", () => {
         interval: 3600 * 24,
         allowedPerInterval: 50,
         namespace: "action:invite-member",
-      });
-      expect(rateLimitConfigs.actions.historicalResponseImport).toEqual({
-        interval: 3600,
-        allowedPerInterval: 10,
-        namespace: "action:historical-response-import",
       });
       expect(rateLimitConfigs.actions.stateMutation).toEqual({
         interval: 60,

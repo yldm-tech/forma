@@ -364,9 +364,6 @@ importers:
       '@boxyhq/saml-jackson':
         specifier: 26.2.0
         version: 26.2.0(@types/node@25.4.0)(ioredis@5.8.1)(socks@2.8.7)(sqlite3@5.1.7)(ts-node@10.9.2(@types/node@25.4.0)(typescript@5.9.3))
-      '@cubejs-client/core':
-        specifier: 1.6.6
-        version: 1.6.6(encoding@0.1.13)
       '@dnd-kit/core':
         specifier: 6.3.1
         version: 6.3.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -391,18 +388,12 @@ importers:
       '@forma/email':
         specifier: workspace:*
         version: link:../../packages/email
-      '@forma/hub':
-        specifier: npm:@formbricks/hub@0.12.0
-        version: '@formbricks/hub@0.12.0'
       '@forma/i18n-utils':
         specifier: workspace:*
         version: link:../../packages/i18n-utils
       '@forma/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
-      '@forma/js':
-        specifier: npm:@formbricks/js@5.0.0
-        version: '@formbricks/js@5.0.0'
       '@forma/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
@@ -2472,9 +2463,6 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
-  '@cubejs-client/core@1.6.6':
-    resolution: {integrity: sha512-JWEVQaaS7y6Y3Nhe4Lcjl8coP5eXIgYZQTb2WMlLdMluSGM4mWOSFpAis77lAPV+nybFvRf9ri+PjCGqGJXH5g==}
-
   '@date-fns/tz@1.4.1':
     resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
 
@@ -2794,12 +2782,6 @@ packages:
 
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
-
-  '@formbricks/hub@0.12.0':
-    resolution: {integrity: sha512-DsSEBaEjSN/KQ/B6w0pI2XmQgeKGUn8BHui72HdDIqWm06rMgfxbmZpB1n9f6ZsVUcBiz74wOahIPT/2WW9vnA==}
-
-  '@formbricks/js@5.0.0':
-    resolution: {integrity: sha512-mQGngmTKFP+x6rxTsqHawT0eDc1txHzSuyJvEZyG69cs7ACxBfesMRamBmabmw4LdMRODZ2J8WaBLuzck3v9Ig==}
 
   '@formkit/auto-animate@0.9.0':
     resolution: {integrity: sha512-VhP4zEAacXS3dfTpJpJ88QdLqMTcabMg0jwpOSxZ/VzfQVfl3GkZSCZThhGC5uhq/TxPHPzW0dzr4H9Bb1OgKA==}
@@ -7817,9 +7799,6 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  cross-fetch@3.2.0:
-    resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
-
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
@@ -7953,9 +7932,6 @@ packages:
 
   dateformat@4.6.3:
     resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
-
-  dayjs@1.11.19:
-    resolution: {integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==}
 
   dayjs@1.11.21:
     resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
@@ -10824,9 +10800,6 @@ packages:
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
 
-  ramda@0.27.2:
-    resolution: {integrity: sha512-SbiLPU40JuJniHexQSAgad32hfwd+DRUdwF2PlVuI5RZD0/vahUco7R8vD86J/tcEKKF9vZrUVwgtmGCqlCKyA==}
-
   randombytes@2.1.0:
     resolution: {integrity: sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==}
 
@@ -12171,9 +12144,6 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
-
-  url-search-params-polyfill@7.0.1:
-    resolution: {integrity: sha512-bAw7L2E+jn9XHG5P9zrPnHdO0yJub4U+yXJOdpcpkr7OBd9T8oll4lUos0iSGRcDvfZoLUKfx9a6aNmIhJ4+mQ==}
 
   url-template@2.0.8:
     resolution: {integrity: sha512-XdVKMF4SJ0nP/O7XIPB0JwAEuT9lDIYnNsK8yGVe43y0AWoKeJNdv3ZNWh7ksJ6KqQFjOO6ox/VEitLnaVNufw==}
@@ -14385,17 +14355,6 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
-  '@cubejs-client/core@1.6.6(encoding@0.1.13)':
-    dependencies:
-      core-js: 3.48.0
-      cross-fetch: 3.2.0(encoding@0.1.13)
-      dayjs: 1.11.19
-      ramda: 0.27.2
-      url-search-params-polyfill: 7.0.1
-      uuid: 11.1.1
-    transitivePeerDependencies:
-      - encoding
-
   '@date-fns/tz@1.4.1': {}
 
   '@dnd-kit/accessibility@3.1.1(react@19.2.6)':
@@ -14670,10 +14629,6 @@ snapshots:
   '@formatjs/intl-localematcher@0.6.2':
     dependencies:
       tslib: 2.8.1
-
-  '@formbricks/hub@0.12.0': {}
-
-  '@formbricks/js@5.0.0': {}
 
   '@formkit/auto-animate@0.9.0': {}
 
@@ -20456,12 +20411,6 @@ snapshots:
       '@epic-web/invariant': 1.0.0
       cross-spawn: 7.0.6
 
-  cross-fetch@3.2.0(encoding@0.1.13):
-    dependencies:
-      node-fetch: 2.7.0(encoding@0.1.13)
-    transitivePeerDependencies:
-      - encoding
-
   cross-spawn@7.0.6:
     dependencies:
       path-key: 3.1.1
@@ -20598,8 +20547,6 @@ snapshots:
   date-fns@4.1.0: {}
 
   dateformat@4.6.3: {}
-
-  dayjs@1.11.19: {}
 
   dayjs@1.11.21: {}
 
@@ -23705,8 +23652,6 @@ snapshots:
 
   quick-format-unescaped@4.0.4: {}
 
-  ramda@0.27.2: {}
-
   randombytes@2.1.0:
     dependencies:
       safe-buffer: 5.2.1
@@ -25320,8 +25265,6 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
-
-  url-search-params-polyfill@7.0.1: {}
 
   url-template@2.0.8: {}
 

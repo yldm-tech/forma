@@ -104,14 +104,8 @@ spec:
             {{- end }}
             - name: LOG_LEVEL
               value: fatal
-            - name: CUBEJS_API_URL
-              value: http://localhost
-            - name: CUBEJS_API_SECRET
-              value: authzed-initialize-unused
             - name: HUB_API_URL
               value: http://localhost
-            - name: HUB_API_KEY
-              value: authzed-initialize-unused
             - name: REDIS_URL
               value: redis://localhost
             - name: ENCRYPTION_KEY

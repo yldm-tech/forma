@@ -173,14 +173,6 @@ spec:
               value: {{ .Values.authzed.consistency | quote }}
             {{- end }}
             {{- end }}
-            {{- if not (hasKey .Values.deployment.env "HUB_API_URL") }}
-            - name: HUB_API_URL
-              value: "http://{{ include "forma.hubname" . }}:8080"
-            {{- end }}
-            {{- if and .Values.cube.enabled (not (hasKey .Values.deployment.env "CUBEJS_API_URL")) }}
-            - name: CUBEJS_API_URL
-              value: "http://{{ include "forma.cubeName" . }}:{{ .Values.cube.service.port }}"
-            {{- end }}
             {{- if and .Values.llm.enabled .Values.llm.autoConfigureApp }}
             {{- if not (hasKey .Values.deployment.env "AI_PROVIDER") }}
             - name: AI_PROVIDER

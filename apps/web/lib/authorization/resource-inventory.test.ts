@@ -45,20 +45,12 @@ describe("authorization resource inventory", () => {
   });
 
   test("keeps every current grant source in the relationship category", () => {
-    for (const source of [
-      "Membership",
-      "TeamUser",
-      "WorkspaceTeam",
-      "ApiKey",
-      "ApiKeyWorkspace",
-      "FeedbackDirectoryWorkspace",
-    ] as const) {
+    for (const source of ["Membership", "TeamUser", "WorkspaceTeam", "ApiKey", "ApiKeyWorkspace"] as const) {
       expect(PRISMA_AUTHORIZATION_RESOURCE_INVENTORY[source]).toBe("relationship_or_grant_source");
     }
   });
 
-  test("keeps charts and workflows workspace-inherited rather than standalone Phase 1 ACLs", () => {
-    expect(PRISMA_AUTHORIZATION_RESOURCE_INVENTORY.Chart).toBe("workspace_inherited_resource");
+  test("keeps workflows workspace-inherited rather than standalone Phase 1 ACLs", () => {
     expect(PRISMA_AUTHORIZATION_RESOURCE_INVENTORY.Workflow).toBe("workspace_inherited_resource");
   });
 });

@@ -256,12 +256,7 @@ describe("authenticateMcpRequest", () => {
       expect(getMcpRequestId(result.authInfo)).toBe("req_1");
       // A write-capable key must reach both tool groups' read AND write tools.
       expect(result.authInfo.scopes).toEqual(
-        expect.arrayContaining([
-          "surveys:read",
-          "surveys:write",
-          "feedbackRecords:read",
-          "feedbackRecords:write",
-        ])
+        expect.arrayContaining(["surveys:read", "surveys:write", "workflows:read", "workflows:write"])
       );
     }
     expect(applyRateLimit).toHaveBeenCalledWith(expect.objectContaining({ namespace: "api:v3" }), "key_1");
@@ -281,7 +276,7 @@ describe("authenticateMcpRequest", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.authInfo.scopes).toEqual(["surveys:read", "workflows:read", "feedbackRecords:read"]);
+      expect(result.authInfo.scopes).toEqual(["surveys:read", "workflows:read"]);
     }
   });
 
@@ -416,7 +411,7 @@ describe("authenticateMcpRequest", () => {
       // added, the baseline auth gate has been widened and MCP is accepting a token that grants no
       // resource access.
       expect(result.response.headers.get("WWW-Authenticate")).toContain(
-        'scope="surveys:read surveys:write workflows:read workflows:write feedbackRecords:read feedbackRecords:write"'
+        'scope="surveys:read surveys:write workflows:read workflows:write"'
       );
     }
     expect(applyRateLimit).not.toHaveBeenCalled();
@@ -445,9 +440,9 @@ describe("authenticateMcpRequest", () => {
     }
   });
 
-  // Any single resource scope is enough to authenticate: a feedbackRecords-only grant is a legitimate
+  // Any single resource scope is enough to authenticate: a workflows-only grant is a legitimate
   // MCP client and must not be turned away for lacking surveys:read (per-tool guards still apply).
-  test.each([["feedbackRecords:read"], ["surveys:write"]])(
+  test.each([["workflows:read"], ["surveys:write"]])(
     "authenticates an OAuth token scoped only to %s",
     async (scope) => {
       verifyBearerTokenMock.mockResolvedValue({ aud: MCP_AUDIENCE, sub: "user_1", azp: "client_1", scope });

@@ -24,10 +24,6 @@ jobs:
       POSTGRES_PASSWORD: build-time-placeholder
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       REDIS_URL: redis://127.0.0.1:6379
-      CUBEJS_API_URL: http://127.0.0.1:4000
-      CUBEJS_API_SECRET: build-time-placeholder
-      HUB_API_URL: http://127.0.0.1:4000
-      HUB_API_KEY: build-time-placeholder
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -147,10 +143,6 @@ jobs:
             database_url=${{ secrets.DUMMY_DATABASE_URL }}
             encryption_key=${{ secrets.DUMMY_ENCRYPTION_KEY }}
             redis_url=redis://localhost:6379
-            hub_api_url=http://localhost:4000
-            hub_api_key=build-time-placeholder
-            cubejs_api_url=http://localhost:4000
-            cubejs_api_secret=build-time-placeholder
 
       - name: Verify Runtime Image Excludes npm
         shell: bash
@@ -186,10 +178,6 @@ jobs:
             -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma"
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY"
             -e REDIS_URL="redis://192.0.2.1:6379"
-            -e HUB_API_URL="http://192.0.2.1:4000"
-            -e HUB_API_KEY="build-time-placeholder"
-            -e CUBEJS_API_URL="http://192.0.2.1:4000"
-            -e CUBEJS_API_SECRET="build-time-placeholder"
             -e AUTHZED_ENABLED="false"
           )
 
@@ -252,10 +240,6 @@ jobs:
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY"
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY"
             -e REDIS_URL="redis://192.0.2.1:6379"
-            -e HUB_API_URL="http://192.0.2.1:4000"
-            -e HUB_API_KEY="build-time-placeholder"
-            -e CUBEJS_API_URL="http://192.0.2.1:4000"
-            -e CUBEJS_API_SECRET="build-time-placeholder"
           )
 
           run_invalid_case() {
@@ -350,8 +334,6 @@ jobs:
             'POSTGRES_PASSWORD=compose-postgres-placeholder' \
             "ENCRYPTION_KEY=$DUMMY_ENCRYPTION_KEY" \
             "BETTER_AUTH_SECRET=$DUMMY_ENCRYPTION_KEY" \
-            'HUB_API_KEY=build-time-placeholder' \
-            'CUBEJS_API_SECRET=build-time-placeholder' \
             'AUTHZED_TOKEN=compose-authzed-token-placeholder' \
             'AUTHZED_DATABASE_PASSWORD=compose-authzed-database-placeholder' \
             'AI_PROVIDER=compose-provider-secret-sentinel' \
@@ -397,10 +379,6 @@ jobs:
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY" \
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY" \
             -e REDIS_URL="redis://192.0.2.1:6379" \
-            -e HUB_API_URL="http://192.0.2.1:4000" \
-            -e HUB_API_KEY="build-time-placeholder" \
-            -e CUBEJS_API_URL="http://192.0.2.1:4000" \
-            -e CUBEJS_API_SECRET="build-time-placeholder" \
             -e SKIP_STARTUP_MIGRATION="true" \
             -d "forma-test:$GITHUB_SHA"
 
@@ -502,10 +480,6 @@ jobs:
             -e ENCRYPTION_KEY="$DUMMY_ENCRYPTION_KEY" \
             -e BETTER_AUTH_SECRET="$DUMMY_ENCRYPTION_KEY" \
             -e REDIS_URL="redis://host.docker.internal:6379" \
-            -e HUB_API_URL="http://localhost:4000" \
-            -e HUB_API_KEY="build-time-placeholder" \
-            -e CUBEJS_API_URL="http://localhost:4000" \
-            -e CUBEJS_API_SECRET="build-time-placeholder" \
             -d "forma-test:$GITHUB_SHA"
 
           # Start health check polling immediately (every 5 seconds for up to 5 minutes)

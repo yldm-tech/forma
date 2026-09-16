@@ -4,7 +4,6 @@ import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { DatabaseError } from "@forma/types/errors";
-import { getFeedbackDirectoryAssignmentObjectId } from "@/lib/authzed/feedback-directory-assignment-id";
 
 /**
  * Light, cached lookups the legacy authorization evaluator uses to walk a
@@ -27,18 +26,6 @@ const rethrowAsDatabaseError = (error: unknown): never => {
 };
 
 export type TAuthorizationWorkspaceScope = Readonly<{
-  organizationId: string;
-  workspaceId: string;
-}>;
-
-export type TFeedbackDirectoryAuthorizationScope = Readonly<{
-  isArchived: boolean;
-  organizationId: string;
-  workspaceIds: ReadonlyArray<string>;
-}>;
-
-export type TFeedbackDirectoryAssignmentAuthorizationScope = Readonly<{
-  assignmentId: string;
   organizationId: string;
   workspaceId: string;
 }>;
@@ -148,26 +135,6 @@ export const getSurveyAuthorizationWorkspaceScope = reactCache(
   }
 );
 
-/** The workspace and organization a dashboard belongs to. */
-export const getDashboardAuthorizationWorkspaceScope = reactCache(
-  async (dashboardId: string): Promise<TAuthorizationWorkspaceScope | null> => {
-    try {
-      const dashboard = await prisma.dashboard.findUnique({
-        where: { id: dashboardId },
-        select: {
-          workspaceId: true,
-          workspace: { select: { organizationId: true } },
-        },
-      });
-      return dashboard
-        ? { organizationId: dashboard.workspace.organizationId, workspaceId: dashboard.workspaceId }
-        : null;
-    } catch (error) {
-      return rethrowAsDatabaseError(error);
-    }
-  }
-);
-
 /** The workspace and organization a response's survey belongs to. */
 export const getResponseAuthorizationWorkspaceScope = reactCache(
   async (responseId: string): Promise<TAuthorizationWorkspaceScope | null> => {
@@ -203,19 +170,6 @@ export const getSurveyWorkspaceId = reactCache(async (surveyId: string): Promise
       select: { workspaceId: true },
     });
     return survey?.workspaceId ?? null;
-  } catch (error) {
-    return rethrowAsDatabaseError(error);
-  }
-});
-
-/** The workspace a dashboard belongs to (`Dashboard.workspaceId`). */
-export const getDashboardWorkspaceId = reactCache(async (dashboardId: string): Promise<string | null> => {
-  try {
-    const dashboard = await prisma.dashboard.findUnique({
-      where: { id: dashboardId },
-      select: { workspaceId: true },
-    });
-    return dashboard?.workspaceId ?? null;
   } catch (error) {
     return rethrowAsDatabaseError(error);
   }
@@ -259,64 +213,6 @@ export const getApiKeyOrganizationId = reactCache(async (apiKeyId: string): Prom
     return rethrowAsDatabaseError(error);
   }
 });
-
-export const getFeedbackDirectoryAuthorizationScope = reactCache(
-  async (feedbackDirectoryId: string): Promise<TFeedbackDirectoryAuthorizationScope | null> => {
-    try {
-      const directory = await prisma.feedbackDirectory.findUnique({
-        where: { id: feedbackDirectoryId },
-        select: {
-          isArchived: true,
-          organizationId: true,
-          workspaces: { select: { workspaceId: true }, orderBy: { workspaceId: "asc" } },
-        },
-      });
-      return directory
-        ? {
-            isArchived: directory.isArchived,
-            organizationId: directory.organizationId,
-            workspaceIds: directory.workspaces.map(({ workspaceId }) => workspaceId),
-          }
-        : null;
-    } catch (error) {
-      return rethrowAsDatabaseError(error);
-    }
-  }
-);
-
-export const getFeedbackDirectoryAssignmentAuthorizationScope = reactCache(
-  async (
-    feedbackDirectoryId: string,
-    workspaceId: string
-  ): Promise<TFeedbackDirectoryAssignmentAuthorizationScope | null> => {
-    try {
-      const assignment = await prisma.feedbackDirectoryWorkspace.findUnique({
-        where: {
-          feedbackDirectoryId_workspaceId: { feedbackDirectoryId, workspaceId },
-        },
-        select: {
-          feedbackDirectory: { select: { isArchived: true, organizationId: true } },
-          workspace: { select: { organizationId: true } },
-        },
-      });
-      if (
-        !assignment ||
-        assignment.feedbackDirectory.isArchived ||
-        assignment.feedbackDirectory.organizationId !== assignment.workspace.organizationId
-      ) {
-        return null;
-      }
-
-      return {
-        assignmentId: getFeedbackDirectoryAssignmentObjectId(feedbackDirectoryId, workspaceId),
-        organizationId: assignment.feedbackDirectory.organizationId,
-        workspaceId,
-      };
-    } catch (error) {
-      return rethrowAsDatabaseError(error);
-    }
-  }
-);
 
 /**
  * Resolve an API key acting as a principal (by `ApiKey.id`) into its effective

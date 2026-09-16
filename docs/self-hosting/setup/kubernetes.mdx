@@ -228,8 +228,6 @@ Cube is part of the baseline Forma v5 stack and is bundled with the chart by def
 (`cube.enabled: true`). To run an external Cube cluster instead:
 
 - set `cube.enabled: false` to skip the bundled Cube deployment
-- point the app at your external endpoint via `deployment.env.CUBEJS_API_URL`
-- supply `CUBEJS_API_SECRET` via `deployment.env` or `deployment.envFrom` if you disable generated
   secrets
 
 ### Optional Bundled Qwen/vLLM For AI
@@ -334,7 +332,6 @@ For a Forma 4.x to 5.0 migration, confirm the following before running the upgra
 - `HUB_API_KEY` is present
 - your edge rate-limiting plan is in place
 - any required `AI_*` variables are added
-- `CUBEJS_API_SECRET` is configured (the generated app secret supplies it by default; provide an external
   endpoint if you set `cube.enabled: false`)
 
 ## 5. Key Values
@@ -350,7 +347,6 @@ For a Forma 4.x to 5.0 migration, confirm the following before running the upgra
 | `envoyRedis.enabled`             | Deploys a dedicated Redis backend for Envoy rate limiting      |
 | `llm.enabled`                    | Deploys the optional bundled Qwen/vLLM runtime                 |
 | `llm.autoConfigureApp`           | Injects Forma OpenAI-compatible env vars for bundled Qwen |
-| `taxonomy.enabled`               | Deploys the optional standalone AI taxonomy service            |
 | `postgresql.externalDatabaseUrl` | Uses an external PostgreSQL service instead of in-cluster      |
 | `redis.externalRedisUrl`         | Uses an external Redis/Valkey service instead of in-cluster    |
 

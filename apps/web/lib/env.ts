@@ -204,9 +204,6 @@ const ZSurveySchedulingTimeZone = z.string().trim().min(1).refine(isValidIanaTim
 
 const ZSurveySchedulingLocalHour = z.coerce.number().int().min(0).max(23);
 const ZSurveySchedulingLocalMinute = z.coerce.number().int().min(0).max(59);
-const emptyStringToUndefined = (value: unknown) =>
-  typeof value === "string" && value.trim() === "" ? undefined : value;
-const ZOptionalNonEmptyString = z.preprocess(emptyStringToUndefined, z.string().trim().min(1).optional());
 const ZAuthzedBoolean = z.enum(["true", "false", "1", "0"]);
 const ZAuthzedConsistency = z.enum(["minimize_latency", "fully_consistent"]).optional();
 const ZAuthzedToken = z
@@ -366,14 +363,8 @@ const parsedEnv = createEnv({
     AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS: z.string().optional(),
     AI_OPENAI_COMPATIBLE_HEADERS_JSON: z.string().optional(),
     AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON: z.string().optional(),
-    CUBEJS_API_SECRET: z.string().trim().min(1),
-    CUBEJS_API_URL: z.url(),
-    CUBEJS_JWT_AUDIENCE: ZOptionalNonEmptyString,
-    CUBEJS_JWT_ISSUER: ZOptionalNonEmptyString,
     HTTP_PROXY: z.url().optional(),
     HTTPS_PROXY: z.url().optional(),
-    HUB_API_URL: z.url(),
-    HUB_API_KEY: z.string().trim().min(1),
     IMPRINT_URL: z
       .url()
       .optional()
@@ -387,8 +378,6 @@ const parsedEnv = createEnv({
     // Forma-in-Forma: dogfood in-app surveys. Points at the Forma
     // instance that hosts the surveys (defaults to Forma Cloud). When
     // FORMA_WORKSPACE_ID is set, the survey widget is mounted in the app.
-    FORMA_WORKSPACE_ID: z.string().optional(),
-    FORMA_APP_URL: z.url().optional(),
     IS_FORMA_CLOUD: z.enum(["1", "0"]).optional(),
     POSTHOG_KEY: z.string().optional(),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal"]).optional(),
@@ -568,14 +557,8 @@ const parsedEnv = createEnv({
       process.env.AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS,
     AI_OPENAI_COMPATIBLE_HEADERS_JSON: process.env.AI_OPENAI_COMPATIBLE_HEADERS_JSON,
     AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON: process.env.AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON,
-    CUBEJS_API_SECRET: process.env.CUBEJS_API_SECRET,
-    CUBEJS_API_URL: process.env.CUBEJS_API_URL,
-    CUBEJS_JWT_AUDIENCE: process.env.CUBEJS_JWT_AUDIENCE,
-    CUBEJS_JWT_ISSUER: process.env.CUBEJS_JWT_ISSUER,
     HTTP_PROXY: process.env.HTTP_PROXY,
     HTTPS_PROXY: process.env.HTTPS_PROXY,
-    HUB_API_URL: process.env.HUB_API_URL,
-    HUB_API_KEY: process.env.HUB_API_KEY,
     IMPRINT_URL: process.env.IMPRINT_URL,
     IMPRINT_ADDRESS: process.env.IMPRINT_ADDRESS,
     INVITE_DISABLED: process.env.INVITE_DISABLED,
@@ -583,8 +566,6 @@ const parsedEnv = createEnv({
     PLAIN_APP_ID: process.env.PLAIN_APP_ID,
     PLAIN_CHAT_HMAC_SECRET: process.env.PLAIN_CHAT_HMAC_SECRET,
     PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID: process.env.PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID,
-    FORMA_WORKSPACE_ID: process.env.FORMA_WORKSPACE_ID,
-    FORMA_APP_URL: process.env.FORMA_APP_URL,
     IS_FORMA_CLOUD: process.env.IS_FORMA_CLOUD,
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     LOG_LEVEL: process.env.LOG_LEVEL,

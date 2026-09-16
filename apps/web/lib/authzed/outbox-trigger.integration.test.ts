@@ -165,39 +165,6 @@ describe("AuthZed projection outbox triggers", () => {
     ]);
   });
 
-  test("classifies unarchiving a directory as a grant unless it also changes organization", async () => {
-    const [organization, other] = await Promise.all([
-      seedOrganization("Directory home"),
-      seedOrganization("Directory elsewhere"),
-    ]);
-    const directory = await prisma.feedbackDirectory.create({
-      data: { name: "Archived", organizationId: organization.id, isArchived: true },
-    });
-    await clearOutbox();
-
-    await prisma.feedbackDirectory.update({ where: { id: directory.id }, data: { isArchived: false } });
-    expect(await outboxRows()).toEqual([
-      { isRevocation: false, primaryId: directory.id, secondaryId: null, targetType: "feedback_directory" },
-    ]);
-
-    await prisma.feedbackDirectory.update({ where: { id: directory.id }, data: { isArchived: true } });
-    // Cleared AFTER the re-archive, not before: that setup step enqueues a revocation of its own, and
-    // `outboxRows` sorts revocations first, so asserting on `.at(0)` would have read the setup row and
-    // passed even with the organizationId clause deleted from the classifier.
-    await clearOutbox();
-
-    await prisma.feedbackDirectory.update({
-      where: { id: directory.id },
-      data: { isArchived: false, organizationId: other.id },
-    });
-
-    // Reconciliation clears every previous parent before restoring the current one. Treat the move as
-    // a revocation so the freshness guard remains active until that exact replacement is delivered.
-    expect(await outboxRows()).toEqual([
-      { isRevocation: true, primaryId: directory.id, secondaryId: null, targetType: "feedback_directory" },
-    ]);
-  });
-
   test("classifies an unmapped enum move as a revocation", async () => {
     const [user, organization] = await Promise.all([
       seedUser("team@integration.test"),

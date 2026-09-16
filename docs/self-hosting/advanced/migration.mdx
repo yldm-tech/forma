@@ -203,7 +203,6 @@ A feedback dataset can be assigned to more than one workspace, and the records i
 of their own. When a dataset is shared that way, a workspace-scoped permission cannot establish which
 workspace a given record belongs to. Two rules now follow from that:
 
-- **Deleting a feedback record requires `manage`.** A key with `write` is no longer enough. This brings
   feedback records in line with every other `DELETE` in the API, which has always required `manage`.
 - **A key cannot update or delete records in a shared dataset.** If a dataset is assigned to two or more
   workspaces, an API key is refused regardless of its permission level, with a `403` explaining why.
@@ -211,11 +210,6 @@ workspace a given record belongs to. Two rules now follow from that:
 | Operation | Before | After |
 | --- | --- | --- |
 | `GET`, search, similar, count | `read` | unchanged |
-| `POST /api/v3/feedbackRecords` (create) | `write` | unchanged |
-| `PATCH /api/v3/feedbackRecords/{id}` | `write` | `write`, **and** the dataset assigned to one workspace |
-| `DELETE /api/v3/feedbackRecords/{id}` | `write` | `manage`, **and** the dataset assigned to one workspace |
-| `DELETE /api/v3/feedbackRecords?tenant_id=…` | `write` | `manage`, **and** the dataset assigned to one workspace |
-
 The same applies to the MCP tools `update_feedback_record` and `delete_feedback_record` when the client
 authenticates with an API key. The required MCP **scope** is unchanged — both remain `feedbackRecords:write`.
 
@@ -417,7 +411,6 @@ The new survey-scheduling feature runs on a fixed daily local time. All three ar
 
 Two Cube-related deltas in v5.3. Neither changes the Cube schema, so there is **no schema refresh to run**:
 
-- **`CUBEJS_EXTERNAL_DEFAULT` now defaults to `false`** (in both `docker/docker-compose.yml` and the Helm
   chart). Cube Store is used only when you explicitly opt into external pre-aggregations — a safe default
   for most self-hosters. Set it back to `true` only if you run external pre-aggregations.
 - **The Hub image moves to `0.8.1`.** The Helm chart pins `0.8.1`. Docker Compose instead resolves the Hub
@@ -529,11 +522,7 @@ Supported providers: `openai`, `google` (AI Studio, needs `*_PROVIDER_API_KEY`),
 An optional standalone taxonomy service, enabled in Docker Compose with `COMPOSE_PROFILES=taxonomy`. It
 shares an internal token with Hub:
 
-- `TAXONOMY_SERVICE_URL` (the internal URL to the taxonomy service)
-- `HUB_INTERNAL_API_TOKEN`, `TAXONOMY_SERVICE_TOKEN` (strong random secrets)
-- `TAXONOMY_LLM_PROVIDER` / `TAXONOMY_LLM_MODEL` / `TAXONOMY_LLM_BASE_URL` / `TAXONOMY_LLM_API_KEY`
   (`openai-compatible` by default; `bedrock` and `vertex-gemini` also supported)
-- `TAXONOMY_IMAGE_REF` to pin a released image (e.g. `:v0.1.0`)
 
 Use `COMPOSE_PROFILES=qwen,taxonomy` to back it with the bundled Qwen/vLLM service.
 
@@ -652,11 +641,9 @@ enterprise functionality.
 Cube is part of the baseline Forma v5 stack.
 
 - the Docker, one-click, and Helm deployments all bundle the `cube` service by default
-- the Forma app requires `CUBEJS_API_URL` and `CUBEJS_API_SECRET`; the install/dev-setup scripts
   generate the secret automatically for new installs
 - Helm operators who want to run an external Cube cluster can set `cube.enabled: false` and provide their
   own endpoint via `deployment.env.CUBEJS_API_URL`
-- if you run Cube yourself, you may also need to override `CUBEJS_DB_*` values for the Cube service
 
 ### Upgrade Steps By Deployment Type
 
@@ -816,7 +803,6 @@ Common upgrade issues:
   protected by the legacy in-app limiter
 - **Missing AI provider configuration**: AI features remain unavailable until `AI_PROVIDER`, `AI_MODEL`, and the
   matching provider settings are set correctly
-- **Missing `CUBEJS_API_SECRET`** (or unreachable Cube endpoint): the Forma app fails env validation
   at boot, or — if env vars are present but Cube is unreachable — dashboards and analysis queries fail
   while the rest of the app stays healthy
 - **Cube healthcheck fails with `wget: not found`**: older v5 Docker Compose files used `wget` for the

@@ -244,53 +244,6 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["unify-feedback/overview"]
-          },
-          {
-            "group": "Unify Feedback Features",
-            "pages": [
-              "unify-feedback/feedback-datasets",
-              "unify-feedback/feedback-sources",
-              "unify-feedback/feedback-records",
-              "unify-feedback/enrichment",
-              {
-                "group": "Dashboards & Charts",
-                "icon": "chart-line",
-                "pages": [
-                  "unify-feedback/dashboards-charts",
-                  "unify-feedback/dashboards-charts/creating-your-first-charts"
-                ]
-              },
-              "unify-feedback/topics-subtopics"
-            ]
-          },
-          {
-            "group": "Best Practices",
-            "pages": [
-              {
-                "group": "Journey Management",
-                "icon": "map",
-                "pages": [
-                  "unify-feedback/journey-management/map-feedback-to-journeys",
-                  "unify-feedback/journey-management/journey-scorecards",
-                  "unify-feedback/journey-management/detection-signals",
-                  "unify-feedback/journey-management/recurring-patterns",
-                  "unify-feedback/journey-management/close-the-loop"
-                ]
-              }
-            ]
-          },
-          {
-            "group": "Powered by",
-            "pages": ["unify-feedback/forma-hub"]
-          }
-        ],
-        "tab": "Unify Feedback (Analyze)"
-      },
-      {
-        "groups": [
-          {
-            "group": "Overview",
             "pages": ["workflows/overview"]
           },
           {
@@ -376,8 +329,6 @@
                   "self-hosting/advanced/enterprise-features/oidc-sso",
                   "self-hosting/advanced/enterprise-features/saml-sso",
                   "self-hosting/advanced/enterprise-features/audit-logging",
-                  "self-hosting/advanced/enterprise-features/unify-feedback",
-                  "self-hosting/advanced/enterprise-features/dashboards",
                   "self-hosting/advanced/enterprise-features/ai-features",
                   "self-hosting/advanced/enterprise-features/workflows"
                 ]
@@ -398,9 +349,7 @@
             "group": "Technical Handbook",
             "pages": [
               "development/technical-handbook/overview",
-              "development/technical-handbook/api-gateway",
               "development/technical-handbook/mcp-server",
-              "development/technical-handbook/cube-tenant-isolation",
               "development/technical-handbook/database-model",
               "development/technical-handbook/tenant-separation"
             ]
@@ -531,10 +480,6 @@
     {
       "destination": "/docs/self-hosting/configuration/auth-sso/setup-saml-with-identity-providers",
       "source": "/docs/development/guides/auth-and-provision/setup-saml-with-identity-providers"
-    },
-    {
-      "destination": "/docs/unify-feedback/feedback-datasets",
-      "source": "/docs/unify-feedback/feedback-directories"
     },
     {
       "destination": "/docs/platform/introduction",

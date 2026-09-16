@@ -9,7 +9,6 @@ import { type TUserLocale, ZUserLocale } from "@forma/types/user";
 import { DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS, POSTHOG_KEY } from "@/lib/constants";
 import { generateStandardWebhookSignature } from "@/lib/crypto";
 import { selectSurveyEmbeddedDataLinks, withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
-import { handleFeedbackSourcePipeline } from "@/lib/feedback-source/pipeline-handler";
 import { getIntegrations } from "@/lib/integration/service";
 import { isDatabasePoolExhaustionError } from "@/lib/jobs/pool-exhaustion";
 import { getResponseCountBySurveyId } from "@/lib/response/service";
@@ -693,18 +692,6 @@ const runResponseFinishedSideEffects = async ({
         "Response pipeline integration handling failed"
       );
     }
-  }
-
-  try {
-    await handleFeedbackSourcePipeline(data.response, survey, workspaceId);
-  } catch (error) {
-    logger.error(
-      {
-        ...logContext,
-        err: error,
-      },
-      "Response pipeline feedbackSource handling failed"
-    );
   }
 
   await handleFollowUpsSafely({

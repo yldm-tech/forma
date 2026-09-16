@@ -24,8 +24,6 @@ const parseAction = (
 };
 
 const WORKSPACE_PERMISSION_FOR_DERIVED_ACTION = {
-  "dashboard.read": "read",
-  "dashboard.write": "write",
   "response.export": "read",
   "response.manage": "manage",
   "response.read": "read",

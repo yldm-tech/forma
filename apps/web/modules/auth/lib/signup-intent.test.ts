@@ -7,9 +7,6 @@ const ENCRYPTION_KEY = "0".repeat(64);
 
 vi.mock("@/lib/constants", () => ({ NEXTAUTH_SECRET, ENCRYPTION_KEY, BETTER_AUTH_SECRET: undefined }));
 vi.mock("@/lib/env", () => ({ env: { WEBAPP_URL: "http://localhost:3000" } }));
-// Imported only so the boundary test below can call the REAL `verifyToken`; its gateway-auth import
-// chain is irrelevant to that call and pulls in server env, so stub it.
-vi.mock("@/modules/gateway-auth/lib/service", () => ({ getGatewayAuthServiceTokenPurpose: vi.fn() }));
 
 const { createSignupIntentToken, readSignupIntent, classifySignupIntent, SIGNUP_INTENT_COOKIE_NAME } =
   await import("./signup-intent");

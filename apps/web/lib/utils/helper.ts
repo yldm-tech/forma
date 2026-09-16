@@ -4,7 +4,6 @@ import {
   getApiKey,
   getContact,
   getContactAttributeKey,
-  getFeedbackSource,
   getIntegration,
   getInvite,
   getLanguage,
@@ -291,14 +290,4 @@ export const isStringMatch = (query: string, value: string): boolean => {
   const valueModified = value.toLowerCase().replace(/ /g, "").replace(/_/g, "").replace(/-/g, "");
 
   return valueModified.includes(queryModified);
-};
-
-// FeedbackSource helpers
-export const getOrganizationIdFromFeedbackSourceId = async (feedbackSourceId: string) => {
-  const feedbackSource = await getFeedbackSource(feedbackSourceId);
-  if (!feedbackSource) {
-    throw new ResourceNotFoundError("feedbackSource", feedbackSourceId);
-  }
-
-  return await getOrganizationIdFromWorkspaceId(feedbackSource.workspaceId);
 };

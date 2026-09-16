@@ -3,9 +3,6 @@ import type { TAuthorizationActor, TAuthorizationResource, TAuthorizationResourc
 import {
   getApiKeyOrganizationId,
   getAuthorizationOrganizationId,
-  getDashboardAuthorizationWorkspaceScope,
-  getFeedbackDirectoryAssignmentAuthorizationScope,
-  getFeedbackDirectoryAuthorizationScope,
   getResponseAuthorizationWorkspaceScope,
   getSurveyAuthorizationWorkspaceScope,
   getTeamOrganizationId,
@@ -71,38 +68,8 @@ const resolveResourceScope = async (resource: TAuthorizationResource): Promise<T
     case "survey": {
       return toWorkspaceResourceScope(await getSurveyAuthorizationWorkspaceScope(resource.id));
     }
-    case "dashboard": {
-      return toWorkspaceResourceScope(await getDashboardAuthorizationWorkspaceScope(resource.id));
-    }
     case "response": {
       return toWorkspaceResourceScope(await getResponseAuthorizationWorkspaceScope(resource.id));
-    }
-    case "feedbackDirectory": {
-      const scope = await getFeedbackDirectoryAuthorizationScope(resource.id);
-      // Archive state is an authoritative PostgreSQL policy input, not a projected relationship.
-      // Deny it before consulting SpiceDB so organization administrators cannot retain access through
-      // feedback_directory#organization while the directory is archived.
-      return scope && !scope.isArchived
-        ? {
-            organizationId: scope.organizationId,
-            permissionResource: { type: resource.type, id: resource.id },
-          }
-        : null;
-    }
-    case "feedbackDirectoryAssignment": {
-      const scope = await getFeedbackDirectoryAssignmentAuthorizationScope(
-        resource.feedbackDirectoryId,
-        resource.workspaceId
-      );
-      return scope
-        ? {
-            organizationId: scope.organizationId,
-            permissionResource: {
-              id: scope.assignmentId,
-              type: "feedbackDirectoryAssignment",
-            },
-          }
-        : null;
     }
   }
 };

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { reconcileApiKeyRelationships } from "./api-key";
 import { isAuthzedEnabled } from "./config";
-import { reconcileFeedbackDirectoryRelationships } from "./feedback-directory";
 import { recordAuthzedRevocationDelivery } from "./metrics";
 import {
   deleteOrganizationRelationships,
@@ -33,7 +32,6 @@ vi.mock("@forma/database", () => ({
 vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn() } }));
 vi.mock("./api-key", () => ({ reconcileApiKeyRelationships: vi.fn() }));
 vi.mock("./config", () => ({ isAuthzedEnabled: vi.fn() }));
-vi.mock("./feedback-directory", () => ({ reconcileFeedbackDirectoryRelationships: vi.fn() }));
 vi.mock("./metrics", () => ({
   recordAuthzedOutboxDelivery: vi.fn(),
   recordAuthzedOutboxStatus: vi.fn(),
@@ -93,8 +91,6 @@ const everyTarget = (): ReadonlyArray<TAuthzedOutboxEvent> => [
   event("workspace_team", "workspace", "team"),
   event("api_key", "key"),
   event("api_key_workspace", "key", "workspace"),
-  event("feedback_directory", "directory"),
-  event("feedback_directory_assignment", "directory", "workspace"),
 ];
 
 const sorted = (ids: ReadonlyArray<string>): ReadonlyArray<string> =>
@@ -114,7 +110,6 @@ describe("AuthZed projection outbox processor", () => {
     vi.mocked(deleteUserTeamRelationships).mockResolvedValue(projected);
     vi.mocked(reconcileTeamWorkspaceRelationships).mockResolvedValue(projected);
     vi.mocked(reconcileApiKeyRelationships).mockResolvedValue(projected);
-    vi.mocked(reconcileFeedbackDirectoryRelationships).mockResolvedValue(projected);
     vi.mocked(prisma.organization.findMany).mockResolvedValue([]);
     vi.mocked(prisma.user.findMany).mockResolvedValue([]);
     vi.mocked(markAuthzedOutboxEventsFailed).mockResolvedValue(0);
@@ -133,9 +128,9 @@ describe("AuthZed projection outbox processor", () => {
     vi.mocked(claimAuthzedOutboxEvents).mockResolvedValue(events);
 
     await expect(processAuthzedOutboxBatch("lease")).resolves.toEqual({
-      claimed: 11,
+      claimed: 9,
       deadLettered: 0,
-      delivered: 11,
+      delivered: 9,
       failed: 0,
     });
 
@@ -155,10 +150,6 @@ describe("AuthZed projection outbox processor", () => {
       apiKeyIds: ["key"],
       apiKeyWorkspaceGrants: [{ apiKeyId: "key", workspaceId: "workspace" }],
     });
-    expect(reconcileFeedbackDirectoryRelationships).toHaveBeenCalledWith({
-      assignments: [{ feedbackDirectoryId: "directory", workspaceId: "workspace" }],
-      feedbackDirectoryIds: ["directory"],
-    });
     expect(deliveredIds()).toEqual(sorted(events.map(({ id }) => id)));
   });
 
@@ -168,7 +159,7 @@ describe("AuthZed projection outbox processor", () => {
     vi.mocked(reconcileApiKeyRelationships).mockResolvedValue(failed("authzed_internal", false));
 
     await expect(processAuthzedOutboxBatch("lease")).resolves.toMatchObject({
-      delivered: 9,
+      delivered: 7,
       failed: 2,
     });
 
@@ -189,11 +180,10 @@ describe("AuthZed projection outbox processor", () => {
     // The membership group runs first, so a retryable failure there must release the rest untried.
     vi.mocked(reconcileOrganizationMemberships).mockResolvedValue(failed("authzed_unavailable", true));
 
-    await expect(processAuthzedOutboxBatch("lease")).resolves.toMatchObject({ delivered: 0, failed: 11 });
+    await expect(processAuthzedOutboxBatch("lease")).resolves.toMatchObject({ delivered: 0, failed: 9 });
 
     expect(reconcileTeamWorkspaceRelationships).not.toHaveBeenCalled();
     expect(reconcileApiKeyRelationships).not.toHaveBeenCalled();
-    expect(reconcileFeedbackDirectoryRelationships).not.toHaveBeenCalled();
     // Nothing here earned a permanent failure: dead-lettering needs `!retryable && isolated`, and a
     // transient fault never satisfies the first half however the events happened to be grouped.
     for (const [, , , attribution] of vi.mocked(markAuthzedOutboxEventsFailed).mock.calls) {
@@ -209,7 +199,6 @@ describe("AuthZed projection outbox processor", () => {
 
     expect(reconcileTeamWorkspaceRelationships).toHaveBeenCalled();
     expect(reconcileApiKeyRelationships).toHaveBeenCalled();
-    expect(reconcileFeedbackDirectoryRelationships).toHaveBeenCalled();
   });
 
   test("treats an unstable source snapshot as transient rather than as a poison event", async () => {
@@ -256,13 +245,13 @@ describe("AuthZed projection outbox processor", () => {
 
   test("isolates the one event a per-event failure is attributable to", async () => {
     const events = ["a", "b", "c", "d"].map((suffix) =>
-      event("feedback_directory_assignment", `directory-${suffix}`, "workspace")
+      event("api_key_workspace", `key-${suffix}`, "workspace")
     );
     const poison = events[2];
     vi.mocked(claimAuthzedOutboxEvents).mockResolvedValue(events);
-    vi.mocked(reconcileFeedbackDirectoryRelationships).mockImplementation(({ assignments }) =>
+    vi.mocked(reconcileApiKeyRelationships).mockImplementation(({ apiKeyWorkspaceGrants }) =>
       Promise.resolve(
-        (assignments ?? []).some(({ feedbackDirectoryId }) => feedbackDirectoryId === poison.primaryId)
+        (apiKeyWorkspaceGrants ?? []).some(({ apiKeyId }) => apiKeyId === poison.primaryId)
           ? failed("authzed_projection_invalid_source", false)
           : projected
       )
@@ -281,15 +270,15 @@ describe("AuthZed projection outbox processor", () => {
 
   test("does not split a group for a failure that describes the instance", async () => {
     const events = ["a", "b", "c", "d"].map((suffix) =>
-      event("feedback_directory_assignment", `directory-${suffix}`, "workspace")
+      event("api_key_workspace", `key-${suffix}`, "workspace")
     );
     vi.mocked(claimAuthzedOutboxEvents).mockResolvedValue(events);
-    vi.mocked(reconcileFeedbackDirectoryRelationships).mockResolvedValue(failed("authzed_internal", false));
+    vi.mocked(reconcileApiKeyRelationships).mockResolvedValue(failed("authzed_internal", false));
 
     await processAuthzedOutboxBatch("lease");
 
     // One call, not the 2N a blind split would spend every five seconds against a broken instance.
-    expect(reconcileFeedbackDirectoryRelationships).toHaveBeenCalledOnce();
+    expect(reconcileApiKeyRelationships).toHaveBeenCalledOnce();
     expect(markAuthzedOutboxEventsFailed).toHaveBeenCalledWith(
       "lease",
       events.map(({ id }) => id),

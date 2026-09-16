@@ -1,10 +1,8 @@
 ---
 title: "Connect AI Agents (MCP)"
-description: "Let AI assistants like Claude and Codex read and manage your Forma surveys and feedback records through the Model Context Protocol (MCP), authorized securely with your own login."
 icon: "robot"
 ---
 
-Forma ships a **Model Context Protocol (MCP) server** that lets AI assistants — Claude Code, the Claude apps, Codex, and other MCP-capable clients — work with your workspace: list and read surveys, create link surveys, update or delete them, and read or add Unify Feedback records. The agent goes through the same APIs and permission checks you use in the app, so it always respects your permissions.
 
 You connect a client **with your own Forma login over OAuth 2.1** — there are no API keys to generate, copy, or paste. You approve the connection once on a consent screen, and you can revoke it at any time.
 
@@ -36,7 +34,7 @@ The whole flow uses Authorization Code + PKCE, the standard the [MCP authorizati
 
 ## What the agent can do
 
-The MCP server exposes survey, workflow and feedback-record tools, grouped into scopes you approve on
+The MCP server exposes survey and workflow tools, grouped into scopes you approve on
 the consent screen. Read tools require the matching `:read` scope; tools that create, update, or delete
 require the `:write` scope:
 
@@ -46,47 +44,17 @@ require the `:write` scope:
 | `surveys:write` | `create_survey`, `patch_survey`, `delete_survey` | Create, update, and delete surveys |
 | `workflows:read` | `list_workflows`, `get_workflow`, `list_workflow_runs`, `get_workflow_run`, `test_workflow`¹ | Read workflows and their runs |
 | `workflows:write` | `create_workflow`, `patch_workflow`, `duplicate_workflow`, `delete_workflow`, `enable_workflow`, `disable_workflow`, `archive_workflow`, `unarchive_workflow` | Create, update, and delete workflows |
-| `feedbackRecords:read` | `list_feedback_datasets`, `list_feedback_records`, `count_feedback_records`, `get_feedback_record`, `search_feedback_records`, `find_similar_feedback_records` | Read, count and search feedback records in a workspace's feedback dataset |
-| `feedbackRecords:write` | `create_feedback_record`, `create_feedback_records`, `update_feedback_record`², `delete_feedback_record`² | Create, correct and delete feedback records |
-
 ¹ `test_workflow` is a dry-run (no changes are saved), so it only needs the `workflows:read` scope — but because it evaluates the live workflow definition, it requires **write or manage** permission on the workspace. A read-only member will get a 403 even though the scope matches.
 
-² Changing a record that already exists is held to a higher bar than creating one, because a feedback dataset shared across workspaces has no way to tell whose records are whose. Connected over **OAuth** (the flow on this page), both tools require you to be an **organization owner or manager**. Authenticated with an **API key** instead, they require the dataset to be assigned to a **single workspace** — a workspace-scoped key cannot be shown to own a record in a shared one — and `delete_feedback_record` additionally requires **manage** permission, matching `DELETE` elsewhere in the API. Creating, reading and searching are unaffected either way.
 
-Scope groups are independent — a client can be granted feedback-record access without survey access, or
-the other way around. `list_workspaces` is available to any read scope, since every other tool needs a
+Scope groups are independent — a client can be granted workflow access without survey access, or the
+other way around. `list_workspaces` is available to any read scope, since every other tool needs a
 workspace id.
 
-<Note>
-  The feedback-record tools work with **Unify Feedback** data and need the Enterprise Edition
-  (`feedbackDirectories`), plus a feedback dataset assigned to the workspace. Without the entitlement or a
-  directory, those tools return an authorization or validation error while the survey tools keep working.
-</Note>
-
-<Warning>
-  `delete_feedback_record` permanently deletes a record — there is no undo and no trash. Grant
-  `feedbackRecords:write` only to clients you want to be able to change or delete feedback, and keep read-only
-  agents on `feedbackRecords:read`. Corrections via `update_feedback_record` are also irreversible — the
-  previous value is kept only in the audit log.
-</Warning>
-
-Feedback records can be filtered by source, question, submission, end user, chosen option, language, date
-range, and by enrichment output — sentiment, emotions and whether a record has been enriched or translated
-at all. Any filter accepts several values, which are OR-ed, while different filters are AND-ed, and the
-listing can be ordered by when feedback was collected or when it was stored. `count_feedback_records`
-answers "how many" without fetching the records themselves — so an agent can report totals without pulling
-anyone's feedback text into the conversation.
-
-The two search tools match by meaning rather than keywords ("checkout is confusing" finds "I couldn't
-figure out how to pay"), and `find_similar_feedback_records` shows how widely one piece of feedback is
-echoed by others. They rely on the feedback service having an embedding model configured; on
-self-hosted installs without one they report that they are unavailable. Newly created records become
-searchable a short while after they arrive, and records without text are never searchable.
 
 <Warning>
   Scopes are only a coarse gate. **Access is always bounded by your Forma workspace role**: even
   if a client holds a `:write` scope, a call only succeeds if you have write/manage permission on the
-  target workspace — and deleting a feedback record needs manage. An agent can never do more than
   you can.
 </Warning>
 
@@ -121,5 +89,3 @@ searchable a short while after they arrive, and records without text are never s
 For the tool schemas, response formats, discovery endpoints, and the API-key fallback, see the
 [MCP server technical handbook](/development/technical-handbook/mcp-server). Survey tools map to the
 [v3 Surveys API](/development/technical-handbook/mcp-server#relationship-to-v3-surveys-api) they wrap;
-feedback-record tools read and write
-[Unify Feedback data](/development/technical-handbook/mcp-server#feedback-records-and-the-hub).

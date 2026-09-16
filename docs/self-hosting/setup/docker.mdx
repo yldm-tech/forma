@@ -86,10 +86,6 @@ Docker and Docker Compose are usually included in tools like Docker Desktop and 
    NEXTAUTH_SECRET=$(openssl rand -hex 32)
    ENCRYPTION_KEY=$(openssl rand -hex 32)
    CRON_SECRET=$(openssl rand -hex 32)
-   HUB_API_KEY=$(openssl rand -hex 32)
-   CUBEJS_API_SECRET=$(openssl rand -hex 32)
-   CUBEJS_JWT_ISSUER=forma-web
-   CUBEJS_JWT_AUDIENCE=forma-cube
    AUTHZED_TOKEN=$(openssl rand -hex 32)
    AUTHZED_DATABASE_PASSWORD=$(openssl rand -hex 32)
    EOF
@@ -258,14 +254,6 @@ To enable taxonomy with the bundled Qwen runtime, add these values to `.env`:
 ```bash
 cat <<EOF >> .env
 COMPOSE_PROFILES=qwen,taxonomy
-TAXONOMY_SERVICE_URL=http://taxonomy:8000
-TAXONOMY_SERVICE_TOKEN=$(openssl rand -hex 32)
-HUB_INTERNAL_API_TOKEN=$(openssl rand -hex 32)
-TAXONOMY_IMAGE_REF=:v0.1.0
-TAXONOMY_LLM_PROVIDER=openai-compatible
-TAXONOMY_LLM_MODEL=qwen3-14b-awq
-TAXONOMY_LLM_BASE_URL=http://vllm:8000/v1
-TAXONOMY_LLM_API_KEY=not-used
 EOF
 ```
 
@@ -279,8 +267,6 @@ taxonomy generation validates an exact 5-level tree.
 To use Amazon Bedrock instead of an OpenAI-compatible endpoint, replace the taxonomy LLM values with:
 
 ```bash
-TAXONOMY_LLM_PROVIDER=bedrock
-TAXONOMY_LLM_MODEL=eu.anthropic.claude-sonnet-4-5-20250929-v1:0
 AWS_REGION=eu-north-1
 AWS_BEARER_TOKEN_BEDROCK=<bedrock-api-key>
 ```
@@ -288,11 +274,6 @@ AWS_BEARER_TOKEN_BEDROCK=<bedrock-api-key>
 To use Gemini on Vertex AI instead, replace the taxonomy LLM values with:
 
 ```bash
-TAXONOMY_LLM_PROVIDER=vertex-gemini
-TAXONOMY_LLM_MODEL=gemini-2.5-flash
-TAXONOMY_VERTEX_PROJECT=<google-cloud-project>
-TAXONOMY_VERTEX_LOCATION=<vertex-location>
-TAXONOMY_GOOGLE_CLOUD_CREDENTIALS_JSON=<service-account-json>
 ```
 
 Start the stack after updating `.env`. Compose reads `COMPOSE_PROFILES` from `.env`, so the same command works
@@ -697,7 +678,6 @@ Common checks:
   `HUB_API_KEY`, and `CUBEJS_API_SECRET`.
 - **Migration failures**: Check `forma-migrate`, `hub-migrate`, and `postgres` logs. Do not remove Docker
   volumes on an existing install unless you intend to delete its data.
-- **Cube is unhealthy**: Confirm `cube/cube.js`, `cube/schema/FeedbackRecords.js`, and `CUBEJS_API_SECRET`
   exist, then inspect `docker compose logs cube`.
 - **Hub auth errors**: Confirm the same `HUB_API_KEY` from `.env` is used by Forma Web and the Hub
   service.

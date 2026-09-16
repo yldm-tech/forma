@@ -7,7 +7,6 @@ import {
   getOrganizationIdFromApiKeyId,
   getOrganizationIdFromContactAttributeKeyId,
   getOrganizationIdFromContactId,
-  getOrganizationIdFromFeedbackSourceId,
   getOrganizationIdFromIntegrationId,
   getOrganizationIdFromInviteId,
   getOrganizationIdFromLanguageId,
@@ -50,7 +49,6 @@ vi.mock("@/lib/utils/services", () => ({
   getLanguage: vi.fn(),
   getTeam: vi.fn(),
   getTag: vi.fn(),
-  getFeedbackSource: vi.fn(),
 }));
 
 describe("Helper Utilities", () => {
@@ -350,29 +348,6 @@ describe("Helper Utilities", () => {
 
       const orgId = await getOrganizationIdFromQuotaId("quota1");
       expect(orgId).toBe("org1");
-    });
-
-    test("getOrganizationIdFromFeedbackSourceId returns organization ID through workspace", async () => {
-      vi.mocked(services.getFeedbackSource).mockResolvedValueOnce({
-        workspaceId: "workspace1",
-      });
-      vi.mocked(services.getWorkspace).mockResolvedValueOnce({
-        organizationId: "org1",
-      });
-
-      const orgId = await getOrganizationIdFromFeedbackSourceId("feedbackSource1");
-      expect(orgId).toBe("org1");
-      expect(services.getFeedbackSource).toHaveBeenCalledWith("feedbackSource1");
-      expect(services.getWorkspace).toHaveBeenCalledWith("workspace1");
-    });
-
-    test("getOrganizationIdFromFeedbackSourceId throws error when feedbackSource not found", async () => {
-      vi.mocked(services.getFeedbackSource).mockResolvedValueOnce(null);
-
-      await expect(getOrganizationIdFromFeedbackSourceId("nonexistent")).rejects.toThrow(
-        ResourceNotFoundError
-      );
-      expect(services.getFeedbackSource).toHaveBeenCalledWith("nonexistent");
     });
   });
 

@@ -15,9 +15,7 @@ type TResourceCategory =
 /**
  * Non-runtime review inventory for every Prisma model.
  *
- * `FeedbackDirectory` is the product's “Feedback Dataset”. Charts and workflows inherit workspace
- * authorization; chart `createdBy` is metadata, not ownership. Feedback records live in Hub rather than
- * Prisma and remain protected by dataset/workspace authorization plus tenant and integrity checks.
+ * Workflows inherit workspace authorization.
  */
 export const PRISMA_AUTHORIZATION_RESOURCE_INVENTORY = {
   Account: "authentication_or_application",
@@ -25,20 +23,12 @@ export const PRISMA_AUTHORIZATION_RESOURCE_INVENTORY = {
   ApiKey: "relationship_or_grant_source",
   ApiKeyWorkspace: "relationship_or_grant_source",
   AuthzedProjectionOutbox: "authentication_or_application",
-  Chart: "workspace_inherited_resource",
   Contact: "workspace_inherited_resource",
   ContactAttribute: "parent_derived_or_data_integrity",
   ContactAttributeKey: "workspace_inherited_resource",
-  Dashboard: "direct_authorization_resource",
-  DashboardWidget: "parent_derived_or_data_integrity",
   DataMigration: "public_or_out_of_scope",
   Display: "parent_derived_or_data_integrity",
   EmbeddedData: "parent_derived_or_data_integrity",
-  FeedbackDirectory: "direct_authorization_resource",
-  FeedbackDirectoryWorkspace: "relationship_or_grant_source",
-  FeedbackSource: "parent_derived_or_data_integrity",
-  FeedbackSourceFieldMapping: "parent_derived_or_data_integrity",
-  FeedbackSourceFormaMapping: "parent_derived_or_data_integrity",
   Integration: "workspace_inherited_resource",
   Invite: "authentication_or_application",
   Language: "parent_derived_or_data_integrity",
@@ -86,15 +76,9 @@ export const PRISMA_AUTHORIZATION_RESOURCE_INVENTORY = {
 export const AUDIT_TARGET_AUTHORIZATION_RESOURCE_INVENTORY = {
   actionClass: "workspace_inherited_resource",
   apiKey: "relationship_or_grant_source",
-  chart: "workspace_inherited_resource",
   contact: "workspace_inherited_resource",
   contactAttributeKey: "workspace_inherited_resource",
   cubeQuery: "parent_derived_or_data_integrity",
-  dashboard: "direct_authorization_resource",
-  dashboardWidget: "parent_derived_or_data_integrity",
-  feedbackDirectory: "direct_authorization_resource",
-  feedbackRecord: "parent_derived_or_data_integrity",
-  feedbackSource: "parent_derived_or_data_integrity",
   file: "workspace_inherited_resource",
   integration: "workspace_inherited_resource",
   invite: "authentication_or_application",

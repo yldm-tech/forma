@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  ArrowUpRightIcon,
-  ChevronRightIcon,
-  LogOutIcon,
-  MegaphoneIcon,
-  MessageSquareTextIcon,
-  UserCircleIcon,
-} from "lucide-react";
+import { ArrowUpRightIcon, ChevronRightIcon, LogOutIcon, UserCircleIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import forma from "@forma/js";
 import type { TUser } from "@forma/types/user";
 import { cn } from "@/lib/cn";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
@@ -30,10 +22,6 @@ interface UserDropdownProps {
   isCollapsed?: boolean;
   isTextVisible?: boolean;
   className?: string;
-  // Whether the Forma-in-Forma in-app survey widget is configured (workspace id set). The
-  // "What's New" and "Share feedback" items only trigger Forma surveys, so they are hidden when
-  // the widget is not mounted — otherwise they would render but do nothing.
-  isFormaSurveysConfigured?: boolean;
 }
 
 // The avatar/account trigger + menu (Account, Documentation, Share feedback, Log out) shown at the
@@ -47,7 +35,6 @@ export const UserDropdown = ({
   isCollapsed = false,
   isTextVisible = false,
   className,
-  isFormaSurveysConfigured = false,
 }: Readonly<UserDropdownProps>) => {
   const { t } = useTranslation();
   const router = useRouter();
@@ -120,20 +107,6 @@ export const UserDropdown = ({
             </DropdownMenuItem>
           </Link>
         ))}
-        {isFormaSurveysConfigured && (
-          <>
-            <DropdownMenuItem
-              onClick={() => forma.track("whats_new_clicked").catch(() => undefined)}
-              icon={<MegaphoneIcon className="mr-2 size-4" strokeWidth={1.5} />}>
-              {t("common.whats_new")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => forma.track("share_feedback_clicked").catch(() => undefined)}
-              icon={<MessageSquareTextIcon className="mr-2 size-4" strokeWidth={1.5} />}>
-              {t("common.share_feedback")}
-            </DropdownMenuItem>
-          </>
-        )}
         <DropdownMenuItem
           onClick={async () => {
             const loginUrl = `${publicDomain}/auth/login`;

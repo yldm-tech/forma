@@ -23,15 +23,9 @@ interface LandingSidebarProps {
   user: TUser;
   organization: TOrganization;
   publicDomain: string;
-  isFormaSurveysConfigured: boolean;
 }
 
-export const LandingSidebar = ({
-  user,
-  organization,
-  publicDomain,
-  isFormaSurveysConfigured,
-}: Readonly<LandingSidebarProps>) => {
+export const LandingSidebar = ({ user, organization, publicDomain }: Readonly<LandingSidebarProps>) => {
   const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -105,7 +99,6 @@ export const LandingSidebar = ({
           organizationId={organization.id}
           publicDomain={publicDomain}
           className="rounded-br-xl"
-          isFormaSurveysConfigured={isFormaSurveysConfigured}
         />
       </div>
     </aside>

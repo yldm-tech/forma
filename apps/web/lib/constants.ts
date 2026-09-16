@@ -44,9 +44,6 @@ export const GITHUB_SECRET = env.GITHUB_SECRET;
 export const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET;
 
-export const HUB_API_URL = env.HUB_API_URL;
-export const HUB_API_KEY = env.HUB_API_KEY;
-
 export const AZUREAD_CLIENT_ID = env.AZUREAD_CLIENT_ID;
 export const AZUREAD_CLIENT_SECRET = env.AZUREAD_CLIENT_SECRET;
 export const AZUREAD_TENANT_ID = env.AZUREAD_TENANT_ID;
@@ -247,9 +244,6 @@ export const IS_PLAIN_CHAT_CONFIGURED = Boolean(env.PLAIN_APP_ID);
 
 // Forma-in-Forma: in-app surveys served by a Forma instance
 // (defaults to Forma Cloud). The widget only mounts when a workspace id is set.
-export const FORMA_WORKSPACE_ID = env.FORMA_WORKSPACE_ID;
-export const FORMA_APP_URL = env.FORMA_APP_URL || "https://app.forma.ylam.ai";
-export const IS_FORMA_SURVEYS_CONFIGURED = Boolean(env.FORMA_WORKSPACE_ID);
 
 export const POSTHOG_KEY = env.POSTHOG_KEY;
 

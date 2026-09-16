@@ -2,9 +2,7 @@ type: object
 description: >
   Ids to delete. A POST custom method rather than a `DELETE` on the collection: a collection-level
   `DELETE` that loses its filters degrades into erasing every response in scope, and a distinct path
-  cannot be reached by accident — which is exactly the shape `feedbackRecords` ships today, a
-  collection `DELETE` whose filters are the only thing standing between a caller and the whole
-  dataset. AIP-165 blesses the custom-method form.
+  cannot be reached by accident. AIP-165 blesses the custom-method form.
 required:
   - ids
 properties:

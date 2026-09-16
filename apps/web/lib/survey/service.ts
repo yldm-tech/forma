@@ -26,7 +26,6 @@ import {
 import { TSurvey, TSurveyCreateInput, ZSurvey, ZSurveyCreateInput } from "@forma/types/surveys/types";
 import { reconcileEmbeddedData } from "@/lib/embedded-data/reconcile";
 import { selectSurveyEmbeddedDataLinks, withInlinedEmbeddedFields } from "@/lib/embedded-data/survey-fields";
-import { scheduleFeedbackSourceReconciliation } from "@/lib/feedback-source/mapping-reconciliation";
 import {
   getOrganizationByWorkspaceId,
   subscribeOrganizationMembersToSurveyResponses,
@@ -736,12 +735,6 @@ export const updateSurveyInternal = async (
       // changed field.
       { timeout: 20_000, maxWait: 10_000 }
     );
-
-    // ENG-2064: keep feedback-source mappings in sync with the survey's questions. Diff against the
-    // blocks that were actually persisted, not the caller's payload — a partial update that omits
-    // blocks leaves the stored questions untouched, and diffing its empty payload would delete every
-    // mapping. Best-effort: a failure logs inside the helper and never blocks the save.
-    await scheduleFeedbackSourceReconciliation(surveyId, currentSurvey.workspaceId, persistedSurvey.blocks);
 
     return await reconcilePersistedSurveySchedulingIfDue({
       logSource: "survey-update",

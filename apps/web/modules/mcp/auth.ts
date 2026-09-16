@@ -126,7 +126,7 @@ function isOriginAllowed(request: NextRequest): boolean {
 }
 
 function getMcpScopes(authentication: TAuthenticationApiKey): string[] {
-  const scopes = new Set(["surveys:read", "workflows:read", "feedbackRecords:read"]);
+  const scopes = new Set(["surveys:read", "workflows:read"]);
   if (
     authentication.workspacePermissions.some(
       (permission) => permission.permission === "write" || permission.permission === "manage"
@@ -134,7 +134,6 @@ function getMcpScopes(authentication: TAuthenticationApiKey): string[] {
   ) {
     scopes.add("surveys:write");
     scopes.add("workflows:write");
-    scopes.add("feedbackRecords:write");
   }
 
   return Array.from(scopes);
@@ -509,8 +508,8 @@ async function authenticateMcpOAuthBearer(
   }
 
   // Minimum grant required to authenticate against the MCP server at all: at least ONE *resource*
-  // scope. Any single one is enough — a token granted only `feedbackRecords:read` is a legitimate
-  // MCP client and must not be rejected here for lacking `surveys:read`. Which tools it can actually
+  // scope. Any single one is enough — a token granted only `workflows:read` is a legitimate MCP
+  // client and must not be rejected here for lacking `surveys:read`. Which tools it can actually
   // call is enforced per-tool by guardMcpScopes at call time.
   //
   // Deliberately NOT MCP_CHALLENGE_SCOPE / MCP_PROTECTED_RESOURCE_SCOPES: those include

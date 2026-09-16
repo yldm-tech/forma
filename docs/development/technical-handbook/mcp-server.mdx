@@ -99,8 +99,6 @@ Supported scopes:
 | `surveys:write` | `create_survey`, `patch_survey`, `delete_survey` |
 | `workflows:read` | `list_workflows`, `get_workflow`, `list_workflow_runs`, `get_workflow_run`, `test_workflow` |
 | `workflows:write` | `create_workflow`, `patch_workflow`, `duplicate_workflow`, `delete_workflow`, and the enable/disable/archive/unarchive mutations |
-| `feedbackRecords:read` | `list_feedback_datasets`, `list_feedback_records`, `count_feedback_records`, `get_feedback_record`, `search_feedback_records`, `find_similar_feedback_records` |
-| `feedbackRecords:write` | `create_feedback_record`, `create_feedback_records`, `update_feedback_record`, `delete_feedback_record` |
 | `openid` | OpenID Connect subject interoperability |
 | `profile` | User profile claims |
 | `email` | User email claim |
@@ -114,21 +112,15 @@ without declaring a scope, so a new tool inherits enforcement by construction �
 group legitimately reaches pass `{ anyOf: [...] }` instead of a plain list, which keeps them on the
 same registration path rather than a hand-rolled gate.
 
-The one current exception is the feedback-record tools, which centralise the gate in their own shared
-read/write handler factories and register through `server.registerTool` directly. Every one of their
-handlers is still gated, but the guarantee is by convention there rather than by construction —
-converging them onto `registerScopedTool` is a known follow-up.
-
 **There is no single mandatory baseline scope.** Authentication requires *at least one* resource scope
-(`MCP_RESOURCE_SCOPES`), so a workflows-only or `feedbackRecords:read`-only grant is a legitimate MCP
+(`MCP_RESOURCE_SCOPES`), so a workflows-only grant is a legitimate MCP
 client. `list_workspaces` — the workspaceId-discovery prerequisite for every resource tool — therefore
 gates on any resource read scope rather than one specific one; its result is derived from the caller's
 own memberships and key grants, so admitting any read scope exposes nothing extra.
 
 The authorization server supports all of the above, but the MCP protected-resource metadata
 (`/.well-known/oauth-protected-resource/api/mcp`) advertises only the resource scopes an MCP client
-needs — `surveys:read`, `surveys:write`, `workflows:read`, `workflows:write`, `feedbackRecords:read`,
-`feedbackRecords:write`, and `offline_access`. Clients derive their Dynamic Client Registration scopes
+needs — `surveys:read`, `surveys:write`, `workflows:read`, `workflows:write`, and `offline_access`. Clients derive their Dynamic Client Registration scopes
 from that list, so `offline_access` must be advertised there for clients to be issued refresh tokens
 (`openid`/`profile`/`email` are OIDC scopes the MCP resource does not require).
 
@@ -148,7 +140,7 @@ at tool execution through the existing v3 authorization checks for the signed-in
 a token scope and a workspace role are independent gates — a call must satisfy both.
 
 Scope groups are **independent**: a token authenticates as long as it holds at least one resource
-scope, so a `feedbackRecords:read`-only grant is valid and simply can't reach the survey tools.
+scope, so a workflows-only grant is valid and simply can't reach the survey tools.
 `list_workspaces` is the shared discovery tool and accepts either read scope.
 
 ### API-key fallback
@@ -191,18 +183,6 @@ API key permissions are enforced through the same workspace access checks as the
 | `disable_workflow` | `write` or `manage` |
 | `archive_workflow` | `write` or `manage` |
 | `unarchive_workflow` | `write` or `manage` |
-| `list_feedback_datasets` | `read` |
-| `list_feedback_records` | `read` |
-| `count_feedback_records` | `read` |
-| `get_feedback_record` | `read` |
-| `search_feedback_records` | `read` |
-| `find_similar_feedback_records` | `read` |
-| `create_feedback_record` | `write` or `manage` |
-| `create_feedback_records` | `write` or `manage` |
-| `update_feedback_record` | `write` or `manage` |
-| `delete_feedback_record` | `manage` |
-
-Synthesized MCP scopes for an API key: `surveys:read` + `workflows:read` + `feedbackRecords:read`
 always; the matching `:write` scopes when the key has `write` or `manage` on any workspace. The scope
 gate and the per-workspace access check above are independent — a `:write` tool requires **both** the
 `:write` scope on the token and write/manage on the target workspace.
@@ -253,14 +233,12 @@ curl -sS -X POST http://localhost:3000/api/auth/oauth2/register \
     "token_endpoint_auth_method": "none",
     "grant_types": ["authorization_code", "refresh_token"],
     "response_types": ["code"],
-    "scope": "openid profile email offline_access surveys:read surveys:write workflows:read workflows:write feedbackRecords:read feedbackRecords:write"
   }'
 ```
 
 <Note>
   This passes `scope` explicitly, so it does **not** reproduce a real client's behavior — real MCP clients
   register with the scopes from the protected-resource metadata's `scopes_supported` (`surveys:read
-  surveys:write workflows:read workflows:write feedbackRecords:read feedbackRecords:write offline_access`).
   Because the authorization server validates the `/authorize` request against the client's **registered**
   scopes, a client that registers with a narrower set than it later requests (e.g. it registers surveys-only
   but requests `offline_access`) is rejected with `invalid_scope`. To smoke-test the real path, omit `scope`
@@ -310,18 +288,15 @@ Authenticate and request the scopes the agent needs:
 
 ```bash
 codex mcp login forma-local \
-  --scopes openid,profile,email,offline_access,surveys:read,surveys:write,workflows:read,workflows:write,feedbackRecords:read,feedbackRecords:write
 ```
 
 For read-only usage, omit the `:write` scopes:
 
 ```bash
 codex mcp login forma-local \
-  --scopes openid,profile,email,offline_access,surveys:read,workflows:read,feedbackRecords:read
 ```
 
 Scope groups are independent — a token needs at least one resource scope, but not all of them. To use
-only the feedback-record tools, request `feedbackRecords:read` (plus `feedbackRecords:write` to create)
 and omit the survey scopes.
 
 Codex opens the browser to Forma, completes Dynamic Client Registration, and stores the OAuth
@@ -385,8 +360,6 @@ claude mcp add --transport http forma-local http://localhost:3000/api/mcp
 
 Run `/mcp` and authenticate `forma-local`. Claude Code discovers the MCP protected-resource
 metadata, registers a public client whose scopes are taken from that metadata's `scopes_supported`
-(`surveys:read surveys:write workflows:read workflows:write feedbackRecords:read
-feedbackRecords:write offline_access`), and launches the browser-based OAuth flow — there is no
 scope-entry step. You approve the requested scopes on the Forma consent screen. A `:write` tool
 requires both the matching `:write` scope on the token and write/manage permission on the target
 workspace at execution time (see [Authentication](#authentication)).
@@ -531,7 +504,6 @@ the handler runs, so an undeclared or misspelled key comes back as an input-vali
 the underlying v3 operation is never reached.
 
 This matters most on filters. A dropped filter does not narrow, so the pre-strict behaviour ran the
-query wider than asked and reported success — `count_feedback_records` with a misspelled `userId`
 (the correct key is `user_id`) returned the count for every record in the dataset, which an agent has no
 way to tell from a real answer.
 
@@ -556,8 +528,6 @@ Two kinds of exception:
   invites that, but it is a behaviour change from earlier Forma releases, which silently dropped
   such keys.
 
-  Two consequences worth knowing. **Read-modify-write needs trimming:** `update_feedback_record` accepts
-  only the eight mutable fields, so echoing a record straight back from `get_feedback_record` is rejected
   — strip the provenance (`source_*`, `field_*`, `submission_id`, `collected_at`) and the derived
   sentiment/emotions/translation first. The error names every key to remove. And **`list_workspaces`
   takes no arguments at all**, so a client that pads zero-argument calls with a placeholder key will fail
@@ -958,9 +928,7 @@ Output:
 }
 ```
 
-### list_feedback_records
 
-Lists feedback records in a workspace's feedback dataset. Read-only and idempotent, with opaque
 cursor pagination. `datasetId` is optional when the workspace has exactly one active
 dataset (the common case) and required when it has more than one.
 
@@ -1045,7 +1013,6 @@ character, so an empty value is rejected rather than ignored.
 </Warning>
 
 **Ordering.** `sort` accepts `collected_at` (the default) or `created_at`, and `order` accepts `asc` or
-`desc` (default `desc`). Neither applies to `count_feedback_records`, which rejects them. A cursor marks a
 position *within one specific ordering*, so keep `sort` and `order` identical for the whole traversal —
 presenting a cursor under a different ordering is rejected rather than silently returning a page that
 looks like a continuation.
@@ -1085,11 +1052,8 @@ records — a caller that let the dataset auto-resolve does not need a second ca
 }
 ```
 
-### count_feedback_records
 
-Counts the feedback records matching a filter set, without fetching them — for "how many" questions that
 would otherwise mean paging through records. Read-only and idempotent. Takes the same filters as
-`list_feedback_records` (no `limit`/`cursor`, and no `sort`/`order` — the Hub's count endpoint does not
 accept ordering and they are rejected here), because the Hub documents its count endpoint as accepting the
 same query parameters as its list endpoint; both go through one mapper in `lib/operations.ts`, so a count
 always describes the same set as the equivalent list.
@@ -1120,9 +1084,7 @@ asking "how many" never pulls end-user text into its context to find out.
 }
 ```
 
-### get_feedback_record
 
-Gets one feedback record by its Hub UUID. Read-only and idempotent. The record must belong to a
 feedback dataset assigned to the workspace; otherwise the tool returns a generic authorization
 error and never reveals whether a record id exists in another tenant.
 
@@ -1135,10 +1097,7 @@ Input:
 }
 ```
 
-### create_feedback_record
 
-Creates a feedback record in a workspace's feedback dataset. Writes data and is not idempotent, and
-requires `feedbackRecords:write` (API keys need `write` or `manage`). The tenant is derived from the
 resolved feedback dataset and is never taken from the request body. `submission_id` is optional — a
 UUID is generated when omitted.
 
@@ -1155,12 +1114,8 @@ Input:
 }
 ```
 
-Output is the created feedback record (Hub shape) plus the MCP `requestId`.
 
-### create_feedback_records
 
-Creates several feedback records in one call — the batch form of `create_feedback_record`, for imports.
-Writes data, is not idempotent, and requires `feedbackRecords:write`. Between 1 and 50 records per call.
 
 The Hub has no bulk-create endpoint (its only bulk write is the delete-by-user erasure path), so this fans
 out to one Hub create per record, in parallel. Two consequences are deliberate:
@@ -1227,11 +1182,8 @@ Per-record failure text goes through the same relay rules as a whole-request fai
 itself, anything else becomes a fixed message. Each record actually created produces its own `created`
 audit event — N creations are N events, not one summary.
 
-### update_feedback_record
 
-Corrects the value of an existing feedback record. Writes data, is annotated `destructiveHint: true` (it
 overwrites a stored value; the previous one survives only in the audit log), and requires
-`feedbackRecords:write` (API keys need `write` or `manage`). Only the fields sent are changed; at least one is required.
 
 For API keys, the same dataset-exclusivity rule applies as for deletes: the key may update only a
 record in a dataset assigned to exactly one workspace, where its permission unambiguously covers every
@@ -1286,10 +1238,7 @@ Output is the updated record.
   asynchronously — and clearing a record's text removes its embedding, making it unsearchable.
 </Warning>
 
-### delete_feedback_record
 
-Permanently deletes one feedback record. Writes data, is not idempotent, is annotated
-`destructiveHint: true`, and requires `feedbackRecords:write` (API keys need `manage`). The
 record and its derived embedding are removed with no soft delete, so this cannot be undone — the audit log
 entry keeps the deleted record as its `oldObject` and is the only remaining trace.
 
@@ -1314,7 +1263,6 @@ Input:
 
 Returns `204 No Content` on success (the tool result carries only the `requestId`).
 
-### search_feedback_records
 
 Searches a workspace's feedback dataset semantically: the query is embedded and compared to record
 embeddings by cosine similarity, so it matches meaning rather than keywords. Read-only and idempotent.
@@ -1332,13 +1280,11 @@ Input:
 ```
 
 Output is scored matches, best first — record ids with the embedded text, not full records. Pass a
-`feedback_record_id` to `get_feedback_record` for the rest of a record:
 
 ```json
 {
   "data": [
     {
-      "feedback_record_id": "019fa338-f494-7384-b34e-01739783d280",
       "field_label": "What can we improve?",
       "score": 0.82,
       "value_text": "I couldn't figure out how to pay"
@@ -1355,10 +1301,8 @@ Output is scored matches, best first — record ids with the embedded text, not 
 }
 ```
 
-### find_similar_feedback_records
 
 Finds the records most similar to a given one, by embedding distance — useful for gauging how widely a
-piece of feedback is echoed. Read-only and idempotent. Same output shape as `search_feedback_records`;
 the anchor record is excluded from its own results.
 
 Input:
@@ -1373,13 +1317,11 @@ Input:
 ```
 
 Ownership of the anchor record is verified before any neighbour is fetched (see
-[Feedback Records And The Hub](#feedback-records-and-the-hub)).
 
 <Note>
   Both search tools need embeddings, which are optional in the Hub. Without `EMBEDDING_PROVIDER` and
   `EMBEDDING_MODEL` configured on **both** the Hub API and the Hub worker they return `503` with that
   instruction as the detail. Embedding is also asynchronous and only covers records that have text, so a
-  record created moments ago is not searchable yet; `find_similar_feedback_records` reports that as a `409`
   rather than an empty result, distinguishing "still being embedded, retry" from "no text, so there is no
   embedding to wait for" — the latter also covers text cleared by an update.
 </Note>
@@ -1427,13 +1369,11 @@ survey operations used by the REST routes:
 When the v3 OpenAPI contract changes, update the MCP schemas and this page together. The hand-maintained
 v3 OpenAPI spec lives at `docs/api-v3-reference/openapi.yml`.
 
-## Feedback Records And The Hub
 
 Feedback-record tools do not map to a v3 REST route. They call the shared server-only Hub service
 (`@/modules/hub/service`) — the same client the Unify Feedback UI uses — and enforce the same
 `feedbackDirectories` Enterprise entitlement.
 
-A feedback record lives in the Forma Hub, addressed by an opaque tenant id. Every tool
 resolves that tenant server-side: it authorizes the caller's access to `workspaceId`, checks the
 `feedbackDirectories` license, then maps the workspace to its assigned feedback dataset — the
 `FeedbackDirectory` id **is** the Hub tenant id, and it is surfaced to callers as `dataset_id`.
@@ -1444,12 +1384,8 @@ It becomes required only if a workspace somehow has several active directories, 
 return `400` rather than guessing. A tenant id is never accepted from tool input.
 
 Three Hub endpoints — get, delete, and similar — take a bare record id and derive the tenant from the
-stored record, delegating record-level authorization to the product. So `get_feedback_record`,
-`delete_feedback_record` and `find_similar_feedback_records` all retrieve the record first and verify its
 tenant — the named dataset when one was given, otherwise any dataset the workspace owns — before acting.
 A foreign record and an unknown record produce the same generic authorization error, so record ids cannot
-be probed across tenants. `search_feedback_records` instead has the resolved tenant injected into the Hub
-query, like `create_feedback_record`.
 
 ## Limitations
 
@@ -1466,12 +1402,9 @@ query, like `create_feedback_record`.
   it is created as a draft and only `enable_workflow` can make it live.
 - Feedback-record tools require the `feedbackDirectories` Enterprise entitlement and a feedback
   directory assigned to the workspace; without either they return 403 / 422.
-- A feedback record's **provenance** is immutable: `update_feedback_record` changes values, users, language
   and metadata, but not which source, question or submission a record belongs to, nor when it was
   collected. The derived enrichment fields are the Hub's to compute and are never accepted from callers.
-- `delete_feedback_record` deletes one record at a time. The Hub's bulk and delete-by-user endpoints are
   deliberately not exposed: they are erasure operations whose blast radius does not belong on an agent
-  surface. There is deliberately no batch _delete_ to match `create_feedback_records`.
 - Counting and filtering cover the Hub's own filter set only. There is no aggregation by sentiment or
   emotion, and semantic search cannot be narrowed by source or date — the Hub's search endpoint takes only
   a query and a tenant. Those need Hub-side support first.
@@ -1509,6 +1442,3 @@ query, like `create_feedback_record`.
 - `apps/web/modules/mcp/tools/workflow-schemas.ts`
 - `apps/web/app/api/v3/surveys/lib/operations.ts`
 - `apps/web/app/api/v3/workflows/lib/context.ts` (adapter to the `@forma/workflows` handlers)
-- `apps/web/app/api/v3/feedbackRecords/lib/operations.ts`
-- `apps/web/app/api/v3/feedbackRecords/lib/access.ts` (tenant resolution + per-record ownership guard)
-- `apps/web/app/api/v3/feedbackRecords/lib/errors.ts` (Hub error → v3 problem mapping)

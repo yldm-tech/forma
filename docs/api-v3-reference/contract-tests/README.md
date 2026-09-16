@@ -61,7 +61,6 @@ Three things to know before reading the result:
   `sessionAuth`), so an API key gets a documented 401 before any handler runs. They are checked
   against that 401, which is a real assertion that they stay session-only — but no tag fixtures
   exist, because nothing an API key sends can reach them.
-- **The eight `/feedbackRecords` operations are not exercised.** They are served by the API gateway
   (Envoy in Cloud, Traefik in the Docker install) straight to the Hub; the Next.js route under
   `/api/v3/feedbackRecords` is a local-dev proxy that needs a running Hub and answers 404 in
   production builds. CI has no Hub, so `schemathesis.toml` disables the `V3 Feedback Records` tag
