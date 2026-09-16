@@ -13,10 +13,10 @@ import { ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TActionClass } from "@forma/types/action-classes";
 import { TSegment } from "@forma/types/segment";
-import { useWorkspaceContext } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { useSurvey } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/context/survey-context";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { H4, InlineSmall, Small } from "@/modules/ui/components/typography";
+import { useWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 import { DocumentationLinksSection } from "./documentation-links-section";
 
 const createDocumentationLinks = (t: ReturnType<typeof useTranslation>["t"]) => [

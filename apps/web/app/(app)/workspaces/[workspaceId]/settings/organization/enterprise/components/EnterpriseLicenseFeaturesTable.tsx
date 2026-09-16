@@ -3,9 +3,9 @@
 import type { TFunction } from "i18next";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import type { TEnterpriseLicenseFeatures } from "@/modules/ee/license-check/types/enterprise-license";
 import { Badge } from "@/modules/ui/components/badge";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { SettingsTable, type TSettingsTableColumn } from "@/modules/ui/components/settings-table";
 
 type TPublicLicenseFeatureKey = Exclude<keyof TEnterpriseLicenseFeatures, "isMultiOrgEnabled">;

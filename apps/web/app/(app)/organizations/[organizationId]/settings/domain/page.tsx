@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { AuthenticationError } from "@forma/types/errors";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { PrettyUrlsTable } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/domain/components/pretty-urls-table";
 import { IS_FORMA_CLOUD, IS_STORAGE_CONFIGURED } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
@@ -13,6 +12,7 @@ import { getSurveysWithSlugsByOrganizationId } from "@/modules/survey/lib/slug";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }> }>) => {
   const params = await props.params;

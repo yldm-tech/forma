@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { AccessTable } from "@/modules/ee/teams/workspace-teams/components/access-table";
 import { ManageTeam } from "@/modules/ee/teams/workspace-teams/components/manage-team";
 import { TWorkspaceTeam } from "@/modules/ee/teams/workspace-teams/types/team";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 interface AccessViewProps {
   teams: TWorkspaceTeam[];

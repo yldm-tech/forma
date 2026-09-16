@@ -15,13 +15,13 @@ import {
   type TOrganizationStripePendingChange,
   type TOrganizationStripeSubscriptionStatus,
 } from "@forma/types/organizations";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Badge } from "@/modules/ui/components/badge";
 import { Button } from "@/modules/ui/components/button";
 import { ConfirmationModal } from "@/modules/ui/components/confirmation-modal";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import {
   changeBillingPlanAction,
   createPlanCheckoutAction,

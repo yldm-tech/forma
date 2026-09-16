@@ -1,10 +1,10 @@
 import { TWorkspace } from "@forma/types/workspace";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
 import { EditBranding } from "@/modules/ee/whitelabel/remove-branding/components/edit-branding";
 import { RemoveBrandingLicenseTip } from "@/modules/ee/whitelabel/remove-branding/components/remove-branding-license-tip";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 interface BrandingSettingsCardProps {

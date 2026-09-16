@@ -1,7 +1,7 @@
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getTranslate } from "@/lingodotdev/server";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { EditTagsWrapper } from "./components/edit-tags-wrapper";
 

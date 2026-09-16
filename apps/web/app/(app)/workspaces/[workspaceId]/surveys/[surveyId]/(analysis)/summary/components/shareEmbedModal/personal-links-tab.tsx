@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TSegment } from "@forma/types/segment";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { DocumentationLinks } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/documentation-links";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { getTranslatedPersonalLinkError } from "@/modules/ee/contacts/lib/personal-link-errors";
@@ -28,6 +27,7 @@ import {
   SelectValue,
 } from "@/modules/ui/components/select";
 import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { generatePersonalLinksAction } from "../../actions";
 
 interface PersonalLinksTabProps {

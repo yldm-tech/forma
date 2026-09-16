@@ -4,8 +4,8 @@ import { InboxIcon, PresentationIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { SecondaryNavigation } from "@/modules/ui/components/secondary-navigation";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface SurveyAnalysisNavigationProps {
   survey: TSurvey;

@@ -4,16 +4,13 @@ import Link from "next/link";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import {
-  useDeploymentInfo,
-  useWorkspace,
-} from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
-import {
   getAIUnavailableAction,
   getAIUnavailableActionLabel,
   getAIUnavailableMessage,
 } from "@/lib/ai/availability";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
+import { useDeploymentInfo, useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface AIUnavailableAlertProps {
   /** Names the blocked capability, e.g. "AI chart generation". The reason copy is shared. */

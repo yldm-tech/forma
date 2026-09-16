@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { LoadingCard } from "@/app/(app)/components/LoadingCard";
+import { LoadingCard } from "@/modules/ui/components/loading-card";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 

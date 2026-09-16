@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { SettingsTableSkeleton } from "@/modules/ui/components/settings-table";
 import { getTagColumns } from "@/modules/workspaces/settings/tags/components/edit-tags-wrapper";
 

@@ -1,10 +1,10 @@
 import { AuthenticationError } from "@forma/types/errors";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { EditLanguage } from "@/modules/survey/multi-language-surveys/components/edit-language";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 
 export const LanguagesPage = async (props: { params: Promise<{ workspaceId: string }> }) => {

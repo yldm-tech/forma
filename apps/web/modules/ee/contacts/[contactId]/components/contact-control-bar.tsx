@@ -6,13 +6,13 @@ import { useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TContactAttributeDataType, TContactAttributeKey } from "@forma/types/contact-attribute-key";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { deleteContactAction } from "@/modules/ee/contacts/actions";
 import { EditContactAttributesModal } from "@/modules/ee/contacts/components/edit-contact-attributes-modal";
 import { PublishedLinkSurvey } from "@/modules/ee/contacts/lib/surveys";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";
 import { IconBar } from "@/modules/ui/components/iconbar";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { GeneratePersonalLinkModal } from "./generate-personal-link-modal";
 
 interface TContactAttributeWithKeyInfo {

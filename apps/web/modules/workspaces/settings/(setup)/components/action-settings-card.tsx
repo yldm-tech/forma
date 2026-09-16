@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TActionClass } from "@forma/types/action-classes";
 import { TUserLocale } from "@forma/types/user";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { ActionClassesTable } from "@/modules/workspaces/settings/(setup)/components/ActionClassesTable";
 import { AddActionModal } from "@/modules/workspaces/settings/(setup)/components/AddActionModal";
 

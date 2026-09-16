@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { WidgetStatusIndicator } from "@/app/(app)/workspaces/[workspaceId]/components/WidgetStatusIndicator";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { WEBAPP_URL } from "@/lib/constants";
 import { getPostHogFeatureFlag } from "@/lib/posthog/get-feature-flag";
 import { getTranslate } from "@/lingodotdev/server";
@@ -11,6 +10,7 @@ import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/c
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { InstallMethodCards } from "./components/install-method-cards";
 

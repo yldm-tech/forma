@@ -4,12 +4,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUser } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import {
   ShareSettingsType,
   ShareViaType,
 } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/types/share";
 import { ShareSurveyLink } from "@/modules/analysis/components/ShareSurveyLink";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface SuccessViewProps {
   survey: TSurvey;

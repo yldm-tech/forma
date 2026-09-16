@@ -4,12 +4,12 @@ import { TUserNotificationSettings } from "@forma/types/user";
 import { EditAlerts } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/components/EditAlerts";
 import { IntegrationsTip } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/components/IntegrationsTip";
 import type { Membership } from "@/app/(app)/workspaces/[workspaceId]/settings/account/notifications/types";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getSession } from "@/modules/auth/lib/session";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 
 const setCompleteNotificationSettings = (
   notificationSettings: TUserNotificationSettings,

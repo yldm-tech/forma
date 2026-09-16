@@ -9,7 +9,6 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TSurveyQuota, TSurveyQuotaInput } from "@forma/types/quota";
 import { TSurvey } from "@forma/types/surveys/types";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import {
   createQuotaAction,
@@ -20,6 +19,7 @@ import { Button } from "@/modules/ui/components/button";
 import { ConfirmationModal } from "@/modules/ui/components/confirmation-modal";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";
 import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { QuotaList } from "./quota-list";
 import { QuotaModal } from "./quota-modal";
 

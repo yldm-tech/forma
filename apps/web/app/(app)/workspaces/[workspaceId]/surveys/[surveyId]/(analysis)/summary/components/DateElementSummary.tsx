@@ -5,13 +5,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey, TSurveyElementSummaryDate } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { timeSince } from "@/lib/time";
 import { getContactIdentifier } from "@/lib/utils/contact";
 import { formatStoredDateForDisplay } from "@/lib/utils/date-display";
 import { PersonAvatar } from "@/modules/ui/components/avatars";
 import { Button } from "@/modules/ui/components/button";
 import { EmptyState } from "@/modules/ui/components/empty-state";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
 
 interface DateElementSummary {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { SettingsCard } from "@/app/(app)/workspaces/[workspaceId]/settings/components/SettingsCard";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/modules/ui/components/badge";
 import { Button } from "@/modules/ui/components/button";
@@ -9,6 +8,7 @@ import { Label } from "@/modules/ui/components/label";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { RadioGroup, RadioGroupItem } from "@/modules/ui/components/radio-group";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { Switch } from "@/modules/ui/components/switch";
 
 export const WorkspaceLookSettingsLoading = () => {

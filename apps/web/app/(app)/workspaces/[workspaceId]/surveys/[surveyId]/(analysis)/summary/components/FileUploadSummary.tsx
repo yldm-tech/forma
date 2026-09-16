@@ -6,13 +6,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey, TSurveyElementSummaryFileUpload } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { timeSince } from "@/lib/time";
 import { getContactIdentifier } from "@/lib/utils/contact";
 import { getOriginalFileNameFromUrl } from "@/modules/storage/url-helpers";
 import { PersonAvatar } from "@/modules/ui/components/avatars";
 import { Button } from "@/modules/ui/components/button";
 import { EmptyState } from "@/modules/ui/components/empty-state";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
 
 interface FileUploadSummaryProps {

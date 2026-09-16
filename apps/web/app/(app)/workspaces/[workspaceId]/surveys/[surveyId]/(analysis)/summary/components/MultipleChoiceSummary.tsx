@@ -7,13 +7,13 @@ import { useTranslation } from "react-i18next";
 import { TI18nString } from "@forma/types/i18n";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey, TSurveyElementSummaryMultipleChoice, TSurveyType } from "@forma/types/surveys/types";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { getChoiceIdByValue } from "@/lib/response/utils";
 import { getContactIdentifier } from "@/lib/utils/contact";
 import { PersonAvatar } from "@/modules/ui/components/avatars";
 import { Button } from "@/modules/ui/components/button";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { ProgressBar } from "@/modules/ui/components/progress-bar";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { convertFloatToNDecimal } from "../lib/utils";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
 

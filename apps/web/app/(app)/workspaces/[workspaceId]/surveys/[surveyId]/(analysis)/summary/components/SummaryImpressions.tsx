@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { TDisplayWithContact } from "@forma/types/displays";
 import { TUserLocale } from "@forma/types/user";
-import { useWorkspace } from "@/app/(app)/workspaces/[workspaceId]/context/workspace-context";
 import { timeSince } from "@/lib/time";
 import { Button } from "@/modules/ui/components/button";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface SummaryImpressionsProps {
   displays: TDisplayWithContact[];
