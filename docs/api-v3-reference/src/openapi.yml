@@ -204,8 +204,6 @@ info:
     audit data.
 
 
-    **Feedback Records**
-
     **OpenAPI**
 
     This spec is **not** produced by `pnpm generate-api-specs` (that script only

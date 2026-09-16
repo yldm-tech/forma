@@ -1,6 +1,6 @@
 # GENERATED FILE — do not edit. Source of truth: docs/api-v3-reference/src/ (one file per path/schema).
 # Regenerate with `pnpm api:v3:bundle`; CI verifies freshness with `pnpm api:v3:check`.
-# V3 API — surveys, workflows, action classes, contact attribute keys, tags and feedback records (hand-maintained source; not produced by generate-api-specs).
+# V3 API — surveys, workflows, action classes, contact attribute keys and tags (hand-maintained source; not produced by generate-api-specs).
 openapi: 3.1.1
 info:
   title: Forma API v3
@@ -48,7 +48,6 @@ info:
     `POST /api/v3/surveys/generate` returns a draft `POST /api/v3/surveys` payload plus validation metadata. It does not create a survey. It generates survey content for both `link` and `app` surveys; for `app` it seeds a default `distribution` (display once, no triggers, no targeting) that you finish configuring before publishing.
     Prompt text is sent to the configured AI provider for generation, but it is not stored by this endpoint, not logged by default, and not included in audit data.
 
-    **Feedback Records**
     **OpenAPI**
     This spec is **not** produced by `pnpm generate-api-specs` (that script only builds v2 → `docs/api-v2-reference/openapi.yml`). When the route contract changes, edit the files under `docs/api-v3-reference/src/`, then run `pnpm api:v3:bundle` to regenerate the committed single-file bundle. `pnpm api:v3:lint` lints the source tree; `pnpm api:v3:check` (CI) fails when the bundle is stale.
 
@@ -2228,7 +2227,7 @@ paths:
 
         `PATCH` is the only update verb — there is no `PUT`. Within it, `data` is replaced wholesale rather than deep-merged, so send the complete answer map; `embeddedData` merges by field name. Unknown top-level keys are rejected with **400** rather than ignored.
 
-        Setting `finished` to `true` fires the finish side of the response pipeline, including Hub ingestion. Updates otherwise emit `responseUpdated`.
+        Setting `finished` to `true` fires the finish side of the response pipeline. Updates otherwise emit `responseUpdated`.
       tags:
         - V3 Responses
       parameters:
@@ -2310,8 +2309,6 @@ paths:
         Permanently deletes a response. Requires `manage` access; the workspace is resolved from the response, and an unknown or inaccessible `responseId` answers **403**.
 
         Deletion cascades to any files uploaded with the response, which are removed from storage after the row is committed. No `responseDeleted` webhook is emitted — no such trigger exists.
-
-        **The Hub copy is not removed.** A submission forwarded to the Hub stays there and stays searchable through the feedback-record endpoints after this returns 204. That cascade is ENG-2855 and lands after the Hub release; until then, an erasure workflow has to delete the feedback record itself. Stated because a caller cannot cheaply verify deletion semantics on a destructive endpoint.
       tags:
         - V3 Responses
       parameters:

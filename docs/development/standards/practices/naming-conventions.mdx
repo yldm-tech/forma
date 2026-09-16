@@ -8,32 +8,7 @@ This page documents naming choices that intentionally split similar-sounding ter
 across different domains. Always check this list before introducing a name that
 overlaps with one of these reserved terms.
 
-## `FeedbackSource` vs `Connector`
+## `Connector`
 
-These two words sound interchangeable in English but refer to **two different
-domains in the codebase**. Use them precisely.
-
-| Term | Domain | Meaning | Used in |
-| --- | --- | --- | --- |
-## Rules
-
-- When adding a new Workflows component, use `Connector` / `connector` freely — that is the reserved name for that domain.
-
-## i18n key prefix conventions
-
-Within `workspace.unify.*`:
-
-- `source_*` — single feedback source actions, errors, labels (e.g., `source_created_successfully`, `source_name`, `default_source_name_csv`)
-- `sources` — collection label
-
-Within `workspace.settings.feedback_directories.*`:
-
-- `*feedback_sources*` — keys referencing feedback sources attached to a directory (e.g., `feedback_sources_description`, `no_feedback_sources`, `error_directory_workspace_has_feedback_sources`)
-
-## Migration history
-
-The Unify Feedback domain was originally implemented under `Connector` naming.
-The rename was performed in migration `20260528120000_rename_connector_to_feedback_source`,
-which renamed three tables, two enums, foreign-key columns (`connectorId` → `feedback_source_id`),
-indexes, and constraints in place — preserving all data. See that migration's SQL for the
-full mapping if you ever need to reconcile pre-rename SQL dumps.
+`Connector` belongs to the Workflows domain. When adding a new Workflows component,
+use `Connector` / `connector` freely — that is the reserved name for that domain.

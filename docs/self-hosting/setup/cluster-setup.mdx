@@ -17,12 +17,10 @@ Running Forma as a cluster of multiple instances gives you:
 
 For a Forma v5 cluster setup, plan for:
 
-- shared PostgreSQL for Forma and Hub, with `pgvector` support if Hub shares the same database
+- shared PostgreSQL for Forma
 - shared Redis/Valkey for caching, rate limiting, and audit-related flows
 - shared S3-compatible storage if you use file uploads or organization branding assets
 - a load balancer or ingress layer in front of the app
-- Forma Hub as part of the runtime
-- Cube, either bundled or externally managed
 - Envoy Gateway or an equivalent external edge rate limiter for the v5-covered public and API-key routes
 
 ## Architecture
@@ -38,8 +36,6 @@ graph TD
         FB1["Forma App 1"]
         FB2["Forma App 2"]
         FB3["Forma App n"]
-        HUB["Forma Hub"]
-        CUBE["Cube"]
     end
 
     subgraph Data Storage
@@ -56,20 +52,10 @@ graph TD
     FB1 --> PSQL
     FB2 --> PSQL
     FB3 --> PSQL
-    HUB --> PSQL
 
     FB1 --> REDIS
     FB2 --> REDIS
     FB3 --> REDIS
-
-    FB1 --> HUB
-    FB2 --> HUB
-    FB3 --> HUB
-
-    FB1 --> CUBE
-    FB2 --> CUBE
-    FB3 --> CUBE
-    CUBE --> PSQL
 
     FB1 --> S3
     FB2 --> S3
@@ -83,20 +69,12 @@ graph TD
    - stateless application instances that serve the UI, APIs, and survey flows
    - can be scaled horizontally behind a load balancer
 
-2. **Forma Hub**
-
-   - required in Forma v5
-   - stores and serves Hub-backed feedback record data
-   - can share the same PostgreSQL database as the main app when configured that way
-
-3. **Cube**
 
    - required for the supported v5 analytics baseline
    - can run as the bundled service or as an external deployment shared by every app replica
 
 4. **PostgreSQL**
 
-   - primary persistent store for the Forma app and, by default, Hub
    - should be backed up and monitored like any other stateful production dependency
 
 5. **Redis / Valkey**
@@ -149,9 +127,7 @@ When using S3 in a cluster setup, ensure:
 
 ## v5 Cluster Notes
 
-### Hub Is Mandatory
 
-Forma v5 self-hosting requires Hub. Do not plan a cluster upgrade that keeps Hub disabled.
 
 ### Edge Rate Limiting Must Exist Somewhere
 
@@ -159,13 +135,9 @@ You do not have to use the Forma Helm chart's Envoy bundle, but you do need equi
 the v5-covered public and API-key routes. Use the
 [rate-limiting guide](/self-hosting/advanced/rate-limiting) for the exact route coverage.
 
-### Cube Is Part Of The Baseline
 
-Cube is part of the supported Forma v5 stack and powers analytics flows that depend on Cube queries. The
 Docker Compose and Helm deployment paths bundle it by default. You can replace the bundled service with an
-external Cube deployment, but do not remove Cube connectivity from the baseline configuration:
 
-- keep the bundled Cube service enabled; or
 
 ## Kubernetes Setup
 
@@ -179,5 +151,4 @@ helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
   -f values.yaml
 ```
 
-For the Kubernetes-specific installation flow, mandatory Hub behavior, and Envoy bundle modes, use the dedicated
 [Kubernetes deployment guide](/self-hosting/setup/kubernetes).

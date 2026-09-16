@@ -202,10 +202,7 @@ security fixes that are not present in 8.1.1.
 #### What to do before upgrading
 
 1. Run the query above. If it returns rows, decide how each affected integration should proceed.
-2. Raise any API key that deletes feedback records from `write` to `manage`.
 3. After deploying, smoke test your feedback-record integrations. Two log lines identify an integration
-   caught by the new rules — grep for `Feedback record mutation denied` (the MCP path, which names the
-   reason) and for `Feedback records gateway authorization denied` (the REST path, which logs
 
 #### Rollback
 
@@ -447,23 +444,6 @@ if you set it; it now has no effect.
 
 None of the following is required to run v5.2. Add them only if you want the associated feature.
 
-#### Hub Enrichment (sentiment, emotion, translation)
-
-Hub `>= 0.8.0` can classify sentiment and emotion and translate feedback. These are **off** unless you set
-a provider and model, and they run in both the Hub API and the hub-worker, so set the variables on **both**
-
-- `SENTIMENT_PROVIDER`, `SENTIMENT_MODEL`, `SENTIMENT_PROVIDER_API_KEY`
-- `EMOTIONS_PROVIDER`, `EMOTIONS_MODEL`, `EMOTIONS_PROVIDER_API_KEY`
-- `TRANSLATION_PROVIDER`, `TRANSLATION_MODEL`, `TRANSLATION_PROVIDER_API_KEY`, `TRANSLATION_DEFAULT_LANGUAGE`
-
-Supported providers: `openai`, `google` (AI Studio, needs `*_PROVIDER_API_KEY`), and `google-gemini`
-(Vertex, needs `*_GOOGLE_CLOUD_PROJECT` / `*_LOCATION` plus Application Default Credentials).
-
-<Warning>
-  A provider set **without** its required credentials crash-loops both Hub containers on startup — it does
-  not degrade gracefully. Set the credentials, or leave the provider unset.
-</Warning>
-
 #### Bundled Qwen / vLLM Runtime
 
 Docker Compose can now run a bundled OpenAI-compatible LLM for self-hosted AI features with
@@ -612,7 +592,6 @@ enterprise functionality.
     - set `POSTGRES_PASSWORD` in `forma/.env` to the exact password used by the existing PostgreSQL
       volume; do not generate a new value during the upgrade. If it contains URI-reserved characters, also set
       `POSTGRES_PASSWORD_URL_ENCODED` to its percent-encoded form
-    - include the bundled `forma-migrate`, `hub-migrate`, and `hub` services
     - if your older setup still uses bundled MinIO for uploads, review that storage path separately before the
       first v5 restart; newer self-hosting updates move the bundled object-storage path to RustFS, while
       external S3-compatible storage keeps the same `S3_*` app contract
@@ -637,7 +616,6 @@ enterprise functionality.
     - `POSTGRES_PASSWORD` contains the exact password used by the existing PostgreSQL volume; replacing the
       Compose file does not rotate the database password. If it contains URI-reserved characters, also set
       `POSTGRES_PASSWORD_URL_ENCODED` to its percent-encoded form
-    - the compose stack includes `forma-migrate`, `hub-migrate`, and `hub`
     - if your legacy Compose file still includes bundled MinIO for uploads, treat that as a separate storage
       review when comparing files; newer bundled storage guidance uses RustFS, while external S3-compatible
       storage keeps the same `S3_*` app contract
@@ -652,7 +630,6 @@ enterprise functionality.
     ```
 
     <Info>
-      The v5 Docker Compose stack bundles Hub and Cube. Keep the bundled `cube/` config files in sync with
       `docker-compose.yml` when you update this path.
     </Info>
   </Tab>
@@ -667,7 +644,6 @@ enterprise functionality.
 
     Before running the upgrade, confirm these v5 expectations in your values:
 
-    - keep `hub.enabled=true`; Hub is mandatory in v5
     - if you want the bundled Envoy path, configure `envoy.enabled=true` and then choose:
       - `envoy.controller.enabled=true` for the bundled controller mode
       - `envoy.controller.enabled=false` when the cluster already has a compatible Envoy Gateway controller
@@ -681,8 +657,6 @@ enterprise functionality.
 After the upgrade:
 
 - confirm the Forma app starts and `GET /health` returns successfully
-- confirm the Hub service is healthy and reachable from the Forma app
-- verify any Hub-backed connector or feedback flows you use
 - verify covered routes are rate-limited at the edge layer
 - verify AI features only if you configured the required `AI_*` variables
 
@@ -694,10 +668,7 @@ Common upgrade issues:
   protected by the legacy in-app limiter
 - **Missing AI provider configuration**: AI features remain unavailable until `AI_PROVIDER`, `AI_MODEL`, and the
   matching provider settings are set correctly
-  at boot, or — if env vars are present but Cube is unreachable — dashboards and analysis queries fail
   while the rest of the app stays healthy
-  bundled Cube healthcheck, but `cubejs/cube:v1.6.6` does not include it. Sync the Cube healthcheck from the
-  current Docker Compose file so it checks `/readyz` with Node instead.
 
 If you need to roll back:
 

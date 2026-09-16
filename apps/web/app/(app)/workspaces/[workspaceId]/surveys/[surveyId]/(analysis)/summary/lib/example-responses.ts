@@ -529,7 +529,7 @@ const buildRespondentProfiles = (count: number): TExampleRespondentProfile[] =>
 //
 // The default's code rather than null: a real respondent's answer carries it too, because the
 // renderer resolves its "default" sentinel to that code before the response is created. Leaving
-// null here published the feedback record with no language, so generated responses landed in the
+// null here published the response with no language, so generated responses landed in the
 // dashboard's "Not specified" bucket and skewed the Language breakdown (ENG-2838).
 //
 // A survey with no configured languages keeps returning null: it declares no language, so there is

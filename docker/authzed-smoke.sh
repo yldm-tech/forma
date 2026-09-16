@@ -77,7 +77,6 @@ authzed_cli() {
     AUTHZED_INSECURE=true \
     AUTHZED_SYSTEM_KEY=forma \
     AUTHZED_TOKEN="${token}" \
-    CUBEJS_API_URL=https://cube.forma.local \
     DATABASE_URL=https://database.forma.local/forma \
     ENCRYPTION_KEY=authzed-smoke-encryption-key \
     HUB_API_KEY=authzed-smoke-hub-key \

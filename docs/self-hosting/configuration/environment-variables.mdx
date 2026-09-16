@@ -10,7 +10,7 @@ These variables are present inside your machine's docker-compose file. Restart t
 
 <Note>
   Upgrading from Forma 4.x to 5.0? Read the [migration guide](/self-hosting/advanced/migration#v5) first.
-  Forma v5 makes Hub part of the standard self-hosted runtime and changes how rate limiting is enforced.
+  Forma v5 changes how rate limiting is enforced.
 </Note>
 
 For the `AI_*` variables, see [AI Features](/self-hosting/advanced/enterprise-features/ai-features) — it walks through each provider and the credentials it needs. Set only the variables for the provider you use; unused provider variables can be omitted.
@@ -142,15 +142,6 @@ If you use a custom subpath, include that subpath in `WEBAPP_URL`, `NEXTAUTH_URL
 `BETTER_AUTH_URL` if set. Do not point MCP or OAuth clients at `PUBLIC_URL`; that domain is reserved
 for public survey delivery and SDK traffic.
 
-#### Forma Hub
-
-Starting with Forma v5, Hub is part of the standard self-hosted runtime. When you run Forma with the
-bundled Docker Compose or Helm assets, the following variables apply:
-
-| Variable         | Description                                                                        | Required | Default                                             |
-| ---------------- | ---------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
-| HUB_DATABASE_URL | PostgreSQL connection URL for Hub. Omit to use the same database as Forma.    | optional | Same as Forma `DATABASE_URL` (shared database) |
-
 #### AuthZed / SpiceDB Authorization
 
 These variables define the supported authorization-client contract. Forma v6 enables AuthZed by default
@@ -215,22 +206,3 @@ Failed or unavailable permission checks fail the protected operation closed; the
 legacy authorization. Existing installations must complete `forma-authzed upgrade prepare` followed by
 `upgrade check` before upgrading. The general application readiness probe remains independent from AuthZed so a
 transient authorization outage does not restart unrelated Forma workloads.
-
-#### Cube Analytics
-
-Cube is part of the baseline Forma v5 stack and is required. Forma generates the backend
-Cube JWT from `CUBEJS_API_SECRET`, so `CUBEJS_API_TOKEN` is not part of the supported setup contract.
-
-| Variable                  | Description                                                                                            | Required | Default                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------ |
-The bundled Docker Compose Cube service sets `CUBEJS_DEFAULT_API_SCOPES=meta,data` directly on the Cube
-container. If you run Cube outside the bundled Compose stack, configure the equivalent Cube service environment
-there rather than adding it to the Forma app environment.
-
-For Helm deployments, the chart deploys Cube by default (`cube.enabled: true`). To use an external Cube
-cluster instead, set `cube.enabled: false`, point `CUBEJS_API_URL` at your endpoint, and supply
-`CUBEJS_API_SECRET` through your existing secret management setup.
-
-{/* prettier-ignore-end */}
-
-Note: If you want to configure something that is not possible via above, please open an issue on our GitHub repo here or reach out to us on Github Discussions and we'll try our best to work out a solution with you.
