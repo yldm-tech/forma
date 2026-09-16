@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Building2Icon,
-  ChevronRightIcon,
-  FoldersIcon,
-  Loader2,
-  MessageCircle,
-  PlusIcon,
-  SettingsIcon,
-  UserIcon,
-  WorkflowIcon,
-} from "lucide-react";
+import { MessageCircle, SettingsIcon, UserIcon, WorkflowIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,16 +20,9 @@ import { useLatestStableRelease } from "@/app/(app)/workspaces/[workspaceId]/lib
 import { cn } from "@/lib/cn";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
 import { getAccessFlags } from "@/lib/membership/utils";
-import { SwitcherDropdownBody } from "@/modules/settings/components/switcher-dropdown-body";
 import { UserDropdown } from "@/modules/settings/components/user-dropdown";
 import { useSwitcherData } from "@/modules/settings/hooks/use-switcher-data";
 import { Badge } from "@/modules/ui/components/badge";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/modules/ui/components/dropdown-menu";
 import { GoBackButton } from "@/modules/ui/components/go-back-button";
 import { ModalButton } from "@/modules/ui/components/upgrade-prompt";
 import { CreateWorkspaceModal } from "@/modules/workspaces/components/create-workspace-modal";
@@ -85,45 +68,6 @@ const sectionLabelWithBeta = (label: React.ReactNode) => (
   </span>
 );
 
-/**
- * The text half of a sidebar switcher trigger: name, caption, an in-flight spinner and the chevron.
- *
- * Both switchers rendered this inline and identically, at the deepest nesting in the component —
- * which is most of what pushed MainNavigation past Sonar's cognitive-complexity limit (ENG-3076).
- * Deliberately not wrapping the `<button>` itself: that is a Radix `asChild` target, and moving it
- * behind a component would mean forwarding props and refs by hand for no gain.
- */
-const SwitcherTriggerLabel = ({
-  isCollapsed,
-  isTextVisible,
-  isPending,
-  name,
-  caption,
-}: Readonly<{
-  isCollapsed: boolean;
-  isTextVisible: boolean;
-  isPending: boolean;
-  name: string;
-  caption: string;
-}>) => {
-  // Collapsed, only the icon shows; `isTextVisible` is the 150ms delay that keeps the label from
-  // flashing while the sidebar animates.
-  if (isCollapsed || isTextVisible) {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="grow overflow-hidden">
-        <p className="truncate text-sm font-bold text-slate-700">{name}</p>
-        <p className="text-sm text-slate-500">{caption}</p>
-      </div>
-      {isPending && <Loader2 className="size-4 animate-spin text-slate-600" strokeWidth={1.5} />}
-      <ChevronRightIcon className="size-4 shrink-0 text-slate-600" strokeWidth={1.5} />
-    </>
-  );
-};
-
 export const MainNavigation = ({
   organization,
   user,
@@ -147,7 +91,7 @@ export const MainNavigation = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isTextVisible, setIsTextVisible] = useState(true);
 
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const { isManager, isOwner, isBilling } = getAccessFlags(membershipRole);
   const isMembershipPending = membershipRole === undefined;
   const disabledNavigationMessage = isMembershipPending
@@ -242,8 +186,6 @@ export const MainNavigation = ({
     [t, workspace.id, isSettingsMode, isMembershipPending, isBilling]
   );
 
-  const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
-  const [isOrganizationDropdownOpen, setIsOrganizationDropdownOpen] = useState(false);
   const workspaceSwitcher = useSwitcherData(
     () => getWorkspacesForSwitcherAction({ organizationId: organization.id }),
     t("common.failed_to_load_workspaces")
@@ -252,60 +194,11 @@ export const MainNavigation = ({
     () => getOrganizationsForSwitcherAction({ organizationId: organization.id }),
     t("common.failed_to_load_organizations")
   );
-  const { load: loadWorkspaces } = workspaceSwitcher;
-  const { load: loadOrganizations } = organizationSwitcher;
   const [openCreateWorkspaceModal, setOpenCreateWorkspaceModal] = useState(false);
   const [openWorkspaceLimitModal, setOpenWorkspaceLimitModal] = useState(false);
-
-  useEffect(() => {
-    // The hook guards against duplicate/looping loads internally.
-    if (isWorkspaceDropdownOpen) {
-      void loadWorkspaces();
-    }
-  }, [isWorkspaceDropdownOpen, loadWorkspaces]);
-
-  useEffect(() => {
-    if (isOrganizationDropdownOpen) {
-      void loadOrganizations();
-    }
-  }, [isOrganizationDropdownOpen, loadOrganizations]);
-
   const mainNavigationLink = isBilling
     ? getBillingFallbackPath(organization.id, isFormaCloud)
     : `/workspaces/${workspace.id}/surveys/`;
-
-  const handleWorkspaceChange = (workspaceId: string) => {
-    const targetPath =
-      workspaceId === workspace.id ? `/workspaces/${workspace.id}/surveys` : `/workspaces/${workspaceId}/`;
-    startTransition(() => {
-      setIsWorkspaceDropdownOpen(false);
-      router.push(targetPath);
-    });
-  };
-
-  const handleOrganizationChange = (organizationId: string) => {
-    const targetPath =
-      organizationId === organization.id
-        ? `/organizations/${organization.id}/settings/general`
-        : `/organizations/${organizationId}/`;
-    startTransition(() => {
-      setIsOrganizationDropdownOpen(false);
-      router.push(targetPath);
-    });
-  };
-
-  const handleWorkspaceCreate = () => {
-    if (!workspaceSwitcher.hasLoaded || workspaceSwitcher.isLoading) {
-      return;
-    }
-
-    if (workspaceSwitcher.items.length >= organizationWorkspacesLimit) {
-      setOpenWorkspaceLimitModal(true);
-      return;
-    }
-
-    setOpenCreateWorkspaceModal(true);
-  };
 
   const workspaceLimitModalButtons = (): [ModalButton, ModalButton] => {
     if (isFormaCloud) {
@@ -357,16 +250,7 @@ export const MainNavigation = ({
     [router, organization.id]
   );
 
-  const switcherTriggerClasses = cn(
-    "w-full border-t px-3 py-3 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-inset",
-    isCollapsed ? "flex items-center justify-center" : ""
-  );
-
-  const switcherIconClasses =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600";
   const mainNavIconClassName = "h-4 w-4 shrink-0";
-  const isInitialWorkspacesLoading =
-    isWorkspaceDropdownOpen && !workspaceSwitcher.hasLoaded && !workspaceSwitcher.error;
 
   return (
     <>
@@ -488,85 +372,11 @@ export const MainNavigation = ({
             )}
 
             <div className="flex flex-col">
-              {!isSettingsMode && (
-                <>
-                  <DropdownMenu onOpenChange={setIsWorkspaceDropdownOpen}>
-                    <DropdownMenuTrigger
-                      asChild
-                      id="workspaceDropdownTrigger"
-                      className={switcherTriggerClasses}>
-                      <button
-                        type="button"
-                        aria-label={isCollapsed ? t("common.choose_workspace") : undefined}
-                        className={cn("flex w-full items-center gap-3", isCollapsed && "justify-center")}>
-                        <span className={switcherIconClasses}>
-                          <FoldersIcon className="size-4" strokeWidth={1.5} />
-                        </span>
-                        <SwitcherTriggerLabel
-                          isCollapsed={isCollapsed}
-                          isTextVisible={isTextVisible}
-                          isPending={isPending}
-                          name={workspace.name}
-                          caption={t("common.workspace")}
-                        />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" sideOffset={10} alignOffset={5} align="end">
-                      <SwitcherDropdownBody
-                        type="workspace"
-                        isLoading={workspaceSwitcher.isLoading || isInitialWorkspacesLoading}
-                        error={workspaceSwitcher.error}
-                        onRetry={workspaceSwitcher.retry}
-                        items={workspaceSwitcher.items}
-                        selectedId={workspace.id}
-                        onSelect={handleWorkspaceChange}>
-                        {isOwnerOrManager && (
-                          <DropdownMenuCheckboxItem
-                            onClick={handleWorkspaceCreate}
-                            className="w-full cursor-pointer justify-between">
-                            <span>{t("common.add_new_workspace")}</span>
-                            <PlusIcon className="ml-2 size-4" strokeWidth={1.5} />
-                          </DropdownMenuCheckboxItem>
-                        )}
-                      </SwitcherDropdownBody>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu onOpenChange={setIsOrganizationDropdownOpen}>
-                    <DropdownMenuTrigger
-                      asChild
-                      id="organizationDropdownTriggerSidebar"
-                      className={switcherTriggerClasses}>
-                      <button
-                        type="button"
-                        aria-label={isCollapsed ? t("common.choose_organization") : undefined}
-                        className={cn("flex w-full items-center gap-3", isCollapsed && "justify-center")}>
-                        <span className={switcherIconClasses}>
-                          <Building2Icon className="size-4" strokeWidth={1.5} />
-                        </span>
-                        <SwitcherTriggerLabel
-                          isCollapsed={isCollapsed}
-                          isTextVisible={isTextVisible}
-                          isPending={isPending}
-                          name={organization.name}
-                          caption={t("common.organization")}
-                        />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" sideOffset={10} alignOffset={5} align="end">
-                      <SwitcherDropdownBody
-                        type="organization"
-                        isLoading={organizationSwitcher.isLoading}
-                        error={organizationSwitcher.error}
-                        onRetry={organizationSwitcher.retry}
-                        items={organizationSwitcher.items}
-                        selectedId={organization.id}
-                        onSelect={handleOrganizationChange}
-                      />
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              )}
+              {/* Organization and workspace switching lives in the top bar's breadcrumb
+                  (`WorkspaceAndOrgSwitch`), which renders on every page through `WorkspaceLayout`
+                  and `settings-shell`, and states the relationship — org › workspace — that two
+                  stacked dropdowns here could only imply. Keeping both meant two places to change
+                  and two fetches of the same switcher data. Creating a workspace lives there too. */}
 
               <UserDropdown
                 user={user}
