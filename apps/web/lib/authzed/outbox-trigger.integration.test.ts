@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vitest";
 import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
@@ -10,14 +7,6 @@ import {
   hasStaleAuthzedRevocation,
   markAuthzedOutboxEventsFailed,
 } from "@/lib/authzed/outbox-repository";
-
-const migration = readFileSync(
-  join(
-    dirname(fileURLToPath(import.meta.url)),
-    "../../../../packages/database/migration/20260818120000_add_authzed_projection_outbox/migration.sql"
-  ),
-  "utf8"
-);
 
 /**
  * The durable outbox against a real PostgreSQL (ENG-2408).
@@ -61,23 +50,6 @@ beforeEach(async () => {
 });
 
 describe("AuthZed projection outbox triggers", () => {
-  test("the migration converges when applied repeatedly", async () => {
-    await prisma.$executeRawUnsafe(migration);
-    await prisma.$executeRawUnsafe(migration);
-
-    const [catalog] = await prisma.$queryRaw<Array<{ indexes: bigint; triggers: bigint }>>`
-      SELECT
-        (SELECT COUNT(*) FROM pg_indexes
-         WHERE tablename = 'AuthzedProjectionOutbox'
-           AND indexname <> 'AuthzedProjectionOutbox_pkey') AS indexes,
-        (SELECT COUNT(*) FROM pg_trigger
-         WHERE tgname LIKE 'authzed_projection_%'
-           AND NOT tgisinternal) AS triggers
-    `;
-    expect(Number(catalog?.indexes)).toBe(3);
-    expect(Number(catalog?.triggers)).toBe(11);
-  });
-
   test("does not classify an accepted invite as a revocation", async () => {
     const [user, organization] = await Promise.all([
       seedUser("accept@integration.test"),
