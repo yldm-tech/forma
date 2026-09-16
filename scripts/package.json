@@ -1,0 +1,13 @@
+{
+  "name": "@forma/scripts",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
