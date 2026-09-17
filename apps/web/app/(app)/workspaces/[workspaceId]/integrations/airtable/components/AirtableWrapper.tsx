@@ -5,8 +5,8 @@ import { TIntegrationItem } from "@forma/types/integration";
 import { TIntegrationAirtable } from "@forma/types/integration/airtable";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { ManageIntegration } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/components/ManageIntegration";
-import { authorize } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/lib/airtable";
+import { ManageIntegration } from "@/app/(app)/workspaces/[workspaceId]/integrations/airtable/components/ManageIntegration";
+import { authorize } from "@/app/(app)/workspaces/[workspaceId]/integrations/airtable/lib/airtable";
 import airtableLogo from "@/images/airtableLogo.svg";
 import { ConnectIntegration } from "@/modules/ui/components/connect-integration";
 

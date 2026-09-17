@@ -17,12 +17,12 @@ import {
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
-import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
+import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/integrations/actions";
 import {
   MappingRow,
   TMapping,
   createEmptyMapping,
-} from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/notion/components/MappingRow";
+} from "@/app/(app)/workspaces/[workspaceId]/integrations/notion/components/MappingRow";
 import NotionLogo from "@/images/notion.png";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { recallToHeadline } from "@/lib/utils/recall";

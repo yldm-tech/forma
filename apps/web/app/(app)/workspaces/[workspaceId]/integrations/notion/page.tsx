@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { TIntegrationNotion, TIntegrationNotionDatabase } from "@forma/types/integration/notion";
-import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
-import { NotionWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/notion/components/NotionWrapper";
+import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/integrations/lib/surveys";
+import { NotionWrapper } from "@/app/(app)/workspaces/[workspaceId]/integrations/notion/components/NotionWrapper";
 import {
   DEFAULT_LOCALE,
   NOTION_AUTH_URL,

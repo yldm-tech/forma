@@ -20,7 +20,7 @@ import { canUserWriteWorkspaceIntegrations } from "@/lib/workspace/auth";
 import { getSession } from "@/modules/auth/lib/session";
 
 const getGoogleSheetsRedirectUrl = (workspaceId: string) =>
-  new URL(`/workspaces/${workspaceId}/settings/workspace/integrations/google-sheets`, WEBAPP_URL);
+  new URL(`/workspaces/${workspaceId}/integrations/google-sheets`, WEBAPP_URL);
 
 const getGoogleSheetsOAuthState = async (state: string | null, userId: string) => {
   try {

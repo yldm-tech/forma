@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { TIntegrationGoogleSheets } from "@forma/types/integration/google-sheet";
-import { GoogleSheetWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/google-sheets/components/GoogleSheetWrapper";
-import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
+import { GoogleSheetWrapper } from "@/app/(app)/workspaces/[workspaceId]/integrations/google-sheets/components/GoogleSheetWrapper";
+import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/integrations/lib/surveys";
 import {
   DEFAULT_LOCALE,
   GOOGLE_SHEETS_CLIENT_ID,
@@ -44,7 +44,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
 
   return (
     <PageContentWrapper>
-      <GoBackButton url={`${WEBAPP_URL}/workspaces/${params.workspaceId}/settings/workspace/integrations`} />
+      <GoBackButton url={`${WEBAPP_URL}/workspaces/${params.workspaceId}/integrations`} />
       <PageHeader pageTitle={t("workspace.integrations.google_sheets.google_sheets_integration")} />
       <div className="h-[75vh] w-full">
         <GoogleSheetWrapper

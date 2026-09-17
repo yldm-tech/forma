@@ -3,7 +3,7 @@ import type { TFunction } from "i18next";
 /**
  * Every place in the product a person can be sent, as data.
  *
- * The sidebars each know a slice of this: the main navigation knows three areas, the settings
+ * The sidebars each know a slice of this: the main navigation knows the product areas, the settings
  * sidebar knows the settings pages, and the account menu knows the personal ones. Nothing knew all
  * of it, which is why the product reads as three items — its depth is real but two clicks down.
  *
@@ -63,6 +63,19 @@ export const getNavigationDestinations = ({
           href: `${workspace}/workflows`,
           group: t("common.workspace"),
         },
+        {
+          id: "user-actions",
+          label: t("common.user_actions"),
+          href: `${workspace}/user-actions`,
+          group: t("common.workspace"),
+        },
+        {
+          id: "integrations",
+          label: t("common.integrations"),
+          href: `${workspace}/integrations`,
+          group: t("common.workspace"),
+          keywords: ["zapier", "webhook", "slack", "notion", "airtable", "google sheets", "n8n", "make"],
+        },
       ];
 
   const workspaceSettingsItems: NavigationDestination[] = isBilling
@@ -93,12 +106,6 @@ export const getNavigationDestinations = ({
           group: t("common.settings"),
         },
         {
-          id: "ws-integrations",
-          label: t("common.integrations"),
-          href: `${workspaceSettings}/integrations`,
-          group: t("common.settings"),
-        },
-        {
           id: "ws-teams",
           label: t("common.team_access"),
           href: `${workspaceSettings}/teams`,
@@ -108,12 +115,6 @@ export const getNavigationDestinations = ({
           id: "ws-sdk",
           label: t("common.web_and_mobile_sdk"),
           href: `${workspaceSettings}/app-connection`,
-          group: t("common.settings"),
-        },
-        {
-          id: "ws-actions",
-          label: t("common.user_actions"),
-          href: `${workspaceSettings}/user-actions`,
           group: t("common.settings"),
         },
       ];

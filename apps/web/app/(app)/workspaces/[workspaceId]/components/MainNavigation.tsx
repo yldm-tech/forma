@@ -1,6 +1,13 @@
 "use client";
 
-import { MessageCircle, SettingsIcon, UserIcon, WorkflowIcon } from "lucide-react";
+import {
+  BlocksIcon,
+  MessageCircle,
+  MousePointerClickIcon,
+  SettingsIcon,
+  UserIcon,
+  WorkflowIcon,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
@@ -114,6 +121,12 @@ export const MainNavigation = ({
   // Act triad, and Analyze went with Dashboards and Unify Feedback in aef7841 — two headings over
   // three links was more chrome than content. The Beta mark moved onto Workflows, which is the
   // thing that is early; it had been sitting on a section that contained only Workflows anyway.
+  //
+  // User actions and Integrations are here rather than in settings because they are things you do
+  // with the product rather than preferences, and because settings was hiding them: nothing in the
+  // UI linked to user actions at all, so a page with five Playwright journeys was unreachable
+  // outside the command palette. They cannot live under `/settings/*` and be reachable from here —
+  // `isSettingsMode` swaps this whole sidebar out on any path containing `/settings`.
   const mainNavigationItems = useMemo(
     () => [
       {
@@ -143,6 +156,22 @@ export const MainNavigation = ({
         isHidden: !areWorkflowsEnabled,
         disabled: isMembershipPending || isBilling,
         badge: betaBadge,
+      },
+      {
+        name: t("common.user_actions"),
+        href: `/workspaces/${workspace.id}/user-actions`,
+        icon: MousePointerClickIcon,
+        isActive: pathname?.startsWith(`/workspaces/${workspace.id}/user-actions`),
+        isHidden: false,
+        disabled: isMembershipPending || isBilling,
+      },
+      {
+        name: t("common.integrations"),
+        href: `/workspaces/${workspace.id}/integrations`,
+        icon: BlocksIcon,
+        isActive: pathname?.startsWith(`/workspaces/${workspace.id}/integrations`),
+        isHidden: false,
+        disabled: isMembershipPending || isBilling,
       },
     ],
     [t, workspace.id, pathname, isMembershipPending, isBilling, isContactsEnabled, areWorkflowsEnabled]
