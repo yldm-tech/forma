@@ -173,7 +173,6 @@ checksums:
     common/are_you_sure: 6d5cd13628a7887711fd0c29f1123652
     common/attempt: fbe2d20432424e164245e13ff9195310
     common/attributes: 86d0ae6fea0fbb119722ed3841f8385a
-    common/authorized_apps: 62c2c8e6703c9e5224e98294a53e1884
     common/back: f541015a827e37cb3b1234e56bc2aa3c
     common/billing: b01dbdd049ebbd4a349fa64d6ce65a3b
     common/booked: 77603a7aca80b8b333023c5cf39fec4d

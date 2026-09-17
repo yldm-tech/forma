@@ -4,8 +4,8 @@ import { useTransition } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
+import { revokeOAuthConsentAction } from "@/modules/account/lib/authorized-apps-actions";
 import { Button } from "@/modules/ui/components/button";
-import { revokeOAuthConsentAction } from "../actions";
 
 interface RevokeOAuthConsentButtonProps {
   consentId: string;

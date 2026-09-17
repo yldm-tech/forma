@@ -61,6 +61,7 @@ export const TopControlBar = ({
         user={user}
         organizationId={currentOrganizationId}
         publicDomain={publicDomain}
+        isBilling={membershipRole === "billing"}
         placement="topBar"
       />
     </div>
