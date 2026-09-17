@@ -421,7 +421,7 @@ const parsedEnv = createEnv({
       (value) => (value === "" ? undefined : value),
       z.coerce.number().int().min(0).max(10).optional()
     ),
-    TELEMETRY_DISABLED: z.enum(["1", "0"]).optional(),
+    TELEMETRY_ENABLED: z.enum(["1", "0"]).optional(),
     S3_ACCESS_KEY: z.string().optional(),
     S3_BUCKET_NAME: z.string().optional(),
     S3_REGION: z.string().optional(),
@@ -589,7 +589,7 @@ const parsedEnv = createEnv({
     PRIVACY_URL: process.env.PRIVACY_URL,
     RATE_LIMITING_DISABLED: process.env.RATE_LIMITING_DISABLED,
     TRUSTED_PROXY_HOP_COUNT: process.env.TRUSTED_PROXY_HOP_COUNT,
-    TELEMETRY_DISABLED: process.env.TELEMETRY_DISABLED,
+    TELEMETRY_ENABLED: process.env.TELEMETRY_ENABLED,
     S3_ACCESS_KEY: process.env.S3_ACCESS_KEY,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     S3_REGION: process.env.S3_REGION,

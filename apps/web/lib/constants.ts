@@ -198,7 +198,8 @@ export const RATE_LIMITING_DISABLED = env.RATE_LIMITING_DISABLED === "1";
  * setting it higher than the real chain lets a caller spoof the address by prepending entries.
  */
 export const TRUSTED_PROXY_HOP_COUNT = env.TRUSTED_PROXY_HOP_COUNT ?? 1;
-export const TELEMETRY_DISABLED = env.TELEMETRY_DISABLED === "1";
+/** Opt-in: this instance reports usage only when its operator turns it on. */
+export const TELEMETRY_ENABLED = env.TELEMETRY_ENABLED === "1";
 
 // Opt-out for the Have-I-Been-Pwned breach check (ENG-1587). Set to "1" on air-gapped /
 // closed-network deployments that can't reach api.pwnedpasswords.com and want no outbound
