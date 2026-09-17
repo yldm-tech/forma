@@ -9,14 +9,13 @@ x-environment: &environment
     # Set this to your public-facing URL, e.g., example http://localhost:3000 or https://example.com
     WEBAPP_URL:
 
-    # Required for next-auth. Should be the same as WEBAPP_URL
+    # Should be the same as WEBAPP_URL. Named for the auth library this app was built on before Better Auth; the name is still what the app reads.
     NEXTAUTH_URL:
 
     # PostgreSQL DB for Forma to connect to
     <<: *forma-database
 
-    # NextJS Auth
-    # @see: https://next-auth.js.org/configuration/options#nextauth_secret
+    # Signing secret for sessions and single-use survey links.
     # You can use: `openssl rand -hex 32` to generate one
     NEXTAUTH_SECRET:
 
@@ -33,13 +32,6 @@ x-environment: &environment
     REDIS_URL: redis://redis:6379
 
     AWS_BEARER_TOKEN_BEDROCK: ""
-
-    # Base URL the Forma app uses to reach Hub. Defaults to the internal Hub service.
-
-    # Hub database URL (optional). Default: same Postgres as Forma. Set only if Hub uses a separate DB.
-    # HUB_DATABASE_URL:
-
-    # Cube semantic-layer API used by Forma analytics. Required.
 
     # Set the minimum log level(debug, info, warn, error, fatal)
     # LOG_LEVEL: info
