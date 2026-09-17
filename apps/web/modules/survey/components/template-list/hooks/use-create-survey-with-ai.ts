@@ -21,14 +21,15 @@ import { useBeforeUnloadPrompt } from "@/modules/ui/hooks/use-before-unload-prom
 
 type UseCreateSurveyWithAIProps = {
   workspaceId: string;
-  language: TUserLocale;
+  /** Seeds the picker. The person generating can change it without changing their own locale. */
+  defaultLanguage: TUserLocale;
   isAIAvailable: boolean;
   onSuccess: (surveyId: string) => void;
 };
 
 export const useCreateSurveyWithAI = ({
   workspaceId,
-  language,
+  defaultLanguage,
   isAIAvailable,
   onSuccess,
 }: UseCreateSurveyWithAIProps) => {
@@ -36,6 +37,9 @@ export const useCreateSurveyWithAI = ({
   // Deliberately outside the reducer: the prompt is never touched by a transition, so it survives a
   // failed generation without a restore path that could get it wrong.
   const [prompt, setPrompt] = useState("");
+  // Held here rather than by the form, so a regenerate after the prompt was edited reuses the
+  // language the draft on screen was generated in rather than resetting to the user's locale.
+  const [language, setLanguage] = useState<TUserLocale>(defaultLanguage);
   const [state, dispatch] = useReducer(aiCreateReducer, INITIAL_AI_CREATE_STATE);
   const [isNavigatingToEditor, setIsNavigatingToEditor] = useState(false);
 
@@ -238,6 +242,8 @@ export const useCreateSurveyWithAI = ({
   return {
     prompt,
     setPrompt,
+    language,
+    setLanguage,
     status: state.status,
     draft: state.draft,
     /** The prompt the draft on screen came from, which is not always the one in the textarea. */

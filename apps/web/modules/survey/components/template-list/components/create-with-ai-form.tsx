@@ -3,7 +3,8 @@
 import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { TUserLocale } from "@forma/types/user";
+import { getLanguageLabel } from "@forma/i18n-utils/utils";
+import { type TUserLocale, ZUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { AIUnavailableAlert } from "@/modules/ai/components/ai-unavailable-alert";
 import { AiDraftPreview } from "@/modules/survey/components/template-list/components/ai-draft-preview";
@@ -15,6 +16,13 @@ import {
 import { AiIcon, AiStatusLine } from "@/modules/ui/components/ai";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/modules/ui/components/select";
 import { TooltipRenderer } from "@/modules/ui/components/tooltip";
 
 type CreateWithAIFormProps = {
@@ -59,6 +67,8 @@ export const CreateWithAIForm = ({
   const {
     prompt,
     setPrompt,
+    language: selectedLanguage,
+    setLanguage: setSelectedLanguage,
     submittedPrompt,
     status,
     draft,
@@ -76,7 +86,7 @@ export const CreateWithAIForm = ({
     clearError,
     hasKeptDraft,
     hasUnsavedWork,
-  } = useCreateSurveyWithAI({ workspaceId, language, isAIAvailable, onSuccess });
+  } = useCreateSurveyWithAI({ workspaceId, defaultLanguage: language, isAIAvailable, onSuccess });
 
   const stopButtonRef = useRef<HTMLButtonElement>(null);
   const draftRef = useRef<HTMLElement>(null);
@@ -109,6 +119,16 @@ export const CreateWithAIForm = ({
   }, [status]);
 
   const helperPrompts = useMemo(() => getHelperPrompts(t), [t]);
+  // Every locale the generate endpoint accepts, which is wider than the four the admin UI ships in:
+  // a survey's audience is not the admin's. Labels are in the reader's own language, so the list
+  // stays legible to someone who does not read the language they are picking.
+  const languageOptions = useMemo(
+    () =>
+      ZUserLocale.options
+        .map((code) => ({ code, label: getLanguageLabel(code, language) ?? code }))
+        .sort((a, b) => a.label.localeCompare(b.label, language)),
+    [language]
+  );
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -273,6 +293,32 @@ export const CreateWithAIForm = ({
                 })}
               </span>
               <span>{t("workspace.surveys.ai_create.shortcut_hint")}</span>
+            </div>
+
+            {/* Beside the prompt rather than behind a settings affordance: which language the
+                questions come back in is part of what is being asked for, not a preference. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="ai-survey-language" className="text-sm font-medium text-slate-700">
+                {t("common.language")}
+              </label>
+              <Select
+                value={selectedLanguage}
+                onValueChange={(value) => setSelectedLanguage(value as TUserLocale)}
+                disabled={isGenerating}>
+                <SelectTrigger
+                  id="ai-survey-language"
+                  className="h-8 w-auto min-w-40"
+                  aria-label={t("common.select_language")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {languageOptions.map((option) => (
+                    <SelectItem key={option.code} value={option.code}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
