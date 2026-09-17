@@ -57,7 +57,7 @@ const renderAiHook = (overrides: { isAIAvailable?: boolean; onSuccess?: () => vo
     () =>
       useCreateSurveyWithAI({
         workspaceId: "workspace1",
-        language: "en-US",
+        defaultLanguage: "en-US",
         isAIAvailable: overrides.isAIAvailable ?? true,
         onSuccess: overrides.onSuccess ?? vi.fn(),
       }),
@@ -201,6 +201,21 @@ describe("useCreateSurveyWithAI", () => {
 
     expect(result.current.status).toBe("review");
     expect(result.current.draft.questions).toHaveLength(1);
+  });
+
+  test("generates in the language that was picked, not the user's own", async () => {
+    const { result } = renderAiHook();
+
+    // Seeded from the user's locale, so someone who changes nothing keeps today's behaviour.
+    expect(result.current.language).toBe("en-US");
+
+    act(() => result.current.setLanguage("ja-JP"));
+    await submitWithPrompt(result);
+
+    expect(streamSurveyGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "ja-JP" }),
+      expect.anything()
+    );
   });
 });
 
