@@ -49,21 +49,6 @@ jobs:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
-      - name: Reserve immutable release tag
-        shell: bash
-        run: |
-          # A rerun must resolve to the commit it first published, never a different one.
-          tag="v$VERSION"
-          if git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
-            [ "$(git rev-list -n 1 "$tag")" = "$RELEASE_SHA" ] || {
-              echo "::error::$tag already points at a different commit"
-              exit 1
-            }
-          else
-            git tag "$tag" "$RELEASE_SHA"
-            git push origin "refs/tags/$tag"
-          fi
-
       - name: Log in to ghcr.io
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
         with:
@@ -83,6 +68,18 @@ jobs:
           tags: |
             ghcr.io/yldm-tech/forma:${{ env.VERSION }}
             ghcr.io/yldm-tech/forma:sha-${{ github.sha }}
+          build-args: |
+            NEXT_SKIP_TYPE_CHECK=1
+          # Build-time only, and deliberately placeholders. The Dockerfile mounts these for the
+          # Next.js build — Prisma client generation and the build-time env validation need the
+          # names to resolve to something shaped right — and the mount leaves nothing in the image.
+          # The values the app actually runs on come from its Secret at runtime, so a real
+          # DATABASE_URL here would be both wrong and pointless. Same set the validation build
+          # passes, so what publishes is what CI proved buildable.
+          secrets: |
+            database_url=postgresql://build:build@127.0.0.1:5432/forma
+            encryption_key=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+            redis_url=redis://127.0.0.1:6379
           # `image.source` is not decoration: the github-deploy-tracker CronWorkflow in the cluster
           # resolves an image back to its repository from this label, which is how a rollout becomes
           # a GitHub Deployment status without naming the repo in yldm-platform.
@@ -91,6 +88,26 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ env.VERSION }}
           provenance: false
+
+      - name: Tag the published commit
+        shell: bash
+        run: |
+          # After the build, not before: the first run of this workflow failed on a missing build
+          # secret and left a v0.1.1 tag pointing at a commit that never produced an image. The
+          # concurrency group already serialises runs, so nothing is racing for the name.
+          #
+          # Still immutable — a rerun of the same run number must resolve to the commit it first
+          # published, never a different one.
+          tag="v$VERSION"
+          if git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
+            [ "$(git rev-list -n 1 "$tag")" = "$RELEASE_SHA" ] || {
+              echo "::error::$tag already points at a different commit"
+              exit 1
+            }
+          else
+            git tag "$tag" "$RELEASE_SHA"
+            git push origin "refs/tags/$tag"
+          fi
 
       - name: Move latest and publish the release
         shell: bash
