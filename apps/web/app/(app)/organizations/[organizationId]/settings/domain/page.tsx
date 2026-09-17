@@ -3,7 +3,6 @@ import { AuthenticationError } from "@forma/types/errors";
 import { PrettyUrlsTable } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/domain/components/pretty-urls-table";
 import { IS_FORMA_CLOUD, IS_STORAGE_CONFIGURED } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
-import { getWhiteLabelPermission } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
@@ -29,8 +28,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
     throw new AuthenticationError(t("common.not_authenticated"));
   }
 
-  const [hasWhiteLabelPermission, surveys, layoutData] = await Promise.all([
-    getWhiteLabelPermission(),
+  const [surveys, layoutData] = await Promise.all([
     getSurveysWithSlugsByOrganizationId(organization.id),
     getSettingsLayoutData(session.user.id, organization.id),
   ]);
@@ -50,7 +48,6 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
 
       <FaviconCustomizationSettings
         organization={organization}
-        hasWhiteLabelPermission={hasWhiteLabelPermission}
         workspaceId={layoutData?.currentWorkspace?.id ?? ""}
         isReadOnly={!isOwnerOrManager}
         isStorageConfigured={IS_STORAGE_CONFIGURED}

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { WorkspaceLayout as WorkspaceLayoutComponent } from "@/app/(app)/workspaces/[workspaceId]/components/WorkspaceLayout";
 import { PostHogGroupIdentify } from "@/app/posthog/PostHogGroupIdentify";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD, POSTHOG_KEY } from "@/lib/constants";
+import { POSTHOG_KEY } from "@/lib/constants";
 import { getSession } from "@/modules/auth/lib/session";
 import { WorkspaceContextWrapper } from "@/modules/workspaces/context/workspace-context";
 import { getWorkspaceLayoutData } from "@/modules/workspaces/lib/utils";
@@ -32,13 +32,7 @@ const WorkspaceLayout = async (props: {
           workspaceName={layoutData.workspace.name}
         />
       )}
-      <WorkspaceContextWrapper
-        workspace={layoutData.workspace}
-        organization={layoutData.organization}
-        deployment={{
-          isFormaCloud: IS_FORMA_CLOUD,
-          enterpriseLicenseRequestFormUrl: ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-        }}>
+      <WorkspaceContextWrapper workspace={layoutData.workspace} organization={layoutData.organization}>
         <WorkspaceLayoutComponent layoutData={layoutData}>{children}</WorkspaceLayoutComponent>
       </WorkspaceContextWrapper>
     </>

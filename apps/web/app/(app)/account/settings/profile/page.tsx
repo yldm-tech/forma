@@ -2,29 +2,20 @@ import { AuthenticationError } from "@forma/types/errors";
 import { AccountSecurity } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/AccountSecurity";
 import { DeleteAccount } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/DeleteAccount";
 import { EditProfileDetailsForm } from "@/app/(app)/workspaces/[workspaceId]/settings/account/profile/components/EditProfileDetailsForm";
-import {
-  EMAIL_VERIFICATION_DISABLED,
-  ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMA_CLOUD,
-  PASSWORD_RESET_DISABLED,
-} from "@/lib/constants";
+import { EMAIL_VERIFICATION_DISABLED, IS_FORMA_CLOUD, PASSWORD_RESET_DISABLED } from "@/lib/constants";
 import { getOrganizationsWhereUserIsSingleOwner } from "@/lib/organization/service";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { AuthorizedAppsCard } from "@/modules/account/components/authorized-apps-card";
 import { requiresPasswordConfirmationForAccountDeletion } from "@/modules/account/lib/account-deletion-auth";
 import { getSession } from "@/modules/auth/lib/session";
-import { getIsMultiOrgEnabled, getIsTwoFactorAuthEnabled } from "@/modules/license-check/lib/utils";
-import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
-import { getOrganizationBillingPath } from "@/modules/settings/lib/routes";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
-import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 const Page = async () => {
-  const isTwoFactorAuthEnabled = await getIsTwoFactorAuthEnabled();
   const isMultiOrgEnabled = await getIsMultiOrgEnabled();
   const t = await getTranslate();
   const session = await getSession();
@@ -37,12 +28,6 @@ const Page = async () => {
   if (!user) {
     throw new AuthenticationError(t("common.not_authenticated"));
   }
-
-  // Two-factor upgrade points at the user's organization billing page (org-scoped after the refactor).
-  const layoutData = await getSettingsLayoutData(session.user.id);
-  const billingUpgradeHref = layoutData
-    ? getOrganizationBillingPath(layoutData.organization.id, IS_FORMA_CLOUD)
-    : "/";
 
   const isPasswordResetEnabled = !PASSWORD_RESET_DISABLED && user.identityProvider === "email";
   const requiresPasswordConfirmation = requiresPasswordConfirmationForAccountDeletion(user);
@@ -64,26 +49,7 @@ const Page = async () => {
           <SettingsCard
             title={t("common.security")}
             description={t("workspace.settings.profile.security_description")}>
-            {!isTwoFactorAuthEnabled && !user.twoFactorEnabled ? (
-              <UpgradePrompt
-                title={t("workspace.settings.profile.unlock_two_factor_authentication")}
-                description={t("workspace.settings.profile.two_factor_authentication_description")}
-                buttons={[
-                  {
-                    text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                    href: IS_FORMA_CLOUD ? billingUpgradeHref : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-                  },
-                  {
-                    text: t("common.learn_more"),
-                    href: IS_FORMA_CLOUD
-                      ? billingUpgradeHref
-                      : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_two_factor",
-                  },
-                ]}
-              />
-            ) : (
-              <AccountSecurity user={user} />
-            )}
+            <AccountSecurity user={user} />
           </SettingsCard>
         )}
 

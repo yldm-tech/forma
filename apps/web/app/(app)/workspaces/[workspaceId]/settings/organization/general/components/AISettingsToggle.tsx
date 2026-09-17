@@ -10,29 +10,20 @@ import { updateOrganizationAISettingsAction } from "@/app/(app)/workspaces/[work
 import { getDisplayedOrganizationAISettingValue, getOrganizationAIEnablementState } from "@/lib/ai/utils";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
-import { organizationSettingsPath } from "@/modules/settings/lib/routes";
 import { AdvancedOptionToggle } from "@/modules/ui/components/advanced-option-toggle";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
-import { type ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 interface AISettingsToggleProps {
   organization: TOrganization;
   membershipRole?: TOrganizationRole;
   isInstanceAIConfigured: boolean;
-  hasAIPermission: boolean;
-  isFormaCloud: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 export const AISettingsToggle = ({
   organization,
   membershipRole,
   isInstanceAIConfigured,
-  hasAIPermission,
-  isFormaCloud,
-  enterpriseLicenseRequestFormUrl,
 }: Readonly<AISettingsToggleProps>) => {
-  const organizationBillingPath = organizationSettingsPath(organization.id, "billing");
   const [loadingField, setLoadingField] = useState<string | null>(null);
   const { t } = useTranslation();
   const router = useRouter();
@@ -75,28 +66,6 @@ export const AISettingsToggle = ({
       setLoadingField(null);
     }
   };
-
-  const upgradeButtons: [ModalButton, ModalButton] = [
-    {
-      text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-      href: isFormaCloud ? organizationBillingPath : enterpriseLicenseRequestFormUrl,
-    },
-    {
-      text: t("common.learn_more"),
-      href: "https://forma.ylam.ai/docs/platform/features/ai-features",
-    },
-  ];
-
-  if (!hasAIPermission) {
-    return (
-      <UpgradePrompt
-        title={t("workspace.settings.general.unlock_ai_features_with_a_higher_plan")}
-        description={t("workspace.settings.general.unlock_ai_features_description")}
-        buttons={upgradeButtons}
-        feature="ai_features"
-      />
-    );
-  }
 
   return (
     <div className="space-y-4">

@@ -11,7 +11,6 @@ import { HowToSendCard } from "@/modules/survey/editor/components/how-to-send-ca
 import { RecontactOptionsCard } from "@/modules/survey/editor/components/recontact-options-card";
 import { ResponseOptionsCard } from "@/modules/survey/editor/components/response-options-card";
 import { SurveyPlacementCard } from "@/modules/survey/editor/components/survey-placement-card";
-import { TargetingLockedCard } from "@/modules/survey/editor/components/targeting-locked-card";
 import { WhenToSendCard } from "@/modules/survey/editor/components/when-to-send-card";
 import { type TSurveySchedulingConfig } from "@/modules/survey/scheduling/lib/config";
 import { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
@@ -25,16 +24,12 @@ interface SettingsViewProps {
   responseCount: number;
   finishedResponseCount: number;
   membershipRole?: OrganizationRole;
-  isUserTargetingAllowed?: boolean;
   isSpamProtectionAllowed: boolean;
   workspacePermission: TTeamPermission | null;
-  isFormaCloud: boolean;
-  isQuotasAllowed: boolean;
   quotas: TSurveyQuota[];
   surveySchedulingConfig: TSurveySchedulingConfig;
   locale: TUserLocale;
   appSetupCompleted: boolean;
-  enterpriseLicenseRequestFormUrl: string;
   /** A save or publish was blocked because the survey has no trigger (ENG-2581). */
   hasTriggerError?: boolean;
 }
@@ -48,16 +43,12 @@ export const SettingsView = ({
   responseCount,
   finishedResponseCount,
   membershipRole,
-  isUserTargetingAllowed = false,
   isSpamProtectionAllowed,
-  isQuotasAllowed,
   workspacePermission,
-  isFormaCloud,
   quotas,
   surveySchedulingConfig,
   locale,
   appSetupCompleted,
-  enterpriseLicenseRequestFormUrl,
   hasTriggerError = false,
 }: Readonly<SettingsViewProps>) => {
   const isAppSurvey = localSurvey.type === "app";
@@ -71,27 +62,14 @@ export const SettingsView = ({
       />
 
       {localSurvey.type === "app" ? (
-        <div>
-          {isUserTargetingAllowed ? (
-            <div className="relative">
-              <div className="blur-none">
-                <TargetingCard
-                  key={localSurvey.segment?.id}
-                  localSurvey={localSurvey}
-                  setLocalSurvey={setLocalSurvey}
-                  contactAttributeKeys={contactAttributeKeys}
-                  segments={segments}
-                  initialSegment={segments.find((segment) => segment.id === localSurvey.segment?.id)}
-                />
-              </div>
-            </div>
-          ) : (
-            <TargetingLockedCard
-              isFormaCloud={isFormaCloud}
-              enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
-            />
-          )}
-        </div>
+        <TargetingCard
+          key={localSurvey.segment?.id}
+          localSurvey={localSurvey}
+          setLocalSurvey={setLocalSurvey}
+          contactAttributeKeys={contactAttributeKeys}
+          segments={segments}
+          initialSegment={segments.find((segment) => segment.id === localSurvey.segment?.id)}
+        />
       ) : null}
 
       <WhenToSendCard
@@ -103,14 +81,7 @@ export const SettingsView = ({
         workspacePermission={workspacePermission}
         hasError={hasTriggerError}
       />
-      <QuotasCard
-        localSurvey={localSurvey}
-        isQuotasAllowed={isQuotasAllowed}
-        isFormaCloud={isFormaCloud}
-        quotas={quotas}
-        hasResponses={responseCount > 0}
-        enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
-      />
+      <QuotasCard localSurvey={localSurvey} quotas={quotas} hasResponses={responseCount > 0} />
 
       <ResponseOptionsCard
         localSurvey={localSurvey}

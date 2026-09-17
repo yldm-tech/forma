@@ -26,16 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/modules/ui/components/select";
-import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
-import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { generatePersonalLinksAction } from "../../actions";
 
 interface PersonalLinksTabProps {
   surveyId: string;
   segments: TSegment[];
-  isContactsEnabled: boolean;
-  isFormaCloud: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 interface PersonalLinksFormData {
@@ -51,15 +46,8 @@ const getTomorrow = (): Date => {
   return tomorrow;
 };
 
-export const PersonalLinksTab = ({
-  segments,
-  surveyId,
-  isContactsEnabled,
-  isFormaCloud,
-  enterpriseLicenseRequestFormUrl,
-}: PersonalLinksTabProps) => {
+export const PersonalLinksTab = ({ segments, surveyId }: PersonalLinksTabProps) => {
   const { t, i18n } = useTranslation();
-  const { workspace } = useWorkspace();
 
   const form = useForm<PersonalLinksFormData>({
     defaultValues: {
@@ -140,30 +128,6 @@ export const PersonalLinksTab = ({
   const buttonText = isGenerating
     ? t("workspace.surveys.share.personal_links.generating_links")
     : t("workspace.surveys.share.personal_links.generate_and_download_links");
-
-  if (!isContactsEnabled) {
-    return (
-      <UpgradePrompt
-        title={t("workspace.surveys.share.personal_links.upgrade_prompt_title")}
-        description={t("workspace.surveys.share.personal_links.upgrade_prompt_description")}
-        feature="personal_links"
-        buttons={[
-          {
-            text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-            href: isFormaCloud
-              ? `/organizations/${workspace?.organizationId}/settings/billing`
-              : enterpriseLicenseRequestFormUrl,
-          },
-          {
-            text: t("common.learn_more"),
-            href: isFormaCloud
-              ? `/organizations/${workspace?.organizationId}/settings/billing`
-              : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_personal_links",
-          },
-        ]}
-      />
-    );
-  }
 
   return (
     <div className="flex h-full flex-col justify-between gap-y-4">

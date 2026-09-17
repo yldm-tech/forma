@@ -10,49 +10,25 @@ import {
 // pinning the English wording.
 const t = (key: string) => key;
 
-const CLOUD = { isFormaCloud: true, enterpriseLicenseRequestFormUrl: "https://forms.example/licence" };
-const SELF_HOSTED = {
-  isFormaCloud: false,
-  enterpriseLicenseRequestFormUrl: "https://forms.example/licence",
-};
-
 describe("getAIUnavailableAction", () => {
   test("sends people to organization settings when AI is switched off", () => {
-    expect(getAIUnavailableAction("not_enabled", "org-1", CLOUD)).toEqual({
+    expect(getAIUnavailableAction("not_enabled", "org-1")).toEqual({
       href: "/organizations/org-1/settings/general",
       type: "enable_ai",
-      isExternal: false,
     });
   });
 
-  test("the enable action does not depend on the deployment", () => {
-    expect(getAIUnavailableAction("not_enabled", "org-1", SELF_HOSTED)).toEqual(
-      getAIUnavailableAction("not_enabled", "org-1", CLOUD)
-    );
-  });
-
-  test("upgrades through billing on cloud", () => {
-    expect(getAIUnavailableAction("not_in_plan", "org-1", CLOUD)).toEqual({
+  test("upgrades through billing", () => {
+    expect(getAIUnavailableAction("not_in_plan", "org-1")).toEqual({
       href: "/organizations/org-1/settings/billing",
       type: "upgrade_plan",
-      isExternal: false,
-    });
-  });
-
-  // Self-hosted instances have no billing page to upgrade on: sending them there is a dead end, so
-  // the CTA has to become a licence request pointed at the configured form.
-  test("upgrades through the licence request form when self-hosted", () => {
-    expect(getAIUnavailableAction("not_in_plan", "org-1", SELF_HOSTED)).toEqual({
-      href: "https://forms.example/licence",
-      type: "request_license",
-      isExternal: true,
     });
   });
 
   test("offers no action for reasons the user cannot resolve themselves", () => {
-    expect(getAIUnavailableAction("instance_not_configured", "org-1", CLOUD)).toBeUndefined();
-    expect(getAIUnavailableAction("read_only", "org-1", CLOUD)).toBeUndefined();
-    expect(getAIUnavailableAction(undefined, "org-1", CLOUD)).toBeUndefined();
+    expect(getAIUnavailableAction("instance_not_configured", "org-1")).toBeUndefined();
+    expect(getAIUnavailableAction("read_only", "org-1")).toBeUndefined();
+    expect(getAIUnavailableAction(undefined, "org-1")).toBeUndefined();
   });
 });
 
@@ -98,6 +74,5 @@ describe("getAIUnavailableActionLabel", () => {
   test("labels each action type", () => {
     expect(getAIUnavailableActionLabel("enable_ai", t)).toBe("common.ai_unavailable.enable_in_settings");
     expect(getAIUnavailableActionLabel("upgrade_plan", t)).toBe("common.upgrade_plan");
-    expect(getAIUnavailableActionLabel("request_license", t)).toBe("common.request_trial_license");
   });
 });

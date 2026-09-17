@@ -441,7 +441,6 @@
     "reorder_and_hide_columns": "重新排序和隐藏列",
     "replace": "替换",
     "report_survey": "报告调查",
-    "request_trial_license": "申请试用许可证",
     "required": "必填",
     "reset_to_default": "重置为 默认",
     "response": "响应",
@@ -2108,14 +2107,11 @@
       "generate_theme_btn": "生成",
       "generate_theme_confirmation": "要根据你的品牌色生成一个匹配的配色主题吗？这将覆盖你当前的颜色设置。",
       "generate_theme_header": "生成配色主题？",
-      "lite_license_description": "We’ll send a complimentary Lite Enterprise License. No strings attached. Free forever.",
       "logo_removed_successfully": "logo 移除成功",
       "logo_settings_description": "上传您的公司 logo，用于品牌调查和链接预览。",
       "logo_updated_successfully": "logo 更新成功",
       "logo_upload_failed": "logo 上传失败，请重试。",
       "placement_updated_successfully": "放置位置更新成功",
-      "remove_branding_license_request_cta": "Request Lite License",
-      "remove_branding_with_a_higher_plan": "升级套餐以移除品牌标识",
       "remove_logo": "移除 logo",
       "remove_logo_confirmation": "您确定要移除 logo 吗？",
       "replace_logo": "替换 logo",
@@ -2127,8 +2123,7 @@
       "suggest_colors": "推荐颜色",
       "suggested_colors_applied_please_save": "已成功生成建议颜色。请点击“保存”以保留更改。",
       "theme": "主题",
-      "theme_settings_description": "为所有问卷创建一个样式主题。你可以为每个问卷启用自定义样式。",
-      "unlock_remove_branding_with_lite_license": "Remove branding for free."
+      "theme_settings_description": "为所有问卷创建一个样式主题。你可以为每个问卷启用自定义样式。"
     },
     "segments": {
       "add_filter_below": "在下方添加 过滤器",
@@ -2425,8 +2420,6 @@
         "your_plan": "你的套餐"
       },
       "domain": {
-        "customize_favicon_description": "上传自定义 Favicon，个性化您的链接问卷体验，提升品牌形象。",
-        "customize_favicon_with_higher_plan": "升级套餐以自定义 Favicon",
         "description": "概览组织内所有使用美化 URL 的调查问卷",
         "favicon_customization": "Favicon",
         "favicon_customization_description": "自定义在浏览器标签页中显示的链接问卷 Favicon。此操作不会影响管理端应用。",
@@ -2475,13 +2468,11 @@
         "bulk_invite_rows_detected": "{count, plural, other {检测到 {count} 行}}",
         "bulk_invite_rows_more": "{count, plural, other {还有 {count} 行}}",
         "bulk_invite_unknown_teams": "CSV 中存在未知团队：{teams}。请先创建这些团队或从文件中移除它们。",
-        "bulk_invite_warning_description": "在免费计划中，所有组织成员都会被分配为 \"Owner \"角色。",
         "cannot_delete_only_organization": "这是 您 唯一的 组织，不可 删除。请 先 创建一个新的 组织。",
         "cannot_leave_only_organization": "您 不能 离开 此 组织，因为 这是 您 唯一的 组织。请 先 创建一个新的 组织。",
         "copy_invite_link_to_clipboard": "复制 invite 链接 到 剪贴板",
         "create_new_organization": "创建 新的 组织",
         "create_new_organization_description": "创建一个新组织来管理不同的工作空间集合。",
-        "customize_email_with_a_higher_plan": "通过更高的计划 自定义电子邮件",
         "delete_member_confirmation": "被删除的成员将失去对你组织中所有工作空间和调查的访问权限。",
         "delete_organization": "删除 组织",
         "delete_organization_description": "删除组织及其所有工作空间,包括所有调查、回复、人员、操作和属性",
@@ -2494,7 +2485,6 @@
         "display_time_zone_placeholder": "选择时区",
         "display_time_zone_updated_successfully": "显示时区更新成功",
         "display_time_zone_utc_default": "UTC(默认)",
-        "eliminate_branding_with_whitelabel": "消除 Forma 品牌 并启用 额外的 白标 自定义 选项",
         "email_customization_preview_email_heading": "嘿 {userName}",
         "email_customization_preview_email_text": "这 是 一封 电子邮件 预览，展示 哪个 徽标 将在 电子邮件 中 渲染。",
         "error_deleting_organization_please_try_again": "删除 组织时 出错 。 请重试 。",
@@ -2543,9 +2533,7 @@
         "security_list_tip_link": "点击此处注册。",
         "share_invite_link": "分享邀请链接",
         "share_this_link_to_let_your_organization_member_join_your_organization": "分享 这个 链接 以 让 你的 组织 成员 加入 你的 组织：",
-        "test_email_sent_successfully": "测试 邮件 发送 成功",
-        "unlock_ai_features_description": "更高级别的套餐提供 AI 驱动的翻译和智能工具。立即升级，让 AI 为您的问卷调查注入强大动力。",
-        "unlock_ai_features_with_a_higher_plan": "升级套餐，解锁 AI 功能"
+        "test_email_sent_successfully": "测试 邮件 发送 成功"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "自动 订阅 新 调查",
@@ -2588,7 +2576,6 @@
         "two_factor_authentication_description": "为你的账户增加额外的安全层，以防密码被盗。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "双因素 认证 已启用 。 请输入 从 你的 身份验证 应用 中 的 六 位 数 字 代码 。",
         "two_factor_code": "双重身份验证码",
-        "unlock_two_factor_authentication": "使用 更高 级 方案 解锁 双 重 因素 验证",
         "update_personal_info": "更新你的个人信息",
         "warning_cannot_delete_account": "您 是 该 组织 的 唯一 拥有者 。 请 先 将 所有权 转移 给 其他 成员 。",
         "warning_cannot_undo": "此 无法 撤销。",
@@ -2602,8 +2589,6 @@
         "are_you_sure_you_want_to_delete_this_team": "你确定要删除这个团队吗?这也会移除对与此团队关联的所有工作空间和调查的访问权限。",
         "billing_role_description": "仅 能 访问 账单 信息。",
         "bulk_invite": "批量 邀请",
-        "bulk_invite_scale_only_description": "通过 CSV 批量邀请成员功能仅在 Scale 套餐中提供。升级后即可一次性邀请整个团队。",
-        "bulk_invite_scale_only_title": "升级到更高套餐以解锁批量邀请功能",
         "contributor": "贡献者",
         "create": "创建",
         "create_first_team_message": "您 需要 先 创建 一个 团队。",
@@ -2638,9 +2623,6 @@
         "team_updated_successfully": "团队 更新 成功",
         "teams": "团队",
         "teams_description": "将成员分配到团队中,并授予团队访问工作空间的权限。",
-        "unlock_teams_description": "管理哪些组织成员可以访问特定的工作空间和调查。",
-        "unlock_teams_title": "通过 更 高级 划解锁 团队",
-        "upgrade_plan_notice_message": "解锁更多组织角色功能 通过升级计划。",
         "you_are_a_member": "你是 会员"
       }
     },
@@ -3124,7 +3106,6 @@
           "save_changes_confirmation_body": "任何 对 包含 条件 的 更改 仅 影响 将来 的 响应。\n我们 建议 复制 一个 现有 的 或 创建 一个 新 的 配额。",
           "save_changes_confirmation_text": "现有 的 响应 保留 在 配额 中",
           "select_ending_card": "选择结尾卡片",
-          "upgrade_prompt_title": "在更高的计划中使用配额",
           "when_quota_has_been_reached": "达到 配额 时"
         },
         "randomize_all": "随机排列",
@@ -3221,8 +3202,6 @@
         "try_lollipop_or_mountain": "尝试 'lollipop' 或 'mountain' ...",
         "type_field_id": "类型 字段 ID",
         "underline": "下划线",
-        "unlock_targeting_description": "根据 属性 或 设备信息 定位 特定 用户组",
-        "unlock_targeting_title": "通过 更 高级 划解锁 定位",
         "unsaved_changes_warning": "您在调查中有未保存的更改。离开前是否要保存？",
         "until_they_submit_a_response": "持续显示直到提交回应",
         "update_options": "更新选项",
@@ -3502,8 +3481,6 @@
           "no_segments_available": "没有可用的片段",
           "segment_survey_workspace_mismatch": "所选细分属于与此调查不同的工作区。",
           "select_segment": "选择 细分",
-          "upgrade_prompt_description": "为 一个 细分 生成 个人 链接 ，并 将 调查 响应 链接 到 每个 联系人。",
-          "upgrade_prompt_title": "在更高的计划中使用 个人 链接",
           "work_with_segments": "个人链接与片段一起工作。"
         },
         "pretty_url": {

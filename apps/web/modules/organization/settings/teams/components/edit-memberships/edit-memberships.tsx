@@ -9,7 +9,6 @@ interface EditMembershipsProps {
   organization: TOrganization;
   currentUserId: string;
   role: TOrganizationRole;
-  isAccessControlAllowed: boolean;
   isUserManagementDisabledFromUi: boolean;
 }
 
@@ -22,7 +21,6 @@ export const EditMemberships = async ({
   organization,
   currentUserId,
   role,
-  isAccessControlAllowed,
   isUserManagementDisabledFromUi,
 }: EditMembershipsProps) => {
   const members = await getMembershipByOrganizationId(organization.id);
@@ -37,7 +35,6 @@ export const EditMemberships = async ({
       invites={invites ?? []}
       members={members ?? []}
       currentUserRole={role}
-      isAccessControlAllowed={isAccessControlAllowed}
       isFormaCloud={IS_FORMA_CLOUD}
       isUserManagementDisabledFromUi={isUserManagementDisabledFromUi}
     />

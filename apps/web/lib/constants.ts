@@ -183,9 +183,6 @@ export const SURVEY_BG_COLORS = [
 
 export const DEBUG = env.DEBUG === "1";
 
-export const ENTERPRISE_LICENSE_REQUEST_FORM_URL =
-  "https://app.forma.ylam.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=onpremise&source=ce&type=licenseRequest";
-
 export const REDIS_URL = env.REDIS_URL;
 /**
  * Whether a gateway in front of this instance enforces the rate-limit policy set.

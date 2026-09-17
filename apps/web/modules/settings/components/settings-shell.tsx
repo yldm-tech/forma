@@ -1,5 +1,4 @@
 import { TopControlBar } from "@/app/(app)/workspaces/[workspaceId]/components/TopControlBar";
-import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
 import { SettingsNavigation } from "@/modules/settings/components/settings-navigation";
 import type { TSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { LimitsReachedBanner } from "@/modules/ui/components/limits-reached-banner";
@@ -73,13 +72,7 @@ export const SettingsShell = ({ data, children }: Readonly<SettingsShellProps>) 
   // they render identically. With no workspace yet, useWorkspace falls back to null on its own.
   if (data.currentWorkspace) {
     return (
-      <WorkspaceContextWrapper
-        workspace={data.currentWorkspace}
-        organization={organization}
-        deployment={{
-          isFormaCloud: IS_FORMA_CLOUD,
-          enterpriseLicenseRequestFormUrl: ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-        }}>
+      <WorkspaceContextWrapper workspace={data.currentWorkspace} organization={organization}>
         {shell}
       </WorkspaceContextWrapper>
     );

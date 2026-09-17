@@ -14,18 +14,13 @@ import { createQuotaAction, deleteQuotaAction, getQuotaResponseCountAction } fro
 import { Button } from "@/modules/ui/components/button";
 import { ConfirmationModal } from "@/modules/ui/components/confirmation-modal";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";
-import { UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
-import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { QuotaList } from "./quota-list";
 import { QuotaModal } from "./quota-modal";
 
 interface QuotasCardProps {
   localSurvey: TSurvey;
-  isQuotasAllowed: boolean;
-  isFormaCloud?: boolean;
   quotas: TSurveyQuota[];
   hasResponses: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 const AddQuotaButton = ({
@@ -58,16 +53,8 @@ const AddQuotaButton = ({
   );
 };
 
-export const QuotasCard = ({
-  localSurvey,
-  isQuotasAllowed,
-  isFormaCloud,
-  quotas,
-  hasResponses,
-  enterpriseLicenseRequestFormUrl,
-}: QuotasCardProps) => {
+export const QuotasCard = ({ localSurvey, quotas, hasResponses }: QuotasCardProps) => {
   const { t } = useTranslation();
-  const { workspace } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
   const [activeQuota, setActiveQuota] = useState<TSurveyQuota | null>(null);
@@ -163,82 +150,58 @@ export const QuotasCard = ({
         <Collapsible.Content className="flex flex-col overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <hr className="py-1 text-slate-600" />
           <div className="px-3 pt-1 pb-3">
-            {!isQuotasAllowed ? (
-              <UpgradePrompt
-                title={t("workspace.surveys.edit.quotas.upgrade_prompt_title")}
-                description={t("common.quotas_description")}
-                feature="quotas"
-                buttons={[
-                  {
-                    text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-                    href: isFormaCloud
-                      ? `/organizations/${workspace?.organizationId}/settings/billing`
-                      : enterpriseLicenseRequestFormUrl,
-                  },
-                  {
-                    text: t("common.learn_more"),
-                    href: isFormaCloud
-                      ? `/organizations/${workspace?.organizationId}/settings/billing`
-                      : "https://forma.ylam.ai/learn-more-self-hosting-license?utm_source=forma-app&utm_medium=webapp&utm_campaign=ee_lock_quotas",
-                  },
-                ]}
-              />
-            ) : (
-              <div className="space-y-4">
-                {hasQuotas ? (
-                  <QuotaList
-                    quotas={quotas}
-                    onEdit={openEditQuotaModal}
-                    deleteQuota={setQuotaToDelete}
-                    duplicateQuota={duplicateQuota}
+            <div className="space-y-4">
+              {hasQuotas ? (
+                <QuotaList
+                  quotas={quotas}
+                  onEdit={openEditQuotaModal}
+                  deleteQuota={setQuotaToDelete}
+                  duplicateQuota={duplicateQuota}
+                />
+              ) : (
+                <div className="rounded-lg border p-3 text-center">
+                  <p className="mb-4 text-sm text-slate-500">{t("common.quotas_description")}</p>
+                  <AddQuotaButton
+                    setIsQuotaModalOpen={setIsQuotaModalOpen}
+                    setActiveQuota={setActiveQuota}
+                    t={t}
+                    hasResponses={hasResponses}
+                    setOpenCreateQuotaConfirmationModal={setOpenCreateQuotaConfirmationModal}
                   />
-                ) : (
-                  <div className="rounded-lg border p-3 text-center">
-                    <p className="mb-4 text-sm text-slate-500">{t("common.quotas_description")}</p>
-                    <AddQuotaButton
-                      setIsQuotaModalOpen={setIsQuotaModalOpen}
-                      setActiveQuota={setActiveQuota}
-                      t={t}
-                      hasResponses={hasResponses}
-                      setOpenCreateQuotaConfirmationModal={setOpenCreateQuotaConfirmationModal}
-                    />
-                  </div>
-                )}
+                </div>
+              )}
 
-                {hasQuotas && (
-                  <div>
-                    <AddQuotaButton
-                      setIsQuotaModalOpen={setIsQuotaModalOpen}
-                      setActiveQuota={setActiveQuota}
-                      t={t}
-                      hasResponses={hasResponses}
-                      setOpenCreateQuotaConfirmationModal={setOpenCreateQuotaConfirmationModal}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+              {hasQuotas && (
+                <div>
+                  <AddQuotaButton
+                    setIsQuotaModalOpen={setIsQuotaModalOpen}
+                    setActiveQuota={setActiveQuota}
+                    t={t}
+                    hasResponses={hasResponses}
+                    setOpenCreateQuotaConfirmationModal={setOpenCreateQuotaConfirmationModal}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </Collapsible.Content>
       </Collapsible.Root>
 
-      {isQuotasAllowed && (
-        <QuotaModal
-          open={isQuotaModalOpen}
-          onOpenChange={setIsQuotaModalOpen}
-          survey={localSurvey}
-          quota={activeQuota}
-          setQuotaToDelete={setQuotaToDelete}
-          duplicateQuota={duplicateQuota}
-          onClose={() => {
-            setIsQuotaModalOpen(false);
-            setActiveQuota(null);
-            setQuotaResponseCount(0);
-          }}
-          hasResponses={hasResponses}
-          quotaResponseCount={quotaResponseCount}
-        />
-      )}
+      <QuotaModal
+        open={isQuotaModalOpen}
+        onOpenChange={setIsQuotaModalOpen}
+        survey={localSurvey}
+        quota={activeQuota}
+        setQuotaToDelete={setQuotaToDelete}
+        duplicateQuota={duplicateQuota}
+        onClose={() => {
+          setIsQuotaModalOpen(false);
+          setActiveQuota(null);
+          setQuotaResponseCount(0);
+        }}
+        hasResponses={hasResponses}
+        quotaResponseCount={quotaResponseCount}
+      />
       <DeleteDialog
         open={!!quotaToDelete}
         setOpen={(open) => !open && setQuotaToDelete(null)}

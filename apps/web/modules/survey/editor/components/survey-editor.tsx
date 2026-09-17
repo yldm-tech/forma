@@ -36,11 +36,9 @@ interface SurveyEditorProps {
   finishedResponseCount: number;
   membershipRole?: OrganizationRole;
   colors: string[];
-  isUserTargetingAllowed?: boolean;
   isSpamProtectionAllowed?: boolean;
   isFormaCloud: boolean;
   isUnsplashConfigured: boolean;
-  isQuotasAllowed: boolean;
   isCxMode: boolean;
   surveySchedulingConfig: TSurveySchedulingConfig;
   locale: TUserLocale;
@@ -55,7 +53,6 @@ interface SurveyEditorProps {
   quotas: TSurveyQuota[];
   isExternalUrlsAllowed: boolean;
   publicDomain: string;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 export const SurveyEditor = ({
@@ -69,11 +66,9 @@ export const SurveyEditor = ({
   finishedResponseCount,
   membershipRole,
   colors,
-  isUserTargetingAllowed = false,
   isSpamProtectionAllowed = false,
   isFormaCloud,
   isUnsplashConfigured,
-  isQuotasAllowed,
   isCxMode = false,
   surveySchedulingConfig,
   locale,
@@ -87,7 +82,6 @@ export const SurveyEditor = ({
   quotas,
   isExternalUrlsAllowed,
   publicDomain,
-  enterpriseLicenseRequestFormUrl,
 }: Readonly<SurveyEditorProps>) => {
   const isFollowUpsTabVisible = shouldShowFollowUpsTab({
     followUpCount: survey.followUps.length,
@@ -291,16 +285,12 @@ export const SurveyEditor = ({
               responseCount={responseCount}
               finishedResponseCount={finishedResponseCount}
               membershipRole={membershipRole}
-              isUserTargetingAllowed={isUserTargetingAllowed}
               isSpamProtectionAllowed={isSpamProtectionAllowed}
               workspacePermission={workspacePermission}
-              isFormaCloud={isFormaCloud}
-              isQuotasAllowed={isQuotasAllowed}
               quotas={quotas}
               surveySchedulingConfig={surveySchedulingConfig}
               locale={locale}
               appSetupCompleted={localWorkspace.appSetupCompleted}
-              enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
               hasTriggerError={hasTriggerError}
             />
           )}

@@ -10,7 +10,7 @@ import {
 } from "@/lib/ai/availability";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
-import { useDeploymentInfo, useWorkspace } from "@/modules/workspaces/context/workspace-context";
+import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
 interface AIUnavailableAlertProps {
   /** Names the blocked capability, e.g. "AI chart generation". The reason copy is shared. */
@@ -28,14 +28,10 @@ interface AIUnavailableAlertProps {
 export const AIUnavailableAlert = ({ title, reason, feature }: Readonly<AIUnavailableAlertProps>) => {
   const { t } = useTranslation();
   const { workspace } = useWorkspace();
-  const deployment = useDeploymentInfo();
 
-  // Both are needed to aim the action: the organization to link to, and whether this deployment
-  // upgrades through billing or a licence request.
-  const action =
-    workspace?.organizationId && deployment
-      ? getAIUnavailableAction(reason, workspace.organizationId, deployment)
-      : undefined;
+  const action = workspace?.organizationId
+    ? getAIUnavailableAction(reason, workspace.organizationId)
+    : undefined;
 
   // Only a plan change is a conversion; switching a setting back on is not, so it stays untracked.
   const handleClick = () => {
@@ -50,10 +46,7 @@ export const AIUnavailableAlert = ({ title, reason, feature }: Readonly<AIUnavai
       <AlertDescription>{getAIUnavailableMessage(reason, t)}</AlertDescription>
       {action && (
         <AlertButton asChild>
-          <Link
-            href={action.href}
-            onClick={handleClick}
-            {...(action.isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+          <Link href={action.href} onClick={handleClick}>
             {getAIUnavailableActionLabel(action.type, t)}
           </Link>
         </AlertButton>

@@ -7,52 +7,29 @@ import { organizationSettingsPath } from "@/modules/settings/lib/routes";
  */
 type TTranslate = (key: string) => string;
 
-export type TAIUnavailableActionType = "enable_ai" | "upgrade_plan" | "request_license";
+export type TAIUnavailableActionType = "enable_ai" | "upgrade_plan";
 
 export type TAIUnavailableAction = {
   href: string;
   type: TAIUnavailableActionType;
-  /** Self-hosted upgrades leave the app for the licence request form; the other targets are in-app. */
-  isExternal: boolean;
-};
-
-/**
- * The deployment facts the upgrade target depends on. `IS_FORMA_CLOUD` and the licence request
- * URL live in the server-only `lib/constants`, so client components read them from the workspace
- * context (`useDeploymentInfo`) instead, which the server layouts fill in.
- */
-export type TDeploymentInfo = {
-  isFormaCloud: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 };
 
 export const getAIUnavailableAction = (
   reason: TAIUnavailableReason | undefined,
-  organizationId: string,
-  deployment: TDeploymentInfo
+  organizationId: string
 ): TAIUnavailableAction | undefined => {
   if (reason === "not_enabled") {
     return {
       href: organizationSettingsPath(organizationId, "general"),
       type: "enable_ai",
-      isExternal: false,
     };
   }
 
   if (reason === "not_in_plan") {
-    // Same split every other gated feature uses (see the UpgradePrompt call sites): cloud sends
-    // people to billing, self-hosted to the enterprise licence request form.
-    return deployment.isFormaCloud
-      ? {
-          href: organizationSettingsPath(organizationId, "billing"),
-          type: "upgrade_plan",
-          isExternal: false,
-        }
-      : {
-          href: deployment.enterpriseLicenseRequestFormUrl,
-          type: "request_license",
-          isExternal: true,
-        };
+    return {
+      href: organizationSettingsPath(organizationId, "billing"),
+      type: "upgrade_plan",
+    };
   }
 
   // `instance_not_configured` is an operator's job and `read_only` a permission the user cannot
@@ -110,7 +87,5 @@ export const getAIUnavailableActionLabel = (type: TAIUnavailableActionType, t: T
       return t("common.ai_unavailable.enable_in_settings");
     case "upgrade_plan":
       return t("common.upgrade_plan");
-    case "request_license":
-      return t("common.request_trial_license");
   }
 };

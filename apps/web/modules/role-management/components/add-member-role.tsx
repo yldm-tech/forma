@@ -18,17 +18,11 @@ import { Muted, P } from "@/modules/ui/components/typography";
 
 interface AddMemberRoleProps {
   control: Control<{ name: string; email: string; role: TOrganizationRole; teamIds: string[] }>;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
   membershipRole?: TOrganizationRole;
 }
 
-export function AddMemberRole({
-  control,
-  isAccessControlAllowed,
-  isFormaCloud,
-  membershipRole,
-}: AddMemberRoleProps) {
+export function AddMemberRole({ control, isFormaCloud, membershipRole }: AddMemberRoleProps) {
   const { isMember, isOwner } = getAccessFlags(membershipRole);
 
   const { t } = useTranslation();
@@ -62,8 +56,7 @@ export function AddMemberRole({
         <div className="flex flex-col gap-y-2">
           <Label>{t("workspace.settings.teams.organization_role")}</Label>
           <Select
-            defaultValue={isAccessControlAllowed ? "member" : "owner"}
-            disabled={!isAccessControlAllowed}
+            defaultValue="member"
             onValueChange={(v) => {
               onChange(v as TOrganizationRole);
             }}

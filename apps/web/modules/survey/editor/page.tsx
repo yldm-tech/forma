@@ -1,7 +1,6 @@
 import { ResourceNotFoundError } from "@forma/types/errors";
 import {
   DEFAULT_LOCALE,
-  ENTERPRISE_LICENSE_REQUEST_FORM_URL,
   IS_FORMA_CLOUD,
   IS_STORAGE_CONFIGURED,
   MAIL_FROM,
@@ -12,12 +11,7 @@ import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getTranslate } from "@/lingodotdev/server";
 import { getContactAttributeKeys } from "@/modules/contacts/lib/contact-attribute-keys";
 import { getSegments } from "@/modules/contacts/segments/lib/segments";
-import {
-  getIsContactsEnabled,
-  getIsQuotasEnabled,
-  getIsSpamProtectionEnabled,
-  getIsWorkflowsEnabled,
-} from "@/modules/license-check/lib/utils";
+import { getIsSpamProtectionEnabled, getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { getQuotas } from "@/modules/quotas/lib/quotas";
 import { getTeamMemberDetails } from "@/modules/survey/editor/lib/team";
 import { getUserEmail } from "@/modules/survey/editor/lib/user";
@@ -92,24 +86,16 @@ export const SurveyEditorPage = async (props: {
     getUserEmail(session.user.id),
   ]);
 
-  const [
-    isSurveyFollowUpsAllowed,
-    isSpamProtectionAllowed,
-    isQuotasAllowed,
-    isExternalUrlsAllowed,
-    isUserTargetingAllowed,
-    isWorkflowsAllowed,
-  ] = await Promise.all([
-    getSurveyFollowUpsPermission(),
-    getIsSpamProtectionEnabled(),
-    getIsQuotasEnabled(),
-    getExternalUrlsPermission(),
-    getIsContactsEnabled(),
-    // Drives the Follow-ups deprecation: the tab only survives where Workflows cannot replace it.
-    getIsWorkflowsEnabled(),
-  ]);
+  const [isSurveyFollowUpsAllowed, isSpamProtectionAllowed, isExternalUrlsAllowed, isWorkflowsAllowed] =
+    await Promise.all([
+      getSurveyFollowUpsPermission(),
+      getIsSpamProtectionEnabled(),
+      getExternalUrlsPermission(),
+      // Drives the Follow-ups deprecation: the tab only survives where Workflows cannot replace it.
+      getIsWorkflowsEnabled(),
+    ]);
 
-  const quotas = isQuotasAllowed && survey ? await getQuotas(survey.id) : [];
+  const quotas = survey ? await getQuotas(survey.id) : [];
   const [workspaceLanguages, teamMemberDetails] = await Promise.all([
     getWorkspaceLanguages(workspaceWithTeamIds.id),
     getTeamMemberDetails(workspaceWithTeamIds.teamIds),
@@ -141,7 +127,6 @@ export const SurveyEditorPage = async (props: {
       workspacePermission={workspacePermission}
       colors={SURVEY_BG_COLORS}
       segments={segments}
-      isUserTargetingAllowed={isUserTargetingAllowed}
       isSpamProtectionAllowed={isSpamProtectionAllowed}
       workspaceLanguages={workspaceLanguages}
       isFormaCloud={IS_FORMA_CLOUD}
@@ -155,11 +140,9 @@ export const SurveyEditorPage = async (props: {
       userEmail={userEmail}
       teamMemberDetails={teamMemberDetails}
       isStorageConfigured={IS_STORAGE_CONFIGURED}
-      isQuotasAllowed={isQuotasAllowed}
       quotas={quotas}
       isExternalUrlsAllowed={isExternalUrlsAllowed}
       publicDomain={publicDomain}
-      enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
     />
   );
 };
