@@ -13,6 +13,8 @@ interface NavigationLinkProps {
   isTextVisible: boolean;
   disabled?: boolean;
   disabledMessage?: string;
+  /** Rendered beside the label when the sidebar is expanded. Collapsed shows the icon alone, so a badge there would have nowhere to sit. */
+  badge?: React.ReactNode;
 }
 
 export const NavigationLink = ({
@@ -20,6 +22,7 @@ export const NavigationLink = ({
   isActive,
   isCollapsed = false,
   children,
+  badge,
   linkText,
   isTextVisible = true,
   disabled = false,
@@ -48,6 +51,7 @@ export const NavigationLink = ({
         isTextVisible ? "opacity-0" : "opacity-100"
       )}>
       {linkText}
+      {badge ? <span className="ml-2">{badge}</span> : null}
     </span>
   );
 
