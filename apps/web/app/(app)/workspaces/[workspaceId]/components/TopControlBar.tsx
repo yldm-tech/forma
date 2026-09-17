@@ -3,6 +3,7 @@
 import { TOrganizationRole } from "@forma/types/memberships";
 import { TUser } from "@forma/types/user";
 import { WorkspaceAndOrgSwitch } from "@/app/(app)/workspaces/[workspaceId]/components/workspace-and-org-switch";
+import { CommandPalette } from "@/modules/navigation/components/command-palette";
 import { UserDropdown } from "@/modules/settings/components/user-dropdown";
 import { useWorkspaceContext } from "@/modules/workspaces/context/workspace-context";
 
@@ -54,16 +55,28 @@ export const TopControlBar = ({
         showWorkspaceBreadcrumb={showWorkspaceBreadcrumb}
       />
 
-      {/* The account menu sits here rather than at the foot of the sidebar: it is the one control
+      <div className="flex items-center gap-3">
+        {/* Everywhere in the product, one keystroke away. The sidebar can only show the three top
+            areas; this is where the rest of it becomes reachable without another click. */}
+        <CommandPalette
+          workspaceId={workspace.id}
+          organizationId={currentOrganizationId}
+          isBilling={membershipRole === "billing"}
+          isOwnerOrManager={isOwnerOrManager}
+          isFormaCloud={isFormaCloud}
+        />
+
+        {/* The account menu sits here rather than at the foot of the sidebar: it is the one control
           that belongs to the person rather than to whatever they are looking at, and the top right
           is where that is looked for. */}
-      <UserDropdown
-        user={user}
-        organizationId={currentOrganizationId}
-        publicDomain={publicDomain}
-        isBilling={membershipRole === "billing"}
-        placement="topBar"
-      />
+        <UserDropdown
+          user={user}
+          organizationId={currentOrganizationId}
+          publicDomain={publicDomain}
+          isBilling={membershipRole === "billing"}
+          placement="topBar"
+        />
+      </div>
     </div>
   );
 };
