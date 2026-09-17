@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { ZId } from "@forma/types/common";
-import { InvalidInputError, OperationNotAllowedError, ResourceNotFoundError } from "@forma/types/errors";
+import { InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { ZSegmentCreateInput, ZSegmentFilters, ZSegmentUpdateInput } from "@forma/types/segment";
 import { assertCan } from "@/lib/authorization";
 import { getOrganization } from "@/lib/organization/service";
@@ -35,19 +35,12 @@ import {
 } from "@/modules/contacts/segments/lib/segments";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 
 const checkAdvancedTargetingPermission = async (organizationId: string) => {
   const organization = await getOrganization(organizationId);
 
   if (!organization) {
     throw new ResourceNotFoundError("Organization", organizationId);
-  }
-
-  const isContactsEnabled = await getIsContactsEnabled();
-
-  if (!isContactsEnabled) {
-    throw new OperationNotAllowedError("Advanced targeting is not allowed for this organization");
   }
 };
 

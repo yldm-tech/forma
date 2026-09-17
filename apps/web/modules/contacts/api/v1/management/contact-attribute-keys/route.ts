@@ -7,8 +7,6 @@ import { transformErrorToDetails } from "@/lib/api/validator";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
-import { CONTACTS_API_V1_NOT_ENABLED_MESSAGE } from "@/modules/contacts/lib/contacts-entitlement";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { ZContactAttributeKeyCreateInput } from "./[contactAttributeKeyId]/types/contact-attribute-keys";
 import { createContactAttributeKey, getContactAttributeKeys } from "./lib/contact-attribute-keys";
 
@@ -19,13 +17,6 @@ export const GET = withV1ApiWrapper({
     }
 
     try {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(CONTACTS_API_V1_NOT_ENABLED_MESSAGE),
-        };
-      }
-
       const workspaceIds = [
         ...new Set(authentication.workspacePermissions.map((permission) => permission.workspaceId)),
       ];
@@ -53,13 +44,6 @@ export const POST = withV1ApiWrapper({
     }
 
     try {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(CONTACTS_API_V1_NOT_ENABLED_MESSAGE),
-        };
-      }
-
       let contactAttributeKeyInput;
       try {
         contactAttributeKeyInput = await parseJsonBodyWithLimit<Record<string, unknown>>(req);

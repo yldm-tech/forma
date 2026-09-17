@@ -6,8 +6,6 @@ import { transformErrorToDetails } from "@/lib/api/validator";
 import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
-import { CONTACTS_API_V1_NOT_ENABLED_MESSAGE } from "@/modules/contacts/lib/contacts-entitlement";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import {
   deleteContactAttributeKey,
   getContactAttributeKey,
@@ -22,10 +20,6 @@ async function fetchAndAuthorizeContactAttributeKey(
 ) {
   // Entitlement first, matching the plural route: without the contacts feature the caller may
   // not interact with attribute keys at all, regardless of workspace permissions.
-  const isContactsEnabled = await getIsContactsEnabled();
-  if (!isContactsEnabled) {
-    return { error: responses.forbiddenResponse(CONTACTS_API_V1_NOT_ENABLED_MESSAGE) };
-  }
 
   const attributeKey = await getContactAttributeKey(attributeKeyId);
   if (!attributeKey) {

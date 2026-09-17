@@ -6,7 +6,6 @@ import { handleApiError } from "@/modules/api/v2/lib/utils";
 import { resolveBodyIdsV2 } from "@/modules/api/v2/management/lib/workspace-resolver";
 import { upsertBulkContacts } from "@/modules/contacts/api/v2/management/contacts/bulk/lib/contact";
 import { ZContactBulkUploadRequest } from "@/modules/contacts/types/contact";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 
 export const PUT = async (request: Request) =>
   authenticatedApiClient({
@@ -20,18 +19,6 @@ export const PUT = async (request: Request) =>
       return { ...body, ...resolved.data };
     },
     handler: async ({ authentication, parsedInput, auditLog }) => {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return handleApiError(
-          request,
-          {
-            type: "forbidden",
-            details: [{ field: "error", issue: "Contacts are not enabled for this environment." }],
-          },
-          auditLog
-        );
-      }
-
       const workspaceId = parsedInput.body?.workspaceId;
 
       if (!workspaceId) {

@@ -13,7 +13,6 @@ import {
 } from "@/modules/api/v2/management/surveys/[surveyId]/contact-links/segments/[segmentId]/types/contact";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { getContactSurveyLink } from "@/modules/contacts/lib/contact-survey-link";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 
 export const GET = async (
   request: Request,
@@ -53,16 +52,6 @@ export const GET = async (
       ) {
         return handleApiError(request, {
           type: "unauthorized",
-        });
-      }
-
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return handleApiError(request, {
-          type: "forbidden",
-          details: [
-            { field: "contacts", issue: "Contacts are only enabled for Enterprise Edition, please upgrade." },
-          ],
         });
       }
 

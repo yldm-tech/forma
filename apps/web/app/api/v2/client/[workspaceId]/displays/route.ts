@@ -7,7 +7,6 @@ import { reportApiError } from "@/lib/api/api-error-reporter";
 import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body";
 import { responses } from "@/lib/api/response";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createDisplay } from "./lib/display";
 
 interface Context {
@@ -68,13 +67,6 @@ export const POST = async (request: Request, context: Context): Promise<Response
 
   try {
     if (displayInputData.contactId) {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return responses.forbiddenResponse(
-          "User identification is only available for enterprise users.",
-          true
-        );
-      }
     }
 
     const response = await createDisplay(displayInputData);

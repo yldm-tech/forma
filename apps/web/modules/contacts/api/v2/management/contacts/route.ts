@@ -7,7 +7,6 @@ import { handleApiError } from "@/modules/api/v2/lib/utils";
 import { resolveBodyIdsV2 } from "@/modules/api/v2/management/lib/workspace-resolver";
 import { createContact } from "@/modules/contacts/api/v2/management/contacts/lib/contact";
 import { ZContactCreateRequest } from "@/modules/contacts/types/contact";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 
 export const POST = async (request: NextRequest) =>
   authenticatedApiClient({
@@ -23,17 +22,6 @@ export const POST = async (request: NextRequest) =>
 
     handler: async ({ authentication, parsedInput, auditLog }) => {
       const { body } = parsedInput;
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return handleApiError(
-          request,
-          {
-            type: "forbidden",
-            details: [{ field: "contacts", issue: "Contacts feature is not enabled for this environment" }],
-          },
-          auditLog
-        );
-      }
 
       const { workspaceId } = body;
 

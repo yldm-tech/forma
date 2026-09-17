@@ -8,7 +8,6 @@ import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/requ
 import { responses } from "@/lib/api/response";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { updateUser } from "./lib/update-user";
 
 const handleError = (err: unknown, url: string): { response: Response; error?: unknown } => {
@@ -128,16 +127,6 @@ export const POST = withV1ApiWrapper({
       }
 
       const userId = jsonInput.userId;
-
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "User identification is only available for enterprise users.",
-            true
-          ),
-        };
-      }
 
       let attributeUpdatesToSend: TContactAttributesInput | null = null;
       if (attributes) {
