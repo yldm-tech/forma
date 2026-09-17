@@ -41,7 +41,7 @@ test.describe("Workspace tags settings @slow", () => {
 
     await user.login();
     await page.waitForURL(/\/workspaces\/[^/]+\/surveys/);
-    await page.goto(`/workspaces/${workspaceId}/settings/workspace/tags`, {
+    await page.goto(`/workspaces/${workspaceId}/tags`, {
       waitUntil: "domcontentloaded",
     });
 

@@ -1,6 +1,9 @@
-import { getSettingsPageMetadata } from "@/modules/settings/lib/metadata";
-import { TagsPage } from "@/modules/workspaces/settings/tags/page";
+import { redirect } from "next/navigation";
 
-export const generateMetadata = () => getSettingsPageMetadata("common.tags");
+// Tags moved out of settings and into the sidebar. Kept so the links in the docs and anyone's bookmarks still land somewhere.
+const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
+  const { workspaceId } = await props.params;
+  redirect(`/workspaces/${workspaceId}/tags`);
+};
 
-export default TagsPage;
+export default Page;

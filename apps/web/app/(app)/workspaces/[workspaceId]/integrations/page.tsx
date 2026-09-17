@@ -200,7 +200,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
     docsHref: "https://forma.ylam.ai/docs/app-surveys/quickstart",
     docsText: t("common.docs"),
     docsNewTab: true,
-    connectHref: `/workspaces/${params.workspaceId}/settings/workspace/app-connection`,
+    connectHref: `/workspaces/${params.workspaceId}/integrations/app-connection`,
     connectText: t("common.connect"),
     connectNewTab: false,
     label: "Javascript SDK",
