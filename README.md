@@ -3,11 +3,7 @@
 <h3 align="center">Forma</h3>
 
 <p align="center">
-Open source experience management — surveys, responses and workflows.
-</p>
-
-<p align="center">
-<a href="https://github.com/yldm-tech/forma/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-purple" alt="License"></a>
+Experience management — surveys, responses and workflows.
 </p>
 
 ## About
@@ -16,15 +12,14 @@ Forma is a survey and experience-management platform. Collect feedback with in-a
 email surveys, read the results in each survey's own summary and response views, and act on them with
 Workflows.
 
-It is a fork of [Formbricks](https://github.com/formbricks/formbricks), maintained by
-[yldm-tech](https://github.com/yldm-tech). Two things differ from upstream and are worth knowing before
-you compare documentation:
+Two things are worth knowing before you compare against any upstream documentation:
 
-- **Unify Feedback and Dashboards are not part of this fork.** They were built on Forma Hub, an external
+- **Unify Feedback and Dashboards are not part of this build.** They were built on Forma Hub, an external
   service, and on a Cube.js semantic layer over its records. Both are gone, along with the charts and
   dashboards that had no data source without them. Survey response analysis is unaffected.
-- **The database history is a single init migration.** Upstream's migration history was squashed, so a
-  database created from this repository cannot be upgraded from one that ran upstream's migrations.
+- **The database history is a single init migration.** The earlier migration history was squashed, so a
+  database created from this repository cannot be upgraded from one that ran the old migrations.
+- **Every feature is on.** There is no enterprise edition, licence key or per-feature entitlement here.
 
 ## Features
 
@@ -80,11 +75,4 @@ Report vulnerabilities to security@ylam.ai rather than opening a public issue. S
 
 ## License
 
-Copyright for the upstream code remains with Formbricks GmbH; this fork does not alter the licences it
-inherited, and both files are unchanged from upstream.
-
-- **Core** — [AGPLv3](./LICENSE). Free to use, modify and distribute; a modified version you distribute
-  or run as a network service must itself be AGPLv3, with your changes documented.
-- **Enterprise Edition** — everything under [`apps/web/modules/ee`](./apps/web/modules/ee) is covered by
-  a separate [Enterprise licence](./apps/web/modules/ee/LICENSE) and needs a licence key to run in
-  production.
+Private. All rights reserved.
