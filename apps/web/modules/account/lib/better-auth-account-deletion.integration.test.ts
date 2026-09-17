@@ -3,12 +3,12 @@ import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { ACCOUNT_DELETION_SOLE_OWNER_BLOCK_MESSAGE } from "@/modules/account/constants";
 import { auth } from "@/modules/auth/lib/auth";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 
 // getIsMultiOrgEnabled is an external license input to the deletion guard (not the behavior under
 // test), so we mock just that one export and drive it per-test (default single-org, set in
 // beforeEach); the rest of the license-check module stays real.
-vi.mock("@/modules/ee/license-check/lib/utils", async (importOriginal) => {
+vi.mock("@/modules/license-check/lib/utils", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, getIsMultiOrgEnabled: vi.fn() };
 });

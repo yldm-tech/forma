@@ -3,13 +3,13 @@ import { SIGNUP_DISABLED_ERROR_CODE } from "@forma/types/errors";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { isSignupEmailDomainBlocked } from "@/modules/auth/lib/signup-email-domain";
 import { isSignupDomainAllowed } from "@/modules/auth/lib/signup-request-context";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import { enforceCredentialSignupBackstop } from "./credential-signup-backstop";
 
 vi.mock("@/modules/auth/lib/signup-email-domain", () => ({ isSignupEmailDomainBlocked: vi.fn() }));
 vi.mock("@/modules/auth/lib/signup-request-context", () => ({ isSignupDomainAllowed: vi.fn() }));
 vi.mock("@/lib/instance/service", () => ({ getIsFreshInstance: vi.fn() }));
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
+vi.mock("@/modules/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
 
 const constantsOverrides = vi.hoisted(() => ({ SIGNUP_ENABLED: true }));
 vi.mock("@/lib/constants", () => ({

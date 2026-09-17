@@ -8,7 +8,7 @@ import { runWithBetterAuthRequestContext } from "@/modules/auth/lib/better-auth-
 import { runWithEmailVerificationRequestContext } from "@/modules/auth/lib/email-verification-request-context";
 import { mapLegacySsoCallbackRequest } from "@/modules/auth/lib/legacy-sso-callback";
 import { normalizeDcrRequest } from "@/modules/auth/lib/mcp-dcr-application-type";
-import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-context";
+import { runWithSsoRequestContext } from "@/modules/sso/lib/sso-request-context";
 
 // Force-no-store so Better Auth's outbound SSO fetches (token exchange, userinfo, JWKS) are never
 // served from Next's fetch cache — carried over from the NextAuth [...nextauth] route.

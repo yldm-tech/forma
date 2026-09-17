@@ -25,7 +25,7 @@ import {
   ZUserInput,
   ZUserInputPatch,
 } from "@/modules/api/v2/organizations/[organizationId]/users/types/users";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 
 export const GET = async (request: NextRequest, props: { params: Promise<{ organizationId: string }> }) =>
   authenticatedApiClient({

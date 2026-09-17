@@ -122,11 +122,11 @@ vi.mock("@/lib/utils/validate-webhook-url", () => ({
   createPinnedDispatcher: mockCreatePinnedDispatcher,
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEventWithoutRequest: mockQueueAuditEventWithoutRequest,
 }));
 
-vi.mock("@/modules/ee/billing/lib/metering", () => ({
+vi.mock("@/modules/billing/lib/metering", () => ({
   recordResponseCreatedMeterEvent: mockRecordResponseCreatedMeterEvent,
 }));
 
@@ -138,11 +138,11 @@ vi.mock("@/modules/survey/follow-ups/lib/follow-ups", () => ({
   sendFollowUpsForResponse: mockSendFollowUpsForResponse,
 }));
 
-vi.mock("@/modules/ee/workflows/lib/runner/enqueue-response-completed-runs", () => ({
+vi.mock("@/modules/workflows/lib/runner/enqueue-response-completed-runs", () => ({
   enqueueResponseCompletedWorkflowRuns: mockEnqueueResponseCompletedWorkflowRuns,
 }));
 
-vi.mock("@/modules/ee/workflows/lib/runner/dispatch", () => ({
+vi.mock("@/modules/workflows/lib/runner/dispatch", () => ({
   dispatchWorkflowRunViaJobs: vi.fn(),
 }));
 

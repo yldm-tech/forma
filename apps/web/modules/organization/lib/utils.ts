@@ -17,7 +17,7 @@ import { TOrganizationAuth } from "../types/organization-auth";
  *
  * Deliberately gates on membership only (`organization.read`), never on a product permission —
  * unlike `getWorkspaceAuth`, which redirects the billing role away from product data. The
- * asymmetry is required, not an oversight: `modules/ee/billing/page.tsx` is the billing role's
+ * asymmetry is required, not an oversight: `modules/billing/page.tsx` is the billing role's
  * own page, so a billing exclusion here would lock that role out of the one surface it exists to
  * reach. Callers that need to exclude billing do so themselves, via
  * `redirectBillingRoleFromRestrictedOrgSettings`.

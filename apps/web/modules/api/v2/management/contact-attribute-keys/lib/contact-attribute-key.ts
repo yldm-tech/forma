@@ -14,7 +14,7 @@ import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import {
   getReservedFutureDefaultAttributeKeyIssue,
   isReservedFutureDefaultAttributeKey,
-} from "@/modules/ee/contacts/lib/attribute-key-policy";
+} from "@/modules/contacts/lib/attribute-key-policy";
 
 export const getContactAttributeKeys = reactCache(
   async (workspaceIds: string[], params: TGetContactAttributeKeysFilter) => {

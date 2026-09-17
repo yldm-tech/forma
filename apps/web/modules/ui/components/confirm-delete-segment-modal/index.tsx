@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { TSegmentActivitySummary } from "@/modules/ee/contacts/segments/components/segment-activity-utils";
+import { TSegmentActivitySummary } from "@/modules/contacts/segments/components/segment-activity-utils";
 import { Button } from "@/modules/ui/components/button";
 import {
   Dialog,

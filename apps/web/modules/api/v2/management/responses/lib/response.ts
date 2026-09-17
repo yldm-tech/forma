@@ -15,7 +15,7 @@ import { getResponsesQuery } from "@/modules/api/v2/management/responses/lib/uti
 import { TGetResponsesFilter, TResponseInput } from "@/modules/api/v2/management/responses/types/responses";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { ApiResponseWithMeta } from "@/modules/api/v2/types/api-success";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 
 export const getResponses = async (
   workspaceIds: string[],

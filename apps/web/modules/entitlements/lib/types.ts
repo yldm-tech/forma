@@ -3,7 +3,7 @@ import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-c
 import type {
   TEnterpriseLicenseFeatures,
   TLicenseStatus,
-} from "@/modules/ee/license-check/types/enterprise-license";
+} from "@/modules/license-check/types/enterprise-license";
 
 export type TEntitlementSource = "cloud_stripe" | "self_hosted_license";
 export type TKnownEntitlementFeature =

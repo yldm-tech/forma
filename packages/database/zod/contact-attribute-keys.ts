@@ -24,7 +24,7 @@ export const ZContactAttributeKey = z.object({
   // Deliberately not refined with `isSafeIdentifier`. This is the read/serialize schema for rows
   // that already exist, and the default attribute keys are still camelCase (`userId`, `firstName`,
   // `lastName`) until the v5.1 migration moves them to safe identifiers — see
-  // `apps/web/modules/ee/contacts/lib/attribute-key-policy.ts`. Refining here would break reads for
+  // `apps/web/modules/contacts/lib/attribute-key-policy.ts`. Refining here would break reads for
   // every existing workspace. The strict rule is enforced on the write path in `apps/web` instead.
   key: z
     .string()

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { OperationNotAllowedError } from "@forma/types/errors";
 import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
-import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 import { checkSpamProtectionPermission, getExternalUrlsPermission } from "./permission";
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsSpamProtectionEnabled: vi.fn(),
 }));
 

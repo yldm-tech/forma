@@ -1,3 +1,3 @@
-import { GET } from "@/modules/ee/auth/saml/api/authorize/route";
+import { GET } from "@/modules/auth/saml/api/authorize/route";
 
 export { GET };

@@ -5,9 +5,8 @@ import { TSurveyQuota } from "@forma/types/quota";
 import { TSegment } from "@forma/types/segment";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { TargetingCard } from "@/modules/ee/contacts/segments/components/targeting-card";
-import { QuotasCard } from "@/modules/ee/quotas/components/quotas-card";
-import { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";
+import { TargetingCard } from "@/modules/contacts/segments/components/targeting-card";
+import { QuotasCard } from "@/modules/quotas/components/quotas-card";
 import { HowToSendCard } from "@/modules/survey/editor/components/how-to-send-card";
 import { RecontactOptionsCard } from "@/modules/survey/editor/components/recontact-options-card";
 import { ResponseOptionsCard } from "@/modules/survey/editor/components/response-options-card";
@@ -15,6 +14,7 @@ import { SurveyPlacementCard } from "@/modules/survey/editor/components/survey-p
 import { TargetingLockedCard } from "@/modules/survey/editor/components/targeting-locked-card";
 import { WhenToSendCard } from "@/modules/survey/editor/components/when-to-send-card";
 import { type TSurveySchedulingConfig } from "@/modules/survey/scheduling/lib/config";
+import { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 
 interface SettingsViewProps {
   localSurvey: TSurvey;

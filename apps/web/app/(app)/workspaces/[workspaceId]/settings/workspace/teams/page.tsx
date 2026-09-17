@@ -1,5 +1,5 @@
-import { WorkspaceTeams } from "@/modules/ee/teams/workspace-teams/page";
 import { getSettingsPageMetadata } from "@/modules/settings/lib/metadata";
+import { WorkspaceTeams } from "@/modules/teams/workspace-teams/page";
 
 export const generateMetadata = () => getSettingsPageMetadata("common.team_access");
 

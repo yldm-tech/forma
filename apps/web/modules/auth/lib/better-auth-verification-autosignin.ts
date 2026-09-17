@@ -3,7 +3,7 @@ import { getSessionFromCtx } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { logger } from "@forma/logger";
 import { WEBAPP_URL } from "@/lib/constants";
-import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
+import type { AuthHookContext } from "@/modules/sso/lib/better-auth-hooks";
 import { auditVerificationSessionWithheld } from "./better-auth-observability";
 import { getJustVerifiedUserId } from "./email-verification-request-context";
 import {

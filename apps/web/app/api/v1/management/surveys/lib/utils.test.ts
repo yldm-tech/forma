@@ -7,7 +7,7 @@ import {
   TSurveyQuestionTypeEnum,
 } from "@forma/types/surveys/types";
 import { responses } from "@/lib/api/response";
-import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
 import { getExternalUrlsPermission } from "@/modules/survey/lib/permission";
 import { checkFeaturePermissions } from "./utils";
@@ -19,7 +19,7 @@ vi.mock("@/lib/api/response", () => ({
   },
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsSpamProtectionEnabled: vi.fn(),
 }));
 

@@ -1,0 +1,83 @@
+import { TWorkspace } from "@forma/types/workspace";
+import { ENTERPRISE_LICENSE_REQUEST_FORM_URL, IS_FORMA_CLOUD } from "@/lib/constants";
+import { getTranslate } from "@/lingodotdev/server";
+import { Alert, AlertDescription } from "@/modules/ui/components/alert";
+import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
+import { EditBranding } from "@/modules/whitelabel/remove-branding/components/edit-branding";
+import { RemoveBrandingLicenseTip } from "@/modules/whitelabel/remove-branding/components/remove-branding-license-tip";
+
+interface BrandingSettingsCardProps {
+  canRemoveBranding: boolean;
+  workspace: TWorkspace;
+  isReadOnly: boolean;
+  showLiteLicenseTip?: boolean;
+}
+
+export const BrandingSettingsCard = async ({
+  canRemoveBranding,
+  workspace,
+  isReadOnly,
+  showLiteLicenseTip = false,
+}: Readonly<BrandingSettingsCardProps>) => {
+  const t = await getTranslate();
+  const buttons: [ModalButton, ModalButton] = [
+    {
+      text: IS_FORMA_CLOUD ? t("common.upgrade_plan") : t("common.request_trial_license"),
+      href: IS_FORMA_CLOUD
+        ? `/organizations/${workspace.organizationId}/settings/billing`
+        : ENTERPRISE_LICENSE_REQUEST_FORM_URL,
+    },
+    {
+      text: t("common.learn_more"),
+      href: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/hide-powered-by-forma",
+    },
+  ];
+
+  let brandingContent: React.ReactNode;
+  if (canRemoveBranding) {
+    brandingContent = (
+      <div className="space-y-4">
+        <EditBranding
+          type="linkSurvey"
+          isEnabled={workspace.linkSurveyBranding}
+          workspaceId={workspace.id}
+          isReadOnly={isReadOnly}
+        />
+        <EditBranding
+          type="appSurvey"
+          isEnabled={workspace.inAppSurveyBranding}
+          workspaceId={workspace.id}
+          isReadOnly={isReadOnly}
+        />
+      </div>
+    );
+  } else if (showLiteLicenseTip) {
+    brandingContent = <RemoveBrandingLicenseTip licenseRequestUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL} />;
+  } else {
+    brandingContent = (
+      <UpgradePrompt
+        title={t("workspace.look.remove_branding_with_a_higher_plan")}
+        description={t("workspace.settings.general.eliminate_branding_with_whitelabel")}
+        buttons={buttons}
+        feature="remove_branding"
+      />
+    );
+  }
+
+  return (
+    <SettingsCard
+      title={t("workspace.look.forma_branding")}
+      description={t("workspace.look.forma_branding_settings_description")}
+      bodyVariant={showLiteLicenseTip ? "bleed" : "padded"}>
+      {brandingContent}
+      {isReadOnly && (
+        <Alert variant="warning" className="mt-4" role="status">
+          <AlertDescription>
+            {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
+          </AlertDescription>
+        </Alert>
+      )}
+    </SettingsCard>
+  );
+};

@@ -379,7 +379,7 @@ doc comments):
   members/billing/API keys but cannot update or delete the organization.
 - `apps/web/lib/workspace/auth.ts` — navigation and integration-specific compositions;
   the billing role is excluded from product data.
-- `apps/web/modules/ee/teams/lib/roles.ts` — a member without a team has no
+- `apps/web/modules/teams/lib/roles.ts` — a member without a team has no
   workspace access; the highest team permission wins.
 - `apps/web/lib/authorization/spicedb-evaluator.ts` — tenant-safe scope resolution,
   API-key ownership checks, and authoritative permission evaluation.

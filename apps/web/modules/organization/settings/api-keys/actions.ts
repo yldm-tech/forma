@@ -6,7 +6,7 @@ import { assertCan } from "@/lib/authorization";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromApiKeyId } from "@/lib/utils/helper";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import {
   createApiKey,
   deleteApiKey,

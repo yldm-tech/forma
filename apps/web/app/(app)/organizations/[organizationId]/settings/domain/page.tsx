@@ -3,8 +3,7 @@ import { AuthenticationError } from "@forma/types/errors";
 import { PrettyUrlsTable } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/domain/components/pretty-urls-table";
 import { IS_FORMA_CLOUD, IS_STORAGE_CONFIGURED } from "@/lib/constants";
 import { getTranslate } from "@/lingodotdev/server";
-import { getWhiteLabelPermission } from "@/modules/ee/license-check/lib/utils";
-import { FaviconCustomizationSettings } from "@/modules/ee/whitelabel/favicon-customization/components/favicon-customization-settings";
+import { getWhiteLabelPermission } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
@@ -13,6 +12,7 @@ import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { FaviconCustomizationSettings } from "@/modules/whitelabel/favicon-customization/components/favicon-customization-settings";
 
 const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }> }>) => {
   const params = await props.params;

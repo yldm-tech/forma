@@ -11,7 +11,7 @@ import { TUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { cn } from "@/lib/cn";
 import { addMultiLanguageLabels, extractLanguageCodes, getEnabledLanguages } from "@/lib/i18n/utils";
-import { checkAITranslationAvailableAction } from "@/modules/ee/ai-translation/lib/actions";
+import { checkAITranslationAvailableAction } from "@/modules/ai-translation/lib/actions";
 import { AdvancedOptionToggle } from "@/modules/ui/components/advanced-option-toggle";
 import { Badge } from "@/modules/ui/components/badge";
 import { Button } from "@/modules/ui/components/button";

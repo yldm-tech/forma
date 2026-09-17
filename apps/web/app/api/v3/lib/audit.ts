@@ -1,7 +1,7 @@
 import { logger } from "@forma/logger";
 import { buildAuditLogBaseObject } from "@/lib/api/with-api-logging";
-import { queueAuditEvent } from "@/modules/ee/audit-logs/lib/handler";
-import { TAuditAction, TAuditTarget } from "@/modules/ee/audit-logs/types/audit-log";
+import { queueAuditEvent } from "@/modules/audit-logs/lib/handler";
+import { TAuditAction, TAuditTarget } from "@/modules/audit-logs/types/audit-log";
 import type { TV3AuditLog, TV3Authentication } from "./types";
 
 export function buildV3AuditLog(

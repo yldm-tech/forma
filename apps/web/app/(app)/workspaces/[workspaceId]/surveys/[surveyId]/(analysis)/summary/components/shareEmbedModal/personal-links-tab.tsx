@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { TSegment } from "@forma/types/segment";
 import { DocumentationLinks } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/shareEmbedModal/documentation-links";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
-import { getTranslatedPersonalLinkError } from "@/modules/ee/contacts/lib/personal-link-errors";
+import { getTranslatedPersonalLinkError } from "@/modules/contacts/lib/personal-link-errors";
 import { Button } from "@/modules/ui/components/button";
 import { DatePicker } from "@/modules/ui/components/date-picker";
 import {

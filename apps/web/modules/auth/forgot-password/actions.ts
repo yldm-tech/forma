@@ -9,11 +9,11 @@ import { ZUserEmail } from "@forma/types/user";
 import { EMAIL_AUTH_ENABLED, PASSWORD_RESET_DISABLED, WEBAPP_URL } from "@/lib/constants";
 import { hasCredentialAccount } from "@/lib/user/password";
 import { actionClient } from "@/lib/utils/action-client";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { auth } from "@/modules/auth/lib/auth";
 import { getUserByEmail } from "@/modules/auth/lib/user";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 
 /**
  * Whether this user has a password to reset. Pure SSO users do not, and are silently skipped — Better

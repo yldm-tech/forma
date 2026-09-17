@@ -4,7 +4,7 @@ vi.mock("@/lib/utils/helper", () => ({
   getOrganizationIdFromWorkspaceId: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEvent: vi.fn(),
 }));
 
@@ -24,7 +24,7 @@ describe("audit-logs lib", () => {
 
   test("logs file deletion success with provided data", async () => {
     const { getOrganizationIdFromWorkspaceId } = await import("@/lib/utils/helper");
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
     const { logFileDeletion } = await import("./audit-logs");
 
     vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org-1");
@@ -56,8 +56,8 @@ describe("audit-logs lib", () => {
 
   test("logs with UNKNOWN_DATA userId when missing and includes failureReason", async () => {
     const { getOrganizationIdFromWorkspaceId } = await import("@/lib/utils/helper");
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
-    const { UNKNOWN_DATA } = await import("@/modules/ee/audit-logs/types/audit-log");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
+    const { UNKNOWN_DATA } = await import("@/modules/audit-logs/types/audit-log");
     const { logFileDeletion } = await import("./audit-logs");
 
     vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org-2");
@@ -82,8 +82,8 @@ describe("audit-logs lib", () => {
 
   test("falls back to UNKNOWN_DATA organizationId when lookup fails", async () => {
     const { getOrganizationIdFromWorkspaceId } = await import("@/lib/utils/helper");
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
-    const { UNKNOWN_DATA } = await import("@/modules/ee/audit-logs/types/audit-log");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
+    const { UNKNOWN_DATA } = await import("@/modules/audit-logs/types/audit-log");
     const { logFileDeletion } = await import("./audit-logs");
 
     vi.mocked(getOrganizationIdFromWorkspaceId).mockRejectedValueOnce(new Error("fail"));
@@ -99,7 +99,7 @@ describe("audit-logs lib", () => {
 
   test("swallows errors from queueAuditEvent and logs", async () => {
     const { getOrganizationIdFromWorkspaceId } = await import("@/lib/utils/helper");
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
     const { logger } = await import("@forma/logger");
     const { logFileDeletion } = await import("./audit-logs");
 

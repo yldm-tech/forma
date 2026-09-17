@@ -2,7 +2,7 @@ import { TOrganization } from "@forma/types/organizations";
 import { TSurvey, TSurveyCreateInputWithWorkspaceId } from "@forma/types/surveys/types";
 import { responses } from "@/lib/api/response";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
-import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
 import { getExternalUrlsPermission } from "@/modules/survey/lib/permission";
 

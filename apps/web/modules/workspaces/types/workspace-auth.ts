@@ -4,11 +4,8 @@ import { TMembership, ZMembership } from "@forma/types/memberships";
 import { TOrganization, ZOrganization } from "@forma/types/organizations";
 import { TUser, ZUser } from "@forma/types/user";
 import { TWorkspace, ZWorkspace } from "@forma/types/workspace";
-import {
-  TEnterpriseLicenseFeatures,
-  TLicenseStatus,
-} from "@/modules/ee/license-check/types/enterprise-license";
-import { TTeamPermission, ZTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";
+import { TEnterpriseLicenseFeatures, TLicenseStatus } from "@/modules/license-check/types/enterprise-license";
+import { TTeamPermission, ZTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 
 // Type for the enterprise license returned by getEnterpriseLicense()
 type TEnterpriseLicense = {
@@ -16,7 +13,6 @@ type TEnterpriseLicense = {
   features: TEnterpriseLicenseFeatures | null;
   lastChecked: Date;
   isPendingDowngrade: boolean;
-  fallbackLevel: string;
   status: TLicenseStatus;
 };
 

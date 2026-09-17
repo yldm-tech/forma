@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { GET } from "@/app/api/auth/[...all]/route";
 import { auth } from "@/modules/auth/lib/auth";
-import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-context";
+import { runWithSsoRequestContext } from "@/modules/sso/lib/sso-request-context";
 
 /**
  * ENG-2343 at the ROUTER boundary: the pinned SSO callback URL against a real Better Auth instance.

@@ -7,7 +7,7 @@ import {
   getSessionTokenFromCookieHeader,
 } from "@/modules/auth/lib/session-cookie";
 import { revokeSessionByToken } from "@/modules/auth/lib/session-revocation";
-import { completeSsoRecovery, getSsoRecoveryFailureRedirectUrl } from "@/modules/ee/sso/lib/sso-recovery";
+import { completeSsoRecovery, getSsoRecoveryFailureRedirectUrl } from "@/modules/sso/lib/sso-recovery";
 
 const clearSessionCookies = (response: NextResponse) => {
   for (const cookieName of BETTER_AUTH_SESSION_COOKIE_NAMES) {

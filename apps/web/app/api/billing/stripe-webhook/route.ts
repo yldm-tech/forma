@@ -1,3 +1,3 @@
-import { POST } from "@/modules/ee/billing/api/route";
+import { POST } from "@/modules/billing/api/route";
 
 export { POST };

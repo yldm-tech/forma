@@ -3,7 +3,7 @@ import { prisma } from "@forma/database";
 import type { JobHandler, TSurveyArchivePurgeJobData } from "@forma/jobs";
 import { logger } from "@forma/logger";
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { queueAuditEventWithoutRequest } from "@/modules/ee/audit-logs/lib/handler";
+import { queueAuditEventWithoutRequest } from "@/modules/audit-logs/lib/handler";
 import {
   SURVEY_ARCHIVE_PURGE_BATCH_SIZE,
   SURVEY_ARCHIVE_RETENTION_DAYS,

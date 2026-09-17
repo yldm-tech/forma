@@ -6,7 +6,7 @@ import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getSession } from "@/modules/auth/lib/session";
-import { invalidateOrganizationBillingCache } from "@/modules/ee/billing/lib/organization-billing";
+import { invalidateOrganizationBillingCache } from "@/modules/billing/lib/organization-billing";
 
 const OnboardingLayout = async (props: {
   params: Promise<{ organizationId: string }>;

@@ -3,11 +3,11 @@ import { prisma } from "@forma/database";
 import { TSurveyQuota } from "@forma/types/quota";
 import { TResponse } from "@forma/types/responses";
 import { updateResponse } from "@/lib/response/service";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 import { updateResponseWithQuotaEvaluation } from "./response";
 
 vi.mock("@/lib/response/service");
-vi.mock("@/modules/ee/quotas/lib/evaluation-service");
+vi.mock("@/modules/quotas/lib/evaluation-service");
 
 const mockUpdateResponse = vi.mocked(updateResponse);
 const mockEvaluateResponseQuotas = vi.mocked(evaluateResponseQuotas);

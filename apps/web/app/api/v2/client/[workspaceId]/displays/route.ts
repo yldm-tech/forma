@@ -8,7 +8,7 @@ import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body
 import { responses } from "@/lib/api/response";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
-import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createDisplay } from "./lib/display";
 
 interface Context {

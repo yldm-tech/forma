@@ -1,4 +1,3 @@
-// ee-entitlement-exempt: returns the contact attached to a response, which is response data rather than the contacts feature
 import { NextRequest } from "next/server";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";

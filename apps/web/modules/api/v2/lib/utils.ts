@@ -6,7 +6,7 @@ import { TApiAuditLog } from "@/lib/api/with-api-logging";
 import { AUDIT_LOG_ENABLED } from "@/lib/constants";
 import { responses } from "@/modules/api/v2/lib/response";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
-import { queueAuditEvent } from "@/modules/ee/audit-logs/lib/handler";
+import { queueAuditEvent } from "@/modules/audit-logs/lib/handler";
 import { logApiErrorEdge } from "./utils-edge";
 
 export const handleApiError = (

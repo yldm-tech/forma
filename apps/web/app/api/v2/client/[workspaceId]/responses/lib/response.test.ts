@@ -16,7 +16,7 @@ import { getOrganization } from "@/lib/organization/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { validateInputs } from "@/lib/utils/validate";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 import { getContact } from "./contact";
 import { createResponse, createResponseWithQuotaEvaluation } from "./response";
 
@@ -60,7 +60,7 @@ vi.mock("@/lib/response/utils", async (importOriginal) => ({
 }));
 vi.mock("@/lib/utils/helper");
 vi.mock("@/lib/utils/validate");
-vi.mock("@/modules/ee/quotas/lib/evaluation-service");
+vi.mock("@/modules/quotas/lib/evaluation-service");
 vi.mock("@forma/database", () => ({
   prisma: {
     response: {

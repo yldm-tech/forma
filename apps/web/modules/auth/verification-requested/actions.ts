@@ -9,6 +9,7 @@ import { WEBAPP_URL } from "@/lib/constants";
 import { verifySsoRelinkIntent } from "@/lib/jwt";
 import { actionClient } from "@/lib/utils/action-client";
 import { getValidatedCallbackUrl } from "@/lib/utils/url";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { auth } from "@/modules/auth/lib/auth";
 import {
   SIGNUP_INTENT_COOKIE_NAME,
@@ -20,9 +21,8 @@ import { getUserByEmail } from "@/modules/auth/lib/user";
 import { TVerificationRequestPurpose } from "@/modules/auth/lib/verification-links";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
-import { SSO_RECOVERY_COMPLETION_PATH } from "@/modules/ee/sso/lib/constants";
 import { sendVerificationEmail } from "@/modules/email";
+import { SSO_RECOVERY_COMPLETION_PATH } from "@/modules/sso/lib/constants";
 
 const ZResendVerificationEmailAction = z.object({
   email: ZUserEmail,

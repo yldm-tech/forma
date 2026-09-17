@@ -12,7 +12,7 @@ import { getWorkspaces } from "@/lib/workspace/service";
 import {
   cleanupStripeCustomer,
   ensureCloudStripeSetupForOrganization,
-} from "@/modules/ee/billing/lib/organization-billing";
+} from "@/modules/billing/lib/organization-billing";
 import {
   createOrganization,
   deleteOrganization,
@@ -65,7 +65,7 @@ vi.mock("@/lib/authzed/team-workspace", () => ({
   reconcileTeamWorkspaceRelationships: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   ensureCloudStripeSetupForOrganization: vi.fn().mockResolvedValue(undefined),
   cleanupStripeCustomer: vi.fn().mockResolvedValue(undefined),
 }));

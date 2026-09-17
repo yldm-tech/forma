@@ -43,11 +43,11 @@ vi.mock("@/lingodotdev/server", () => ({
   getTranslate: mocks.getTranslate,
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_eventName, _objectType, fn) => fn),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsMultiOrgEnabled: mocks.getIsMultiOrgEnabled,
 }));
 

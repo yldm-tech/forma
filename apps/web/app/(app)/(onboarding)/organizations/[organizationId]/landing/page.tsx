@@ -8,7 +8,7 @@ import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
-import { getAccessControlPermission, getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getAccessControlPermission, getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { Header } from "@/modules/ui/components/header";
 

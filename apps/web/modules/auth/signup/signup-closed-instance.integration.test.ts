@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { auth } from "@/modules/auth/lib/auth";
-import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-context";
+import { runWithSsoRequestContext } from "@/modules/sso/lib/sso-request-context";
 
 /**
  * ENG-2293 at the FRAMEWORK boundary: Better Auth's native `POST /sign-up/email` against a real
@@ -34,8 +34,8 @@ vi.mock("@/lib/constants", async (importOriginal) => ({
   SIGNUP_ENABLED: false,
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/ee/license-check/lib/utils")>()),
+vi.mock("@/modules/license-check/lib/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/license-check/lib/utils")>()),
   getIsMultiOrgEnabled: vi.fn(async () => false),
 }));
 

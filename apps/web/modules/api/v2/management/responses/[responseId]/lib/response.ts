@@ -13,7 +13,7 @@ import { getSurveyQuestions } from "@/modules/api/v2/management/responses/[respo
 import { findAndDeleteUploadedFilesInResponse } from "@/modules/api/v2/management/responses/[responseId]/lib/utils";
 import { ZResponseUpdateSchema } from "@/modules/api/v2/management/responses/[responseId]/types/responses";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 
 export const getResponse = reactCache(async (responseId: string) => {
   try {

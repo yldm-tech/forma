@@ -24,9 +24,9 @@ import {
   accountDeletionConfig,
   requireDeletionConfirmationBeforeHandler,
 } from "@/modules/account/lib/better-auth-account-deletion";
-import { ssoDatabaseHooks, ssoLicenseGateBeforeHandler } from "@/modules/ee/sso/lib/better-auth-hooks";
-import { ssoGenericOAuthConfig, ssoSocialProviders } from "@/modules/ee/sso/lib/better-auth-providers";
-import { ssoRecoverySignInPlugin } from "@/modules/ee/sso/lib/better-auth-recovery-signin";
+import { ssoDatabaseHooks, ssoLicenseGateBeforeHandler } from "@/modules/sso/lib/better-auth-hooks";
+import { ssoGenericOAuthConfig, ssoSocialProviders } from "@/modules/sso/lib/better-auth-providers";
+import { ssoRecoverySignInPlugin } from "@/modules/sso/lib/better-auth-recovery-signin";
 import { runAfterAuthHooks } from "./after-auth-hooks";
 import { EMAIL_VERIFICATION_TTL_SECONDS, USE_SECURE_COOKIES } from "./auth-cookies";
 import { rejectInactiveUserOnSessionCreate } from "./better-auth-active-user-gate";
@@ -90,7 +90,7 @@ export const auth = betterAuth({
   secondaryStorage: redisSecondaryStorage,
 
   // SSO providers (Google/GitHub social + Azure/OIDC/SAML genericOAuth) live in
-  // modules/ee/sso/lib/better-auth-providers.ts. The account-linking / verify-before-link flow is
+  // modules/sso/lib/better-auth-providers.ts. The account-linking / verify-before-link flow is
   // the security-sensitive Phase 5 work, re-expressed via hooks separately (pending review, D7).
   socialProviders: ssoSocialProviders,
 

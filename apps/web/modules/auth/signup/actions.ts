@@ -26,6 +26,7 @@ import { getUserByEmail } from "@/lib/user/service";
 import { actionClient } from "@/lib/utils/action-client";
 import { ActionClientCtx } from "@/lib/utils/action-client/types/context";
 import { DEFAULT_WORKSPACE_NAME } from "@/lib/workspace/constants";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { ATTRIBUTION_COOKIE_NAME, getAttributionPropertiesFromCookies } from "@/modules/auth/lib/attribution";
 import { auth } from "@/modules/auth/lib/auth";
 import { isPasswordCompromisedError } from "@/modules/auth/lib/better-auth-hibp";
@@ -49,13 +50,12 @@ import {
 } from "@/modules/auth/signup/lib/invite";
 import { createTeamMembership } from "@/modules/auth/signup/lib/team";
 import { verifyTurnstileToken } from "@/modules/auth/signup/lib/utils";
+import { ensureCloudStripeSetupForOrganization } from "@/modules/billing/lib/organization-billing";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
-import { ensureCloudStripeSetupForOrganization } from "@/modules/ee/billing/lib/organization-billing";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
-import { subscribeUserToMailingList } from "@/modules/ee/mailing/lib/mailing-subscription";
 import { sendInviteAcceptedEmail } from "@/modules/email";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
+import { subscribeUserToMailingList } from "@/modules/mailing/lib/mailing-subscription";
 import { createWorkspace } from "@/modules/workspaces/settings/lib/workspace";
 
 const ZCreatedUser = ZUser.pick({

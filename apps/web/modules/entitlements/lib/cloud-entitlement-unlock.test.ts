@@ -6,15 +6,15 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@forma/logger", () => ({ logger: { warn: vi.fn() } }));
 
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   getOrganizationBillingWithReadThroughSync: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
+vi.mock("@/modules/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
 
 const { getOrganizationBillingWithReadThroughSync } =
-  await import("@/modules/ee/billing/lib/organization-billing");
-const { getEnterpriseLicense } = await import("@/modules/ee/license-check/lib/license");
+  await import("@/modules/billing/lib/organization-billing");
+const { getEnterpriseLicense } = await import("@/modules/license-check/lib/license");
 const { getCloudOrganizationEntitlementsContext } = await import("./cloud-provider");
 const { KNOWN_ENTITLEMENT_FEATURES } = await import("./types");
 

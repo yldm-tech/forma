@@ -13,11 +13,11 @@ import { getMonthlyOrganizationResponseCount, getOrganization } from "@/lib/orga
 import { getUser } from "@/lib/user/service";
 import { getWorkspace } from "@/lib/workspace/service";
 import { getSession } from "@/modules/auth/lib/session";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import {
   getAccessControlPermission,
   getOrganizationWorkspacesLimit,
-} from "@/modules/ee/license-check/lib/utils";
+} from "@/modules/license-check/lib/utils";
 
 type TOrganizationWithBilling = NonNullable<Awaited<ReturnType<typeof getOrganization>>>;
 type TLicense = Awaited<ReturnType<typeof getEnterpriseLicense>>;

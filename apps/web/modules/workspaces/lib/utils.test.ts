@@ -10,9 +10,9 @@ import { getUser } from "@/lib/user/service";
 import { canUserNavigateWorkspace } from "@/lib/workspace/auth";
 import { getWorkspace } from "@/lib/workspace/service";
 import { getSession } from "@/modules/auth/lib/session";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
-import { getAccessControlPermission } from "@/modules/ee/license-check/lib/utils";
-import { getWorkspacePermissionByUserId } from "@/modules/ee/teams/lib/roles";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
+import { getAccessControlPermission } from "@/modules/license-check/lib/utils";
+import { getWorkspacePermissionByUserId } from "@/modules/teams/lib/roles";
 import { getWorkspaceAuth, getWorkspaceLayoutData, workspaceIdLayoutChecks } from "./utils";
 
 const mocks = vi.hoisted(() => ({ isFormaCloud: false, workspaceFindUnique: vi.fn() }));
@@ -31,8 +31,8 @@ vi.mock("@/lib/authorization", () => ({ can: vi.fn() }));
 vi.mock("@/lib/workspace/auth", () => ({ canUserNavigateWorkspace: vi.fn() }));
 vi.mock("@forma/database", () => ({ prisma: { workspace: { findUnique: mocks.workspaceFindUnique } } }));
 vi.mock("@/lib/user/service", () => ({ getUser: vi.fn() }));
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getAccessControlPermission: vi.fn() }));
-vi.mock("@/modules/ee/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
+vi.mock("@/modules/license-check/lib/utils", () => ({ getAccessControlPermission: vi.fn() }));
+vi.mock("@/modules/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
 vi.mock("@/lib/organization/service", () => ({
   getOrganization: vi.fn(),
   getMonthlyOrganizationResponseCount: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock("@/lib/membership/service", () => ({ getMembershipByUserIdOrganizationId
 vi.mock("@/lib/membership/navigation", () => ({ getBillingFallbackPath: vi.fn() }));
 vi.mock("@/lingodotdev/server", () => ({ getTranslate: vi.fn(() => Promise.resolve((k: string) => k)) }));
 vi.mock("@/modules/auth/lib/session", () => ({ getSession: vi.fn() }));
-vi.mock("@/modules/ee/teams/lib/roles", () => ({ getWorkspacePermissionByUserId: vi.fn() }));
+vi.mock("@/modules/teams/lib/roles", () => ({ getWorkspacePermissionByUserId: vi.fn() }));
 
 const workspaceId = "workspace-1";
 const organizationId = "organization-1";

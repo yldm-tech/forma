@@ -4,7 +4,7 @@ import { z } from "zod";
 import { logger } from "@forma/logger";
 import { isExpectedError } from "@forma/types/errors";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { deleteWorkspaceWithConfirmation, getWorkspaceIdForLogging } from "./lib/delete-workspace";
 
 const logWorkspaceDeletionError = (userId: string, workspaceId: string, error: unknown) => {

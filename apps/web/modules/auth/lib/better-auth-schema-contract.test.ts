@@ -93,7 +93,7 @@ const CORE_FIELDS_NOT_PERSISTED = {
   // `User.imageUrl` was dropped in 20250813071701_remove_user_image_url. Better Auth still maps a
   // provider image (Google picture / GitHub avatar / OIDC picture), and the SSO user-create hook
   // strips it to `undefined` so `transformInput` drops it before Prisma sees it.
-  user: { image: { file: "../../ee/sso/lib/better-auth-hooks.ts", strips: "image: undefined" } },
+  user: { image: { file: "../../sso/lib/better-auth-hooks.ts", strips: "image: undefined" } },
 } as const;
 
 /** BA's model keys are lower-case; our Prisma models are PascalCase. */

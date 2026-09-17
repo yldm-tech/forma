@@ -1,4 +1,3 @@
-// ee-entitlement-exempt: returns the contact attached to a response, which is response data rather than the contacts feature
 import { logger } from "@forma/logger";
 import { TResponse, TResponseInput, ZResponseInput } from "@forma/types/responses";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";

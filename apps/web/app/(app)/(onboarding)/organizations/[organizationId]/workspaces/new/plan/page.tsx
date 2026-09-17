@@ -6,7 +6,7 @@ import { IS_FORMA_CLOUD } from "@/lib/constants";
 import {
   getOrganizationBillingWithReadThroughSync,
   getProTrialDays,
-} from "@/modules/ee/billing/lib/organization-billing";
+} from "@/modules/billing/lib/organization-billing";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { SelectPlanOnboarding } from "./components/select-plan-onboarding";
 

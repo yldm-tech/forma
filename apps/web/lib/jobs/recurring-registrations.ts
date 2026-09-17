@@ -14,14 +14,6 @@ import { processAuthzedProjectionDeliveryJob } from "@/lib/authzed/outbox-proces
 import { processAuthzedScheduledReconciliationJob } from "@/lib/authzed/scheduled-reconciliation";
 import { USAGE_TELEMETRY_DAILY_CRON_PATTERN, USAGE_TELEMETRY_TIME_ZONE } from "@/lib/telemetry/constants";
 import { processUsageTelemetryJob } from "@/lib/telemetry/process-usage-telemetry-job";
-import {
-  WORKFLOWS_USAGE_SNAPSHOT_DAILY_CRON_PATTERN,
-  WORKFLOWS_USAGE_SNAPSHOT_TIME_ZONE,
-} from "@/modules/ee/workflows/lib/analytics/constants";
-import { processWorkflowsUsageSnapshotJob } from "@/modules/ee/workflows/lib/analytics/process-workflows-usage-snapshot-job";
-import { processWorkflowRunJob } from "@/modules/ee/workflows/lib/runner/process-workflow-run-job";
-import { processWorkflowRunReconcileJob } from "@/modules/ee/workflows/lib/runner/process-workflow-run-reconcile-job";
-import { WORKFLOW_RUN_RECONCILE_INTERVAL_MS } from "@/modules/ee/workflows/lib/runner/reconcile-constants";
 import { processResponsePipelineJob } from "@/modules/response-pipeline/lib/process-response-pipeline-job";
 import {
   SURVEY_ARCHIVE_PURGE_DAILY_CRON_PATTERN,
@@ -33,6 +25,14 @@ import {
   SURVEY_SCHEDULING_TIME_ZONE,
 } from "@/modules/survey/scheduling/lib/constants";
 import { processSurveySchedulingJob } from "@/modules/survey/scheduling/lib/process-survey-scheduling-job";
+import {
+  WORKFLOWS_USAGE_SNAPSHOT_DAILY_CRON_PATTERN,
+  WORKFLOWS_USAGE_SNAPSHOT_TIME_ZONE,
+} from "@/modules/workflows/lib/analytics/constants";
+import { processWorkflowsUsageSnapshotJob } from "@/modules/workflows/lib/analytics/process-workflows-usage-snapshot-job";
+import { processWorkflowRunJob } from "@/modules/workflows/lib/runner/process-workflow-run-job";
+import { processWorkflowRunReconcileJob } from "@/modules/workflows/lib/runner/process-workflow-run-reconcile-job";
+import { WORKFLOW_RUN_RECONCILE_INTERVAL_MS } from "@/modules/workflows/lib/runner/reconcile-constants";
 
 /**
  * Adapts an app handler to the worker's override signature. The worker validates the payload against

@@ -3,7 +3,7 @@ import { type TIngestFlag } from "@forma/types/embedded-data-ingest";
 import { TResponseWithQuotaFull } from "@forma/types/quota";
 import { TResponseUpdateInput } from "@forma/types/responses";
 import { updateResponse } from "@/lib/response/service";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 
 export const updateResponseWithQuotaEvaluation = async (
   responseId: string,

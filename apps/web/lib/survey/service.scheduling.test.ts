@@ -24,7 +24,7 @@ vi.mock("@/lib/organization/service", () => ({
   subscribeOrganizationMembersToSurveyResponses: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEventWithoutRequest: mockQueueAuditEventWithoutRequest,
 }));
 

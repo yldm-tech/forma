@@ -47,7 +47,7 @@ export interface Session {
 
 /**
  * OAuth account shape for the SSO account-linking flow — formerly `next-auth`'s `Account`. Mirrors the
- * provider/token fields the linking code reads (apps/web/modules/ee/sso/lib/account-linking.ts).
+ * provider/token fields the linking code reads (apps/web/modules/sso/lib/account-linking.ts).
  */
 export interface Account {
   provider: string;

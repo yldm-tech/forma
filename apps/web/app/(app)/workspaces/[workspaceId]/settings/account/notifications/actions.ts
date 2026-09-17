@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ZUserNotificationSettings } from "@forma/types/user";
 import { getUser, updateUser } from "@/lib/user/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 
 const ZUpdateNotificationSettingsAction = z.object({
   notificationSettings: ZUserNotificationSettings,

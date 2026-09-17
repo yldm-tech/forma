@@ -9,8 +9,8 @@ import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { checkForInvalidMediaInBlocks } from "@/lib/survey/utils";
 import { validateInputs } from "@/lib/utils/validate";
-import { getIsQuotasEnabled } from "@/modules/ee/license-check/lib/utils";
-import { getQuotas } from "@/modules/ee/quotas/lib/quotas";
+import { getIsQuotasEnabled } from "@/modules/license-check/lib/utils";
+import { getQuotas } from "@/modules/quotas/lib/quotas";
 import { buildWhereClause } from "@/modules/survey/lib/utils";
 import { doesWorkspaceExist, getWorkspaceWithLanguages } from "@/modules/survey/list/lib/workspace";
 import { TWorkspaceWithLanguages } from "../types/surveys";
@@ -52,11 +52,11 @@ vi.mock("@paralleldrive/cuid2", () => ({
   createId: vi.fn(() => "new_cuid2_id"),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsQuotasEnabled: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/quotas/lib/quotas", () => ({
+vi.mock("@/modules/quotas/lib/quotas", () => ({
   getQuotas: vi.fn(),
 }));
 

@@ -3,7 +3,7 @@ import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { can } from "@/lib/authorization";
 import { getOrganization, updateOrganization } from "@/lib/organization/service";
 import { getUserWorkspaces, getWorkspaces } from "@/lib/workspace/service";
-import { getIsAISmartToolsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsAISmartToolsEnabled } from "@/modules/license-check/lib/utils";
 import { getOnboardingWorkspaceContext, selectOldestWorkspace } from "./onboarding-workspace";
 
 vi.mock("@/lib/authorization", () => ({
@@ -15,7 +15,7 @@ vi.mock("@/lib/organization/service", () => ({
   updateOrganization: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsAISmartToolsEnabled: vi.fn(),
 }));
 

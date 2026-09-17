@@ -9,13 +9,13 @@ import {
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getWorkspace } from "@/lib/workspace/service";
 import { getTranslate } from "@/lingodotdev/server";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
-import { getRemoveBrandingPermission } from "@/modules/ee/license-check/lib/utils";
-import { BrandingSettingsCard } from "@/modules/ee/whitelabel/remove-branding/components/branding-settings-card";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
+import { getRemoveBrandingPermission } from "@/modules/license-check/lib/utils";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { BrandingSettingsCard } from "@/modules/whitelabel/remove-branding/components/branding-settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { EditLogo } from "@/modules/workspaces/settings/look/components/edit-logo";
 import { EditPlacementForm } from "./components/edit-placement-form";

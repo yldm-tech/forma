@@ -6,7 +6,7 @@ import { E2E_TESTING, IS_DEVELOPMENT, TELEMETRY_DISABLED } from "@/lib/constants
 import { env } from "@/lib/env";
 import { hashString } from "@/lib/hash-string";
 import { getInstanceInfo } from "@/lib/instance";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import packageJson from "@/package.json";
 
 const TELEMETRY_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours

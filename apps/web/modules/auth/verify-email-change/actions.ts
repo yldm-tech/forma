@@ -3,11 +3,11 @@
 import { z } from "zod";
 import { verifyEmailChangeToken } from "@/lib/jwt";
 import { actionClient } from "@/lib/utils/action-client";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { updateBrevoCustomer } from "@/modules/auth/lib/brevo";
 import { getUser, updateUser } from "@/modules/auth/lib/user";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 
 export const verifyEmailChangeAction = actionClient.inputSchema(z.object({ token: z.string() })).action(
   withAuditLogging("updated", "user", async ({ ctx, parsedInput }) => {

@@ -12,7 +12,7 @@ import {
   normaliseProjectIdToWorkspaceId,
 } from "@/modules/api/v2/organizations/[organizationId]/workspace-teams/lib/backwards-compat";
 import { checkAuthenticationAndAccess } from "@/modules/api/v2/organizations/[organizationId]/workspace-teams/lib/utils";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 import {
   createWorkspaceTeam,
   deleteWorkspaceTeam,

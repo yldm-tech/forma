@@ -3,7 +3,7 @@ import {
   type AuthHookContext,
   blockedSignupDomainRedirectAfterHandler,
   ssoRecoveryAfterHandler,
-} from "@/modules/ee/sso/lib/better-auth-hooks";
+} from "@/modules/sso/lib/better-auth-hooks";
 import { auditFailedAuthAfter } from "./better-auth-observability";
 import { twoFactorBackfillAfterHandler } from "./better-auth-two-factor-backfill";
 import { verificationAutoSignInAfterHandler } from "./better-auth-verification-autosignin";

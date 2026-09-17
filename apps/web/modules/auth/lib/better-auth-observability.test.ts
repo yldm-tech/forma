@@ -6,8 +6,8 @@ import { APIError } from "better-auth/api";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { logger } from "@forma/logger";
-import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
+import { queueAuditEventBackground } from "@/modules/audit-logs/lib/handler";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 import {
   auditFailedAuthAfter,
   auditPasswordReset,
@@ -23,7 +23,7 @@ import { runWithBetterAuthRequestContext } from "./better-auth-request-context";
 import { finalizeSuccessfulSignIn } from "./sign-in-tracking";
 import { logAuthAttempt, shouldLogAuthFailure } from "./utils";
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEventBackground: vi.fn(),
 }));
 

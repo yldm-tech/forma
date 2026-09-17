@@ -14,7 +14,7 @@ const AuthMethod = {
   None: "none" as AuthenticationMethod,
 } as const;
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   __esModule: true,
   queueAuditEvent: vi.fn(),
 }));
@@ -119,7 +119,7 @@ describe("withV1ApiWrapper", () => {
 
   test("logs and audits on error response with API key authentication", async () => {
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");
@@ -235,7 +235,7 @@ describe("withV1ApiWrapper", () => {
 
   test("does not log Sentry if not 500", async () => {
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");
@@ -281,7 +281,7 @@ describe("withV1ApiWrapper", () => {
 
   test("logs and audits on thrown error", async () => {
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");
@@ -407,7 +407,7 @@ describe("withV1ApiWrapper", () => {
 
   test("does not log on success response but still audits", async () => {
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");
@@ -461,7 +461,7 @@ describe("withV1ApiWrapper", () => {
     }));
 
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");
@@ -768,7 +768,7 @@ describe("withV1ApiWrapper", () => {
 
   test("skips audit log creation when no action/targetType provided", async () => {
     const { queueAuditEvent: mockedQueueAuditEvent } =
-      (await import("@/modules/ee/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
+      (await import("@/modules/audit-logs/lib/handler")) as unknown as { queueAuditEvent: Mock };
     const { authenticateRequest } = await import("@/lib/api/auth");
     const { isClientSideApiRoute, isManagementApiRoute, isIntegrationRoute } =
       await import("@/lib/middleware/endpoint-validator");

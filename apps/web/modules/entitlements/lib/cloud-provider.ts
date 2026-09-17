@@ -1,7 +1,7 @@
 import "server-only";
 import { logger } from "@forma/logger";
-import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
+import { getOrganizationBillingWithReadThroughSync } from "@/modules/billing/lib/organization-billing";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import {
   KNOWN_ENTITLEMENT_FEATURES,
   type TEntitlementFeature,

@@ -1,6 +1,6 @@
 import "server-only";
 import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
-import type { TEnterpriseLicenseFeatures } from "@/modules/ee/license-check/types/enterprise-license";
+import type { TEnterpriseLicenseFeatures } from "@/modules/license-check/types/enterprise-license";
 import { getOrganizationEntitlementsContext } from "./provider";
 import { type TEntitlementFeature, isEntitlementFeature } from "./types";
 

@@ -31,8 +31,8 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 // we drive — the same shape as the production fault (a TypeError from an awaited async auth path).
 // Spread the real module so ssoDatabaseHooks and the rest of auth.ts's wiring stay intact.
 const FAULT_MESSAGE = "Cannot read properties of null (reading 'id')";
-vi.mock("@/modules/ee/sso/lib/better-auth-hooks", async (importActual) => ({
-  ...(await importActual<typeof import("@/modules/ee/sso/lib/better-auth-hooks")>()),
+vi.mock("@/modules/sso/lib/better-auth-hooks", async (importActual) => ({
+  ...(await importActual<typeof import("@/modules/sso/lib/better-auth-hooks")>()),
   ssoLicenseGateBeforeHandler: vi.fn(async () => {
     throw new TypeError(FAULT_MESSAGE);
   }),
@@ -92,7 +92,7 @@ describe("Better Auth internal fault — Sentry capture carries the endpoint (re
   });
 
   test("a handled APIError is still not captured — the ENG-2037 gate is unchanged", async () => {
-    const { ssoLicenseGateBeforeHandler } = await import("@/modules/ee/sso/lib/better-auth-hooks");
+    const { ssoLicenseGateBeforeHandler } = await import("@/modules/sso/lib/better-auth-hooks");
     vi.mocked(ssoLicenseGateBeforeHandler).mockImplementationOnce(async () => {
       throw new APIError("FORBIDDEN", { message: "SSO is not enabled for this instance." });
     });

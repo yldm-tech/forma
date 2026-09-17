@@ -6,7 +6,7 @@ import { Prisma } from "@forma/database/prisma";
 import { ZId, ZString } from "@forma/types/common";
 import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { validateInputs } from "@/lib/utils/validate";
-import { getQuota as getQuotaService } from "@/modules/ee/quotas/lib/quotas";
+import { getQuota as getQuotaService } from "@/modules/quotas/lib/quotas";
 
 export const getActionClass = reactCache(
   async (actionClassId: string): Promise<{ workspaceId: string } | null> => {
