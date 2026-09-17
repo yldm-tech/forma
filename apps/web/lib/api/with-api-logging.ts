@@ -6,6 +6,7 @@ import { authenticateRequest } from "@/lib/api/auth";
 import { getRateLimitErrorResponse } from "@/lib/api/client-rate-limit";
 import { responses } from "@/lib/api/response";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
+import { GATEWAY_RATE_LIMITING } from "@/lib/constants";
 import { AUDIT_LOG_ENABLED } from "@/lib/constants";
 import {
   AuthenticationMethod,
@@ -106,11 +107,15 @@ const handleRateLimiting = async (
     return responses.internalServerErrorResponse("Invalid authentication configuration");
   }
 
-  const isEnvoyManagedRateLimit = isRouteRateLimitedByEnvoy({
-    pathname: req.nextUrl.pathname,
-    method: req.method,
-    authType,
-  });
+  // The policy set describes what a gateway would enforce; skipping the in-app limiter on its word
+  // only holds where a gateway is actually deployed. GATEWAY_RATE_LIMITING says whether one is.
+  const isEnvoyManagedRateLimit =
+    GATEWAY_RATE_LIMITING &&
+    isRouteRateLimitedByEnvoy({
+      pathname: req.nextUrl.pathname,
+      method: req.method,
+      authType,
+    });
 
   try {
     if (authentication && !isEnvoyManagedRateLimit) {
