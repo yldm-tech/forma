@@ -1,8 +1,7 @@
-import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import Logo from "@/images/powered-by-forma.svg";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/modules/ui/components/loading-spinner";
+import { Wordmark } from "@/modules/ui/components/wordmark";
 
 interface SurveyLoadingAnimationProps {
   isWelcomeCardEnabled: boolean;
@@ -123,7 +122,10 @@ export const SurveyLoadingAnimation = ({
           isReadyToTransition ? "animate-surveyExit" : "animate-surveyLoading"
         )}>
         {isBrandingEnabled && (
-          <Image src={Logo} alt="Logo" className={cn("w-32 transition-all duration-1000 md:w-40")} />
+          <Wordmark
+            eyebrow="powered by"
+            className={cn("text-3xl transition-all duration-1000 md:text-4xl")}
+          />
         )}
         <LoadingSpinner />
       </div>

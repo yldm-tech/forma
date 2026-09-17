@@ -92,7 +92,6 @@
   --animate-fadeOut: fadeOut 0.2s ease-out;
   --animate-surveyLoading: surveyLoadingAnimation 0.5s ease-out forwards;
   --animate-surveyExit: surveyExitAnimation 0.5s ease-out forwards;
-  --animate-logo-scroll: logo-scroll 20s linear infinite;
   /* AI activity. Both rest at their start/end frame so the prefers-reduced-motion kill-switch below
      — which collapses duration to 0.01ms rather than removing the animation — lands on a correct
      static appearance instead of a stranded mid-animation pose. */
@@ -186,14 +185,6 @@
     100% {
       transform: translateY(-50px);
       opacity: 0;
-    }
-  }
-  @keyframes logo-scroll {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-50%);
     }
   }
   /* Transform-dominant rather than an opacity pulse: the skeleton rows that sit beside this while a
