@@ -11,7 +11,7 @@ export type TKnownEntitlementFeature =
 export type TUsageLimitEntitlementFeature = `responses-${number}`;
 export type TEntitlementFeature = TKnownEntitlementFeature | TUsageLimitEntitlementFeature;
 
-const KNOWN_ENTITLEMENT_FEATURES: readonly TKnownEntitlementFeature[] = Object.values(
+export const KNOWN_ENTITLEMENT_FEATURES: readonly TKnownEntitlementFeature[] = Object.values(
   CLOUD_STRIPE_FEATURE_LOOKUP_KEYS
 ) as TKnownEntitlementFeature[];
 
