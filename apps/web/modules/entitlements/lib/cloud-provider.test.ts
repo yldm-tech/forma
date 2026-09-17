@@ -3,6 +3,7 @@ import type { TOrganizationBilling } from "@forma/types/organizations";
 import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
 import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
 import { getCloudOrganizationEntitlementsContext } from "./cloud-provider";
+import { KNOWN_ENTITLEMENT_FEATURES } from "./types";
 
 vi.mock("server-only", () => ({}));
 
@@ -44,7 +45,7 @@ beforeEach(() => {
 });
 
 describe("getCloudOrganizationEntitlementsContext", () => {
-  test("returns default entitlements when billing is null", async () => {
+  test("grants the ungated entitlements when billing is null", async () => {
     mockGetBilling.mockResolvedValue(null);
     mockGetLicense.mockResolvedValue({ status: "no-license", features: null, active: false } as any);
 
@@ -53,8 +54,8 @@ describe("getCloudOrganizationEntitlementsContext", () => {
     expect(result).toEqual({
       organizationId: "org1",
       source: "cloud_stripe",
-      features: [],
-      limits: { workspaces: 1, monthlyResponses: 250, monthlyWorkflowRuns: null },
+      features: [...KNOWN_ENTITLEMENT_FEATURES],
+      limits: { workspaces: null, monthlyResponses: null, monthlyWorkflowRuns: null },
       licenseActive: false,
       licenseStatus: "no-license",
       licenseFeatures: null,
@@ -98,7 +99,7 @@ describe("getCloudOrganizationEntitlementsContext", () => {
 
     const result = await getCloudOrganizationEntitlementsContext("org1");
 
-    expect(result.features).toEqual([]);
+    expect(result.features).toEqual([...KNOWN_ENTITLEMENT_FEATURES]);
     expect(result.limits).toEqual({ workspaces: null, monthlyResponses: null, monthlyWorkflowRuns: null });
     expect(result.stripeCustomerId).toBeNull();
     expect(result.subscriptionStatus).toBeNull();

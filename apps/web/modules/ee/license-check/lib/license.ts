@@ -6,7 +6,7 @@ import { createCacheKey } from "@forma/cache";
 import { prisma } from "@forma/database";
 import { logger } from "@forma/logger";
 import { cache } from "@/lib/cache";
-import { COMMUNITY_WORKSPACE_LIMIT, E2E_TESTING, IS_DEVELOPMENT } from "@/lib/constants";
+import { COMMUNITY_WORKSPACE_LIMIT, E2E_TESTING } from "@/lib/constants";
 import { env } from "@/lib/env";
 import { hashString } from "@/lib/hash-string";
 import { getInstanceId } from "@/lib/instance";
@@ -535,13 +535,15 @@ export const fetchLicense = async (): Promise<TEnterpriseLicenseDetails | null> 
  * Sets the in-process memoryCache as a side effect so subsequent requests benefit.
  */
 /**
- * Every feature, for a local instance running without a key.
+ * Every feature, for an instance running without a key — which on this fork is every instance.
  *
- * The EE licence in `apps/web/modules/ee/LICENSE` gates *production* use on holding one, and says in the same breath that you "may copy and modify the Software for development and testing purposes, without requiring a subscription". This is that: an install with no key is fully usable while you work on it, and a production build is untouched.
+ * Features are not sold separately here, so there is nothing for a licence key to unlock: an install with no key gets the whole product rather than a gated subset. This replaces the development-only unlock, which existed when the same install was expected to be locked in production.
  *
- * Gated positively on development or E2E rather than negatively on production, so an unset NODE_ENV stays locked rather than accidentally unlocking — the same shape `SIGNUP_ENABLED` already uses. It also sits inside the no-key branch on purpose: set a real key in development and the ordinary path runs, so the licence logic itself is still testable.
+ * It still sits inside the no-key branch on purpose. Set a key and the ordinary licence path runs, so the fetch, cache, grace-period and downgrade logic stays reachable and testable rather than becoming dead code that rots.
+ *
+ * This changes what the software *does*, not what its licence *permits*. The EE code under `apps/web/modules/ee/` remains under `modules/ee/LICENSE`, which conditions production use on holding a subscription and separately permits copying and modifying for development and testing. Removing a gate does not move that line.
  */
-const UNLICENSED_DEVELOPMENT_FEATURES: TEnterpriseLicenseFeatures = {
+const UNGATED_FEATURES: TEnterpriseLicenseFeatures = {
   isMultiOrgEnabled: true,
   contacts: true,
   workspaces: null,
@@ -566,24 +568,13 @@ const computeLicenseState = async (
   validateConfig();
 
   if (!env.ENTERPRISE_LICENSE_KEY || env.ENTERPRISE_LICENSE_KEY.length === 0) {
-    if (IS_DEVELOPMENT || E2E_TESTING) {
-      return {
-        active: true,
-        features: UNLICENSED_DEVELOPMENT_FEATURES,
-        lastChecked: new Date(),
-        isPendingDowngrade: false,
-        fallbackLevel: "default" as const,
-        status: "active" as const,
-      };
-    }
-
     return {
-      active: false,
-      features: null,
+      active: true,
+      features: UNGATED_FEATURES,
       lastChecked: new Date(),
       isPendingDowngrade: false,
       fallbackLevel: "default" as const,
-      status: "no-license" as const,
+      status: "active" as const,
     };
   }
 
