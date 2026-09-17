@@ -14,7 +14,6 @@ import { MainNavigationHeader } from "@/app/(app)/workspaces/[workspaceId]/compo
 import { MainNavigationNotices } from "@/app/(app)/workspaces/[workspaceId]/components/MainNavigationNotices";
 import { NavigationLink } from "@/app/(app)/workspaces/[workspaceId]/components/NavigationLink";
 import { SettingsSidebarContent } from "@/app/(app)/workspaces/[workspaceId]/components/SettingsSidebarContent";
-import { getVisibleNavigationSections } from "@/app/(app)/workspaces/[workspaceId]/lib/navigation-visibility";
 import { useLatestStableRelease } from "@/app/(app)/workspaces/[workspaceId]/lib/use-latest-stable-release";
 import { cn } from "@/lib/cn";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
@@ -52,16 +51,13 @@ interface NavigationProps {
  * between "this is finished" and "this is early". Extracted rather than duplicated so the two
  * sections cannot drift into looking subtly different from each other.
  */
-const sectionLabelWithBeta = (label: React.ReactNode) => (
-  <span className="inline-flex items-center gap-2">
-    <span>{label}</span>
-    <Badge
-      text="Beta"
-      type="gray"
-      size="tiny"
-      className="text-[10px] font-semibold tracking-normal normal-case"
-    />
-  </span>
+const betaBadge = (
+  <Badge
+    text="Beta"
+    type="gray"
+    size="tiny"
+    className="text-[10px] font-semibold tracking-normal normal-case"
+  />
 );
 
 export const MainNavigation = ({
@@ -114,60 +110,47 @@ export const MainNavigation = ({
     return () => clearTimeout(timeoutId);
   }, [isCollapsed]);
 
-  const mainNavigationSections = useMemo(
+  // One flat list rather than labelled sections. The labels were the remnant of an Ask / Analyze /
+  // Act triad, and Analyze went with Dashboards and Unify Feedback in aef7841 — two headings over
+  // three links was more chrome than content. The Beta mark moved onto Workflows, which is the
+  // thing that is early; it had been sitting on a section that contained only Workflows anyway.
+  const mainNavigationItems = useMemo(
     () => [
       {
-        id: "ask",
-        // Product section (IA) label — intentionally not localized (kept in English across all locales)
-        name: "Ask",
-        items: [
-          {
-            name: t("common.surveys"),
-            href: `/workspaces/${workspace.id}/surveys`,
-            icon: MessageCircle,
-            isActive: pathname?.includes("/surveys"),
-            isHidden: false,
-            disabled: isMembershipPending || isBilling,
-          },
-          {
-            href: `/workspaces/${workspace.id}/contacts`,
-            name: t("common.contacts"),
-            icon: UserIcon,
-            isActive:
-              pathname?.includes("/contacts") ||
-              pathname?.includes("/segments") ||
-              pathname?.includes("/attributes"),
-            isHidden: !isContactsEnabled,
-            disabled: isMembershipPending || isBilling,
-          },
-        ],
+        name: t("common.surveys"),
+        href: `/workspaces/${workspace.id}/surveys`,
+        icon: MessageCircle,
+        isActive: pathname?.includes("/surveys"),
+        isHidden: false,
+        disabled: isMembershipPending || isBilling,
       },
       {
-        id: "act",
-        // Kept translated, unlike "Ask" above, which is deliberately English in every locale; this
-        // one has been going through t() since it was added. Making the two consistent means
-        // dropping a string every locale already translates, which is a naming decision rather than
-        // a side effect of adding a badge — see ENG-2742. The third section the older wording
-        // named, "Analyze", went with Dashboards and Unify Feedback in aef7841.
-        name: sectionLabelWithBeta(t("common.act")),
-        items: [
-          {
-            name: t("common.workflows"),
-            href: `/workspaces/${workspace.id}/workflows`,
-            icon: WorkflowIcon,
-            isActive: pathname?.startsWith(`/workspaces/${workspace.id}/workflows`),
-            isHidden: !areWorkflowsEnabled,
-            disabled: isMembershipPending || isBilling,
-          },
-        ],
+        href: `/workspaces/${workspace.id}/contacts`,
+        name: t("common.contacts"),
+        icon: UserIcon,
+        isActive:
+          pathname?.includes("/contacts") ||
+          pathname?.includes("/segments") ||
+          pathname?.includes("/attributes"),
+        isHidden: !isContactsEnabled,
+        disabled: isMembershipPending || isBilling,
+      },
+      {
+        name: t("common.workflows"),
+        href: `/workspaces/${workspace.id}/workflows`,
+        icon: WorkflowIcon,
+        isActive: pathname?.startsWith(`/workspaces/${workspace.id}/workflows`),
+        isHidden: !areWorkflowsEnabled,
+        disabled: isMembershipPending || isBilling,
+        badge: betaBadge,
       },
     ],
     [t, workspace.id, pathname, isMembershipPending, isBilling, isContactsEnabled, areWorkflowsEnabled]
   );
 
-  const visibleNavigationSections = useMemo(
-    () => getVisibleNavigationSections(mainNavigationSections),
-    [mainNavigationSections]
+  const visibleNavigationItems = useMemo(
+    () => mainNavigationItems.filter((item) => !item.isHidden),
+    [mainNavigationItems]
   );
 
   const settingsNavigationItem = useMemo(
@@ -301,34 +284,20 @@ export const MainNavigation = ({
               />
 
               {/* Main Nav */}
-              <ul className="space-y-2">
-                {visibleNavigationSections.map((section) => (
-                  <li key={section.id}>
-                    {!isCollapsed && !isTextVisible && (
-                      <p className="px-4 pt-2 pb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                        {section.name}
-                      </p>
-                    )}
-
-                    <ul>
-                      {section.items.map(
-                        (item) =>
-                          !item.isHidden && (
-                            <NavigationLink
-                              key={item.name}
-                              href={item.href}
-                              isActive={item.isActive}
-                              isCollapsed={isCollapsed}
-                              isTextVisible={isTextVisible}
-                              disabled={item.disabled}
-                              disabledMessage={item.disabled ? disabledNavigationMessage : undefined}
-                              linkText={item.name}>
-                              <item.icon className={mainNavIconClassName} strokeWidth={1.5} />
-                            </NavigationLink>
-                          )
-                      )}
-                    </ul>
-                  </li>
+              <ul>
+                {visibleNavigationItems.map((item) => (
+                  <NavigationLink
+                    key={item.name}
+                    href={item.href}
+                    isActive={item.isActive}
+                    isCollapsed={isCollapsed}
+                    isTextVisible={isTextVisible}
+                    disabled={item.disabled}
+                    disabledMessage={item.disabled ? disabledNavigationMessage : undefined}
+                    badge={item.badge}
+                    linkText={item.name}>
+                    <item.icon className={mainNavIconClassName} strokeWidth={1.5} />
+                  </NavigationLink>
                 ))}
               </ul>
             </div>
