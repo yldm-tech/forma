@@ -52,7 +52,7 @@ export const ConnectIntegration = ({
       <div className="flex w-1/2 flex-col items-center justify-center rounded-lg bg-white p-8 shadow-sm">
         <div className="flex w-1/2 justify-center -space-x-4">
           <div className="flex size-32 items-center justify-center rounded-full bg-white p-6 shadow-md">
-            <FormaLogo />
+            <FormaLogo className="w-1/2" />
           </div>
           <div className="flex size-32 items-center justify-center rounded-full bg-white p-4 shadow-md">
             <Image

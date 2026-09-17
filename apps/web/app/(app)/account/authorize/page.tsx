@@ -11,7 +11,7 @@ import {
 } from "@/modules/auth/lib/oauth-client-metadata";
 import { getSession } from "@/modules/auth/lib/session";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
-import { Logo } from "@/modules/ui/components/logo";
+import { Wordmark } from "@/modules/ui/components/wordmark";
 import { OAuthConsentActions } from "./components/OAuthConsentActions";
 
 type TSearchParams = Record<string, string | string[] | undefined>;
@@ -66,7 +66,7 @@ const OAuthConsentLogo = ({ label }: Readonly<{ label: string }>) => (
       href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=oauth_consent_logo"
       rel="noopener noreferrer"
       aria-label={label}>
-      <Logo aria-hidden="true" className="h-8 w-auto" />
+      <Wordmark aria-hidden="true" className="text-xl" />
     </Link>
   </div>
 );

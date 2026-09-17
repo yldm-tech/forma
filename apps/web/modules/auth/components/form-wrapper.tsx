@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslate } from "@/lingodotdev/server";
-import { Logo } from "@/modules/ui/components/logo";
+import { Wordmark } from "@/modules/ui/components/wordmark";
 
 interface FormWrapperProps {
   children: React.ReactNode;
@@ -27,7 +27,7 @@ export const FormWrapper = async ({ children }: Readonly<FormWrapperProps>) => {
             rel="noopener noreferrer"
             aria-label={t("common.forma_homepage")}
             className="inline-block rounded-md focus-visible:ring-2 focus-visible:ring-brand-dark focus-visible:ring-offset-2 focus-visible:outline-hidden">
-            <Logo aria-hidden="true" className="mx-auto w-40 sm:w-48" />
+            <Wordmark aria-hidden="true" className="mx-auto text-3xl sm:text-4xl" />
           </Link>
         </div>
         {children}
