@@ -422,12 +422,6 @@ minimumReleaseAge: 4320
 # Keep the install-time re-verification of lockfile entries active (this is pnpm's default;
 # pinned explicitly so a future default flip can't silently weaken the cooldown).
 trustLockfile: false
-minimumReleaseAgeExclude:
-  # The Hub SDK, consumed through the `@forma/hub` alias — exempt all versions from the release-age
-  # gate so a fresh hub bump isn't blocked. Matched by the registry name rather than the alias,
-  # because that is what pnpm resolves; version-pinned scoped entries (e.g. '@formbricks/hub@0.9.0')
-  # are not reliably matched by the exclude, so match by name.
-  - "@formbricks/hub"
 
 # ENG-2772 / better-auth#10887: oauth-provider eagerly seeds persisted resources while building its
 # plugin context. A transient database failure rejects Better Auth's process-lifetime context promise,

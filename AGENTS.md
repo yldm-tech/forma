@@ -153,13 +153,16 @@ Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonl
 - Do not use Next.js `unstable_cache()`.
 - Always use `createCacheKey.*` utilities for cache keys.
 
-## Enterprise features in development
+## Features are not gated
 
-An install with no `ENTERPRISE_LICENSE_KEY` has every licensed feature enabled when `NODE_ENV` is `development`, or under `E2E_TESTING`. Production is untouched: without a key it stays locked exactly as before.
+There is no enterprise edition here. An install with no `ENTERPRISE_LICENSE_KEY` — which is every install — has every feature enabled, in every environment. Do not add a new per-feature gate, and do not reintroduce one when touching code that used to carry it.
 
-The EE code under `apps/web/modules/ee/` carries its own licence (`modules/ee/LICENSE`), which gates *production* use on holding a subscription and in the same breath permits copying and modifying the software "for development and testing purposes, without requiring a subscription". This is that permission, taken literally and no further.
+Two branches implement that, one per entitlement source, and each is guarded by a test that goes red if the branch is narrowed again:
 
-Two details are load-bearing, both in `license-check/lib/license.ts`. The branch is gated positively on development or E2E rather than negatively on production, so an unset `NODE_ENV` stays locked instead of accidentally unlocking. And it sits inside the no-key branch, so setting a real key in development still runs the ordinary path — the licence logic itself remains testable. `license-development-unlock.test.ts` holds both: make the guard unconditional and it goes red.
+- `license-check/lib/license.ts` — the no-key branch returns `UNGATED_FEATURES` with an active licence. `license-unlock.test.ts` holds it, including that the result does not vary with `NODE_ENV`.
+- `entitlements/lib/cloud-provider.ts` — an organization whose Stripe subscription resolves no features gets the full entitlement set and no limits, which is what keeps `IS_FORMA_CLOUD=1` from turning the product off. `cloud-entitlement-unlock.test.ts` holds it.
+
+Both sit inside the "nothing to read" branch on purpose: set a real licence key, or attach a real subscription, and the ordinary path still runs, so the fetch, cache, grace-period and trial logic stays reachable rather than rotting. `modules/ee/` is a location, not a licence boundary — treat it as ordinary application code.
 
 ## Environment Variables
 

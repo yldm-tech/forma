@@ -467,7 +467,7 @@ describe("License Core Logic", () => {
       });
     });
 
-    test("should return inactive license if ENTERPRISE_LICENSE_KEY is not set in env", async () => {
+    test("should grant every feature without contacting anything if ENTERPRISE_LICENSE_KEY is not set in env", async () => {
       // Reset all mocks first
       vi.resetAllMocks();
       mockCache.get.mockReset();
@@ -494,13 +494,20 @@ describe("License Core Logic", () => {
       const license = await getEnterpriseLicense();
 
       expect(license).toEqual({
-        active: false,
-        features: null,
+        active: true,
+        features: expect.objectContaining({
+          contacts: true,
+          workflows: true,
+          quotas: true,
+          sso: true,
+          workspaces: null,
+        }),
         lastChecked: expect.any(Date),
         isPendingDowngrade: false,
         fallbackLevel: "default" as const,
-        status: "no-license" as const,
+        status: "active" as const,
       });
+      expect(Object.values(license.features ?? {})).not.toContain(false);
       expect(mockCache.get).not.toHaveBeenCalled();
       expect(mockCache.set).not.toHaveBeenCalled();
       expect(mockCache.exists).not.toHaveBeenCalled();
