@@ -3811,8 +3811,6 @@
       "unarchive": "Unarchive",
       "unarchive_failed": "Failed to unarchive the workflow. Please try again.",
       "unarchive_success": "Workflow unarchived.",
-      "upgrade_prompt_description": "Automate response-driven tasks with triggers, filters, and actions.",
-      "upgrade_prompt_title": "Upgrade to unlock Workflows",
       "validation_failed": "Workflow validation failed.",
       "validation_problem_fix_label": "Fix: {problem}",
       "validation_problem_flow_invalid": "The workflow steps aren't connected into a single runnable flow.",
