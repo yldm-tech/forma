@@ -2465,9 +2465,6 @@
         "whitelabel_email_follow_ups": "Whitelabel email follow-ups",
         "workflows": "Workflows"
       },
-      "feedback_directories": {
-        "nav_label": "Datasets"
-      },
       "general": {
         "ai_enabled": "Forma AI",
         "ai_enabled_description": "Manage AI-powered features for this organization.",

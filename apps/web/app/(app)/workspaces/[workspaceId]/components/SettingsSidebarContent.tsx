@@ -377,14 +377,6 @@ export const SettingsSidebarContent = ({
       hidden: !isOwnerOrManager,
     },
     {
-      id: "org-feedback-directories",
-      label: t("workspace.settings.feedback_directories.nav_label"),
-      href: organizationSettingsPath(organizationId, "feedback-directories"),
-      icon: <FoldersIcon className={iconClassName} />,
-      hidden: isMember,
-      disabled: !isOwnerOrManager,
-    },
-    {
       id: "org-domain",
       label: t("common.domain"),
       href: organizationSettingsPath(organizationId, "domain"),

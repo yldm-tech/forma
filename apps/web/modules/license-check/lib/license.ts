@@ -23,7 +23,6 @@ const UNGATED_FEATURES: TEnterpriseLicenseFeatures = {
   auditLogs: true,
   accessControl: true,
   quotas: true,
-  feedbackDirectories: true,
   dashboards: true,
   workflows: true,
 };

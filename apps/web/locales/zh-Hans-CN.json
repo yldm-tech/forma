@@ -2465,9 +2465,6 @@
         "whitelabel_email_follow_ups": "白标电子邮件跟进",
         "workflows": "Workflows"
       },
-      "feedback_directories": {
-        "nav_label": "数据集"
-      },
       "general": {
         "ai_enabled": "Forma AI",
         "ai_enabled_description": "管理该组织的 AI 驱动功能。",

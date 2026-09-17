@@ -2367,7 +2367,6 @@ checksums:
     workspace/settings/enterprise/two_factor_authentication: bc68ddd9c3c82225ef641f097e0940db
     workspace/settings/enterprise/whitelabel_email_follow_ups: 4d62c861b60c5dceb6ad72cd5d1186d7
     workspace/settings/enterprise/workflows: b0c9c8615a9ba7d9cb73e767290a7f72
-    workspace/settings/feedback_directories/nav_label: 37599d99d8286f60585820f2a93d940c
     workspace/settings/general/ai_enabled: 86520aca40e1e90a23f32faf8f8b6ae9
     workspace/settings/general/ai_enabled_description: e8c3e9f362588898a6cea85e18c013a1
     workspace/settings/general/ai_instance_not_configured: 37a80753eb22b5bfc985d0e1f2145e3f
