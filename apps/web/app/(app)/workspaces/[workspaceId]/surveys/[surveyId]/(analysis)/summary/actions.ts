@@ -20,7 +20,6 @@ import { NO_CONTACTS_IN_SEGMENT_ERROR_CODE } from "@/modules/contacts/lib/person
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { sendEmbedSurveyPreviewEmail } from "@/modules/email";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { getOrganizationLogoUrl } from "@/modules/whitelabel/email-customization/lib/organization";
 import { deleteResponsesAndDisplaysForSurvey } from "./lib/survey";
 
@@ -215,10 +214,6 @@ export const generatePersonalLinksAction = authenticatedActionClient
   .action(async ({ ctx, parsedInput }) => {
     const organizationId = await getOrganizationIdFromSurveyId(parsedInput.surveyId);
     const workspaceId = await getWorkspaceIdFromSurveyId(parsedInput.surveyId);
-    const isContactsEnabled = await getIsContactsEnabled();
-    if (!isContactsEnabled) {
-      throw new OperationNotAllowedError("Contacts are not enabled for this workspace");
-    }
 
     await assertCan({ type: "user", id: ctx.user.id }, "workspace.write", {
       type: "workspace",

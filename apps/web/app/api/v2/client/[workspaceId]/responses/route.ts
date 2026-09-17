@@ -16,6 +16,7 @@ import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { formatValidationErrorsForV1Api, validateResponseData } from "@/modules/api/lib/validation";
 import { validateOtherOptionLengthForMultipleChoice } from "@/modules/api/v2/lib/element";
+import { applyClientApiRateLimit } from "@/modules/core/rate-limit/client-api";
 import { createQuotaFullObject } from "@/modules/quotas/lib/helpers";
 import { validateClientFileUploads } from "@/modules/storage/utils";
 import { createResponseWithQuotaEvaluation } from "./lib/response";
@@ -197,6 +198,11 @@ export const OPTIONS = async (): Promise<Response> => {
 };
 
 export const POST = async (request: Request, context: Context): Promise<Response> => {
+  const rateLimited = await applyClientApiRateLimit(request);
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const params = await context.params;
   // Resolve: accepts either an environmentId (old SDK) or a workspaceId (new SDK)
   const resolved = await resolveClientApiIds(params.workspaceId);

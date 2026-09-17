@@ -1,7 +1,6 @@
 import { DatabaseError } from "@forma/types/errors";
 import { responses } from "@/lib/api/response";
 import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { getContacts } from "./lib/contacts";
 
 export const GET = withV1ApiWrapper({
@@ -11,15 +10,6 @@ export const GET = withV1ApiWrapper({
     }
 
     try {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "Contacts are only enabled for Enterprise Edition, please upgrade."
-          ),
-        };
-      }
-
       const workspaceIds = [
         ...new Set(authentication.workspacePermissions.map((permission) => permission.workspaceId)),
       ];

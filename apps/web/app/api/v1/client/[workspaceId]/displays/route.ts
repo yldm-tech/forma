@@ -6,7 +6,6 @@ import { responses } from "@/lib/api/response";
 import { transformErrorToDetails } from "@/lib/api/validator";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createDisplay } from "./lib/display";
 
 export const OPTIONS = async (): Promise<Response> => {
@@ -64,18 +63,6 @@ export const POST = withV1ApiWrapper({
           true
         ),
       };
-    }
-
-    if (inputValidation.data.userId) {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "User identification is only available for enterprise users.",
-            true
-          ),
-        };
-      }
     }
 
     try {

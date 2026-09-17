@@ -3,7 +3,6 @@ import { responses } from "@/lib/api/response";
 import { TApiKeyAuthentication, THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { deleteContact, getContact } from "./lib/contact";
 
 // Please use the methods provided by the client API to update a person
@@ -41,15 +40,6 @@ export const GET = withV1ApiWrapper({
     try {
       const params = await props.params;
 
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "Contacts are only enabled for Enterprise Edition, please upgrade."
-          ),
-        };
-      }
-
       const result = await fetchAndAuthorizeContact(params.contactId, authentication, "GET");
       if (result.error) {
         return {
@@ -82,15 +72,6 @@ export const DELETE = withV1ApiWrapper({
     }
 
     try {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "Contacts are only enabled for Enterprise Edition, please upgrade."
-          ),
-        };
-      }
-
       const result = await fetchAndAuthorizeContact(params.contactId, authentication, "DELETE");
       if (result.error) {
         return {

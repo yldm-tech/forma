@@ -17,7 +17,6 @@ import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { formatValidationErrorsForV1Api, validateResponseData } from "@/modules/api/lib/validation";
 import { verifyResponseRecaptcha } from "@/modules/api/lib/verify-response-recaptcha";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createQuotaFullObject } from "@/modules/quotas/lib/helpers";
 import { validateClientFileUploads } from "@/modules/storage/utils";
 import { verifyLinkSurveyPinToken } from "@/modules/survey/link/lib/pin-token";
@@ -108,18 +107,6 @@ export const POST = withV1ApiWrapper({
       requestHeaders.get("CF-IPCountry") || requestHeaders.get("CloudFront-Viewer-Country") || undefined;
 
     const responseInputData = responseInputValidation.data;
-
-    if (responseInputData.userId) {
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return {
-          response: responses.forbiddenResponse(
-            "User identification is only available for enterprise users.",
-            true
-          ),
-        };
-      }
-    }
 
     // get and check survey
     const survey = await getSurvey(responseInputData.surveyId);

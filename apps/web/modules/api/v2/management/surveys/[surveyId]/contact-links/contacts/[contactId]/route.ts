@@ -15,7 +15,6 @@ import {
 import { calculateExpirationDate } from "@/modules/api/v2/management/surveys/[surveyId]/contact-links/lib/utils";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
 import { getContactSurveyLink } from "@/modules/contacts/lib/contact-survey-link";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 
 export const GET = async (request: Request, props: { params: Promise<TContactLinkParams> }) =>
   authenticatedApiClient({
@@ -52,16 +51,6 @@ export const GET = async (request: Request, props: { params: Promise<TContactLin
       ) {
         return handleApiError(request, {
           type: "unauthorized",
-        });
-      }
-
-      const isContactsEnabled = await getIsContactsEnabled();
-      if (!isContactsEnabled) {
-        return handleApiError(request, {
-          type: "forbidden",
-          details: [
-            { field: "contacts", issue: "Contacts are only enabled for Enterprise Edition, please upgrade." },
-          ],
         });
       }
 
