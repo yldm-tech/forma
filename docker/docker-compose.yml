@@ -179,8 +179,8 @@ x-environment: &environment
     # Set the below to 1 to disable Rate Limiting across Forma
     # RATE_LIMITING_DISABLED: 1
 
-    # Set the below to 1 to disable telemetry reporting (ignored when EE license is active)
-    # TELEMETRY_DISABLED: 1
+    # Usage telemetry is off. Set to 1 to report anonymous usage to the instance registry.
+    # TELEMETRY_ENABLED: 1
 
     # Set the below to send OpenTelemetry data via OTLP to your collector
     # OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318

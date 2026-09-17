@@ -1,17 +1,11 @@
 "use client";
 
 import { CheckIcon, GiftIcon, XCircleIcon } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import calLogo from "@/images/customer-logos/cal-logo-light.svg";
-import ethereumLogo from "@/images/customer-logos/ethereum-logo.png";
-import flixbusLogo from "@/images/customer-logos/flixbus-white.svg";
-import githubLogo from "@/images/customer-logos/github-logo.png";
-import siemensLogo from "@/images/customer-logos/siemens.png";
 import { startHobbyAction, startProTrialAction } from "@/modules/billing/actions";
 import { Button } from "@/modules/ui/components/button";
 import {
@@ -28,14 +22,6 @@ interface SelectPlanCardProps {
   organizationId: string;
   trialDays: number;
 }
-
-const CUSTOMER_LOGOS = [
-  { src: siemensLogo, alt: "Siemens" },
-  { src: calLogo, alt: "Cal.com" },
-  { src: flixbusLogo, alt: "FlixBus" },
-  { src: githubLogo, alt: "GitHub" },
-  { src: ethereumLogo, alt: "Ethereum" },
-];
 
 export const SelectPlanCard = ({ nextUrl, organizationId, trialDays }: Readonly<SelectPlanCardProps>) => {
   const router = useRouter();
@@ -123,24 +109,6 @@ export const SelectPlanCard = ({ nextUrl, organizationId, trialDays }: Readonly<
             disabled={isStartingTrial || isStartingHobby}>
             {copy.cta}
           </Button>
-        </div>
-
-        <div className="w-full overflow-hidden border-t border-slate-100 bg-slate-50 py-4">
-          <div className="flex w-max animate-logo-scroll gap-12 hover:paused">
-            {[...CUSTOMER_LOGOS, ...CUSTOMER_LOGOS].map((logo, index) => (
-              <div
-                key={`${logo.alt}-${index}`}
-                className="flex h-5 items-center opacity-50 grayscale transition-all duration-200 hover:opacity-100 hover:grayscale-0">
-                <Image
-                  src={logo.src}
-                  alt={logo.alt}
-                  height={20}
-                  width={100}
-                  className="h-5 w-auto max-w-[100px] object-contain"
-                />
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

@@ -1,12 +1,11 @@
 "use client";
 
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import FBLogo from "@/images/forma-wordmark.svg";
 import { cn } from "@/lib/cn";
 import { Button } from "@/modules/ui/components/button";
+import { Wordmark } from "@/modules/ui/components/wordmark";
 
 interface MainNavigationHeaderProps {
   isCollapsed: boolean;
@@ -41,7 +40,7 @@ export const MainNavigationHeader = ({
             "flex items-center justify-center transition-opacity duration-100",
             isTextVisible ? "opacity-0" : "opacity-100"
           )}>
-          <Image src={FBLogo} width={160} height={30} alt={t("workspace.forma_logo")} />
+          <Wordmark aria-label={t("workspace.forma_logo")} className="text-2xl" />
         </Link>
       )}
       <Button

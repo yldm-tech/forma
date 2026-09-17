@@ -1,14 +1,12 @@
 "use client";
 
 import { Building2Icon, ChevronRightIcon, Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { TOrganization } from "@forma/types/organizations";
 import { TUser } from "@forma/types/user";
 import { getOrganizationsForSwitcherAction } from "@/app/(app)/workspaces/[workspaceId]/actions";
-import FBLogo from "@/images/forma-wordmark.svg";
 import { cn } from "@/lib/cn";
 import { SwitcherDropdownBody } from "@/modules/settings/components/switcher-dropdown-body";
 import { UserDropdown } from "@/modules/settings/components/user-dropdown";
@@ -18,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/modules/ui/components/dropdown-menu";
+import { Wordmark } from "@/modules/ui/components/wordmark";
 
 interface LandingSidebarProps {
   user: TUser;
@@ -62,7 +61,7 @@ export const LandingSidebar = ({ user, organization, publicDomain }: Readonly<La
       className={cn(
         "z-40 flex w-sidebar-collapsed flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md transition-all duration-100"
       )}>
-      <Image src={FBLogo} width={160} height={30} alt={t("workspace.forma_logo")} />
+      <Wordmark aria-label={t("workspace.forma_logo")} className="text-2xl" />
 
       <div className="flex flex-col">
         {/* Organization Switcher */}
