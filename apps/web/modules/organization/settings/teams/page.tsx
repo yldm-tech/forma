@@ -1,7 +1,6 @@
 import { USER_MANAGEMENT_MINIMUM_ROLE } from "@/lib/constants";
 import { getUserManagementAccess } from "@/lib/membership/utils";
 import { getTranslate } from "@/lingodotdev/server";
-import { getAccessControlPermission } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { MembersView } from "@/modules/organization/settings/teams/components/members-view";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
@@ -18,8 +17,6 @@ export const TeamsPage = async (props: Readonly<{ params: Promise<{ organization
 
   const { session, currentUserMembership, organization } = await getOrganizationAuth(params.organizationId);
 
-  const isAccessControlAllowed = await getAccessControlPermission();
-
   // Check if user has standard user management access (owner/manager)
   const hasStandardUserManagementAccess = getUserManagementAccess(
     currentUserMembership?.role,
@@ -30,9 +27,8 @@ export const TeamsPage = async (props: Readonly<{ params: Promise<{ organization
   const userAdminTeamIds = await getTeamsWhereUserIsAdmin(session.user.id, organization.id);
   const isTeamAdminUser = userAdminTeamIds.length > 0;
 
-  // Allow user management UI if they're owner/manager OR team admin (when access control is enabled)
-  const hasUserManagementAccess =
-    hasStandardUserManagementAccess || (isAccessControlAllowed && isTeamAdminUser);
+  // Allow user management UI if they're owner/manager OR team admin
+  const hasUserManagementAccess = hasStandardUserManagementAccess || isTeamAdminUser;
 
   return (
     <PageContentWrapper>
@@ -41,14 +37,12 @@ export const TeamsPage = async (props: Readonly<{ params: Promise<{ organization
         membershipRole={currentUserMembership?.role}
         organization={organization}
         currentUserId={session.user.id}
-        isAccessControlAllowed={isAccessControlAllowed}
         isUserManagementDisabledFromUi={!hasUserManagementAccess}
       />
       <TeamsView
         organizationId={organization.id}
         membershipRole={currentUserMembership?.role}
         currentUserId={session.user.id}
-        isAccessControlAllowed={isAccessControlAllowed}
       />
     </PageContentWrapper>
   );

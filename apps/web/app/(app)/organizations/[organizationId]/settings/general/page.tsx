@@ -4,19 +4,10 @@ import { DeleteOrganization } from "@/app/(app)/workspaces/[workspaceId]/setting
 import { EditOrganizationSettingsForm } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/general/components/EditOrganizationSettingsForm";
 import { SecurityListTip } from "@/app/(app)/workspaces/[workspaceId]/settings/organization/general/components/SecurityListTip";
 import { isInstanceAIConfigured } from "@/lib/ai/service";
-import {
-  ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  FB_LOGO_URL,
-  IS_FORMA_CLOUD,
-  IS_STORAGE_CONFIGURED,
-} from "@/lib/constants";
+import { FB_LOGO_URL, IS_FORMA_CLOUD, IS_STORAGE_CONFIGURED } from "@/lib/constants";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
-import {
-  getIsAISmartToolsEnabled,
-  getIsMultiOrgEnabled,
-  getWhiteLabelPermission,
-} from "@/modules/license-check/lib/utils";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
@@ -40,10 +31,8 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
 
   const user = session?.user?.id ? await getUser(session.user.id) : null;
 
-  const [isMultiOrgEnabled, hasWhiteLabelPermission, hasAIPermission, layoutData] = await Promise.all([
+  const [isMultiOrgEnabled, layoutData] = await Promise.all([
     getIsMultiOrgEnabled(),
-    getWhiteLabelPermission(),
-    getIsAISmartToolsEnabled(),
     getSettingsLayoutData(session.user.id, organization.id),
   ]);
 
@@ -74,21 +63,15 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
           organization={organization}
           membershipRole={currentUserRole}
           isInstanceAIConfigured={isInstanceAIConfigured()}
-          hasAIPermission={hasAIPermission}
-          isFormaCloud={IS_FORMA_CLOUD}
-          enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
         />
       </SettingsCard>
       <EmailCustomizationSettings
         organization={organization}
-        hasWhiteLabelPermission={hasWhiteLabelPermission}
         workspaceId={layoutData?.currentWorkspace?.id ?? ""}
         isReadOnly={!isOwnerOrManager}
-        isFormaCloud={IS_FORMA_CLOUD}
         fbLogoUrl={FB_LOGO_URL}
         user={user}
         isStorageConfigured={IS_STORAGE_CONFIGURED}
-        enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
       />
       {isMultiOrgEnabled && (
         <>

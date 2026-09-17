@@ -441,7 +441,6 @@
     "reorder_and_hide_columns": "列の並び替えと非表示",
     "replace": "置き換え",
     "report_survey": "フォームを報告",
-    "request_trial_license": "トライアルライセンスをリクエスト",
     "required": "必須",
     "reset_to_default": "デフォルトにリセット",
     "response": "回答",
@@ -2108,14 +2107,11 @@
       "generate_theme_btn": "生成",
       "generate_theme_confirmation": "ブランドカラーに基づいて、マッチするカラーテーマを生成しますか？現在のカラー設定は上書きされます。",
       "generate_theme_header": "カラーテーマを生成しますか？",
-      "lite_license_description": "We’ll send a complimentary Lite Enterprise License. No strings attached. Free forever.",
       "logo_removed_successfully": "ロゴを正常に削除しました",
       "logo_settings_description": "会社のロゴをアップロードして、アンケートとリンクプレビューにブランディングを適用します。",
       "logo_updated_successfully": "ロゴを正常に更新しました",
       "logo_upload_failed": "ロゴのアップロードに失敗しました。もう一度お試しください。",
       "placement_updated_successfully": "配置を正常に更新しました",
-      "remove_branding_license_request_cta": "Request Lite License",
-      "remove_branding_with_a_higher_plan": "上位プランでブランディングを削除",
       "remove_logo": "ロゴを削除",
       "remove_logo_confirmation": "ロゴを削除してもよろしいですか?",
       "replace_logo": "ロゴを交換",
@@ -2127,8 +2123,7 @@
       "suggest_colors": "カラーを提案",
       "suggested_colors_applied_please_save": "推奨カラーが正常に生成されました。変更を保存するには“保存”を押してください。",
       "theme": "テーマ",
-      "theme_settings_description": "すべてのアンケート用のスタイルテーマを作成します。各アンケートでカスタムスタイルを有効にできます。",
-      "unlock_remove_branding_with_lite_license": "Remove branding for free."
+      "theme_settings_description": "すべてのアンケート用のスタイルテーマを作成します。各アンケートでカスタムスタイルを有効にできます。"
     },
     "segments": {
       "add_filter_below": "下にフィルターを追加",
@@ -2425,8 +2420,6 @@
         "your_plan": "ご利用プラン"
       },
       "domain": {
-        "customize_favicon_description": "カスタムファビコンをアップロードして、リンク調査の体験をパーソナライズし、ブランドプレゼンスを強化します。",
-        "customize_favicon_with_higher_plan": "上位プランでファビコンをカスタマイズ",
         "description": "組織全体でカスタムURLを使用しているすべてのフォームの概要",
         "favicon_customization": "ファビコン",
         "favicon_customization_description": "リンク調査のブラウザタブに表示されるファビコンをカスタマイズします。管理アプリには影響しません。",
@@ -2475,13 +2468,11 @@
         "bulk_invite_rows_detected": "{count, plural, one {{count} row detected} other {{count} rows detected}}",
         "bulk_invite_rows_more": "{count, plural, one {+{count} more row} other {+{count} more rows}}",
         "bulk_invite_unknown_teams": "Unknown teams in CSV: {teams}. Create them first or remove them from the file.",
-        "bulk_invite_warning_description": "無料プランでは、すべての組織メンバーに常に「オーナー」ロールが割り当てられます。",
         "cannot_delete_only_organization": "これはあなたの唯一の組織です。削除できません。まず新しい組織を作成してください。",
         "cannot_leave_only_organization": "これはあなたの唯一の組織であるため、離れることはできません。まず新しい組織を作成してください。",
         "copy_invite_link_to_clipboard": "招待リンクをクリップボードにコピー",
         "create_new_organization": "新しい組織を作成",
         "create_new_organization_description": "異なるワークスペースのセットを管理するために、新しい組織を作成します。",
-        "customize_email_with_a_higher_plan": "上位プランでメールをカスタマイズ",
         "delete_member_confirmation": "削除されたメンバーは、組織のすべてのワークスペースとフォームへのアクセス権を失います。",
         "delete_organization": "組織を削除",
         "delete_organization_description": "すべてのフォーム、回答、ユーザー、アクション、属性を含む、すべてのワークスペースと共に組織を削除します",
@@ -2494,7 +2485,6 @@
         "display_time_zone_placeholder": "タイムゾーンを選択",
         "display_time_zone_updated_successfully": "表示タイムゾーンを正常に更新しました",
         "display_time_zone_utc_default": "UTC（デフォルト）",
-        "eliminate_branding_with_whitelabel": "Formaのブランディングを削除し、追加のホワイトラベルカスタマイズオプションを有効にします。",
         "email_customization_preview_email_heading": "こんにちは、{userName}さん",
         "email_customization_preview_email_text": "これは、メールに表示されるロゴを確認するためのプレビューメールです。",
         "error_deleting_organization_please_try_again": "組織の削除中にエラーが発生しました。もう一度お試しください。",
@@ -2543,9 +2533,7 @@
         "security_list_tip_link": "こちらからサインアップしてください。",
         "share_invite_link": "招待リンクを共有",
         "share_this_link_to_let_your_organization_member_join_your_organization": "このリンクを共有して、組織メンバーを招待できます:",
-        "test_email_sent_successfully": "テストメールを正常に送信しました",
-        "unlock_ai_features_description": "AI翻訳とスマートツールは上位プランでご利用いただけます。アップグレードしてAIでアンケートをパワーアップしましょう。",
-        "unlock_ai_features_with_a_higher_plan": "上位プランでAI機能を利用する"
+        "test_email_sent_successfully": "テストメールを正常に送信しました"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "新しいフォームに自動購読",
@@ -2588,7 +2576,6 @@
         "two_factor_authentication_description": "パスワードが盗まれた場合に備えて、アカウントにセキュリティの追加レイヤーを追加します。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "二段階認証が有効になりました。認証アプリから6桁のコードを入力してください。",
         "two_factor_code": "二段階認証コード",
-        "unlock_two_factor_authentication": "上位プランで二段階認証をアンロック",
         "update_personal_info": "個人情報を更新",
         "warning_cannot_delete_account": "あなたは、この組織の唯一のオーナーです。まず、別のメンバーにオーナーシップを譲渡してください。",
         "warning_cannot_undo": "この操作は元に戻せません",
@@ -2602,8 +2589,6 @@
         "are_you_sure_you_want_to_delete_this_team": "このチームを削除してもよろしいですか？このチームに関連付けられたすべてのワークスペースとサーベイへのアクセスも削除されます。",
         "billing_role_description": "請求情報へのアクセスのみ。",
         "bulk_invite": "一括招待",
-        "bulk_invite_scale_only_description": "CSVによる一括メンバー招待は、Scaleプランでご利用いただけます。アップグレードして、チーム全員を一度に招待しましょう。",
-        "bulk_invite_scale_only_title": "上位プランで一括招待機能を利用する",
         "contributor": "貢献者",
         "create": "作成",
         "create_first_team_message": "まず、チームを作成する必要があります。",
@@ -2638,9 +2623,6 @@
         "team_updated_successfully": "チームを正常に更新しました",
         "teams": "チーム",
         "teams_description": "メンバーをチームに割り当て、チームにワークスペースへのアクセス権を付与します。",
-        "unlock_teams_description": "組織のメンバーが特定のワークスペースとサーベイにアクセスできるかを管理します。",
-        "unlock_teams_title": "上位プランでチームをアンロック。",
-        "upgrade_plan_notice_message": "上位プランで組織ロールをアンロック。",
         "you_are_a_member": "あなたはメンバーです"
       }
     },
@@ -3124,7 +3106,6 @@
           "save_changes_confirmation_body": "今後の回答のみに影響します。\\n 既存のクォータを複製するか、新しいクォータを作成することをお勧めします。",
           "save_changes_confirmation_text": "既存の応答 は クォータ に とどまります",
           "select_ending_card": "終了カードを選択",
-          "upgrade_prompt_title": "上位プランで クォータ を使用",
           "when_quota_has_been_reached": "クオータが達成されたとき"
         },
         "randomize_all": "すべてをランダム化",
@@ -3221,8 +3202,6 @@
         "try_lollipop_or_mountain": "「lollipop」や「mountain」を試してみてください...",
         "type_field_id": "フィールドIDを入力",
         "underline": "下線",
-        "unlock_targeting_description": "属性またはデバイス情報に基づいて、特定のユーザーグループをターゲットにします",
-        "unlock_targeting_title": "上位プランでターゲティングをアンロック",
         "unsaved_changes_warning": "フォームに未保存の変更があります。離れる前に保存しますか？",
         "until_they_submit_a_response": "回答が提出されるまで質問する",
         "update_options": "オプションを更新",
@@ -3502,8 +3481,6 @@
           "no_segments_available": "利用可能なセグメントがありません",
           "segment_survey_workspace_mismatch": "選択されたセグメントは、このアンケートとは異なるワークスペースに属しています。",
           "select_segment": "セグメントを選択",
-          "upgrade_prompt_description": "セグメントの個人リンクを生成し、フォームの回答を各連絡先とリンクします。",
-          "upgrade_prompt_title": "上位プランで個人リンクを使用",
           "work_with_segments": "個人リンクはセグメントで機能します。"
         },
         "pretty_url": {

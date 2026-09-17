@@ -441,7 +441,6 @@
     "reorder_and_hide_columns": "重新排序和隱藏欄位",
     "replace": "取代",
     "report_survey": "報告問卷",
-    "request_trial_license": "請求試用授權",
     "required": "必填",
     "reset_to_default": "重設為預設值",
     "response": "回應",
@@ -2108,14 +2107,11 @@
       "generate_theme_btn": "產生",
       "generate_theme_confirmation": "你想根據品牌色產生一組相符的主題色嗎？這將會覆蓋你目前的顏色設定。",
       "generate_theme_header": "要產生主題色嗎？",
-      "lite_license_description": "We’ll send a complimentary Lite Enterprise License. No strings attached. Free forever.",
       "logo_removed_successfully": "標誌已成功移除",
       "logo_settings_description": "上傳您的公司標誌，以用於問卷和連結預覽的品牌展示。",
       "logo_updated_successfully": "標誌已成功更新",
       "logo_upload_failed": "標誌上傳失敗。請再試一次。",
       "placement_updated_successfully": "位置已成功更新",
-      "remove_branding_license_request_cta": "Request Lite License",
-      "remove_branding_with_a_higher_plan": "升級方案以移除品牌標示",
       "remove_logo": "移除標誌",
       "remove_logo_confirmation": "您確定要移除標誌嗎？",
       "replace_logo": "取代標誌",
@@ -2127,8 +2123,7 @@
       "suggest_colors": "建議顏色",
       "suggested_colors_applied_please_save": "已成功產生建議色彩。請按「Save」以儲存變更。",
       "theme": "主題",
-      "theme_settings_description": "為所有調查建立樣式主題。您可以為每個調查啟用自訂樣式。",
-      "unlock_remove_branding_with_lite_license": "Remove branding for free."
+      "theme_settings_description": "為所有調查建立樣式主題。您可以為每個調查啟用自訂樣式。"
     },
     "segments": {
       "add_filter_below": "在下方新增篩選器",
@@ -2425,8 +2420,6 @@
         "your_plan": "您的方案"
       },
       "domain": {
-        "customize_favicon_description": "上傳自訂 Favicon，讓您的連結問卷體驗更具個人化，並強化品牌形象。",
-        "customize_favicon_with_higher_plan": "升級方案以自訂 Favicon",
         "description": "檢視貴組織內所有使用 Pretty URL 的問卷",
         "favicon_customization": "網站圖示",
         "favicon_customization_description": "自訂顯示於瀏覽器分頁上的連結問卷 Favicon。這不會影響管理後台應用程式。",
@@ -2475,13 +2468,11 @@
         "bulk_invite_rows_detected": "{count, plural, other {偵測到 {count} 列}}",
         "bulk_invite_rows_more": "{count, plural, other {還有 {count} 列}}",
         "bulk_invite_unknown_teams": "CSV 中的未知團隊：{teams}。請先建立這些團隊或從檔案中移除它們。",
-        "bulk_invite_warning_description": "在免費方案中，所有組織成員始終會被指派「擁有者」角色。",
         "cannot_delete_only_organization": "這是您唯一的組織，無法刪除。請先建立新組織。",
         "cannot_leave_only_organization": "您無法離開此組織，因為它是您唯一的組織。請先建立新組織。",
         "copy_invite_link_to_clipboard": "將邀請連結複製到剪貼簿",
         "create_new_organization": "建立新組織",
         "create_new_organization_description": "建立新組織來管理不同的工作區集合。",
-        "customize_email_with_a_higher_plan": "使用更高等級的方案自訂電子郵件",
         "delete_member_confirmation": "已刪除的成員將無法存取您組織的所有工作區和調查問卷。",
         "delete_organization": "刪除組織",
         "delete_organization_description": "刪除組織及其所有工作區,包括所有調查問卷、回覆、人員、操作和屬性",
@@ -2494,7 +2485,6 @@
         "display_time_zone_placeholder": "選擇時區",
         "display_time_zone_updated_successfully": "顯示時區已成功更新",
         "display_time_zone_utc_default": "UTC(預設)",
-        "eliminate_branding_with_whitelabel": "消除 Forma 品牌並啟用其他白標自訂選項。",
         "email_customization_preview_email_heading": "嗨，{userName}",
         "email_customization_preview_email_text": "這是電子郵件預覽，向您展示電子郵件中將呈現哪個標誌。",
         "error_deleting_organization_please_try_again": "刪除組織時發生錯誤。請再試一次。",
@@ -2543,9 +2533,7 @@
         "security_list_tip_link": "請在此註冊。",
         "share_invite_link": "分享邀請連結",
         "share_this_link_to_let_your_organization_member_join_your_organization": "分享此連結以讓您的組織成員加入您的組織：",
-        "test_email_sent_successfully": "測試電子郵件已成功發送",
-        "unlock_ai_features_description": "AI 驅動的翻譯、智慧工具和資料分析功能在更高級別的方案中提供。立即升級,讓 AI 為您的問卷調查加持。",
-        "unlock_ai_features_with_a_higher_plan": "升級至更高級別方案以解鎖 AI 功能"
+        "test_email_sent_successfully": "測試電子郵件已成功發送"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "自動訂閱新問卷",
@@ -2588,7 +2576,6 @@
         "two_factor_authentication_description": "在您的密碼被盜時，為您的帳戶新增額外的安全層。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "已啟用雙重驗證。請輸入您驗證器應用程式中的六位數程式碼。",
         "two_factor_code": "雙重驗證碼",
-        "unlock_two_factor_authentication": "使用更高等級的方案解鎖雙重驗證",
         "update_personal_info": "更新您的個人資訊",
         "warning_cannot_delete_account": "您是此組織的唯一擁有者。請先將所有權轉讓給其他成員。",
         "warning_cannot_undo": "此操作無法復原",
@@ -2602,8 +2589,6 @@
         "are_you_sure_you_want_to_delete_this_team": "確定要刪除這個團隊嗎?這也會移除與此團隊相關的所有工作區和調查問卷的存取權限。",
         "billing_role_description": "只能存取帳單資訊。",
         "bulk_invite": "大量邀請",
-        "bulk_invite_scale_only_description": "透過 CSV 批量邀請成員功能僅適用於 Scale 方案。升級即可一次邀請整個團隊。",
-        "bulk_invite_scale_only_title": "升級至更高方案以解鎖批量邀請功能",
         "contributor": "投稿人",
         "create": "建立",
         "create_first_team_message": "您必須先建立團隊。",
@@ -2638,9 +2623,6 @@
         "team_updated_successfully": "團隊已成功更新",
         "teams": "團隊",
         "teams_description": "將成員分配到團隊,並授予團隊存取工作區的權限。",
-        "unlock_teams_description": "管理哪些組織成員可以存取特定的工作區和調查問卷。",
-        "unlock_teams_title": "使用更高等級的方案解鎖團隊。",
-        "upgrade_plan_notice_message": "使用更高等級的方案解鎖組織角色。",
         "you_are_a_member": "您是成員"
       }
     },
@@ -3124,7 +3106,6 @@
           "save_changes_confirmation_body": "對納入條件所做的任何變更，僅會影響後續的回應。\n建議改為複製現有配額或新建一個配額。",
           "save_changes_confirmation_text": "現有回應仍計入此配額",
           "select_ending_card": "選擇結尾卡片",
-          "upgrade_prompt_title": "升級方案即可使用配額功能",
           "when_quota_has_been_reached": "當配額達上限時"
         },
         "randomize_all": "全部隨機排序",
@@ -3221,8 +3202,6 @@
         "try_lollipop_or_mountain": "嘗試「棒棒糖」或「山峰」...",
         "type_field_id": "輸入欄位 ID",
         "underline": "底線",
-        "unlock_targeting_description": "根據屬性或裝置資訊鎖定特定使用者群組",
-        "unlock_targeting_title": "使用更高等級的方案解鎖目標設定",
         "unsaved_changes_warning": "您的問卷中有未儲存的變更。您要先儲存它們再離開嗎？",
         "until_they_submit_a_response": "持續詢問直到提交回應",
         "update_options": "更新選項",
@@ -3502,8 +3481,6 @@
           "no_segments_available": "沒有可用的區隔",
           "segment_survey_workspace_mismatch": "所選的區段屬於不同的工作區,與此問卷不同。",
           "select_segment": "選擇區隔",
-          "upgrade_prompt_description": "為某個區隔產生個人連結，並將問卷回應對應到每位聯絡人。",
-          "upgrade_prompt_title": "升級方案即可使用個人連結",
           "work_with_segments": "個人連結需搭配區隔使用。"
         },
         "pretty_url": {

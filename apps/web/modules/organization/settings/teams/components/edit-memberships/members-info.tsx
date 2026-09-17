@@ -99,7 +99,6 @@ const getMemberColumns = ({
   organization,
   currentUserRole,
   currentUserId,
-  isAccessControlAllowed,
   isFormaCloud,
   isUserManagementDisabledFromUi,
   isOwnerOrManager,
@@ -111,7 +110,6 @@ const getMemberColumns = ({
   organization: TOrganization;
   currentUserRole: TOrganizationRole;
   currentUserId: string;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
   isUserManagementDisabledFromUi: boolean;
   isOwnerOrManager: boolean;
@@ -136,28 +134,26 @@ const getMemberColumns = ({
     },
   ];
 
-  if (isAccessControlAllowed) {
-    columns.push({
-      id: "role",
-      header: t("common.role"),
-      headerClassName: "w-[17%]",
-      cellClassName: "ph-no-capture",
-      cell: (member) => (
-        <EditMembershipRole
-          currentUserRole={currentUserRole}
-          memberRole={member.role}
-          memberId={!isInvitee(member) ? member.userId : ""}
-          organizationId={organization.id}
-          userId={currentUserId}
-          memberAccepted={!isInvitee(member) ? member.accepted : undefined}
-          inviteId={isInvitee(member) ? member.id : ""}
-          doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
-          isFormaCloud={isFormaCloud}
-          isUserManagementDisabledFromUi={isUserManagementDisabledFromUi}
-        />
-      ),
-    });
-  }
+  columns.push({
+    id: "role",
+    header: t("common.role"),
+    headerClassName: "w-[17%]",
+    cellClassName: "ph-no-capture",
+    cell: (member) => (
+      <EditMembershipRole
+        currentUserRole={currentUserRole}
+        memberRole={member.role}
+        memberId={!isInvitee(member) ? member.userId : ""}
+        organizationId={organization.id}
+        userId={currentUserId}
+        memberAccepted={!isInvitee(member) ? member.accepted : undefined}
+        inviteId={isInvitee(member) ? member.id : ""}
+        doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
+        isFormaCloud={isFormaCloud}
+        isUserManagementDisabledFromUi={isUserManagementDisabledFromUi}
+      />
+    ),
+  });
 
   columns.push({
     id: "status",
@@ -204,7 +200,6 @@ interface MembersInfoProps {
   invites: TInvite[];
   currentUserRole: TOrganizationRole;
   currentUserId: string;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
   isUserManagementDisabledFromUi: boolean;
 }
@@ -215,7 +210,6 @@ export const MembersInfo = ({
   currentUserRole,
   members,
   currentUserId,
-  isAccessControlAllowed,
   isFormaCloud,
   isUserManagementDisabledFromUi,
 }: Readonly<MembersInfoProps>) => {
@@ -237,7 +231,6 @@ export const MembersInfo = ({
         organization,
         currentUserRole,
         currentUserId,
-        isAccessControlAllowed,
         isFormaCloud,
         isUserManagementDisabledFromUi,
         isOwnerOrManager,

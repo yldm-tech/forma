@@ -8,13 +8,11 @@ import { useTranslation } from "react-i18next";
 import { TOrganizationRole } from "@forma/types/memberships";
 import { cn } from "@/lib/cn";
 import { ZInvitees } from "@/modules/organization/settings/teams/types/invites";
-import { organizationSettingsPath } from "@/modules/settings/lib/routes";
 import type { TOrganizationTeam } from "@/modules/teams/team-list/types/team";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
 import { CsvTable } from "@/modules/ui/components/csv-table";
 import { DialogFooter } from "@/modules/ui/components/dialog";
-import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 
 interface BulkInviteTabProps {
   setOpen: (v: boolean) => void;
@@ -22,11 +20,7 @@ interface BulkInviteTabProps {
     data: { name: string; email: string; role: TOrganizationRole; teamIds: string[] }[]
   ) => Promise<boolean>;
   teams: TOrganizationTeam[];
-  organizationId: string;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
-  isBulkInviteAllowed: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 export type BulkCsvRow = Record<string, string | undefined>;
@@ -53,16 +47,7 @@ export const parseTeamCell = (cell: string | undefined): string[] => {
     .filter((t) => t.length > 0);
 };
 
-export const BulkInviteTab = ({
-  setOpen,
-  onSubmit,
-  teams,
-  organizationId,
-  isAccessControlAllowed,
-  isFormaCloud,
-  isBulkInviteAllowed,
-  enterpriseLicenseRequestFormUrl,
-}: Readonly<BulkInviteTabProps>) => {
+export const BulkInviteTab = ({ setOpen, onSubmit, teams, isFormaCloud }: Readonly<BulkInviteTabProps>) => {
   const { t } = useTranslation();
   const [csvFile, setCSVFile] = useState<File>();
   const [previewRows, setPreviewRows] = useState<BulkCsvRow[]>([]);
@@ -122,7 +107,7 @@ export const BulkInviteTab = ({
   };
 
   const onImport = async () => {
-    if (!csvFile || !previewRows.length || !isBulkInviteAllowed || isImporting) {
+    if (!csvFile || !previewRows.length || isImporting) {
       return;
     }
 
@@ -133,25 +118,23 @@ export const BulkInviteTab = ({
     const members = previewRows.map((csv) => {
       const email = readCell(csv, "Email Address", "email").trim();
       const roleCell = readCell(csv, "Organization Role", "Role", "role");
-      const orgRole = isAccessControlAllowed ? roleCell.trim().toLowerCase() : "owner";
+      const orgRole = roleCell.trim().toLowerCase();
       if (!isFormaCloud && orgRole === "billing") {
         billingRoleEmails.add(email);
       }
 
       const teamsCell = readCell(csv, "Teams", "teams");
-      const teamIds = isAccessControlAllowed
-        ? parseTeamCell(teamsCell).reduce<string[]>((acc, teamName) => {
-            const match = teamByName.get(teamName.toLowerCase());
-            if (match) {
-              if (!acc.includes(match.id)) {
-                acc.push(match.id);
-              }
-            } else {
-              unknownTeamNames.add(teamName);
-            }
-            return acc;
-          }, [])
-        : [];
+      const teamIds = parseTeamCell(teamsCell).reduce<string[]>((acc, teamName) => {
+        const match = teamByName.get(teamName.toLowerCase());
+        if (match) {
+          if (!acc.includes(match.id)) {
+            acc.push(match.id);
+          }
+        } else {
+          unknownTeamNames.add(teamName);
+        }
+        return acc;
+      }, []);
 
       return {
         name: readCell(csv, "Full Name", "name").trim(),
@@ -198,30 +181,6 @@ export const BulkInviteTab = ({
 
   const previewCount = previewRows.length;
   const extraRowCount = Math.max(previewCount - PREVIEW_ROW_LIMIT, 0);
-
-  if (!isBulkInviteAllowed) {
-    const upgradeButtons: [ModalButton, ModalButton] = [
-      {
-        text: isFormaCloud ? t("common.upgrade_plan") : t("common.request_trial_license"),
-        href: isFormaCloud
-          ? organizationSettingsPath(organizationId, "billing")
-          : enterpriseLicenseRequestFormUrl,
-      },
-      {
-        text: t("common.learn_more"),
-        href: "https://forma.ylam.ai/docs/self-hosting/license",
-      },
-    ];
-
-    return (
-      <UpgradePrompt
-        title={t("workspace.settings.teams.bulk_invite_scale_only_title")}
-        description={t("workspace.settings.teams.bulk_invite_scale_only_description")}
-        buttons={upgradeButtons}
-        feature="bulk-invite"
-      />
-    );
-  }
 
   return (
     <>
@@ -295,17 +254,6 @@ export const BulkInviteTab = ({
             </div>
           )}
         </div>
-
-        {!isAccessControlAllowed && (
-          <Alert variant="default" className="mt-1.5 flex items-start bg-slate-50" role="status">
-            <AlertDescription className="ml-2">
-              <p className="text-sm">
-                <strong>{t("common.warning")}: </strong>
-                {t("workspace.settings.general.bulk_invite_warning_description")}
-              </p>
-            </AlertDescription>
-          </Alert>
-        )}
       </div>
 
       <DialogFooter>

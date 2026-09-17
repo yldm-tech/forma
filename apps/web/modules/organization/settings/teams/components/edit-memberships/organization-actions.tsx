@@ -40,14 +40,11 @@ interface OrganizationActionsProps {
   organization: TOrganization;
   teams: TOrganizationTeam[];
   isInviteDisabled: boolean;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
   isMultiOrgEnabled: boolean;
   isUserManagementDisabledFromUi: boolean;
   isTeamAdmin: boolean;
   userAdminTeamIds?: string[];
-  enterpriseLicenseRequestFormUrl: string;
-  isBulkInviteAllowed: boolean;
 }
 
 export const OrganizationActions = ({
@@ -57,14 +54,11 @@ export const OrganizationActions = ({
   teams,
   isLeaveOrganizationDisabled,
   isInviteDisabled,
-  isAccessControlAllowed,
   isFormaCloud,
   isMultiOrgEnabled,
   isUserManagementDisabledFromUi,
   isTeamAdmin,
   userAdminTeamIds,
-  enterpriseLicenseRequestFormUrl,
-  isBulkInviteAllowed,
 }: OrganizationActionsProps) => {
   const router = useRouter();
   const { t } = useTranslation();
@@ -75,7 +69,7 @@ export const OrganizationActions = ({
   const { isOwner, isManager } = getAccessFlags(membershipRole);
   const isOwnerOrManager = isOwner || isManager;
 
-  const canInvite = isOwnerOrManager || (isAccessControlAllowed && isTeamAdmin);
+  const canInvite = isOwnerOrManager || isTeamAdmin;
 
   const handleLeaveOrganization = async () => {
     setLoading(true);
@@ -195,15 +189,11 @@ export const OrganizationActions = ({
         setOpen={setIsInviteMemberModalOpen}
         onSubmit={handleAddMembers}
         membershipRole={membershipRole}
-        organizationId={organization.id}
-        isAccessControlAllowed={isAccessControlAllowed}
         isFormaCloud={isFormaCloud}
         teams={teams}
         isOwnerOrManager={isOwnerOrManager}
         isTeamAdmin={isTeamAdmin}
         userAdminTeamIds={userAdminTeamIds}
-        enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
-        isBulkInviteAllowed={isBulkInviteAllowed}
       />
 
       <Dialog open={isLeaveOrganizationModalOpen} onOpenChange={setIsLeaveOrganizationModalOpen}>

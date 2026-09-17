@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { FormProvider, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -10,7 +9,6 @@ import { ZId } from "@forma/types/common";
 import { TOrganizationRole, ZOrganizationRole } from "@forma/types/memberships";
 import { ZUserName } from "@forma/types/user";
 import { AddMemberRole } from "@/modules/role-management/components/add-member-role";
-import { organizationSettingsPath } from "@/modules/settings/lib/routes";
 import { TOrganizationTeam } from "@/modules/teams/team-list/types/team";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
@@ -26,24 +24,18 @@ interface IndividualInviteTabProps {
     data: { name: string; email: string; role: TOrganizationRole; teamIds: string[] }[]
   ) => Promise<boolean>;
   teams: TOrganizationTeam[];
-  organizationId: string;
-  isAccessControlAllowed: boolean;
   isFormaCloud: boolean;
   membershipRole?: TOrganizationRole;
   showTeamAdminRestrictions: boolean;
-  enterpriseLicenseRequestFormUrl: string;
 }
 
 export const IndividualInviteTab = ({
   setOpen,
   onSubmit,
   teams,
-  organizationId,
-  isAccessControlAllowed,
   isFormaCloud,
   membershipRole,
   showTeamAdminRestrictions,
-  enterpriseLicenseRequestFormUrl,
 }: IndividualInviteTabProps) => {
   const ZFormSchema = z.object({
     name: ZUserName,
@@ -64,10 +56,7 @@ export const IndividualInviteTab = ({
 
   type TFormData = z.infer<typeof ZFormSchema>;
   const { t } = useTranslation();
-  let defaultRole: TOrganizationRole = "owner";
-  if (showTeamAdminRestrictions || isAccessControlAllowed) {
-    defaultRole = "member";
-  }
+  const defaultRole: TOrganizationRole = "member";
 
   const form = useForm<TFormData>({
     resolver: zodResolver(ZFormSchema),
@@ -132,12 +121,7 @@ export const IndividualInviteTab = ({
             </div>
           ) : (
             <>
-              <AddMemberRole
-                control={control}
-                isAccessControlAllowed={isAccessControlAllowed}
-                isFormaCloud={isFormaCloud}
-                membershipRole={membershipRole}
-              />
+              <AddMemberRole control={control} isFormaCloud={isFormaCloud} membershipRole={membershipRole} />
               {watch("role") === "member" && (
                 <Alert className="mt-2" variant="info">
                   <AlertDescription>
@@ -149,56 +133,36 @@ export const IndividualInviteTab = ({
           )}
         </div>
 
-        {isAccessControlAllowed && (
-          <>
-            <FormField
-              control={control}
-              name="teamIds"
-              render={({ field }) => (
-                <FormItem className="flex flex-col gap-y-2">
-                  <FormLabel>{t("common.add_to_team")} </FormLabel>
-                  <div className="space-y-2">
-                    <MultiSelect
-                      value={field.value}
-                      options={teamOptions}
-                      placeholder={t("workspace.settings.teams.team_select_placeholder")}
-                      disabled={!teamOptions.length}
-                      onChange={(val) => field.onChange(val)}
-                    />
-                    {!teamOptions.length && (
-                      <Small className="font-normal text-amber-600">
-                        {t("workspace.settings.teams.create_first_team_message")}
-                      </Small>
-                    )}
-                  </div>
-                  <FormError>{errors.teamIds?.message}</FormError>
-                </FormItem>
-              )}
-            />
-            <div className="flex flex-col gap-y-2">
-              <Label htmlFor="teamRoleInput">{t("common.team_role")}</Label>
-              <Input value={t("workspace.settings.teams.contributor")} disabled />
-            </div>
-          </>
-        )}
-
-        {!isAccessControlAllowed && (
-          <Alert role="status">
-            <AlertDescription className="flex">
-              {t("workspace.settings.teams.upgrade_plan_notice_message")}
-              <Link
-                className="ml-1 underline"
-                target="_blank"
-                href={
-                  isFormaCloud
-                    ? organizationSettingsPath(organizationId, "billing")
-                    : enterpriseLicenseRequestFormUrl
-                }>
-                {t("common.upgrade_plan")}
-              </Link>
-            </AlertDescription>
-          </Alert>
-        )}
+        <>
+          <FormField
+            control={control}
+            name="teamIds"
+            render={({ field }) => (
+              <FormItem className="flex flex-col gap-y-2">
+                <FormLabel>{t("common.add_to_team")} </FormLabel>
+                <div className="space-y-2">
+                  <MultiSelect
+                    value={field.value}
+                    options={teamOptions}
+                    placeholder={t("workspace.settings.teams.team_select_placeholder")}
+                    disabled={!teamOptions.length}
+                    onChange={(val) => field.onChange(val)}
+                  />
+                  {!teamOptions.length && (
+                    <Small className="font-normal text-amber-600">
+                      {t("workspace.settings.teams.create_first_team_message")}
+                    </Small>
+                  )}
+                </div>
+                <FormError>{errors.teamIds?.message}</FormError>
+              </FormItem>
+            )}
+          />
+          <div className="flex flex-col gap-y-2">
+            <Label htmlFor="teamRoleInput">{t("common.team_role")}</Label>
+            <Input value={t("workspace.settings.teams.contributor")} disabled />
+          </div>
+        </>
 
         <div className="flex items-end justify-end gap-x-2">
           <Button

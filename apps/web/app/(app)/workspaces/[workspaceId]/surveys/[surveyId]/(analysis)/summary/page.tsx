@@ -5,12 +5,7 @@ import { SummaryPage } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surve
 import { SurveyAnalysisCTA } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SurveyAnalysisCTA";
 import { getSurveySummary } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/surveySummary";
 import { getAISmartToolsUnavailableReason, getOrganizationAIConfig } from "@/lib/ai/service";
-import {
-  DEFAULT_LOCALE,
-  ENTERPRISE_LICENSE_REQUEST_FORM_URL,
-  IS_FORMA_CLOUD,
-  IS_STORAGE_CONFIGURED,
-} from "@/lib/constants";
+import { DEFAULT_LOCALE, IS_FORMA_CLOUD, IS_STORAGE_CONFIGURED } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getSurvey } from "@/lib/survey/service";
 import { getUser } from "@/lib/user/service";
@@ -83,7 +78,6 @@ const SurveyPage = async (
             isContactsEnabled={isContactsEnabled}
             isFormaCloud={IS_FORMA_CLOUD}
             isStorageConfigured={IS_STORAGE_CONFIGURED}
-            enterpriseLicenseRequestFormUrl={ENTERPRISE_LICENSE_REQUEST_FORM_URL}
             aiUnavailableReason={aiUnavailableReason}
           />
         }>

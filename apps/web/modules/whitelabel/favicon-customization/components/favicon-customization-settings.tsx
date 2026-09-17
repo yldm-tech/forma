@@ -17,7 +17,6 @@ import { FileInput } from "@/modules/ui/components/file-input";
 import { Input } from "@/modules/ui/components/input";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { showStorageNotConfiguredToast } from "@/modules/ui/components/storage-not-configured-toast/lib/utils";
-import { ModalButton, UpgradePrompt } from "@/modules/ui/components/upgrade-prompt";
 import {
   removeOrganizationFaviconUrlAction,
   updateOrganizationFaviconUrlAction,
@@ -32,7 +31,6 @@ const MAX_FAVICON_SIZE_MB = 0.1; // 100KB
 
 interface FaviconCustomizationSettingsProps {
   organization: TOrganization;
-  hasWhiteLabelPermission: boolean;
   workspaceId: string;
   isReadOnly: boolean;
   isStorageConfigured: boolean;
@@ -40,7 +38,6 @@ interface FaviconCustomizationSettingsProps {
 
 export const FaviconCustomizationSettings = ({
   organization,
-  hasWhiteLabelPermission,
   workspaceId,
   isReadOnly,
   isStorageConfigured,
@@ -149,104 +146,84 @@ export const FaviconCustomizationSettings = ({
     }
   };
 
-  const buttons: [ModalButton, ModalButton] = [
-    {
-      text: t("common.upgrade_plan"),
-      href: `/organizations/${organization.id}/settings/billing`,
-    },
-    {
-      text: t("common.learn_more"),
-      href: `/organizations/${organization.id}/settings/billing`,
-    },
-  ];
-
   return (
     <SettingsCard
       title={t("workspace.settings.domain.favicon_customization")}
       description={t("workspace.settings.domain.favicon_customization_description")}>
-      {hasWhiteLabelPermission ? (
-        <div className="w-full space-y-4">
-          {faviconUrl ? (
-            <Image
-              src={faviconUrl}
-              alt="Favicon"
-              width={64}
-              height={64}
-              className="-mb-2 size-16 rounded-lg border object-contain p-1"
-              unoptimized={isExternalImageSrc(faviconUrl)}
-            />
-          ) : (
-            <FileInput
-              id="favicon-input"
-              allowedFileExtensions={allowedFileExtensions}
-              workspaceId={workspaceId}
-              onFileUpload={(files: string[] | undefined, _fileType: "image" | "video") => {
-                if (files?.[0]) {
-                  setFaviconUrl(files[0]);
-                  setIsEditing(true);
-                }
-              }}
-              disabled={isReadOnly}
-              maxSizeInMB={MAX_FAVICON_SIZE_MB}
-              isStorageConfigured={isStorageConfigured}
-            />
-          )}
-
-          <Input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg, image/png, image/webp, image/x-icon, image/ico"
-            className="hidden"
-            disabled={isReadOnly}
-            onChange={handleFileChange}
+      <div className="w-full space-y-4">
+        {faviconUrl ? (
+          <Image
+            src={faviconUrl}
+            alt="Favicon"
+            width={64}
+            height={64}
+            className="-mb-2 size-16 rounded-lg border object-contain p-1"
+            unoptimized={isExternalImageSrc(faviconUrl)}
           />
+        ) : (
+          <FileInput
+            id="favicon-input"
+            allowedFileExtensions={allowedFileExtensions}
+            workspaceId={workspaceId}
+            onFileUpload={(files: string[] | undefined, _fileType: "image" | "video") => {
+              if (files?.[0]) {
+                setFaviconUrl(files[0]);
+                setIsEditing(true);
+              }
+            }}
+            disabled={isReadOnly}
+            maxSizeInMB={MAX_FAVICON_SIZE_MB}
+            isStorageConfigured={isStorageConfigured}
+          />
+        )}
 
-          {isEditing && faviconUrl && (
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  if (!isStorageConfigured) {
-                    showStorageNotConfiguredToast();
-                    return;
-                  }
-                  fileInputRef.current?.click();
-                }}
-                variant="secondary"
-                size="sm">
-                {t("common.replace")}
-              </Button>
-              <Button variant="destructive" size="sm" onClick={removeFavicon} disabled={!isEditing}>
-                {t("common.remove")}
-              </Button>
-            </div>
-          )}
-
-          {faviconUrl && (
-            <Button onClick={saveChanges} disabled={isLoading || isReadOnly} size="sm">
-              {isEditing ? t("common.save") : t("common.edit")}
-            </Button>
-          )}
-
-          <Alert variant="info" role="status">
-            <AlertDescription>{t("workspace.settings.domain.favicon_size_hint")}</AlertDescription>
-          </Alert>
-
-          {isReadOnly && (
-            <Alert variant="warning" role="status">
-              <AlertDescription>
-                {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      ) : (
-        <UpgradePrompt
-          title={t("workspace.settings.domain.customize_favicon_with_higher_plan")}
-          description={t("workspace.settings.domain.customize_favicon_description")}
-          buttons={buttons}
-          feature="favicon_customization"
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg, image/png, image/webp, image/x-icon, image/ico"
+          className="hidden"
+          disabled={isReadOnly}
+          onChange={handleFileChange}
         />
-      )}
+
+        {isEditing && faviconUrl && (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                if (!isStorageConfigured) {
+                  showStorageNotConfiguredToast();
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+              variant="secondary"
+              size="sm">
+              {t("common.replace")}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={removeFavicon} disabled={!isEditing}>
+              {t("common.remove")}
+            </Button>
+          </div>
+        )}
+
+        {faviconUrl && (
+          <Button onClick={saveChanges} disabled={isLoading || isReadOnly} size="sm">
+            {isEditing ? t("common.save") : t("common.edit")}
+          </Button>
+        )}
+
+        <Alert variant="info" role="status">
+          <AlertDescription>{t("workspace.settings.domain.favicon_size_hint")}</AlertDescription>
+        </Alert>
+
+        {isReadOnly && (
+          <Alert variant="warning" role="status">
+            <AlertDescription>
+              {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     </SettingsCard>
   );
 };

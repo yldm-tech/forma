@@ -441,7 +441,6 @@
     "reorder_and_hide_columns": "Reorder and hide columns",
     "replace": "Replace",
     "report_survey": "Report Survey",
-    "request_trial_license": "Request trial license",
     "required": "Required",
     "reset_to_default": "Reset to default",
     "response": "Response",
@@ -2108,14 +2107,11 @@
       "generate_theme_btn": "Generate",
       "generate_theme_confirmation": "Would you like to generate a matching color theme based on your brand color? This will overwrite your current color settings.",
       "generate_theme_header": "Generate Color Theme?",
-      "lite_license_description": "We’ll send a complimentary Lite Enterprise License. No strings attached. Free forever.",
       "logo_removed_successfully": "Logo removed successfully",
       "logo_settings_description": "Upload your company logo to brand surveys and link previews.",
       "logo_updated_successfully": "Logo updated successfully",
       "logo_upload_failed": "Logo upload failed. Please try again.",
       "placement_updated_successfully": "Placement updated successfully",
-      "remove_branding_license_request_cta": "Request Lite License",
-      "remove_branding_with_a_higher_plan": "Remove branding with a higher plan",
       "remove_logo": "Remove Logo",
       "remove_logo_confirmation": "Are you sure you want to remove the logo?",
       "replace_logo": "Replace Logo",
@@ -2127,8 +2123,7 @@
       "suggest_colors": "Suggest colors",
       "suggested_colors_applied_please_save": "Suggested colors generated successfully. Press “Save” to persist the changes.",
       "theme": "Theme",
-      "theme_settings_description": "Create a style theme for all surveys. You can enable custom styling for each survey.",
-      "unlock_remove_branding_with_lite_license": "Remove branding for free."
+      "theme_settings_description": "Create a style theme for all surveys. You can enable custom styling for each survey."
     },
     "segments": {
       "add_filter_below": "Add filter below",
@@ -2425,8 +2420,6 @@
         "your_plan": "Your plan"
       },
       "domain": {
-        "customize_favicon_description": "Upload a custom favicon to personalize your link survey experience and strengthen your brand presence.",
-        "customize_favicon_with_higher_plan": "Customize favicon with a higher plan",
         "description": "Overview of all surveys using Pretty URLs across your organization",
         "favicon_customization": "Favicon",
         "favicon_customization_description": "Customize the favicon displayed in browser tabs for your link surveys. This will not affect the admin app.",
@@ -2475,13 +2468,11 @@
         "bulk_invite_rows_detected": "{count, plural, one {{count} row detected} other {{count} rows detected}}",
         "bulk_invite_rows_more": "{count, plural, one {+{count} more row} other {+{count} more rows}}",
         "bulk_invite_unknown_teams": "Unknown teams in CSV: {teams}. Create them first or remove them from the file.",
-        "bulk_invite_warning_description": "On the free plan, all organization members are always assigned the “Owner” role.",
         "cannot_delete_only_organization": "This is your only organization, it cannot be deleted. Create a new organization first.",
         "cannot_leave_only_organization": "You cannot leave this organization as it is your only organization. Create a new organization first.",
         "copy_invite_link_to_clipboard": "Copy invite link to clipboard",
         "create_new_organization": "Create new organization",
         "create_new_organization_description": "Create a new organization to handle a different set of workspaces.",
-        "customize_email_with_a_higher_plan": "Customize email with a higher plan",
         "delete_member_confirmation": "Deleted members will lose access to all workspaces and surveys of your organization.",
         "delete_organization": "Delete Organization",
         "delete_organization_description": "Delete organization with all its workspaces including all surveys, responses, people, actions and attributes",
@@ -2494,7 +2485,6 @@
         "display_time_zone_placeholder": "Select a Time Zone",
         "display_time_zone_updated_successfully": "Display time zone updated successfully",
         "display_time_zone_utc_default": "UTC (default)",
-        "eliminate_branding_with_whitelabel": "Eliminate Forma branding and enable additional white-label customization options.",
         "email_customization_preview_email_heading": "Hey {userName}",
         "email_customization_preview_email_text": "This is an email preview to show you which logo will be rendered in the emails.",
         "error_deleting_organization_please_try_again": "Error deleting organization. Please try again.",
@@ -2543,9 +2533,7 @@
         "security_list_tip_link": "Sign up here.",
         "share_invite_link": "Share Invite Link",
         "share_this_link_to_let_your_organization_member_join_your_organization": "Share this link to let your organization member join your organization:",
-        "test_email_sent_successfully": "Test email sent successfully",
-        "unlock_ai_features_description": "AI-powered translations and smart tools are available on higher plans. Upgrade to supercharge your surveys with AI.",
-        "unlock_ai_features_with_a_higher_plan": "Unlock AI features with a higher plan"
+        "test_email_sent_successfully": "Test email sent successfully"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "Auto-subscribe to new surveys",
@@ -2588,7 +2576,6 @@
         "two_factor_authentication_description": "Add an extra layer of security to your account in case your password is stolen.",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "Two-factor authentication enabled. Please enter the six-digit code from your authenticator app.",
         "two_factor_code": "Two-Factor Code",
-        "unlock_two_factor_authentication": "Unlock two-factor authentication with a higher plan",
         "update_personal_info": "Update your personal information",
         "warning_cannot_delete_account": "You are the only owner of this organization. Please transfer ownership to another member first.",
         "warning_cannot_undo": "This cannot be undone",
@@ -2602,8 +2589,6 @@
         "are_you_sure_you_want_to_delete_this_team": "Are you sure you want to delete this team? This also removes the access to all the workspaces and surveys associated with this team.",
         "billing_role_description": "Only have access to billing info.",
         "bulk_invite": "Bulk Invite",
-        "bulk_invite_scale_only_description": "Inviting members in bulk via CSV is available on the Scale plan. Upgrade to invite your whole team at once.",
-        "bulk_invite_scale_only_title": "Unlock bulk invite with a higher plan",
         "contributor": "Contributor",
         "create": "Create",
         "create_first_team_message": "You need to create a team first.",
@@ -2638,9 +2623,6 @@
         "team_updated_successfully": "Team updated successfully",
         "teams": "Teams",
         "teams_description": "Assign members into teams and give teams access to workspaces.",
-        "unlock_teams_description": "Manage which organization members have access to specific workspaces and surveys.",
-        "unlock_teams_title": "Unlock Teams with a higher plan.",
-        "upgrade_plan_notice_message": "Unlock Organization Roles with a higher plan.",
         "you_are_a_member": "You are a member"
       }
     },
@@ -3124,7 +3106,6 @@
           "save_changes_confirmation_body": "Any changes to the inclusion criteria only affect future responses. \nWe recommend to either duplicate an existing or create a new quota.",
           "save_changes_confirmation_text": "Existing responses stay in the quota",
           "select_ending_card": "Select ending card",
-          "upgrade_prompt_title": "Use quotas with a higher plan",
           "when_quota_has_been_reached": "When quota has been reached"
         },
         "randomize_all": "Randomize all",
@@ -3221,8 +3202,6 @@
         "try_lollipop_or_mountain": "Try “lollipop” or “mountain”…",
         "type_field_id": "Type field id",
         "underline": "Underline",
-        "unlock_targeting_description": "Target specific user groups based on attributes or device information",
-        "unlock_targeting_title": "Unlock targeting with a higher plan",
         "unsaved_changes_warning": "You have unsaved changes in your survey. Would you like to save them before leaving?",
         "until_they_submit_a_response": "Ask until they submit a response",
         "update_options": "Update options",
@@ -3502,8 +3481,6 @@
           "no_segments_available": "No segments available",
           "segment_survey_workspace_mismatch": "The selected segment belongs to a different workspace than this survey.",
           "select_segment": "Select segment",
-          "upgrade_prompt_description": "Generate personal links for a segment and link survey responses to each contact.",
-          "upgrade_prompt_title": "Use personal links with a higher plan",
           "work_with_segments": "Personal links work with segments."
         },
         "pretty_url": {

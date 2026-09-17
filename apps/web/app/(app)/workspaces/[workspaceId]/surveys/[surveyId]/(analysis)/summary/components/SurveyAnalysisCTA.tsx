@@ -35,7 +35,6 @@ interface SurveyAnalysisCTAProps {
   isContactsEnabled: boolean;
   isFormaCloud: boolean;
   isStorageConfigured: boolean;
-  enterpriseLicenseRequestFormUrl: string;
   aiUnavailableReason: TAIUnavailableReason | null;
 }
 
@@ -53,7 +52,6 @@ export const SurveyAnalysisCTA = ({
   isContactsEnabled,
   isFormaCloud,
   isStorageConfigured,
-  enterpriseLicenseRequestFormUrl,
   aiUnavailableReason,
 }: SurveyAnalysisCTAProps) => {
   const { t } = useTranslation();
@@ -318,7 +316,6 @@ export const SurveyAnalysisCTA = ({
           isReadOnly={isReadOnly}
           isStorageConfigured={isStorageConfigured}
           workspaceCustomScripts={workspace.customHeadScripts}
-          enterpriseLicenseRequestFormUrl={enterpriseLicenseRequestFormUrl}
         />
       )}
       <SuccessMessage />
