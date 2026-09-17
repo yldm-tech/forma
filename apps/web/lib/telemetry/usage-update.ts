@@ -2,10 +2,9 @@ import { type CacheService, createCacheKey, getCacheService } from "@forma/cache
 import { prisma } from "@forma/database";
 import { IntegrationType } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
-import { E2E_TESTING, IS_DEVELOPMENT, TELEMETRY_DISABLED } from "@/lib/constants";
+import { E2E_TESTING, IS_DEVELOPMENT, TELEMETRY_ENABLED } from "@/lib/constants";
 import { env } from "@/lib/env";
 import { getInstanceInfo } from "@/lib/instance";
-import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import packageJson from "@/package.json";
 
 const TELEMETRY_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -30,16 +29,6 @@ let nextTelemetryCheck = 0;
  * (so an active instance reports as it is used) and the daily usage telemetry job (so an instance that
  * collects no responses still reports at least once — see ENG-2107).
  */
-/**
- * Returns true if telemetry is disabled via env var AND there is no active EE license.
- * EE customers cannot opt out — telemetry is always enforced for license compliance.
- */
-const isTelemetryDisabledForCE = async (): Promise<boolean> => {
-  if (!TELEMETRY_DISABLED) return false;
-  const license = await getEnterpriseLicense();
-  return !license.active;
-};
-
 /**
  * Runs the actual send once every check has passed and the lock is held. Pulled out of
  * `sendTelemetryEvents` so its try/catch/finally isn't nested inside that function's own try block —
@@ -113,13 +102,13 @@ export const sendTelemetryEvents = async () => {
     }
 
     // ============================================================
-    // CHECK 2: Telemetry Disabled Check
+    // CHECK 2: Telemetry Opt-In
     // ============================================================
-    // Purpose: Allow CE self-hosters to opt out of telemetry via env var.
-    // EE bypass: If an active Enterprise License is detected, telemetry is always sent
-    // regardless of the TELEMETRY_DISABLED setting to enforce license compliance.
-    // Placed after in-memory check to avoid calling getEnterpriseLicense() on every invocation.
-    if (await isTelemetryDisabledForCE()) {
+    // Purpose: This instance reports nothing unless its operator asked it to. The check used to be
+    // the other way round — on unless TELEMETRY_DISABLED was set, and then only for an instance
+    // without a licence, so a licensed one could not opt out at all. Nothing is licensed here any
+    // more, which would have made it unconditional.
+    if (!TELEMETRY_ENABLED) {
       return;
     }
 
