@@ -144,10 +144,11 @@ export const MainNavigation = ({
       },
       {
         id: "act",
-        // Kept translated, unlike "Ask" and "Analyze" above. Those two are deliberately English in
-        // every locale; this one has been going through t() since it was added. Making the three
-        // consistent means dropping a string 15 locales already translate, which is a naming
-        // decision rather than a side effect of adding a badge — see ENG-2742.
+        // Kept translated, unlike "Ask" above, which is deliberately English in every locale; this
+        // one has been going through t() since it was added. Making the two consistent means
+        // dropping a string every locale already translates, which is a naming decision rather than
+        // a side effect of adding a badge — see ENG-2742. The third section the older wording
+        // named, "Analyze", went with Dashboards and Unify Feedback in aef7841.
         name: sectionLabelWithBeta(t("common.act")),
         items: [
           {
@@ -329,23 +330,6 @@ export const MainNavigation = ({
                     </ul>
                   </li>
                 ))}
-
-                <li className={cn("mt-2 border-t border-slate-100 pt-2", isCollapsed && "border-t-0 pt-0")}>
-                  <ul>
-                    <NavigationLink
-                      href={settingsNavigationItem.href}
-                      isActive={settingsNavigationItem.isActive}
-                      isCollapsed={isCollapsed}
-                      isTextVisible={isTextVisible}
-                      disabled={settingsNavigationItem.disabled}
-                      disabledMessage={
-                        settingsNavigationItem.disabled ? disabledNavigationMessage : undefined
-                      }
-                      linkText={settingsNavigationItem.name}>
-                      <settingsNavigationItem.icon className={mainNavIconClassName} strokeWidth={1.5} />
-                    </NavigationLink>
-                  </ul>
-                </li>
               </ul>
             </div>
           )}
@@ -365,13 +349,24 @@ export const MainNavigation = ({
               />
             )}
 
-            <div className="flex flex-col">
-              {/* Nothing here any more. Switching organization and workspace is the top bar's
-                  breadcrumb (`WorkspaceAndOrgSwitch`), which states the relationship — org ›
-                  workspace — that stacked dropdowns could only imply; the account menu is the
-                  avatar at the top right. Both render on every page through `WorkspaceLayout` and
-                  `settings-shell`. */}
-            </div>
+            {/* Settings is pinned to the foot of the sidebar rather than sitting at the end of the
+                navigation list, so it stays in the same corner however long that list grows. The
+                rest of this area emptied out when the account menu became the avatar at the top
+                right and switching organization or workspace became the top bar's breadcrumb. */}
+            {!isSettingsMode && (
+              <div className="flex flex-col border-t border-slate-100 pt-2">
+                <NavigationLink
+                  href={settingsNavigationItem.href}
+                  isActive={settingsNavigationItem.isActive}
+                  isCollapsed={isCollapsed}
+                  isTextVisible={isTextVisible}
+                  disabled={settingsNavigationItem.disabled}
+                  disabledMessage={settingsNavigationItem.disabled ? disabledNavigationMessage : undefined}
+                  linkText={settingsNavigationItem.name}>
+                  <settingsNavigationItem.icon className={mainNavIconClassName} strokeWidth={1.5} />
+                </NavigationLink>
+              </div>
+            )}
           </div>
         </aside>
       )}
