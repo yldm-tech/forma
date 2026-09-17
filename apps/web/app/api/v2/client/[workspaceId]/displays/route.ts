@@ -66,9 +66,6 @@ export const POST = async (request: Request, context: Context): Promise<Response
   const { displayInputData } = validatedInput;
 
   try {
-    if (displayInputData.contactId) {
-    }
-
     const response = await createDisplay(displayInputData);
 
     return responses.successResponse(response, true);

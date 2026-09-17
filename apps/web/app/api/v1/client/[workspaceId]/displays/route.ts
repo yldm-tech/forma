@@ -65,9 +65,6 @@ export const POST = withV1ApiWrapper({
       };
     }
 
-    if (inputValidation.data.userId) {
-    }
-
     try {
       const response = await createDisplay(inputValidation.data);
 

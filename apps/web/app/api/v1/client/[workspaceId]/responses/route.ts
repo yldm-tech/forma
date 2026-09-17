@@ -108,9 +108,6 @@ export const POST = withV1ApiWrapper({
 
     const responseInputData = responseInputValidation.data;
 
-    if (responseInputData.userId) {
-    }
-
     // get and check survey
     const survey = await getSurvey(responseInputData.surveyId);
     if (!survey) {
