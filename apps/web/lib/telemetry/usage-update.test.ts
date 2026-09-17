@@ -51,7 +51,6 @@ vi.mock("@/lib/env", () => ({
     RECAPTCHA_SECRET_KEY: "secret-key",
     GITHUB_ID: "github-id",
     SAML_DATABASE_URL: "postgresql://saml.example.com/forma",
-    ENTERPRISE_LICENSE_KEY: "test-license-key",
   },
 }));
 vi.mock("@/lib/constants", () => ({
@@ -337,7 +336,6 @@ describe("sendTelemetryEvents", () => {
       expect.objectContaining({
         error: networkError,
         message: "Network error",
-        hashedLicenseKey: "hashed-test-license-key",
       }),
       "Failed to send telemetry - applying 1h cooldown"
     );

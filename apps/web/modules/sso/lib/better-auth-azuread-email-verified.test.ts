@@ -55,7 +55,6 @@ const loadAzure = async (tenant?: string) => {
     const actual = await vi.importActual<Record<string, unknown>>("@/lib/constants");
     return {
       ...actual,
-      ENTERPRISE_LICENSE_KEY: "lic",
       WEBAPP_URL: BASE_URL,
       GITHUB_OAUTH_ENABLED: false,
       GOOGLE_OAUTH_ENABLED: false,

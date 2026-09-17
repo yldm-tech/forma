@@ -347,9 +347,8 @@ export const ssoDatabaseHooks: NonNullable<BetterAuthOptions["databaseHooks"]> =
 
 /**
  * Request hook (`hooks.before`) that re-checks the SSO license on every SSO callback — parity with
- * the legacy NextAuth SSO callback's runtime license checks. Provider registration is gated by
- * `ENTERPRISE_LICENSE_KEY` (broad); this verifies the specific `sso`/`saml` feature flags on every
- * callback. It runs for ALL SSO sign-ins (including existing users, who skip `user.create` and so
+ * the legacy NextAuth SSO callback's runtime license checks. Provider registration follows each
+ * provider's own credentials; this verifies the `sso`/`saml` feature flags on every callback. It runs for ALL SSO sign-ins (including existing users, who skip `user.create` and so
  * aren't seen by the databaseHooks gate) and catches a license that changes at runtime. Blocks with
  * 403 when disabled.
  *

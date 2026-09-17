@@ -30,7 +30,6 @@ vi.mock("@/lib/constants", () => ({
   POSTHOG_KEY: undefined,
   FB_LOGO_URL: "https://example.com/mock-logo.png",
   ENCRYPTION_KEY: "mock-encryption-key",
-  ENTERPRISE_LICENSE_KEY: "mock-enterprise-license-key",
   GITHUB_ID: "mock-github-id",
   GITHUB_SECRET: "mock-github-secret",
   GOOGLE_CLIENT_ID: "mock-google-client-id",

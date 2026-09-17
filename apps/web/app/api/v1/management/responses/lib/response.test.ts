@@ -87,7 +87,6 @@ vi.mock("@/lib/constants", () => ({
   IS_FORMA_CLOUD: true,
   POSTHOG_KEY: undefined,
   ENCRYPTION_KEY: "mock-encryption-key",
-  ENTERPRISE_LICENSE_KEY: "mock-enterprise-license-key",
   GITHUB_ID: "mock-github-id",
   GITHUB_SECRET: "test-githubID",
   GOOGLE_CLIENT_ID: "test-google-client-id",

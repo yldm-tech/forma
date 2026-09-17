@@ -7,7 +7,7 @@ import { gateSsoProvisioning, provisionSsoUserMemberships } from "@/modules/sso/
 /**
  * Integration coverage for the SSO just-in-time provisioning LOGIC against a real Postgres (ENG-1054,
  * design doc §13). The full OAuth round-trip is a cutover validation with real IdPs (the genericOAuth
- * providers aren't even registered without ENTERPRISE_LICENSE_KEY + provider env, and the callback
+ * providers aren't even registered without their provider env, and the callback
  * needs real IdP token/userinfo endpoints — runbook §4). What IS testable now is the provider-agnostic
  * provisioning: the gate's decision against real instance state, and the membership / notification-
  * settings WRITES the unit tests can only mock.

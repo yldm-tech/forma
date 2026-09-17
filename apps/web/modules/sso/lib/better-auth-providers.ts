@@ -7,7 +7,6 @@ import {
   AZUREAD_CLIENT_SECRET,
   AZUREAD_TENANT_ID,
   AZURE_OAUTH_ENABLED,
-  ENTERPRISE_LICENSE_KEY,
   GITHUB_ID,
   GITHUB_OAUTH_ENABLED,
   GITHUB_SECRET,
@@ -61,9 +60,9 @@ type GoogleProfile = Parameters<NonNullable<SocialConfig<"google">["mapProfileTo
 const ssoSyncProfileOnSignIn = true;
 
 /**
- * Better Auth SSO providers (ENG-1054), mirroring the NextAuth set in `./providers.ts`. Gated behind
- * `ENTERPRISE_LICENSE_KEY` (parity with the `getSSOProviders()` gate) and each provider's configured
- * credentials. Google/GitHub use Better Auth's built-in social providers; Azure/OIDC/SAML register
+ * Better Auth SSO providers (ENG-1054), mirroring the NextAuth set in `./providers.ts`. A provider
+ * registers when its own credentials are configured and not otherwise — there is no licence gate, so
+ * setting GITHUB_ID and GITHUB_SECRET is the whole of enabling GitHub sign-in. Google/GitHub use Better Auth's built-in social providers; Azure/OIDC/SAML register
  * through the `genericOAuth` plugin (Azure keeps providerId "azuread" so existing `account.provider`
  * rows need no remap — design doc D6).
  *
@@ -78,38 +77,36 @@ const ssoSyncProfileOnSignIn = true;
  * one. Tracking the default makes every self-hoster re-register a redirect URI on each such upstream
  * change, so `redirectURI` below holds the v5.2 URL their IdPs already have. See ssoLegacyRedirectUri.
  */
-export const ssoSocialProviders = ENTERPRISE_LICENSE_KEY
-  ? {
-      ...(GITHUB_OAUTH_ENABLED
-        ? {
-            github: {
-              clientId: GITHUB_ID ?? "",
-              clientSecret: GITHUB_SECRET ?? "",
-              overrideUserInfoOnSignIn: ssoSyncProfileOnSignIn,
-              // Capture the resolved identity for verify-before-link recovery (design doc §13).
-              // ⚠ providerAccountId must equal Better Auth's account.accountId — validate at cutover.
-              mapProfileToUser: (profile: GithubProfile) => {
-                captureSsoIdentity({ email: profile.email, providerAccountId: toAccountSubject(profile.id) });
-                return { email: profile.email };
-              },
-            },
-          }
-        : {}),
-      ...(GOOGLE_OAUTH_ENABLED
-        ? {
-            google: {
-              clientId: GOOGLE_CLIENT_ID ?? "",
-              clientSecret: GOOGLE_CLIENT_SECRET ?? "",
-              overrideUserInfoOnSignIn: ssoSyncProfileOnSignIn,
-              mapProfileToUser: (profile: GoogleProfile) => {
-                captureSsoIdentity({ email: profile.email, providerAccountId: profile.sub });
-                return { email: profile.email };
-              },
-            },
-          }
-        : {}),
-    }
-  : {};
+export const ssoSocialProviders = {
+  ...(GITHUB_OAUTH_ENABLED
+    ? {
+        github: {
+          clientId: GITHUB_ID ?? "",
+          clientSecret: GITHUB_SECRET ?? "",
+          overrideUserInfoOnSignIn: ssoSyncProfileOnSignIn,
+          // Capture the resolved identity for verify-before-link recovery (design doc §13).
+          // ⚠ providerAccountId must equal Better Auth's account.accountId — validate at cutover.
+          mapProfileToUser: (profile: GithubProfile) => {
+            captureSsoIdentity({ email: profile.email, providerAccountId: toAccountSubject(profile.id) });
+            return { email: profile.email };
+          },
+        },
+      }
+    : {}),
+  ...(GOOGLE_OAUTH_ENABLED
+    ? {
+        google: {
+          clientId: GOOGLE_CLIENT_ID ?? "",
+          clientSecret: GOOGLE_CLIENT_SECRET ?? "",
+          overrideUserInfoOnSignIn: ssoSyncProfileOnSignIn,
+          mapProfileToUser: (profile: GoogleProfile) => {
+            captureSsoIdentity({ email: profile.email, providerAccountId: profile.sub });
+            return { email: profile.email };
+          },
+        },
+      }
+    : {}),
+};
 
 /**
  * Coerce a provider subject to a string WITHOUT inventing one.
@@ -352,12 +349,7 @@ const azureAuthority = isAzureTemplateIssuerTenant ? azureTenant.toLowerCase() :
 // The wording deliberately avoids "treating it like unset": an operator who set `organizations` would
 // read that as having lost their work/school-only restriction, which still applies at the authorize
 // endpoint. Only id_token verification is given up.
-if (
-  ENTERPRISE_LICENSE_KEY &&
-  AZURE_OAUTH_ENABLED &&
-  AZUREAD_TENANT_ID?.trim() &&
-  isAzureTemplateIssuerTenant
-) {
+if (AZURE_OAUTH_ENABLED && AZUREAD_TENANT_ID?.trim() && isAzureTemplateIssuerTenant) {
   logger.warn(
     `AZUREAD_TENANT_ID="${azureTenant}" names a Microsoft multi-tenant authority whose discovery document advertises a placeholder issuer, so id_tokens cannot be verified against it. Skipping discovery for this provider and taking identity from the userinfo endpoint; the authority you configured still applies at sign-in. Set a Directory (tenant) ID for full id_token verification.`
   );
@@ -382,7 +374,7 @@ const azureEndpoints = isAzureTemplateIssuerTenant
  * `AZUREAD_*` provider, which maps Entra's profile properly.
  */
 const oidcTemplateIssuerAuthority = microsoftTemplateIssuerAuthority(OIDC_ISSUER);
-if (ENTERPRISE_LICENSE_KEY && OIDC_OAUTH_ENABLED && oidcTemplateIssuerAuthority) {
+if (OIDC_OAUTH_ENABLED && oidcTemplateIssuerAuthority) {
   logger.warn(
     `OIDC_ISSUER points at Microsoft's "${oidcTemplateIssuerAuthority}" authority, whose discovery document advertises a placeholder issuer, so id_tokens cannot be verified against it. Skipping discovery for this provider and taking identity from the userinfo endpoint; the authority you configured still applies at sign-in. Prefer the dedicated AZUREAD_CLIENT_ID / AZUREAD_CLIENT_SECRET provider for Microsoft Entra ID.`
   );
@@ -407,120 +399,118 @@ const oidcEndpoints = oidcTemplateIssuerAuthority
  * authoritative all the way into `createUser` — and into the sign-in upgrade path, which flips an
  * existing unverified row to verified when the IdP later attests the address.
  */
-export const ssoGenericOAuthConfig: GenericOAuthConfig[] = ENTERPRISE_LICENSE_KEY
-  ? [
-      ...(AZURE_OAUTH_ENABLED
-        ? [
-            {
-              providerId: "azuread",
-              clientId: AZUREAD_CLIENT_ID ?? "",
-              clientSecret: AZUREAD_CLIENT_SECRET ?? "",
-              ...azureEndpoints,
-              scopes: ["openid", "email", "profile"],
-              // Redundant since 1.7 defaults it to true, kept explicit: this is a security control,
-              // and an explicit value survives a future default flip.
-              pkce: true,
-              // `requireIssuerValidation` is gone in 1.7 (ENG-2343) and this no longer needs an
-              // opt-out. ENG-1800 was that Better Auth rejected a MISSING RFC 9207 `iss` response
-              // parameter, which Microsoft Entra never sends — so the check could only ever fail.
-              // 1.7 only compares `iss` when the provider actually returns one
-              // (`if (iss && provider.issuer && iss !== provider.issuer)`), so Entra short-circuits
-              // and the mix-up defence still applies to providers that do implement RFC 9207.
-              accountIssuer: ssoAccountIssuer("azuread"),
-              accountSubject: ssoAccountSubject("sub"),
-              redirectURI: ssoLegacyRedirectUri("azuread"),
-              overrideUserInfo: ssoSyncProfileOnSignIn,
-              mapProfileToUser: (profile) => {
-                // Capture for verify-before-link recovery; name parity with the OIDC mapping.
-                captureSsoIdentity({
-                  email: profile.email,
-                  providerAccountId: toAccountSubject(profile.sub),
-                });
-                return {
-                  email: profile.email,
-                  name: toDisplayName(profile),
-                  // Read the RAW claim here, which is the only place it survives intact (ENG-2589).
-                  //
-                  // Entra is the one provider that does not speak `email_verified` at all: neither its
-                  // id_tokens nor Graph's `/oidc/userinfo` carry it. Microsoft's equivalent is the
-                  // OPTIONAL `xms_edov` ("email domain owner verified"), which a tenant has to enable on
-                  // the app registration — and which is exactly the signal that says whether the `email`
-                  // claim is a proven address or just a mutable directory attribute. Falling back to it
-                  // means a tenant that opts in gets its denial honoured; one that does not is unchanged,
-                  // because an absent claim resolves the same way either way.
-                  emailVerified: resolveEmailVerifiedFromRawClaim(profile.email_verified ?? profile.xms_edov),
-                };
-              },
-            } satisfies GenericOAuthConfig,
-          ]
-        : []),
-      ...(OIDC_OAUTH_ENABLED
-        ? [
-            {
-              providerId: "openid",
-              clientId: OIDC_CLIENT_ID ?? "",
-              clientSecret: OIDC_CLIENT_SECRET ?? "",
-              ...oidcEndpoints,
-              scopes: ["openid", "email", "profile"],
-              // Redundant since 1.7 defaults it to true, kept explicit (see azuread above).
-              pkce: true,
-              // `requireIssuerValidation: true` (RFC 9207 mix-up defence, design doc §10.3) is gone
-              // in 1.7 — the comparison is now automatic whenever the provider returns `iss`, so the
-              // defence is kept without the flag.
-              accountIssuer: ssoAccountIssuer("openid"),
-              accountSubject: ssoAccountSubject("sub"),
-              redirectURI: ssoLegacyRedirectUri("openid"),
-              overrideUserInfo: ssoSyncProfileOnSignIn,
-              mapProfileToUser: (profile) => {
-                captureSsoIdentity({
-                  email: profile.email,
-                  providerAccountId: toAccountSubject(profile.sub),
-                });
-                return {
-                  email: profile.email,
-                  // Parity with provisionNewSsoUser (OIDC): name → given+family → preferred_username.
-                  name: toDisplayName(profile),
-                  // Read the RAW claim here, which is the only place it survives intact (ENG-2589).
-                  emailVerified: resolveEmailVerifiedFromRawClaim(profile.email_verified),
-                };
-              },
-            } satisfies GenericOAuthConfig,
-          ]
-        : []),
-      ...(SAML_OAUTH_ENABLED
-        ? [
-            {
-              // BoxyHQ SAML bridge — points at the existing local Jackson endpoints (unchanged).
-              providerId: "saml",
-              clientId: "dummy",
-              clientSecret: "dummy",
-              authorizationUrl: `${WEBAPP_URL}/api/auth/saml/authorize`,
-              tokenUrl: `${WEBAPP_URL}/api/auth/saml/token`,
-              userInfoUrl: `${WEBAPP_URL}/api/auth/saml/userinfo`,
-              scopes: [],
-              // Redundant since 1.7 defaults it to true, kept explicit (see azuread above).
-              pkce: true,
-              // Already a plain string map, which is all 1.7 accepts here.
-              authorizationUrlParams: { provider: "saml", tenant: SAML_TENANT, product: SAML_PRODUCT },
-              accountIssuer: ssoAccountIssuer("saml"),
-              accountSubject: ssoAccountSubject("id"),
-              redirectURI: ssoLegacyRedirectUri("saml"),
-              overrideUserInfo: ssoSyncProfileOnSignIn,
-              mapProfileToUser: (profile) => {
-                // ⚠ BoxyHQ's userinfo id — validate it matches Better Auth's account.accountId at cutover.
-                captureSsoIdentity({ email: profile.email, providerAccountId: toAccountSubject(profile.id) });
-                return {
-                  email: profile.email,
-                  // Parity with provisionNewSsoUser (SAML): name → firstName + lastName.
-                  name: toSamlDisplayName(profile),
-                  // No `emailVerified`, deliberately: SAML is a permanent `never-attests` provider in
-                  // ./email-verification-policy. Jackson's userinfo shape carries no `email_verified`,
-                  // and this provider requests no `openid` scope, so no id_token one could ride in on
-                  // is ever minted — there is nothing to read, and the hook verifies the row.
-                };
-              },
-            } satisfies GenericOAuthConfig,
-          ]
-        : []),
-    ]
-  : [];
+export const ssoGenericOAuthConfig: GenericOAuthConfig[] = [
+  ...(AZURE_OAUTH_ENABLED
+    ? [
+        {
+          providerId: "azuread",
+          clientId: AZUREAD_CLIENT_ID ?? "",
+          clientSecret: AZUREAD_CLIENT_SECRET ?? "",
+          ...azureEndpoints,
+          scopes: ["openid", "email", "profile"],
+          // Redundant since 1.7 defaults it to true, kept explicit: this is a security control,
+          // and an explicit value survives a future default flip.
+          pkce: true,
+          // `requireIssuerValidation` is gone in 1.7 (ENG-2343) and this no longer needs an
+          // opt-out. ENG-1800 was that Better Auth rejected a MISSING RFC 9207 `iss` response
+          // parameter, which Microsoft Entra never sends — so the check could only ever fail.
+          // 1.7 only compares `iss` when the provider actually returns one
+          // (`if (iss && provider.issuer && iss !== provider.issuer)`), so Entra short-circuits
+          // and the mix-up defence still applies to providers that do implement RFC 9207.
+          accountIssuer: ssoAccountIssuer("azuread"),
+          accountSubject: ssoAccountSubject("sub"),
+          redirectURI: ssoLegacyRedirectUri("azuread"),
+          overrideUserInfo: ssoSyncProfileOnSignIn,
+          mapProfileToUser: (profile) => {
+            // Capture for verify-before-link recovery; name parity with the OIDC mapping.
+            captureSsoIdentity({
+              email: profile.email,
+              providerAccountId: toAccountSubject(profile.sub),
+            });
+            return {
+              email: profile.email,
+              name: toDisplayName(profile),
+              // Read the RAW claim here, which is the only place it survives intact (ENG-2589).
+              //
+              // Entra is the one provider that does not speak `email_verified` at all: neither its
+              // id_tokens nor Graph's `/oidc/userinfo` carry it. Microsoft's equivalent is the
+              // OPTIONAL `xms_edov` ("email domain owner verified"), which a tenant has to enable on
+              // the app registration — and which is exactly the signal that says whether the `email`
+              // claim is a proven address or just a mutable directory attribute. Falling back to it
+              // means a tenant that opts in gets its denial honoured; one that does not is unchanged,
+              // because an absent claim resolves the same way either way.
+              emailVerified: resolveEmailVerifiedFromRawClaim(profile.email_verified ?? profile.xms_edov),
+            };
+          },
+        } satisfies GenericOAuthConfig,
+      ]
+    : []),
+  ...(OIDC_OAUTH_ENABLED
+    ? [
+        {
+          providerId: "openid",
+          clientId: OIDC_CLIENT_ID ?? "",
+          clientSecret: OIDC_CLIENT_SECRET ?? "",
+          ...oidcEndpoints,
+          scopes: ["openid", "email", "profile"],
+          // Redundant since 1.7 defaults it to true, kept explicit (see azuread above).
+          pkce: true,
+          // `requireIssuerValidation: true` (RFC 9207 mix-up defence, design doc §10.3) is gone
+          // in 1.7 — the comparison is now automatic whenever the provider returns `iss`, so the
+          // defence is kept without the flag.
+          accountIssuer: ssoAccountIssuer("openid"),
+          accountSubject: ssoAccountSubject("sub"),
+          redirectURI: ssoLegacyRedirectUri("openid"),
+          overrideUserInfo: ssoSyncProfileOnSignIn,
+          mapProfileToUser: (profile) => {
+            captureSsoIdentity({
+              email: profile.email,
+              providerAccountId: toAccountSubject(profile.sub),
+            });
+            return {
+              email: profile.email,
+              // Parity with provisionNewSsoUser (OIDC): name → given+family → preferred_username.
+              name: toDisplayName(profile),
+              // Read the RAW claim here, which is the only place it survives intact (ENG-2589).
+              emailVerified: resolveEmailVerifiedFromRawClaim(profile.email_verified),
+            };
+          },
+        } satisfies GenericOAuthConfig,
+      ]
+    : []),
+  ...(SAML_OAUTH_ENABLED
+    ? [
+        {
+          // BoxyHQ SAML bridge — points at the existing local Jackson endpoints (unchanged).
+          providerId: "saml",
+          clientId: "dummy",
+          clientSecret: "dummy",
+          authorizationUrl: `${WEBAPP_URL}/api/auth/saml/authorize`,
+          tokenUrl: `${WEBAPP_URL}/api/auth/saml/token`,
+          userInfoUrl: `${WEBAPP_URL}/api/auth/saml/userinfo`,
+          scopes: [],
+          // Redundant since 1.7 defaults it to true, kept explicit (see azuread above).
+          pkce: true,
+          // Already a plain string map, which is all 1.7 accepts here.
+          authorizationUrlParams: { provider: "saml", tenant: SAML_TENANT, product: SAML_PRODUCT },
+          accountIssuer: ssoAccountIssuer("saml"),
+          accountSubject: ssoAccountSubject("id"),
+          redirectURI: ssoLegacyRedirectUri("saml"),
+          overrideUserInfo: ssoSyncProfileOnSignIn,
+          mapProfileToUser: (profile) => {
+            // ⚠ BoxyHQ's userinfo id — validate it matches Better Auth's account.accountId at cutover.
+            captureSsoIdentity({ email: profile.email, providerAccountId: toAccountSubject(profile.id) });
+            return {
+              email: profile.email,
+              // Parity with provisionNewSsoUser (SAML): name → firstName + lastName.
+              name: toSamlDisplayName(profile),
+              // No `emailVerified`, deliberately: SAML is a permanent `never-attests` provider in
+              // ./email-verification-policy. Jackson's userinfo shape carries no `email_verified`,
+              // and this provider requests no `openid` scope, so no id_token one could ride in on
+              // is ever minted — there is nothing to read, and the hook verifies the row.
+            };
+          },
+        } satisfies GenericOAuthConfig,
+      ]
+    : []),
+];

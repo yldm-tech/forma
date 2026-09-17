@@ -24,7 +24,6 @@ vi.mock("@/lib/env", async () => {
 // SAML literals (SAML_TENANT/SAML_PRODUCT) keep their real values — they are not env-derived toggles and
 // can't be overridden through the mock anyway — and override only the env-driven flags/credentials.
 interface MockConstants {
-  ENTERPRISE_LICENSE_KEY?: string;
   GITHUB_OAUTH_ENABLED: boolean;
   GITHUB_ID?: string;
   GITHUB_SECRET?: string;
@@ -47,7 +46,6 @@ interface MockConstants {
 // runner's .env): everything off, no license, a known WEBAPP_URL. Spread OVER the real constants per
 // test so non-overridden values (e.g. the hardcoded SAML_TENANT/SAML_PRODUCT) keep their real values.
 const BASE: MockConstants = {
-  ENTERPRISE_LICENSE_KEY: undefined,
   GITHUB_OAUTH_ENABLED: false,
   GITHUB_ID: undefined,
   GITHUB_SECRET: undefined,
@@ -98,22 +96,23 @@ afterEach(() => {
 });
 
 describe("better-auth SSO providers", () => {
-  describe("enterprise license gate", () => {
-    test("registers no providers without an enterprise license", async () => {
+  describe("what decides whether a provider registers", () => {
+    test("registers every provider whose own credentials are configured, with no licence involved", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: undefined,
         GITHUB_OAUTH_ENABLED: true,
         GOOGLE_OAUTH_ENABLED: true,
         AZURE_OAUTH_ENABLED: true,
         OIDC_OAUTH_ENABLED: true,
         SAML_OAUTH_ENABLED: true,
       });
-      expect(m.ssoSocialProviders).toEqual({});
-      expect(m.ssoGenericOAuthConfig).toEqual([]);
+      expect(Object.keys(asSocial(m.ssoSocialProviders))).toEqual(
+        expect.arrayContaining(["github", "google"])
+      );
+      expect(m.ssoGenericOAuthConfig.length).toBeGreaterThan(0);
     });
 
-    test("registers no providers when licensed but every provider is disabled", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic" });
+    test("registers no providers when every provider is disabled", async () => {
+      const m = await loadProviders({});
       expect(m.ssoSocialProviders).toEqual({});
       expect(m.ssoGenericOAuthConfig).toEqual([]);
     });
@@ -122,7 +121,6 @@ describe("better-auth SSO providers", () => {
   describe("social providers (Google / GitHub)", () => {
     test("registers GitHub and Google with their configured credentials", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         GITHUB_OAUTH_ENABLED: true,
         GITHUB_ID: "gh-id",
         GITHUB_SECRET: "gh-secret",
@@ -136,14 +134,14 @@ describe("better-auth SSO providers", () => {
     });
 
     test("falls back to empty-string credentials when env values are unset", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", GITHUB_OAUTH_ENABLED: true });
+      const m = await loadProviders({ GITHUB_OAUTH_ENABLED: true });
       const social = asSocial(m.ssoSocialProviders);
       expect(social.github).toMatchObject({ clientId: "", clientSecret: "" });
       expect(social.google).toBeUndefined();
     });
 
     test("GitHub mapProfileToUser captures the identity (id stringified) and returns the email", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", GITHUB_OAUTH_ENABLED: true });
+      const m = await loadProviders({ GITHUB_OAUTH_ENABLED: true });
       const social = asSocial(m.ssoSocialProviders);
       const result = callMapper(social.github?.mapProfileToUser, { email: "octocat@github.test", id: 42 });
       expect(result).toEqual({ email: "octocat@github.test" });
@@ -154,7 +152,7 @@ describe("better-auth SSO providers", () => {
     });
 
     test("Google mapProfileToUser captures the identity using the OIDC sub", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", GOOGLE_OAUTH_ENABLED: true });
+      const m = await loadProviders({ GOOGLE_OAUTH_ENABLED: true });
       const social = asSocial(m.ssoSocialProviders);
       const result = callMapper(social.google?.mapProfileToUser, {
         email: "user@gmail.test",
@@ -171,7 +169,6 @@ describe("better-auth SSO providers", () => {
   describe("generic-OAuth providers (Azure / OIDC / SAML)", () => {
     test("Azure keeps providerId 'azuread' and builds the tenant discovery URL", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_CLIENT_ID: "az-id",
         AZUREAD_CLIENT_SECRET: "az-secret",
@@ -203,7 +200,6 @@ describe("better-auth SSO providers", () => {
      */
     test("pins a portable account issuer on every generic provider", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         OIDC_OAUTH_ENABLED: true,
         SAML_OAUTH_ENABLED: true,
@@ -228,7 +224,6 @@ describe("better-auth SSO providers", () => {
      */
     test("pins the v5.2 callback URL on every generic provider", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         OIDC_OAUTH_ENABLED: true,
         SAML_OAUTH_ENABLED: true,
@@ -249,7 +244,6 @@ describe("better-auth SSO providers", () => {
      */
     test("every pinned provider is one the legacy callback route serves", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         OIDC_OAUTH_ENABLED: true,
         SAML_OAUTH_ENABLED: true,
@@ -286,7 +280,6 @@ describe("better-auth SSO providers", () => {
       "%s derives its account subject from the field that provider actually sends",
       async (providerId, profile, expected) => {
         const m = await loadProviders({
-          ENTERPRISE_LICENSE_KEY: "lic",
           AZURE_OAUTH_ENABLED: true,
           OIDC_OAUTH_ENABLED: true,
           SAML_OAUTH_ENABLED: true,
@@ -299,7 +292,7 @@ describe("better-auth SSO providers", () => {
     );
 
     test("Azure uses explicit endpoints, not discovery, when no tenant is configured", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", AZURE_OAUTH_ENABLED: true });
+      const m = await loadProviders({ AZURE_OAUTH_ENABLED: true });
       const azure = m.ssoGenericOAuthConfig.find((c) => c.providerId === "azuread");
 
       expect(azure?.discoveryUrl).toBeUndefined();
@@ -316,7 +309,6 @@ describe("better-auth SSO providers", () => {
      */
     test("Azure uses discovery when a concrete tenant is configured", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_TENANT_ID: "00000000-1111-2222-3333-444444444444",
       });
@@ -351,7 +343,6 @@ describe("better-auth SSO providers", () => {
       "Azure treats the template-issuer authority %j like unset: explicit endpoints, no discovery",
       async (value, inUrl) => {
         const m = await loadProviders({
-          ENTERPRISE_LICENSE_KEY: "lic",
           AZURE_OAUTH_ENABLED: true,
           AZUREAD_TENANT_ID: value,
         });
@@ -378,7 +369,6 @@ describe("better-auth SSO providers", () => {
      */
     test("the tenant warning says the configured authority still applies, not that it is ignored", async () => {
       await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_TENANT_ID: "organizations",
       });
@@ -402,7 +392,6 @@ describe("better-auth SSO providers", () => {
       ["a mixed-case value, passed through unchanged", "Contoso.OnMicrosoft.com", "Contoso.OnMicrosoft.com"],
     ])("Azure uses discovery for %s", async (_label, value, inUrl) => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_TENANT_ID: value,
       });
@@ -422,7 +411,6 @@ describe("better-auth SSO providers", () => {
       ["the personal-accounts authority", "consumers"],
     ])("Azure does not warn when the tenant is %s", async (_label, value) => {
       await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_TENANT_ID: value,
       });
@@ -432,22 +420,18 @@ describe("better-auth SSO providers", () => {
 
     /**
      * The warning describes how Azure sign-in will behave, so it is pointless — and misleading — on an
-     * instance that registers no Azure provider. Both cases below reach that state, and registration
-     * needs BOTH gates, so the warning has to check both too: an unlicensed instance with Azure
-     * credentials configured is just as provider-less as a licensed one with none.
+     * instance that registers no Azure provider. Registration now follows the provider's own switch
+     * alone, so that switch being off is the only way to reach the provider-less state.
      */
-    test.each([
-      ["Azure SSO is disabled", { ENTERPRISE_LICENSE_KEY: "lic", AZURE_OAUTH_ENABLED: false }],
-      ["the instance is unlicensed", { ENTERPRISE_LICENSE_KEY: undefined, AZURE_OAUTH_ENABLED: true }],
-    ])("Azure does not warn about a template-issuer authority when %s", async (_label, overrides) => {
-      const m = await loadProviders({ ...overrides, AZUREAD_TENANT_ID: "common" });
+    test("Azure does not warn about a template-issuer authority when Azure SSO is disabled", async () => {
+      const m = await loadProviders({ AZURE_OAUTH_ENABLED: false, AZUREAD_TENANT_ID: "common" });
 
       expect(m.ssoGenericOAuthConfig.find((c) => c.providerId === "azuread")).toBeUndefined();
       expect(loggerWarn).not.toHaveBeenCalled();
     });
 
     test("Azure mapProfileToUser resolves the display name through its fallback chain", async () => {
-      const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", AZURE_OAUTH_ENABLED: true });
+      const m = await loadProviders({ AZURE_OAUTH_ENABLED: true });
       const azure = m.ssoGenericOAuthConfig.find((c) => c.providerId === "azuread");
       const mapper = azure?.mapProfileToUser;
 
@@ -476,7 +460,6 @@ describe("better-auth SSO providers", () => {
 
     test("OIDC registers with issuer validation and builds the discovery URL from the issuer", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         OIDC_OAUTH_ENABLED: true,
         OIDC_CLIENT_ID: "oidc-id",
         OIDC_CLIENT_SECRET: "oidc-secret",
@@ -512,7 +495,6 @@ describe("better-auth SSO providers", () => {
      * skip discovery here too — and the operator is told to prefer the dedicated azuread provider.
      */
     const oidcBase = {
-      ENTERPRISE_LICENSE_KEY: "lic",
       OIDC_OAUTH_ENABLED: true,
       OIDC_CLIENT_ID: "oidc-id",
       OIDC_CLIENT_SECRET: "oidc-secret",
@@ -568,10 +550,10 @@ describe("better-auth SSO providers", () => {
       expect(loggerWarn).not.toHaveBeenCalled();
     });
 
-    test("OIDC does not warn about a Microsoft authority when the instance is unlicensed", async () => {
+    test("OIDC does not warn about a Microsoft authority when OIDC is disabled", async () => {
       const m = await loadProviders({
         ...oidcBase,
-        ENTERPRISE_LICENSE_KEY: undefined,
+        OIDC_OAUTH_ENABLED: false,
         OIDC_ISSUER: "https://login.microsoftonline.com/common/v2.0",
       });
 
@@ -591,7 +573,6 @@ describe("better-auth SSO providers", () => {
     describe("generic providers resolve the raw email_verified claim (ENG-2589)", () => {
       const genericMapper = async (providerId: "azuread" | "openid") => {
         const m = await loadProviders({
-          ENTERPRISE_LICENSE_KEY: "lic",
           AZURE_OAUTH_ENABLED: true,
           OIDC_OAUTH_ENABLED: true,
           OIDC_CLIENT_ID: "oidc-id",
@@ -637,7 +618,6 @@ describe("better-auth SSO providers", () => {
        */
       test("the Graph userinfo passes the raw verification claims through to the mapper", async () => {
         const m = await loadProviders({
-          ENTERPRISE_LICENSE_KEY: "lic",
           AZURE_OAUTH_ENABLED: true,
           AZUREAD_TENANT_ID: "common", // the explicit-endpoint branch, where getUserInfo is ours
         });
@@ -667,7 +647,7 @@ describe("better-auth SSO providers", () => {
       // Entra emits no `email_verified` at all; `xms_edov` is Microsoft's own equivalent, and honouring
       // it is what makes azuread's `raw-claim` classification true rather than aspirational.
       test("azuread honours xms_edov when email_verified is absent", async () => {
-        const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", AZURE_OAUTH_ENABLED: true });
+        const m = await loadProviders({ AZURE_OAUTH_ENABLED: true });
         const azure = m.ssoGenericOAuthConfig.find((c) => c.providerId === "azuread");
 
         expect(
@@ -682,7 +662,7 @@ describe("better-auth SSO providers", () => {
       // SAML is `never-attests`: it must not smuggle a claim into the mapped user at all, so the hook's
       // forced `true` is the single decision for it (BoxyHQ carries no `email_verified` on any path).
       test("saml maps no emailVerified at all", async () => {
-        const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", SAML_OAUTH_ENABLED: true });
+        const m = await loadProviders({ SAML_OAUTH_ENABLED: true });
         const saml = m.ssoGenericOAuthConfig.find((c) => c.providerId === "saml");
         if (!saml) throw new Error("saml provider not registered");
 
@@ -693,7 +673,6 @@ describe("better-auth SSO providers", () => {
 
     test("SAML bridges to the local Jackson endpoints and resolves first/last name", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         SAML_OAUTH_ENABLED: true,
         WEBAPP_URL: "https://app.forma.test",
       });
@@ -728,7 +707,6 @@ describe("better-auth SSO providers", () => {
 
     test("registers all three generic-OAuth providers together when enabled", async () => {
       const m = await loadProviders({
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         OIDC_OAUTH_ENABLED: true,
         OIDC_ISSUER: "https://idp.test",
@@ -761,7 +739,6 @@ describe("Azure identity comes from Graph, not an unverified id_token (#9017 rev
 
   const initializedAzureProvider = async (tenant?: string) => {
     const m = await loadProviders({
-      ENTERPRISE_LICENSE_KEY: "lic",
       AZURE_OAUTH_ENABLED: true,
       AZUREAD_CLIENT_ID: "az-id",
       AZUREAD_CLIENT_SECRET: "az-secret",
@@ -842,7 +819,6 @@ describe("Azure identity comes from Graph, not an unverified id_token (#9017 rev
   // profile is resolved — so it is intentionally left on the default path.
   test("a concrete tenant still uses discovery, not the Graph override", async () => {
     const m = await loadProviders({
-      ENTERPRISE_LICENSE_KEY: "lic",
       AZURE_OAUTH_ENABLED: true,
       AZUREAD_TENANT_ID: "00000000-1111-2222-3333-444444444444",
     });
@@ -868,7 +844,7 @@ describe("OIDC identity comes from Graph when pointed at Microsoft (#9023 review
   ).toString("base64url")}.`;
 
   const initializedProvider = async (providerId: string, overrides: Partial<MockConstants>) => {
-    const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", ...overrides });
+    const m = await loadProviders({ ...overrides });
     const { betterAuth } = await import("better-auth");
     const { memoryAdapter } = await import("better-auth/adapters/memory");
     const { genericOAuth } = await import("better-auth/plugins");
@@ -928,7 +904,6 @@ describe("OIDC identity comes from Graph when pointed at Microsoft (#9023 review
 
   test("a normal OIDC issuer keeps discovery and the default profile path", async () => {
     const m = await loadProviders({
-      ENTERPRISE_LICENSE_KEY: "lic",
       ...oidcAtMicrosoft,
       OIDC_ISSUER: "https://idp.test",
     });
@@ -946,7 +921,7 @@ describe("OIDC identity comes from Graph when pointed at Microsoft (#9023 review
    * `openid` to these scopes, this test fails and says why.
    */
   test("saml requests no openid scope, so no id_token exists for the shortcut to read", async () => {
-    const m = await loadProviders({ ENTERPRISE_LICENSE_KEY: "lic", SAML_OAUTH_ENABLED: true });
+    const m = await loadProviders({ SAML_OAUTH_ENABLED: true });
     const saml = m.ssoGenericOAuthConfig.find((c) => c.providerId === "saml");
 
     // Anchor the negatives: without this, an unregistered `saml` makes `saml?.scopes ?? []` an empty
@@ -962,7 +937,6 @@ describe("OIDC identity comes from Graph when pointed at Microsoft (#9023 review
 describe("per-sign-in profile sync", () => {
   // Everything on, so one load covers all five providers.
   const ALL_ON = {
-    ENTERPRISE_LICENSE_KEY: "license",
     GITHUB_OAUTH_ENABLED: true,
     GOOGLE_OAUTH_ENABLED: true,
     AZURE_OAUTH_ENABLED: true,

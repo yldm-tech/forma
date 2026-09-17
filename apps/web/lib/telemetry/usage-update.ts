@@ -4,7 +4,6 @@ import { IntegrationType } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
 import { E2E_TESTING, IS_DEVELOPMENT, TELEMETRY_DISABLED } from "@/lib/constants";
 import { env } from "@/lib/env";
-import { hashString } from "@/lib/hash-string";
 import { getInstanceInfo } from "@/lib/instance";
 import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import packageJson from "@/package.json";
@@ -31,10 +30,6 @@ let nextTelemetryCheck = 0;
  * (so an active instance reports as it is used) and the daily usage telemetry job (so an instance that
  * collects no responses still reports at least once — see ENG-2107).
  */
-// Hashed license key for log context — allows correlating log entries to a specific license
-// without exposing the raw key. Computed once at module load.
-const hashedLicenseKey = env.ENTERPRISE_LICENSE_KEY ? hashString(env.ENTERPRISE_LICENSE_KEY) : null;
-
 /**
  * Returns true if telemetry is disabled via env var AND there is no active EE license.
  * EE customers cannot opt out — telemetry is always enforced for license compliance.
@@ -63,10 +58,7 @@ const executeTelemetrySend = async (cache: CacheService, lastSent: number, now: 
       // processed response, the next 02:15 UTC tick, or that tick running overdue at the next boot.
       // So on an instance with no response traffic the first usage update after an organization is
       // created lands within a day, not within an hour.
-      logger.info(
-        { hashedLicenseKey },
-        "Telemetry skipped - no organization to report on yet, not consuming the 24h window"
-      );
+      logger.info("Telemetry skipped - no organization to report on yet, not consuming the 24h window");
       nextTelemetryCheck = now + 60 * 60 * 1000;
       return;
     }
@@ -81,7 +73,7 @@ const executeTelemetrySend = async (cache: CacheService, lastSent: number, now: 
     // Log as warning since telemetry is non-essential
     const errorMessage = e instanceof Error ? e.message : String(e);
     logger.warn(
-      { error: e, message: errorMessage, lastSent, now, hashedLicenseKey },
+      { error: e, message: errorMessage, lastSent, now },
       "Failed to send telemetry - applying 1h cooldown"
     );
 
@@ -186,7 +178,7 @@ export const sendTelemetryEvents = async () => {
     // Log as warning since telemetry is non-essential functionality
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.warn(
-      { error, message: errorMessage, timestamp: Date.now(), hashedLicenseKey },
+      { error, message: errorMessage, timestamp: Date.now() },
       "Unexpected error in sendTelemetryEvents wrapper - telemetry check skipped"
     );
   }

@@ -23,13 +23,12 @@ import { runWithSsoRequestContext } from "@/modules/sso/lib/sso-request-context"
  * validation runs before any token exchange in any case, so both requests fail at the same place.
  */
 
-// Register the SAML generic provider: the config array is gated on ENTERPRISE_LICENSE_KEY, and the
+// Register the SAML generic provider: the config array follows SAML_OAUTH_ENABLED, and the
 // provider itself on SAML_OAUTH_ENABLED. Without a registered provider the callback would answer
 // identically for both paths for the *wrong* reason (an unknown provider), and the comparison below
 // would pass while proving nothing.
 vi.mock("@/lib/constants", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/constants")>()),
-  ENTERPRISE_LICENSE_KEY: "integration-license",
   SAML_OAUTH_ENABLED: true,
 }));
 

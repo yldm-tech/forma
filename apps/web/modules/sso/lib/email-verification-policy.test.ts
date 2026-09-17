@@ -80,7 +80,6 @@ describe("SSO_EMAIL_VERIFICATION_TRUST is consistent with what the providers act
       const actual = await vi.importActual<Record<string, unknown>>("@/lib/constants");
       return {
         ...actual,
-        ENTERPRISE_LICENSE_KEY: "lic",
         AZURE_OAUTH_ENABLED: true,
         AZUREAD_CLIENT_ID: "az",
         AZUREAD_CLIENT_SECRET: "az-secret",
