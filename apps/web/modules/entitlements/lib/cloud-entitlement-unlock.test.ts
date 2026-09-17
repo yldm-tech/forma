@@ -12,9 +12,8 @@ vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
 
 vi.mock("@/modules/ee/license-check/lib/license", () => ({ getEnterpriseLicense: vi.fn() }));
 
-const { getOrganizationBillingWithReadThroughSync } = await import(
-  "@/modules/ee/billing/lib/organization-billing"
-);
+const { getOrganizationBillingWithReadThroughSync } =
+  await import("@/modules/ee/billing/lib/organization-billing");
 const { getEnterpriseLicense } = await import("@/modules/ee/license-check/lib/license");
 const { getCloudOrganizationEntitlementsContext } = await import("./cloud-provider");
 const { KNOWN_ENTITLEMENT_FEATURES } = await import("./types");
