@@ -29,12 +29,12 @@ describe("getNavigationDestinations", () => {
         "workflows",
         "user-actions",
         "integrations",
+        "app-connection",
+        "tags",
         "ws-general",
         "ws-look",
-        "ws-tags",
         "ws-languages",
         "ws-teams",
-        "ws-sdk",
         "org-general",
         "org-teams",
         "org-api-keys",
@@ -44,15 +44,23 @@ describe("getNavigationDestinations", () => {
     );
   });
 
-  // User actions and Integrations are sidebar entries, which they cannot be while their paths
-  // contain `/settings` — the main navigation swaps itself out for the settings sidebar on those.
-  test("keeps user actions and integrations out of the settings paths", () => {
+  // These are sidebar entries, which they cannot be while their paths contain `/settings` — the
+  // main navigation swaps itself out for the settings sidebar on those.
+  test("keeps the product areas out of the settings paths", () => {
     const result = build();
 
-    for (const id of ["user-actions", "integrations"]) {
+    for (const id of ["user-actions", "integrations", "tags"]) {
       const destination = result.find((d) => d.id === id);
       expect(destination?.href).toBe(`/workspaces/ws_1/${id}`);
     }
+  });
+
+  // The SDK connection had two entries: a card in Integrations and its own settings page. It is
+  // now one page, inside Integrations, and the palette has to agree with the card.
+  test("offers the SDK connection inside integrations", () => {
+    const destination = build().find((d) => d.id === "app-connection");
+
+    expect(destination?.href).toBe("/workspaces/ws_1/integrations/app-connection");
   });
 
   test("offers the billing role only what it can open", () => {

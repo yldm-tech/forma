@@ -55,7 +55,7 @@ export const APIKeysPage = async (props: Readonly<{ params: Promise<{ organizati
             {t("workspace.settings.api_keys.connect_app_banner_description")}
           </AlertDescription>
           <AlertButton asChild>
-            <Link href={`/workspaces/${workspaces[0].id}/settings/workspace/app-connection`}>
+            <Link href={`/workspaces/${workspaces[0].id}/integrations/app-connection`}>
               {t("workspace.settings.api_keys.connect_app_banner_link")}
             </Link>
           </AlertButton>

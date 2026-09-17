@@ -24,7 +24,7 @@ export const EmptyAppSurveys = () => {
           {t("workspace.surveys.summary.connect_your_website_or_app_with_forma_to_get_started")}
         </p>
 
-        <Link className="mt-2" href={`/workspaces/${workspace?.id}/settings/workspace/app-connection`}>
+        <Link className="mt-2" href={`/workspaces/${workspace?.id}/integrations/app-connection`}>
           <Button size="sm" className="flex w-fit justify-center">
             {t("common.set_up_forma_sdk")}
           </Button>

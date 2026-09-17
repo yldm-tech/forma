@@ -76,6 +76,19 @@ export const getNavigationDestinations = ({
           group: t("common.workspace"),
           keywords: ["zapier", "webhook", "slack", "notion", "airtable", "google sheets", "n8n", "make"],
         },
+        {
+          id: "app-connection",
+          label: t("common.web_and_mobile_sdk"),
+          href: `${workspace}/integrations/app-connection`,
+          group: t("common.workspace"),
+          keywords: ["sdk", "javascript", "snippet", "embed"],
+        },
+        {
+          id: "tags",
+          label: t("common.tags"),
+          href: `${workspace}/tags`,
+          group: t("common.workspace"),
+        },
       ];
 
   const workspaceSettingsItems: NavigationDestination[] = isBilling
@@ -94,12 +107,6 @@ export const getNavigationDestinations = ({
           group: t("common.settings"),
         },
         {
-          id: "ws-tags",
-          label: t("common.tags"),
-          href: `${workspaceSettings}/tags`,
-          group: t("common.settings"),
-        },
-        {
           id: "ws-languages",
           label: t("common.survey_languages"),
           href: `${workspaceSettings}/languages`,
@@ -109,12 +116,6 @@ export const getNavigationDestinations = ({
           id: "ws-teams",
           label: t("common.team_access"),
           href: `${workspaceSettings}/teams`,
-          group: t("common.settings"),
-        },
-        {
-          id: "ws-sdk",
-          label: t("common.web_and_mobile_sdk"),
-          href: `${workspaceSettings}/app-connection`,
           group: t("common.settings"),
         },
       ];

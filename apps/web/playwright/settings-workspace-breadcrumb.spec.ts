@@ -18,16 +18,9 @@ const topBar = (page: Page) => page.getByTestId("fb__global-top-control-bar");
 // identity to assert on here — display labels are product copy that changes independently of
 // this spec's actual concern (that the breadcrumb change didn't alter the sidebar), so pinning
 // the full label inventory just makes the spec break on every unrelated rename.
-const WORKSPACE_NAV_HREF_SUFFIXES = [
-  "general",
-  "teams",
-  "languages",
-  "app-connection",
-  "integrations",
-  "look",
-  "user-actions",
-  "tags",
-];
+// Only preferences are in the settings sidebar now: integrations, user actions and tags became
+// main-navigation entries, and the SDK connection became a page inside Integrations.
+const WORKSPACE_NAV_HREF_SUFFIXES = ["general", "teams", "languages", "look"];
 
 // Distinct, run-unique organization and workspace names so the breadcrumb and the sidebar pill
 // (which are only distinguishable by their accessible name) can never be confused with each other.

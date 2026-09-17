@@ -5,6 +5,7 @@ import {
   MessageCircle,
   MousePointerClickIcon,
   SettingsIcon,
+  TagIcon,
   UserIcon,
   WorkflowIcon,
 } from "lucide-react";
@@ -122,10 +123,12 @@ export const MainNavigation = ({
   // three links was more chrome than content. The Beta mark moved onto Workflows, which is the
   // thing that is early; it had been sitting on a section that contained only Workflows anyway.
   //
-  // User actions and Integrations are here rather than in settings because they are things you do
-  // with the product rather than preferences, and because settings was hiding them: nothing in the
-  // UI linked to user actions at all, so a page with five Playwright journeys was unreachable
-  // outside the command palette. They cannot live under `/settings/*` and be reachable from here —
+  // User actions, Integrations and Tags are here rather than in settings because they are things
+  // you do with the product rather than preferences, and because settings was hiding them: nothing
+  // in the UI linked to user actions at all, so a page with five Playwright journeys was
+  // unreachable outside the command palette. Tags is a vocabulary curated across every response —
+  // it renames and merges them — which puts it beside Contacts' attributes rather than beside the
+  // workspace name. None of them can live under `/settings/*` and be reachable from here:
   // `isSettingsMode` swaps this whole sidebar out on any path containing `/settings`.
   const mainNavigationItems = useMemo(
     () => [
@@ -170,6 +173,14 @@ export const MainNavigation = ({
         href: `/workspaces/${workspace.id}/integrations`,
         icon: BlocksIcon,
         isActive: pathname?.startsWith(`/workspaces/${workspace.id}/integrations`),
+        isHidden: false,
+        disabled: isMembershipPending || isBilling,
+      },
+      {
+        name: t("common.tags"),
+        href: `/workspaces/${workspace.id}/tags`,
+        icon: TagIcon,
+        isActive: pathname?.startsWith(`/workspaces/${workspace.id}/tags`),
         isHidden: false,
         disabled: isMembershipPending || isBilling,
       },

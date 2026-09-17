@@ -177,7 +177,7 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
                           </AlertDescription>
                           <AlertButton
                             onClick={() =>
-                              window.open(`${workspaceBasePath}/settings/workspace/app-connection`, "_blank")
+                              window.open(`${workspaceBasePath}/integrations/app-connection`, "_blank")
                             }>
                             {t("common.set_up_forma_sdk")}
                           </AlertButton>

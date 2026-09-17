@@ -1,20 +1,16 @@
 "use client";
 
 import {
-  BlocksIcon,
   BrushIcon,
   Building2Icon,
   ChevronDownIcon,
-  CodeXmlIcon,
   CreditCardIcon,
   FoldersIcon,
   GlobeIcon,
   KeyIcon,
   LanguagesIcon,
-  ListChecksIcon,
   Loader2,
   ShieldIcon,
-  TagIcon,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -288,6 +284,10 @@ export const SettingsSidebarContent = ({
   // Workspace items stay nested under the workspace; organization and account settings are now
   // scoped to their own top-level routes so they work with or without a current workspace. Paths
   // come from the shared route helpers so they can't drift from redirects/other navigation.
+  //
+  // Only preferences are left here. Integrations, user actions and tags are main-navigation
+  // entries, and the SDK connection is a card inside Integrations — listing any of them again
+  // would be a second entry for the same page, reached through a redirect.
   const workspaceItems: NavItem[] = [
     {
       id: "general",
@@ -311,38 +311,10 @@ export const SettingsSidebarContent = ({
       disabled: isBilling,
     },
     {
-      id: "app-connection",
-      label: t("common.web_and_mobile_sdk"),
-      href: workspaceSettingsPath(workspaceId, "app-connection"),
-      icon: <CodeXmlIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-    {
-      id: "integrations",
-      label: t("common.integrations"),
-      href: workspaceSettingsPath(workspaceId, "integrations"),
-      icon: <BlocksIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-    {
       id: "look",
       label: t("common.appearance"),
       href: workspaceSettingsPath(workspaceId, "look"),
       icon: <BrushIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-    {
-      id: "user-actions",
-      label: t("common.user_actions"),
-      href: workspaceSettingsPath(workspaceId, "user-actions"),
-      icon: <ListChecksIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-    {
-      id: "tags",
-      label: t("common.tags"),
-      href: workspaceSettingsPath(workspaceId, "tags"),
-      icon: <TagIcon className={iconClassName} />,
       disabled: isBilling,
     },
   ];

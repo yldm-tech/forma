@@ -36,7 +36,7 @@ export const WorkspaceConfigNavigation = ({ activeId, loading }: WorkspaceConfig
       id: "app-connection",
       label: t("common.web_and_mobile_sdk"),
       icon: <CodeXmlIcon className="size-5" />,
-      href: `${workspaceBasePath}/settings/workspace/app-connection`,
+      href: `${workspaceBasePath}/integrations/app-connection`,
       current: pathname?.includes("/app-connection"),
     },
     {
@@ -57,7 +57,7 @@ export const WorkspaceConfigNavigation = ({ activeId, loading }: WorkspaceConfig
       id: "tags",
       label: t("common.tags"),
       icon: <TagIcon className="size-5" />,
-      href: `${workspaceBasePath}/settings/workspace/tags`,
+      href: `${workspaceBasePath}/tags`,
       current: pathname?.includes("/tags"),
     },
   ];

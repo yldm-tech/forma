@@ -164,7 +164,7 @@ export const AppTab = () => {
           </AlertDescription>
           {!workspace.appSetupCompleted && (
             <AlertButton asChild>
-              <Link href={`/workspaces/${workspace?.id}/settings/workspace/app-connection`}>
+              <Link href={`/workspaces/${workspace?.id}/integrations/app-connection`}>
                 {t("common.set_up_forma_sdk")}
               </Link>
             </AlertButton>

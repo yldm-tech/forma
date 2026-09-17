@@ -162,7 +162,7 @@ describe("proxy", () => {
     // The router keeps prefetching the links of a tree it rendered earlier, so after a workspace is
     // deleted it still prefetches that workspace's links. Honouring one would overwrite the
     // surviving workspace the delete action stored with a workspace that no longer exists.
-    const request = new NextRequest("http://localhost:3000/workspaces/ws-deleted/settings/workspace/tags", {
+    const request = new NextRequest("http://localhost:3000/workspaces/ws-deleted/tags", {
       headers: { [prefetchHeader]: "1" },
     });
     request.cookies.set("forma-workspace-id", "ws-surviving");
