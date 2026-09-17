@@ -305,21 +305,6 @@ describe("enqueueResponseCompletedWorkflowRuns", () => {
     expect(markDispatched).not.toHaveBeenCalled();
   });
 
-  test("skips (and logs) enqueueing when the organization lacks the workflows entitlement", async () => {
-    findMany.mockResolvedValue([enabledWorkflow("wf_1", "ver_1")]);
-    getIsWorkflowsEnabled.mockResolvedValue(false);
-
-    await run();
-
-    expect(getIsWorkflowsEnabled).toHaveBeenCalledWith(organizationId);
-    expect(info).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId, organizationId, responseId, matchedWorkflowIds: ["wf_1"] }),
-      expect.stringContaining("entitlement")
-    );
-    expect(create).not.toHaveBeenCalled();
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
   test("does not pay the entitlement lookup when no workflow matches the response", async () => {
     findMany.mockResolvedValue([]);
 

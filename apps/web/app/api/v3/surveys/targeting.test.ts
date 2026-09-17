@@ -3,16 +3,13 @@ import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import type { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import { DatabaseError } from "@forma/types/errors";
-import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getContactAttributeKeys } from "@/modules/contacts/lib/contact-attribute-keys";
 import { getExistingWorkspaceSurveyIds, getSegments } from "@/modules/contacts/segments/lib/segments";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import type { TV3SurveyTargeting } from "./schemas";
 import {
   areV3SurveyTargetingFiltersEqual,
   assertV3SurveyTargetingFilterReferences,
-  resolveV3ContactsEntitlement,
   setV3SurveySegmentFilters,
 } from "./targeting";
 
@@ -44,44 +41,9 @@ vi.mock("@/modules/license-check/lib/utils", () => ({
 }));
 
 const EMPTY_FILTERS: TV3SurveyTargeting["filters"] = [];
-type ResolvedOrganization = Awaited<ReturnType<typeof getOrganizationByWorkspaceId>>;
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-describe("resolveV3ContactsEntitlement", () => {
-  test("uses the supplied organizationId without a workspace lookup", async () => {
-    vi.mocked(getIsContactsEnabled).mockResolvedValueOnce(true);
-
-    const result = await resolveV3ContactsEntitlement("ws_1", "org_1");
-
-    expect(result).toEqual({ resolvedOrganizationId: "org_1", isContactsEnabled: true });
-    expect(getOrganizationByWorkspaceId).not.toHaveBeenCalled();
-    expect(getIsContactsEnabled).toHaveBeenCalledWith("org_1");
-  });
-
-  test("resolves the organization from the workspace when no id is supplied", async () => {
-    vi.mocked(getOrganizationByWorkspaceId).mockResolvedValueOnce({
-      id: "org_2",
-    } as unknown as ResolvedOrganization);
-    vi.mocked(getIsContactsEnabled).mockResolvedValueOnce(false);
-
-    const result = await resolveV3ContactsEntitlement("ws_2");
-
-    expect(getOrganizationByWorkspaceId).toHaveBeenCalledWith("ws_2");
-    expect(getIsContactsEnabled).toHaveBeenCalledWith("org_2");
-    expect(result).toEqual({ resolvedOrganizationId: "org_2", isContactsEnabled: false });
-  });
-
-  test("returns a null org and disabled flag when the workspace has no organization", async () => {
-    vi.mocked(getOrganizationByWorkspaceId).mockResolvedValueOnce(null);
-
-    const result = await resolveV3ContactsEntitlement("ws_3");
-
-    expect(result).toEqual({ resolvedOrganizationId: null, isContactsEnabled: false });
-    expect(getIsContactsEnabled).not.toHaveBeenCalled();
-  });
 });
 
 describe("areV3SurveyTargetingFiltersEqual", () => {

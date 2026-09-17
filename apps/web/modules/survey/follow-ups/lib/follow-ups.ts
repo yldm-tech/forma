@@ -188,7 +188,7 @@ export const sendFollowUpsForResponse = async (
     }
 
     // Check if follow-ups are allowed for this organization
-    const surveyFollowUpsPermission = await getSurveyFollowUpsPermission(organization.id);
+    const surveyFollowUpsPermission = await getSurveyFollowUpsPermission();
     if (!surveyFollowUpsPermission) {
       return err({
         code: FollowUpSendError.FOLLOW_UP_NOT_ALLOWED,

@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
@@ -15,14 +14,7 @@ const WorkflowDetailLayout = async (
   }>
 ) => {
   const params = await props.params;
-  const { isReadOnly, isWorkflowsEnabled } = await getWorkflowsRouteAuth(params.workspaceId);
-
-  if (!isWorkflowsEnabled) {
-    // Not entitled: the route does not exist for this installation, matching the list layout. Also
-    // keeps WorkflowPageTitle/WorkflowHeaderCta/WorkflowEditorProvider from mounting — they fetch the
-    // workflow through the now-403 API and would render broken states.
-    notFound();
-  }
+  const { isReadOnly } = await getWorkflowsRouteAuth(params.workspaceId);
 
   return (
     <WorkflowEditorProvider>

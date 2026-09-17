@@ -1,10 +1,2 @@
-import { IS_FORMA_CLOUD } from "@/lib/constants";
-import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
-import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
-
-export const getSurveyFollowUpsPermission = async (organizationId: string): Promise<boolean> => {
-  if (IS_FORMA_CLOUD) {
-    return hasCloudEntitlementWithLicenseGuard(organizationId, CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.FOLLOW_UPS);
-  }
-  return true;
-};
+/** Follow-ups are part of the product, not something an organization can lack. */
+export const getSurveyFollowUpsPermission = async (): Promise<boolean> => true;

@@ -100,13 +100,13 @@ export const SurveyEditorPage = async (props: {
     isUserTargetingAllowed,
     isWorkflowsAllowed,
   ] = await Promise.all([
-    getSurveyFollowUpsPermission(workspaceWithTeamIds.organizationId),
-    getIsSpamProtectionEnabled(workspaceWithTeamIds.organizationId),
-    getIsQuotasEnabled(workspaceWithTeamIds.organizationId),
-    getExternalUrlsPermission(workspaceWithTeamIds.organizationId),
-    getIsContactsEnabled(workspaceWithTeamIds.organizationId),
+    getSurveyFollowUpsPermission(),
+    getIsSpamProtectionEnabled(),
+    getIsQuotasEnabled(),
+    getExternalUrlsPermission(),
+    getIsContactsEnabled(),
     // Drives the Follow-ups deprecation: the tab only survives where Workflows cannot replace it.
-    getIsWorkflowsEnabled(workspaceWithTeamIds.organizationId),
+    getIsWorkflowsEnabled(),
   ]);
 
   const quotas = isQuotasAllowed && survey ? await getQuotas(survey.id) : [];

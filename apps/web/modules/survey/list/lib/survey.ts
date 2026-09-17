@@ -96,7 +96,7 @@ export const copySurveyToOtherWorkspace = async (
     if (!existingSurvey) throw new ResourceNotFoundError("Survey", surveyId);
     if (!organization) throw new ResourceNotFoundError("Organization", workspaceId);
 
-    const isQuotasAllowed = await getIsQuotasEnabled(organization.id);
+    const isQuotasAllowed = await getIsQuotasEnabled();
 
     let targetWorkspace: TWorkspaceWithLanguages | null = null;
 

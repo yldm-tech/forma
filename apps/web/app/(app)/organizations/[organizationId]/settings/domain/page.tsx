@@ -30,7 +30,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   }
 
   const [hasWhiteLabelPermission, surveys, layoutData] = await Promise.all([
-    getWhiteLabelPermission(organization.id),
+    getWhiteLabelPermission(),
     getSurveysWithSlugsByOrganizationId(organization.id),
     getSettingsLayoutData(session.user.id, organization.id),
   ]);

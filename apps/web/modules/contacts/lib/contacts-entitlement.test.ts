@@ -1,32 +1,10 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { OperationNotAllowedError } from "@forma/types/errors";
+import { describe, expect, test } from "vitest";
+import { CONTACTS_API_V1_NOT_ENABLED_MESSAGE } from "./contacts-entitlement";
 
-const mocks = vi.hoisted(() => ({
-  getIsContactsEnabled: vi.fn(),
-}));
-
-vi.mock("@/modules/license-check/lib/utils", () => ({
-  getIsContactsEnabled: mocks.getIsContactsEnabled,
-}));
-
-const { CONTACTS_NOT_ENABLED_MESSAGE, ensureContactsEnabled } = await import("./contacts-entitlement");
-
-describe("ensureContactsEnabled", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test("throws OperationNotAllowedError when the entitlement is missing", async () => {
-    mocks.getIsContactsEnabled.mockResolvedValue(false);
-
-    await expect(ensureContactsEnabled("org1")).rejects.toThrow(OperationNotAllowedError);
-    await expect(ensureContactsEnabled("org1")).rejects.toThrow(CONTACTS_NOT_ENABLED_MESSAGE);
-    expect(mocks.getIsContactsEnabled).toHaveBeenCalledWith("org1");
-  });
-
-  test("resolves when the entitlement is present", async () => {
-    mocks.getIsContactsEnabled.mockResolvedValue(true);
-
-    await expect(ensureContactsEnabled("org1")).resolves.toBeUndefined();
+describe("contacts entitlement messages", () => {
+  test("keeps the v1 wording verbatim, because consumers match on the string", () => {
+    expect(CONTACTS_API_V1_NOT_ENABLED_MESSAGE).toBe(
+      "Contacts are only enabled for Enterprise Edition, please upgrade."
+    );
   });
 });

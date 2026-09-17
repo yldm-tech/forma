@@ -7,7 +7,7 @@ Staging already has this; prod does not.
 
 Three Stripe objects drive the app per Scale org:
 
-- Availability entitlement — product feature lookup key **`workflows`** → `getIsWorkflowsEnabled(orgId)`.
+- Availability entitlement — product feature lookup key **`workflows`** → `getIsWorkflowsEnabled()`.
 - Included-volume entitlement — product feature **`workflow-runs-included-1000`** → `limits.monthly.workflowRuns`.
 - Metered price — `forma_price_kind: workflow_runs`, attached to meter **`workflow_run_created`**.
 

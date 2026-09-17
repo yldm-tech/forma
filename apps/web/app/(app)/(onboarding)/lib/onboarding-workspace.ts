@@ -37,7 +37,7 @@ const ensureOrganizationAISmartTools = async (
     throw new ResourceNotFoundError("Organization", organizationId);
   }
 
-  const isEntitled = await getIsAISmartToolsEnabled(organizationId);
+  const isEntitled = await getIsAISmartToolsEnabled();
 
   if (isEntitled && !organization.isAISmartToolsEnabled) {
     organization = await updateOrganization(organizationId, { isAISmartToolsEnabled: true });

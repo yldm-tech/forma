@@ -42,7 +42,7 @@ export const updateWorkspaceBrandingAction = authenticatedActionClient
         if (!organization) {
           throw new ResourceNotFoundError("Organization", organizationId);
         }
-        const canRemoveBranding = await getRemoveBrandingPermission(organizationId);
+        const canRemoveBranding = await getRemoveBrandingPermission();
 
         if (parsedInput.data.inAppSurveyBranding !== undefined) {
           if (!canRemoveBranding) {

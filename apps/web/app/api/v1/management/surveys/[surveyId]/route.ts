@@ -221,9 +221,7 @@ export const PUT = withV1ApiWrapper({
       }
 
       const featureCheckResult = await checkFeaturePermissions(
-        surveyUpdate as Parameters<typeof checkFeaturePermissions>[0],
-        organization,
-        result.survey
+        surveyUpdate as Parameters<typeof checkFeaturePermissions>[0]
       );
       if (featureCheckResult) {
         return {

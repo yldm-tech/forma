@@ -11,14 +11,14 @@ export const SegmentsPage = async ({ params: paramsProps }: { params: Promise<{ 
   const params = await paramsProps;
   const t = await getTranslate();
 
-  const { isReadOnly, organization, workspace } = await getWorkspaceAuth(params.workspaceId);
+  const { isReadOnly, workspace } = await getWorkspaceAuth(params.workspaceId);
 
   const [segments, contactAttributeKeys] = await Promise.all([
     getSegments(workspace.id),
     getContactAttributeKeys(workspace.id),
   ]);
 
-  const isContactsEnabled = await getIsContactsEnabled(organization.id);
+  const isContactsEnabled = await getIsContactsEnabled();
 
   if (!segments) {
     throw new Error("Failed to fetch segments");

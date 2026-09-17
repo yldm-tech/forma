@@ -129,7 +129,7 @@ export const POST = withV1ApiWrapper({
       };
     }
 
-    const isBiggerFileUploadAllowed = await getBiggerUploadFileSizePermission(organization.id);
+    const isBiggerFileUploadAllowed = await getBiggerUploadFileSizePermission();
     const maxFileUploadSize = isBiggerFileUploadAllowed
       ? MAX_FILE_UPLOAD_SIZES.big
       : MAX_FILE_UPLOAD_SIZES.standard;

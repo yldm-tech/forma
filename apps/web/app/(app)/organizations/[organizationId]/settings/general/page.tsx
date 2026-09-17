@@ -42,8 +42,8 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
 
   const [isMultiOrgEnabled, hasWhiteLabelPermission, hasAIPermission, layoutData] = await Promise.all([
     getIsMultiOrgEnabled(),
-    getWhiteLabelPermission(organization.id),
-    getIsAISmartToolsEnabled(organization.id),
+    getWhiteLabelPermission(),
+    getIsAISmartToolsEnabled(),
     getSettingsLayoutData(session.user.id, organization.id),
   ]);
 

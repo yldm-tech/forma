@@ -44,7 +44,7 @@ export const MembersView = async ({
   const isLeaveOrganizationDisabled = userMemberships.length <= 1;
 
   const isMultiOrgEnabled = await getIsMultiOrgEnabled();
-  const isBulkInviteAllowed = await getBulkInvitePermission(organization.id);
+  const isBulkInviteAllowed = await getBulkInvitePermission();
 
   // Fetch admin teams if they're a team admin
   const userAdminTeamIds = await getTeamsWhereUserIsAdmin(currentUserId, organization.id);

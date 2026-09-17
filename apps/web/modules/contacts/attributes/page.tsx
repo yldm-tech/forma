@@ -15,11 +15,11 @@ export const AttributesPage = async ({
   const params = await paramsProps;
   const locale = await getLocale();
   const t = await getTranslate();
-  const { isReadOnly, organization, workspace } = await getWorkspaceAuth(params.workspaceId);
+  const { isReadOnly, workspace } = await getWorkspaceAuth(params.workspaceId);
 
   const contactAttributeKeys = await getContactAttributeKeys(workspace.id);
 
-  const isContactsEnabled = await getIsContactsEnabled(organization.id);
+  const isContactsEnabled = await getIsContactsEnabled();
 
   return (
     <ContactsPageLayout

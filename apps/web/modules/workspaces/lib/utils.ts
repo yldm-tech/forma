@@ -362,7 +362,7 @@ const resolveWorkspaceLayoutData = async (
   }
 
   const [isAccessControlAllowed, workspacePermission, license] = await Promise.all([
-    getAccessControlPermission(organization.id),
+    getAccessControlPermission(),
     getWorkspacePermissionByUserId(userId, workspace.id),
     getEnterpriseLicense(),
   ]);

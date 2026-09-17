@@ -22,7 +22,7 @@ async function fetchAndAuthorizeContactAttributeKey(
 ) {
   // Entitlement first, matching the plural route: without the contacts feature the caller may
   // not interact with attribute keys at all, regardless of workspace permissions.
-  const isContactsEnabled = await getIsContactsEnabled(authentication.organizationId);
+  const isContactsEnabled = await getIsContactsEnabled();
   if (!isContactsEnabled) {
     return { error: responses.forbiddenResponse(CONTACTS_API_V1_NOT_ENABLED_MESSAGE) };
   }

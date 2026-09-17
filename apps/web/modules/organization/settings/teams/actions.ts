@@ -421,7 +421,7 @@ export const bulkInviteUsersAction = authenticatedActionClient.inputSchema(ZBulk
     // Entitlement gate: bulk invite is a paid feature. Mitigates the invite-spam abuse vector by
     // keeping high-volume invites behind the bulk-invite entitlement (Stripe on cloud, license
     // feature on self-hosted) rather than hardcoding plan names.
-    const isBulkInviteAllowed = await getBulkInvitePermission(organizationId);
+    const isBulkInviteAllowed = await getBulkInvitePermission();
     if (!isBulkInviteAllowed) {
       throw new OperationNotAllowedError("Bulk invite is not available on your current plan");
     }

@@ -157,7 +157,7 @@ export const gateSsoProvisioning = async ({
       : await getFirstOrganization();
   if (!organization) return { action: "reject", reason: "no_organization_found" };
 
-  const isAccessControlAllowed = await getAccessControlPermission(organization.id);
+  const isAccessControlAllowed = await getAccessControlPermission();
   if (!isAccessControlAllowed && !callbackUrl) {
     return { action: "reject", reason: "insufficient_role_permissions" };
   }

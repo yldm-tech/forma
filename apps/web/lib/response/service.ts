@@ -476,7 +476,7 @@ export const getResponseDownloadFile = async (
     if (!organizationBilling) {
       throw new ResourceNotFoundError("OrganizationBilling", organizationId);
     }
-    const isQuotasAllowed = await getIsQuotasEnabled(organizationId);
+    const isQuotasAllowed = await getIsQuotasEnabled();
 
     const headers = [
       "No.",

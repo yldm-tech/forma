@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { TOrganization } from "@forma/types/organizations";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
-import {
-  TSurvey,
-  TSurveyCreateInputWithWorkspaceId,
-  TSurveyQuestionTypeEnum,
-} from "@forma/types/surveys/types";
+import { TSurveyCreateInputWithWorkspaceId, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
 import { responses } from "@/lib/api/response";
 import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
@@ -34,24 +29,6 @@ vi.mock("@/modules/survey/lib/permission", () => ({
 vi.mock("@/lib/survey/utils", () => ({
   getElementsFromBlocks: vi.fn((blocks: any[]) => blocks.flatMap((block: any) => block.elements)),
 }));
-
-const mockOrganization: TOrganization = {
-  id: "test-org",
-  name: "Test Organization",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  billing: {
-    stripeCustomerId: null,
-    limits: {
-      workspaces: 3,
-      monthly: {
-        responses: 1500,
-      },
-    },
-    usageCycleAnchor: new Date(),
-  },
-  isAISmartToolsEnabled: false,
-};
 
 const mockFollowUp: TSurveyCreateInputWithWorkspaceId["followUps"][number] = {
   id: "followup1",
@@ -119,7 +96,7 @@ describe("checkFeaturePermissions", () => {
 
   test("should return null if no restricted features are used", async () => {
     const surveyData = { ...baseSurveyData };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeNull();
   });
 
@@ -127,7 +104,7 @@ describe("checkFeaturePermissions", () => {
   test("should return forbiddenResponse if recaptcha is enabled but permission denied", async () => {
     vi.mocked(getIsSpamProtectionEnabled).mockResolvedValue(false);
     const surveyData = { ...baseSurveyData, recaptcha: { enabled: true, threshold: 0.5 } };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeInstanceOf(Response);
     expect(result?.status).toBe(403);
     expect(responses.forbiddenResponse).toHaveBeenCalledWith(
@@ -141,29 +118,16 @@ describe("checkFeaturePermissions", () => {
       ...baseSurveyData,
       recaptcha: { enabled: true, threshold: 0.5 },
     };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeNull();
   });
 
   // Follow-ups tests
-  test("should return forbiddenResponse if follow-ups are used but permission denied", async () => {
-    vi.mocked(getSurveyFollowUpsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      followUps: [mockFollowUp],
-    }; // Add minimal follow-up data
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-    expect(responses.forbiddenResponse).toHaveBeenCalledWith(
-      "Survey follow ups are not allowed for this organization"
-    );
-  });
 
   test("should return null if follow-ups are used and permission granted", async () => {
     vi.mocked(getSurveyFollowUpsPermission).mockResolvedValue(true);
     const surveyData = { ...baseSurveyData, followUps: [mockFollowUp] }; // Add minimal follow-up data
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeNull();
   });
 
@@ -177,7 +141,7 @@ describe("checkFeaturePermissions", () => {
       followUps: [mockFollowUp],
       languages: [mockLanguage],
     };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeNull();
   });
 
@@ -190,7 +154,7 @@ describe("checkFeaturePermissions", () => {
       followUps: [mockFollowUp],
       languages: [mockLanguage],
     };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeInstanceOf(Response);
     expect(result?.status).toBe(403);
     expect(responses.forbiddenResponse).toHaveBeenCalledWith(
@@ -199,110 +163,7 @@ describe("checkFeaturePermissions", () => {
     expect(responses.forbiddenResponse).toHaveBeenCalledTimes(1); // Ensure it stops at the first failure
   });
 
-  test("should return forbiddenResponse for the first denied feature (follow-ups)", async () => {
-    vi.mocked(getIsSpamProtectionEnabled).mockResolvedValue(true);
-    vi.mocked(getSurveyFollowUpsPermission).mockResolvedValue(false); // Denied
-    const surveyData = {
-      ...baseSurveyData,
-      recaptcha: { enabled: true, threshold: 0.5 },
-      followUps: [mockFollowUp],
-      languages: [mockLanguage],
-    };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-    expect(responses.forbiddenResponse).toHaveBeenCalledWith(
-      "Survey follow ups are not allowed for this organization"
-    );
-    expect(responses.forbiddenResponse).toHaveBeenCalledTimes(1); // Ensure it stops at the first failure
-  });
-
   // External URLs - ending card button link tests
-  test("should return forbiddenResponse when adding new ending with buttonLink without permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      endings: [
-        {
-          id: "ending1",
-          type: "endScreen" as const,
-          headline: { default: "Thanks" },
-          subheader: { default: "" },
-          buttonLink: "https://example.com",
-          buttonLabel: { default: "Click" },
-        },
-      ],
-    };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-    expect(responses.forbiddenResponse).toHaveBeenCalledWith(
-      "External URLs are not enabled for this organization. Upgrade to use external button links."
-    );
-  });
-
-  test("should return forbiddenResponse when changing ending buttonLink without permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      endings: [
-        {
-          id: "ending1",
-          type: "endScreen" as const,
-          headline: { default: "Thanks" },
-          subheader: { default: "" },
-          buttonLink: "https://new-url.com",
-          buttonLabel: { default: "Click" },
-        },
-      ],
-    };
-    const oldSurvey = {
-      endings: [
-        {
-          id: "ending1",
-          type: "endScreen" as const,
-          headline: { default: "Thanks" },
-          subheader: { default: "" },
-          buttonLink: "https://old-url.com",
-          buttonLabel: { default: "Click" },
-        },
-      ],
-    } as unknown as TSurvey;
-    const result = await checkFeaturePermissions(surveyData, mockOrganization, oldSurvey);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-  });
-
-  test("should allow keeping existing ending buttonLink without permission (grandfathering)", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      endings: [
-        {
-          id: "ending1",
-          type: "endScreen" as const,
-          headline: { default: "Thanks" },
-          subheader: { default: "" },
-          buttonLink: "https://existing-url.com",
-          buttonLabel: { default: "Click" },
-        },
-      ],
-    };
-    const oldSurvey = {
-      endings: [
-        {
-          id: "ending1",
-          type: "endScreen" as const,
-          headline: { default: "Thanks" },
-          subheader: { default: "" },
-          buttonLink: "https://existing-url.com",
-          buttonLabel: { default: "Click" },
-        },
-      ],
-    } as unknown as TSurvey;
-    const result = await checkFeaturePermissions(surveyData, mockOrganization, oldSurvey);
-    expect(result).toBeNull();
-  });
 
   test("should allow ending buttonLink when permission is granted", async () => {
     vi.mocked(getExternalUrlsPermission).mockResolvedValue(true);
@@ -319,138 +180,11 @@ describe("checkFeaturePermissions", () => {
         },
       ],
     };
-    const result = await checkFeaturePermissions(surveyData, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData);
     expect(result).toBeNull();
   });
 
   // External URLs - CTA external button tests
-  test("should return forbiddenResponse when adding CTA with external button without permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://example.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-    };
-    const result = await checkFeaturePermissions(surveyData as any, mockOrganization);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-    expect(responses.forbiddenResponse).toHaveBeenCalledWith(
-      "External URLs are not enabled for this organization. Upgrade to use external CTA buttons."
-    );
-  });
-
-  test("should return forbiddenResponse when changing CTA external button URL without permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://new-url.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-    };
-    const oldSurvey = {
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://old-url.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-      endings: [],
-    } as unknown as TSurvey;
-    const result = await checkFeaturePermissions(surveyData as any, mockOrganization, oldSurvey);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
-  });
-
-  test("should allow keeping existing CTA external button without permission (grandfathering)", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://existing-url.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-    };
-    const oldSurvey = {
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://existing-url.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-      endings: [],
-    } as unknown as TSurvey;
-    const result = await checkFeaturePermissions(surveyData as any, mockOrganization, oldSurvey);
-    expect(result).toBeNull();
-  });
 
   test("should allow CTA external button when permission is granted", async () => {
     vi.mocked(getExternalUrlsPermission).mockResolvedValue(true);
@@ -475,56 +209,7 @@ describe("checkFeaturePermissions", () => {
         },
       ],
     };
-    const result = await checkFeaturePermissions(surveyData as any, mockOrganization);
+    const result = await checkFeaturePermissions(surveyData as any);
     expect(result).toBeNull();
-  });
-
-  test("should return forbiddenResponse when switching CTA from internal to external without permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const surveyData = {
-      ...baseSurveyData,
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://example.com",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-    };
-    const oldSurvey = {
-      blocks: [
-        {
-          id: "block1",
-          name: "Block 1",
-          elements: [
-            {
-              id: "cta1",
-              type: TSurveyElementTypeEnum.CTA,
-              headline: { default: "CTA" },
-              required: false,
-              buttonExternal: false,
-              buttonUrl: "",
-              ctaButtonLabel: { default: "Click" },
-            },
-          ],
-          buttonLabel: { default: "Next" },
-        },
-      ],
-      endings: [],
-    } as unknown as TSurvey;
-    const result = await checkFeaturePermissions(surveyData as any, mockOrganization, oldSurvey);
-    expect(result).toBeInstanceOf(Response);
-    expect(result?.status).toBe(403);
   });
 });

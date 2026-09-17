@@ -25,7 +25,7 @@ export const WorkspaceLookSettingsPage = async (props: { params: Promise<{ works
   const params = await props.params;
   const t = await getTranslate();
 
-  const { isReadOnly, organization, isOwner, isManager } = await getWorkspaceAuth(params.workspaceId);
+  const { isReadOnly, isOwner, isManager } = await getWorkspaceAuth(params.workspaceId);
 
   const workspace = await getWorkspace(params.workspaceId);
 
@@ -34,7 +34,7 @@ export const WorkspaceLookSettingsPage = async (props: { params: Promise<{ works
   }
 
   const [canRemoveBranding, enterpriseLicense] = await Promise.all([
-    getRemoveBrandingPermission(organization.id),
+    getRemoveBrandingPermission(),
     IS_FORMA_CLOUD ? Promise.resolve(null) : getEnterpriseLicense(),
   ]);
 

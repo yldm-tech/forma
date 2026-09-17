@@ -4,7 +4,6 @@ import { TSurvey } from "@forma/types/surveys/types";
 import { getOrganizationBillingByWorkspaceId } from "@/app/api/v2/client/[workspaceId]/responses/lib/organization";
 import { verifyRecaptchaToken } from "@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha";
 import { responses } from "@/lib/api/response";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 
 export const RECAPTCHA_VERIFICATION_ERROR_CODE = "recaptcha_verification_failed";
@@ -53,8 +52,7 @@ export const verifyResponseRecaptcha = async ({
     return responses.notFoundResponse("Organization", null, true);
   }
 
-  const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
-  const isSpamProtectionEnabled = await getIsSpamProtectionEnabled(organizationId);
+  const isSpamProtectionEnabled = await getIsSpamProtectionEnabled();
   if (!isSpamProtectionEnabled) {
     // Deliberately does not gate: the token is still verified below, so an organization without the
     // entitlement gets the stricter behaviour, not a bypass. Logged at warn because it reports a

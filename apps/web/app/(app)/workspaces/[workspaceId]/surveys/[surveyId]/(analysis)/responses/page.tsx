@@ -36,7 +36,7 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
     getSurvey(params.surveyId),
     getUser(session.user.id),
     getTagsByWorkspaceId(workspace.id),
-    getIsContactsEnabled(organization.id),
+    getIsContactsEnabled(),
     getResponseCountBySurveyId(params.surveyId),
   ]);
 
@@ -61,7 +61,7 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
     throw new ResourceNotFoundError(t("common.organization"), organization.id);
   }
 
-  const isQuotasAllowed = await getIsQuotasEnabled(organization.id);
+  const isQuotasAllowed = await getIsQuotasEnabled();
   const quotas = isQuotasAllowed ? await getQuotas(survey.id) : [];
 
   const aiConfig = await getOrganizationAIConfig(organization.id);

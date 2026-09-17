@@ -10,39 +10,14 @@ import type {
   TSegmentSurveyInteractionFilter,
 } from "@forma/types/segment";
 import type { InvalidParam } from "@/app/api/v3/lib/response";
-import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
 import { getContactAttributeKeys } from "@/modules/contacts/lib/contact-attribute-keys";
 import { getExistingWorkspaceSurveyIds, getSegments } from "@/modules/contacts/segments/lib/segments";
-import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import type { TV3SurveyTargeting } from "./schemas";
 
 type TV3SurveyFilters = TV3SurveyTargeting["filters"];
 
 /** Shared message for the (enterprise) contacts/targeting entitlement, thrown with caller-specific error classes. */
-export const V3_CONTACTS_NOT_ENABLED_MESSAGE =
-  "Contact targeting (segments) is not enabled for this organization. Upgrade to target app surveys by contact attributes.";
-
-/**
- * Resolve whether contact targeting (the enterprise Contacts feature) is enabled for a workspace's
- * organization. Returns the resolved org id alongside the flag so each caller can throw its own typed
- * permission error (create vs patch surface differently). `resolvedOrganizationId` is null when the
- * organization cannot be resolved.
- */
-export async function resolveV3ContactsEntitlement(
-  workspaceId: string,
-  organizationId?: string
-): Promise<{ resolvedOrganizationId: string | null; isContactsEnabled: boolean }> {
-  const resolvedOrganizationId =
-    organizationId ?? (await getOrganizationByWorkspaceId(workspaceId))?.id ?? null;
-  if (!resolvedOrganizationId) {
-    return { resolvedOrganizationId: null, isContactsEnabled: false };
-  }
-
-  const isContactsEnabled = await getIsContactsEnabled(resolvedOrganizationId);
-  return { resolvedOrganizationId, isContactsEnabled };
-}
-
 /**
  * Order-insensitive deep equality for JSON values. Object keys are compared by name (order does not
  * matter); arrays are compared positionally (filter order is meaningful). Used to detect whether a

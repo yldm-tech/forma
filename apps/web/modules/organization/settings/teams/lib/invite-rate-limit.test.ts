@@ -29,7 +29,7 @@ describe("getInviteRateLimitConfig", () => {
   });
 
   test("uses the configured instance limit on self-hosted deployments", async () => {
-    const config = await getInviteRateLimitConfig("org_1");
+    const config = await getInviteRateLimitConfig();
 
     expect(config).toEqual({
       interval: 3600 * 24,
@@ -39,21 +39,11 @@ describe("getInviteRateLimitConfig", () => {
     expect(getBulkInvitePermission).not.toHaveBeenCalled();
   });
 
-  test("uses the default limit on cloud without the bulk-invite entitlement", async () => {
-    constants.isFormaCloud = true;
-    vi.mocked(getBulkInvitePermission).mockResolvedValueOnce(false);
-
-    const config = await getInviteRateLimitConfig("org_1");
-
-    expect(config.allowedPerInterval).toBe(50);
-    expect(getBulkInvitePermission).toHaveBeenCalledWith("org_1");
-  });
-
   test("raises the cloud limit for organizations with the bulk-invite entitlement", async () => {
     constants.isFormaCloud = true;
     vi.mocked(getBulkInvitePermission).mockResolvedValueOnce(true);
 
-    const config = await getInviteRateLimitConfig("org_1");
+    const config = await getInviteRateLimitConfig();
 
     expect(config.allowedPerInterval).toBe(500);
   });

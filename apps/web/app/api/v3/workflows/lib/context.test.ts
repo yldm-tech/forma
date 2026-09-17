@@ -5,7 +5,6 @@ import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspaceMemberEmails } from "@/lib/workspace/service";
-import { getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { buildWorkflowApiContext } from "./context";
 
 const { surveyFindUnique } = vi.hoisted(() => ({ surveyFindUnique: vi.fn() }));
@@ -19,7 +18,6 @@ vi.mock("@/app/api/v3/lib/auth", () => ({ requireV3WorkspaceAccess: vi.fn() }));
 vi.mock("@/lib/posthog", () => ({ capturePostHogEvent: vi.fn() }));
 vi.mock("@/lib/utils/helper", () => ({ getOrganizationIdFromWorkspaceId: vi.fn() }));
 vi.mock("@/lib/workspace/service", () => ({ getWorkspaceMemberEmails: vi.fn() }));
-vi.mock("@/modules/license-check/lib/utils", () => ({ getIsWorkflowsEnabled: vi.fn() }));
 
 const baseAuditLog = (): TV3AuditLog => ({
   action: "updated",
@@ -49,7 +47,6 @@ const apiKeyAuth = {
 beforeEach(() => {
   vi.clearAllMocks();
   // Entitled by default so authorization-focused tests exercise the workspace-access behavior.
-  vi.mocked(getIsWorkflowsEnabled).mockResolvedValue(true);
 });
 
 describe("buildWorkflowApiContext", () => {
@@ -81,25 +78,7 @@ describe("buildWorkflowApiContext", () => {
       "https://app.forma.ylam.ai"
     );
     // The entitlement is checked against the organization resolved by workspace access.
-    expect(getIsWorkflowsEnabled).toHaveBeenCalledWith("org_1");
     expect(result).toEqual(resolved);
-  });
-
-  test("authorize returns a 403 problem when the organization lacks the workflows entitlement", async () => {
-    vi.mocked(requireV3WorkspaceAccess).mockResolvedValue({ workspaceId: "ws_1", organizationId: "org_1" });
-    vi.mocked(getIsWorkflowsEnabled).mockResolvedValue(false);
-
-    const ctx = buildWorkflowApiContext(apiKeyAuth, "req_1", "https://app.forma.ylam.ai");
-    const result = await ctx.authorize("ws_1", "read");
-
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(403);
-    const body = await response.json();
-    expect(body).toMatchObject({
-      status: 403,
-      detail: "Workflows are not enabled for this organization",
-    });
   });
 
   test("authorize short-circuits on a workspace-access failure without checking the entitlement", async () => {
@@ -110,7 +89,6 @@ describe("buildWorkflowApiContext", () => {
     const result = await ctx.authorize("ws_1", "read");
 
     expect(result).toBe(denied);
-    expect(getIsWorkflowsEnabled).not.toHaveBeenCalled();
   });
 });
 
