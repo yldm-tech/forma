@@ -187,6 +187,13 @@ export const ENTERPRISE_LICENSE_REQUEST_FORM_URL =
   "https://app.forma.ylam.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=onpremise&source=ce&type=licenseRequest";
 
 export const REDIS_URL = env.REDIS_URL;
+/**
+ * Whether a gateway in front of this instance enforces the rate-limit policy set.
+ *
+ * Off by default, because the compose stack in `docker/` runs no gateway. The client API paths the policy set covers are skipped by the in-app limiter only when this says something else is doing the work; otherwise the app does it itself.
+ */
+export const GATEWAY_RATE_LIMITING = env.GATEWAY_RATE_LIMITING === "1";
+
 export const RATE_LIMITING_DISABLED = env.RATE_LIMITING_DISABLED === "1";
 /**
  * Number of reverse proxies in front of the app whose `X-Forwarded-For` entries may be believed.

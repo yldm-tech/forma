@@ -408,6 +408,7 @@ const parsedEnv = createEnv({
       .url()
       .optional()
       .or(z.string().refine((str) => str === "")),
+    GATEWAY_RATE_LIMITING: z.enum(["1", "0"]).optional(),
     RATE_LIMITING_DISABLED: z.enum(["1", "0"]).optional(),
     // Number of reverse proxies in front of the app whose X-Forwarded-For entries can be believed.
     // Unset falls back to 1 (see TRUSTED_PROXY_HOP_COUNT in lib/constants.ts); an explicit 0 trusts no
@@ -587,6 +588,7 @@ const parsedEnv = createEnv({
     PASSWORD_RESET_DISABLED: process.env.PASSWORD_RESET_DISABLED,
     PASSWORD_RESET_TOKEN_LIFETIME_MINUTES: process.env.PASSWORD_RESET_TOKEN_LIFETIME_MINUTES,
     PRIVACY_URL: process.env.PRIVACY_URL,
+    GATEWAY_RATE_LIMITING: process.env.GATEWAY_RATE_LIMITING,
     RATE_LIMITING_DISABLED: process.env.RATE_LIMITING_DISABLED,
     TRUSTED_PROXY_HOP_COUNT: process.env.TRUSTED_PROXY_HOP_COUNT,
     TELEMETRY_ENABLED: process.env.TELEMETRY_ENABLED,

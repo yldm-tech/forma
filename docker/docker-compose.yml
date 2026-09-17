@@ -176,6 +176,10 @@ x-environment: &environment
 
     ########################################## OPTIONAL (SERVER CONFIGURATION) ###########################################
 
+    # Set to 1 when a gateway enforces the client API rate-limit policy in front of this instance.
+    # Unset, the app applies those limits itself, which is what this stack needs — it runs no gateway.
+    # GATEWAY_RATE_LIMITING: 1
+
     # Set the below to 1 to disable Rate Limiting across Forma
     # RATE_LIMITING_DISABLED: 1
 

@@ -7,6 +7,7 @@ import { reportApiError } from "@/lib/api/api-error-reporter";
 import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body";
 import { responses } from "@/lib/api/response";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
+import { applyClientApiRateLimit } from "@/modules/core/rate-limit/client-api";
 import { createDisplay } from "./lib/display";
 
 interface Context {
@@ -49,6 +50,11 @@ export const OPTIONS = async (): Promise<Response> => {
 };
 
 export const POST = async (request: Request, context: Context): Promise<Response> => {
+  const rateLimited = await applyClientApiRateLimit(request);
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const params = await context.params;
   // Resolve: accepts either an environmentId (old SDK) or a workspaceId (new SDK)
   const resolved = await resolveClientApiIds(params.workspaceId);

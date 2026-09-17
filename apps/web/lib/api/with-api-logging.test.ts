@@ -108,6 +108,7 @@ describe("withV1ApiWrapper", () => {
 
     vi.doMock("@/lib/constants", () => ({
       AUDIT_LOG_ENABLED: true,
+      GATEWAY_RATE_LIMITING: true,
       IS_PRODUCTION: true,
       SENTRY_DSN: "dsn",
       ENCRYPTION_KEY: "test-key",
@@ -454,6 +455,7 @@ describe("withV1ApiWrapper", () => {
   test("does not call audit if AUDIT_LOG_ENABLED is false", async () => {
     vi.doMock("@/lib/constants", () => ({
       AUDIT_LOG_ENABLED: false,
+      GATEWAY_RATE_LIMITING: true,
       IS_PRODUCTION: true,
       SENTRY_DSN: "dsn",
       ENCRYPTION_KEY: "test-key",
