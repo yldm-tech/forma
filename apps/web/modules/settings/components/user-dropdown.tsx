@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRightIcon, ChevronRightIcon, LogOutIcon, UserCircleIcon } from "lucide-react";
+import { ArrowUpRightIcon, BellIcon, ChevronRightIcon, LogOutIcon, UserCircleIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -23,6 +23,14 @@ interface UserDropdownProps {
   isTextVisible?: boolean;
   className?: string;
   /**
+   * Whether the signed-in member holds the billing role, which has no product access.
+   *
+   * Notifications and authorized apps are settings for survey activity that role cannot see, so they
+   * are left out rather than shown and refused. Undefined where the caller does not know the role —
+   * the onboarding sidebar renders before there is a membership to read — and everything is offered.
+   */
+  isBilling?: boolean;
+  /**
    * Where this is rendered, which decides both the trigger's shape and which way the menu opens.
    *
    * `sidebar` is a full-width row with a top border, opening to the right — the shape the onboarding
@@ -44,17 +52,30 @@ export const UserDropdown = ({
   isTextVisible = false,
   className,
   placement = "sidebar",
+  isBilling = false,
 }: Readonly<UserDropdownProps>) => {
   const { t } = useTranslation();
   const router = useRouter();
   const { signOut: signOutWithAudit } = useSignOut({ id: user.id, email: user.email });
 
+  // The personal settings themselves, not a link to the page that lists them. They are the only
+  // account-scoped destinations in the product, and reaching them through a workspace's settings
+  // sidebar meant a per-user setting was filed under whichever workspace happened to be open.
   const dropdownNavigation = [
     {
-      label: t("common.account"),
+      label: t("common.your_profile"),
       href: "/account/settings/profile",
       icon: UserCircleIcon,
     },
+    ...(isBilling
+      ? []
+      : [
+          {
+            label: t("common.notifications"),
+            href: "/account/settings/notifications",
+            icon: BellIcon,
+          },
+        ]),
     {
       label: t("common.documentation"),
       href: "https://forma.ylam.ai/docs",

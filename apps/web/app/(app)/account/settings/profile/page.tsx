@@ -11,6 +11,7 @@ import {
 import { getOrganizationsWhereUserIsSingleOwner } from "@/lib/organization/service";
 import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
+import { AuthorizedAppsCard } from "@/modules/account/components/authorized-apps-card";
 import { requiresPasswordConfirmationForAccountDeletion } from "@/modules/account/lib/account-deletion-auth";
 import { getSession } from "@/modules/auth/lib/session";
 import { getIsMultiOrgEnabled, getIsTwoFactorAuthEnabled } from "@/modules/license-check/lib/utils";
@@ -85,6 +86,8 @@ const Page = async () => {
             )}
           </SettingsCard>
         )}
+
+        <AuthorizedAppsCard locale={user.locale} />
 
         <SettingsCard
           title={t("workspace.settings.profile.delete_account")}

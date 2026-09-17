@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BellIcon,
   BlocksIcon,
   BrushIcon,
   Building2Icon,
@@ -16,8 +15,6 @@ import {
   Loader2,
   ShieldIcon,
   TagIcon,
-  UnplugIcon,
-  UserCircleIcon,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,11 +23,7 @@ import { useTranslation } from "react-i18next";
 import { TOrganizationRole } from "@forma/types/memberships";
 import { cn } from "@/lib/cn";
 import { getAccessFlags } from "@/lib/membership/utils";
-import {
-  accountSettingsPath,
-  organizationSettingsPath,
-  workspaceSettingsPath,
-} from "@/modules/settings/lib/routes";
+import { organizationSettingsPath, workspaceSettingsPath } from "@/modules/settings/lib/routes";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -400,29 +393,6 @@ export const SettingsSidebarContent = ({
     },
   ];
 
-  const accountItems: NavItem[] = [
-    {
-      id: "profile",
-      label: t("common.your_profile"),
-      href: accountSettingsPath("profile"),
-      icon: <UserCircleIcon className={iconClassName} />,
-    },
-    {
-      id: "notifications",
-      label: t("common.notifications"),
-      href: accountSettingsPath("notifications"),
-      icon: <BellIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-    {
-      id: "authorized-apps",
-      label: t("common.authorized_apps"),
-      href: accountSettingsPath("authorized-apps"),
-      icon: <UnplugIcon className={iconClassName} />,
-      disabled: isBilling,
-    },
-  ];
-
   const disabledMessage = t("common.you_are_not_authorized_to_perform_this_action");
 
   const renderSection = (items: NavItem[]) => {
@@ -479,11 +449,6 @@ export const SettingsSidebarContent = ({
           onSwitcherOpen={onOrganizationDropdownOpen}
         />
         {renderSection(organizationItems)}
-      </div>
-
-      <div>
-        <SectionHeader label={t("common.account")} isCollapsed={isCollapsed} isTextVisible={isTextVisible} />
-        {renderSection(accountItems)}
       </div>
     </div>
   );
