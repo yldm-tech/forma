@@ -11,13 +11,13 @@ import { ContactDataView } from "./components/contact-data-view";
 export const ContactsPage = async ({ params: paramsProps }: { params: Promise<{ workspaceId: string }> }) => {
   const params = await paramsProps;
 
-  const { isReadOnly, organization, workspace } = await getWorkspaceAuth(params.workspaceId);
+  const { isReadOnly, workspace } = await getWorkspaceAuth(params.workspaceId);
 
   const t = await getTranslate();
 
-  const isContactsEnabled = await getIsContactsEnabled(organization.id);
+  const isContactsEnabled = await getIsContactsEnabled();
 
-  const isQuotasAllowed = await getIsQuotasEnabled(organization.id);
+  const isQuotasAllowed = await getIsQuotasEnabled();
 
   const contactAttributeKeys = isContactsEnabled ? await getContactAttributeKeys(workspace.id) : [];
   const initialContacts = isContactsEnabled ? await getContacts(workspace.id, 0) : [];

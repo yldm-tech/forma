@@ -14,7 +14,6 @@ import { applyAnonymizePolicy } from "@/lib/response/anonymize";
 import { applyIngestContractToResponseData } from "@/lib/response/ingest";
 import { getSurvey } from "@/lib/survey/service";
 import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { formatValidationErrorsForV1Api, validateResponseData } from "@/modules/api/lib/validation";
 import { verifyResponseRecaptcha } from "@/modules/api/lib/verify-response-recaptcha";
@@ -111,8 +110,7 @@ export const POST = withV1ApiWrapper({
     const responseInputData = responseInputValidation.data;
 
     if (responseInputData.userId) {
-      const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
-      const isContactsEnabled = await getIsContactsEnabled(organizationId);
+      const isContactsEnabled = await getIsContactsEnabled();
       if (!isContactsEnabled) {
         return {
           response: responses.forbiddenResponse(

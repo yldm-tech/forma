@@ -32,7 +32,7 @@ const Page = async (props: { params: Promise<{ organizationId: string }> }) => {
   const isMembershipPending = membership?.role === undefined;
   const { isOwner, isManager } = getAccessFlags(membership?.role);
   const isOwnerOrManager = isOwner || isManager;
-  const isAccessControlAllowed = isOwnerOrManager ? await getAccessControlPermission(organization.id) : false;
+  const isAccessControlAllowed = isOwnerOrManager ? await getAccessControlPermission() : false;
 
   return (
     <div className="flex min-h-full min-w-full flex-row">

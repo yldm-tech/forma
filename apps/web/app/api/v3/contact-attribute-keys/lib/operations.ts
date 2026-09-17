@@ -17,7 +17,7 @@ export function listV3ContactAttributeKeys(params: TV3WorkspaceListParams): Prom
     // the UI and management API do, so an unentitled organization can't enumerate them through v3.
     assertEntitlement: async (workspaceId) => {
       const organization = await getOrganizationByWorkspaceId(workspaceId);
-      if (organization && (await getIsContactsEnabled(organization.id))) {
+      if (organization && (await getIsContactsEnabled())) {
         return null;
       }
       return problemForbidden(

@@ -49,7 +49,7 @@ const SurveyPage = async (
     throw new AuthenticationError(t("common.not_authenticated"));
   }
 
-  const isContactsEnabled = await getIsContactsEnabled(organization.id);
+  const isContactsEnabled = await getIsContactsEnabled();
   const segments = isContactsEnabled ? await getSegments(workspace.id) : [];
 
   if (!organization) {
@@ -59,7 +59,7 @@ const SurveyPage = async (
   if (!organizationBilling) {
     throw new ResourceNotFoundError(t("common.organization"), organization.id);
   }
-  const isQuotasAllowed = await getIsQuotasEnabled(organization.id);
+  const isQuotasAllowed = await getIsQuotasEnabled();
 
   const aiConfig = await getOrganizationAIConfig(organization.id);
   const aiUnavailableReason = getAISmartToolsUnavailableReason(aiConfig) ?? null;

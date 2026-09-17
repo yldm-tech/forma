@@ -2,7 +2,6 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
-import { getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 
 export const getWorkflowsRouteAuth = async (workspaceId: string) => {
@@ -19,11 +18,6 @@ export const getWorkflowsRouteAuth = async (workspaceId: string) => {
     notFound();
   }
 
-  // Workflows is an EE feature (Cloud plan entitlement / self-hosted EE license). Routes render an
-  // upgrade prompt instead of the feature when the organization is not entitled.
-  const isWorkflowsEnabled = await getIsWorkflowsEnabled(auth.organization.id);
-
-  // Consumers only need these flags (plus the organization id for the upgrade prompt's billing
-  // link); keep the contract narrow.
-  return { isReadOnly: auth.isReadOnly, isWorkflowsEnabled, organizationId: auth.organization.id };
+  // Consumers only need these; keep the contract narrow.
+  return { isReadOnly: auth.isReadOnly, organizationId: auth.organization.id };
 };

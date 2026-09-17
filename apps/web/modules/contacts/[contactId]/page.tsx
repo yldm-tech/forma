@@ -22,7 +22,7 @@ export const SingleContactPage = async (props: {
 
   // Ties the contact in the URL to the workspace in the URL: authorizing the workspace alone would
   // let any authenticated user read a foreign contact's PII through their own workspace.
-  const { isReadOnly, organization, workspace } = await getContactAuth(params.workspaceId, params.contactId);
+  const { isReadOnly, workspace } = await getContactAuth(params.workspaceId, params.contactId);
 
   const [environmentTags, contact, publishedLinkSurveys, attributesWithKeyInfo, allAttributeKeys] =
     await Promise.all([
@@ -37,7 +37,7 @@ export const SingleContactPage = async (props: {
     throw new ResourceNotFoundError(t("common.contact"), params.contactId);
   }
 
-  const isQuotasAllowed = await getIsQuotasEnabled(organization.id);
+  const isQuotasAllowed = await getIsQuotasEnabled();
 
   // Derive contact identifier from metadata array
   const getAttributeValue = (key: string): string | undefined => {

@@ -3811,8 +3811,6 @@
       "unarchive": "取消封存",
       "unarchive_failed": "無法取消封存工作流程,請再試一次。",
       "unarchive_success": "工作流程已取消封存。",
-      "upgrade_prompt_description": "透過觸發條件、篩選器和動作，自動化回應驅動的任務。",
-      "upgrade_prompt_title": "升級以解鎖工作流程",
       "validation_failed": "工作流程驗證失敗。",
       "validation_problem_fix_label": "修正：{problem}",
       "validation_problem_flow_invalid": "工作流程步驟未連接成單一可執行流程。",

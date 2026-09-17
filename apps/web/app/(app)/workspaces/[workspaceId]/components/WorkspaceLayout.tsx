@@ -89,7 +89,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
     trialEndingVariant,
     cookieStore,
   ] = await Promise.all([
-    getOrganizationWorkspacesLimit(organization.id),
+    getOrganizationWorkspacesLimit(),
     getPostHogFeatureFlag(user.id, "a-b_navigation_rich-trial-banner-v2"),
     isHobby ? getPostHogFeatureFlag(user.id, "a-b_workspace_trial-response-warning") : Promise.resolve(null),
     isTrialing ? getPostHogFeatureFlag(user.id, "a-b_workspace_trial-ending-warning") : Promise.resolve(null),

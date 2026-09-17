@@ -173,7 +173,7 @@ const checkSurveyFollowUpsPermission = async (
     throw new ResourceNotFoundError("Organization", organizationId);
   }
 
-  const isSurveyFollowUpsEnabled = await getSurveyFollowUpsPermission(organizationId);
+  const isSurveyFollowUpsEnabled = await getSurveyFollowUpsPermission();
   if (isSurveyFollowUpsEnabled) return;
 
   for (const id of newFollowUpIds) {
@@ -197,7 +197,7 @@ export const updateSurveyDraftAction = authenticatedActionClient.inputSchema(ZSu
     await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
 
     if (survey.recaptcha?.enabled) {
-      await checkSpamProtectionPermission(organizationId);
+      await checkSpamProtectionPermission();
     }
 
     ctx.auditLoggingCtx.organizationId = organizationId;
@@ -245,7 +245,7 @@ export const updateSurveyAction = authenticatedActionClient.inputSchema(ZSurvey)
     await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
 
     if (parsedInput.recaptcha?.enabled) {
-      await checkSpamProtectionPermission(organizationId);
+      await checkSpamProtectionPermission();
     }
 
     ctx.auditLoggingCtx.organizationId = organizationId;

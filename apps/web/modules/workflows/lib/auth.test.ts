@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { getBillingFallbackPath } from "@/lib/membership/navigation";
-import { getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { getWorkflowsRouteAuth } from "./auth";
 
@@ -18,9 +17,7 @@ vi.mock("@/lib/constants", () => ({ IS_FORMA_CLOUD: true }));
 vi.mock("@/lib/membership/navigation", () => ({
   getBillingFallbackPath: vi.fn(() => "/billing-fallback"),
 }));
-vi.mock("@/modules/license-check/lib/utils", () => ({
-  getIsWorkflowsEnabled: vi.fn(),
-}));
+vi.mock("@/modules/license-check/lib/utils", () => ({}));
 vi.mock("@/modules/workspaces/lib/utils", () => ({
   getWorkspaceAuth: vi.fn(),
 }));
@@ -46,7 +43,6 @@ describe("getWorkflowsRouteAuth", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getIsWorkflowsEnabled).mockResolvedValue(true);
   });
 
   test("redirects to the billing fallback when the workspace is in billing", async () => {
@@ -64,7 +60,6 @@ describe("getWorkflowsRouteAuth", () => {
     await expect(getWorkflowsRouteAuth(workspaceId)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
-    expect(getIsWorkflowsEnabled).not.toHaveBeenCalled();
   });
 
   test.each(["isOwner", "isManager", "hasReadAccess", "hasReadWriteAccess", "hasManageAccess"] as const)(
@@ -74,23 +69,10 @@ describe("getWorkflowsRouteAuth", () => {
 
       await expect(getWorkflowsRouteAuth(workspaceId)).resolves.toEqual({
         isReadOnly: true,
-        isWorkflowsEnabled: true,
         organizationId: "org_123",
       });
-      expect(getIsWorkflowsEnabled).toHaveBeenCalledWith("org_123");
       expect(redirect).not.toHaveBeenCalled();
       expect(notFound).not.toHaveBeenCalled();
     }
   );
-
-  test("returns isWorkflowsEnabled false when the organization lacks the entitlement", async () => {
-    vi.mocked(getWorkspaceAuth).mockResolvedValue(buildAuth({ isOwner: true }));
-    vi.mocked(getIsWorkflowsEnabled).mockResolvedValue(false);
-
-    await expect(getWorkflowsRouteAuth(workspaceId)).resolves.toEqual({
-      isReadOnly: false,
-      isWorkflowsEnabled: false,
-      organizationId: "org_123",
-    });
-  });
 });

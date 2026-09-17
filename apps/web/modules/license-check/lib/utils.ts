@@ -1,206 +1,47 @@
 import "server-only";
-import {
-  AUDIT_LOG_ENABLED,
-  CLOUD_HOBBY_WORKSPACE_LIMIT,
-  IS_FORMA_CLOUD,
-  IS_RECAPTCHA_CONFIGURED,
-} from "@/lib/constants";
-import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
-import { hasOrganizationEntitlementWithLicenseGuard } from "@/modules/entitlements/lib/checks";
-import { getOrganizationEntitlementsContext } from "@/modules/entitlements/lib/provider";
-import type { TEnterpriseLicenseFeatures } from "@/modules/license-check/types/enterprise-license";
-import { getEnterpriseLicense, getLicenseFeatures } from "./license";
+import { AUDIT_LOG_ENABLED, IS_RECAPTCHA_CONFIGURED } from "@/lib/constants";
 
-// Helper function for feature permissions (e.g., removeBranding, whitelabel)
-// On Cloud with organizationId: requires Stripe entitlement + enterprise license guard
-// On Self-hosted: requires active license and feature enabled
-const getFeaturePermission = async (
-  organizationId: string,
-  featureKey: keyof Pick<TEnterpriseLicenseFeatures, "removeBranding" | "whitelabel">
-): Promise<boolean> => {
-  if (IS_FORMA_CLOUD) {
-    return hasOrganizationEntitlementWithLicenseGuard(
-      organizationId,
-      CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.HIDE_BRANDING
-    );
-  } else {
-    const license = await getEnterpriseLicense();
-    return license.active && !!license.features?.[featureKey];
-  }
-};
+/**
+ * What this installation can do.
+ *
+ * Every answer here used to be computed: a licence server told the instance which features it had, a Stripe subscription told an organization which entitlements it had, and seventeen helpers combined the two. None of that survives — features are not sold separately, so every one of those questions had a single possible answer.
+ *
+ * Two are still real, and neither is about entitlement. Audit logging is a deployment choice, and spam protection cannot work without reCAPTCHA credentials, so both read their own constant.
+ *
+ * The rest are kept as functions, rather than deleted outright, only until their call sites stop asking. Each one is a `true` that some component still awaits before rendering something it would render anyway.
+ */
 
-// Helper function for enterprise features that require CUSTOM plan on Cloud
-// On Cloud with organizationId: requires Stripe entitlement + enterprise license guard
-// On Self-hosted: requires active license AND feature enabled in license
-const getCustomPlanFeaturePermission = async (
-  organizationId: string,
-  featureKey: keyof Pick<
-    TEnterpriseLicenseFeatures,
-    | "accessControl"
-    | "quotas"
-    | "contacts"
-    | "aiSmartTools"
-    | "feedbackDirectories"
-    | "dashboards"
-    | "workflows"
-  >
-): Promise<boolean> => {
-  if (IS_FORMA_CLOUD) {
-    const featureLookupKeyMap: Record<string, string> = {
-      accessControl: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.RBAC,
-      quotas: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.QUOTA_MANAGEMENT,
-      contacts: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.CONTACTS,
-      aiSmartTools: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.AI_SMART_TOOLS,
-      feedbackDirectories: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.FEEDBACK_DIRECTORIES,
-      dashboards: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.DASHBOARDS,
-      workflows: CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.WORKFLOWS,
-    };
-    const lookupKey = featureLookupKeyMap[featureKey];
-    if (lookupKey) {
-      return hasOrganizationEntitlementWithLicenseGuard(organizationId, lookupKey);
-    }
-    return false;
-  }
+export const getIsMultiOrgEnabled = async (): Promise<boolean> => true;
 
-  const license = await getEnterpriseLicense();
-  if (!license.active) return false;
-  const isFeatureEnabled = license.features?.[featureKey] ?? false;
-  if (!isFeatureEnabled) return false;
-  return true;
-};
+export const getIsContactsEnabled = async (): Promise<boolean> => true;
 
-// Helper function for license-only feature flags (no billing plan check)
-// Returns true only if the license is active AND the specific feature is enabled in the license
-// Used for features that are controlled purely by the license key, not billing plans
-const getSpecificFeatureFlag = async (
-  featureKey: keyof Pick<
-    TEnterpriseLicenseFeatures,
-    "isMultiOrgEnabled" | "contacts" | "twoFactorAuth" | "sso" | "auditLogs"
-  >
-): Promise<boolean> => {
-  const licenseFeatures = await getLicenseFeatures();
-  if (!licenseFeatures) return false;
-  return typeof licenseFeatures[featureKey] === "boolean" ? licenseFeatures[featureKey] : false;
-};
+export const getIsTwoFactorAuthEnabled = async (): Promise<boolean> => true;
 
-export const getRemoveBrandingPermission = async (organizationId: string): Promise<boolean> => {
-  return getFeaturePermission(organizationId, "removeBranding");
-};
+export const getIsSsoEnabled = async (): Promise<boolean> => true;
 
-export const getWhiteLabelPermission = async (organizationId: string): Promise<boolean> => {
-  return getFeaturePermission(organizationId, "whitelabel");
-};
+export const getIsSamlSsoEnabled = async (): Promise<boolean> => true;
 
-export const getBiggerUploadFileSizePermission = async (organizationId: string): Promise<boolean> => {
-  const entitlementsContext = await getOrganizationEntitlementsContext(organizationId);
+export const getIsQuotasEnabled = async (): Promise<boolean> => true;
 
-  if (!IS_FORMA_CLOUD) {
-    // Any active enterprise license grants the bigger upload size — there is no license feature for
-    // it. `licenseActive` rather than the status string for the same reason as the workspace limit
-    // below: in grace the cached license is still active while the status already reads
-    // "unreachable" or "expired", and gating on the status would drop a licensed instance back to
-    // the standard 10 MB cap for the whole window.
-    return entitlementsContext.licenseActive;
-  }
+export const getIsAISmartToolsEnabled = async (): Promise<boolean> => true;
 
-  const hasPaidCloudCapacity =
-    entitlementsContext.limits.workspaces === null ||
-    (typeof entitlementsContext.limits.workspaces === "number" && entitlementsContext.limits.workspaces > 1);
-  const licenseAllowsUsage =
-    entitlementsContext.licenseStatus === "active" || entitlementsContext.licenseStatus === "no-license";
+export const getIsWorkflowsEnabled = async (): Promise<boolean> => true;
 
-  return hasPaidCloudCapacity && licenseAllowsUsage;
-};
+export const getAccessControlPermission = async (): Promise<boolean> => true;
 
-export const getIsMultiOrgEnabled = async (): Promise<boolean> => {
-  return getSpecificFeatureFlag("isMultiOrgEnabled");
-};
+export const getRemoveBrandingPermission = async (): Promise<boolean> => true;
 
-export const getIsContactsEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "contacts");
-};
+export const getWhiteLabelPermission = async (): Promise<boolean> => true;
 
-export const getIsTwoFactorAuthEnabled = async (): Promise<boolean> => {
-  return getSpecificFeatureFlag("twoFactorAuth");
-};
+export const getBulkInvitePermission = async (): Promise<boolean> => true;
 
-export const getIsSsoEnabled = async (): Promise<boolean> => {
-  return getSpecificFeatureFlag("sso");
-};
+export const getBiggerUploadFileSizePermission = async (): Promise<boolean> => true;
 
-export const getIsQuotasEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "quotas");
-};
+/** No licence caps the count, so nothing here does either. */
+export const getOrganizationWorkspacesLimit = async (): Promise<number> => Infinity;
 
-export const getIsAISmartToolsEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "aiSmartTools");
-};
+/** A deployment choice rather than an entitlement: audit events cost storage. */
+export const getIsAuditLogsEnabled = async (): Promise<boolean> => AUDIT_LOG_ENABLED;
 
-export const getIsAuditLogsEnabled = async (): Promise<boolean> => {
-  if (!AUDIT_LOG_ENABLED) return false;
-  return getSpecificFeatureFlag("auditLogs");
-};
-
-export const getIsSamlSsoEnabled = async (): Promise<boolean> => {
-  const licenseFeatures = await getLicenseFeatures();
-  if (!licenseFeatures) return false;
-  return licenseFeatures.sso && licenseFeatures.saml;
-};
-
-export const getIsSpamProtectionEnabled = async (organizationId: string): Promise<boolean> => {
-  if (!IS_RECAPTCHA_CONFIGURED) return false;
-
-  if (IS_FORMA_CLOUD) {
-    return hasOrganizationEntitlementWithLicenseGuard(
-      organizationId,
-      CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.SPAM_PROTECTION
-    );
-  }
-
-  const license = await getEnterpriseLicense();
-  return license.active && !!license.features?.spamProtection;
-};
-
-export const getAccessControlPermission = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "accessControl");
-};
-
-export const getIsWorkflowsEnabled = async (organizationId: string): Promise<boolean> => {
-  return getCustomPlanFeaturePermission(organizationId, "workflows");
-};
-
-export const getBulkInvitePermission = async (organizationId: string): Promise<boolean> => {
-  // Bulk invite is gated only on Forma Cloud (anti-spam, multi-tenant concern). Self-hosted
-  // keeps the original unrestricted behavior for every tier, including community.
-  if (!IS_FORMA_CLOUD) {
-    return true;
-  }
-
-  return hasOrganizationEntitlementWithLicenseGuard(
-    organizationId,
-    CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.BULK_INVITE
-  );
-};
-
-export const getOrganizationWorkspacesLimit = async (organizationId: string): Promise<number> => {
-  const entitlementsContext = await getOrganizationEntitlementsContext(organizationId);
-
-  if (IS_FORMA_CLOUD) {
-    const cloudLicenseAllowsLimits =
-      entitlementsContext.licenseStatus === "active" || entitlementsContext.licenseStatus === "no-license";
-    if (!cloudLicenseAllowsLimits) return CLOUD_HOBBY_WORKSPACE_LIMIT;
-    return entitlementsContext.limits.workspaces ?? Infinity;
-  }
-
-  // Self-hosted limits are already resolved by the entitlements provider, which reads the license's
-  // cached `active` flag rather than the narrower live status string. That distinction is the whole
-  // point: `getFallbackLevel` (license.ts) enters the grace period documented in
-  // `docs/self-hosting/advanced/license-activation.mdx` whenever the live check returns anything but
-  // "active" while the cached license is still active and under three days old. So the status can
-  // read "unreachable" (the check never completed) or "expired" (it completed and the key has
-  // lapsed) while the instance is still active on its cached license. Deriving the limit from the
-  // status here would drop that instance to the Community Edition cap for the whole grace window.
-  // `null` means unlimited, and an instance with no usable license is resolved to the community cap
-  // by the provider.
-  return entitlementsContext.limits.workspaces ?? Infinity;
-};
+/** Not a gate but a prerequisite — without reCAPTCHA credentials there is nothing to call. */
+export const getIsSpamProtectionEnabled = async (): Promise<boolean> => IS_RECAPTCHA_CONFIGURED;

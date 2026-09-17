@@ -14,7 +14,6 @@ import {
   getWorkspaceIdFromContactId,
 } from "@/lib/utils/helper";
 import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
-import { ensureContactsEnabled } from "@/modules/contacts/lib/contacts-entitlement";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { createContactsFromCSV, deleteContact, getContact, getContacts } from "./lib/contacts";
@@ -35,14 +34,11 @@ export const getContactsAction = authenticatedActionClient
   .inputSchema(ZGetContactsAction)
   .action(async ({ ctx, parsedInput }) => {
     const workspaceId = parsedInput.workspaceId;
-    const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
 
     await assertCan({ type: "user", id: ctx.user.id }, "workspace.read", {
       type: "workspace",
       id: workspaceId,
     });
-
-    await ensureContactsEnabled(organizationId);
 
     return getContacts(workspaceId, parsedInput.offset, parsedInput.searchValue);
   });
@@ -61,8 +57,6 @@ export const deleteContactAction = authenticatedActionClient.inputSchema(ZContac
       id: workspaceId,
     });
     await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-    await ensureContactsEnabled(organizationId);
 
     ctx.auditLoggingCtx.organizationId = organizationId;
     ctx.auditLoggingCtx.contactId = parsedInput.contactId;
@@ -92,8 +86,6 @@ export const createContactsFromCSVAction = authenticatedActionClient
         id: workspaceId,
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-      await ensureContactsEnabled(organizationId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
       const existingContactCount = await prisma.contact.count({
@@ -147,8 +139,6 @@ export const updateContactAttributesAction = authenticatedActionClient
         id: workspaceId,
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-      await ensureContactsEnabled(organizationId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
       ctx.auditLoggingCtx.contactId = parsedInput.contactId;

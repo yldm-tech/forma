@@ -8,13 +8,11 @@ import {
   createWorkflowsService,
 } from "@forma/workflows/server";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
-import { problemForbidden } from "@/app/api/v3/lib/response";
 import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
 import { ENCRYPTION_KEY } from "@/lib/constants";
 import { normalizeEmailForComparison } from "@/lib/utils/email";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspaceMemberEmails } from "@/lib/workspace/service";
-import { getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { buildRecordAnalytics } from "./analytics";
 
 /**
@@ -138,10 +136,6 @@ export const buildWorkflowApiContext = (
     );
     if (authorized instanceof Response) {
       return authorized;
-    }
-    const isWorkflowsEnabled = await getIsWorkflowsEnabled(authorized.organizationId);
-    if (!isWorkflowsEnabled) {
-      return problemForbidden(requestId, "Workflows are not enabled for this organization", instance);
     }
     return authorized;
   },

@@ -20,7 +20,7 @@ export const PUT = async (request: Request) =>
       return { ...body, ...resolved.data };
     },
     handler: async ({ authentication, parsedInput, auditLog }) => {
-      const isContactsEnabled = await getIsContactsEnabled(authentication.organizationId);
+      const isContactsEnabled = await getIsContactsEnabled();
       if (!isContactsEnabled) {
         return handleApiError(
           request,

@@ -79,7 +79,7 @@ export const getSurveyFilterDataAction = authenticatedActionClient
       throw new ResourceNotFoundError("Organization", organizationId);
     }
 
-    const isQuotasAllowed = await getIsQuotasEnabled(organizationId);
+    const isQuotasAllowed = await getIsQuotasEnabled();
 
     const [
       tags,

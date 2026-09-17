@@ -20,7 +20,6 @@ import {
   getContactAttributeKeyById,
   updateContactAttributeKey,
 } from "@/modules/contacts/lib/contact-attribute-keys";
-import { ensureContactsEnabled } from "@/modules/contacts/lib/contacts-entitlement";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 
@@ -52,8 +51,6 @@ export const createContactAttributeKeyAction = authenticatedActionClient
         id: workspaceId,
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-      await ensureContactsEnabled(organizationId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
 
@@ -107,8 +104,6 @@ export const updateContactAttributeKeyAction = authenticatedActionClient
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
 
-      await ensureContactsEnabled(organizationId);
-
       ctx.auditLoggingCtx.organizationId = organizationId;
       ctx.auditLoggingCtx.oldObject = existingKey;
 
@@ -145,8 +140,6 @@ export const deleteContactAttributeKeyAction = authenticatedActionClient
         id: workspaceId,
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-      await ensureContactsEnabled(organizationId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
       ctx.auditLoggingCtx.oldObject = existingKey;

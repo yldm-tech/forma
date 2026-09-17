@@ -215,7 +215,7 @@ export const generatePersonalLinksAction = authenticatedActionClient
   .action(async ({ ctx, parsedInput }) => {
     const organizationId = await getOrganizationIdFromSurveyId(parsedInput.surveyId);
     const workspaceId = await getWorkspaceIdFromSurveyId(parsedInput.surveyId);
-    const isContactsEnabled = await getIsContactsEnabled(organizationId);
+    const isContactsEnabled = await getIsContactsEnabled();
     if (!isContactsEnabled) {
       throw new OperationNotAllowedError("Contacts are not enabled for this workspace");
     }

@@ -146,7 +146,7 @@ export const renderSurvey = async ({
   const publicDomain = getPublicDomain();
   const canReadUserIdFromUrl =
     allowUrlUserIdLookup && !contactId && hasUserIdSearchParam(searchParams)
-      ? await getIsContactsEnabled(workspaceContext.organizationId)
+      ? await getIsContactsEnabled()
       : false;
 
   // Handle PIN-protected surveys

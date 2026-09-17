@@ -35,7 +35,7 @@ import {
 } from "./targeting";
 import { resolveV3SurveyTriggers } from "./triggers";
 import { getV3SurveyMediaInvalidParams } from "./validation";
-import { assertV3SurveyTargetingWritePermission, assertV3SurveyWritePermissions } from "./write-permissions";
+import { assertV3SurveyWritePermissions } from "./write-permissions";
 
 function buildSurveyLanguageUpdate(
   currentSurvey: TSurvey,
@@ -331,8 +331,6 @@ export async function patchV3Survey(
     },
     organizationId
   );
-
-  await assertV3SurveyTargetingWritePermission(currentSurvey, preparation.document, organizationId);
 
   return await executeV3SurveyPatch({
     currentSurvey,

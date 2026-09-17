@@ -41,7 +41,7 @@ export const createWorkspaceAction = authenticatedActionClient.inputSchema(ZCrea
       throw new ResourceNotFoundError("Organization", organizationId);
     }
 
-    const organizationWorkspacesLimit = await getOrganizationWorkspacesLimit(organization.id);
+    const organizationWorkspacesLimit = await getOrganizationWorkspacesLimit();
     const organizationWorkspacesCount = await getOrganizationWorkspacesCount(organization.id);
 
     if (organizationWorkspacesCount >= organizationWorkspacesLimit) {
@@ -49,7 +49,7 @@ export const createWorkspaceAction = authenticatedActionClient.inputSchema(ZCrea
     }
 
     if (parsedInput.data.teamIds && parsedInput.data.teamIds.length > 0) {
-      const isAccessControlAllowed = await getAccessControlPermission(organization.id);
+      const isAccessControlAllowed = await getAccessControlPermission();
 
       if (!isAccessControlAllowed) {
         throw new OperationNotAllowedError("You do not have permission to manage roles");

@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { OperationNotAllowedError } from "@forma/types/errors";
-import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
 import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 import { checkSpamProtectionPermission, getExternalUrlsPermission } from "./permission";
 
@@ -8,80 +7,26 @@ vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsSpamProtectionEnabled: vi.fn(),
 }));
 
-vi.mock("@/modules/billing/lib/feature-access", () => ({
-  hasCloudEntitlementWithLicenseGuard: vi.fn(),
-}));
-
-vi.mock("@/lib/constants", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/constants")>();
-  return {
-    ...actual,
-    IS_FORMA_CLOUD: true,
-  };
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
 describe("checkSpamProtectionPermission", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test("resolves when spam protection is enabled", async () => {
+  test("passes when reCAPTCHA is configured", async () => {
     vi.mocked(getIsSpamProtectionEnabled).mockResolvedValue(true);
 
-    await expect(checkSpamProtectionPermission("org_1")).resolves.toBeUndefined();
+    await expect(checkSpamProtectionPermission()).resolves.toBeUndefined();
   });
 
-  test("throws when spam protection is not enabled", async () => {
+  test("throws when it is not, because there are no credentials to call with", async () => {
     vi.mocked(getIsSpamProtectionEnabled).mockResolvedValue(false);
 
-    await expect(checkSpamProtectionPermission("org_1")).rejects.toThrow(OperationNotAllowedError);
-    await expect(checkSpamProtectionPermission("org_1")).rejects.toThrow(
-      "Spam protection is not enabled for this organization"
-    );
+    await expect(checkSpamProtectionPermission()).rejects.toBeInstanceOf(OperationNotAllowedError);
   });
 });
 
-describe("getExternalUrlsPermission - cloud", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test("returns true when both entitlement checks pass", async () => {
-    vi.mocked(hasCloudEntitlementWithLicenseGuard).mockResolvedValue(true);
-
-    const result = await getExternalUrlsPermission("org_123");
-
-    expect(result).toBe(true);
-    expect(hasCloudEntitlementWithLicenseGuard).toHaveBeenCalledTimes(2);
-  });
-
-  test("returns false when one entitlement check fails", async () => {
-    vi.mocked(hasCloudEntitlementWithLicenseGuard).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-
-    const result = await getExternalUrlsPermission("org_123");
-
-    expect(result).toBe(false);
-  });
-});
-
-describe("getExternalUrlsPermission - self-hosted", () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
-  test("returns true in self-hosted deployments", async () => {
-    vi.doMock("@/lib/constants", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("@/lib/constants")>();
-      return {
-        ...actual,
-        IS_FORMA_CLOUD: false,
-      };
-    });
-
-    const { getExternalUrlsPermission: getExternalUrlsPermissionSelfHosted } = await import("./permission");
-    const result = await getExternalUrlsPermissionSelfHosted("org_123");
-
-    expect(result).toBe(true);
-    expect(hasCloudEntitlementWithLicenseGuard).not.toHaveBeenCalled();
+describe("getExternalUrlsPermission", () => {
+  test("is on, because custom redirects and links are part of the product", async () => {
+    await expect(getExternalUrlsPermission()).resolves.toBe(true);
   });
 });

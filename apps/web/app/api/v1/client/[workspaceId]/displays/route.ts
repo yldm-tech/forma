@@ -5,7 +5,6 @@ import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/requ
 import { responses } from "@/lib/api/response";
 import { transformErrorToDetails } from "@/lib/api/validator";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createDisplay } from "./lib/display";
@@ -68,8 +67,7 @@ export const POST = withV1ApiWrapper({
     }
 
     if (inputValidation.data.userId) {
-      const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
-      const isContactsEnabled = await getIsContactsEnabled(organizationId);
+      const isContactsEnabled = await getIsContactsEnabled();
       if (!isContactsEnabled) {
         return {
           response: responses.forbiddenResponse(

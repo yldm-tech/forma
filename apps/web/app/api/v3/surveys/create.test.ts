@@ -8,7 +8,6 @@ import { getExternalUrlsPermission } from "@/modules/survey/lib/permission";
 import { V3SurveyCreatePermissionError, V3SurveyInputValidationError, createV3Survey } from "./create";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import { ZV3CreateSurveyBody } from "./schemas";
-import { resolveV3ContactsEntitlement } from "./targeting";
 
 vi.mock("server-only", () => ({}));
 
@@ -30,7 +29,6 @@ vi.mock("@/lib/actionClass/service", () => ({
 }));
 
 vi.mock("./targeting", () => ({
-  resolveV3ContactsEntitlement: vi.fn(),
   assertV3SurveyTargetingFilterReferences: vi.fn(),
   V3_CONTACTS_NOT_ENABLED_MESSAGE: "Contact targeting is not enabled.",
 }));
@@ -141,10 +139,6 @@ describe("createV3Survey", () => {
     });
     vi.mocked(getExternalUrlsPermission).mockResolvedValue(true);
     vi.mocked(getActionClasses).mockResolvedValue([]);
-    vi.mocked(resolveV3ContactsEntitlement).mockResolvedValue({
-      resolvedOrganizationId: "org_1",
-      isContactsEnabled: true,
-    });
     vi.mocked(getSurvey).mockResolvedValue(createdSurvey);
   });
 
@@ -471,48 +465,6 @@ describe("createV3Survey", () => {
     expect(createSurvey).toHaveBeenCalled();
   });
 
-  test("rejects external CTA buttons for API-key creates without external URL permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const body = ZV3CreateSurveyBody.parse({
-      ...rawCreateBody,
-      blocks: [
-        {
-          ...rawCreateBody.blocks[0],
-          elements: [
-            {
-              id: "external_cta",
-              type: "cta",
-              headline: { "en-US": "Continue", "de-DE": "Weiter" },
-              required: false,
-              buttonExternal: true,
-              buttonUrl: "https://example.com",
-              ctaButtonLabel: { "en-US": "Open", "de-DE": "Öffnen" },
-            },
-          ],
-        },
-      ],
-    });
-
-    await expect(
-      createV3Survey(
-        body,
-        {
-          type: "apiKey",
-          apiKeyId: "key_1",
-          organizationId: "org_1",
-          organizationAccess: { accessControl: { read: true, write: true } },
-          workspacePermissions: [],
-        },
-        "req_api_key",
-        "org_1"
-      )
-    ).rejects.toThrow(V3SurveyCreatePermissionError);
-
-    expect(getOrganizationByWorkspaceId).not.toHaveBeenCalled();
-    expect(getExternalUrlsPermission).toHaveBeenCalledWith("org_1");
-    expect(createSurvey).not.toHaveBeenCalled();
-  });
-
   test("rejects redirect endings when the organization does not have external URL permission", async () => {
     vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
     const body = ZV3CreateSurveyBody.parse({
@@ -527,36 +479,6 @@ describe("createV3Survey", () => {
     });
 
     await expect(createV3Survey(body, null, "req_4")).rejects.toThrow(V3SurveyCreatePermissionError);
-    expect(createSurvey).not.toHaveBeenCalled();
-  });
-
-  test("rejects external URLs for session-authenticated public creates without external URL permission", async () => {
-    vi.mocked(getExternalUrlsPermission).mockResolvedValue(false);
-    const body = ZV3CreateSurveyBody.parse({
-      ...rawCreateBody,
-      type: "app",
-      endings: [
-        {
-          id: "clen1234567890123456789012",
-          type: "redirectToUrl",
-          url: "https://example.com/next",
-        },
-      ],
-    });
-
-    await expect(
-      createV3Survey(
-        body,
-        {
-          user: { id: "user_1", email: "user@example.com", name: "User" },
-          expires: "2026-05-01",
-        },
-        "req_5"
-      )
-    ).rejects.toThrow(V3SurveyCreatePermissionError);
-
-    expect(getOrganizationByWorkspaceId).toHaveBeenCalledWith(workspaceId);
-    expect(getExternalUrlsPermission).toHaveBeenCalledWith("org_1");
     expect(createSurvey).not.toHaveBeenCalled();
   });
 
@@ -687,7 +609,6 @@ describe("createV3Survey", () => {
         []
       );
       // No targeting filters → empty private segment, no entitlement check.
-      expect(resolveV3ContactsEntitlement).not.toHaveBeenCalled();
     });
 
     test("passes targeting filters into createSurvey and returns the re-read survey", async () => {
@@ -701,7 +622,6 @@ describe("createV3Survey", () => {
 
       const result = await createV3Survey(body, null, "req_app_2", "org_1");
 
-      expect(resolveV3ContactsEntitlement).toHaveBeenCalledWith(workspaceId, "org_1");
       expect(createSurvey).toHaveBeenCalledWith(
         workspaceId,
         expect.objectContaining({ type: "app" }),
@@ -719,19 +639,6 @@ describe("createV3Survey", () => {
 
       await expect(createV3Survey(body, null, "req_app_targeting_fail", "org_1")).rejects.toThrow();
       expect(getSurvey).not.toHaveBeenCalled();
-    });
-
-    test("rejects targeting when contacts are not enabled, before any write", async () => {
-      vi.mocked(resolveV3ContactsEntitlement).mockResolvedValue({
-        resolvedOrganizationId: "org_1",
-        isContactsEnabled: false,
-      });
-      const body = buildAppBody({ targeting: { filters: attributeFilters } });
-
-      await expect(createV3Survey(body, null, "req_app_3", "org_1")).rejects.toThrow(
-        V3SurveyCreatePermissionError
-      );
-      expect(createSurvey).not.toHaveBeenCalled();
     });
 
     test("rejects unknown trigger action class ids", async () => {

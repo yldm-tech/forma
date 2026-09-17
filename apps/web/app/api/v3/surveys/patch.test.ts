@@ -14,11 +14,7 @@ import {
 import { executeV3SurveyPatch, patchV3Survey } from "./patch";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import { ZV3CreateSurveyBody } from "./schemas";
-import {
-  areV3SurveyTargetingFiltersEqual,
-  resolveV3ContactsEntitlement,
-  setV3SurveySegmentFilters,
-} from "./targeting";
+import { areV3SurveyTargetingFiltersEqual, setV3SurveySegmentFilters } from "./targeting";
 import { V3SurveyWritePermissionError } from "./write-permissions";
 
 vi.mock("server-only", () => ({}));
@@ -68,7 +64,6 @@ vi.mock("./targeting", () => ({
   setV3SurveySegmentFilters: vi.fn(),
   areV3SurveyTargetingFiltersEqual: vi.fn(),
   assertV3SurveyTargetingFilterReferences: vi.fn(),
-  resolveV3ContactsEntitlement: vi.fn(),
   V3_CONTACTS_NOT_ENABLED_MESSAGE: "Contact targeting is not enabled.",
 }));
 
@@ -274,10 +269,6 @@ describe("patchV3Survey", () => {
     });
     vi.mocked(getExternalUrlsPermission).mockResolvedValue(true);
     vi.mocked(getActionClasses).mockResolvedValue([]);
-    vi.mocked(resolveV3ContactsEntitlement).mockResolvedValue({
-      resolvedOrganizationId: "org_1",
-      isContactsEnabled: true,
-    });
     vi.mocked(areV3SurveyTargetingFiltersEqual).mockReturnValue(true);
   });
 
@@ -995,7 +986,6 @@ describe("patchV3Survey", () => {
         "org_1"
       );
 
-      expect(resolveV3ContactsEntitlement).toHaveBeenCalledWith(workspaceId, "org_1");
       // Segment-filter write and survey update must use the SAME tx client (true atomic behavior).
       expect(setV3SurveySegmentFilters).toHaveBeenCalledWith(
         "clsg1234567890123456789012",
@@ -1023,26 +1013,6 @@ describe("patchV3Survey", () => {
           "org_1"
         )
       ).rejects.toThrow(V3SurveyReferenceValidationError);
-
-      expect(setV3SurveySegmentFilters).not.toHaveBeenCalled();
-      expect(prisma.survey.update).not.toHaveBeenCalled();
-    });
-
-    test("rejects targeting changes when contacts are not enabled", async () => {
-      vi.mocked(areV3SurveyTargetingFiltersEqual).mockReturnValue(false);
-      vi.mocked(resolveV3ContactsEntitlement).mockResolvedValue({
-        resolvedOrganizationId: "org_1",
-        isContactsEnabled: false,
-      });
-
-      await expect(
-        patchV3Survey(
-          appCurrentSurvey,
-          { targeting: { filters: attributeFilters } },
-          "req_app_patch_4",
-          "org_1"
-        )
-      ).rejects.toThrow(V3SurveyWritePermissionError);
 
       expect(setV3SurveySegmentFilters).not.toHaveBeenCalled();
       expect(prisma.survey.update).not.toHaveBeenCalled();

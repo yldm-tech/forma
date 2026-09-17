@@ -5,7 +5,6 @@ import { logger } from "@forma/logger";
 import { type TWorkflowTriggerRunPayload, ZWorkflowTriggerRunPayload } from "@forma/workflows";
 import { isDatabasePoolExhaustionError } from "@/lib/jobs/pool-exhaustion";
 import { recordWorkflowRunCreatedMeterEvent } from "@/modules/billing/lib/metering";
-import { getIsWorkflowsEnabled } from "@/modules/license-check/lib/utils";
 import { type DispatchWorkflowRun } from "./dispatch";
 import { markWorkflowRunDispatched } from "./mark-dispatched";
 import {
@@ -249,15 +248,10 @@ const createAndDispatchWorkflowRun = async ({
  * Each match is isolated so one workflow's failure never blocks the others. The caller wraps the whole
  * call so a runner failure never affects the response pipeline.
  *
- * Entitlement gate: workflows is an EE feature (Cloud plan entitlement / self-hosted EE license).
- * The check runs only after a workflow actually matched — the common no-workflow response pays
- * nothing — and reads the Redis-cached entitlements context, so a non-entitled organization's
- * enabled workflows stop producing runs without an uncached per-response query.
  */
 export const enqueueResponseCompletedWorkflowRuns = async ({
   response,
   workspaceId,
-  organizationId,
   stripeCustomerId,
   dispatch,
   logContext,
@@ -271,21 +265,6 @@ export const enqueueResponseCompletedWorkflowRuns = async ({
   const candidates = await loadEnabledWorkflowCandidates(workspaceId, logContext);
   const matches = matchWorkflowsForResponse(candidates, { surveyId: response.surveyId, endingId });
   if (matches.length === 0) {
-    return;
-  }
-
-  const isWorkflowsEnabled = await getIsWorkflowsEnabled(organizationId);
-  if (!isWorkflowsEnabled) {
-    logger.info(
-      {
-        ...logContext,
-        workspaceId,
-        organizationId,
-        responseId: response.id,
-        matchedWorkflowIds: matches.map((match) => match.workflowId),
-      },
-      "Workflows entitlement missing for organization; skipping workflow run enqueue"
-    );
     return;
   }
 

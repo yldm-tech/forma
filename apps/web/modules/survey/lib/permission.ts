@@ -1,37 +1,17 @@
 import { OperationNotAllowedError } from "@forma/types/errors";
-import { IS_FORMA_CLOUD } from "@/lib/constants";
-import { hasCloudEntitlementWithLicenseGuard } from "@/modules/billing/lib/feature-access";
-import { CLOUD_STRIPE_FEATURE_LOOKUP_KEYS } from "@/modules/billing/lib/stripe-catalog";
 import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 
 /**
  * Checks if the organization has spam protection enabled.
- * @param {string} organizationId - The ID of the organization to check.
  * @returns {Promise<void>} A promise that resolves if spam protection is enabled.
  * @throws {OperationNotAllowedError} If spam protection is not enabled for the organization.
  */
-export const checkSpamProtectionPermission = async (organizationId: string): Promise<void> => {
-  const isSpamProtectionEnabled = await getIsSpamProtectionEnabled(organizationId);
+export const checkSpamProtectionPermission = async (): Promise<void> => {
+  const isSpamProtectionEnabled = await getIsSpamProtectionEnabled();
   if (!isSpamProtectionEnabled) {
     throw new OperationNotAllowedError("Spam protection is not enabled for this organization");
   }
 };
 
-export const getExternalUrlsPermission = async (organizationId: string): Promise<boolean> => {
-  if (IS_FORMA_CLOUD) {
-    const [canUseCustomRedirectUrl, canUseCustomLinksInSurveys] = await Promise.all([
-      hasCloudEntitlementWithLicenseGuard(
-        organizationId,
-        CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.CUSTOM_REDIRECT_URL
-      ),
-      hasCloudEntitlementWithLicenseGuard(
-        organizationId,
-        CLOUD_STRIPE_FEATURE_LOOKUP_KEYS.CUSTOM_LINKS_IN_SURVEYS
-      ),
-    ]);
-
-    return canUseCustomRedirectUrl && canUseCustomLinksInSurveys;
-  }
-
-  return true;
-};
+/** Custom redirect URLs and custom survey links are part of the product. */
+export const getExternalUrlsPermission = async (): Promise<boolean> => true;

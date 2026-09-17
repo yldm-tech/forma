@@ -43,7 +43,7 @@ export const updateWorkspaceAction = authenticatedActionClient.inputSchema(ZUpda
         throw new ResourceNotFoundError("Organization", organizationId);
       }
 
-      const canRemoveBranding = await getRemoveBrandingPermission(organizationId);
+      const canRemoveBranding = await getRemoveBrandingPermission();
 
       if (parsedInput.data.inAppSurveyBranding !== undefined) {
         if (!canRemoveBranding) {

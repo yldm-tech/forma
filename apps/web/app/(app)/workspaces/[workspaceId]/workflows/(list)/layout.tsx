@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getTranslate } from "@/lingodotdev/server";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
@@ -12,16 +11,8 @@ const WorkspaceWorkflowsLayout = async (
   props: Readonly<{ params: Promise<{ workspaceId: string }>; children: ReactNode }>
 ) => {
   const params = await props.params;
-  const { isReadOnly, isWorkflowsEnabled } = await getWorkflowsRouteAuth(params.workspaceId);
+  const { isReadOnly } = await getWorkflowsRouteAuth(params.workspaceId);
   const t = await getTranslate();
-
-  if (!isWorkflowsEnabled) {
-    // Not entitled: this installation does not have the feature, so the route does not exist for it.
-    // The nav already omits the entry, which leaves old links and bookmarks — and answering those
-    // with a page whose only content is an upsell reads as a broken product rather than a smaller
-    // one. The client pages must not mount either: they fetch through the now-403 workflows API.
-    notFound();
-  }
 
   return (
     <WorkflowsQueryClientProvider>

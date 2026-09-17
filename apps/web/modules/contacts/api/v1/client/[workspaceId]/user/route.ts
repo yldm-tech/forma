@@ -7,7 +7,6 @@ import { TJsPersonState } from "@forma/types/js";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
 import { responses } from "@/lib/api/response";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { updateUser } from "./lib/update-user";
@@ -130,8 +129,7 @@ export const POST = withV1ApiWrapper({
 
       const userId = jsonInput.userId;
 
-      const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
-      const isContactsEnabled = await getIsContactsEnabled(organizationId);
+      const isContactsEnabled = await getIsContactsEnabled();
       if (!isContactsEnabled) {
         return {
           response: responses.forbiddenResponse(

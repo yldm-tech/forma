@@ -13,7 +13,6 @@ import {
 } from "@/lib/utils/helper";
 import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { getContactSurveyLink } from "@/modules/contacts/lib/contact-survey-link";
-import { ensureContactsEnabled } from "@/modules/contacts/lib/contacts-entitlement";
 import { CONTACT_SURVEY_WORKSPACE_MISMATCH_ERROR_CODE } from "@/modules/contacts/lib/personal-link-errors";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
@@ -36,8 +35,6 @@ export const generatePersonalSurveyLinkAction = authenticatedActionClient
         id: workspaceId,
       });
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
-
-      await ensureContactsEnabled(organizationId);
 
       // Cross-tenant guard: the survey must belong to the same workspace as the
       // contact the caller was authorized against. Authorization above is derived

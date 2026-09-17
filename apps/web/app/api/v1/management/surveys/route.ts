@@ -145,7 +145,7 @@ export const POST = withV1ApiWrapper({
         surveyData.questions = [];
       }
 
-      const featureCheckResult = await checkFeaturePermissions(surveyData, organization);
+      const featureCheckResult = await checkFeaturePermissions(surveyData);
       if (featureCheckResult) {
         return {
           response: featureCheckResult,

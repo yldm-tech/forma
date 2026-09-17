@@ -13,11 +13,7 @@ import { type TV3SurveyLanguageRequest, ensureV3WorkspaceLanguages } from "./lan
 import { prepareV3SurveyCreate } from "./prepare";
 import { V3SurveyReferenceValidationError } from "./reference-validation";
 import { type TV3CreateSurveyBody, formatV3ZodInvalidParams } from "./schemas";
-import {
-  V3_CONTACTS_NOT_ENABLED_MESSAGE,
-  assertV3SurveyTargetingFilterReferences,
-  resolveV3ContactsEntitlement,
-} from "./targeting";
+import { assertV3SurveyTargetingFilterReferences } from "./targeting";
 import { resolveV3SurveyTriggers } from "./triggers";
 import { getV3SurveyMediaInvalidParams } from "./validation";
 
@@ -96,41 +92,11 @@ async function assertV3SurveyCreatePermissions(
     );
   }
 
-  const isExternalUrlsAllowed = await getExternalUrlsPermission(resolvedOrganizationId);
+  const isExternalUrlsAllowed = await getExternalUrlsPermission();
   if (!isExternalUrlsAllowed) {
     throw new V3SurveyCreatePermissionError(
       "External URLs are not enabled for this organization. Upgrade to use external survey links."
     );
-  }
-}
-
-function hasV3SurveyTargetingFilters(input: TV3CreateSurveyBody): boolean {
-  return input.type === "app" && (input.targeting?.filters.length ?? 0) > 0;
-}
-
-/**
- * Contact targeting (segment filters) is an enterprise feature. Gate non-empty targeting before any
- * write so an unentitled request fails with a 403 instead of creating a survey it can't fully configure.
- */
-async function assertV3SurveyTargetingPermission(
-  input: TV3CreateSurveyBody,
-  organizationId?: string
-): Promise<void> {
-  if (!hasV3SurveyTargetingFilters(input)) {
-    return;
-  }
-
-  const { resolvedOrganizationId, isContactsEnabled } = await resolveV3ContactsEntitlement(
-    input.workspaceId,
-    organizationId
-  );
-  if (!resolvedOrganizationId) {
-    throw new V3SurveyCreatePermissionError(
-      `Unable to verify contact targeting permissions for workspaceId '${input.workspaceId}'.`
-    );
-  }
-  if (!isContactsEnabled) {
-    throw new V3SurveyCreatePermissionError(V3_CONTACTS_NOT_ENABLED_MESSAGE);
   }
 }
 
@@ -240,7 +206,6 @@ export async function createV3Survey(
   }
 
   await assertV3SurveyCreatePermissions(input, organizationId, options);
-  await assertV3SurveyTargetingPermission(preparation.document, organizationId);
 
   return await executeV3SurveyCreate({
     input: preparation.document,

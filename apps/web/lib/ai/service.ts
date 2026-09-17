@@ -96,7 +96,7 @@ export const getOrganizationAIConfig = async (organizationId: string): Promise<T
     throw new ResourceNotFoundError("Organization", organizationId);
   }
 
-  const isAISmartToolsEntitled = await getIsAISmartToolsEnabled(organizationId);
+  const isAISmartToolsEntitled = await getIsAISmartToolsEnabled();
 
   return {
     organizationId,

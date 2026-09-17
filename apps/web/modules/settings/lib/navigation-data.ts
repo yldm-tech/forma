@@ -104,9 +104,9 @@ export const getSettingsLayoutData = async (
   if (!user || !organization || !membership) return null;
 
   const [isAccessControlAllowed, license, organizationWorkspacesLimit, workspaces] = await Promise.all([
-    getAccessControlPermission(organization.id),
+    getAccessControlPermission(),
     getEnterpriseLicense(),
-    getOrganizationWorkspacesLimit(organization.id),
+    getOrganizationWorkspacesLimit(),
     getWorkspacesByUserId(userId, organization.id),
   ]);
 
