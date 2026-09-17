@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { z } from "zod";
 import {
   GENERATED_SURVEY_MAX_BLOCKS,
   GENERATED_SURVEY_MAX_QUESTIONS_PER_BLOCK,
@@ -15,6 +16,11 @@ function generatedQuestion(index: number) {
     placeholder: null,
     longAnswer: true,
     choices: null,
+    // Required by the provider-facing schema and accepted as null by the parsing one, so one
+    // fixture serves both.
+    rows: null,
+    columns: null,
+    format: null,
     lowerLabel: null,
     upperLabel: null,
     scale: null,
@@ -395,5 +401,37 @@ describe("ZV3SurveyGenerateBody", () => {
     if (result.success) {
       expect(result.data.language).toBe("zh-Hans-CN");
     }
+  });
+});
+
+describe("ZGeneratedSurveyDraftForAI as a provider structured-output schema", () => {
+  // A provider's strict mode requires every object's `required` to list all of its properties;
+  // `.optional()` is what removes a key from it, and the answer is a 400 naming the field while the
+  // surface shows only "The draft could not be finished". This walks the converted JSON Schema
+  // rather than asserting on the Zod shape, because the conversion is what the provider sees.
+  test("every object requires all of its properties", () => {
+    const jsonSchema = z.toJSONSchema(ZGeneratedSurveyDraftForAI, { io: "input" });
+    const offenders: string[] = [];
+
+    const walk = (node: unknown, path: string): void => {
+      if (!node || typeof node !== "object") return;
+      const schema = node as Record<string, unknown>;
+
+      if (schema.type === "object" && schema.properties && typeof schema.properties === "object") {
+        const properties = Object.keys(schema.properties as Record<string, unknown>);
+        const required = new Set((schema.required as string[] | undefined) ?? []);
+        for (const property of properties) {
+          if (!required.has(property)) offenders.push(`${path}.${property}`);
+        }
+      }
+
+      for (const [key, value] of Object.entries(schema)) {
+        if (value && typeof value === "object") walk(value, `${path}/${key}`);
+      }
+    };
+
+    walk(jsonSchema, "#");
+
+    expect(offenders).toEqual([]);
   });
 });

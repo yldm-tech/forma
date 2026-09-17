@@ -159,6 +159,19 @@ function validateGeneratedSurveyElement(
 export const ZGeneratedSurveyElementForAI = z
   .object({
     ...generatedSurveyElementShape,
+    // Required here and only here. A provider's strict structured output demands that every
+    // object's `required` list all of its properties, and `.optional()` is what removes a key from
+    // it: OpenAI answers a schema missing one with a 400 naming the field, while the surface shows
+    // only "The draft could not be finished". The model must therefore send these keys, with null
+    // where they do not apply.
+    //
+    // Deliberately not changed on the shared shape: `ZGeneratedSurveyElement` parses what came
+    // back, and a parser that also demanded them would reject a reply it could otherwise read.
+    // Downstream treats null and absent alike (`!element.rows`, `element.columns ?? []`,
+    // `element.format ?? "M-d-y"`).
+    rows: ZGeneratedChoiceList.nullable(),
+    columns: ZGeneratedChoiceList.nullable(),
+    format: z.enum(["M-d-y", "d-M-y", "y-M-d"]).nullable(),
     range: ZGeneratedRatingRangeForAI.nullable(),
   })
   .strict()
