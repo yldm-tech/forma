@@ -2465,9 +2465,6 @@
         "whitelabel_email_follow_ups": "ホワイトラベルメールフォローアップ",
         "workflows": "Workflows"
       },
-      "feedback_directories": {
-        "nav_label": "データセット"
-      },
       "general": {
         "ai_enabled": "Forma AI",
         "ai_enabled_description": "この組織のAI機能を管理します。",
