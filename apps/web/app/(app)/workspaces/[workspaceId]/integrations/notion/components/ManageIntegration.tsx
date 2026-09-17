@@ -1,54 +1,52 @@
 "use client";
 
-import { Trash2Icon } from "lucide-react";
+import { RefreshCcwIcon, Trash2Icon } from "lucide-react";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { Trans, useTranslation } from "react-i18next";
-import { TIntegrationSlack, TIntegrationSlackConfigData } from "@forma/types/integration/slack";
+import { useTranslation } from "react-i18next";
+import { TIntegrationNotion, TIntegrationNotionConfigData } from "@forma/types/integration/notion";
 import { TUserLocale } from "@forma/types/user";
-import { deleteIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
+import { deleteIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/integrations/actions";
 import { timeSince } from "@/lib/time";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { Button } from "@/modules/ui/components/button";
 import { DeleteDialog } from "@/modules/ui/components/delete-dialog";
 import { EmptyState } from "@/modules/ui/components/empty-state";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/modules/ui/components/tooltip";
 
 interface ManageIntegrationProps {
-  slackIntegration: TIntegrationSlack;
+  notionIntegration: TIntegrationNotion;
   setOpenAddIntegrationModal: React.Dispatch<React.SetStateAction<boolean>>;
   setIsConnected: React.Dispatch<React.SetStateAction<boolean>>;
   setSelectedIntegration: React.Dispatch<
-    React.SetStateAction<(TIntegrationSlackConfigData & { index: number }) | null>
+    React.SetStateAction<(TIntegrationNotionConfigData & { index: number }) | null>
   >;
-  refreshChannels: () => void;
-  showReconnectButton: boolean;
-  handleSlackAuthorization: () => void;
   locale: TUserLocale;
+  handleNotionAuthorization: () => void;
 }
 
 export const ManageIntegration = ({
-  slackIntegration,
+  notionIntegration,
   setOpenAddIntegrationModal,
   setIsConnected,
   setSelectedIntegration,
-  refreshChannels,
-  showReconnectButton,
-  handleSlackAuthorization,
   locale,
+  handleNotionAuthorization,
 }: ManageIntegrationProps) => {
   const { t } = useTranslation();
   const [isDeleteIntegrationModalOpen, setIsDeleteIntegrationModalOpen] = useState(false);
   const [isDeleting, setisDeleting] = useState(false);
-  let integrationArray: TIntegrationSlackConfigData[] = [];
-  if (slackIntegration?.config.data) {
-    integrationArray = slackIntegration.config.data;
+
+  let integrationArray: TIntegrationNotionConfigData[] = [];
+  if (notionIntegration?.config.data) {
+    integrationArray = notionIntegration.config.data;
   }
 
   const handleDeleteIntegration = async () => {
     setisDeleting(true);
 
     const deleteIntegrationActionResult = await deleteIntegrationAction({
-      integrationId: slackIntegration.id,
+      integrationId: notionIntegration.id,
     });
 
     if (deleteIntegrationActionResult?.data) {
@@ -64,70 +62,65 @@ export const ManageIntegration = ({
   };
 
   const editIntegration = (index: number) => {
-    setSelectedIntegration({ ...slackIntegration.config.data[index], index });
+    setSelectedIntegration({ ...notionIntegration.config.data[index], index });
     setOpenAddIntegrationModal(true);
   };
 
   return (
     <div className="mt-6 flex w-full flex-col items-center justify-center p-6">
-      {showReconnectButton && (
-        <div className="mb-4 flex w-full items-center justify-between gap-x-4">
-          <p className="text-amber-700">
-            <Trans
-              i18nKey="workspace.integrations.slack.slack_reconnect_button_description"
-              components={{ b: <b /> }}
-            />
-          </p>
-          <Button onClick={handleSlackAuthorization} variant="secondary">
-            {t("workspace.integrations.slack.slack_reconnect_button")}
-          </Button>
-        </div>
-      )}
-      <div className="flex w-full justify-end gap-x-4">
+      <div className="flex w-full justify-end gap-x-2">
         <div className="mr-6 flex items-center">
           <span className="mr-4 size-4 rounded-full bg-green-600"></span>
           <span className="text-slate-500">
-            {t("workspace.integrations.slack.connected_with_team", {
-              team: slackIntegration.config.key.team?.name,
+            {t("workspace.integrations.notion.connected_with_workspace", {
+              workspace: notionIntegration.config.key.workspace_name,
             })}
           </span>
         </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" onClick={handleNotionAuthorization}>
+                <RefreshCcwIcon className="mr-2 size-4" />
+                {t("workspace.integrations.notion.update_connection")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspace.integrations.notion.update_connection_tooltip")}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Button
           onClick={() => {
-            refreshChannels();
             setSelectedIntegration(null);
             setOpenAddIntegrationModal(true);
           }}>
-          {t("workspace.integrations.slack.link_channel")}
+          {t("workspace.integrations.notion.link_new_database")}
         </Button>
       </div>
       {!integrationArray || integrationArray.length === 0 ? (
         <div className="mt-4 w-full">
-          <EmptyState text={t("workspace.integrations.slack.connect_your_first_slack_channel")} />
+          <EmptyState text={t("workspace.integrations.notion.no_databases_found")} />
         </div>
       ) : (
         <div className="mt-4 flex w-full flex-col items-center justify-center">
           <div className="mt-6 w-full rounded-lg border border-slate-200">
-            <div className="grid h-12 grid-cols-8 content-center rounded-lg bg-slate-100 text-left text-sm font-semibold text-slate-900">
+            <div className="grid h-12 grid-cols-6 content-center rounded-lg bg-slate-100 text-left text-sm font-semibold text-slate-900">
               <div className="col-span-2 hidden text-center sm:block">{t("common.survey")}</div>
               <div className="col-span-2 hidden text-center sm:block">
-                {t("workspace.integrations.slack.channel_name")}
+                {t("workspace.integrations.notion.database_name")}
               </div>
-              <div className="col-span-2 hidden text-center sm:block">{t("common.questions")}</div>
               <div className="col-span-2 hidden text-center sm:block">{t("common.updated_at")}</div>
             </div>
             {integrationArray.map((data, index) => {
               return (
                 <button
                   type="button"
-                  key={`${index}-${data.surveyName}-${data.channelName}`}
-                  className="grid h-16 w-full grid-cols-8 content-center rounded-lg p-2 text-slate-700 hover:cursor-pointer hover:bg-slate-100"
+                  key={`${index}-${data.databaseId}`}
+                  className="grid h-16 w-full cursor-pointer grid-cols-6 content-center rounded-lg p-2 hover:bg-slate-100"
                   onClick={() => {
                     editIntegration(index);
                   }}>
                   <div className="col-span-2 text-center">{data.surveyName}</div>
-                  <div className="col-span-2 text-center">{data.channelName}</div>
-                  <div className="col-span-2 text-center">{data.elements}</div>
+                  <div className="col-span-2 text-center">{data.databaseName}</div>
                   <div className="col-span-2 text-center">{timeSince(data.createdAt.toString(), locale)}</div>
                 </button>
               );
@@ -143,7 +136,7 @@ export const ManageIntegration = ({
       <DeleteDialog
         open={isDeleteIntegrationModalOpen}
         setOpen={setIsDeleteIntegrationModalOpen}
-        deleteWhat={t("workspace.integrations.slack.slack_integration")}
+        deleteWhat={t("workspace.integrations.notion.notion_integration")}
         onDelete={handleDeleteIntegration}
         text={t("workspace.integrations.delete_integration_confirmation")}
         isDeleting={isDeleting}

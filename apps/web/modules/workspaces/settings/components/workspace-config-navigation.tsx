@@ -1,6 +1,6 @@
 "use client";
 
-import { BlocksIcon, BrushIcon, CodeXmlIcon, LanguagesIcon, TagIcon, UsersIcon } from "lucide-react";
+import { BrushIcon, CodeXmlIcon, LanguagesIcon, TagIcon, UsersIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { SecondaryNavigation } from "@/modules/ui/components/secondary-navigation";
@@ -38,13 +38,6 @@ export const WorkspaceConfigNavigation = ({ activeId, loading }: WorkspaceConfig
       icon: <CodeXmlIcon className="size-5" />,
       href: `${workspaceBasePath}/settings/workspace/app-connection`,
       current: pathname?.includes("/app-connection"),
-    },
-    {
-      id: "integrations",
-      label: t("common.integrations"),
-      icon: <BlocksIcon className="size-5" />,
-      href: `${workspaceBasePath}/settings/workspace/integrations`,
-      current: pathname?.includes("/integrations"),
     },
     {
       id: "teams",

@@ -9,7 +9,7 @@ import {
   TIntegrationGoogleSheetsConfigData,
 } from "@forma/types/integration/google-sheet";
 import { TUserLocale } from "@forma/types/user";
-import { deleteIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
+import { deleteIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/integrations/actions";
 import { timeSince } from "@/lib/time";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { Alert, AlertButton, AlertDescription } from "@/modules/ui/components/alert";

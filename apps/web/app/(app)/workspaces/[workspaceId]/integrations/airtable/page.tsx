@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { logger } from "@forma/logger";
 import { TIntegrationItem } from "@forma/types/integration";
 import { TIntegrationAirtable } from "@forma/types/integration/airtable";
-import { AirtableWrapper } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/components/AirtableWrapper";
-import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/lib/surveys";
+import { AirtableWrapper } from "@/app/(app)/workspaces/[workspaceId]/integrations/airtable/components/AirtableWrapper";
+import { getSurveys } from "@/app/(app)/workspaces/[workspaceId]/integrations/lib/surveys";
 import { getAirtableTables } from "@/lib/airtable/service";
 import { AIRTABLE_CLIENT_ID, DEFAULT_LOCALE, WEBAPP_URL } from "@/lib/constants";
 import { redactIntegrationCredentials } from "@/lib/integration/redact-credentials";
@@ -52,7 +52,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
 
   return (
     <PageContentWrapper>
-      <GoBackButton url={`${WEBAPP_URL}/workspaces/${params.workspaceId}/settings/workspace/integrations`} />
+      <GoBackButton url={`${WEBAPP_URL}/workspaces/${params.workspaceId}/integrations`} />
       <PageHeader pageTitle={t("workspace.integrations.airtable.airtable_integration")} />
       <div className="h-[75vh] w-full">
         <AirtableWrapper

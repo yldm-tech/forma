@@ -7,9 +7,9 @@ import {
 } from "@forma/types/integration/google-sheet";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { validateGoogleSheetsConnectionAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/google-sheets/actions";
-import { ManageIntegration } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/google-sheets/components/ManageIntegration";
-import { authorize } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/google-sheets/lib/google";
+import { validateGoogleSheetsConnectionAction } from "@/app/(app)/workspaces/[workspaceId]/integrations/google-sheets/actions";
+import { ManageIntegration } from "@/app/(app)/workspaces/[workspaceId]/integrations/google-sheets/components/ManageIntegration";
+import { authorize } from "@/app/(app)/workspaces/[workspaceId]/integrations/google-sheets/lib/google";
 import googleSheetLogo from "@/images/googleSheetsLogo.png";
 import { GOOGLE_SHEET_INTEGRATION_INVALID_GRANT } from "@/lib/googleSheet/constants";
 import { ConnectIntegration } from "@/modules/ui/components/connect-integration";

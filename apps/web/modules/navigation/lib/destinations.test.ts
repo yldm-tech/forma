@@ -19,7 +19,7 @@ const build = (overrides: Partial<Parameters<typeof getNavigationDestinations>[0
 const ids = (destinations: ReturnType<typeof build>) => destinations.map((d) => d.id);
 
 describe("getNavigationDestinations", () => {
-  test("offers the three product areas and every settings page a manager can open", () => {
+  test("offers every product area and every settings page a manager can open", () => {
     const result = ids(build());
 
     expect(result).toEqual(
@@ -27,14 +27,14 @@ describe("getNavigationDestinations", () => {
         "surveys",
         "contacts",
         "workflows",
+        "user-actions",
+        "integrations",
         "ws-general",
         "ws-look",
         "ws-tags",
         "ws-languages",
-        "ws-integrations",
         "ws-teams",
         "ws-sdk",
-        "ws-actions",
         "org-general",
         "org-teams",
         "org-api-keys",
@@ -42,6 +42,17 @@ describe("getNavigationDestinations", () => {
         "account-notifications",
       ])
     );
+  });
+
+  // User actions and Integrations are sidebar entries, which they cannot be while their paths
+  // contain `/settings` — the main navigation swaps itself out for the settings sidebar on those.
+  test("keeps user actions and integrations out of the settings paths", () => {
+    const result = build();
+
+    for (const id of ["user-actions", "integrations"]) {
+      const destination = result.find((d) => d.id === id);
+      expect(destination?.href).toBe(`/workspaces/ws_1/${id}`);
+    }
   });
 
   test("offers the billing role only what it can open", () => {

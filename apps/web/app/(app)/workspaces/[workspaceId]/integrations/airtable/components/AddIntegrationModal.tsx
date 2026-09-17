@@ -17,9 +17,9 @@ import {
 import { TSurveyElement } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
-import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/actions";
-import { BaseSelectDropdown } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/components/BaseSelectDropdown";
-import { fetchTables } from "@/app/(app)/workspaces/[workspaceId]/settings/workspace/integrations/airtable/lib/airtable";
+import { createOrUpdateIntegrationAction } from "@/app/(app)/workspaces/[workspaceId]/integrations/actions";
+import { BaseSelectDropdown } from "@/app/(app)/workspaces/[workspaceId]/integrations/airtable/components/BaseSelectDropdown";
+import { fetchTables } from "@/app/(app)/workspaces/[workspaceId]/integrations/airtable/lib/airtable";
 import AirtableLogo from "@/images/airtableLogo.svg";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { recallToHeadline } from "@/lib/utils/recall";
