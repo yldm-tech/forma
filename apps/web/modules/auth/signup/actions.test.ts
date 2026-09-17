@@ -11,14 +11,14 @@ import { createMembership } from "@/lib/membership/service";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getUserByEmail } from "@/lib/user/service";
 import { AuditLoggingCtx } from "@/lib/utils/action-client/types/context";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 import { auth } from "@/modules/auth/lib/auth";
 import { readSignupIntent } from "@/modules/auth/lib/signup-intent";
 import { updateUser } from "@/modules/auth/lib/user";
 import { getInvite, resolveInviteMatch } from "@/modules/auth/signup/lib/invite";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
-import { subscribeUserToMailingList } from "@/modules/ee/mailing/lib/mailing-subscription";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
+import { subscribeUserToMailingList } from "@/modules/mailing/lib/mailing-subscription";
 import { createUserAction } from "./actions";
 
 vi.mock("next/headers", () => ({
@@ -73,11 +73,11 @@ vi.mock("@/lib/posthog", () => ({
   identifyPostHogPerson: vi.fn(),
   getEmailDomain: (email: string) => email.split("@")[1]?.toLowerCase() || undefined,
 }));
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   ensureCloudStripeSetupForOrganization: vi.fn(),
 }));
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
-vi.mock("@/modules/ee/mailing/lib/mailing-subscription", () => ({ subscribeUserToMailingList: vi.fn() }));
+vi.mock("@/modules/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
+vi.mock("@/modules/mailing/lib/mailing-subscription", () => ({ subscribeUserToMailingList: vi.fn() }));
 vi.mock("@/modules/email", () => ({ sendInviteAcceptedEmail: vi.fn() }));
 vi.mock("@/modules/workspaces/settings/lib/workspace", () => ({ createWorkspace: vi.fn() }));
 
@@ -111,7 +111,7 @@ vi.mock("@/lib/constants", () => ({
 
 vi.mock("@/lib/instance/service", () => ({ getIsFreshInstance: vi.fn() }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_type: string, _object: string, fn: Function) => fn),
 }));
 

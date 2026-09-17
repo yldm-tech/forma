@@ -7,7 +7,7 @@ import { transformErrorToDetails } from "@/lib/api/validator";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
-import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { createDisplay } from "./lib/display";
 
 export const OPTIONS = async (): Promise<Response> => {

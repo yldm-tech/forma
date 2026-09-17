@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { TOrganizationBilling } from "@forma/types/organizations";
-import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
+import { getOrganizationBillingWithReadThroughSync } from "@/modules/billing/lib/organization-billing";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
 import { getCloudOrganizationEntitlementsContext } from "./cloud-provider";
 import { KNOWN_ENTITLEMENT_FEATURES } from "./types";
 
@@ -11,7 +11,7 @@ vi.mock("@forma/logger", () => ({
   logger: { warn: vi.fn() },
 }));
 
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   getOrganizationBillingWithReadThroughSync: vi.fn(),
   getDefaultOrganizationBilling: () => ({
     limits: { workspaces: 1, monthly: { responses: 250, workflowRuns: null } },
@@ -20,7 +20,7 @@ vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
   }),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/license", () => ({
+vi.mock("@/modules/license-check/lib/license", () => ({
   getEnterpriseLicense: vi.fn(),
 }));
 

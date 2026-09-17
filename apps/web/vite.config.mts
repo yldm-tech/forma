@@ -125,14 +125,14 @@ export default defineConfig({
 
         // Feature-specific modules
         "app/**/billing-confirmation/**", // Billing confirmation pages
-        "modules/ee/billing/**", // Enterprise billing features
+        "modules/billing/**", // Enterprise billing features
         "modules/survey/multi-language-surveys/**", // Multi-language survey features
         "modules/email/**", // Email functionality
         "modules/integrations/**", // Integration modules
         "modules/setup/**/intro/**", // Setup intro pages
         "modules/setup/**/signup/**", // Setup signup pages
         "modules/setup/**/layout.tsx", // Setup layouts
-        "modules/ee/contacts/components/**", // Contact components
+        "modules/contacts/components/**", // Contact components
 
         // Third-party integrations
         "lib/slack/**", // Slack integration

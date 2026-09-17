@@ -4,8 +4,8 @@ import { type Prisma, type SurveyStatus } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
 import { ValidationError } from "@forma/types/errors";
 import type { TSurvey } from "@forma/types/surveys/types";
-import { queueAuditEventWithoutRequest } from "@/modules/ee/audit-logs/lib/handler";
-import { type TAuditStatus } from "@/modules/ee/audit-logs/types/audit-log";
+import { queueAuditEventWithoutRequest } from "@/modules/audit-logs/lib/handler";
+import { type TAuditStatus } from "@/modules/audit-logs/types/audit-log";
 import { SURVEY_SCHEDULING_CONFIG, SURVEY_SCHEDULING_RECONCILIATION_BATCH_SIZE } from "./constants";
 import { createSurveySchedulingDateUtils, isDateDue } from "./date-utils";
 

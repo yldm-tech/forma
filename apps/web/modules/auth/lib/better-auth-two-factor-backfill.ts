@@ -3,10 +3,10 @@ import { isAPIError } from "better-auth/api";
 import { prisma } from "@forma/database";
 import { logger } from "@forma/logger";
 import { buildReencodedTwoFactorData } from "@/modules/auth/lib/cutover/reencode-two-factor";
-import type { AuthHookContext } from "@/modules/ee/sso/lib/better-auth-hooks";
+import type { AuthHookContext } from "@/modules/sso/lib/better-auth-hooks";
 
 /**
- * ENG-1824 self-heal. The custom 2FA enable flow (`modules/ee/two-factor-auth`) historically wrote the
+ * ENG-1824 self-heal. The custom 2FA enable flow (`modules/two-factor-auth`) historically wrote the
  * secret only to the legacy `User.twoFactorSecret` column, but login verifies via Better Auth's
  * `twoFactor` plugin, which reads the `TwoFactor` table. Users who enabled 2FA before the enable-path
  * bridge landed have the legacy columns but no `TwoFactor` row, so login throws "TOTP not enabled".

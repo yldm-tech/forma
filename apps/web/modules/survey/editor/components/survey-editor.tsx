@@ -10,7 +10,6 @@ import { TUserLocale } from "@forma/types/user";
 import { extractLanguageCodes, getEnabledLanguages } from "@/lib/i18n/utils";
 import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { useDocumentVisibility } from "@/lib/useDocumentVisibility";
-import { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";
 import { EditPublicSurveyAlertDialog } from "@/modules/survey/components/edit-public-survey-alert-dialog";
 import { ElementsView } from "@/modules/survey/editor/components/elements-view";
 import { LoadingSkeleton } from "@/modules/survey/editor/components/loading-skeleton";
@@ -23,6 +22,7 @@ import { FollowUpsView } from "@/modules/survey/follow-ups/components/follow-ups
 import { shouldShowFollowUpsTab } from "@/modules/survey/follow-ups/lib/deprecation";
 import { LanguageView } from "@/modules/survey/multi-language-surveys/components/language-view";
 import { type TSurveySchedulingConfig } from "@/modules/survey/scheduling/lib/config";
+import { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 import { PreviewSurvey } from "@/modules/ui/components/preview-survey";
 import { getWorkspaceLanguagesAction, refetchWorkspaceAction } from "../actions";
 

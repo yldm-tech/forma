@@ -10,11 +10,11 @@ import { capturePostHogEvent } from "@/lib/posthog";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspace } from "@/lib/workspace/service";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
-import { getRemoveBrandingPermission } from "@/modules/ee/license-check/lib/utils";
-import { getTeamsByOrganizationId } from "@/modules/ee/teams/team-list/lib/team";
+import { getRemoveBrandingPermission } from "@/modules/license-check/lib/utils";
+import { getTeamsByOrganizationId } from "@/modules/teams/team-list/lib/team";
 import { updateWorkspace } from "@/modules/workspaces/settings/lib/workspace";
 import { ZWorkspaceUpdateActionInput } from "@/modules/workspaces/settings/lib/workspace-update-input";
 

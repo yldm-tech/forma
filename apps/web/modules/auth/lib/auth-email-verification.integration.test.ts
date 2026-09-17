@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { capturePostHogEvent } from "@/lib/posthog";
+import { queueAuditEventBackground } from "@/modules/audit-logs/lib/handler";
 import { auth } from "@/modules/auth/lib/auth";
 import * as brevo from "@/modules/auth/lib/brevo";
-import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
 import {
   sendPasswordResetLinkEmail,
   sendPasswordResetNotifyEmail,
@@ -19,8 +19,8 @@ vi.mock("@/modules/auth/lib/brevo", async (importOriginal) => {
 
 // Spy queueAuditEventBackground (the session.create.after `signedIn` audit) so the auto-login-after-
 // verification path can be asserted without depending on the real setImmediate/headers() emission.
-vi.mock("@/modules/ee/audit-logs/lib/handler", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/modules/ee/audit-logs/lib/handler")>();
+vi.mock("@/modules/audit-logs/lib/handler", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/audit-logs/lib/handler")>();
   return { ...actual, queueAuditEventBackground: vi.fn().mockResolvedValue(undefined) };
 });
 

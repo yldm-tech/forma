@@ -9,7 +9,7 @@ import { assertCan } from "@/lib/authorization";
 import { getSurveysByActionClassId } from "@/lib/survey/service";
 import { actionClient, authenticatedActionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromActionClassId, getWorkspaceIdFromActionClassId } from "@/lib/utils/helper";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { getLatestStableFbRelease } from "./lib/github";
 
 const ZDeleteActionClassAction = z.object({

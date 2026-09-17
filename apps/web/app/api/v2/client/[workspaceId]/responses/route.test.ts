@@ -65,11 +65,11 @@ vi.mock("@/modules/api/v2/lib/element", () => ({
   validateOtherOptionLengthForMultipleChoice: mocks.validateOtherOptionLengthForMultipleChoice,
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsContactsEnabled: mocks.getIsContactsEnabled,
 }));
 
-vi.mock("@/modules/ee/quotas/lib/helpers", () => ({
+vi.mock("@/modules/quotas/lib/helpers", () => ({
   createQuotaFullObject: mocks.createQuotaFullObject,
 }));
 

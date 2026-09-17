@@ -122,15 +122,15 @@ vi.mock("@/lib/telemetry/process-usage-telemetry-job", () => ({
   processUsageTelemetryJob: mockProcessUsageTelemetryJob,
 }));
 
-vi.mock("@/modules/ee/workflows/lib/runner/process-workflow-run-job", () => ({
+vi.mock("@/modules/workflows/lib/runner/process-workflow-run-job", () => ({
   processWorkflowRunJob: mockProcessWorkflowRunJob,
 }));
 
-vi.mock("@/modules/ee/workflows/lib/runner/process-workflow-run-reconcile-job", () => ({
+vi.mock("@/modules/workflows/lib/runner/process-workflow-run-reconcile-job", () => ({
   processWorkflowRunReconcileJob: mockProcessWorkflowRunReconcileJob,
 }));
 
-vi.mock("@/modules/ee/workflows/lib/analytics/process-workflows-usage-snapshot-job", () => ({
+vi.mock("@/modules/workflows/lib/analytics/process-workflows-usage-snapshot-job", () => ({
   processWorkflowsUsageSnapshotJob: mockProcessWorkflowsUsageSnapshotJob,
 }));
 
@@ -500,9 +500,9 @@ describe("instrumentation-jobs", () => {
       const { USAGE_TELEMETRY_DAILY_CRON_PATTERN, USAGE_TELEMETRY_TIME_ZONE } =
         await import("@/lib/telemetry/constants");
       const { WORKFLOW_RUN_RECONCILE_INTERVAL_MS } =
-        await import("@/modules/ee/workflows/lib/runner/reconcile-constants");
+        await import("@/modules/workflows/lib/runner/reconcile-constants");
       const { WORKFLOWS_USAGE_SNAPSHOT_DAILY_CRON_PATTERN, WORKFLOWS_USAGE_SNAPSHOT_TIME_ZONE } =
-        await import("@/modules/ee/workflows/lib/analytics/constants");
+        await import("@/modules/workflows/lib/analytics/constants");
 
       await registerRecurringJobs();
       await registerRecurringJobs();

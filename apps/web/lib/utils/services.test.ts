@@ -19,7 +19,7 @@ import {
 import { DatabaseError, InvalidInputError, ResourceNotFoundError } from "@forma/types/errors";
 import { TSurveyQuota } from "@forma/types/quota";
 import { validateInputs } from "@/lib/utils/validate";
-import { getQuota as getQuotaService } from "@/modules/ee/quotas/lib/quotas";
+import { getQuota as getQuotaService } from "@/modules/quotas/lib/quotas";
 import {
   getActionClass,
   getApiKey,
@@ -102,7 +102,7 @@ vi.mock("@forma/database", () => ({
   },
 }));
 
-vi.mock("@/modules/ee/quotas/lib/quotas", () => ({
+vi.mock("@/modules/quotas/lib/quotas", () => ({
   getQuota: vi.fn(),
 }));
 

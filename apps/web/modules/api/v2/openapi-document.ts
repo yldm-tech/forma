@@ -23,8 +23,8 @@ import { teamPaths } from "@/modules/api/v2/organizations/[organizationId]/teams
 import { userPaths } from "@/modules/api/v2/organizations/[organizationId]/users/lib/openapi";
 import { workspaceTeamPaths } from "@/modules/api/v2/organizations/[organizationId]/workspace-teams/lib/openapi";
 import { rolePaths } from "@/modules/api/v2/roles/lib/openapi";
-import { bulkContactPaths } from "@/modules/ee/contacts/api/v2/management/contacts/bulk/lib/openapi";
-import { contactPaths } from "@/modules/ee/contacts/api/v2/management/contacts/lib/openapi";
+import { bulkContactPaths } from "@/modules/contacts/api/v2/management/contacts/bulk/lib/openapi";
+import { contactPaths } from "@/modules/contacts/api/v2/management/contacts/lib/openapi";
 
 const document = createDocument({
   openapi: "3.1.0",

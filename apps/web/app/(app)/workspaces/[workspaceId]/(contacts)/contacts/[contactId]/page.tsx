@@ -1,3 +1,3 @@
-import { SingleContactPage } from "@/modules/ee/contacts/[contactId]/page";
+import { SingleContactPage } from "@/modules/contacts/[contactId]/page";
 
 export default SingleContactPage;

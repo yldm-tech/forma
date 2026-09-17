@@ -5,7 +5,7 @@ import { Prisma } from "@forma/database/prisma";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { TSurvey } from "@forma/types/surveys/types";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
-import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
+import { getOrganizationBillingWithReadThroughSync } from "@/modules/billing/lib/organization-billing";
 import { transformPrismaSurvey } from "@/modules/survey/lib/utils";
 import {
   getExistingContactResponse,
@@ -18,7 +18,7 @@ import {
 vi.mock("server-only", () => ({}));
 
 // Mock dependencies
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   getOrganizationBillingWithReadThroughSync: vi.fn(),
 }));
 

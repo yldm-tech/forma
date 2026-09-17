@@ -10,7 +10,7 @@ import { responses } from "@/lib/api/response";
 import { symmetricDecrypt } from "@/lib/crypto";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { generateSurveySingleUseSignature } from "@/lib/utils/single-use-surveys";
-import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 
 vi.mock("@/lib/i18n/utils", () => ({
   getLocalizedValue: vi.fn().mockImplementation((value, language) => {
@@ -30,7 +30,7 @@ vi.mock("@/lib/api/response", () => ({
   },
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsSpamProtectionEnabled: vi.fn(),
 }));
 

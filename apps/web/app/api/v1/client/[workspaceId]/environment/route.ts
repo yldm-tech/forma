@@ -1,4 +1,3 @@
-// ee-entitlement-exempt: resolves segment filters already attached to surveys so targeting keeps working; it does not offer the contacts feature, and guarding it would break surveys configured while the licence was held
 import { logger } from "@forma/logger";
 import { ZId } from "@forma/types/common";
 import { ResourceNotFoundError } from "@forma/types/errors";

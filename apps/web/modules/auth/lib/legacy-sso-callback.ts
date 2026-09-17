@@ -17,8 +17,8 @@ import "server-only";
  * better-auth-redirect-uri-pin.test.ts at upgrade time) rather than half-working.
  *
  * Deliberately dependency-free — no env, no license, no `auth` import — so it is exhaustively testable
- * and so it works during the window where the provider list is empty (the generic providers are gated
- * behind `ENTERPRISE_LICENSE_KEY`).
+ * and so it works when the provider list is empty, which is what an install with no SSO credentials
+ * configured has.
  */
 
 const AUTH_BASE_PATH = "/api/auth";

@@ -4,8 +4,8 @@ import { resetDb } from "@/integration/reset-db";
 import { createInviteToken } from "@/lib/jwt";
 import { capturePostHogEvent, identifyPostHogPerson } from "@/lib/posthog";
 import { createUserAction } from "@/modules/auth/signup/actions";
-import { subscribeUserToMailingList } from "@/modules/ee/mailing/lib/mailing-subscription";
 import { sendInviteAcceptedEmail, sendVerificationLinkEmail } from "@/modules/email";
+import { subscribeUserToMailingList } from "@/modules/mailing/lib/mailing-subscription";
 
 /**
  * Invite sign-up at the ACTION boundary: the real `createUserAction` + real Better Auth + real
@@ -35,17 +35,17 @@ vi.mock("@/lib/constants", async (importOriginal) => ({
   SIGNUP_ENABLED: true,
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/ee/license-check/lib/utils")>()),
+vi.mock("@/modules/license-check/lib/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/license-check/lib/utils")>()),
   getIsMultiOrgEnabled: vi.fn(async () => true),
 }));
 
-vi.mock("@/modules/ee/mailing/lib/mailing-subscription", () => ({
+vi.mock("@/modules/mailing/lib/mailing-subscription", () => ({
   subscribeUserToMailingList: vi.fn(async () => undefined),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/modules/ee/audit-logs/lib/handler")>();
+vi.mock("@/modules/audit-logs/lib/handler", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/audit-logs/lib/handler")>();
   return { ...actual, queueAuditEventBackground: vi.fn(async () => undefined) };
 });
 

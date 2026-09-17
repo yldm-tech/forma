@@ -24,7 +24,7 @@ const readPrismaModels = (): ReadonlyArray<string> => {
 
 const readAuditTargets = (): ReadonlyArray<string> => {
   const source = readFileSync(
-    join(REPOSITORY_ROOT, "apps/web/modules/ee/audit-logs/types/audit-log.ts"),
+    join(REPOSITORY_ROOT, "apps/web/modules/audit-logs/types/audit-log.ts"),
     "utf8"
   );
   const targetBlock = source.match(/ZAuditTarget\s*=\s*z\.enum\(\[([\s\S]*?)\]\)/)?.[1];

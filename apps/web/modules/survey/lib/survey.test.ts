@@ -5,7 +5,7 @@ import { PrismaErrorType } from "@forma/database/types/error";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { TOrganizationBilling } from "@forma/types/organizations";
 import { TSurvey } from "@forma/types/surveys/types";
-import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
+import { getOrganizationBillingWithReadThroughSync } from "@/modules/billing/lib/organization-billing";
 import { getOrganizationBilling, getSurvey } from "./survey";
 
 // Mock prisma
@@ -17,7 +17,7 @@ vi.mock("@forma/database", () => ({
   },
 }));
 
-vi.mock("@/modules/ee/billing/lib/organization-billing", () => ({
+vi.mock("@/modules/billing/lib/organization-billing", () => ({
   getOrganizationBillingWithReadThroughSync: vi.fn(),
 }));
 

@@ -1,12 +1,12 @@
 import { USER_MANAGEMENT_MINIMUM_ROLE } from "@/lib/constants";
 import { getUserManagementAccess } from "@/lib/membership/utils";
 import { getTranslate } from "@/lingodotdev/server";
-import { getAccessControlPermission } from "@/modules/ee/license-check/lib/utils";
-import { getTeamsWhereUserIsAdmin } from "@/modules/ee/teams/lib/roles";
-import { TeamsView } from "@/modules/ee/teams/team-list/components/teams-view";
+import { getAccessControlPermission } from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { MembersView } from "@/modules/organization/settings/teams/components/members-view";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
+import { getTeamsWhereUserIsAdmin } from "@/modules/teams/lib/roles";
+import { TeamsView } from "@/modules/teams/team-list/components/teams-view";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 

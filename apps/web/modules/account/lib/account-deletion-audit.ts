@@ -1,7 +1,7 @@
 import "server-only";
 import { logger } from "@forma/logger";
-import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
+import { queueAuditEventBackground } from "@/modules/audit-logs/lib/handler";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 
 export const queueAccountDeletionAuditEvent = async ({
   eventId,

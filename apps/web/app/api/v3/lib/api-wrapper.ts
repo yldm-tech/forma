@@ -6,11 +6,11 @@ import { authenticateRequest } from "@/lib/api/auth";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
 import { withAuthorizationSurface } from "@/lib/authorization/context";
 import { getApiKeyFromHeaders } from "@/modules/api/lib/api-key-auth";
+import { TAuditAction, TAuditTarget } from "@/modules/audit-logs/types/audit-log";
 import { getSession } from "@/modules/auth/lib/session";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import type { TRateLimitConfig } from "@/modules/core/rate-limit/types/rate-limit";
-import { TAuditAction, TAuditTarget } from "@/modules/ee/audit-logs/types/audit-log";
 import { buildV3AuditLog, queueV3AuditLog } from "./audit";
 import {
   type InvalidParam,

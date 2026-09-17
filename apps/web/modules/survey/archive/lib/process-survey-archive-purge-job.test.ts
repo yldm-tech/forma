@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { queueAuditEventWithoutRequest } from "@/modules/ee/audit-logs/lib/handler";
+import { queueAuditEventWithoutRequest } from "@/modules/audit-logs/lib/handler";
 import { SURVEY_ARCHIVE_PURGE_BATCH_SIZE } from "@/modules/survey/archive/lib/constants";
 import { deleteSurvey } from "@/modules/survey/lib/surveys";
 import { getSurveyArchivePurgeCutoff, purgeExpiredArchivedSurveys } from "./process-survey-archive-purge-job";
@@ -22,7 +22,7 @@ vi.mock("@/modules/survey/lib/surveys", () => ({
   deleteSurvey: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEventWithoutRequest: vi.fn().mockResolvedValue(undefined),
 }));
 

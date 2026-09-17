@@ -30,7 +30,7 @@ vi.mock("@/lib/utils/helper", () => ({
   getOrganizationIdFromApiKeyId: mocks.getOrganizationIdFromApiKeyId,
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_eventName, _objectType, fn) => fn),
 }));
 

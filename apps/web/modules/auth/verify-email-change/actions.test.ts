@@ -35,7 +35,7 @@ vi.mock("@/modules/core/rate-limit/helpers", () => ({
   applyIPRateLimit: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_action: string, _object: string, handler: VerifyEmailChangeHandler) => handler),
 }));
 

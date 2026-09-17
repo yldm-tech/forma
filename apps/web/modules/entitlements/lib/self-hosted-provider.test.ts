@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ResourceNotFoundError } from "@forma/types/errors";
 import type { TOrganization } from "@forma/types/organizations";
 import { getOrganization } from "@/lib/organization/service";
-import { getEnterpriseLicense } from "@/modules/ee/license-check/lib/license";
-import { TEnterpriseLicenseFeatures } from "@/modules/ee/license-check/types/enterprise-license";
+import { getEnterpriseLicense } from "@/modules/license-check/lib/license";
+import { TEnterpriseLicenseFeatures } from "@/modules/license-check/types/enterprise-license";
 import { getSelfHostedOrganizationEntitlementsContext } from "./self-hosted-provider";
 
 vi.mock("server-only", () => ({}));
@@ -12,7 +12,7 @@ vi.mock("@/lib/organization/service", () => ({
   getOrganization: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/license", () => ({
+vi.mock("@/modules/license-check/lib/license", () => ({
   getEnterpriseLicense: vi.fn(),
 }));
 
@@ -76,7 +76,6 @@ const activeLicense = (features: Partial<TEnterpriseLicenseFeatures> = {}): TLic
   features: licenseFeatures(features),
   lastChecked: new Date(),
   isPendingDowngrade: false,
-  fallbackLevel: "live",
 });
 
 const expiredLicense = (features: Partial<TEnterpriseLicenseFeatures> = {}): TLicenseResult => ({

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SIGNUP_DISABLED_ERROR_CODE } from "@forma/types/errors";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { isSignupDomainAllowed } from "@/modules/auth/lib/signup-request-context";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import { isUninvitedSignupAllowed, signupPolicyBeforeHandler } from "./signup-policy";
 
 const constantsOverrides = vi.hoisted(() => ({ SIGNUP_ENABLED: true }));
@@ -12,7 +12,7 @@ vi.mock("@/lib/constants", () => ({
   },
 }));
 vi.mock("@/lib/instance/service", () => ({ getIsFreshInstance: vi.fn() }));
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
+vi.mock("@/modules/license-check/lib/utils", () => ({ getIsMultiOrgEnabled: vi.fn() }));
 vi.mock("@/modules/auth/lib/signup-request-context", () => ({ isSignupDomainAllowed: vi.fn() }));
 
 /** A closed self-hosted instance: SIGNUP_ENABLED is always false there, and it already has users. */

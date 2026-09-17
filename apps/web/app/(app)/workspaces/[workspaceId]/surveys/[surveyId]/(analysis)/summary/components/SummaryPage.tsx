@@ -19,7 +19,7 @@ import { CustomFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surv
 import { getFormattedFilters } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { replaceHeadlineRecall } from "@/lib/utils/recall";
-import { QuotasSummary } from "@/modules/ee/quotas/components/quotas-summary";
+import { QuotasSummary } from "@/modules/quotas/components/quotas-summary";
 import { SummaryList } from "./SummaryList";
 import { SummaryMetadata } from "./SummaryMetadata";
 

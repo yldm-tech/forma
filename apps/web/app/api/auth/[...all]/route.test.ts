@@ -37,7 +37,7 @@ vi.mock("@/modules/auth/lib/auth", () => ({
     },
   },
 }));
-vi.mock("@/modules/ee/sso/lib/sso-request-context", () => ({
+vi.mock("@/modules/sso/lib/sso-request-context", () => ({
   runWithSsoRequestContext: runWithCtxMock,
 }));
 

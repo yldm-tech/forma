@@ -16,8 +16,7 @@ import {
   getIsAISmartToolsEnabled,
   getIsMultiOrgEnabled,
   getWhiteLabelPermission,
-} from "@/modules/ee/license-check/lib/utils";
-import { EmailCustomizationSettings } from "@/modules/ee/whitelabel/email-customization/components/email-customization-settings";
+} from "@/modules/license-check/lib/utils";
 import { getOrganizationAuth } from "@/modules/organization/lib/utils";
 import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { redirectBillingRoleFromRestrictedOrgSettings } from "@/modules/settings/lib/redirect-billing-role";
@@ -26,6 +25,7 @@ import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { EmailCustomizationSettings } from "@/modules/whitelabel/email-customization/components/email-customization-settings";
 import packageJson from "@/package.json";
 
 const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }> }>) => {

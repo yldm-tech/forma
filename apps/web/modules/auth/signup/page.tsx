@@ -24,7 +24,7 @@ import {
   getIsMultiOrgEnabled,
   getIsSamlSsoEnabled,
   getIsSsoEnabled,
-} from "@/modules/ee/license-check/lib/utils";
+} from "@/modules/license-check/lib/utils";
 import { SignupForm } from "./components/signup-form";
 
 export const SignupPage = async ({

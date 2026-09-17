@@ -16,9 +16,9 @@ import {
   getWorkspaceIdFromSurveyId,
 } from "@/lib/utils/helper";
 import { getTag } from "@/lib/utils/services";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 
 const ZCreateTagAction = z.object({
   workspaceId: ZId,

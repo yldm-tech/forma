@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { queueAuditEventBackground } from "@/modules/ee/audit-logs/lib/handler";
-import { UNKNOWN_DATA } from "@/modules/ee/audit-logs/types/audit-log";
+import { queueAuditEventBackground } from "@/modules/audit-logs/lib/handler";
+import { UNKNOWN_DATA } from "@/modules/audit-logs/types/audit-log";
 import {
   createAuditIdentifier,
   hashPassword,
@@ -18,7 +18,7 @@ import {
 const PASSWORD_HASH_TEST_TIMEOUT_MS = 45_000;
 
 // Mock the audit event handler
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEventBackground: vi.fn(),
 }));
 

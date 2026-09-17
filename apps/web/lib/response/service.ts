@@ -19,8 +19,8 @@ import {
 } from "@forma/types/responses";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
-import { getIsQuotasEnabled } from "@/modules/ee/license-check/lib/utils";
-import { reduceQuotaLimits } from "@/modules/ee/quotas/lib/quotas";
+import { getIsQuotasEnabled } from "@/modules/license-check/lib/utils";
+import { reduceQuotaLimits } from "@/modules/quotas/lib/quotas";
 import { deleteResponseFileUrls } from "@/modules/storage/lib/delete-response-files";
 import {
   collectResponseFileUrls,

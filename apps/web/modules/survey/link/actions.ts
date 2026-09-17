@@ -7,11 +7,11 @@ import { actionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromSurveyId } from "@/lib/utils/helper";
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { getOrganizationLogoUrl } from "@/modules/ee/whitelabel/email-customization/lib/organization";
 import { sendLinkSurveyToVerifiedEmail } from "@/modules/email";
 import { getSurveyWithMetadata } from "@/modules/survey/link/lib/data";
 import { resolveSurveyLanguageCode } from "@/modules/survey/link/lib/language";
 import { createLinkSurveyPinToken } from "@/modules/survey/link/lib/pin-token";
+import { getOrganizationLogoUrl } from "@/modules/whitelabel/email-customization/lib/organization";
 
 export const sendLinkSurveyEmailAction = actionClient
   .inputSchema(ZLinkSurveyEmailData)

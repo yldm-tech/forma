@@ -10,15 +10,15 @@ import {
 } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getTranslate } from "@/lingodotdev/server";
-import { getContactAttributeKeys } from "@/modules/ee/contacts/lib/contact-attribute-keys";
-import { getSegments } from "@/modules/ee/contacts/segments/lib/segments";
+import { getContactAttributeKeys } from "@/modules/contacts/lib/contact-attribute-keys";
+import { getSegments } from "@/modules/contacts/segments/lib/segments";
 import {
   getIsContactsEnabled,
   getIsQuotasEnabled,
   getIsSpamProtectionEnabled,
   getIsWorkflowsEnabled,
-} from "@/modules/ee/license-check/lib/utils";
-import { getQuotas } from "@/modules/ee/quotas/lib/quotas";
+} from "@/modules/license-check/lib/utils";
+import { getQuotas } from "@/modules/quotas/lib/quotas";
 import { getTeamMemberDetails } from "@/modules/survey/editor/lib/team";
 import { getUserEmail } from "@/modules/survey/editor/lib/user";
 import { getWorkspaceLanguages } from "@/modules/survey/editor/lib/workspace";

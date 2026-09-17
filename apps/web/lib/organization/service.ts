@@ -23,7 +23,7 @@ import { IS_FORMA_CLOUD, ITEMS_PER_PAGE } from "@/lib/constants";
 import { updateUser } from "@/lib/user/service";
 import { getBillingUsageCycleWindow } from "@/lib/utils/billing";
 import { getWorkspaces } from "@/lib/workspace/service";
-import { cleanupStripeCustomer } from "@/modules/ee/billing/lib/organization-billing";
+import { cleanupStripeCustomer } from "@/modules/billing/lib/organization-billing";
 import { validateInputs } from "../utils/validate";
 
 export const select = {

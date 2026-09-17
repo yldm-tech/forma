@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { resetDb } from "@/integration/reset-db";
 import { hashSecret } from "@/lib/crypto";
+import * as auditHandler from "@/modules/audit-logs/lib/handler";
 import { auth } from "@/modules/auth/lib/auth";
-import * as auditHandler from "@/modules/ee/audit-logs/lib/handler";
 
 // Capture audit emission without running the real background audit logging (DB writes via setImmediate).
-vi.mock("@/modules/ee/audit-logs/lib/handler", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/modules/ee/audit-logs/lib/handler")>();
+vi.mock("@/modules/audit-logs/lib/handler", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/audit-logs/lib/handler")>();
   return { ...actual, queueAuditEventBackground: vi.fn() };
 });
 

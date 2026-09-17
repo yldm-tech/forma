@@ -15,19 +15,19 @@ import { getAccessFlags } from "@/lib/membership/utils";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromInviteId } from "@/lib/utils/helper";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
-import { getBulkInvitePermission, getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
-import { checkRoleManagementPermission } from "@/modules/ee/role-management/actions";
-import { getTeamsWhereUserIsAdmin } from "@/modules/ee/teams/lib/roles";
 import { sendInviteMemberEmail } from "@/modules/email";
+import { getBulkInvitePermission, getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 import {
   deleteMembership,
   getMembershipsByUserId,
   getOrganizationOwnerCount,
 } from "@/modules/organization/settings/teams/lib/membership";
 import { ZInvitees } from "@/modules/organization/settings/teams/types/invites";
+import { checkRoleManagementPermission } from "@/modules/role-management/actions";
+import { getTeamsWhereUserIsAdmin } from "@/modules/teams/lib/roles";
 import { deleteInvite, getInvite, inviteUser, refreshInviteExpiration, resendInvite } from "./lib/invite";
 import { type TBulkInviteResult, getInviteFailureReason } from "./lib/invite-failure";
 import { applyInviteRateLimit } from "./lib/invite-rate-limit";

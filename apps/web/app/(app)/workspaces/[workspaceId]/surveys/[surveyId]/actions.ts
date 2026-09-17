@@ -11,8 +11,8 @@ import { getSurvey } from "@/lib/survey/service";
 import { getTagsByWorkspaceId } from "@/lib/tag/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { getOrganizationIdFromSurveyId, getWorkspaceIdFromSurveyId } from "@/lib/utils/helper";
-import { getIsQuotasEnabled } from "@/modules/ee/license-check/lib/utils";
-import { getQuotas } from "@/modules/ee/quotas/lib/quotas";
+import { getIsQuotasEnabled } from "@/modules/license-check/lib/utils";
+import { getQuotas } from "@/modules/quotas/lib/quotas";
 import { getOrganizationBilling } from "@/modules/survey/lib/survey";
 
 const ZGetResponsesDownloadUrlAction = z.object({

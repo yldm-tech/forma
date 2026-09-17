@@ -3,7 +3,7 @@ import { prisma } from "@forma/database";
 import { logger } from "@forma/logger";
 import { err, ok } from "@forma/types/error-handlers";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
-import { segmentFilterToPrismaQuery } from "@/modules/ee/contacts/segments/lib/filter/prisma-query";
+import { segmentFilterToPrismaQuery } from "@/modules/contacts/segments/lib/filter/prisma-query";
 import { getContactAttributeKeys } from "./contact-attribute-key";
 import { getSegment } from "./segment";
 import { getSurvey } from "./surveys";

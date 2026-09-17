@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@forma/database";
 import { TResponse, TResponseInput } from "@forma/types/responses";
 import { updateResponse } from "@/lib/response/service";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 
 export const updateResponseWithQuotaEvaluation = async (
   responseId: string,

@@ -10,7 +10,7 @@ import { getAIUnavailableMessage, getAIUnavailableMessageForErrorCode } from "@/
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { cn } from "@/lib/cn";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
-import { translateSurveyFieldsAction } from "@/modules/ee/ai-translation/lib/actions";
+import { translateSurveyFieldsAction } from "@/modules/ai-translation/lib/actions";
 import { Button } from "@/modules/ui/components/button";
 import {
   Dialog,

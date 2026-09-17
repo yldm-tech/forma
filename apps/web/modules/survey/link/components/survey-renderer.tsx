@@ -12,7 +12,7 @@ import {
   TERMS_URL,
 } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
-import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { PinScreen } from "@/modules/survey/link/components/pin-screen";
 import { SurveyClientWrapper } from "@/modules/survey/link/components/survey-client-wrapper";
 import { SurveyCompletedMessage } from "@/modules/survey/link/components/survey-completed-message";

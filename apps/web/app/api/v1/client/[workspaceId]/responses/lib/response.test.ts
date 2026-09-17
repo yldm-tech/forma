@@ -12,7 +12,7 @@ import { TResponseInput } from "@forma/types/responses";
 import { getOrganization } from "@/lib/organization/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 import { createResponse, createResponseWithQuotaEvaluation } from "./response";
 
 vi.mock("server-only", () => ({}));
@@ -63,7 +63,7 @@ vi.mock("./contact", () => ({
   getContactByUserId: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/quotas/lib/evaluation-service", () => ({
+vi.mock("@/modules/quotas/lib/evaluation-service", () => ({
   evaluateResponseQuotas: vi.fn(),
 }));
 

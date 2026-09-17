@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { DatabaseError } from "@forma/types/errors";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { getOrganizationByWorkspaceId } from "@/lib/organization/service";
-import { getContactAttributeKeys } from "@/modules/ee/contacts/lib/contact-attribute-keys";
-import { getIsContactsEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getContactAttributeKeys } from "@/modules/contacts/lib/contact-attribute-keys";
+import { getIsContactsEnabled } from "@/modules/license-check/lib/utils";
 import { listV3ContactAttributeKeys } from "./operations";
 
 vi.mock("server-only", () => ({}));
@@ -16,11 +16,11 @@ vi.mock("@/lib/organization/service", () => ({
   getOrganizationByWorkspaceId: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/contacts/lib/contact-attribute-keys", () => ({
+vi.mock("@/modules/contacts/lib/contact-attribute-keys", () => ({
   getContactAttributeKeys: vi.fn(),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsContactsEnabled: vi.fn(),
 }));
 

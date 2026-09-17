@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { findMatchingLocale } from "@/lib/utils/locale";
 import { getTranslate } from "@/lingodotdev/server";
-import { verifyContactSurveyToken } from "@/modules/ee/contacts/lib/contact-survey-link";
+import { verifyContactSurveyToken } from "@/modules/contacts/lib/contact-survey-link";
 import { getResponseCountBySurveyId } from "@/modules/survey/lib/response";
 import { getSurvey } from "@/modules/survey/lib/survey";
 import { SurveyInactive } from "@/modules/survey/link/components/survey-inactive";

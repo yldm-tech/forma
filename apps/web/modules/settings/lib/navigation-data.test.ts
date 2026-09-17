@@ -42,10 +42,10 @@ vi.mock("@/lib/organization/service", () => ({
 }));
 vi.mock("@/lib/user/service", () => ({ getUser: (...a: unknown[]) => mocks.getUser(...a) }));
 vi.mock("@/lib/workspace/service", () => ({ getWorkspace: (...a: unknown[]) => mocks.getWorkspace(...a) }));
-vi.mock("@/modules/ee/license-check/lib/license", () => ({
+vi.mock("@/modules/license-check/lib/license", () => ({
   getEnterpriseLicense: (...a: unknown[]) => mocks.getEnterpriseLicense(...a),
 }));
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getAccessControlPermission: (...a: unknown[]) => mocks.getAccessControlPermission(...a),
   getOrganizationWorkspacesLimit: (...a: unknown[]) => mocks.getOrganizationWorkspacesLimit(...a),
 }));

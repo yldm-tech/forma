@@ -5,12 +5,12 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { TOrganizationAccess } from "@forma/types/api-key";
-import { type TOrganizationWorkspace } from "@/modules/ee/teams/team-list/types/workspace";
 import {
   type TApiKeyUpdateInput,
   type TApiKeyWithEnvironmentPermission,
   ZApiKeyUpdateInput,
 } from "@/modules/organization/settings/api-keys/types/api-keys";
+import { type TOrganizationWorkspace } from "@/modules/teams/team-list/types/workspace";
 import { Button } from "@/modules/ui/components/button";
 import {
   Dialog,

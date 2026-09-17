@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { waitForBillingPlanAction } from "@/modules/ee/billing/actions";
+import { waitForBillingPlanAction } from "@/modules/billing/actions";
 import { Button } from "@/modules/ui/components/button";
 import { Confetti } from "@/modules/ui/components/confetti";
 

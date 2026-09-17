@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ResourceNotFoundError } from "@forma/types/errors";
 import { verifySsoRelinkIntent } from "@/lib/jwt";
+import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { auth } from "@/modules/auth/lib/auth";
 import { getUserByEmail } from "@/modules/auth/lib/user";
 // Import mocked functions
 import { applyIPRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { withAuditLogging } from "@/modules/ee/audit-logs/lib/handler";
 import { sendVerificationEmail } from "@/modules/email";
 import { resendVerificationEmailAction } from "./actions";
 
@@ -72,7 +72,7 @@ vi.mock("@/lib/constants", async (importOriginal) => {
   };
 });
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_type: string, _object: string, fn: Function) => fn),
 }));
 

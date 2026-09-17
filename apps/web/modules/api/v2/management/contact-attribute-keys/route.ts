@@ -13,7 +13,6 @@ import {
 import { getAuthorizedApiKeyWorkspaceIds } from "@/modules/api/v2/management/lib/authorized-workspace-ids";
 import { resolveBodyIdsV2 } from "@/modules/api/v2/management/lib/workspace-resolver";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
-import { checkContactsEnabledApiV2 } from "@/modules/ee/license-check/lib/contacts-api-guard";
 
 export const GET = async (request: NextRequest) =>
   authenticatedApiClient({
@@ -23,11 +22,6 @@ export const GET = async (request: NextRequest) =>
     },
     handler: async ({ authentication, parsedInput }) => {
       const { query } = parsedInput;
-
-      const contactsNotEnabledError = await checkContactsEnabledApiV2(authentication.organizationId);
-      if (contactsNotEnabledError) {
-        return handleApiError(request, contactsNotEnabledError);
-      }
 
       const workspaceIds = await getAuthorizedApiKeyWorkspaceIds(authentication);
 
@@ -52,13 +46,8 @@ export const POST = async (request: NextRequest) =>
       if (!resolved.ok) throw resolved.error;
       return { ...body, ...resolved.data };
     },
-    handler: async ({ authentication, parsedInput, auditLog }) => {
+    handler: async ({ parsedInput, auditLog }) => {
       const { body } = parsedInput;
-
-      const contactsNotEnabledError = await checkContactsEnabledApiV2(authentication.organizationId);
-      if (contactsNotEnabledError) {
-        return handleApiError(request, contactsNotEnabledError, auditLog);
-      }
 
       const createContactAttributeKeyResult = await createContactAttributeKey(body);
 

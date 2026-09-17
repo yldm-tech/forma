@@ -1,6 +1,6 @@
 import "server-only";
 import { OrganizationAccessType } from "@forma/types/api-key";
-import type { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";
+import type { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 import type { TAuthorizationAction } from "./contract";
 
 type TWorkspaceAction = Extract<TAuthorizationAction, `workspace.${string}`>;

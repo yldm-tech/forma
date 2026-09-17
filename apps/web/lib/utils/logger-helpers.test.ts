@@ -18,7 +18,7 @@ beforeEach(async () => {
   }));
 });
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsAuditLogsEnabled: vi.fn().mockResolvedValue(true),
 }));
 
@@ -36,7 +36,7 @@ vi.mock("@/lib/constants", () => ({
 vi.mock("@/lib/utils/client-ip", () => ({
   getClientIpFromHeaders: vi.fn().mockResolvedValue("127.0.0.1"),
 }));
-vi.mock("@/modules/ee/audit-logs/lib/service", () => ({
+vi.mock("@/modules/audit-logs/lib/service", () => ({
   logAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -98,7 +98,7 @@ describe("withAuditLogging", () => {
   });
   test("logs audit event for successful handler", async () => {
     const handler = vi.fn().mockResolvedValue("ok");
-    const { withAuditLogging } = await import("../../modules/ee/audit-logs/lib/handler");
+    const { withAuditLogging } = await import("../../modules/audit-logs/lib/handler");
     const wrapped = withAuditLogging("created", "survey", handler);
     const ctx = {
       user: {
@@ -136,7 +136,7 @@ describe("withAuditLogging", () => {
   });
   test("logs audit event for failed handler and throws", async () => {
     const handler = vi.fn().mockRejectedValue(new Error("fail"));
-    const { withAuditLogging } = await import("../../modules/ee/audit-logs/lib/handler");
+    const { withAuditLogging } = await import("../../modules/audit-logs/lib/handler");
     const wrapped = withAuditLogging("created", "survey", handler);
     const ctx = {
       user: {

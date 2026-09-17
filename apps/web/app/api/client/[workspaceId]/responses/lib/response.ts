@@ -6,7 +6,7 @@ import type { TIngestFlag } from "@forma/types/embedded-data-ingest";
 import type { TResponse } from "@forma/types/responses";
 import type { TTag } from "@forma/types/tags";
 import { normalizeResponseLanguage } from "@/lib/response/utils";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 
 type TQuotaEvaluationResponseInput = {
   surveyId: string;

@@ -43,7 +43,7 @@ vi.mock("@/modules/core/rate-limit/helpers", () => ({
   applyRateLimit: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   queueAuditEvent: mockQueueAuditEvent,
 }));
 
@@ -72,7 +72,7 @@ describe("withV3ApiWrapper", () => {
   });
 
   test("passes an audit log to the handler and queues success after the response", async () => {
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
 
     mockGetSession.mockResolvedValue({
       user: { id: "user_1", name: "Test", email: "t@example.com" },
@@ -130,7 +130,7 @@ describe("withV3ApiWrapper", () => {
   });
 
   test("queues a failure audit log when the handler returns a non-ok response", async () => {
-    const { queueAuditEvent } = await import("@/modules/ee/audit-logs/lib/handler");
+    const { queueAuditEvent } = await import("@/modules/audit-logs/lib/handler");
 
     mockAuthenticateRequest.mockResolvedValue({
       type: "apiKey",

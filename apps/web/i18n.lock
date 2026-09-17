@@ -312,7 +312,6 @@ checksums:
     common/language: 277fd1a41cc237a437cd1d5e4a80463b
     common/last_name: 2c9a7de7738ca007ba9023c385149c26
     common/learn_more: e598091d132f890c37a6d4ed94f6d794
-    common/license_expired: 7af13535e320e4197989472c01387d2c
     common/light_overlay: 0499907ea7b8405f4267b117998b5a78
     common/limits_reached: 98879ae8c2be281ad6d283d7029d0148
     common/link: 60f0aa33e70ca6df3b6659802b16f433
@@ -380,7 +379,6 @@ checksums:
     common/password: 223a61cf906ab9c40d22612c588dff48
     common/paused: edb1f7b7219e1c9b7aa67159090d6991
     common/pending: 030a6f3395d5d4efddd3cc67d6009039
-    common/pending_downgrade: d6796fc1d4df21591c69fbbd39ba53ff
     common/people_manager: c1a2f206157ec618f9fe74bf99a06b85
     common/person: b6e3064ca6b67285dc1ebb2590d6094f
     common/phone: b9537ee90fc5b0116942e0af29d926cc
@@ -529,7 +527,6 @@ checksums:
     common/video: 8050c90e4289b105a0780f0fdda6ff66
     common/view_workflow: c3d3675fc33f5793cfe5fa86155224bb
     common/warning: 6618da2c7e5e93bb4ea0e16d29ab8c4c
-    common/we_were_unable_to_verify_your_license_because_the_license_server_is_unreachable: f29f2e0286195dab170b9806bcd74fc9
     common/web_and_mobile_sdk: ebf19ed5decb5ef6deeea7cae346f1ae
     common/webhook: 70f95b2c27f2c3840b500fcaf79ee83c
     common/webhooks: 0329bc102d3ab3c73410d126e119de12
@@ -549,12 +546,9 @@ checksums:
     common/workspace_settings: 202db67b74837309ba7baa46a2382aa0
     common/workspaces: 8ba082a84aa35cf851af1cf874b853e2
     common/years: eb4f5fdd2b320bf13e200fd6a6c1abff
-    common/you_are_downgraded_to_the_community_edition: e3ae56502ff787109cae0997519f628e
     common/you_are_not_authorized_to_perform_this_action: 1b3255ab740582ddff016a399f8bf302
     common/you_have_reached_your_limit_of_workspace_limit: 444293496a4029ea608ec12266bb2e94
     common/you_have_reached_your_monthly_response_limit_of_count: d1e427dbc5ce704bd6b9e188d8407e07
-    common/you_will_be_downgraded_to_the_community_edition_on_date: bff35b54c13e2c205dc4c19056261cc0
-    common/your_license_has_expired_please_renew: 3f21ae4a7deab351b143b407ece58254
     common/your_profile: 955b66d0455e28c805cc462b8f8d1f11
     emails/accept: f8cc1de4f5e3c850cfdbbc0ec831ade7
     emails/click_or_drag_to_upload_files: 64f59bc339568d52b8464b82546b70ea
@@ -2356,12 +2350,7 @@ checksums:
     workspace/settings/enterprise/coming_soon: ee2b0671e00972773210c5be5a9ccb89
     workspace/settings/enterprise/contacts_and_segments: 5795d9e89c0c10e1ddbbc6fc65b8d90f
     workspace/settings/enterprise/custom_workspace_count: 97e71d0494da113254631d3d4cbf8a27
-    workspace/settings/enterprise/enterprise_features: 3271476140733924b2a2477c4fdf3d12
-    workspace/settings/enterprise/full_feature_trial_description: 1599bdcb87d115ffa551a6e574909468
-    workspace/settings/enterprise/full_feature_trial_title: e013945e21c4b80b063b567807c9de64
-    workspace/settings/enterprise/get_an_enterprise_license_to_get_access_to_all_features: afd3c00f19097e88ed051800979eea44
     workspace/settings/enterprise/hide_powered_by_forma: 3c03a1245e33bb56bc351743fb81762d
-    workspace/settings/enterprise/keep_full_control_over_your_data_privacy_and_security: 43aa041cc3e2b2fdd35d2d34659a6b7a
     workspace/settings/enterprise/license_features_table_access: 550606d4a12bdf108c1b12b925ca1b3a
     workspace/settings/enterprise/license_features_table_description: d6260830d0703f5a2c9ed59c9da462e3
     workspace/settings/enterprise/license_features_table_disabled: 0889a3dfd914a7ef638611796b17bf72
@@ -2370,37 +2359,12 @@ checksums:
     workspace/settings/enterprise/license_features_table_title: 82d1d7b30d876cf4312f78140a90e394
     workspace/settings/enterprise/license_features_table_unlimited: e1a92523172cd1bdde5550689840e42d
     workspace/settings/enterprise/license_features_table_value: 34b0eaa85808b15cbc4be94c64d0146b
-    workspace/settings/enterprise/license_instance_mismatch_description: d6011fc7dc5d670f07357a2008397e0f
-    workspace/settings/enterprise/license_invalid_description: b500c22ab17893fdf9532d2bd94aa526
-    workspace/settings/enterprise/license_status: f6f85c59074ca2455321bd5288d94be8
-    workspace/settings/enterprise/license_status_active: 3e1ec025c4a50830bbb9ad57a176630a
-    workspace/settings/enterprise/license_status_description: 828e4527f606471cd8cf58b55ff824f6
-    workspace/settings/enterprise/license_status_expired: 63b27cccba4ab2143e0f5f3d46e4168a
-    workspace/settings/enterprise/license_status_instance_mismatch: 2c85ca34eef67c5ca34477dc1eda68c0
-    workspace/settings/enterprise/license_status_invalid: a4bfd3787fc0bf0a38db61745bd25cec
-    workspace/settings/enterprise/license_status_unreachable: 202b110dab099f1167b13c326349e570
-    workspace/settings/enterprise/license_unreachable_grace_period: c0587c9d79ac55ff2035fb8b8eec4433
-    workspace/settings/enterprise/lite_license_description: 59d73d0a9232da210d2b1c826e80c7d6
-    workspace/settings/enterprise/lite_license_title: b45a0bcf9a111356125b4a6d68866361
     workspace/settings/enterprise/oidc_sso: 6a620d31e752f52de5aa1aba28934c80
-    workspace/settings/enterprise/questions_please_reach_out_to_email: afe43a8e2a812110e9c49425adb6e1e4
     workspace/settings/enterprise/quota_management: 31fb6b5e846dd44de140a69fd3e4c067
-    workspace/settings/enterprise/recheck_license: b913b64f89df184b5059710f4a0b26fa
-    workspace/settings/enterprise/recheck_license_failed: dd410acbb8887625cf194189f832dd7c
-    workspace/settings/enterprise/recheck_license_instance_mismatch: 7b43ac863dbf76106fc37e5a84b640bb
-    workspace/settings/enterprise/recheck_license_invalid: 58f41bc208692b7d53b975dfcf9f4ad8
-    workspace/settings/enterprise/recheck_license_success: 700ddd805be904a415f614de3df1da78
-    workspace/settings/enterprise/recheck_license_unreachable: 0ca81bd89595a9da24bc94dcef132175
-    workspace/settings/enterprise/rechecking: 68dacda4ccacfc808c5105e99dad4b71
-    workspace/settings/enterprise/request_lite_license: 5bf4ddd64c056c5cf00ecd254f3e1390
-    workspace/settings/enterprise/request_trial_license: bc065705e30b6598f5d83229dbb88fda
     workspace/settings/enterprise/saml_sso: 86b76024524fc585b2c3950126ef6f62
     workspace/settings/enterprise/spam_protection_recaptcha: 8ba2cbc55f466c7128dcf54aef52a317
-    workspace/settings/enterprise/support_slas: 347f2b57486dfe861eafa07a7cddc8f0
     workspace/settings/enterprise/teams_and_access_roles: ecde7a5204109c220a358d46210c869d
     workspace/settings/enterprise/two_factor_authentication: bc68ddd9c3c82225ef641f097e0940db
-    workspace/settings/enterprise/unlock_the_full_power_of_forma_free_for_30_days: 20db45e15c63d1e0373d5d68a5928efd
-    workspace/settings/enterprise/white_glove_onboarding: 79d5f04ad3decd659e63f5cf61628ea0
     workspace/settings/enterprise/whitelabel_email_follow_ups: 4d62c861b60c5dceb6ad72cd5d1186d7
     workspace/settings/enterprise/workflows: b0c9c8615a9ba7d9cb73e767290a7f72
     workspace/settings/feedback_directories/nav_label: 37599d99d8286f60585820f2a93d940c

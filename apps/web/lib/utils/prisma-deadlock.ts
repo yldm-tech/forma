@@ -24,7 +24,7 @@ const DEADLOCK_MAX_ATTEMPTS = 3;
  * re-running it must be safe.
  *
  * Retry is the second line of defense — the first is acquiring locks in a deterministic order so no
- * cycle can form in the first place (see updateAttributes in modules/ee/contacts/lib/attributes.ts).
+ * cycle can form in the first place (see updateAttributes in modules/contacts/lib/attributes.ts).
  *
  * `context` identifies the caller in the retry log. A swallowed deadlock is otherwise invisible —
  * the request succeeds and nothing reaches Sentry — which would leave "no longer deadlocking" and

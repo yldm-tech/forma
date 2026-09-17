@@ -162,7 +162,7 @@ Two branches implement that, one per entitlement source, and each is guarded by 
 - `license-check/lib/license.ts` — the no-key branch returns `UNGATED_FEATURES` with an active licence. `license-unlock.test.ts` holds it, including that the result does not vary with `NODE_ENV`.
 - `entitlements/lib/cloud-provider.ts` — an organization whose Stripe subscription resolves no features gets the full entitlement set and no limits, which is what keeps `IS_FORMA_CLOUD=1` from turning the product off. `cloud-entitlement-unlock.test.ts` holds it.
 
-Both sit inside the "nothing to read" branch on purpose: set a real licence key, or attach a real subscription, and the ordinary path still runs, so the fetch, cache, grace-period and trial logic stays reachable rather than rotting. `modules/ee/` is a location, not a licence boundary — treat it as ordinary application code.
+The cloud branch sits inside the "nothing to read" case on purpose: attach a real subscription and the ordinary path still runs, so the sync, cache and trial logic stays reachable rather than rotting. There is no `modules/ee/` directory any more — what lived there is ordinary application code under `modules/`.
 
 ## Environment Variables
 
@@ -190,7 +190,6 @@ Both sit inside the "nothing to read" branch on purpose: set a real licence key,
 ## Database & Prisma Performance
 
 - Multi-tenancy: All data must be scoped by Organization or Environment. `pnpm lint` enforces this through `scripts/check-tenant-scoping.mjs`: a read or bulk write against a model carrying a tenant column fails the build unless the enclosing function constrains that column, takes tenant ids, or scopes through an id that is itself tenant-scoped. The models come from the Prisma schema, so adding one enrolls it. A query that is legitimately global — telemetry, the API-key lookup authentication is built on, a background sweep — carries `// tenant-scope-exempt: <reason>` on the line above, which puts each exception in a diff a reviewer can challenge. The check cannot see whether the caller was entitled to an id it was handed; that guarantee still lives at the call site.
-- Licensed-feature data: an HTTP endpoint that reads or writes a model belonging to a licensed feature — contacts, quotas, workflows — either calls that feature's guard (`getIs<Feature>Enabled`, or the `check<Feature>Enabled*` wrapper that returns an API error) or carries `// ee-entitlement-exempt: <reason>` in its `route.ts`. `pnpm lint` enforces this through `apps/web/scripts/check-ee-entitlement.ts`. The check exists because nothing previously said when entitlement applies at an HTTP boundary, so sibling endpoints disagreed: `v2/management/contact-attribute-keys` guards, `v2/management/responses` does not. It does not decide which is right — adding a guard changes what an existing consumer receives — it only makes the choice visible. Entitlement that gates a capability rather than a table (bigger uploads, removing branding) is invisible to it and stays a matter of review.
 - Soft Deletion: Check for `isActive` or `deletedAt` fields; use proper filtering.
 - Never use `skip`/`offset` with `prisma.response.count()`; only use `where`.
 - Separate count and data queries and run in parallel (`Promise.all`).

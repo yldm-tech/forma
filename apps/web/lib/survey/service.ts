@@ -30,7 +30,7 @@ import {
   getOrganizationByWorkspaceId,
   subscribeOrganizationMembersToSurveyResponses,
 } from "@/lib/organization/service";
-import { getSurveyWorkspaceIdMap } from "@/modules/ee/contacts/segments/lib/segments";
+import { getSurveyWorkspaceIdMap } from "@/modules/contacts/segments/lib/segments";
 import { handleTriggerUpdates } from "@/modules/survey/lib/trigger-updates";
 import {
   isSurveySchedulingDue,

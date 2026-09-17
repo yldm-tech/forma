@@ -40,15 +40,15 @@ vi.mock("@/lib/workspace/service", () => ({
   getWorkspace: mocks.getWorkspace,
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", () => ({
+vi.mock("@/modules/audit-logs/lib/handler", () => ({
   withAuditLogging: vi.fn((_eventName, _objectType, fn) => fn),
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getRemoveBrandingPermission: mocks.getRemoveBrandingPermission,
 }));
 
-vi.mock("@/modules/ee/teams/team-list/lib/team", () => ({
+vi.mock("@/modules/teams/team-list/lib/team", () => ({
   getTeamsByOrganizationId: mocks.getTeamsByOrganizationId,
 }));
 

@@ -16,7 +16,7 @@ import { getOrganization } from "@/lib/organization/service";
 import { calculateTtcTotal } from "@/lib/response/utils";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { validateInputs } from "@/lib/utils/validate";
-import { evaluateResponseQuotas } from "@/modules/ee/quotas/lib/evaluation-service";
+import { evaluateResponseQuotas } from "@/modules/quotas/lib/evaluation-service";
 import { getContact } from "./contact";
 import { createResponse, createResponseWithQuotaEvaluation } from "./response";
 
@@ -30,7 +30,6 @@ vi.mock("@/lib/constants", () => ({
   POSTHOG_KEY: undefined,
   FB_LOGO_URL: "https://example.com/mock-logo.png",
   ENCRYPTION_KEY: "mock-encryption-key",
-  ENTERPRISE_LICENSE_KEY: "mock-enterprise-license-key",
   GITHUB_ID: "mock-github-id",
   GITHUB_SECRET: "mock-github-secret",
   GOOGLE_CLIENT_ID: "mock-google-client-id",
@@ -60,7 +59,7 @@ vi.mock("@/lib/response/utils", async (importOriginal) => ({
 }));
 vi.mock("@/lib/utils/helper");
 vi.mock("@/lib/utils/validate");
-vi.mock("@/modules/ee/quotas/lib/evaluation-service");
+vi.mock("@/modules/quotas/lib/evaluation-service");
 vi.mock("@forma/database", () => ({
   prisma: {
     response: {

@@ -8,12 +8,10 @@ import { getAccessFlags } from "@/lib/membership/utils";
 import { getPostHogFeatureFlag } from "@/lib/posthog/get-feature-flag";
 import { getTrialDaysRemaining } from "@/lib/trial-countdown";
 import { getTranslate } from "@/lingodotdev/server";
-import { TrialEndingWarningModal } from "@/modules/ee/billing/components/trial-ending-warning-modal";
-import { TrialResponseWarningModal } from "@/modules/ee/billing/components/trial-response-warning-modal";
-import { getPendingDowngradeSchedule } from "@/modules/ee/license-check/lib/license";
-import { getOrganizationWorkspacesLimit } from "@/modules/ee/license-check/lib/utils";
+import { TrialEndingWarningModal } from "@/modules/billing/components/trial-ending-warning-modal";
+import { TrialResponseWarningModal } from "@/modules/billing/components/trial-response-warning-modal";
+import { getOrganizationWorkspacesLimit } from "@/modules/license-check/lib/utils";
 import { LimitsReachedBanner } from "@/modules/ui/components/limits-reached-banner";
-import { PendingDowngradeBanner } from "@/modules/ui/components/pending-downgrade-banner";
 import { TWorkspaceLayoutData } from "@/modules/workspaces/types/workspace-auth";
 
 interface WorkspaceLayoutProps {
@@ -74,7 +72,7 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
   // Calculate derived values (no queries)
   const { isMember, isOwner, isManager } = getAccessFlags(membership.role);
 
-  const { features, lastChecked, isPendingDowngrade, active, status } = license;
+  const { features, active } = license;
   const isMultiOrgEnabled = features?.isMultiOrgEnabled ?? false;
   // Nav entries for features this installation cannot serve. Showing them routes the user to a page
   // whose only content is an upsell, so the product reads as broken rather than as smaller.
@@ -128,15 +126,6 @@ export const WorkspaceLayout = async ({ layoutData, children }: WorkspaceLayoutP
       {IS_FORMA_CLOUD && !isTrialing && !(isHobby && responseWarningVariant === "test") && (
         <LimitsReachedBanner organization={organization} responseCount={responseCount} />
       )}
-
-      <PendingDowngradeBanner
-        organizationId={organization.id}
-        {...getPendingDowngradeSchedule(lastChecked)}
-        isPendingDowngrade={isPendingDowngrade ?? false}
-        active={active}
-        locale={user.locale}
-        status={status}
-      />
 
       {responseWarningThreshold && (
         <TrialResponseWarningModal

@@ -13,7 +13,7 @@ import { getSurvey } from "@/lib/survey/service";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { formatValidationErrorsForV1Api, validateResponseData } from "@/modules/api/lib/validation";
 import { validateOtherOptionLengthForMultipleChoice } from "@/modules/api/v2/lib/element";
-import { createQuotaFullObject } from "@/modules/ee/quotas/lib/helpers";
+import { createQuotaFullObject } from "@/modules/quotas/lib/helpers";
 import { validateClientFileUploads } from "@/modules/storage/utils";
 import { verifyLinkSurveyPinToken } from "@/modules/survey/link/lib/pin-token";
 import { VERIFIED_EMAIL_RESPONSE_KEY } from "@/modules/survey/link/lib/verify-email-gate";

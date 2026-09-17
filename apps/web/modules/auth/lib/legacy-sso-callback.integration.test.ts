@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { GET } from "@/app/api/auth/[...all]/route";
 import { auth } from "@/modules/auth/lib/auth";
-import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-context";
+import { runWithSsoRequestContext } from "@/modules/sso/lib/sso-request-context";
 
 /**
  * ENG-2343 at the ROUTER boundary: the pinned SSO callback URL against a real Better Auth instance.
@@ -23,13 +23,12 @@ import { runWithSsoRequestContext } from "@/modules/ee/sso/lib/sso-request-conte
  * validation runs before any token exchange in any case, so both requests fail at the same place.
  */
 
-// Register the SAML generic provider: the config array is gated on ENTERPRISE_LICENSE_KEY, and the
+// Register the SAML generic provider: the config array follows SAML_OAUTH_ENABLED, and the
 // provider itself on SAML_OAUTH_ENABLED. Without a registered provider the callback would answer
 // identically for both paths for the *wrong* reason (an unknown provider), and the comparison below
 // would pass while proving nothing.
 vi.mock("@/lib/constants", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/constants")>()),
-  ENTERPRISE_LICENSE_KEY: "integration-license",
   SAML_OAUTH_ENABLED: true,
 }));
 

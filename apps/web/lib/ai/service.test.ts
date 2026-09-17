@@ -69,7 +69,7 @@ vi.mock("@/lib/organization/service", () => ({
   getOrganization: mocks.getOrganization,
 }));
 
-vi.mock("@/modules/ee/license-check/lib/utils", () => ({
+vi.mock("@/modules/license-check/lib/utils", () => ({
   getIsAISmartToolsEnabled: mocks.getIsAISmartToolsEnabled,
 }));
 

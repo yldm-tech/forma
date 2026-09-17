@@ -64,7 +64,6 @@ vi.mock("@/lib/constants", () => ({
   RECAPTCHA_SECRET_KEY: "mock_recaptcha_secret_key",
   IS_RECAPTCHA_CONFIGURED: true,
   IS_PRODUCTION: true,
-  ENTERPRISE_LICENSE_KEY: "mock_enterprise_license_key",
   POSTHOG_KEY: "phc_test_key",
 }));
 

@@ -4,11 +4,11 @@ import type { WorkflowAnalyticsDetail, WorkflowApiContext } from "@forma/workflo
 import type { TV3Authentication } from "@/app/api/v3/lib/types";
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
+import { MCP_API_ROUTE } from "@/modules/mcp/constants";
 import {
   type TWorkflowAnalyticsVia,
   WORKFLOW_LIFECYCLE_EVENTS,
-} from "@/modules/ee/workflows/lib/analytics-events";
-import { MCP_API_ROUTE } from "@/modules/mcp/constants";
+} from "@/modules/workflows/lib/analytics-events";
 
 const HOUR_MS = 60 * 60 * 1000;
 

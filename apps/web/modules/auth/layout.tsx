@@ -3,7 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { getIsFreshInstance } from "@/lib/instance/service";
 import { AttributionTracker } from "@/modules/auth/components/attribution-tracker";
 import { getSession } from "@/modules/auth/lib/session";
-import { getIsMultiOrgEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsMultiOrgEnabled } from "@/modules/license-check/lib/utils";
 
 export const AuthLayout = async ({ children }: Readonly<{ children: React.ReactNode }>) => {
   const [session, isFreshInstance, isMultiOrgEnabled] = await Promise.all([

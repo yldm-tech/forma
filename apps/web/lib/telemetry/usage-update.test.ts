@@ -51,7 +51,6 @@ vi.mock("@/lib/env", () => ({
     RECAPTCHA_SECRET_KEY: "secret-key",
     GITHUB_ID: "github-id",
     SAML_DATABASE_URL: "postgresql://saml.example.com/forma",
-    ENTERPRISE_LICENSE_KEY: "test-license-key",
   },
 }));
 vi.mock("@/lib/constants", () => ({
@@ -62,7 +61,7 @@ vi.mock("@/lib/constants", () => ({
 vi.mock("@/lib/hash-string", () => ({
   hashString: vi.fn((s: string) => `hashed-${s}`),
 }));
-vi.mock("@/modules/ee/license-check/lib/license", () => ({
+vi.mock("@/modules/license-check/lib/license", () => ({
   getEnterpriseLicense: vi.fn(),
 }));
 
@@ -201,7 +200,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: false }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -312,7 +311,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: false }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -337,7 +336,6 @@ describe("sendTelemetryEvents", () => {
       expect.objectContaining({
         error: networkError,
         message: "Network error",
-        hashedLicenseKey: "hashed-test-license-key",
       }),
       "Failed to send telemetry - applying 1h cooldown"
     );
@@ -364,7 +362,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: false }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -449,7 +447,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: false }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -475,7 +473,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: true,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: false }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -494,7 +492,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: true,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: true }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -551,7 +549,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: false,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: true }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");
@@ -570,7 +568,7 @@ describe("sendTelemetryEvents", () => {
       IS_DEVELOPMENT: true,
       TELEMETRY_DISABLED: false,
     }));
-    vi.doMock("@/modules/ee/license-check/lib/license", () => ({
+    vi.doMock("@/modules/license-check/lib/license", () => ({
       getEnterpriseLicense: vi.fn().mockResolvedValue({ active: true }),
     }));
     const { sendTelemetryEvents: freshSendTelemetryEvents } = await import("./usage-update");

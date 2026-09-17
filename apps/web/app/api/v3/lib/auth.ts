@@ -6,7 +6,7 @@ import type { TAuthenticationApiKey } from "@forma/types/auth";
 import { AuthorizationError, ResourceNotFoundError } from "@forma/types/errors";
 import { type TAuthorizationActor, assertCan, can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationAction } from "@/lib/authorization/permission-action";
-import type { TTeamPermission } from "@/modules/ee/teams/workspace-teams/types/team";
+import type { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 import { problemForbidden, problemUnauthorized } from "./response";
 import type { TV3Authentication } from "./types";
 import { type V3WorkspaceContext, resolveV3WorkspaceContext } from "./workspace-context";

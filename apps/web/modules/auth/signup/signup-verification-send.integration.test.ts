@@ -23,12 +23,12 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
 }));
 
-vi.mock("@/modules/ee/mailing/lib/mailing-subscription", () => ({
+vi.mock("@/modules/mailing/lib/mailing-subscription", () => ({
   subscribeUserToMailingList: vi.fn(async () => undefined),
 }));
 
-vi.mock("@/modules/ee/audit-logs/lib/handler", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/modules/ee/audit-logs/lib/handler")>();
+vi.mock("@/modules/audit-logs/lib/handler", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/audit-logs/lib/handler")>();
   return { ...actual, queueAuditEventBackground: vi.fn(async () => undefined) };
 });
 

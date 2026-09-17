@@ -6,7 +6,7 @@ import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { TOrganizationBilling } from "@forma/types/organizations";
 import { TSurvey } from "@forma/types/surveys/types";
 import { selectSurvey } from "@/lib/survey/service";
-import { getOrganizationBillingWithReadThroughSync } from "@/modules/ee/billing/lib/organization-billing";
+import { getOrganizationBillingWithReadThroughSync } from "@/modules/billing/lib/organization-billing";
 import { transformPrismaSurvey } from "@/modules/survey/lib/utils";
 
 export const getOrganizationBilling = reactCache(

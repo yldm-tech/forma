@@ -5,7 +5,7 @@ import { getOrganizationBillingByWorkspaceId } from "@/app/api/v2/client/[worksp
 import { verifyRecaptchaToken } from "@/app/api/v2/client/[workspaceId]/responses/lib/recaptcha";
 import { responses } from "@/lib/api/response";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
-import { getIsSpamProtectionEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsSpamProtectionEnabled } from "@/modules/license-check/lib/utils";
 
 export const RECAPTCHA_VERIFICATION_ERROR_CODE = "recaptcha_verification_failed";
 

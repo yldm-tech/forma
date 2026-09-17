@@ -12,7 +12,7 @@ import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import { ITEMS_PER_PAGE } from "@/lib/constants";
 import { validateInputs } from "@/lib/utils/validate";
-import { TOrganizationMember } from "@/modules/ee/teams/team-list/types/team";
+import { TOrganizationMember } from "@/modules/teams/team-list/types/team";
 
 const MAX_SERIALIZABLE_TRANSACTION_ATTEMPTS = 3;
 

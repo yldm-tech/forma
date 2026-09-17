@@ -13,7 +13,7 @@ import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { requiresPasswordConfirmationForAccountDeletion } from "@/modules/account/lib/account-deletion-auth";
 import { getSession } from "@/modules/auth/lib/session";
-import { getIsMultiOrgEnabled, getIsTwoFactorAuthEnabled } from "@/modules/ee/license-check/lib/utils";
+import { getIsMultiOrgEnabled, getIsTwoFactorAuthEnabled } from "@/modules/license-check/lib/utils";
 import { getSettingsLayoutData } from "@/modules/settings/lib/navigation-data";
 import { getOrganizationBillingPath } from "@/modules/settings/lib/routes";
 import { IdBadge } from "@/modules/ui/components/id-badge";
