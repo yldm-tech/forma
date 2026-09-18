@@ -21,6 +21,12 @@ describe("isDatabasePoolExhaustionError", () => {
     );
   });
 
+  // What pg-pool actually throws when a queued acquisition passes connectionTimeoutMillis, and so
+  // the only shape a Prisma 7 + pg-adapter install ever produces.
+  test("is true for pg-pool's own acquisition timeout", () => {
+    expect(isDatabasePoolExhaustionError(new Error("timeout exceeded when trying to connect"))).toBe(true);
+  });
+
   test("is false for other Prisma codes, unrelated messages, and non-errors", () => {
     const notFound = new Prisma.PrismaClientKnownRequestError("not found", {
       code: "P2025",
