@@ -369,12 +369,14 @@ describe("ZV3SurveyGenerateBody", () => {
       const result = ZV3SurveyGenerateBody.safeParse({
         workspaceId: "clxx1234567890123456789012",
         prompt: "Measure onboarding completion for new users.",
-        language: input,
+        languages: [input],
       });
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.language).toBe(expected);
+        // Normalisation still applies per entry, which is what keeps `en` or `es_ES` usable in a
+        // list the same way they were usable as a single value.
+        expect(result.data.languages).toEqual([expected]);
       }
     }
   });
@@ -383,7 +385,7 @@ describe("ZV3SurveyGenerateBody", () => {
     const result = ZV3SurveyGenerateBody.safeParse({
       workspaceId: "clxx1234567890123456789012",
       prompt: "Measure onboarding completion for new users.",
-      language: "it-IT",
+      languages: ["it-IT"],
     });
 
     expect(result.success).toBe(false);
@@ -394,12 +396,12 @@ describe("ZV3SurveyGenerateBody", () => {
     const result = ZV3SurveyGenerateBody.safeParse({
       workspaceId: "clxx1234567890123456789012",
       prompt: "Measure onboarding completion for new users.",
-      language: "zh-Hans",
+      languages: ["zh-Hans"],
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.language).toBe("zh-Hans-CN");
+      expect(result.data.languages?.[0]).toBe("zh-Hans-CN");
     }
   });
 });

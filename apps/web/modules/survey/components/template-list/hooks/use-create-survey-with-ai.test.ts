@@ -113,7 +113,12 @@ describe("useCreateSurveyWithAI", () => {
     await submitWithPrompt(result);
 
     expect(streamSurveyGeneration).toHaveBeenCalledWith(
-      { workspaceId: "workspace1", prompt: "create an onboarding survey", type: "link", language: "en-US" },
+      {
+        workspaceId: "workspace1",
+        prompt: "create an onboarding survey",
+        type: "link",
+        languages: ["en-US"],
+      },
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
@@ -203,17 +208,28 @@ describe("useCreateSurveyWithAI", () => {
     expect(result.current.draft.questions).toHaveLength(1);
   });
 
-  test("generates in the language that was picked, not the user's own", async () => {
+  test("defaults to one language and sends exactly that", async () => {
     const { result } = renderAiHook();
 
-    // Seeded from the user's locale, so someone who changes nothing keeps today's behaviour.
-    expect(result.current.language).toBe("en-US");
+    expect(result.current.languages).toEqual(["en-US"]);
 
-    act(() => result.current.setLanguage("ja-JP"));
     await submitWithPrompt(result);
 
     expect(streamSurveyGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({ language: "ja-JP" }),
+      expect.objectContaining({ languages: ["en-US"] }),
+      expect.anything()
+    );
+  });
+
+  test("sends every picked language, in the order they were picked", async () => {
+    const { result } = renderAiHook();
+
+    // The first is the survey's default and the one the model writes in; order is not incidental.
+    act(() => result.current.setLanguages(["ja-JP", "en-US", "de-DE"]));
+    await submitWithPrompt(result);
+
+    expect(streamSurveyGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({ languages: ["ja-JP", "en-US", "de-DE"] }),
       expect.anything()
     );
   });

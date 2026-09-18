@@ -87,7 +87,7 @@ describe("v3 survey write helpers", () => {
       workspaceId: "cm4workspace0000000000000000",
       prompt: "Measure whether onboarding explains the core product value clearly.",
       type: "link",
-      language: "en-US",
+      languages: ["en-US"],
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/v3/surveys/generate", {
@@ -100,7 +100,7 @@ describe("v3 survey write helpers", () => {
         workspaceId: "cm4workspace0000000000000000",
         prompt: "Measure whether onboarding explains the core product value clearly.",
         type: "link",
-        language: "en-US",
+        languages: ["en-US"],
       }),
     });
     expect(result.language).toBe("en-US");

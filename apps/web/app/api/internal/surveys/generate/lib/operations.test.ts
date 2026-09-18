@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   assertOrganizationAIConfigured: vi.fn(),
   streamOrganizationAIObject: vi.fn(),
   assertV3SurveyGeneratePrompt: vi.fn(),
-  buildV3SurveyCreatePayloadFromDraft: vi.fn(),
+  finishV3SurveyGeneration: vi.fn(),
   capturePostHogEvent: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("@/app/api/v3/surveys/generate/service", async (importOriginal) => ({
   assertV3SurveyGeneratePrompt: mocks.assertV3SurveyGeneratePrompt,
   buildV3SurveyGenerationRequest: () => ({ prompt: "built" }),
   buildV3SurveyGenerationTracing: () => undefined,
-  buildV3SurveyCreatePayloadFromDraft: mocks.buildV3SurveyCreatePayloadFromDraft,
+  finishV3SurveyGeneration: mocks.finishV3SurveyGeneration,
 }));
 vi.mock("@/lib/posthog", () => ({ capturePostHogEvent: mocks.capturePostHogEvent }));
 
@@ -68,7 +68,7 @@ describe("streamV3SurveyGeneration", () => {
     });
     mocks.getSessionUserId.mockReturnValue("user1");
     mocks.assertOrganizationAIConfigured.mockResolvedValue({ isInstanceConfigured: true });
-    mocks.buildV3SurveyCreatePayloadFromDraft.mockReturnValue({
+    mocks.finishV3SurveyGeneration.mockResolvedValue({
       language: "en-US",
       payload: { name: "Onboarding" },
       validation: { valid: true, invalid_params: [], languages: [] },

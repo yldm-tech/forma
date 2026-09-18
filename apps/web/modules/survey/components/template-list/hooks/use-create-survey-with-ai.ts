@@ -21,7 +21,10 @@ import { useBeforeUnloadPrompt } from "@/modules/ui/hooks/use-before-unload-prom
 
 type UseCreateSurveyWithAIProps = {
   workspaceId: string;
-  /** Seeds the picker. The person generating can change it without changing their own locale. */
+  /**
+   * Seeds the picker. English rather than the signed-in person's locale: a survey's audience is
+   * not its author, and the common case is writing for readers elsewhere.
+   */
   defaultLanguage: TUserLocale;
   isAIAvailable: boolean;
   onSuccess: (surveyId: string) => void;
@@ -38,8 +41,11 @@ export const useCreateSurveyWithAI = ({
   // failed generation without a restore path that could get it wrong.
   const [prompt, setPrompt] = useState("");
   // Held here rather than by the form, so a regenerate after the prompt was edited reuses the
-  // language the draft on screen was generated in rather than resetting to the user's locale.
-  const [language, setLanguage] = useState<TUserLocale>(defaultLanguage);
+  // languages the draft on screen was generated with rather than resetting.
+  //
+  // Ordered, and the order carries meaning: the first is the survey's default language and the one
+  // the model writes in, the rest are attached empty for the editor's translation flow to fill.
+  const [languages, setLanguages] = useState<TUserLocale[]>([defaultLanguage]);
   const [state, dispatch] = useReducer(aiCreateReducer, INITIAL_AI_CREATE_STATE);
   const [isNavigatingToEditor, setIsNavigatingToEditor] = useState(false);
 
@@ -118,7 +124,7 @@ export const useCreateSurveyWithAI = ({
 
     try {
       await streamSurveyGeneration(
-        { workspaceId, prompt: prompt.trim(), type: "link", language },
+        { workspaceId, prompt: prompt.trim(), type: "link", languages },
         {
           signal: controller.signal,
           onEvent: (event) => {
@@ -153,7 +159,7 @@ export const useCreateSurveyWithAI = ({
         abortControllerRef.current = null;
       }
     }
-  }, [flushSnapshot, language, prompt, queueSnapshot, workspaceId]);
+  }, [flushSnapshot, languages, prompt, queueSnapshot, workspaceId]);
 
   // What both entry points need: AI on, and a prompt worth sending. `canCreate` adds the one thing
   // that is only true of the first generation — that nothing is running yet.
@@ -242,8 +248,8 @@ export const useCreateSurveyWithAI = ({
   return {
     prompt,
     setPrompt,
-    language,
-    setLanguage,
+    languages,
+    setLanguages,
     status: state.status,
     draft: state.draft,
     /** The prompt the draft on screen came from, which is not always the one in the textarea. */

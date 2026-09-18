@@ -11,9 +11,9 @@ import type {
 } from "@/app/api/v3/surveys/generate/schemas";
 import {
   assertV3SurveyGeneratePrompt,
-  buildV3SurveyCreatePayloadFromDraft,
   buildV3SurveyGenerationRequest,
   buildV3SurveyGenerationTracing,
+  finishV3SurveyGeneration,
 } from "@/app/api/v3/surveys/generate/service";
 import { getSessionUserId } from "@/app/api/v3/surveys/lib/operations";
 import { assertOrganizationAIConfigured, streamOrganizationAIObject } from "@/lib/ai/service";
@@ -140,7 +140,15 @@ export async function streamV3SurveyGeneration({
           emit({ type: "partial", seq, draft: finalDraft });
         }
 
-        const result = buildV3SurveyCreatePayloadFromDraft(body, draft);
+        // Same finish step the blocking route uses, so multi-language generation cannot work on
+        // one path and silently do nothing on the other.
+        const result = await finishV3SurveyGeneration({
+          input: body,
+          draft,
+          organizationId,
+          workspaceId,
+          userId,
+        });
         emit({ type: "done", ...result });
 
         if (userId) {
