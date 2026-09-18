@@ -93,7 +93,7 @@ export const validateUrlFilterRegex = (data: TActionClassInput, ctx: z.Refinemen
           ctx.addIssue({
             code: "custom",
             path: ["noCodeConfig", "urlFilters", i, "value"],
-            message: t("workspace.actions.invalid_regex"),
+            message: t("common.invalid_regex"),
           });
         }
       }

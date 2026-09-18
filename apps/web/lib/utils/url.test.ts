@@ -11,8 +11,8 @@ describe("testURLmatch", () => {
   // Mock translation function
   const mockT = (key: string): string => {
     const translations: Record<string, string> = {
-      "workspace.actions.invalid_regex": "Please use a valid regular expression.",
-      "workspace.actions.invalid_match_type": "The option selected is not available.",
+      "common.invalid_regex": "Please use a valid regular expression.",
+      "common.invalid_match_type": "The option selected is not available.",
     };
     return translations[key] || key;
   };

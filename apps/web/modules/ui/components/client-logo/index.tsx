@@ -73,7 +73,7 @@ export const ClientLogo = ({
           )}
           width={256}
           height={64}
-          alt={t("workspace.surveys.edit.company_logo")}
+          alt={t("common.company_logo")}
           unoptimized={isExternalImageSrc(logoToUse?.url)}
         />
       ) : disableLinks ? (
