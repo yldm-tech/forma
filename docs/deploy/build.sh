@@ -33,14 +33,25 @@ root = pathlib.Path(os.environ["DOCS_OUT_DIR"])
 extensions = {".html", ".js", ".css", ".json", ".txt", ".xml"}
 rewritten = 0
 
-# Anchored on a quote, paren or equals so only a path in a reference position is touched — a bare
-# slash inside prose or a regex literal is left alone.
+# Anchored on a quote, backtick, paren or equals so only a path in a reference position is touched
+# — a bare slash inside prose or a regex literal is left alone.
+#
+# The backtick is not decoration. Body links come from the mdx as root-relative markdown, and the
+# compiled chunk holds them as template literals: `{href:\`/workflows/overview\`}`. Leaving it out
+# rewrote the navigation and missed every in-page link, which is a failure that only shows when
+# somebody clicks one.
 patterns = [
-    (re.compile(r'(["\'(=])/(_next/)'), rf'\1{base}/\2'),
-    (re.compile(r'(["\'(=])/(favicons?/)'), rf'\1{base}/\2'),
-    (re.compile(r'(["\'(=])/(images?/)'), rf'\1{base}/\2'),
+    (re.compile(r'(["\'`(=])/(_next/)'), rf'\1{base}/\2'),
+    (re.compile(r'(["\'`(=])/(favicons?/)'), rf'\1{base}/\2'),
+    (re.compile(r'(["\'`(=])/(images?/)'), rf'\1{base}/\2'),
     (re.compile(rf'(href=")/(?!{base.lstrip("/")}/)([a-z0-9][^"]*)"'), rf'\1{base}/\2"'),
     (re.compile(r'(href=")/"'), rf'\1{base}/"'),
+    # href in a template literal, which is how the compiled chunks carry in-page links.
+    (re.compile(rf'(href:`)/(?!{base.lstrip("/")}/)([a-z0-9][^`]*)`'), rf'\1{base}/\2`'),
+    # href inside an escaped JSON string. The RSC payload is embedded in the HTML as a JavaScript
+    # string, so its quotes arrive backslash-escaped and the plain-quote patterns above skip them —
+    # which is exactly where the navigation tree and the in-page links live.
+    (re.compile(rf'(\\"href\\":\\")/(?!{base.lstrip("/")}/)([a-z0-9][^\\]*)'), rf'\1{base}/\2'),
 ]
 
 for path in root.rglob("*"):
