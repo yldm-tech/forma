@@ -143,12 +143,17 @@ export const getNavigationDestinations = ({
           },
         ]
       : []),
-    {
-      id: "org-billing",
-      label: isFormaCloud ? t("common.billing") : t("common.enterprise_license"),
-      href: `${organizationSettings}/${isFormaCloud ? "billing" : "enterprise"}`,
-      group: t("common.organization"),
-    },
+    // Cloud only. Off Cloud there is no billing page and no licence page to offer.
+    ...(isFormaCloud
+      ? [
+          {
+            id: "org-billing",
+            label: t("common.billing"),
+            href: `${organizationSettings}/billing`,
+            group: t("common.organization"),
+          },
+        ]
+      : []),
     ...(isFormaCloud
       ? []
       : [

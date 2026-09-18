@@ -283,7 +283,6 @@
     "enabled": "Enabled",
     "ending_card": "Ending card",
     "enter_url": "Enter URL",
-    "enterprise_license": "Enterprise License",
     "error": "Error",
     "error_component_description": "This resource does not exist or you do not have the necessary rights to access it.",
     "error_component_title": "Error loading resources",
@@ -2434,27 +2433,7 @@
         "workspace": "Workspace"
       },
       "enterprise": {
-        "audit_logs": "Audit Logs",
-        "coming_soon": "Coming soon",
-        "contacts_and_segments": "Contact management & segments",
-        "custom_workspace_count": "Custom 'Workspace' count",
-        "hide_powered_by_forma": "Hide \"Powered by Forma\"",
-        "license_features_table_access": "Access",
-        "license_features_table_description": "Enterprise features and limits currently available to this instance.",
-        "license_features_table_disabled": "Disabled",
-        "license_features_table_enabled": "Enabled",
-        "license_features_table_feature": "Feature",
-        "license_features_table_title": "Licensed Features",
-        "license_features_table_unlimited": "Unlimited",
-        "license_features_table_value": "Value",
-        "oidc_sso": "OIDC SSO (AzureAD, Google, OpenID)",
-        "quota_management": "Quota Management",
-        "saml_sso": "SAML SSO",
-        "spam_protection_recaptcha": "Spam protection (ReCaptchaV3)",
-        "teams_and_access_roles": "Teams & access roles",
-        "two_factor_authentication": "Two-factor authentication",
-        "whitelabel_email_follow_ups": "Whitelabel email follow-ups",
-        "workflows": "Workflows"
+        "coming_soon": "Coming soon"
       },
       "general": {
         "ai_enabled": "Forma AI",

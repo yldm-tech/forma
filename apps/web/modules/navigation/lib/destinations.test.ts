@@ -66,14 +66,7 @@ describe("getNavigationDestinations", () => {
   test("offers the billing role only what it can open", () => {
     const result = ids(build({ isBilling: true }));
 
-    expect(result).toEqual([
-      "org-general",
-      "org-teams",
-      "org-api-keys",
-      "org-billing",
-      "org-domain",
-      "account-profile",
-    ]);
+    expect(result).toEqual(["org-general", "org-teams", "org-api-keys", "org-domain", "account-profile"]);
   });
 
   test("withholds API keys from a member, matching the settings sidebar", () => {
@@ -83,12 +76,12 @@ describe("getNavigationDestinations", () => {
     expect(result).toContain("org-general");
   });
 
-  test("points at billing on cloud and at the licence page otherwise", () => {
+  test("offers billing on cloud only, where the page exists", () => {
     const cloud = build({ isFormaCloud: true }).find((d) => d.id === "org-billing");
     const selfHosted = build({ isFormaCloud: false }).find((d) => d.id === "org-billing");
 
     expect(cloud?.href).toBe("/organizations/org_1/settings/billing");
-    expect(selfHosted?.href).toBe("/organizations/org_1/settings/enterprise");
+    expect(selfHosted).toBeUndefined();
   });
 
   test("offers the domain page only off cloud, where that settings page exists", () => {
