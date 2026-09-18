@@ -34,7 +34,7 @@ const mockT = vi.fn((key: string, params?: any) => {
   if (key === "workspace.actions.invalid_css_selector") {
     return "Invalid CSS selector";
   }
-  if (key === "workspace.actions.invalid_regex") {
+  if (key === "common.invalid_regex") {
     return "Invalid regex pattern";
   }
   if (key === "common.you_are_not_authorized_to_perform_this_action") {

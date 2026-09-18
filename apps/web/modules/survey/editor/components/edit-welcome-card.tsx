@@ -119,7 +119,7 @@ export const EditWelcomeCard = ({
         <Collapsible.CollapsibleContent className={`flex flex-col px-4 ${open && "pb-6"}`}>
           <form>
             <div className="mt-2">
-              <Label htmlFor="companyLogo">{t("workspace.surveys.edit.company_logo")}</Label>
+              <Label htmlFor="companyLogo">{t("common.company_logo")}</Label>
             </div>
             <div className="mt-3 flex w-full items-center justify-center">
               <FileInput
