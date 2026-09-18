@@ -283,7 +283,6 @@
     "enabled": "有効",
     "ending_card": "終了カード",
     "enter_url": "URLを入力",
-    "enterprise_license": "エンタープライズライセンス",
     "error": "エラー",
     "error_component_description": "この リソース は 存在 しない か、アクセス する ための 必要な 権限 が ありません。",
     "error_component_title": "リソース の 読み込み エラー",
@@ -2434,27 +2433,7 @@
         "workspace": "ワークスペース"
       },
       "enterprise": {
-        "audit_logs": "監査ログ",
-        "coming_soon": "近日公開",
-        "contacts_and_segments": "連絡先管理＆セグメント",
-        "custom_workspace_count": "カスタム「ワークスペース」数",
-        "hide_powered_by_forma": "「Powered by Forma」を非表示にする",
-        "license_features_table_access": "アクセス",
-        "license_features_table_description": "このインスタンスで現在利用可能なエンタープライズ機能と制限。",
-        "license_features_table_disabled": "無効",
-        "license_features_table_enabled": "有効",
-        "license_features_table_feature": "機能",
-        "license_features_table_title": "ライセンス機能",
-        "license_features_table_unlimited": "無制限",
-        "license_features_table_value": "値",
-        "oidc_sso": "OIDC SSO（AzureAD、Google、OpenID）",
-        "quota_management": "クォータ管理",
-        "saml_sso": "SAML SSO",
-        "spam_protection_recaptcha": "スパム保護（ReCaptchaV3）",
-        "teams_and_access_roles": "チームとアクセス権限",
-        "two_factor_authentication": "二要素認証",
-        "whitelabel_email_follow_ups": "ホワイトラベルメールフォローアップ",
-        "workflows": "Workflows"
+        "coming_soon": "近日公開"
       },
       "general": {
         "ai_enabled": "Forma AI",
