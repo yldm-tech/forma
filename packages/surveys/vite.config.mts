@@ -77,7 +77,13 @@ const config = ({ mode }) => {
       },
       plugins: [
         ...sharedConfig.plugins,
-        copyCompiledAssetsPlugin({ filename: "surveys", distDir: resolve(__dirname, "dist") }),
+        copyCompiledAssetsPlugin({
+          filename: "surveys",
+          distDir: resolve(__dirname, "dist"),
+          // See the option's own note: `.cjs` is not on Cloudflare's cacheable-extension list,
+          // so the app loads `surveys.umd.js` while embeds keep the `.cjs` name they hardcode.
+          duplicateSuffixes: { ".umd.cjs": ".umd.js" },
+        }),
       ],
     });
   }
@@ -144,7 +150,13 @@ const config = ({ mode }) => {
     plugins: [
       ...sharedConfig.plugins,
       stubSurveyUiStylesForVitest(),
-      copyCompiledAssetsPlugin({ filename: "surveys", distDir: resolve(__dirname, "dist") }),
+      copyCompiledAssetsPlugin({
+        filename: "surveys",
+        distDir: resolve(__dirname, "dist"),
+        // See the option's own note: `.cjs` is not on Cloudflare's cacheable-extension list,
+        // so the app loads `surveys.umd.js` while embeds keep the `.cjs` name they hardcode.
+        duplicateSuffixes: { ".umd.cjs": ".umd.js" },
+      }),
       process.env.ANALYZE === "true" &&
         visualizer({
           filename: resolve(__dirname, "stats.html"),

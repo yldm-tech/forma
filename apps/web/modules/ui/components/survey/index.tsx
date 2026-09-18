@@ -8,7 +8,10 @@ import { executeRecaptcha, loadRecaptchaScript } from "@/modules/ui/components/s
 
 const createContainerId = () => `forma-survey-container`;
 
-const surveyScriptUrl = (appUrl?: string) => `${appUrl ?? ""}/js/surveys.umd.cjs`;
+// `.umd.js`, not the `.umd.cjs` the embed snippets use: Cloudflare will not cache a `.cjs`, so the
+// render-blocking bundle was a full origin round trip on every survey open. Both names are written
+// by the build — see `duplicateSuffixes` in copy-compiled-assets.
+const surveyScriptUrl = (appUrl?: string) => `${appUrl ?? ""}/js/surveys.umd.js`;
 
 // Module-level flag to prevent concurrent script loads across component instances
 let isLoadingScript = false;
@@ -39,42 +42,59 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const hasLoadedRef = useRef(false);
 
-  // Runs during render, including the server one, so the hint reaches the document's own <head>.
-  // The renderer is a 1 MB bundle whose URL appeared nowhere in the HTML: it was fetched from an
-  // effect after hydration, so the browser's preload scanner could not see it and the respondent's
-  // critical path was hydrate-then-fetch-then-paint, strictly serial.
-  ReactDOM.preload(surveyScriptUrl(props.appUrl), { as: "script", fetchPriority: "high" });
+  const scriptUrl = surveyScriptUrl(props.appUrl);
 
-  const loadSurveyScript: () => Promise<void> = async () =>
+  // Runs during render, the server one included, so the hint reaches the document's own <head>.
+  ReactDOM.preload(scriptUrl, { as: "script", fetchPriority: "high" });
+
+  /**
+   * Waits for the bundle rather than fetching it.
+   *
+   * In production the `<script>` is rendered below, so the browser has it from the document and may
+   * well have run it before this effect does. Creating the element here instead — which is what this
+   * component used to do — gated the 1 MB renderer's *execution* on the whole app tree hydrating
+   * first, however early its bytes arrived. The preload fixed the download; it could not fix that.
+   */
+  const awaitSurveyScript: () => Promise<void> = async () =>
     new Promise((resolve, reject) => {
-      // Set loading flag immediately to prevent concurrent loads
       isLoadingScript = true;
 
-      // A real `src` rather than fetch-then-assign-textContent. The old shape read the response as
-      // text and injected it inline, which threw away the preload hint, the HTTP cache entry and
-      // V8's code cache — a returning respondent recompiled 1 MB of JavaScript every time. Nothing
-      // was bought for it: the response is same-origin and already `public, max-age=3600`.
-      const scriptElement = document.createElement("script");
-      scriptElement.src = surveyScriptUrl(props.appUrl);
-      scriptElement.async = true;
-      if (IS_DEVELOPMENT_BUILD) {
-        scriptElement.src += `?t=${String(Date.now())}`;
-      }
-
-      scriptElement.onload = () => {
+      let settled = false;
+      const settle = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        isLoadingScript = false;
+        if (!ok) {
+          reject(new Error("Failed to load the surveys package"));
+          return;
+        }
         setIsScriptLoaded(true);
         hasLoadedRef.current = true;
-        isLoadingScript = false;
         resolve();
       };
-      scriptElement.onerror = () => {
-        // Leaving the element behind would make the guard below treat a failed load as done.
-        scriptElement.remove();
-        isLoadingScript = false;
-        reject(new Error("Failed to load the surveys package"));
-      };
 
-      document.head.appendChild(scriptElement);
+      if (window.formaSurveys) {
+        settle(true);
+        return;
+      }
+
+      // React hoists the rendered script into <head> under exactly this src, so an attribute
+      // selector finds it. In development nothing is rendered and this is null, which is the signal
+      // to create the element instead. The src is a same-origin path, so it needs no escaping here.
+      const rendered = document.querySelector<HTMLScriptElement>(`script[src="${scriptUrl}"]`);
+
+      const element = rendered ?? createDevScript(scriptUrl);
+      element.addEventListener("load", () => settle(true), { once: true });
+      element.addEventListener("error", () => settle(false), { once: true });
+
+      // Closes the race where the script finished between the check above and the listener being
+      // attached: a load event that already fired will never fire again.
+      if (window.formaSurveys) {
+        settle(true);
+        return;
+      }
+
+      if (!rendered) document.head.appendChild(element);
     });
 
   useEffect(() => {
@@ -89,7 +109,7 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
           if (props.isSpamProtectionEnabled && props.recaptchaSiteKey) {
             await loadRecaptchaScript(props.recaptchaSiteKey);
           }
-          await loadSurveyScript();
+          await awaitSurveyScript();
         } catch (error) {
           console.error("Failed to load the surveys package: ", error);
         }
@@ -99,7 +119,7 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
     };
 
     loadScript();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time script load guarded by hasLoadedRef; depending on loadSurveyScript/renderInline would re-trigger the load
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time script load guarded by hasLoadedRef; depending on awaitSurveyScript/renderInline would re-trigger the load
   }, [props]);
 
   useEffect(() => {
@@ -108,5 +128,22 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
     }
   }, [isScriptLoaded, renderInline]);
 
-  return <div id={containerId} className="h-full w-full" />;
+  return (
+    <>
+      {/* Hoisted by React into <head>, and present in the server-rendered HTML — which is the point:
+          the browser can fetch and run it alongside hydration instead of after it. Skipped in
+          development, where the element is created in the effect with a cache-buster so a rebuilt
+          bundle is picked up without a hard refresh; a timestamp rendered on the server would not
+          match the one the client computes. */}
+      {!IS_DEVELOPMENT_BUILD && <script async src={scriptUrl} />}
+      <div id={containerId} className="h-full w-full" />
+    </>
+  );
+};
+
+const createDevScript = (scriptUrl: string): HTMLScriptElement => {
+  const element = document.createElement("script");
+  element.async = true;
+  element.src = `${scriptUrl}?t=${String(Date.now())}`;
+  return element;
 };

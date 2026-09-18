@@ -1,5 +1,5 @@
 import { MutableRef } from "preact/hooks";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { JSX } from "preact/jsx-runtime";
 import React from "react";
 import { type TPlacement } from "@forma/types/common";
@@ -37,7 +37,10 @@ export const StackedCard = ({
 }: StackedCardProps) => {
   const isHidden = offset < 0;
   const [delayedOffset, setDelayedOffset] = useState<number>(offset);
-  const [contentOpacity, setContentOpacity] = useState<number>(0);
+  // 1 on the first card so it is legible as soon as it paints; the fade below still applies to every
+  // card-to-card transition after that.
+  const [contentOpacity, setContentOpacity] = useState<number>(offset === 0 ? 1 : 0);
+  const hasMountedRef = useRef(offset === 0);
   const currentCardHeight = offset === 0 ? "auto" : offset < 0 ? "initial" : cardHeight;
 
   const getTopBottomStyles = () => {
@@ -91,16 +94,34 @@ export const StackedCard = ({
       : {};
 
   useEffect(() => {
-    setTimeout(() => {
+    const offsetTimer = setTimeout(() => {
       setDelayedOffset(offset);
     }, 300);
 
+    // The fade belongs to moving between cards. On the very first card there is nothing to move from,
+    // and paying for it meant a respondent waited 300 ms of delay plus a 300 ms fade to read a
+    // question that had already rendered — measured at 971 ms to become legible with the loading
+    // overlay forced off, most of it here.
+    if (offset === 0 && !hasMountedRef.current) {
+      hasMountedRef.current = true;
+      setContentOpacity(1);
+      return () => {
+        clearTimeout(offsetTimer);
+      };
+    }
+
+    let opacityTimer: ReturnType<typeof setTimeout> | undefined;
     if (offset === 0) {
       setContentOpacity(0);
-      setTimeout(() => {
+      opacityTimer = setTimeout(() => {
         setContentOpacity(1);
       }, 300);
     }
+
+    return () => {
+      clearTimeout(offsetTimer);
+      if (opacityTimer) clearTimeout(opacityTimer);
+    };
   }, [offset]);
 
   return (

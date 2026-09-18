@@ -6,6 +6,20 @@ interface CopyCompiledAssetsPluginOptions {
   filename: string;
   distDir: string;
   skipDirectoryCheck?: boolean; // New option to skip checking non-existent directories
+  /**
+   * Extra copies to write, keyed by the suffix to match and valued by the suffix to write instead.
+   *
+   * This exists because a CDN decides what to cache from the file extension. Cloudflare's standard
+   * cache level has a fixed list of cacheable extensions and `.cjs` is not on it, so
+   * `surveys.umd.cjs` was served `cf-cache-status: DYNAMIC` on every request while its sibling
+   * `surveys.js` — same directory, same `Cache-Control` — was a `HIT`. That is a full origin round
+   * trip for the render-blocking bundle a respondent waits on.
+   *
+   * The `.cjs` name cannot simply change: `packages/js-core` hardcodes it into embed snippets that
+   * live on third-party pages and cannot be updated in lockstep. So both names are written, the app
+   * asks for the cacheable one, and embeds keep working.
+   */
+  duplicateSuffixes?: Readonly<Record<string, string>>;
 }
 
 const ensureDirectoryExists = async (dirPath: string): Promise<void> => {
@@ -74,6 +88,12 @@ export function copyCompiledAssetsPlugin(options: CopyCompiledAssetsPluginOption
 
             await copyFile(srcFile, destFile);
             copiedFiles++;
+
+            for (const [fromSuffix, toSuffix] of Object.entries(options.duplicateSuffixes ?? {})) {
+              if (!destFile.endsWith(fromSuffix)) continue;
+              await copyFile(srcFile, `${destFile.slice(0, -fromSuffix.length)}${toSuffix}`);
+              copiedFiles++;
+            }
           } catch (error) {
             if ((error as { code: string }).code === "ENOENT" && options.skipDirectoryCheck) {
               console.log(`Skipping non-existent file: ${srcFile}`);

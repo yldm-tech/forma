@@ -1,7 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { LoadingSpinner } from "@/modules/ui/components/loading-spinner";
 import { Wordmark } from "@/modules/ui/components/wordmark";
+
+/**
+ * How long the overlay is held even when everything is ready. Its only job is to stop a flash on a
+ * fast connection; anything longer is time a respondent spends looking at a spinner over a question
+ * that has already rendered.
+ */
+const MIN_VISIBLE_MS = 150;
+
+/** Kept in step with `duration-300` on the overlay below. */
+const OVERLAY_FADE_MS = 300;
 
 interface SurveyLoadingAnimationProps {
   isWelcomeCardEnabled: boolean;
@@ -19,6 +29,7 @@ export const SurveyLoadingAnimation = ({
   const [isMediaLoaded, setIsMediaLoaded] = useState(false); // Tracks if all media are fully loaded
   const [isSurveyPackageLoaded, setIsSurveyPackageLoaded] = useState(false); // Tracks if the survey package has been loaded into the DOM
   const isReadyToTransition = isMediaLoaded && minTimePassed && isBackgroundLoaded;
+  const overlayRef = useRef<HTMLDivElement>(null);
   const cardId = isWelcomeCardEnabled ? `questionCard--1` : `questionCard-0`;
 
   // Function to check if all media elements (images and iframes) within the survey card are loaded
@@ -65,26 +76,43 @@ export const SurveyLoadingAnimation = ({
     };
   }, [isSurveyPackageLoaded, checkMediaLoaded, cardId]);
 
-  // Effect to handle the hiding of the animation once both media are loaded and the minimum time has passed
+  // Hides the overlay once the fade-out has actually finished, rather than after a timer chosen to
+  // outlast it. The two were 500 ms and 1000 ms, so the overlay stayed mounted well past the point
+  // it had become invisible, and the element it covered was already painted underneath.
   useEffect(() => {
-    if (isMediaLoaded && minTimePassed) {
-      const hideTimer = setTimeout(() => {
-        setIsHidden(true);
-      }, 500);
-
-      return () => {
-        clearTimeout(hideTimer);
-      };
-    } else {
+    if (!isReadyToTransition) {
       setIsHidden(false);
+      return;
     }
-  }, [isMediaLoaded, minTimePassed]);
+
+    const overlay = overlayRef.current;
+    if (!overlay) {
+      setIsHidden(true);
+      return;
+    }
+
+    const hide = () => {
+      setIsHidden(true);
+    };
+    overlay.addEventListener("transitionend", hide, { once: true });
+
+    // A background-color transition does not fire `transitionend` if the computed value never
+    // changes — an already-transparent overlay, or a browser honouring prefers-reduced-motion.
+    const fallbackTimer = setTimeout(hide, OVERLAY_FADE_MS + 50);
+
+    return () => {
+      overlay.removeEventListener("transitionend", hide);
+      clearTimeout(fallbackTimer);
+    };
+  }, [isReadyToTransition]);
 
   useEffect(() => {
-    // Ensure the animation is shown for at least 1.5 seconds
+    // An anti-flash floor, not a staged animation. The comment used to say 1.5 seconds and the timer
+    // said 500 ms; both were long enough that a respondent watched a spinner over a question that
+    // was already in the DOM — measured at ~300 ms for the question against ~1240 ms for the overlay.
     const minTimeTimer = setTimeout(() => {
       setMinTimePassed(true);
-    }, 500);
+    }, MIN_VISIBLE_MS);
 
     // Observe the DOM for when the survey package (child elements) is added to the target node
     const observer = new MutationObserver((mutations) => {
@@ -111,8 +139,9 @@ export const SurveyLoadingAnimation = ({
 
   return (
     <div
+      ref={overlayRef}
       className={cn(
-        "absolute inset-0 z-5000 flex items-center justify-center transition-colors duration-1000",
+        "absolute inset-0 z-5000 flex items-center justify-center transition-colors duration-300",
         isReadyToTransition ? "bg-transparent" : "bg-white",
         isHidden && "hidden"
       )}>
