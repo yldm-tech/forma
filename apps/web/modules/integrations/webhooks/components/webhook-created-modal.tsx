@@ -72,7 +72,7 @@ export const WebhookCreatedModal = ({ open, webhook, onClose }: WebhookCreatedMo
               {t("workspace.integrations.webhooks.secret_copy_warning")}
             </p>
             <Link
-              href="https://forma.ylam.ai/docs/platform/features/integrations/webhooks#webhook-security-with-standard-webhooks"
+              href="https://forma.yldm.ai/docs/platform/features/integrations/webhooks#webhook-security-with-standard-webhooks"
               target="_blank"
               className="mt-2 inline-flex items-center gap-1 text-xs text-slate-600 underline hover:text-slate-800">
               {t("workspace.integrations.webhooks.learn_to_verify")}

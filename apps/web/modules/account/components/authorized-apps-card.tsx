@@ -64,7 +64,7 @@ export const AuthorizedAppsCard = async ({ locale }: Readonly<{ locale: TUserLoc
       cta={
         <Button asChild variant="secondary" size="sm">
           <a
-            href="https://forma.ylam.ai/docs/platform/mcp/overview"
+            href="https://forma.yldm.ai/docs/platform/mcp/overview"
             target="_blank"
             rel="noopener noreferrer">
             {t("auth.oauth.mcp_docs_link")}

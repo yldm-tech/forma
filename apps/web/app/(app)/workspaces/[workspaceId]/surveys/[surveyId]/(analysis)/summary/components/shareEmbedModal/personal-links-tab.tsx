@@ -208,7 +208,7 @@ export const PersonalLinksTab = ({ segments, surveyId }: PersonalLinksTabProps) 
         links={[
           {
             title: t("workspace.surveys.share.personal_links.work_with_segments"),
-            href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/advanced-targeting#segment-configuration",
+            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/advanced-targeting#segment-configuration",
           },
         ]}
       />

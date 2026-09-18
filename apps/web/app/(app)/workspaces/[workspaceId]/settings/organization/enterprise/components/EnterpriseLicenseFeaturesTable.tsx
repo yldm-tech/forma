@@ -21,69 +21,69 @@ const getFeatureDefinitions = (t: TFunction): TFeatureDefinition[] => {
     {
       key: "removeBranding",
       labelKey: t("workspace.settings.enterprise.hide_powered_by_forma"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/hide-powered-by-forma",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/hide-powered-by-forma",
     },
     {
       key: "whitelabel",
       labelKey: t("workspace.settings.enterprise.whitelabel_email_follow_ups"),
       docsUrl:
-        "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/whitelabel-email-follow-ups",
+        "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/whitelabel-email-follow-ups",
     },
     {
       key: "accessControl",
       labelKey: t("workspace.settings.enterprise.teams_and_access_roles"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/team-access",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/team-access",
     },
     {
       key: "contacts",
       labelKey: t("workspace.settings.enterprise.contacts_and_segments"),
       docsUrl:
-        "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/contact-management-segments",
+        "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/contact-management-segments",
     },
     {
       key: "quotas",
       labelKey: t("workspace.settings.enterprise.quota_management"),
-      docsUrl: "https://forma.ylam.ai/docs/surveys/general-features/quota-management",
+      docsUrl: "https://forma.yldm.ai/docs/surveys/general-features/quota-management",
     },
     {
       key: "auditLogs",
       labelKey: t("workspace.settings.enterprise.audit_logs"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/audit-logging",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/audit-logging",
     },
     {
       key: "sso",
       labelKey: t("workspace.settings.enterprise.oidc_sso"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/oidc-sso",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/oidc-sso",
     },
     {
       key: "saml",
       labelKey: t("workspace.settings.enterprise.saml_sso"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/enterprise-features/saml-sso",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/enterprise-features/saml-sso",
     },
     {
       key: "spamProtection",
       labelKey: t("workspace.settings.enterprise.spam_protection_recaptcha"),
-      docsUrl: "https://forma.ylam.ai/docs/surveys/general-features/spam-protection",
+      docsUrl: "https://forma.yldm.ai/docs/surveys/general-features/spam-protection",
     },
     {
       key: "twoFactorAuth",
       labelKey: t("workspace.settings.enterprise.two_factor_authentication"),
-      docsUrl: "https://forma.ylam.ai/docs/platform/features/user-management/two-factor-auth",
+      docsUrl: "https://forma.yldm.ai/docs/platform/features/user-management/two-factor-auth",
     },
     {
       key: "workspaces",
       labelKey: t("workspace.settings.enterprise.custom_workspace_count"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/advanced/license#what-features-are-free",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/advanced/license#what-features-are-free",
     },
     {
       key: "aiSmartTools",
       labelKey: t("workspace.settings.general.ai_smart_tools_enabled"),
-      docsUrl: "https://forma.ylam.ai/docs/self-hosting/configuration/ai",
+      docsUrl: "https://forma.yldm.ai/docs/self-hosting/configuration/ai",
     },
     {
       key: "workflows",
       labelKey: t("workspace.settings.enterprise.workflows"),
-      docsUrl: "https://forma.ylam.ai/docs/workflows/overview",
+      docsUrl: "https://forma.yldm.ai/docs/workflows/overview",
     },
   ];
 };

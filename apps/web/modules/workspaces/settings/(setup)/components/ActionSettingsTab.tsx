@@ -45,7 +45,7 @@ export const ActionSettingsTab = ({
   currentSurveyId,
   onActionUpdated,
 }: Readonly<ActionSettingsTabProps>) => {
-  const actionDocsHref = "https://forma.ylam.ai/docs/surveys/website-app-surveys/actions";
+  const actionDocsHref = "https://forma.yldm.ai/docs/surveys/website-app-surveys/actions";
   const { createdAt, updatedAt, id, ...restActionClass } = actionClass;
   const router = useRouter();
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);

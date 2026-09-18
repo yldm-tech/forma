@@ -254,7 +254,7 @@ export const AddChannelMappingModal = ({
                     disabled={channels.length === 0}
                   />
                   <Link
-                    href="https://forma.ylam.ai/docs/developer-docs/integrations/slack"
+                    href="https://forma.yldm.ai/docs/developer-docs/integrations/slack"
                     target="_blank"
                     className="text-xs">
                     <Button variant="ghost" size="sm" className="my-2" type="button">

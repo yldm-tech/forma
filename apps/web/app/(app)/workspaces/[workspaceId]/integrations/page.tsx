@@ -69,7 +69,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
   const appSetupCompleted = !!workspace.appSetupCompleted;
   const integrationCards = [
     {
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/zapier",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/zapier",
       docsText: t("common.docs"),
       docsNewTab: true,
       connectHref: "https://zapier.com/apps/forma/integrations",
@@ -86,7 +86,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       connectHref: `/workspaces/${params.workspaceId}/integrations/webhooks`,
       connectText: t("workspace.integrations.manage_webhooks"),
       connectNewTab: false,
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/webhooks",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/webhooks",
       docsText: t("common.docs"),
       docsNewTab: true,
       label: "Webhooks",
@@ -100,7 +100,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       connectHref: `/workspaces/${params.workspaceId}/integrations/google-sheets`,
       connectText: `${isGoogleSheetsIntegrationConnected ? t("common.manage") : t("common.connect")}`,
       connectNewTab: false,
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/google-sheets",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/google-sheets",
       docsText: t("common.docs"),
       docsNewTab: true,
       label: "Google Sheets",
@@ -114,7 +114,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       connectHref: `/workspaces/${params.workspaceId}/integrations/airtable`,
       connectText: `${isAirtableIntegrationConnected ? t("common.manage") : t("common.connect")}`,
       connectNewTab: false,
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/airtable",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/airtable",
       docsText: t("common.docs"),
       docsNewTab: true,
       label: "Airtable",
@@ -128,7 +128,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       connectHref: `/workspaces/${params.workspaceId}/integrations/slack`,
       connectText: `${isSlackIntegrationConnected ? t("common.manage") : t("common.connect")}`,
       connectNewTab: false,
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/slack",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/slack",
       docsText: t("common.docs"),
       docsNewTab: true,
       label: "Slack",
@@ -139,7 +139,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       disabled: isReadOnly,
     },
     {
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/n8n",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/n8n",
       connectText: `${isN8nIntegrationConnected ? t("common.manage") : t("common.connect")}`,
       docsText: t("common.docs"),
       docsNewTab: true,
@@ -153,7 +153,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       disabled: isReadOnly,
     },
     {
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/make",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/make",
       docsText: t("common.docs"),
       docsNewTab: true,
       connectHref: "https://www.make.com/en/integrations/forma",
@@ -170,7 +170,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       connectHref: `/workspaces/${params.workspaceId}/integrations/notion`,
       connectText: `${isNotionIntegrationConnected ? t("common.manage") : t("common.connect")}`,
       connectNewTab: false,
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/notion",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/notion",
       docsText: t("common.docs"),
       docsNewTab: true,
       label: "Notion",
@@ -181,7 +181,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
       disabled: isReadOnly,
     },
     {
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/activepieces",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/activepieces",
       docsText: t("common.docs"),
       docsNewTab: true,
       connectHref: "https://www.activepieces.com/pieces/forma",
@@ -197,7 +197,7 @@ const Page = async (props: { params: Promise<{ workspaceId: string }> }) => {
   ];
 
   integrationCards.unshift({
-    docsHref: "https://forma.ylam.ai/docs/app-surveys/quickstart",
+    docsHref: "https://forma.yldm.ai/docs/app-surveys/quickstart",
     docsText: t("common.docs"),
     docsNewTab: true,
     connectHref: `/workspaces/${params.workspaceId}/integrations/app-connection`,

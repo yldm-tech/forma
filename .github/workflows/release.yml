@@ -89,6 +89,23 @@ jobs:
             org.opencontainers.image.version=${{ env.VERSION }}
           provenance: false
 
+      # The documentation is a second image from the same commit, so the two can never describe
+      # different versions of the product. Same tag, different repository.
+      - name: Build and push the documentation
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./docs/deploy/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/yldm-tech/forma-docs:${{ env.VERSION }}
+            ghcr.io/yldm-tech/forma-docs:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+          provenance: false
+
       - name: Tag the published commit
         shell: bash
         run: |
@@ -127,5 +144,6 @@ jobs:
             echo "## Published $VERSION"
             echo "Source: $RELEASE_SHA"
             echo "- \`$image:$VERSION\`"
+            echo "- \`ghcr.io/yldm-tech/forma-docs:$VERSION\`"
             echo "- \`$image:sha-$RELEASE_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
