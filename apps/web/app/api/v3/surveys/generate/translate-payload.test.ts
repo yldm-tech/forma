@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { translateFields } from "@/modules/ai-translation/lib/translate-fields";
 import type { TV3CreateSurveyBody } from "../schemas";
@@ -122,5 +123,20 @@ describe("translateV3SurveyPayloadLanguages", () => {
     await call(["ja-JP", "de-DE", "fr-FR"]);
 
     expect(translateFields).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("both generation routes finish the same way", () => {
+  // The first version of this feature translated in the blocking route only. The product's own
+  // dialog streams, so multi-language generation shipped doing nothing where it was used, and
+  // every unit test still passed. This asserts the wiring the tests below cannot see.
+  test("the streaming route goes through the shared finish step, not the pure builder", () => {
+    const streamingOperations = readFileSync(
+      new URL("../../../internal/surveys/generate/lib/operations.ts", import.meta.url),
+      "utf8"
+    );
+
+    expect(streamingOperations).toContain("finishV3SurveyGeneration");
+    expect(streamingOperations).not.toContain("buildV3SurveyCreatePayloadFromDraft");
   });
 });

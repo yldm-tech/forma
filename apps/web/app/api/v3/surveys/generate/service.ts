@@ -476,14 +476,38 @@ export async function generateV3SurveyCreatePayloadFromPrompt(params: {
     ...buildV3SurveyGenerationRequest(params.input),
   });
 
-  const result = buildV3SurveyCreatePayloadFromDraft(params.input, generation.object);
+  return finishV3SurveyGeneration({
+    input: params.input,
+    draft: generation.object,
+    organizationId: params.organizationId,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+  });
+}
 
-  // After the pure build, never inside it: translating is network I/O, and a payload that claims a
-  // language it has no text for is rejected by `prepareV3SurveyCreateInput`.
+/**
+ * The one way a finished draft becomes a result. Both routes call this rather than the pure builder
+ * directly — the first version of multi-language generation wired the translation into the blocking
+ * route only, and since the product's own dialog streams, the feature did nothing where it was used.
+ *
+ * Translation sits here instead of inside `buildV3SurveyCreatePayloadFromDraft` because that
+ * function is pure and synchronous by contract, and translating is network I/O. A payload that
+ * claims a language it has no text for is rejected by `prepareV3SurveyCreateInput`, so the
+ * languages can only be added once their text exists.
+ */
+export async function finishV3SurveyGeneration(params: {
+  input: TV3SurveyGenerateBody;
+  draft: unknown;
+  organizationId: string;
+  workspaceId: string;
+  userId?: string | null;
+}): Promise<TV3SurveyGenerateResult> {
+  const result = buildV3SurveyCreatePayloadFromDraft(params.input, params.draft);
+
   const extraLanguages = (params.input.languages ?? []).filter(
     (code) => code.toLowerCase() !== result.language.toLowerCase()
   );
-  if (extraLanguages.length === 0) return result;
+  if (extraLanguages.length === 0 || !params.userId) return result;
 
   const payload = await translateV3SurveyPayloadLanguages({
     payload: result.payload,
@@ -491,11 +515,11 @@ export async function generateV3SurveyCreatePayloadFromPrompt(params: {
     targetLanguages: extraLanguages,
     organizationId: params.organizationId,
     workspaceId: params.workspaceId,
-    userId: params.userId ?? "",
+    userId: params.userId,
   });
 
-  // The validation block mirrors the payload's languages, so it has to be rebuilt from the same
-  // list rather than left describing the single-language payload the pure build produced.
+  // The validation block mirrors the payload's languages, so it is rebuilt from the same list
+  // rather than left describing the single-language payload the pure build produced.
   return {
     ...result,
     payload,
