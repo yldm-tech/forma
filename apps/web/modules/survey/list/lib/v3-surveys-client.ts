@@ -5,9 +5,16 @@ import { parseV3ApiError } from "@/modules/api/lib/v3-client";
 import { normalizeSurveyFilters } from "@/modules/survey/list/lib/utils";
 import { TSurveyListItem, TSurveyOverviewFilters } from "@/modules/survey/list/types/survey-overview";
 
-type TV3SurveyListItemResponse = Omit<
+/**
+ * `singleUse` is omitted on purpose: `serializeV3SurveyListItem` does not emit it, so the type
+ * claiming it was a lie the compiler could not catch. It is the reason
+ * `survey-dropdown-menu.tsx` reads `survey.singleUse?.enabled ?? false` and always gets `false`,
+ * whatever the survey is actually configured to do. Fixing that means adding the field to the v3
+ * response and its OpenAPI contract, which is a change of its own, not a rename here.
+ */
+export type TV3SurveyListItemResponse = Omit<
   TSurveyListItem,
-  "createdAt" | "publishOn" | "updatedAt" | "archivedAt"
+  "createdAt" | "publishOn" | "updatedAt" | "archivedAt" | "singleUse"
 > & {
   createdAt: string;
   publishOn: string | null;
@@ -71,9 +78,12 @@ export type TSurveyListPage = {
   };
 };
 
-function mapSurveyListItem(survey: TV3SurveyListItemResponse): TSurveyListItem {
+export function mapSurveyListItem(survey: TV3SurveyListItemResponse): TSurveyListItem {
   return {
     ...survey,
+    // Not in the response — see the note on TV3SurveyListItemResponse. Explicit rather than left
+    // `undefined`, so the absence is visible at the one place it is decided.
+    singleUse: null,
     createdAt: new Date(survey.createdAt),
     publishOn: survey.publishOn ? new Date(survey.publishOn) : null,
     updatedAt: new Date(survey.updatedAt),

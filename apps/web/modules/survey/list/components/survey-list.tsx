@@ -20,6 +20,7 @@ import { useDeleteSurvey } from "@/modules/survey/list/hooks/use-delete-survey";
 import { useRenameSurvey } from "@/modules/survey/list/hooks/use-rename-survey";
 import { useRestoreSurvey } from "@/modules/survey/list/hooks/use-restore-survey";
 import { useSurveys } from "@/modules/survey/list/hooks/use-surveys";
+import type { TInitialSurveyPage } from "@/modules/survey/list/hooks/use-surveys";
 import { useUpdateSurveyStatus } from "@/modules/survey/list/hooks/use-update-survey-status";
 import { initialFilters } from "@/modules/survey/list/lib/constants";
 import { normalizeSurveyFilters, parseStoredSurveyFilters } from "@/modules/survey/list/lib/utils";
@@ -53,6 +54,8 @@ interface SurveysListProps {
   isAIAvailable: boolean;
   aiUnavailableReason?: TAIUnavailableReason;
   showFeaturedTemplates?: boolean;
+  /** Page one with the default filters, read on the server. Seeds the query cache. */
+  initialSurveyPage?: TInitialSurveyPage;
 }
 
 type NewSurveyMenuProps = {
@@ -156,6 +159,7 @@ export const SurveysList = ({
   isAIAvailable,
   aiUnavailableReason,
   showFeaturedTemplates = false,
+  initialSurveyPage,
 }: Readonly<SurveysListProps>) => {
   const { t } = useTranslation();
   const [surveyFilters, setSurveyFilters] = useState<TSurveyOverviewFilters>(initialFilters);
@@ -209,6 +213,7 @@ export const SurveysList = ({
     limit: surveysPerPage,
     filters: normalizedFilters,
     enabled: isFilterInitialized,
+    initialPage: initialSurveyPage,
   });
 
   const deleteSurveyMutation = useDeleteSurvey({ queryKey });

@@ -11,6 +11,7 @@ import { getTranslate } from "@/lingodotdev/server";
 import { getSurveyAIAvailability } from "@/modules/survey/lib/get-survey-ai-availability";
 import { getWorkspaceWithTeamIds } from "@/modules/survey/lib/workspace";
 import { SurveysList } from "@/modules/survey/list/components/survey-list";
+import { getInitialSurveyListPage } from "@/modules/survey/list/lib/initial-page";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 
 export const metadata: Metadata = {
@@ -41,11 +42,15 @@ export const SurveysPage = async ({ params: paramsProps }: SurveyTemplateProps) 
   }
 
   const currentWorkspaceChannel = workspace.config.channel ?? null;
-  const [locale, featuredTemplatesVariant, { isAIAvailable, aiUnavailableReason }] = await Promise.all([
-    getUserLocale(session.user.id).then((l) => l ?? DEFAULT_LOCALE),
-    getPostHogFeatureFlag(session.user.id, "a-b_surveys_featured-templates-create-with-ai"),
-    getSurveyAIAvailability(workspace.organizationId, { isReadOnly }),
-  ]);
+  const [locale, featuredTemplatesVariant, { isAIAvailable, aiUnavailableReason }, initialSurveyPage] =
+    await Promise.all([
+      getUserLocale(session.user.id).then((l) => l ?? DEFAULT_LOCALE),
+      getPostHogFeatureFlag(session.user.id, "a-b_surveys_featured-templates-create-with-ai"),
+      getSurveyAIAvailability(workspace.organizationId, { isReadOnly }),
+      // Page one with the default filters, so the list renders rows instead of waiting for
+      // hydration to start its first request. See `lib/initial-page.ts`.
+      getInitialSurveyListPage(params.workspaceId, SURVEYS_PER_PAGE),
+    ]);
   const workspaceWithRequiredProps = {
     ...workspace,
     brandColor: workspace.styling?.brandColor?.light ?? null,
@@ -67,6 +72,7 @@ export const SurveysPage = async ({ params: paramsProps }: SurveyTemplateProps) 
       isAIAvailable={isAIAvailable}
       aiUnavailableReason={aiUnavailableReason}
       showFeaturedTemplates={featuredTemplatesVariant === "test"}
+      initialSurveyPage={initialSurveyPage}
     />
   );
 };
