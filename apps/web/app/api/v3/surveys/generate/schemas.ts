@@ -62,7 +62,18 @@ export const ZV3SurveyGenerateBody = z
         `Prompt must be ${V3_SURVEY_GENERATE_PROMPT_MAX_LENGTH} characters or less`
       ),
     type: z.enum(["link", "app"]).prefault("link"),
-    language: ZV3SurveyGenerateLanguage.optional(),
+    // The first entry is the survey's default language and the one the model writes in; the rest
+    // are attached to the survey so the editor's translation flow can fill them. Kept as an array
+    // rather than a language plus a translations list because the caller already thinks of it as
+    // one ordered choice, and the create path upserts every code it is given.
+    languages: z
+      .array(ZV3SurveyGenerateLanguage)
+      .min(1)
+      .max(V3_SURVEY_GENERATE_ALLOWED_LOCALES.length)
+      .refine((codes) => new Set(codes).size === codes.length, {
+        message: "languages must not repeat a locale",
+      })
+      .optional(),
   })
   .strict();
 

@@ -38,3 +38,15 @@ export const getHelperPrompts = (
     Icon: TrendingDownIcon,
   },
 ];
+
+/**
+ * The language an AI draft is generated in when the author picks nothing.
+ *
+ * English rather than the signed-in person's locale: a survey's audience is not its author, and
+ * the common case is writing for readers elsewhere.
+ *
+ * Restated here rather than imported from the route's schemas: production code under `modules/`
+ * does not import from `app/`, and the route keeps its own fallback for callers that send no
+ * language at all. The picker always sends one, so the two cannot disagree in practice.
+ */
+export const DEFAULT_AI_SURVEY_LANGUAGE = "en-US" as const;

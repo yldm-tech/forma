@@ -19,6 +19,7 @@ import {
   ZGeneratedSurveyDraft,
   ZGeneratedSurveyDraftForAI,
 } from "./schemas";
+import { translateV3SurveyPayloadLanguages } from "./translate-payload";
 
 export type TV3SurveyGenerateValidation = {
   valid: boolean;
@@ -407,7 +408,7 @@ export function buildV3SurveyGenerationRequest(input: TV3SurveyGenerateBody) {
     prompt: buildV3SurveyGenerationPrompt(
       input.prompt,
       input.type,
-      input.language ?? DEFAULT_V3_SURVEY_LANGUAGE,
+      input.languages?.[0] ?? DEFAULT_V3_SURVEY_LANGUAGE,
       V3_SURVEY_GENERATE_ALLOWED_LOCALES
     ),
     temperature: 0.2,
@@ -475,5 +476,38 @@ export async function generateV3SurveyCreatePayloadFromPrompt(params: {
     ...buildV3SurveyGenerationRequest(params.input),
   });
 
-  return buildV3SurveyCreatePayloadFromDraft(params.input, generation.object);
+  const result = buildV3SurveyCreatePayloadFromDraft(params.input, generation.object);
+
+  // After the pure build, never inside it: translating is network I/O, and a payload that claims a
+  // language it has no text for is rejected by `prepareV3SurveyCreateInput`.
+  const extraLanguages = (params.input.languages ?? []).filter(
+    (code) => code.toLowerCase() !== result.language.toLowerCase()
+  );
+  if (extraLanguages.length === 0) return result;
+
+  const payload = await translateV3SurveyPayloadLanguages({
+    payload: result.payload,
+    sourceLanguage: result.language,
+    targetLanguages: extraLanguages,
+    organizationId: params.organizationId,
+    workspaceId: params.workspaceId,
+    userId: params.userId ?? "",
+  });
+
+  // The validation block mirrors the payload's languages, so it has to be rebuilt from the same
+  // list rather than left describing the single-language payload the pure build produced.
+  return {
+    ...result,
+    payload,
+    validation: {
+      ...result.validation,
+      languages: payload.languages.map(({ code, default: isDefault, enabled }) => ({
+        code,
+        // The payload's `default` is optional; the validation block's is not. Only the source
+        // language is ever the default here, so an absent flag means false.
+        default: isDefault ?? false,
+        enabled,
+      })),
+    },
+  };
 }

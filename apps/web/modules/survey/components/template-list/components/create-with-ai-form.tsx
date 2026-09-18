@@ -11,18 +11,13 @@ import { AiDraftPreview } from "@/modules/survey/components/template-list/compon
 import { useCreateSurveyWithAI } from "@/modules/survey/components/template-list/hooks/use-create-survey-with-ai";
 import {
   AI_SURVEY_PROMPT_MAX_LENGTH,
+  DEFAULT_AI_SURVEY_LANGUAGE,
   getHelperPrompts,
 } from "@/modules/survey/components/template-list/lib/ai-create-utils";
 import { AiIcon, AiStatusLine } from "@/modules/ui/components/ai";
 import { Alert, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/modules/ui/components/select";
+import { MultiSelect } from "@/modules/ui/components/multi-select";
 import { TooltipRenderer } from "@/modules/ui/components/tooltip";
 
 type CreateWithAIFormProps = {
@@ -67,8 +62,8 @@ export const CreateWithAIForm = ({
   const {
     prompt,
     setPrompt,
-    language: selectedLanguage,
-    setLanguage: setSelectedLanguage,
+    languages: selectedLanguages,
+    setLanguages: setSelectedLanguages,
     submittedPrompt,
     status,
     draft,
@@ -86,7 +81,14 @@ export const CreateWithAIForm = ({
     clearError,
     hasKeptDraft,
     hasUnsavedWork,
-  } = useCreateSurveyWithAI({ workspaceId, defaultLanguage: language, isAIAvailable, onSuccess });
+  } = useCreateSurveyWithAI({
+    workspaceId,
+    // English, not the signed-in person's locale: a survey's audience is not its author, and the
+    // common case is writing for readers elsewhere.
+    defaultLanguage: DEFAULT_AI_SURVEY_LANGUAGE,
+    isAIAvailable,
+    onSuccess,
+  });
 
   const stopButtonRef = useRef<HTMLButtonElement>(null);
   const draftRef = useRef<HTMLElement>(null);
@@ -125,7 +127,7 @@ export const CreateWithAIForm = ({
   const languageOptions = useMemo(
     () =>
       ZUserLocale.options
-        .map((code) => ({ code, label: getLanguageLabel(code, language) ?? code }))
+        .map((code) => ({ value: code, label: getLanguageLabel(code, language) ?? code }))
         .sort((a, b) => a.label.localeCompare(b.label, language)),
     [language]
   );
@@ -295,30 +297,29 @@ export const CreateWithAIForm = ({
               <span>{t("workspace.surveys.ai_create.shortcut_hint")}</span>
             </div>
 
-            {/* Beside the prompt rather than behind a settings affordance: which language the
-                questions come back in is part of what is being asked for, not a preference. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor="ai-survey-language" className="text-sm font-medium text-slate-700">
+            {/* Beside the prompt rather than behind a settings affordance: which languages the
+                survey comes back in is part of what is being asked for, not a preference.
+
+                The first selection is the survey's default language and the one the model writes
+                in; the rest are attached to the draft empty, for the editor's translation flow to
+                fill. Emptying the list falls back to the default rather than sending none, because
+                a survey with no language is not a thing the create path can build. */}
+            <div className="space-y-1">
+              <label htmlFor="ai-survey-languages" className="text-sm font-medium text-slate-700">
                 {t("common.language")}
               </label>
-              <Select
-                value={selectedLanguage}
-                onValueChange={(value) => setSelectedLanguage(value as TUserLocale)}
-                disabled={isGenerating}>
-                <SelectTrigger
-                  id="ai-survey-language"
-                  className="h-8 w-auto min-w-40"
-                  aria-label={t("common.select_language")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {languageOptions.map((option) => (
-                    <SelectItem key={option.code} value={option.code}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={languageOptions}
+                value={selectedLanguages}
+                onChange={(selected) =>
+                  setSelectedLanguages(
+                    selected.length > 0 ? (selected as TUserLocale[]) : [DEFAULT_AI_SURVEY_LANGUAGE]
+                  )
+                }
+                disabled={isGenerating}
+                placeholder={t("common.select_language")}
+                containerClassName="w-full"
+              />
             </div>
           </div>
 

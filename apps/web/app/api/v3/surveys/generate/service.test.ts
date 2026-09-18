@@ -733,7 +733,7 @@ describe("generateV3SurveyCreatePayloadFromPrompt", () => {
       workspaceId,
       input: {
         ...generateInput,
-        language: "es-ES",
+        languages: ["es-ES"],
         prompt: "Mide la experiencia de onboarding de usuarios nuevos.",
       },
     });
