@@ -10,7 +10,6 @@ import {
   KeyIcon,
   LanguagesIcon,
   Loader2,
-  ShieldIcon,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -277,7 +276,7 @@ export const SettingsSidebarContent = ({
 }: SettingsSidebarContentProps) => {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { isMember, isBilling, isOwner, isManager } = getAccessFlags(membershipRole);
+  const { isBilling, isOwner, isManager } = getAccessFlags(membershipRole);
   const isOwnerOrManager = isOwner || isManager;
   const iconClassName = "h-4 w-4 shrink-0";
 
@@ -354,14 +353,6 @@ export const SettingsSidebarContent = ({
       href: organizationSettingsPath(organizationId, "billing"),
       icon: <CreditCardIcon className={iconClassName} />,
       hidden: !isFormaCloud,
-    },
-    {
-      id: "org-enterprise",
-      label: t("common.enterprise_license"),
-      href: organizationSettingsPath(organizationId, "enterprise"),
-      icon: <ShieldIcon className={iconClassName} />,
-      hidden: isFormaCloud,
-      disabled: isMember || isBilling,
     },
   ];
 

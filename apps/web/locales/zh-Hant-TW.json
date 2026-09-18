@@ -283,7 +283,6 @@
     "enabled": "已啟用",
     "ending_card": "結尾卡片",
     "enter_url": "輸入 URL",
-    "enterprise_license": "企業授權",
     "error": "錯誤",
     "error_component_description": "此資源不存在或您沒有存取權限。",
     "error_component_title": "載入資源錯誤",
@@ -2434,27 +2433,7 @@
         "workspace": "工作區"
       },
       "enterprise": {
-        "audit_logs": "稽核記錄",
-        "coming_soon": "即將推出",
-        "contacts_and_segments": "聯絡人管理和區隔",
-        "custom_workspace_count": "自訂「工作區」數量",
-        "hide_powered_by_forma": "隱藏「Powered by Forma」",
-        "license_features_table_access": "存取權限",
-        "license_features_table_description": "此執行個體目前可使用的企業功能與限制。",
-        "license_features_table_disabled": "已停用",
-        "license_features_table_enabled": "已啟用",
-        "license_features_table_feature": "功能",
-        "license_features_table_title": "授權功能",
-        "license_features_table_unlimited": "無限制",
-        "license_features_table_value": "值",
-        "oidc_sso": "OIDC 單一登入(AzureAD、Google、OpenID)",
-        "quota_management": "配額管理",
-        "saml_sso": "SAML SSO",
-        "spam_protection_recaptcha": "垃圾訊息防護(ReCaptchaV3)",
-        "teams_and_access_roles": "團隊與存取角色",
-        "two_factor_authentication": "雙重驗證",
-        "whitelabel_email_follow_ups": "白標電子郵件追蹤",
-        "workflows": "Workflows"
+        "coming_soon": "即將推出"
       },
       "general": {
         "ai_enabled": "Forma AI",

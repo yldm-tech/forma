@@ -283,7 +283,6 @@
     "enabled": "已启用",
     "ending_card": "结尾卡片",
     "enter_url": "输入 URL",
-    "enterprise_license": "企业 许可证",
     "error": "错误",
     "error_component_description": "这个资源不存在或您没有权限访问它。",
     "error_component_title": "错误 加载 资源",
@@ -2434,27 +2433,7 @@
         "workspace": "工作区"
       },
       "enterprise": {
-        "audit_logs": "审计日志",
-        "coming_soon": "即将推出",
-        "contacts_and_segments": "联系人管理 & 分段",
-        "custom_workspace_count": "自定义\"工作空间\"数量",
-        "hide_powered_by_forma": "隐藏 \"Powered by Forma\"",
-        "license_features_table_access": "访问权限",
-        "license_features_table_description": "此实例当前可用的企业功能和限制。",
-        "license_features_table_disabled": "已禁用",
-        "license_features_table_enabled": "已启用",
-        "license_features_table_feature": "功能",
-        "license_features_table_title": "许可功能",
-        "license_features_table_unlimited": "无限制",
-        "license_features_table_value": "值",
-        "oidc_sso": "OIDC 单点登录 (AzureAD、Google、OpenID)",
-        "quota_management": "配额管理",
-        "saml_sso": "SAML SSO",
-        "spam_protection_recaptcha": "垃圾信息防护 (ReCaptchaV3)",
-        "teams_and_access_roles": "团队和访问角色",
-        "two_factor_authentication": "双因素身份验证",
-        "whitelabel_email_follow_ups": "白标电子邮件跟进",
-        "workflows": "Workflows"
+        "coming_soon": "即将推出"
       },
       "general": {
         "ai_enabled": "Forma AI",
