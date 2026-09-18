@@ -8,6 +8,10 @@ export const mockPosthog = {
   __loaded: false,
   capture: vi.fn(),
   getFeatureFlag: vi.fn(),
+  group: vi.fn(),
+  identify: vi.fn(),
+  init: vi.fn(),
+  reset: vi.fn(),
 };
 
 vi.mock("posthog-js", () => ({ default: mockPosthog }));

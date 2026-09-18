@@ -5,7 +5,6 @@ import type { TFunction } from "i18next";
 import { CheckIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import posthog from "posthog-js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Trans, useTranslation } from "react-i18next";
@@ -16,6 +15,7 @@ import {
   type TOrganizationStripeSubscriptionStatus,
 } from "@forma/types/organizations";
 import { cn } from "@/lib/cn";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { formatDateForDisplay } from "@/lib/utils/datetime";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { Badge } from "@/modules/ui/components/badge";
@@ -833,7 +833,7 @@ export const PricingTable = ({
   };
 
   const handlePlanAction = async (plan: TStandardPlan, interval: TCloudBillingInterval) => {
-    posthog.capture("billing_pricing_cta_clicked", {
+    capturePostHogClientEvent("billing_pricing_cta_clicked", {
       plan,
       interval,
       cta: getCtaKey(plan, interval),

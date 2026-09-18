@@ -1,7 +1,7 @@
 "use client";
 
-import posthog from "posthog-js";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { whenPostHogReady } from "@/lib/posthog/client";
 
 interface PostHogGroupIdentifyProps {
   organizationId: string;
@@ -16,42 +16,17 @@ export const PostHogGroupIdentify = ({
   workspaceId,
   workspaceName,
 }: PostHogGroupIdentifyProps) => {
-  const cancelledRef = useRef(false);
-
-  useEffect(() => {
-    cancelledRef.current = false;
-
-    const applyGroups = () => {
-      posthog.group("organization", organizationId, { name: organizationName });
-      posthog.group("workspace", workspaceId, { name: workspaceName });
-    };
-
-    if (posthog.__loaded) {
-      applyGroups();
-      return;
-    }
-
-    // PostHogIdentify (in app layout) initialises posthog from a sibling
-    // useEffect; effect order isn't guaranteed, so poll briefly until loaded.
-    const intervalId = setInterval(() => {
-      if (cancelledRef.current) return;
-      if (posthog.__loaded) {
-        applyGroups();
-        clearInterval(intervalId);
-      }
-    }, 50);
-
-    const timeoutId = setTimeout(() => {
-      cancelledRef.current = true;
-      clearInterval(intervalId);
-    }, 5000);
-
-    return () => {
-      cancelledRef.current = true;
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-    };
-  }, [organizationId, organizationName, workspaceId, workspaceName]);
+  useEffect(
+    () =>
+      // PostHogIdentify initialises the SDK from a sibling effect in the app layout and effect order
+      // is not guaranteed, so this waits rather than assuming it is loaded. It gives up after a few
+      // seconds, which is what happens on an install with no POSTHOG_KEY.
+      whenPostHogReady((posthog) => {
+        posthog.group("organization", organizationId, { name: organizationName });
+        posthog.group("workspace", workspaceId, { name: workspaceName });
+      }),
+    [organizationId, organizationName, workspaceId, workspaceName]
+  );
 
   return null;
 };

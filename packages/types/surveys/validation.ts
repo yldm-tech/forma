@@ -1,5 +1,5 @@
-import { parse } from "node-html-parser";
 import { type z } from "zod";
+import { getTextContent, isValidHTML } from "@forma/types/surveys/html-text";
 import type { TI18nString } from "../i18n";
 import { RESERVED_FIELD_NAMES } from "../reserved-field-names";
 import { isLegacyIdCharset, isSafeIdentifier } from "../safe-identifier";
@@ -11,47 +11,6 @@ import type {
   TSurveyQuestion,
   TSurveyQuestionId,
 } from "./types";
-
-/**
- * Checks if a string contains valid HTML markup
- * @param str - The input string to test
- * @returns true if the string contains valid HTML elements, false otherwise
- */
-export const isValidHTML = (str: string): boolean => {
-  if (!str) return false;
-
-  try {
-    const root = parse(str);
-    // Check if there are any element nodes (not just text nodes)
-    // nodeType 1 = ELEMENT_NODE
-    return root.childNodes.some((node) => Number(node.nodeType) === 1);
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Extracts text content from an HTML string
- * Works in both browser and Node.js using node-html-parser
- * @param str - The input string (can be HTML or plain text)
- * @returns The extracted text content without HTML tags
- */
-export const getTextContent = (str: string): string => {
-  if (!str || str.trim() === "") return "";
-
-  if (isValidHTML(str)) {
-    try {
-      const root = parse(str);
-      const textContent = root.textContent;
-      return textContent.trim();
-    } catch {
-      // If parsing fails, treat as plain text
-      return str.trim();
-    }
-  }
-
-  return str.trim();
-};
 
 export const FORBIDDEN_IDS = [
   "userId",
@@ -447,3 +406,9 @@ export const isSingleCondition = (condition: TCondition): condition is TSingleCo
 export const isConditionGroup = (condition: TCondition): condition is TConditionGroup => {
   return "conditions" in condition;
 };
+
+// Re-exported so the ~30 call sites that already import these from here keep working. The
+// implementations moved to `html-text`, which has a browser variant: `node-html-parser` pulls 84 KB
+// brotli of HTML entity tables into the browser, and the browser has `DOMParser` built in.
+// A package-name import, not a relative one — `exports` conditions do not apply to relative paths.
+export { getTextContent, isValidHTML };

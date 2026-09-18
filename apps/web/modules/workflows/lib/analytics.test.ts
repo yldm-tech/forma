@@ -5,6 +5,7 @@ import { WORKFLOW_CLIENT_EVENTS, WORKFLOW_LIFECYCLE_EVENTS, WORKFLOW_SURFACES } 
 describe("trackWorkflowEvent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
     mockPosthog.__loaded = false;
   });
 
@@ -17,7 +18,11 @@ describe("trackWorkflowEvent", () => {
   });
 
   test("captures the event with its properties once loaded", async () => {
-    mockPosthog.__loaded = true;
+    // Initialised for real rather than by flipping `__loaded`: the SDK is loaded lazily now, so
+    // "is PostHog available" is a question about whether `initPostHogClient` ran, not about a flag
+    // on a module that may never have been imported.
+    const { initPostHogClient } = await import("@/lib/posthog/client");
+    await initPostHogClient("phc_test", {});
     const { trackWorkflowEvent } = await import("./analytics");
 
     trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.listFiltered, { sort_by: "updatedAt" });
@@ -29,6 +34,7 @@ describe("trackWorkflowEvent", () => {
 describe("trackWorkflowEventWhenReady", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
     vi.useFakeTimers();
     mockPosthog.__loaded = false;
   });
@@ -41,15 +47,16 @@ describe("trackWorkflowEventWhenReady", () => {
     const { trackWorkflowEventWhenReady } = await import("./analytics");
 
     trackWorkflowEventWhenReady(WORKFLOW_CLIENT_EVENTS.surfaceViewed, { surface: "builder" });
-    vi.advanceTimersByTime(200);
+    await vi.advanceTimersByTimeAsync(200);
     expect(mockPosthog.capture).not.toHaveBeenCalled();
 
-    mockPosthog.__loaded = true;
-    vi.advanceTimersByTime(50);
+    const { initPostHogClient } = await import("@/lib/posthog/client");
+    await initPostHogClient("phc_test", {});
+    await vi.advanceTimersByTimeAsync(50);
     expect(mockPosthog.capture).toHaveBeenCalledTimes(1);
     expect(mockPosthog.capture).toHaveBeenCalledWith("workflow_surface_viewed", { surface: "builder" });
 
-    vi.advanceTimersByTime(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(mockPosthog.capture).toHaveBeenCalledTimes(1);
   });
 
@@ -58,8 +65,9 @@ describe("trackWorkflowEventWhenReady", () => {
 
     const cancel = trackWorkflowEventWhenReady(WORKFLOW_CLIENT_EVENTS.surfaceViewed, { surface: "list" });
     cancel();
-    mockPosthog.__loaded = true;
-    vi.advanceTimersByTime(500);
+    const { initPostHogClient } = await import("@/lib/posthog/client");
+    await initPostHogClient("phc_test", {});
+    await vi.advanceTimersByTimeAsync(500);
 
     expect(mockPosthog.capture).not.toHaveBeenCalled();
   });

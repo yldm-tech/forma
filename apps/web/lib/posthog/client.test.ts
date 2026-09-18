@@ -1,136 +1,139 @@
 import { mockPosthog } from "@/lib/posthog/__mocks__/posthog-js";
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-describe("getPostHogClientFeatureFlag", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPosthog.__loaded = false;
-  });
+const loadClient = async () => {
+  vi.resetModules();
+  return import("./client");
+};
 
-  test("returns false before PostHog is initialized", async () => {
-    const { getPostHogClientFeatureFlag } = await import("./client");
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockPosthog.__loaded = false;
+});
 
-    expect(getPostHogClientFeatureFlag("test-flag")).toBe(false);
-    expect(mockPosthog.getFeatureFlag).not.toHaveBeenCalled();
-  });
+afterEach(() => {
+  vi.useRealTimers();
+});
 
-  test("returns true from posthog.getFeatureFlag", async () => {
-    mockPosthog.__loaded = true;
-    mockPosthog.getFeatureFlag.mockReturnValue(true);
+describe("posthog-js stays out of the entry bundle", () => {
+  // The point of this module. A static `import posthog from "posthog-js"` anywhere in application
+  // code puts 93 KB brotli into the chunk group of the app layout's unconditionally-rendered
+  // clients, where the `POSTHOG_KEY &&` render guard cannot reach it — 290 KB parsed and executed on
+  // every authenticated page of an install that has no key. Only a dynamic import is code-split.
+  test("the module imports the SDK dynamically, and only for its type otherwise", () => {
+    const source = readFileSync(new URL("./client.ts", import.meta.url), "utf8");
 
-    const { getPostHogClientFeatureFlag } = await import("./client");
-
-    expect(getPostHogClientFeatureFlag("test-flag")).toBe(true);
-  });
-
-  test("returns false from posthog.getFeatureFlag", async () => {
-    mockPosthog.__loaded = true;
-    mockPosthog.getFeatureFlag.mockReturnValue(false);
-
-    const { getPostHogClientFeatureFlag } = await import("./client");
-
-    expect(getPostHogClientFeatureFlag("test-flag")).toBe(false);
-  });
-
-  test("returns variant string from posthog.getFeatureFlag", async () => {
-    mockPosthog.__loaded = true;
-    mockPosthog.getFeatureFlag.mockReturnValue("variant-a");
-
-    const { getPostHogClientFeatureFlag } = await import("./client");
-
-    expect(getPostHogClientFeatureFlag("test-flag")).toBe("variant-a");
-  });
-
-  test("coerces undefined to false", async () => {
-    mockPosthog.__loaded = true;
-    mockPosthog.getFeatureFlag.mockReturnValue(undefined);
-
-    const { getPostHogClientFeatureFlag } = await import("./client");
-
-    expect(getPostHogClientFeatureFlag("test-flag")).toBe(false);
+    expect(source).toContain('import("posthog-js")');
+    // A type-only import is erased at compile time and costs nothing.
+    expect(source).toContain('import type { PostHog } from "posthog-js"');
+    expect(source).not.toMatch(/^import posthog from "posthog-js";$/m);
   });
 });
 
 describe("capturePostHogClientEvent", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPosthog.__loaded = false;
-  });
+  test("drops the event when PostHog was never initialised", async () => {
+    // The install this runs on has no POSTHOG_KEY, so this is the normal path, not an edge case.
+    const { capturePostHogClientEvent } = await loadClient();
 
-  test("drops the event while PostHog is not initialised", async () => {
-    const { capturePostHogClientEvent } = await import("./client");
-
-    capturePostHogClientEvent("upgrade_cta_clicked", { feature: "workflows" });
+    capturePostHogClientEvent("some_event", { a: 1 });
 
     expect(mockPosthog.capture).not.toHaveBeenCalled();
   });
 
-  test("captures the event with its properties once initialised", async () => {
-    mockPosthog.__loaded = true;
-    const { capturePostHogClientEvent } = await import("./client");
+  test("captures once PostHog has been initialised", async () => {
+    const { capturePostHogClientEvent, initPostHogClient } = await loadClient();
+    await initPostHogClient("phc_test", {});
 
-    capturePostHogClientEvent("upgrade_cta_clicked", { feature: "workflows" });
+    capturePostHogClientEvent("some_event", { a: 1 });
 
-    expect(mockPosthog.capture).toHaveBeenCalledWith("upgrade_cta_clicked", { feature: "workflows" });
+    expect(mockPosthog.capture).toHaveBeenCalledWith("some_event", { a: 1 });
   });
 });
 
-describe("capturePostHogClientEventWhenReady", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("initPostHogClient", () => {
+  test("initialises the SDK and exposes it", async () => {
+    const { getPostHogClient, initPostHogClient } = await loadClient();
+    expect(getPostHogClient()).toBeNull();
+
+    const client = await initPostHogClient("phc_test", { api_host: "/ingest" });
+
+    expect(mockPosthog.init).toHaveBeenCalledWith("phc_test", { api_host: "/ingest" });
+    expect(client).toBe(mockPosthog);
+    expect(getPostHogClient()).toBe(mockPosthog);
+  });
+
+  test("never initialises twice, however many callers race", async () => {
+    // A second `init` resets the SDK's state, which would drop the identify that just ran.
+    const { initPostHogClient } = await loadClient();
+
+    await Promise.all([
+      initPostHogClient("phc_test", {}),
+      initPostHogClient("phc_test", {}),
+      initPostHogClient("phc_test", {}),
+    ]);
+    await initPostHogClient("phc_test", {});
+
+    expect(mockPosthog.init).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not re-init an SDK that already loaded itself", async () => {
+    const { initPostHogClient } = await loadClient();
+    mockPosthog.__loaded = true;
+
+    await initPostHogClient("phc_test", {});
+
+    expect(mockPosthog.init).not.toHaveBeenCalled();
+  });
+});
+
+describe("whenPostHogReady", () => {
+  test("runs immediately when PostHog is already initialised", async () => {
+    const { initPostHogClient, whenPostHogReady } = await loadClient();
+    await initPostHogClient("phc_test", {});
+    const action = vi.fn();
+
+    whenPostHogReady(action);
+
+    expect(action).toHaveBeenCalledWith(mockPosthog);
+  });
+
+  test("waits for initialisation, then runs once", async () => {
     vi.useFakeTimers();
-    mockPosthog.__loaded = false;
+    const { initPostHogClient, whenPostHogReady } = await loadClient();
+    const action = vi.fn();
+
+    whenPostHogReady(action);
+    expect(action).not.toHaveBeenCalled();
+
+    await initPostHogClient("phc_test", {});
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(action).toHaveBeenCalledTimes(1);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  test("gives up rather than polling forever when no key is configured", async () => {
+    vi.useFakeTimers();
+    const { whenPostHogReady } = await loadClient();
+    const action = vi.fn();
+
+    whenPostHogReady(action);
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(action).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  test("captures at once when PostHog is already initialised", async () => {
-    mockPosthog.__loaded = true;
-    const { capturePostHogClientEventWhenReady } = await import("./client");
+  test("the returned canceller stops the wait, so a remount cannot double-report", async () => {
+    vi.useFakeTimers();
+    const { initPostHogClient, whenPostHogReady } = await loadClient();
+    const action = vi.fn();
 
-    capturePostHogClientEventWhenReady("upgrade_prompt_viewed", { feature: "workflows" });
-
-    expect(mockPosthog.capture).toHaveBeenCalledTimes(1);
-    expect(mockPosthog.capture).toHaveBeenCalledWith("upgrade_prompt_viewed", { feature: "workflows" });
-  });
-
-  test("waits for PostHog to initialise, then captures exactly once", async () => {
-    const { capturePostHogClientEventWhenReady } = await import("./client");
-
-    capturePostHogClientEventWhenReady("upgrade_prompt_viewed", { feature: "workflows" });
-    vi.advanceTimersByTime(200);
-    expect(mockPosthog.capture).not.toHaveBeenCalled();
-
-    mockPosthog.__loaded = true;
-    vi.advanceTimersByTime(50);
-    expect(mockPosthog.capture).toHaveBeenCalledTimes(1);
-    expect(mockPosthog.capture).toHaveBeenCalledWith("upgrade_prompt_viewed", { feature: "workflows" });
-
-    vi.advanceTimersByTime(10_000);
-    expect(mockPosthog.capture).toHaveBeenCalledTimes(1);
-  });
-
-  test("gives up once the readiness window has passed", async () => {
-    const { capturePostHogClientEventWhenReady } = await import("./client");
-
-    capturePostHogClientEventWhenReady("upgrade_prompt_viewed", { feature: "workflows" });
-    vi.advanceTimersByTime(6000);
-    mockPosthog.__loaded = true;
-    vi.advanceTimersByTime(1000);
-
-    expect(mockPosthog.capture).not.toHaveBeenCalled();
-  });
-
-  test("cancelling before PostHog is ready drops the event", async () => {
-    const { capturePostHogClientEventWhenReady } = await import("./client");
-
-    const cancel = capturePostHogClientEventWhenReady("upgrade_prompt_viewed", { feature: "workflows" });
+    const cancel = whenPostHogReady(action);
     cancel();
-    mockPosthog.__loaded = true;
-    vi.advanceTimersByTime(500);
+    await initPostHogClient("phc_test", {});
+    await vi.advanceTimersByTimeAsync(1000);
 
-    expect(mockPosthog.capture).not.toHaveBeenCalled();
+    expect(action).not.toHaveBeenCalled();
   });
 });

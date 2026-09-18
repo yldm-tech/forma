@@ -13,7 +13,6 @@ import { getTranslate } from "@/lingodotdev/server";
 import { getSegments } from "@/modules/contacts/segments/lib/segments";
 import { getIsContactsEnabled, getIsQuotasEnabled } from "@/modules/license-check/lib/utils";
 import { getQuotas } from "@/modules/quotas/lib/quotas";
-import { getOrganizationBilling } from "@/modules/survey/lib/survey";
 import { getSurveyAuth } from "@/modules/survey/lib/survey-auth";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
@@ -50,11 +49,6 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
   const segments = isContactsEnabled ? await getSegments(workspace.id) : [];
 
   const publicDomain = getPublicDomain();
-
-  const organizationBilling = await getOrganizationBilling(organization.id);
-  if (!organizationBilling) {
-    throw new ResourceNotFoundError(t("common.organization"), organization.id);
-  }
 
   const isQuotasAllowed = await getIsQuotasEnabled();
   const quotas = isQuotasAllowed ? await getQuotas(survey.id) : [];

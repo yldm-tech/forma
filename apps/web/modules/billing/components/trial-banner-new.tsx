@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 
 export const TRIAL_BASE_RESPONSE_LIMIT = 250;
 
@@ -33,7 +33,7 @@ export const TrialBannerNew = ({
   return (
     <Link
       href={billingHref}
-      onClick={() => posthog.capture("main_nav_go_to_billing_clicked")}
+      onClick={() => capturePostHogClientEvent("main_nav_go_to_billing_clicked")}
       className="m-2 block rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50">
       <div className="mb-1 flex items-center gap-2">
         <span className="font-semibold text-slate-800">
