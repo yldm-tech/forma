@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import {
   getAIUnavailableAction,
@@ -9,6 +8,7 @@ import {
   getAIUnavailableMessage,
 } from "@/lib/ai/availability";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "@/modules/ui/components/alert";
 import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 
@@ -35,8 +35,8 @@ export const AIUnavailableAlert = ({ title, reason, feature }: Readonly<AIUnavai
 
   // Only a plan change is a conversion; switching a setting back on is not, so it stays untracked.
   const handleClick = () => {
-    if (posthog.__loaded && action && action.type !== "enable_ai") {
-      posthog.capture("upgrade_cta_clicked", { feature });
+    if (action && action.type !== "enable_ai") {
+      capturePostHogClientEvent("upgrade_cta_clicked", { feature });
     }
   };
 

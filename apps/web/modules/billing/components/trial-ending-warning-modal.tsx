@@ -2,9 +2,9 @@
 
 import { ClockIcon, XCircleIcon } from "lucide-react";
 import Link from "next/link";
-import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { Button } from "@/modules/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/modules/ui/components/dialog";
 
@@ -22,7 +22,7 @@ export const TrialEndingWarningModal = ({ daysRemaining, billingHref }: TrialEnd
   useEffect(() => {
     document.cookie = `trial_ending_shown_${daysRemaining}=true; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
     setOpen(true);
-    posthog.capture("trial_ending_warning_shown", { days_remaining: daysRemaining });
+    capturePostHogClientEvent("trial_ending_warning_shown", { days_remaining: daysRemaining });
   }, [daysRemaining]);
 
   const handleDismiss = () => {
@@ -86,7 +86,7 @@ export const TrialEndingWarningModal = ({ daysRemaining, billingHref }: TrialEnd
             <Button
               variant="secondary"
               onClick={() => {
-                posthog.capture("trial_ending_warning_cta_clicked", {
+                capturePostHogClientEvent("trial_ending_warning_cta_clicked", {
                   days_remaining: daysRemaining,
                   cta: "remind_me_later",
                 });
@@ -97,7 +97,7 @@ export const TrialEndingWarningModal = ({ daysRemaining, billingHref }: TrialEnd
             <Button
               asChild
               onClick={() => {
-                posthog.capture("trial_ending_warning_cta_clicked", {
+                capturePostHogClientEvent("trial_ending_warning_cta_clicked", {
                   days_remaining: daysRemaining,
                   cta: "add_payment_method",
                 });

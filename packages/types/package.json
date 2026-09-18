@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    "./surveys/html-text": {
+      "browser": "./surveys/html-text.browser.ts",
+      "default": "./surveys/html-text.ts"
+    },
     "./integration": "./integration/index.ts",
     "./*": "./*.ts"
   },

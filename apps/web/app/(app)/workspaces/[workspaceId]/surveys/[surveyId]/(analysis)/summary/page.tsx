@@ -12,7 +12,6 @@ import { getUser } from "@/lib/user/service";
 import { getTranslate } from "@/lingodotdev/server";
 import { getSegments } from "@/modules/contacts/segments/lib/segments";
 import { getIsContactsEnabled, getIsQuotasEnabled } from "@/modules/license-check/lib/utils";
-import { getOrganizationBilling } from "@/modules/survey/lib/survey";
 import { getSurveyAuth } from "@/modules/survey/lib/survey-auth";
 import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
@@ -49,10 +48,6 @@ const SurveyPage = async (
 
   if (!organization) {
     throw new ResourceNotFoundError(t("common.organization"), null);
-  }
-  const organizationBilling = await getOrganizationBilling(organization.id);
-  if (!organizationBilling) {
-    throw new ResourceNotFoundError(t("common.organization"), organization.id);
   }
   const isQuotasAllowed = await getIsQuotasEnabled();
 

@@ -2,9 +2,9 @@
 
 import { RocketIcon } from "lucide-react";
 import Link from "next/link";
-import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { TOrganization } from "@forma/types/organizations";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { TrialAlert } from "@/modules/billing/components/trial-alert";
 import { TRIAL_BASE_RESPONSE_LIMIT, TrialBannerNew } from "@/modules/billing/components/trial-banner-new";
 
@@ -82,7 +82,7 @@ export const MainNavigationNotices = ({
           <Link
             href={billingHref}
             className="m-2 block"
-            onClick={() => posthog.capture("main_nav_go_to_billing_clicked")}>
+            onClick={() => capturePostHogClientEvent("main_nav_go_to_billing_clicked")}>
             <TrialAlert trialDaysRemaining={trialDaysRemaining} size="small" />
           </Link>
         ))}

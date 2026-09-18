@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -25,6 +24,7 @@ import type { TSurveyType } from "@forma/types/surveys/types";
 import type { TTemplateRole } from "@forma/types/templates";
 import type { TUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { templates } from "@/lib/templates";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { CreateWithAIDialog } from "@/modules/survey/components/template-list/components/create-with-ai-dialog";
@@ -111,7 +111,7 @@ export const FeaturedTemplates = ({
 
   const handleHide = () => {
     document.cookie = `${HIDDEN_COOKIE}=true; path=/; max-age=${HIDDEN_COOKIE_MAX_AGE}; SameSite=Lax`;
-    posthog.capture("featured_templates_hidden");
+    capturePostHogClientEvent("featured_templates_hidden");
     setIsHidden(true);
   };
 
@@ -128,7 +128,7 @@ export const FeaturedTemplates = ({
     workspace.config.channel === "website" ? "app" : (workspace.config.channel ?? "link");
 
   const handleUse = async (templateId: string) => {
-    posthog.capture("featured_template_used", {
+    capturePostHogClientEvent("featured_template_used", {
       template_id: templateId,
       role_filter: selectedRole,
       survey_type: surveyType,

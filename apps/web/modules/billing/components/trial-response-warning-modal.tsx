@@ -2,9 +2,9 @@
 
 import { InfoIcon } from "lucide-react";
 import Link from "next/link";
-import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { Button } from "@/modules/ui/components/button";
 import { Dialog, DialogContent } from "@/modules/ui/components/dialog";
 
@@ -27,7 +27,7 @@ export const TrialResponseWarningModal = ({
   useEffect(() => {
     document.cookie = `trial_warning_shown_${threshold}=true; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
     setOpen(true);
-    posthog.capture("trial_response_warning_shown", { threshold, response_count: responseCount });
+    capturePostHogClientEvent("trial_response_warning_shown", { threshold, response_count: responseCount });
   }, [threshold, responseCount]);
 
   const handleDismiss = () => {
@@ -67,7 +67,7 @@ export const TrialResponseWarningModal = ({
             <Button
               variant="secondary"
               onClick={() => {
-                posthog.capture("trial_response_warning_cta_clicked", {
+                capturePostHogClientEvent("trial_response_warning_cta_clicked", {
                   threshold,
                   cta: "remind_me_later",
                 });
@@ -78,7 +78,7 @@ export const TrialResponseWarningModal = ({
             <Button
               asChild
               onClick={() => {
-                posthog.capture("trial_response_warning_cta_clicked", {
+                capturePostHogClientEvent("trial_response_warning_cta_clicked", {
                   threshold,
                   cta: "add_payment_method",
                 });

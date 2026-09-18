@@ -2,10 +2,10 @@
 
 import { CheckIcon, GiftIcon, XCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { startHobbyAction, startProTrialAction } from "@/modules/billing/actions";
 import { Button } from "@/modules/ui/components/button";
 import {
@@ -157,14 +157,18 @@ export const SelectPlanCard = ({ nextUrl, organizationId, trialDays }: Readonly<
               variant="secondary"
               loading={isStartingHobby}
               onClick={() => {
-                posthog.capture("billing_onboarding_hobby_confirm_cta_clicked", { cta: "downgrade_hobby" });
+                capturePostHogClientEvent("billing_onboarding_hobby_confirm_cta_clicked", {
+                  cta: "downgrade_hobby",
+                });
                 void handleContinueHobby();
               }}>
               {t("workspace.settings.billing.hobby_confirm_downgrade")}
             </Button>
             <Button
               onClick={() => {
-                posthog.capture("billing_onboarding_hobby_confirm_cta_clicked", { cta: "start_trial" });
+                capturePostHogClientEvent("billing_onboarding_hobby_confirm_cta_clicked", {
+                  cta: "start_trial",
+                });
                 setShowHobbyConfirm(false);
                 void handleStartTrial();
               }}>

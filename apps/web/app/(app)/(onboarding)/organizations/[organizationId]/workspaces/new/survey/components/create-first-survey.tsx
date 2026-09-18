@@ -2,12 +2,12 @@
 
 import { PencilLineIcon, SquareLibraryIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { OnboardingOptionsContainer } from "@/app/(app)/(onboarding)/organizations/components/OnboardingOptionsContainer";
 import { getAIUnavailableMessage } from "@/lib/ai/availability";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
+import { capturePostHogClientEvent } from "@/lib/posthog/client";
 import { CUSTOM_SURVEY_TEMPLATE_ID } from "@/lib/templates";
 import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
 import { useCreateSurveyFromTemplate } from "@/modules/survey/components/template-list/hooks/use-create-survey-from-template";
@@ -36,7 +36,7 @@ export const CreateFirstSurvey = ({
   const createSurveyMutation = useCreateSurveyFromTemplate();
 
   const trackPathSelected = (path: TOnboardingSurveyPath) => {
-    posthog.capture("onboarding_survey_path_selected", {
+    capturePostHogClientEvent("onboarding_survey_path_selected", {
       path,
       organization_id: organizationId,
       workspace_id: workspaceId,

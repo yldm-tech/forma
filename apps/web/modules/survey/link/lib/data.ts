@@ -118,8 +118,6 @@ export const getSurveyWithMetadata = reactCache(async (surveyId: string) => {
             },
           },
         },
-        followUps: true,
-
         // ENG-1837: the definitions the renderer's recall and logic engines resolve through.
         embeddedDataLinks: selectSurveyEmbeddedDataLinks,
       },
@@ -129,7 +127,9 @@ export const getSurveyWithMetadata = reactCache(async (surveyId: string) => {
       throw new ResourceNotFoundError("Survey", surveyId);
     }
 
-    const transformedSurvey = transformPrismaSurvey<TSurvey>(survey);
+    // `followUps` is not selected: the block below blanks it anyway, so reading it was a column and
+    // a row the public page never used. Supplied here because `TSurvey` requires the key.
+    const transformedSurvey = transformPrismaSurvey<TSurvey>({ ...survey, followUps: [] });
 
     // This survey object is handed to a client component on the *public* link-survey page, so every
     // field in it ends up in the page payload for anonymous visitors. Follow-up configuration carries
@@ -138,7 +138,6 @@ export const getSurveyWithMetadata = reactCache(async (surveyId: string) => {
     // above only because `TSurvey` requires the keys, so blank them out before they leave the server.
     return {
       ...transformedSurvey,
-      followUps: [],
       ...(transformedSurvey.segment
         ? { segment: { ...transformedSurvey.segment, filters: [], description: null } }
         : {}),
