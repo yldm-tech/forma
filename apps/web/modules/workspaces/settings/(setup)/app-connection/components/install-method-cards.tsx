@@ -87,7 +87,7 @@ export const InstallMethodCards = ({
           {htmlSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#html",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#html",
     },
     {
       id: "react",
@@ -102,7 +102,7 @@ export const InstallMethodCards = ({
           {reactSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#react-js",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#react-js",
     },
     {
       id: "nextjs",
@@ -118,7 +118,7 @@ export const InstallMethodCards = ({
           {nextjsSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#next-js",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#next-js",
     },
     {
       id: "vue",
@@ -133,7 +133,7 @@ export const InstallMethodCards = ({
           {vueSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#vue-js",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#vue-js",
     },
   ];
 
@@ -151,7 +151,7 @@ export const InstallMethodCards = ({
           {reactNativeSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#react-native",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#react-native",
     },
     {
       id: "swift",
@@ -166,7 +166,7 @@ export const InstallMethodCards = ({
           {swiftSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#swift",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#swift",
     },
     {
       id: "android",
@@ -181,7 +181,7 @@ export const InstallMethodCards = ({
           {androidSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#android",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#android",
     },
     {
       id: "flutter",
@@ -196,7 +196,7 @@ export const InstallMethodCards = ({
           {flutterSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/framework-guides#flutter",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#flutter",
     },
   ];
 
@@ -249,7 +249,7 @@ export const InstallMethodCards = ({
           {htmlSnippet}
         </CodeBlock>
       ),
-      docsHref: "https://forma.ylam.ai/docs/surveys/website-app-surveys/google-tag-manager",
+      docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/google-tag-manager",
     },
     {
       id: "wordpress",
@@ -262,7 +262,7 @@ export const InstallMethodCards = ({
         t("workspace.app-connection.install_method_wordpress_step_3"),
         t("workspace.app-connection.install_method_wordpress_step_4"),
       ],
-      docsHref: "https://forma.ylam.ai/docs/platform/features/integrations/wordpress",
+      docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/wordpress",
     },
   ];
 

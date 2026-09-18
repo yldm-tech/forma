@@ -373,19 +373,19 @@ export const AnonymousLinksTab = ({
           links={[
             {
               title: t("workspace.surveys.share.anonymous_links.single_use_links"),
-              href: "https://forma.ylam.ai/docs/surveys/link-surveys/single-use-links",
+              href: "https://forma.yldm.ai/docs/surveys/link-surveys/single-use-links",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.data_prefilling"),
-              href: "https://forma.ylam.ai/docs/surveys/link-surveys/data-prefilling",
+              href: "https://forma.yldm.ai/docs/surveys/link-surveys/data-prefilling",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.source_tracking"),
-              href: "https://forma.ylam.ai/docs/surveys/link-surveys/source-tracking",
+              href: "https://forma.yldm.ai/docs/surveys/link-surveys/source-tracking",
             },
             {
               title: t("workspace.surveys.share.anonymous_links.custom_start_point"),
-              href: "https://forma.ylam.ai/docs/surveys/link-surveys/start-at-block",
+              href: "https://forma.yldm.ai/docs/surveys/link-surveys/start-at-block",
             },
           ]}
         />

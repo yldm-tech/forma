@@ -561,7 +561,7 @@ const KITCHEN_SINK_QUESTIONS: SurveyQuestion[] = [
     headline: { default: "Check out our documentation!" },
     required: true,
     ctaButtonLabel: { default: "Go to Docs" },
-    buttonUrl: "https://forma.ylam.ai/docs",
+    buttonUrl: "https://forma.yldm.ai/docs",
     buttonExternal: true,
   },
   {

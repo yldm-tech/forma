@@ -259,7 +259,7 @@ describe("ZV3CreateSurveyBody", () => {
     );
   });
 
-  test.each(["https://forma.ylam.ai/docs", "http://localhost:3000/docs", "mailto:support@example.com"])(
+  test.each(["https://forma.yldm.ai/docs", "http://localhost:3000/docs", "mailto:support@example.com"])(
     "accepts a cta buttonUrl with the safe scheme %j",
     (buttonUrl) => {
       expect(ZV3CreateSurveyBody.safeParse(ctaCreateBody(buttonUrl)).success).toBe(true);

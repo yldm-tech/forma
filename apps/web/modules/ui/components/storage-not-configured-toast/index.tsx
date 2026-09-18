@@ -18,7 +18,7 @@ export const StorageNotConfiguredToast = ({
         : t("common.file_storage_not_set_up")}{" "}
       <a
         className="whitespace-nowrap underline"
-        href="https://forma.ylam.ai/docs/self-hosting/configuration/file-uploads"
+        href="https://forma.yldm.ai/docs/self-hosting/configuration/file-uploads"
         target="_blank"
         rel="noopener noreferrer">
         {t("common.learn_more")}

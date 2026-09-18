@@ -18,7 +18,7 @@ export const AppConnectionPage = async ({ params }: { params: Promise<{ workspac
   const t = await getTranslate();
   const { workspaceId } = await params;
   const workspaceIdMigrationUrl =
-    "https://forma.ylam.ai/docs/surveys/website-app-surveys/workspace-id-migration";
+    "https://forma.yldm.ai/docs/surveys/website-app-surveys/workspace-id-migration";
 
   const { workspace, organization, session } = await getWorkspaceAuth(workspaceId);
   const showAIPrompt = session?.user.id

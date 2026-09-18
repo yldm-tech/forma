@@ -78,7 +78,7 @@ export const UserDropdown = ({
         ]),
     {
       label: t("common.documentation"),
-      href: "https://forma.ylam.ai/docs",
+      href: "https://forma.yldm.ai/docs",
       target: "_blank",
       icon: ArrowUpRightIcon,
     },

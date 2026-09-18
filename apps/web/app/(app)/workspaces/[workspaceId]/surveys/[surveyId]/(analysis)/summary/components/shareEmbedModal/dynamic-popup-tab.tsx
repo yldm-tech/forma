@@ -30,15 +30,15 @@ export const DynamicPopupTab = ({ surveyId }: DynamicPopupTabProps) => {
         links={[
           {
             title: t("workspace.surveys.share.dynamic_popup.attribute_based_targeting"),
-            href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/advanced-targeting",
+            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/advanced-targeting",
           },
           {
             title: t("workspace.surveys.share.dynamic_popup.code_no_code_triggers"),
-            href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/actions",
+            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/actions",
           },
           {
             title: t("workspace.surveys.share.dynamic_popup.recontact_options"),
-            href: "https://forma.ylam.ai/docs/surveys/website-app-surveys/recontact",
+            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/recontact",
           },
         ]}
       />

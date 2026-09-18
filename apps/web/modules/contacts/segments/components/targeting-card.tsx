@@ -434,7 +434,7 @@ export function TargetingCard({
                   components={{
                     docsLink: (
                       <Link
-                        href="https://forma.ylam.ai/docs/app-surveys/user-identification"
+                        href="https://forma.yldm.ai/docs/app-surveys/user-identification"
                         target="_blank"
                         rel="noreferrer"
                         className="underline"

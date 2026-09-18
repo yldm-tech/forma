@@ -45,7 +45,7 @@ export const EMBED_SURVEY_PREVIEW_PICTURE_CHOICES = [
   "https://app.forma.ylam.ai/static/media/powered-by-forma.7aec4b1c.svg",
   "https://app.forma.ylam.ai/static/media/powered-by-forma.7aec4b1c.svg?variant=2",
 ] as const;
-export const EMBED_SURVEY_PREVIEW_CTA_URL = "https://forma.ylam.ai/docs";
+export const EMBED_SURVEY_PREVIEW_CTA_URL = "https://forma.yldm.ai/docs";
 
 export const EMBED_SURVEY_PREVIEW_STYLING: TSurveyStyling = {
   brandColor: { light: "#22c55e" },

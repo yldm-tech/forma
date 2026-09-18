@@ -101,7 +101,7 @@ export const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ surveyUrl, surve
         <AlertButton
           onClick={() => {
             window.open(
-              "https://forma.ylam.ai/docs/surveys/link-surveys/source-tracking",
+              "https://forma.yldm.ai/docs/surveys/link-surveys/source-tracking",
               "_blank",
               "noopener,noreferrer"
             );
