@@ -4,6 +4,7 @@ import { recordAuthorizationCheckIssued } from "./context";
 import type { TAuthorizationAction, TAuthorizationActor, TAuthorizationResourceForAction } from "./contract";
 import { authorizationCoordinator } from "./coordinator";
 import type { AuthorizationEvaluator } from "./evaluator";
+import { memoizeAuthorizationDecision } from "./request-memo";
 
 /**
  * The single, engine-independent authorization interface for Forma (Phase 0
@@ -36,7 +37,10 @@ export const can = <TAction extends TAuthorizationAction>(
   resource: TAuthorizationResourceForAction<NoInfer<TAction>>
 ): Promise<boolean> => {
   recordAuthorizationCheckIssued();
-  return evaluator.can(actor, action, resource);
+  // Counted above, evaluated below: a page that asks the same question twenty times still shows
+  // twenty issued checks in the histogram, but only pays for the first. See `request-memo.ts`,
+  // which also states where the memo can serve a stale answer and why that is not new.
+  return memoizeAuthorizationDecision(actor, action, resource, () => evaluator.can(actor, action, resource));
 };
 
 /** Assert that `actor` may perform `action` on `resource`, throwing `AuthorizationError` otherwise. */
