@@ -124,6 +124,29 @@ describe("enqueueResponseCompletedWorkflowRuns", () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
+  test("still enqueues (and logs) when the response's ending id is not a valid ending card id", async () => {
+    findMany.mockResolvedValue([enabledWorkflow("wf_1", "ver_1")]);
+    create.mockResolvedValue({ id: "run_1" });
+
+    // Respondent-controlled: the public client endpoint stores whatever string was posted, so a value
+    // the cuid2 payload schema rejects must not suppress every workflow on the response.
+    await run({
+      response: { ...response, endingId: "thank-you" },
+      workspaceId,
+      organizationId,
+      dispatch,
+    });
+
+    const data = create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ workflowId: "wf_1", status: "queued" });
+    expect(data.triggerPayload.endingCardId).toBeUndefined();
+    expect(dispatch).toHaveBeenCalledWith({ workflowRunId: "run_1", workflowId: "wf_1", workspaceId });
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId, endingId: "thank-you" }),
+      expect.stringContaining("not a valid ending card id")
+    );
+  });
+
   test("a response without an ending card does not fire an ending-specific workflow", async () => {
     findMany.mockResolvedValue([enabledWorkflow("wf_1", "ver_1", [endingId])]);
 

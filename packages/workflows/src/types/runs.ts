@@ -58,7 +58,13 @@ export const ZWorkflowRunLog = z
   .object({
     id: z.cuid2(),
     runId: z.cuid2(),
-    sequence: z.number().int().nonnegative(),
+    sequence: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe(
+        "Position of the entry within the run, counting from 1. Kept non-negative rather than positive so rows written before the base was pinned still deserialize."
+      ),
     stepId: z.string().min(1),
     stepType: z.string().min(1),
     status: ZWorkflowRunLogStatus,

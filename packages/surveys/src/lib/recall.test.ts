@@ -139,6 +139,29 @@ describe("replaceRecallInfo", () => {
     expect(replaceRecallInfo(text, responseData, variables)).toBe(expected);
   });
 
+  test("returns when a recalled value is itself a recall token", () => {
+    // A hidden field can arrive as ?name=%23recall%3Aname%2Ffallback%3Ax%23, and a respondent can type
+    // the same string into an open text question a later headline recalls. Substituting must not be
+    // re-entrant: rescanning the whole text finds the re-emitted token forever and locks up the tab.
+    const selfReferential: TResponseData = { name: "#recall:name/fallback:x#" };
+    expect(replaceRecallInfo("Hi #recall:name/fallback:friend#!", selfReferential, {})).toBe(
+      "Hi #recall:name/fallback:x#!"
+    );
+  });
+
+  test("keeps substituting the tokens after a self-referential one", () => {
+    const selfReferential: TResponseData = { greeting: "#recall:role/fallback:x#", role: "Admin" };
+    const text = "#recall:greeting/fallback:Hi# — you are #recall:role/fallback:Member#.";
+    expect(replaceRecallInfo(text, selfReferential, {})).toBe("#recall:role/fallback:x# — you are Admin.");
+  });
+
+  test("inserts a recalled value containing '$&' literally", () => {
+    // `String.prototype.replace` would expand `$&` into the token it just matched, re-emitting a
+    // recall token from a plain answer.
+    const withDollar: TResponseData = { code: "50$&OFF" };
+    expect(replaceRecallInfo("Use #recall:code/fallback:none#.", withDollar, {})).toBe("Use 50$&OFF.");
+  });
+
   test("should handle fallback with '$nbsp;' (should not replace '$nbsp;')", () => {
     const text = "Note: #recall:note/fallback:$nbsp;#.";
     const expected = "Note: $ ;.";

@@ -236,17 +236,19 @@ export const AddIntegrationModal = ({
       });
       integrationData.createdAt = new Date();
 
+      // `config.data` aliases the `notionIntegration` server prop's array, so mutate a clone: a failed save otherwise leaves the pushed entry behind and the retry persists the same database twice.
+      const updatedIntegrationData = structuredClone(notionIntegrationData);
       if (selectedIntegration) {
         // update action
-        notionIntegrationData.config.data[selectedIntegration.index] = integrationData;
+        updatedIntegrationData.config.data[selectedIntegration.index] = integrationData;
       } else {
         // create action
-        notionIntegrationData.config.data.push(integrationData);
+        updatedIntegrationData.config.data.push(integrationData);
       }
 
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: notionIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));
@@ -267,12 +269,14 @@ export const AddIntegrationModal = ({
   };
 
   const deleteLink = async () => {
-    notionIntegrationData.config.data.splice(selectedIntegration!.index, 1);
+    // Same aliasing as above: splicing the prop array in place would make a retry after a failed delete remove a different, already shifted entry.
+    const updatedIntegrationData = structuredClone(notionIntegrationData);
+    updatedIntegrationData.config.data.splice(selectedIntegration!.index, 1);
     try {
       setIsDeleting(true);
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: notionIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));

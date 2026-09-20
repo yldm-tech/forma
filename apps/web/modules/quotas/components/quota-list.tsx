@@ -15,7 +15,8 @@ interface QuotaListProps {
 }
 
 export const QuotaList = ({ quotas, onEdit, deleteQuota, duplicateQuota }: QuotaListProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? "en-US";
 
   return (
     <div className="space-y-3">
@@ -41,7 +42,7 @@ export const QuotaList = ({ quotas, onEdit, deleteQuota, duplicateQuota }: Quota
             <Label className="text-sm font-medium text-slate-800">{quota.name}</Label>
             <div className="mt-1 text-sm text-slate-500">
               {t("workspace.surveys.edit.quotas.limited_to_x_responses", {
-                limit: quota.limit.toLocaleString(),
+                limit: quota.limit.toLocaleString(locale),
               })}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { Prisma } from "@forma/database/prisma";
 import { type TEmbeddedValueResponse, deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
 import { TResponse } from "@forma/types/responses";
@@ -948,6 +948,22 @@ describe("Response Utils", () => {
       const extension = "csv";
       const result = getResponsesFileName(surveyName, extension);
       expect(result).toContain("export-test_survey-");
+    });
+
+    test("stamps a single UTC moment and says so", () => {
+      // `stubEnv` rather than assigning `process.env.TZ`: it restores an originally-unset key by deleting it, where an assignment would write back the string "undefined" and pin every later test in this file to UTC.
+      vi.stubEnv("TZ", "Asia/Tokyo");
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-19T23:30:45.000Z"));
+      try {
+        // The whole stamp is UTC. It used to read "2026-09-19-08-30-45": a UTC date beside the server's local clock, one calendar day off and inconsistent with the rows inside, which are rendered in the organization's display time zone.
+        expect(getResponsesFileName("Test Survey", "csv")).toBe(
+          "export-test_survey-2026-09-19-23-30-45-utc.csv"
+        );
+      } finally {
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+      }
     });
   });
 

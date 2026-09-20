@@ -7,35 +7,34 @@ export const getTeamMemberDetails = reactCache(async (teamIds: string[]): Promis
     return [];
   }
 
-  const memberDetails: TFollowUpEmailToUser[] = [];
-
-  for (const teamId of teamIds) {
-    const teamMembers = await prisma.teamUser.findMany({
-      where: {
-        teamId,
+  // Two queries for the whole workspace rather than two per team: this runs on every survey-editor page load, and awaiting a pair of round trips per team made the helper's cost scale with the team count.
+  const teamMembers = await prisma.teamUser.findMany({
+    where: {
+      teamId: {
+        in: teamIds,
       },
-    });
+    },
+    select: {
+      userId: true,
+    },
+  });
 
-    const userEmailAndNames = await prisma.user.findMany({
-      where: {
-        id: {
-          in: teamMembers.map((member) => member.userId),
-        },
-      },
-      select: {
-        email: true,
-        name: true,
-      },
-    });
+  // A user on several of these teams appears once per team, so the ids are deduplicated before the lookup. User.email is unique, so the resulting rows are unique too.
+  const userIds = Array.from(new Set(teamMembers.map((member) => member.userId)));
 
-    memberDetails.push(...userEmailAndNames);
+  if (userIds.length === 0) {
+    return [];
   }
 
-  const uniqueMemberDetailsMap = new Map(memberDetails.map((member) => [member.email, member]));
-  const uniqueMemberDetails = Array.from(uniqueMemberDetailsMap.values()).map((member) => ({
-    email: member.email,
-    name: member.name,
-  }));
-
-  return uniqueMemberDetails;
+  return prisma.user.findMany({
+    where: {
+      id: {
+        in: userIds,
+      },
+    },
+    select: {
+      email: true,
+      name: true,
+    },
+  });
 });

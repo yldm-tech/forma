@@ -51,10 +51,17 @@ export const formatDate = (date: Date, locale: string = DEFAULT_LOCALE) => {
   });
 };
 
-export const getTodaysDateTimeFormatted = (seperator: string) => {
-  const date = new Date();
-  const formattedDate = date.toISOString().split("T")[0].split("-").join(seperator);
-  const formattedTime = date.toTimeString().split(" ")[0].split(":").join(seperator);
+/**
+ * A UTC date and clock time joined by `seperator`, for machine-facing names such as the response export's filename.
+ *
+ * Both halves come out of one ISO string, so they always describe the same moment. They used not to: the date was read from `toISOString()` (UTC) while the time came from `toTimeString()` (the process's local zone), so on a server running ahead of UTC an export taken at 08:30 JST was named `…-2026-09-19-08-30-00` — a calendar day behind the clock time printed beside it, and out of name order against an export taken minutes earlier on the other side of UTC midnight.
+ *
+ * `date` is injectable so the format can be asserted against a fixed instant instead of recomputed the same way the implementation computes it.
+ */
+export const getTodaysDateTimeFormatted = (seperator: string, date: Date = new Date()) => {
+  const [isoDate, isoTime] = date.toISOString().split("T");
+  const formattedDate = isoDate.split("-").join(seperator);
+  const formattedTime = isoTime.slice(0, 8).split(":").join(seperator);
 
   return [formattedDate, formattedTime].join(seperator);
 };

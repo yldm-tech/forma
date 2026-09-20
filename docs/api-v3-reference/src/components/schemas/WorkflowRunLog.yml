@@ -24,7 +24,10 @@ properties:
   sequence:
     type: integer
     minimum: 0
-    description: Order of the entry within the run.
+    description: >-
+      Position of the entry within the run, counting from 1. Kept non-negative
+      rather than positive so rows written before the base was pinned still
+      deserialize.
   stepId:
     type: string
     minLength: 1

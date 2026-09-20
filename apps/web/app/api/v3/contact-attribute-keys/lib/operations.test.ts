@@ -59,10 +59,6 @@ const params = {
 describe("listV3ContactAttributeKeys", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.mocked(getOrganizationByWorkspaceId).mockResolvedValue({
-      id: "org_1",
-    } as Awaited<ReturnType<typeof getOrganizationByWorkspaceId>>);
-    vi.mocked(getIsContactsEnabled).mockResolvedValue(true);
   });
 
   test("returns the public attribute-key shape for an authorized workspace", async () => {
@@ -139,16 +135,21 @@ describe("listV3ContactAttributeKeys", () => {
     expect(getContactAttributeKeys).not.toHaveBeenCalled();
   });
 
-  test("returns 403 when the contacts feature is not enabled for the organization", async () => {
+  test("lists without a contacts entitlement gate, and without the organization read one would need", async () => {
     vi.mocked(requireV3WorkspaceAccess).mockResolvedValue({
       workspaceId,
     } as Awaited<ReturnType<typeof requireV3WorkspaceAccess>>);
+    vi.mocked(getContactAttributeKeys).mockResolvedValue([attributeKey]);
+    vi.mocked(getOrganizationByWorkspaceId).mockResolvedValue(
+      null as unknown as Awaited<ReturnType<typeof getOrganizationByWorkspaceId>>
+    );
     vi.mocked(getIsContactsEnabled).mockResolvedValue(false);
 
     const response = await listV3ContactAttributeKeys(params);
 
-    expect(response.status).toBe(403);
-    expect(getContactAttributeKeys).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(getOrganizationByWorkspaceId).not.toHaveBeenCalled();
+    expect(getIsContactsEnabled).not.toHaveBeenCalled();
   });
 
   test("returns 500 when fetching attribute keys fails", async () => {

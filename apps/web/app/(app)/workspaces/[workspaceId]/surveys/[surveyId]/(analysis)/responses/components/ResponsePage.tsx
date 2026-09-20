@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TSurveyQuota } from "@forma/types/quota";
@@ -141,14 +141,25 @@ export const ResponsePage = ({
     (selectedFilter?.filter && selectedFilter.filter.length > 0) ||
     (dateRange.from && dateRange.to);
 
+  // The inputs of the last page-1 fetch, by VALUE — the guard SummaryPage uses, for the same reason. The effect above calls `resetState()` on every load without `?referer`, i.e. every direct visit or reload, and it hands back fresh `selectedFilter`/`dateRange` object literals holding identical content. Keyed on their identity alone this effect would re-run, skip the `page === null` branch (page is 1 by then) and refetch offset 0 with the very same empty filters — discarding the server-seeded `initialResponses` and flashing a spinner on every such load.
+  const lastFetchedKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
+    const fetchKey = `${surveyId}:${responsesPerPage}:${filtersKey}`;
+
     const fetchFilteredResponses = async () => {
       try {
-        // skip call for initial mount
+        // skip call for initial mount: `initialResponses` already holds this exact unfiltered page 1
         if (page === null && !hasFilters) {
+          lastFetchedKeyRef.current = fetchKey;
           setPage(1);
           return;
         }
+        if (fetchKey === lastFetchedKeyRef.current) {
+          return;
+        }
+        // Commit the key BEFORE awaiting, so a re-run triggered while the request is in flight skips.
+        lastFetchedKeyRef.current = fetchKey;
         setPage(1);
         setIsFetchingFirstPage(true);
         let responses: TResponseWithQuotas[] = [];
@@ -159,6 +170,11 @@ export const ResponsePage = ({
           offset: 0,
           filterCriteria: filters,
         });
+
+        if (getResponsesActionResponse?.serverError) {
+          // Roll the key back on failure so re-selecting the same filter retries instead of being deduped against a failed fetch.
+          lastFetchedKeyRef.current = null;
+        }
 
         responses = getResponsesActionResponse?.data || [];
 

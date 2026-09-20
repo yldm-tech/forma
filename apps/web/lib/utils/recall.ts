@@ -54,6 +54,9 @@ export const extractFallbackValue = (text: string): string => {
   return valueEnd === -1 ? "" : text.slice(valueStart, valueEnd);
 };
 
+// Every recall token in a string, in order, with the recall item id captured. Same shape as the pattern `extractRecallInfo` builds for a single match; `g` is safe on a shared instance because the only things it is handed to are `matchAll`, which clones the regex instead of advancing this one's `lastIndex`, and `replaceAll`, which sets `lastIndex` back to 0 before it starts matching.
+const RECALL_TOKEN_PATTERN = /#recall:([A-Za-z0-9_-]+)\/fallback:([^#]*)#/g;
+
 // Extracts the complete recall information (ID and fallback) from a headline string.
 export const extractRecallInfo = (headline: string, id?: string): string | null => {
   const idPattern = id ? escapeRegExp(id) : "[A-Za-z0-9_-]+";
@@ -136,6 +139,19 @@ export const getRecallItemLabel = <T extends TSurvey>(
     getDeclaredEmbeddedFields(survey)
   );
 
+/**
+ * Replaces every complete recall token in a survey question's headline with an ___.
+ *
+ * `replaceAll` rather than the `while (label.includes("#recall:"))` loop this used to be: a string can
+ * carry the literal prefix `#recall:` without the `/fallback:…#` tail that completes a token, and then
+ * `extractRecallInfo` returns null, the body replaces nothing, and the condition stays true — a
+ * synchronous spin that never ends. An author only has to type `#recall:` into a headline to reach it,
+ * through `getTextContentWithRecallTruncated` below or through the editor's recall wrapper, and it
+ * hangs the tab. A partial token is now left alone, which is what it is: literal text.
+ */
+export const replaceRecallInfoWithUnderline = (label: string): string =>
+  label.replaceAll(RECALL_TOKEN_PATTERN, "___");
+
 // Converts recall information in a headline to a corresponding recall question headline, with or without a slash.
 export const recallToHeadline = <T extends TSurvey>(
   headline: TI18nString,
@@ -151,44 +167,30 @@ export const recallToHeadline = <T extends TSurvey>(
   const embeddedFields = getDeclaredEmbeddedFields(survey);
   const elements = getElementsFromBlocks(survey.blocks);
 
+  // One left-to-right pass over the original text, appending to an output buffer, for the same reason `parseRecallInfo` does it: re-scanning the substituted result does not terminate if a substitution can put a token back into the text. Here that is `String.replace`'s doing rather than the label's — a replacement string treats `$&`, `` $` `` and `$'` specially, so a headline containing `$&` splices the matched token straight back in and the next iteration matches it again, growing the string by a label each time until the tab dies. Appending sidesteps the whole substitution grammar.
   const replaceNestedRecalls = (text: string): string => {
-    while (text.includes("#recall:")) {
-      const recallInfo = extractRecallInfo(text);
-      if (!recallInfo) break;
+    let result = "";
+    let cursor = 0;
 
-      const recallItemId = extractId(recallInfo);
-      if (!recallItemId) break;
+    for (const match of text.matchAll(RECALL_TOKEN_PATTERN)) {
+      const recallItemId = match[1];
 
-      let recallItemLabel =
-        resolveRecallItemLabel(recallItemId, elements, languageCode, embeddedFields) || recallItemId;
+      result += text.slice(cursor, match.index);
+      cursor = match.index + match[0].length;
 
-      while (recallItemLabel.includes("#recall:")) {
-        const nestedRecallInfo = extractRecallInfo(recallItemLabel);
-        if (nestedRecallInfo) {
-          recallItemLabel = recallItemLabel.replace(nestedRecallInfo, "___");
-        }
-      }
+      // A label is itself authored text and may carry nested recall tokens; they render as ___ rather than as raw syntax.
+      const recallItemLabel = replaceRecallInfoWithUnderline(
+        resolveRecallItemLabel(recallItemId, elements, languageCode, embeddedFields) || recallItemId
+      );
 
-      const replacement = withSlash ? `/${recallItemLabel}\\` : `@${recallItemLabel}`;
-      text = text.replace(recallInfo, replacement);
+      result += withSlash ? `/${recallItemLabel}\\` : `@${recallItemLabel}`;
     }
-    return text;
+
+    return result + text.slice(cursor);
   };
 
   newHeadline[languageCode] = replaceNestedRecalls(localizedHeadline);
   return newHeadline;
-};
-
-// Replaces recall information in a survey question's headline with an ___.
-export const replaceRecallInfoWithUnderline = (label: string): string => {
-  let newLabel = label;
-  while (newLabel.includes("#recall:")) {
-    const recallInfo = extractRecallInfo(newLabel);
-    if (recallInfo) {
-      newLabel = newLabel.replace(recallInfo, "___");
-    }
-  }
-  return newLabel;
 };
 
 // Checks for survey questions with a "recall" pattern but no fallback value.
@@ -349,21 +351,19 @@ export const parseRecallInfo = (
   dateFormats?: TSurveyDateFormatMap,
   escapeValues: boolean = false
 ) => {
-  let modifiedText = text;
   const questionIds = responseData ? Object.keys(responseData) : [];
   const variableIds = variables ? Object.keys(variables) : [];
 
-  // Process all recall patterns regardless of whether we have matching data
-  while (modifiedText.includes("#recall:")) {
-    const recallInfo = extractRecallInfo(modifiedText);
-    if (!recallInfo) break; // Exit the loop if no recall info is found
+  // One left-to-right pass over the ORIGINAL text, appending to an output buffer, rather than repeatedly re-scanning the substituted result. Re-scanning does not terminate when a substituted value itself contains a recall token: a respondent can answer `#recall:q1/fallback:z#` through the public response API, and replacing that token with that same string leaves the text unchanged while `includes("#recall:")` stays true — a synchronous infinite loop that pins the workflow worker's event loop at 100% CPU (no BullMQ timeout fires, the whole process stalls) and hangs the browser tab for the in-app callers. A recalled value is respondent data, so it is copied to the output verbatim and never interpreted as a token.
+  let result = "";
+  let cursor = 0;
 
-    const recallItemId = extractId(recallInfo);
-    if (!recallItemId) {
-      // If no ID could be extracted, just remove the recall tag
-      modifiedText = modifiedText.replace(recallInfo, "");
-      continue;
-    }
+  for (const match of text.matchAll(RECALL_TOKEN_PATTERN)) {
+    const recallInfo = match[0];
+    const recallItemId = match[1];
+
+    result += text.slice(cursor, match.index);
+    cursor = match.index + recallInfo.length;
 
     const fallback = extractFallbackValue(recallInfo).replaceAll("nbsp", " ");
     let value: TResponseDataValue | undefined;
@@ -399,16 +399,13 @@ export const parseRecallInfo = (
     // every caller outside the follow-up-email flow. Raised by CodeRabbit on #8681.
     const stringifiedValue = stringifyRecallValue(value);
     const substitutedValue = escapeValues ? escapeHtml(stringifiedValue) : stringifiedValue;
-    // Replacer functions, not replacement strings: `$&`, `` $` `` and friends are special in a
-    // replacement string, so an answer containing them would splice part of the pattern back in.
-    if (withSlash) {
-      modifiedText = modifiedText.replace(recallInfo, () => `#/${substitutedValue}${RECALL_SLASH_SUFFIX}`);
-    } else {
-      modifiedText = modifiedText.replace(recallInfo, () => substitutedValue);
-    }
+    // Appended, not fed to `String.replace`: `$&`, `` $` `` and friends are special in a replacement string, so an answer containing them would splice part of the pattern back in.
+    result += withSlash ? `#/${substitutedValue}${RECALL_SLASH_SUFFIX}` : substitutedValue;
   }
 
-  return modifiedText;
+  result += text.slice(cursor);
+
+  return result;
 };
 
 export const getTextContentWithRecallTruncated = (text: string, maxLength: number = 25): string => {

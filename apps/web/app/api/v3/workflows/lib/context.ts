@@ -122,23 +122,9 @@ export const buildWorkflowApiContext = (
   // HMAC key for redacting PII markers in audit snapshots; reuses the app's audit/encryption secret
   // so markers aren't offline-guessable. Injected as data to keep `@forma/workflows` agnostic.
   auditRedactionKey: ENCRYPTION_KEY,
-  // Workspace access first, then the workflows entitlement (Cloud plan / self-hosted EE license)
-  // for the resolved organization. Every v3 route handler and MCP tool authorizes through this
-  // capability, so this is the single enforcement point for both surfaces; the returned problem
-  // Response short-circuits through the package's error mapping like any authorization failure.
-  authorize: async (workspaceId, access) => {
-    const authorized = await requireV3WorkspaceAccess(
-      authentication,
-      workspaceId,
-      access,
-      requestId,
-      instance
-    );
-    if (authorized instanceof Response) {
-      return authorized;
-    }
-    return authorized;
-  },
+  // Workspace access, and nothing else: workflows are not entitlement-gated, here or anywhere — every install has every feature. Every v3 route handler and MCP tool authorizes through this capability, so this is the single enforcement point for both surfaces; the returned problem Response short-circuits through the package's error mapping like any authorization failure.
+  authorize: (workspaceId, access) =>
+    requireV3WorkspaceAccess(authentication, workspaceId, access, requestId, instance),
   verifyTriggerSurvey,
   verifyRecipientsAllowed,
   ...(auditLog ? { recordAudit: buildRecordAudit(auditLog, authentication, requestId) } : {}),

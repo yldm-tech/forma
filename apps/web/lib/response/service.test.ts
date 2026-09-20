@@ -1,11 +1,18 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { PrismaErrorType } from "@forma/database/types/error";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
 import { TResponseUpdateInput } from "@forma/types/responses";
 import { getOrganization } from "../organization/service";
-import { getResponseDownloadFile, responseSelection, updateResponse } from "./service";
+import { getSurvey } from "../survey/service";
+import {
+  RESPONSE_FILTER_SAMPLE_SIZE,
+  getResponseDownloadFile,
+  getResponseFilteringValues,
+  responseSelection,
+  updateResponse,
+} from "./service";
 import { calculateTtcTotal, getResponsesJson } from "./utils";
 
 vi.mock("@forma/database", () => ({
@@ -582,6 +589,93 @@ describe("getResponseDownloadFile", () => {
       expect.anything(),
       false,
       "UTC"
+    );
+  });
+
+  /**
+   * The export walks the table in 3000-row batches, ordered by `createdAt desc, id desc`, resuming from the last row of the previous batch. `createdAt` is caller-supplied on the management API, so a historical import carries an old `createdAt` under a cuid minted today — and a cursor predicate written on the id alone puts that row above the cursor and drops it, which reads as "no more pages" rather than as an error.
+   *
+   * The fake below applies the `where`, the ordering and the `take` for real, so this asserts the rows the export ships rather than the shape of a query object.
+   */
+  test("exports a response whose createdAt predates the batch boundary but whose id sorts above it", async () => {
+    type TDownloadRow = MockCurrentResponse & { quotaLinks: never[] };
+
+    const matchesWhere = (clause: Prisma.ResponseWhereInput, row: TDownloadRow): boolean =>
+      Object.entries(clause).every(([key, value]) => {
+        if (key === "OR") return (value as Prisma.ResponseWhereInput[]).some((sub) => matchesWhere(sub, row));
+        if (key === "AND")
+          return (value as Prisma.ResponseWhereInput[]).every((sub) => matchesWhere(sub, row));
+        if (key === "surveyId") return row.surveyId === value;
+        if (key === "createdAt") {
+          const filter = value as { lt?: Date; equals?: Date };
+          if (filter.lt !== undefined) return row.createdAt.getTime() < filter.lt.getTime();
+          if (filter.equals !== undefined) return row.createdAt.getTime() === filter.equals.getTime();
+          throw new Error(`unsupported createdAt filter: ${JSON.stringify(filter)}`);
+        }
+        if (key === "id") {
+          const filter = value as { lt?: string };
+          if (filter.lt !== undefined) return row.id < filter.lt;
+          throw new Error(`unsupported id filter: ${JSON.stringify(filter)}`);
+        }
+        throw new Error(`unsupported where key: ${key}`);
+      });
+
+    const batchSize = 3000;
+    const newest = new Date("2026-06-01T00:00:00.000Z");
+    const row = (id: string, createdAt: Date): TDownloadRow => ({
+      ...createMockCurrentResponse({ id, createdAt }),
+      quotaLinks: [],
+    });
+
+    // Already in `createdAt desc, id desc` order: a full batch of ordinary responses, then the import.
+    const ordinary = Array.from({ length: batchSize }, (_, index) =>
+      row(
+        `cuid-a${String(batchSize - 1 - index).padStart(4, "0")}`,
+        new Date(newest.getTime() - index * 60_000)
+      )
+    );
+    const imported = row("cuid-zzzz", new Date("2020-01-01T00:00:00.000Z"));
+    const rows = [...ordinary, imported];
+
+    (prisma.response.findMany as unknown as Mock).mockImplementation(
+      (args: { where?: Prisma.ResponseWhereInput; take?: number }) =>
+        Promise.resolve(
+          rows.filter((candidate) => matchesWhere(args.where ?? {}, candidate)).slice(0, args.take)
+        )
+    );
+    vi.mocked(getOrganization).mockResolvedValue({ displayTimeZone: "UTC" } as never);
+
+    await getResponseDownloadFile("survey-123", "csv");
+
+    const exported = vi.mocked(getResponsesJson).mock.calls[0][1] as { id: string }[];
+    expect(exported).toHaveLength(rows.length);
+    expect(exported.map((response) => response.id)).toContain(imported.id);
+  });
+});
+
+describe("getResponseFilteringValues", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(prisma.response.findMany).mockResolvedValue([] as never);
+    vi.mocked(getSurvey).mockResolvedValue({
+      id: "survey-123",
+      name: "Test Survey",
+      workspaceId: "workspace-123",
+      blocks: [],
+      variables: [],
+    } as never);
+  });
+
+  // The dropdowns this feeds only need distinct values, and the selection behind them is five unbounded JSON columns. Without a bound, opening the analysis page of a large survey streams the whole response table into one Node process.
+  test("reads a bounded, newest-first sample rather than every response of the survey", async () => {
+    await getResponseFilteringValues("survey-123");
+
+    expect(prisma.response.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { surveyId: "survey-123" },
+        take: RESPONSE_FILTER_SAMPLE_SIZE,
+        orderBy: { createdAt: "desc" },
+      })
     );
   });
 });

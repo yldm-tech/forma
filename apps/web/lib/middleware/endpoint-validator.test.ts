@@ -39,14 +39,15 @@ describe("endpoint-validator", () => {
       });
     });
 
-    test("should return correct object for OG route (client-side but not rate limited)", () => {
+    test("should rate limit the OG route like every other client route", () => {
+      // The OG route used to be carved out of rate limiting entirely. It renders an image from an unauthenticated query string, so it now carries the client limit like its siblings — applied in the handler, since it is not wrapped in `withV1ApiWrapper`.
       expect(isClientSideApiRoute("/api/v1/client/og")).toEqual({
         isClientSideApi: true,
-        isRateLimited: false,
+        isRateLimited: true,
       });
       expect(isClientSideApiRoute("/api/v1/client/og/image")).toEqual({
         isClientSideApi: true,
-        isRateLimited: false,
+        isRateLimited: true,
       });
     });
 

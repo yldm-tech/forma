@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   convertDatesInObject,
   formatDate,
@@ -74,12 +74,30 @@ describe("Time Utilities", () => {
   });
 
   describe("getTodaysDateTimeFormatted", () => {
-    test("should format today's date and time with specified separator", () => {
-      const today = new Date();
-      const datePart = today.toISOString().split("T")[0].split("-").join(".");
-      const timePart = today.toTimeString().split(" ")[0].split(":").join(".");
-      const expected = `${datePart}.${timePart}`;
-      expect(getTodaysDateTimeFormatted(".")).toBe(expected);
+    // Asserted against a fixed instant rather than recomputed the way the implementation computes it: the old expectation mirrored the mixed-zone bug line for line, so it passed on both the broken and the correct implementation.
+    const instant = new Date("2026-09-19T23:30:45.000Z");
+
+    test("formats the date and time with the given separator", () => {
+      expect(getTodaysDateTimeFormatted(".", instant)).toBe("2026.09.19.23.30.45");
+      expect(getTodaysDateTimeFormatted("-", instant)).toBe("2026-09-19-23-30-45");
+    });
+
+    test("reads both halves in UTC, so they describe one moment under a non-UTC server zone", () => {
+      // 08:30 on the 20th in Tokyo is 23:30 on the 19th UTC. Taking the date from `toISOString()` and the clock from `toTimeString()` produced "2026.09.19.08.30.45" here — a calendar day behind the time printed beside it, naming a moment that never existed.
+      // `stubEnv` rather than assigning `process.env.TZ`: it restores an originally-unset key by deleting it, where an assignment would write back the string "undefined" and pin every later test in this file to UTC.
+      vi.stubEnv("TZ", "Asia/Tokyo");
+      vi.useFakeTimers();
+      vi.setSystemTime(instant);
+      try {
+        expect(getTodaysDateTimeFormatted(".")).toBe("2026.09.19.23.30.45");
+      } finally {
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+      }
+    });
+
+    test("defaults to now", () => {
+      expect(getTodaysDateTimeFormatted("-")).toMatch(/^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/);
     });
   });
 

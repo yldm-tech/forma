@@ -139,14 +139,15 @@ pnpm lint:migrations migration/<timestamp>/migration.sql
 
 Squawk checks PostgreSQL 15 syntax, which remains relevant to older one-click installations in the
 [self-hosted migration guide](../../docs/self-hosting/advanced/migration.mdx#v27), while CI replays the complete
-history on PostgreSQL 18. Prisma 7.8 does not add a transaction wrapper around migration SQL, so concurrent index
-checks remain enabled and migrations must add `BEGIN` and `COMMIT` explicitly when atomic execution is required.
+history on PostgreSQL 18.
+
+Prisma 7.8 adds no transaction wrapper of its own, but that does not make a migration non-transactional: `prisma migrate deploy` hands the whole `migration.sql` to PostgreSQL as one multi-statement script, and the server runs such a script in an implicit transaction. So `CREATE INDEX CONCURRENTLY` and `DROP INDEX CONCURRENTLY` are not available here — they abort with `25001` on every deploy — and neither is a one-statement file a way around it, because Squawk's `require-lock-timeout` needs a preceding `SET` and makes the file multi-statement again. Write `BEGIN` and `COMMIT` explicitly anyway: the boundary is what a reader and Squawk both go by, and it is what makes a partly-applied migration roll back instead of leaving half its statements in place. The operational consequence is a blocking index build, which is the self-hoster's problem rather than the author's — see the warning in the [self-hosted migration guide](../../docs/self-hosting/advanced/migration.mdx) and document the same for any large table you index.
 
 `pnpm create-migration` copies Prisma's generated SQL unchanged. Before committing every generated migration:
 
-1. Add `SET lock_timeout = '1s';` at the top.
-2. Add explicit transaction boundaries when the statements must be atomic.
-3. Change eligible index builds to `CREATE INDEX CONCURRENTLY`, which cannot run inside a transaction.
+1. Wrap the statements in `BEGIN;` / `COMMIT;` and add `SET LOCAL lock_timeout = '1s';` as the first statement inside. Raise the timeout when the migration takes a lock that has to queue behind ordinary traffic; the two shipped migrations use `'5s'`.
+2. Leave index builds as plain `CREATE INDEX` / `DROP INDEX`, add `-- squawk-ignore require-concurrent-index-creation` (or `require-concurrent-index-deletion`) above each, and state in the comment which table it blocks writes on and roughly for how long.
+3. Document the same blocking window in the self-hosted migration guide when the table is large on a real instance.
 4. Run `pnpm lint:migrations migration/<timestamp>/migration.sql` and document targeted exceptions.
 
 Squawk cannot inspect statements hidden inside a `DO $$ ... $$` block. Use such blocks only when PostgreSQL
@@ -158,10 +159,15 @@ SQL or deployment model; do not add one for a migration-specific exception or us
 For example:
 
 ```sql
-SET lock_timeout = '1s';
+BEGIN;
+
+SET LOCAL lock_timeout = '1s';
+
 -- A preceding data migration guarantees that Example has no rows.
 -- squawk-ignore adding-required-field
-ALTER TABLE "Example" ADD COLUMN IF NOT EXISTS "slug" TEXT NOT NULL;
+ALTER TABLE "Example" ADD COLUMN "slug" TEXT NOT NULL;
+
+COMMIT;
 ```
 
 Squawk enforces a short lock timeout, but intentionally does not require a statement timeout. If an operation

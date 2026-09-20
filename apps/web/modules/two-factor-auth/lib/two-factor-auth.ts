@@ -10,6 +10,11 @@ import { auth } from "@/modules/auth/lib/auth";
 import { buildReencodedTwoFactorData } from "@/modules/auth/lib/cutover/reencode-two-factor";
 import { totpAuthenticatorCheck } from "@/modules/auth/lib/totp";
 
+/**
+ * `User.twoFactorSecret` and `User.backupCodes` are at rest, written by whichever app version enrolled the user, and never influenced by a request — the request only carries the TOTP or backup code checked against them. So legacy unauthenticated-CBC ciphertext is accepted here: refusing it would lock a pre-GCM enrollee out of their own account with no way back in.
+ */
+const AT_REST_DECRYPT_OPTIONS = { allowLegacyCbc: true } as const;
+
 export const setupTwoFactorAuth = async (
   userId: string,
   password: string
@@ -113,7 +118,7 @@ export const enableTwoFactorAuth = async (id: string, code: string) => {
     throw new Error("Encryption key not found");
   }
 
-  const secret = symmetricDecrypt(user.twoFactorSecret, ENCRYPTION_KEY);
+  const secret = symmetricDecrypt(user.twoFactorSecret, ENCRYPTION_KEY, AT_REST_DECRYPT_OPTIONS);
   if (secret.length !== 32) {
     throw new InvalidInputError("Invalid secret");
   }
@@ -190,7 +195,9 @@ export const disableTwoFactorAuth = async (id: string, params: TDisableTwoFactor
       throw new InvalidInputError("Missing backup codes");
     }
 
-    const backupCodes = JSON.parse(symmetricDecrypt(user.backupCodes, ENCRYPTION_KEY));
+    const backupCodes = JSON.parse(
+      symmetricDecrypt(user.backupCodes, ENCRYPTION_KEY, AT_REST_DECRYPT_OPTIONS)
+    );
 
     // check if user-supplied code matches one
     const index = backupCodes.indexOf(backupCode.replaceAll("-", ""));
@@ -214,7 +221,7 @@ export const disableTwoFactorAuth = async (id: string, params: TDisableTwoFactor
       throw new Error("Encryption key not found");
     }
 
-    const secret = symmetricDecrypt(user.twoFactorSecret, ENCRYPTION_KEY);
+    const secret = symmetricDecrypt(user.twoFactorSecret, ENCRYPTION_KEY, AT_REST_DECRYPT_OPTIONS);
     if (secret.length !== 32) {
       throw new InvalidInputError("Invalid secret");
     }

@@ -221,24 +221,10 @@ vi.mock("@/lib/constants", async (importOriginal) => {
     SESSION_MAX_AGE: 1000,
     MAX_ATTRIBUTE_CLASSES_PER_ENVIRONMENT: 100,
     MAX_OTHER_OPTION_LENGTH: 250,
-    AVAILABLE_LOCALES: [
-      "de-DE",
-      "en-US",
-      "es-ES",
-      "fr-FR",
-      "hu-HU",
-      "ja-JP",
-      "nl-NL",
-      "pt-BR",
-      "pt-PT",
-      "ro-RO",
-      "ru-RU",
-      "sv-SE",
-      "tr-TR",
-      "zh-Hans-CN",
-      "zh-Hant-TW",
-    ],
-    DEFAULT_LOCALE: "en-US",
+    // AVAILABLE_LOCALES and DEFAULT_LOCALE are deliberately not overridden: they carry no secret and
+    // no environment dependency, so the real values are the ones tests should see. The override used
+    // to pin the 15 locales of the upstream project, which hid every bug that only exists because two
+    // of the four locales this app ships share a base language (see lib/utils/locale.test.ts).
     BREVO_API_KEY: "mock-brevo-api-key",
     ITEMS_PER_PAGE: 30,
     FB_LOGO_URL: "mock-fb-logo-url",

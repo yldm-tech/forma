@@ -47,16 +47,17 @@ describe("fileUpload", () => {
     expect(result.url).toBe("");
   });
 
-  test("should return FILE_SIZE_EXCEEDED if arrayBuffer is > 10MB even if file.size is OK", async () => {
-    const file = createMockFile("test.jpg", "image/jpeg", 1000); // file.size = 1KB
-
-    // Mock arrayBuffer to return >10MB buffer
-    file.arrayBuffer = vi.fn().mockResolvedValueOnce(new ArrayBuffer(11 * 1024 * 1024)); // 11MB
+  // Contract change: the size check used to read `await file.arrayBuffer()` and measure its `byteLength`, so this test asserted an 11 MB buffer behind a 1 KB `file.size` was rejected. `file.size` is that same byte count as metadata, so the check now reads no bytes at all — and the whole file is never pulled into memory on the main thread.
+  test("should return FILE_SIZE_EXCEEDED from file.size without reading the file", async () => {
+    const file = createMockFile("test.jpg", "image/jpeg", 11 * 1024 * 1024);
+    const arrayBufferSpy = vi.spyOn(file, "arrayBuffer");
 
     const result = await fileUploadModule.handleFileUpload(file, "env-oversize-buffer");
 
     expect(result.error).toBe(fileUploadModule.FileUploadError.FILE_SIZE_EXCEEDED);
     expect(result.url).toBe("");
+    expect(arrayBufferSpy).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   test("should handle API error when getting signed URL", async () => {
@@ -128,44 +129,14 @@ describe("fileUpload", () => {
       ok: true,
     });
 
-    // Simulate FileReader onload
-    setTimeout(() => {
-      mockFileReader.onload();
-    }, 0);
-
     const result = await fileUploadModule.handleFileUpload(file, "test-env");
     expect(result.error).toBeUndefined();
     expect(result.url).toBe("/storage/test-env/public/file.jpg");
-  });
 
-  test("should handle upload error with presigned fields", async () => {
-    const file = createMockFile("test.jpg", "image/jpeg", 1000);
-    // Mock successful API response - now returns relative path
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        data: {
-          signedUrl: "https://s3.example.com/upload",
-          fileUrl: "/storage/test-env/public/file.jpg",
-          presignedFields: {
-            key: "value",
-          },
-        },
-      }),
-    });
-
-    global.atob = vi.fn(() => {
-      throw new Error("Failed to decode base64 string");
-    });
-
-    // Simulate FileReader onload
-    setTimeout(() => {
-      mockFileReader.onload();
-    }, 0);
-
-    const result = await fileUploadModule.handleFileUpload(file, "test-env");
-    expect(result.error).toBe(fileUploadModule.FileUploadError.UPLOAD_FAILED);
-    expect(result.url).toBe("");
+    // Regression: the file used to be base64-encoded and rebuilt as a Blob before this point. It now goes on the form as-is, so `fetch` streams it and nothing copies it.
+    const uploadBody = mockFetch.mock.calls[1][1].body as FormData;
+    expect(uploadBody.get("key")).toBe("value");
+    expect(uploadBody.get("file")).toBe(file);
   });
 
   test("should handle upload error", async () => {
@@ -190,11 +161,6 @@ describe("fileUpload", () => {
       ok: false,
     });
 
-    // Simulate FileReader onload
-    setTimeout(() => {
-      mockFileReader.onload();
-    }, 0);
-
     const result = await fileUploadModule.handleFileUpload(file, "test-env");
     expect(result.error).toBe(fileUploadModule.FileUploadError.STORAGE_UPLOAD_FAILED);
     expect(result.url).toBe("");
@@ -218,10 +184,6 @@ describe("fileUpload", () => {
 
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    setTimeout(() => {
-      mockFileReader.onload();
-    }, 0);
-
     const result = await fileUploadModule.handleFileUpload(file, "test-env");
     expect(result.error).toBe(fileUploadModule.FileUploadError.STORAGE_UPLOAD_FAILED);
     expect(result.url).toBe("");
@@ -230,10 +192,8 @@ describe("fileUpload", () => {
   test("should catch unexpected errors and return UPLOAD_FAILED", async () => {
     const file = createMockFile("test.jpg", "image/jpeg", 1000);
 
-    // Force arrayBuffer() to throw
-    file.arrayBuffer = vi.fn().mockImplementation(() => {
-      throw new Error("Unexpected crash in arrayBuffer");
-    });
+    // The signing request is the first thing that can throw now that the file itself is never read.
+    mockFetch.mockRejectedValueOnce(new Error("Unexpected crash while signing"));
 
     const result = await fileUploadModule.handleFileUpload(file, "env-crash");
 

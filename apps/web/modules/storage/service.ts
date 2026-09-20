@@ -26,9 +26,20 @@ const SAFE_FILE_PATH_SEGMENT = /^[A-Za-z0-9_-]+$/;
  * name another's file must not depend on how the storage backend or any proxy in front of it happens
  * to treat dot segments. `fileName` legitimately contains `/` (upload nests it under
  * `filePathSegments`), so only the segments themselves are constrained.
+ *
+ * Each segment is checked raw and decoded: the route param reaches us decoded once already, so a `%252e%252e` traversal is a literal `%2e%2e` here and only a second decode reveals it. The decode is for the guard alone — the key is built from the name as given — and a segment whose encoding is malformed (`100%`, which `decodeURIComponent` throws on) is simply not a double-encoded dot segment.
  */
 const hasTraversalSegment = (fileName: string): boolean =>
-  fileName.split("/").some((segment) => segment === "." || segment === "..");
+  fileName.split("/").some((segment) => {
+    if (segment === "." || segment === "..") return true;
+
+    try {
+      const decoded = decodeURIComponent(segment);
+      return decoded === "." || decoded === "..";
+    } catch {
+      return false;
+    }
+  });
 
 export const getSignedUrlForUpload = async (
   fileName: string,
@@ -103,20 +114,17 @@ export const getFileStreamForDownload = async (
   fallbackId?: string
 ): Promise<Result<FileStreamResult, StorageError>> => {
   try {
-    const fileNameDecoded = decodeURIComponent(fileName);
-
-    // Checked after the decode: the route param is already URL-decoded once, so a `%252e%252e`
-    // traversal only becomes `..` here.
-    if (hasTraversalSegment(fileName) || hasTraversalSegment(fileNameDecoded)) {
+    if (hasTraversalSegment(fileName)) {
       return err({ code: StorageErrorCode.InvalidInput });
     }
 
-    const primaryKey = `${primaryId}/${accessType}/${fileNameDecoded}`;
+    // `fileName` is the stored name, not an encoded one: the `[...filePath]` route param arrives decoded from Next, and the export path decodes the stored URL before calling in. Decoding again here threw `URIError` on any name holding a literal `%` (`invoice 100%.pdf`, which `sanitizeFileName` keeps), turning an uploaded file into a permanent 500.
+    const primaryKey = `${primaryId}/${accessType}/${fileName}`;
 
     const streamResult = await getFileStream(primaryKey);
 
     if (!streamResult.ok && streamResult.error.code === StorageErrorCode.FileNotFoundError && fallbackId) {
-      const fallbackKey = `${fallbackId}/${accessType}/${fileNameDecoded}`;
+      const fallbackKey = `${fallbackId}/${accessType}/${fileName}`;
       return await getFileStream(fallbackKey);
     }
 

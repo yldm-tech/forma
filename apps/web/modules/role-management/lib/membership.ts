@@ -60,15 +60,6 @@ export const updateMembership = async (
     });
     affectedTeamIds = teamMemberships.map(({ teamId }) => teamId);
 
-    await client.membership.findMany({
-      where: {
-        organizationId,
-      },
-      select: {
-        userId: true,
-      },
-    });
-
     return membership;
   } catch (error) {
     if (

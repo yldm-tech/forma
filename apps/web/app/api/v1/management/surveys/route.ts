@@ -1,5 +1,6 @@
 import { logger } from "@forma/logger";
 import { ZSurveyCreateInputWithWorkspaceId } from "@forma/types/surveys/types";
+import { MAX_ITEMS_PER_PAGE, parsePaginationParams } from "@/app/api/v1/management/lib/pagination";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { checkFeaturePermissions } from "@/app/api/v1/management/surveys/lib/utils";
 import {
@@ -38,8 +39,17 @@ export const GET = withV1ApiWrapper({
 
     try {
       const searchParams = new URL(req.url).searchParams;
-      const limit = searchParams.has("limit") ? Number(searchParams.get("limit")) : undefined;
-      const offset = searchParams.has("offset") ? Number(searchParams.get("offset")) : undefined;
+
+      const pagination = parsePaginationParams(searchParams, {
+        defaultLimit: MAX_ITEMS_PER_PAGE,
+        offsetParamName: "offset",
+      });
+      if (!pagination.ok) {
+        return {
+          response: responses.badRequestResponse("Invalid pagination parameters", pagination.details, true),
+        };
+      }
+      const { limit, offset } = pagination.data;
 
       const workspaceIds = [
         ...new Set(authentication.workspacePermissions.map((permission) => permission.workspaceId)),

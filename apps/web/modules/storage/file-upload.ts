@@ -65,10 +65,8 @@ export const handleFileUpload = async (
         url: "",
       };
     }
-    const fileBuffer = await file.arrayBuffer();
-
-    const bufferBytes = fileBuffer.byteLength;
-    const bufferKB = bufferBytes / 1024;
+    // `file.size` is metadata, so the size check no longer reads the file's bytes at all.
+    const bufferKB = file.size / 1024;
 
     const MAX_FILE_SIZE_MB = 5;
     const maxSizeInKB = MAX_FILE_SIZE_MB * 1024;
@@ -110,26 +108,14 @@ export const handleFileUpload = async (
       fileUrl: string;
     };
 
-    const fileBase64 = (await toBase64(file)) as string;
     const formDataForS3 = new FormData();
 
     Object.entries(presignedFields).forEach(([key, value]) => {
       formDataForS3.append(key, value);
     });
 
-    try {
-      const binaryString = atob(fileBase64.split(",")[1]);
-      const uint8Array = Uint8Array.from([...binaryString].map((char) => char.charCodeAt(0)));
-      const blob = new Blob([uint8Array], { type: file.type });
-
-      formDataForS3.append("file", blob);
-    } catch (err) {
-      console.error("Error in uploading file: ", err);
-      return {
-        error: FileUploadError.UPLOAD_FAILED,
-        url: "",
-      };
-    }
+    // The `File` goes on the form as-is and `fetch` streams it. Round-tripping it through a base64 data URL, `atob`, and a per-character array first held four copies of a 5 MB upload in memory synchronously — hundreds of MB for the spread alone — and the S3 object's key and content type come from `presignedFields` either way, not from this part.
+    formDataForS3.append("file", file);
 
     let uploadResponse: Response;
 

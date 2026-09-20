@@ -35,6 +35,7 @@ export const symmetricEncrypt = (text: string, key: string) => {
 };
 
 /**
+ * Legacy AES-256-CBC. Unauthenticated: the IV is read verbatim out of the payload and there is no auth tag, so an attacker who holds one valid ciphertext can mint unlimited variants whose first plaintext block they choose, and every one of them decrypts without error. Never reachable from a caller that has not opted in — see `symmetricDecrypt`.
  *
  * @param text Value to decrypt
  * @param key Key used to decrypt value must be 32 bytes for AES256 encryption algorithm
@@ -70,26 +71,44 @@ const symmetricDecryptV2 = (text: string, key: string): string => {
   return decrypted;
 };
 
+export type TSymmetricDecryptOptions = {
+  /**
+   * Accept the legacy two-part `iv:ciphertext` form and decrypt it with unauthenticated AES-256-CBC. Off by default, and the default is the security boundary: a payload in that form carries no auth tag, so any string a caller was handed decrypts to *something* rather than being rejected.
+   *
+   * Only pass `true` when the ciphertext's integrity is already established by something other than this function — it came out of our own database and no request can influence it. A value that arrives on a request, in a URL parameter, a body field, or an unverified token, never qualifies, however deeply nested it is.
+   */
+  allowLegacyCbc?: boolean;
+};
+
 /**
- * Decrypts an encrypted payload, automatically handling multiple encryption versions.
+ * Decrypt a payload produced by `symmetricEncrypt` (V2, `iv:ciphertext:tag`, AES-256-GCM).
  *
- * If the payload contains exactly one “:”, it is treated as a legacy V1 format
- * and `symmetricDecryptV1` is invoked. Otherwise, it attempts a V2 GCM decryption
- * via `symmetricDecryptV2`, falling back to V1 on failure (e.g., authentication
- * errors or bad formats).
+ * A two-part `iv:ciphertext` payload is the pre-GCM V1 format. It is rejected unless the caller passes `allowLegacyCbc: true`, because V1 is unauthenticated: routing attacker-supplied strings there turns "decryption failed" into "decrypted to a value the attacker steered", which is how a single-use link could be forged. There is no fallback in the other direction — a V2 payload that fails its auth tag throws, and is never retried as CBC.
  *
  * @param payload - The encrypted string to decrypt.
  * @param key - The secret key used for decryption.
+ * @param options - See `TSymmetricDecryptOptions`.
  * @returns The decrypted plaintext.
  */
 
-export function symmetricDecrypt(payload: string, key: string): string {
-  // If it's clearly V1 (only one “:”), skip straight to V1
+export function symmetricDecrypt(
+  payload: string,
+  key: string,
+  options: TSymmetricDecryptOptions = {}
+): string {
+  // Two parts means legacy V1 — hex has no colons, so the part count is an exact discriminator.
   if (payload.split(":").length === 2) {
+    if (!options.allowLegacyCbc) {
+      logger.warn(
+        "Rejected a legacy AES-256-CBC payload: this caller does not accept unauthenticated ciphertext"
+      );
+
+      throw new Error("Unsupported encrypted payload format");
+    }
+
     return symmetricDecryptV1(payload, key);
   }
 
-  // Otherwise try GCM first, then fall back to CBC
   try {
     return symmetricDecryptV2(payload, key);
   } catch (err) {

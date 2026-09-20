@@ -291,19 +291,49 @@ describe("Crypto Utils", () => {
       });
     });
 
-    test("should decrypt legacy V1 format (with only one colon)", () => {
-      // Simulate a V1 encrypted value (only has one colon: iv:ciphertext)
-      // This test verifies backward compatibility
-      const plaintext = "legacy data";
+    describe("legacy V1 (AES-256-CBC) payloads", () => {
+      // The pre-GCM format this codebase used to emit: `ivHex:ciphertextHex`, no auth tag.
+      const encryptV1 = (plaintext: string): string => {
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv("aes256", Buffer.from(testKey, "hex"), iv);
+        let ciphered = cipher.update(plaintext, "utf8", "hex");
+        ciphered += cipher.final("hex");
+        return `${iv.toString("hex")}:${ciphered}`;
+      };
 
-      // Since we can't easily create a V1 format without the old code,
-      // we'll just verify that a payload with 2 parts triggers the V1 path
-      // For a real test, you'd need a known V1 encrypted value
+      test("rejects a V1 payload by default", () => {
+        const v1Payload = encryptV1("legacy data");
+        expect(v1Payload.split(":")).toHaveLength(2);
 
-      // Skip this test or use a known V1 encrypted string if available
-      // For now, we'll test that the logic correctly identifies the format
-      const v2Encrypted = symmetricEncrypt(plaintext, testKey);
-      expect(v2Encrypted.split(":")).toHaveLength(3); // V2 has 3 parts
+        expect(() => symmetricDecrypt(v1Payload, testKey)).toThrow("Unsupported encrypted payload format");
+      });
+
+      test("decrypts a V1 payload only when the caller opts in", () => {
+        const plaintext = "legacy data";
+
+        expect(symmetricDecrypt(encryptV1(plaintext), testKey, { allowLegacyCbc: true })).toBe(plaintext);
+      });
+
+      test("an attacker-chosen IV cannot steer the plaintext without the opt-in", () => {
+        // CBC malleability: XOR the IV with (known plaintext block ^ desired plaintext block) and the
+        // first block decrypts to the attacker's choice, with no auth tag to catch it. This is the
+        // forgery the default now blocks — with `allowLegacyCbc` it still succeeds, which is exactly
+        // why no request-facing caller may pass it.
+        const known = "aaaaaaaaaaaaaaaa"; // one AES block
+        const forged = "bbbbbbbbbbbbbbbb";
+        const [ivHex, ciphertextHex] = encryptV1(known).split(":");
+
+        const forgedIv = Buffer.from(ivHex, "hex");
+        for (let i = 0; i < 16; i++) {
+          forgedIv[i] ^= known.charCodeAt(i) ^ forged.charCodeAt(i);
+        }
+        const forgedPayload = `${forgedIv.toString("hex")}:${ciphertextHex}`;
+
+        expect(symmetricDecrypt(forgedPayload, testKey, { allowLegacyCbc: true })).toBe(forged);
+        expect(() => symmetricDecrypt(forgedPayload, testKey)).toThrow(
+          "Unsupported encrypted payload format"
+        );
+      });
     });
 
     test("should throw error for invalid encrypted data", () => {

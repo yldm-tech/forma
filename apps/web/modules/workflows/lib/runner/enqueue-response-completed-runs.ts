@@ -237,6 +237,41 @@ const createAndDispatchWorkflowRun = async ({
 };
 
 /**
+ * The one trigger payload every matched workflow's run stores. `triggeredAt` is derived from `response.updatedAt` (not wall-clock) so a pipeline retry rebuilds a byte-identical payload.
+ *
+ * `endingId` is respondent-controlled — the public client response endpoint persists whatever string was posted (`ZResponseInput.endingId` is a bare string), while the payload schema types `endingCardId` as a cuid2. A value the schema rejects must not cost the workspace its automation, so it is logged and left out of the snapshot while the runs still fire: matching already happened on the raw string, and nothing at run time reads `endingCardId` back.
+ */
+const buildTriggerPayload = (
+  response: RunnerResponse,
+  workspaceId: string,
+  endingId: string | null,
+  logContext?: Record<string, unknown>
+): TWorkflowTriggerRunPayload => {
+  const base = {
+    type: "response.completed",
+    workspaceId,
+    surveyId: response.surveyId,
+    responseId: response.id,
+    data: response.data,
+    triggeredAt: response.updatedAt.toISOString(),
+  };
+
+  if (endingId) {
+    const withEndingCard = ZWorkflowTriggerRunPayload.safeParse({ ...base, endingCardId: endingId });
+    if (withEndingCard.success) {
+      return withEndingCard.data;
+    }
+    logger.warn(
+      // Truncated: the stored value is unvalidated client input and can be arbitrarily long.
+      { ...logContext, workspaceId, responseId: response.id, endingId: endingId.slice(0, 64) },
+      "Response ending id is not a valid ending card id; enqueueing workflow runs without it"
+    );
+  }
+
+  return ZWorkflowTriggerRunPayload.parse(base);
+};
+
+/**
  * Producer half of the workflow runner. On a completed response, find the enabled workflows whose
  * current published version targets this survey/ending, persist one `queued` `WorkflowRun` per match
  * (bound to that published version), and hand each to the injected dispatcher. Responses without an
@@ -268,17 +303,7 @@ export const enqueueResponseCompletedWorkflowRuns = async ({
     return;
   }
 
-  // One trigger payload for every matched workflow. `triggeredAt` is derived from `response.updatedAt`
-  // (not wall-clock) so a pipeline retry rebuilds a byte-identical payload.
-  const triggerPayload = ZWorkflowTriggerRunPayload.parse({
-    type: "response.completed",
-    workspaceId,
-    surveyId: response.surveyId,
-    responseId: response.id,
-    ...(endingId ? { endingCardId: endingId } : {}),
-    data: response.data,
-    triggeredAt: response.updatedAt.toISOString(),
-  });
+  const triggerPayload = buildTriggerPayload(response, workspaceId, endingId, logContext);
 
   const meterEvents: Promise<void>[] = [];
   for (const match of matches) {

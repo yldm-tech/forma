@@ -67,6 +67,8 @@ describe("updateMembership", () => {
         { teamId: "team2", userId: "user1" },
       ],
     });
+    // Nothing reads an org-wide membership list, and running one inside the caller's Serializable transaction would widen its read set to every membership in the organization.
+    expect(prisma.membership.findMany).not.toHaveBeenCalled();
   });
 
   test("should throw ResourceNotFoundError when membership doesn't exist", async () => {
@@ -171,6 +173,7 @@ describe("updateMembership", () => {
     await expect(updateMembership("user1", "org1", { role: "member" }, tx)).resolves.toEqual(mockMembership);
 
     expect(tx.membership.update).toHaveBeenCalled();
+    expect(tx.membership.findMany).not.toHaveBeenCalled();
     expect(prisma.membership.update).not.toHaveBeenCalled();
     expect(reconcileOrganizationMembership).not.toHaveBeenCalled();
     expect(reconcileTeamWorkspaceRelationships).not.toHaveBeenCalled();

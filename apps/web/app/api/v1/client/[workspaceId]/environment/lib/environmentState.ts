@@ -30,14 +30,15 @@ export const getWorkspaceState = async (
       const { workspace, surveys, actionClasses } = await getWorkspaceStateData(workspaceId);
 
       // Handle app setup completion update if needed
-      // This is a one-time setup flag that can tolerate TTL-based cache expiration
+      // This is a one-time setup flag that can tolerate TTL-based cache expiration.
+      // withCache does not dedupe concurrent callers, so the first burst of requests for a workspace that has just embedded the snippet all miss the cache and all read `appSetupCompleted: false`. The write is therefore conditional on the flag still being false, and only the request whose UPDATE actually flipped the row reports the activation — otherwise one activation produces one `app_connected` event per concurrent first page view.
       if (!workspace.appSetupCompleted) {
-        await prisma.workspace.update({
-          where: { id: workspaceId },
+        const { count: appSetupCompletedCount } = await prisma.workspace.updateMany({
+          where: { id: workspaceId, appSetupCompleted: false },
           data: { appSetupCompleted: true },
         });
 
-        if (POSTHOG_KEY) {
+        if (appSetupCompletedCount > 0 && POSTHOG_KEY) {
           const organizationId = await getOrganizationIdFromWorkspaceId(workspaceId);
           capturePostHogEvent(
             workspaceId,

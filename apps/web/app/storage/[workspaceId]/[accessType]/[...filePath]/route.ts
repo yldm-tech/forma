@@ -139,12 +139,8 @@ export const DELETE = async (
     }
   }
 
-  const deleteResult = await deleteFile(
-    resolved.workspaceId,
-    accessType,
-    decodeURIComponent(fileName),
-    idParam
-  );
+  // No decode here: Next already decoded the `[...filePath]` param, and a second pass threw on any name holding a literal `%` — the same double decode the download path used to do.
+  const deleteResult = await deleteFile(resolved.workspaceId, accessType, fileName, idParam);
 
   if (!deleteResult.ok) {
     if (!("error" in deleteResult)) {

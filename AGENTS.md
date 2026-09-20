@@ -2,19 +2,53 @@
 
 ## Project Structure & Module Organization
 
-Forma runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, with feature modules under `app/` and `modules/`, assets in `public/` and `images/`, and Playwright specs in `apps/web/playwright/`. `apps/storybook` renders reusable UI pieces for review. Shared logic lives in `packages/*`: `database` (Prisma schemas/migrations), `surveys`, `js-core`, `types`, plus linting and TypeScript presets (`config-*`). Deployment collateral is kept in `docs/`, `docker/`, and `helm-chart/`. Unit tests sit next to their source as `*.test.ts` or inside `__tests__`.
+Forma runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, with feature modules under `app/` and `modules/`, assets in `public/` and `images/`, and Playwright specs in `apps/web/playwright/`. `apps/storybook` renders reusable UI pieces for review. Shared logic lives in `packages/*`: `database` (Prisma schemas/migrations), `surveys`, `js-core`, `types`, plus linting and TypeScript presets (`config-*`). Deployment collateral is kept in `docs/`, `docker/`, and `charts/` (`charts/forma` is the Helm chart). Unit tests sit next to their source as `*.test.ts` or inside `__tests__`.
 
 ## Build, Test & Development Commands
 
 - `pnpm install` — install workspace dependencies pinned by `pnpm-lock.yaml`.
 - `pnpm db:up` / `pnpm db:down` — start/stop the Docker services backing the app. `db:up` also writes `authzed/schema.zed` into SpiceDB via `scripts/apply-authzed-schema.sh`, because docker compose only runs SpiceDB's datastore migration: it creates the tables and leaves it with no schema. Until the schema is written every permission check fails with `FAILED_PRECONDITION`, which the app surfaces as "Error loading resources" — a symptom that points nowhere near its cause. Do not gate that write on the gRPC health probe alone; it reports healthy as soon as the server accepts connections, which can precede a freshly migrated datastore accepting a schema write, so the script retries the write itself. The write is idempotent, so re-running `db:up` on a provisioned stack is a no-op.
 - `pnpm dev` — run all app and worker dev servers in parallel via Turborepo.
+- `pnpm go` — the one-command cold start: `db:up`, then `turbo run go`, which boots the Next dev server and puts every consumed package (`surveys`, `survey-ui`, `js-core`, `cache`, `storage`, `i18n-utils`) into `vite build --watch`. Prefer it over `pnpm dev` when touching package sources, because it is what keeps their `dist/` in step with `src/` — see "Stale package builds" below for what happens when it is not.
 - `pnpm build` — generate production builds for every package and app.
-- `pnpm lint` — apply the shared ESLint rules across the workspace.
+- `pnpm lint` — apply the shared ESLint rules across the workspace. Also runs four repo-level gates that ESLint cannot express: `api:v3:lint` (OpenAPI bundle), `catalog:check`, `tenant:check`, `tests:run-check`.
+- `pnpm typecheck` — TypeScript across the workspace. Not part of `pnpm lint`; CI runs it as its own job (`typecheck.yml`), so run it separately before pushing.
 - `pnpm format` / `pnpm format:check` — apply or verify Prettier across the workspace; `format:check` is what CI runs, so run `pnpm format` before pushing if you committed with `--no-verify`.
 - `pnpm test` / `pnpm test:coverage` — execute Vitest suites with optional coverage.
 - `pnpm test:e2e` — launch the Playwright browser regression suite.
 - `pnpm db:migrate:dev` — apply Prisma migrations against the dev database.
+- `pnpm db:seed` / `pnpm db:seed:clear` — populate or wipe the dev dataset.
+- `pnpm authzed:validate` — assert `authzed/schema.zed` against `authzed/schema-validation.yaml`, offline. Required green for any schema change, and a PR gate.
+- `pnpm api:v3:bundle` / `pnpm api:v3:check` — rebuild or verify the committed `/api/v3` OpenAPI bundle.
+- `pnpm i18n` — regenerate non-English locales from `en-US.json` and validate keys.
+
+### Running one test
+
+`pnpm test` runs the whole graph. To iterate on a single file, filter to its workspace and pass the
+path — and read "Stale package builds after a branch switch" first, because this is exactly the route
+that bypasses turbo's rebuild:
+
+```shell
+pnpm --filter @forma/web test lib/hash-string.test.ts   # one file
+pnpm --filter @forma/web test -t "<test name>"           # one test by name
+pnpm --filter @forma/surveys test src/lib/logic.test.ts  # any other workspace
+```
+
+`apps/web` splits its Vitest run into three projects (`apps/web/vite.config.mts`), so the environment a
+spec gets is decided by its filename, and `--project=<name>` narrows the run:
+
+| Project      | Files                  | Environment | Why                                                                                              |
+| ------------ | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------ |
+| `unit`       | `*.test.ts`            | node        | the default                                                                                      |
+| `components` | `*.test.tsx`           | jsdom       | assigned automatically — no `@vitest-environment` pragma                                         |
+| `rsc`        | `*.rsc.test.ts`        | node        | resolves React under the `react-server` condition, so `cache()` is real rather than a no-op      |
+
+A spec that needs the `page` authorization surface, or anything else that only exists in the RSC build,
+must be named `*.rsc.test.ts` — under `unit`, React's `cache()` is a no-op and the setup file mocks it
+to identity, so the behaviour cannot be exercised at all.
+
+Integration specs (`*.integration.test.ts`) are excluded from the unit config and need a real Postgres
+and Redis: `pnpm db:up`, then `pnpm --filter @forma/web test:integration`.
 
 Turbo runs a task only in packages that define the matching script and **silently skips** the rest.
 Every `packages/*` workspace therefore exposes the standard `lint` / `typecheck` / `test` /
@@ -139,6 +173,56 @@ TypeScript, React, and Prisma are the primary languages. Use the shared ESLint p
 Import order is set by `@trivago/prettier-plugin-sort-imports` and verified in CI by `pnpm format:check`, so it is not a matter of taste: `__mocks__` imports come first (they carry `vi.mock` calls), then `server-only`, then third-party packages, then `@forma/*`, `~/*`, `@/*`, and relative imports. Do not ask for or apply a different order in review — it will fail the check.
 We are using SonarQube to identify code smells and security hotspots.
 Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonly<MyProps>)`).
+
+## System architecture
+
+One Next.js process is the whole server: `apps/web` serves the product UI, every API surface, and — through
+`instrumentation.ts` / `instrumentation-jobs.ts` — the background worker, in-process. There is no separate
+worker deployment. It talks to PostgreSQL (source of truth), Valkey/Redis (cache and job queue), SpiceDB
+(authorization), and S3-compatible storage; `docker-compose.dev.yml` stands all of those up locally,
+plus MailHog for mail and — behind the opt-in `qwen` profile — a vLLM container for local AI. The Helm
+chart is a single deployment (`charts/forma/templates/deployment.yaml`), which is the same shape.
+
+**Authorization is the concept that spans the most files, and it is two layers on purpose.**
+`apps/web/lib/authorization` is the engine-independent contract — actors, namespaced actions
+(`workspace.read`, `survey.response_export`), opaque resource ids — and holds no AuthZed types. Product
+code calls only `can()` / `assertCan()` from there. `apps/web/lib/authzed` is the SpiceDB implementation
+behind it, and SpiceDB is the **sole** evaluator: there is no legacy fallback and no role-name gate. An
+unhealthy client is an operational error, not a denial. New authorization-sensitive code adds a `can` call;
+it never re-derives access from `Membership.role`. `apps/web/lib/authorization/README.md` carries the full
+role/grant mapping and the reasoning behind the non-obvious ones — read it before changing a gate.
+
+PostgreSQL stays the source of truth for membership and grants; SpiceDB holds a *projection* of them.
+Source-table triggers insert `AuthzedProjectionOutbox` rows in the same transaction as the mutation, and
+`lib/authzed/outbox-processor.ts` leases and drains them into SpiceDB, with retry, dead-lettering, and
+`pnpm authzed:backfill` as the recovery path (`authzed/RUNBOOK.md`). So a permission change is eventually
+consistent by design, and a check that reads stale is a delivery problem rather than a logic bug. The
+schema itself lives in `authzed/schema.zed`, is deployed only by the explicit `pnpm authzed:schema apply`
+— never at startup, migration, or Helm reconcile — and its semantics are pinned by
+`authzed/schema-validation.yaml`.
+
+Authorization decisions are also *surface*-scoped: `page` (server-rendered routes) is held in a React
+`cache()` slot so it spans a whole render pass, while every other surface uses `AsyncLocalStorage`. That is
+why an RSC-only spec has to be `*.rsc.test.ts`.
+
+**Several API surfaces; only one takes new work.** `/api/v1` and `/api/v2` are the legacy management and
+client APIs, `/api/client/[workspaceId]` serves the embedded survey runtime, and `/api/mcp` exposes the MCP
+server — all closed to new endpoints. New backend work goes in `/api/v3` only, where `app/api/v3/lib` supplies the shared wrapper, auth,
+cursor pagination and response shape, and each resource folder keeps its own `authorization.ts`,
+`schemas.ts` and `serializers.ts`. Documenting a v3 operation in the OpenAPI bundle is what enrolls it in
+the Schemathesis contract tests.
+
+**Background work** is BullMQ on Valkey, wrapped by `@forma/jobs`: `queue.ts` holds the typed enqueue
+helpers, `processors/` the handlers (response pipeline, workflow runs), and `runtime.ts` the worker the web
+process starts. Recurring schedules are upserted at boot from `apps/web/lib/jobs/recurring-registrations`
+— upsert only, never remove-first; `instrumentation-jobs.ts` documents why at length.
+
+**The survey runtime is shipped as a built bundle, not imported as source.** `@forma/survey-ui` holds the
+question components (CSS scoped to `#fbjs`), `@forma/surveys` composes them into the renderer, and
+`@forma/js-core` is the embed SDK. The Vite builds of the last two copy their output into
+`apps/web/public/js/` (`surveys.*` and `forma.*`) via `packages/vite-plugins/copy-compiled-assets`, and the
+browser loads it from there. That copy step is the reason a source change is invisible until you rebuild —
+see "Survey Packages Build & Cache" above.
 
 ## Architecture & Patterns
 

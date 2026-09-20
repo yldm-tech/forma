@@ -4,7 +4,11 @@ import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
 import { type TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
-import { type TConditionGroup, type TSingleCondition } from "@forma/types/surveys/logic";
+import {
+  type TConditionGroup,
+  type TSingleCondition,
+  type TSurveyLogicConditionsOperator,
+} from "@forma/types/surveys/logic";
 import { type TSurveyVariable } from "@forma/types/surveys/types";
 import { evaluateLogic, isConditionGroup, performActions } from "./logic";
 
@@ -540,6 +544,53 @@ describe("Survey Logic", () => {
       expect(result.calculations.var2).toBe(100); // 50 + 50
     });
 
+    test("assigns an element answer to a number variable as a number", () => {
+      const actions: TSurveyBlockLogicAction[] = [
+        {
+          id: "var2",
+          objective: "calculate",
+          variableId: "var2",
+          operator: "assign",
+          value: { type: "element", value: "q2" },
+        },
+      ];
+
+      const result = performActions(mockSurvey, actions, mockData, mockVariablesData);
+      // q2 is stored as the string "42": a number field holding "42" never matches a numeric response filter.
+      expect(result.calculations.var2).toBe(42);
+    });
+
+    test("leaves a number variable untouched when the assigned answer is not numeric", () => {
+      const actions: TSurveyBlockLogicAction[] = [
+        {
+          id: "var2",
+          objective: "calculate",
+          variableId: "var2",
+          operator: "assign",
+          value: { type: "element", value: "q1" },
+        },
+      ];
+
+      const result = performActions(mockSurvey, actions, mockData, mockVariablesData);
+      expect(result.calculations.var2).toBe(50);
+    });
+
+    test("leaves a number variable untouched when the assigned answer was cleared", () => {
+      const actions: TSurveyBlockLogicAction[] = [
+        {
+          id: "var2",
+          objective: "calculate",
+          variableId: "var2",
+          operator: "assign",
+          value: { type: "element", value: "q2" },
+        },
+      ];
+
+      // `Number("")` is 0, so without the blank guard a cleared answer assigns a 0 that a `score <= 5` response filter matches and the blank never did.
+      const result = performActions(mockSurvey, actions, { ...mockData, q2: "" }, mockVariablesData);
+      expect(result.calculations.var2).toBe(50);
+    });
+
     test("performs multiple actions in order", () => {
       const actions: TSurveyBlockLogicAction[] = [
         {
@@ -702,6 +753,38 @@ describe("Survey Logic", () => {
       expect(evaluateLogic(mockSurvey, mockData, mockVariablesData, doesNotEndWithCondition, "default")).toBe(
         true
       );
+    });
+
+    test("does not match the substring operators against a skipped question", () => {
+      // An unanswered question is absent from the response data, and `String(undefined)` is the literal "undefined" — so every one of these right operands is a substring of it.
+      const unansweredData: TResponseData = {};
+
+      const evaluateSubstring = (operator: TSurveyLogicConditionsOperator, rightValue: string): boolean =>
+        evaluateLogic(
+          mockSurvey,
+          unansweredData,
+          mockVariablesData,
+          {
+            id: "group1",
+            connector: "and",
+            conditions: [
+              {
+                id: "condition1",
+                operator,
+                leftOperand: { type: "element", value: "q1" },
+                rightOperand: { type: "static", value: rightValue },
+              },
+            ],
+          },
+          "default"
+        );
+
+      expect(evaluateSubstring("contains", "def")).toBe(false);
+      expect(evaluateSubstring("startsWith", "und")).toBe(false);
+      expect(evaluateSubstring("endsWith", "ned")).toBe(false);
+      expect(evaluateSubstring("doesNotContain", "def")).toBe(true);
+      expect(evaluateSubstring("doesNotStartWith", "und")).toBe(true);
+      expect(evaluateSubstring("doesNotEndWith", "ned")).toBe(true);
     });
 
     test("evaluates number comparison operators", () => {

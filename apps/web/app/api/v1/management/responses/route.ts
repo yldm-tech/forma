@@ -1,5 +1,6 @@
 import { logger } from "@forma/logger";
 import { TResponse, TResponseInput, ZResponseInput } from "@forma/types/responses";
+import { parsePaginationParams } from "@/app/api/v1/management/lib/pagination";
 import { resolveBodyIds } from "@/app/api/v1/management/lib/workspace-resolver";
 import { handleApiError } from "@/lib/api/handle-api-error";
 import { RequestBodyTooLargeError, parseJsonBodyWithLimit } from "@/lib/api/request-body";
@@ -8,6 +9,7 @@ import { transformErrorToDetails } from "@/lib/api/validator";
 import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import { can } from "@/lib/authorization";
 import { getWorkspaceAuthorizationActionForMethod } from "@/lib/authorization/permission-action";
+import { RESPONSES_PER_PAGE } from "@/lib/constants";
 import { sendToPipeline } from "@/lib/pipelines";
 import { applyAnonymizePolicy } from "@/lib/response/anonymize";
 import { getSurvey } from "@/lib/survey/service";
@@ -24,8 +26,14 @@ export const GET = withV1ApiWrapper({
 
     const searchParams = req.nextUrl.searchParams;
     const surveyId = searchParams.get("surveyId");
-    const limit = searchParams.get("limit") ? Number(searchParams.get("limit")) : undefined;
-    const offset = searchParams.get("skip") ? Number(searchParams.get("skip")) : undefined;
+
+    const pagination = parsePaginationParams(searchParams, { defaultLimit: RESPONSES_PER_PAGE });
+    if (!pagination.ok) {
+      return {
+        response: responses.badRequestResponse("Invalid pagination parameters", pagination.details, true),
+      };
+    }
+    const { limit, offset } = pagination.data;
 
     try {
       let allResponses: TResponse[] = [];

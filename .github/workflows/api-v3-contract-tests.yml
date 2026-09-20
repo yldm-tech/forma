@@ -13,11 +13,7 @@ on:
   workflow_call:
     secrets:
       ENTERPRISE_LICENSE_KEY:
-        # Optional: without it every entitlement-gated operation answers its documented 403 instead of
-        # a real payload — the run stays honest, just shallower, which is also the fork-PR path since
-        # secrets are never available there. With it, `contacts` resolves; `workflows` does not yet,
-        # because the CI key's feature set does not grant it (ENG-2553). The probe after boot reports
-        # which of the two you got.
+        # Changes nothing about this run. No feature is sold separately here (AGENTS.md, "Features are not gated"), no `/api/v3` handler calls a licence or entitlement helper, and the name appears in no application source — so every operation is exercised to the same depth with or without it, including on fork PRs where no secret is available. It stays declared only because pr.yml passes it by name and a caller passing a secret the callee does not declare fails validation; dropping it means changing both files together.
         required: false
   workflow_dispatch:
 
@@ -116,11 +112,7 @@ jobs:
           # documented-but-uninteresting 429s.
           echo "RATE_LIMITING_DISABLED=1" >> .env
           sed -i "s|AUTHZED_CONSISTENCY=.*|AUTHZED_CONSISTENCY=fully_consistent|" .env
-          # Not about running Playwright: this is the flag that stops the app sending an instanceId
-          # alongside the shared licence key (license.ts — "Skip instance ID during E2E tests to avoid
-          # license key conflicts"). Without it the licence server answers 403 "bound to another
-          # instance", every entitlement falls back to DEFAULT_FEATURES, and the 13 workflow
-          # operations plus contacts are only ever checked against their documented 403.
+          # Not about running Playwright, and no longer about licensing either — the licence call this used to work around is gone. What it still does that this job wants: `sendTelemetryEvents` hard-skips on it (lib/telemetry/usage-update.ts), so a CI instance built from a PR branch does not phone home, and next.config.mjs widens the CSP to loopback origins when the app is served as a production build.
           echo "E2E_TESTING=1" >> .env
 
       - name: Build App
@@ -230,22 +222,12 @@ jobs:
             exit 1
           fi
 
-          # Entitlement-gated operations answer a documented 403 when the licence does not grant the
-          # feature, so the suite stays green while testing half the contract shallowly. Probe one of
-          # them and say so out loud, rather than leaving that to whoever reads the warnings.
+          # The 13 workflow operations are a third of the contract and reach the database through their own context (buildWorkflowApiContext), so probe one of them too. Nothing about this asks whether a feature is unlocked: workflows are not entitlement-gated, and `workflows.list` authorizes exactly as the surveys read above does — `requireV3WorkspaceAccess(..., "read", ...)`, same key, same workspace. With that read already green, 200 is the only answer this can honestly give. A 403 is what a broken workflow context looks like (wrong workspace or permission reaching authorize), so it fails the run rather than being downgraded to a warning nobody reads; the branch that used to report it as an unlicensed install was reporting a state this build cannot be in.
           workflows_status=$(curl -o /tmp/preflight-workflows.json -s -w "%{http_code}" \
             -H "x-api-key: fbk_${SEED_API_KEY}" \
             "http://localhost:3000/api/v3/workflows?workspaceId=${workspace_id}&limit=1")
-          if [ "${workflows_status}" -eq 200 ]; then
-            echo "::notice::Workflows entitlement active — the 13 workflow operations run against real data."
-          elif [ "${workflows_status}" -eq 403 ]; then
-            echo "::warning::Workflows entitlement inactive (GET /api/v3/workflows → ${workflows_status}). The 13 workflow operations are only checked against their documented 403."
-            cat /tmp/preflight-workflows.json
-          else
-            # Anything else is a setup failure, not an entitlement answer. Treating it as "inactive"
-            # would let a 401 or 404 pass as a warning and the run go green having never exercised the
-            # workflow fixtures at all — the shallow-green outcome this whole job exists to prevent.
-            echo "::error::Workflow entitlement probe returned ${workflows_status}, expected 200 or 403."
+          if [ "${workflows_status}" -ne 200 ]; then
+            echo "::error::Workflow read returned ${workflows_status}, expected 200. The 13 workflow operations would be checked against an error response instead of real data."
             cat /tmp/preflight-workflows.json
             exit 1
           fi
@@ -294,8 +276,7 @@ jobs:
           if-no-files-found: ignore
           path: schemathesis-report/
 
-      # Failure only. A green run's log has nothing to say that the entitlement probe above does not,
-      # and an application log is the wrong thing to ship as an artifact on every green PR.
+      # Failure only. A green run's log has nothing to say that the pre-flight probes above do not, and an application log is the wrong thing to ship as an artifact on every green PR.
       - name: Upload app logs
         if: failure() && steps.harness.outputs.present == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
