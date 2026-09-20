@@ -27,7 +27,7 @@ vi.mock("@/lib/cache", () => ({
 vi.mock("@forma/database", () => ({
   prisma: {
     workspace: {
-      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     project: {
       findUnique: vi.fn(),
@@ -166,6 +166,9 @@ describe("getWorkspaceState", () => {
     // Mock cache.withCache to simply execute the function without caching for tests
     vi.mocked(cache.withCache).mockImplementation(async (fn) => await fn());
 
+    // The caller that flips appSetupCompleted sees count: 1; a concurrent caller that lost the race sees count: 0.
+    vi.mocked(prisma.workspace.updateMany).mockResolvedValue({ count: 1 });
+
     // Default mocks for successful retrieval
     vi.mocked(getWorkspaceStateData).mockResolvedValue(mockWorkspaceStateData);
     vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue("mock-org-id");
@@ -195,7 +198,7 @@ describe("getWorkspaceState", () => {
 
     expect(result.data).toEqual(expectedData);
     expect(getWorkspaceStateData).toHaveBeenCalledWith(workspaceId);
-    expect(prisma.workspace.update).not.toHaveBeenCalled();
+    expect(prisma.workspace.updateMany).not.toHaveBeenCalled();
   });
 
   test("should throw ResourceNotFoundError if workspace not found", async () => {
@@ -220,8 +223,8 @@ describe("getWorkspaceState", () => {
 
     const result = await getWorkspaceState(workspaceId);
 
-    expect(prisma.workspace.update).toHaveBeenCalledWith({
-      where: { id: workspaceId },
+    expect(prisma.workspace.updateMany).toHaveBeenCalledWith({
+      where: { id: workspaceId, appSetupCompleted: false },
       data: { appSetupCompleted: true },
     });
     expect(result.data).toBeDefined();
@@ -252,7 +255,7 @@ describe("getWorkspaceState", () => {
       },
     };
     vi.mocked(getWorkspaceStateData).mockResolvedValue(incompleteData);
-    vi.mocked(prisma.workspace.update).mockRejectedValue(new Error("Database error"));
+    vi.mocked(prisma.workspace.updateMany).mockRejectedValue(new Error("Database error"));
 
     // Should throw error since Promise.all will fail if database update fails
     await expect(getWorkspaceState(workspaceId)).rejects.toThrow("Database error");
@@ -361,5 +364,27 @@ describe("getWorkspaceState", () => {
     await getWorkspaceState(workspaceId);
 
     expect(capturePostHogEvent).not.toHaveBeenCalled();
+  });
+
+  test("should not capture app_connected event when a concurrent request already flipped the flag", async () => {
+    // withCache does not dedupe concurrent callers, so several requests can read appSetupCompleted: false at once. Only the one whose conditional update matched a row reports the activation.
+    const incompleteData = {
+      ...mockWorkspaceStateData,
+      workspace: {
+        ...mockWorkspaceStateData.workspace,
+        appSetupCompleted: false,
+      },
+    };
+    vi.mocked(getWorkspaceStateData).mockResolvedValue(incompleteData);
+    vi.mocked(prisma.workspace.updateMany).mockResolvedValue({ count: 0 });
+
+    const result = await getWorkspaceState(workspaceId);
+
+    expect(prisma.workspace.updateMany).toHaveBeenCalledWith({
+      where: { id: workspaceId, appSetupCompleted: false },
+      data: { appSetupCompleted: true },
+    });
+    expect(capturePostHogEvent).not.toHaveBeenCalled();
+    expect(result.data).toBeDefined();
   });
 });

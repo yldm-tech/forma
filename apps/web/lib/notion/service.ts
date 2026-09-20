@@ -57,7 +57,10 @@ export const writeData = async (
 };
 
 const getHeaders = (config: TIntegrationNotionConfig) => {
-  const decryptedToken = symmetricDecrypt(config.key.access_token, ENCRYPTION_KEY!);
+  // `allowLegacyCbc`: the token is at rest in `Integration.config`, written by whatever version of the app connected the integration, and nothing on a request can influence it. An install that connected Notion before the GCM switch would otherwise lose the integration on the next sync.
+  const decryptedToken = symmetricDecrypt(config.key.access_token, ENCRYPTION_KEY!, {
+    allowLegacyCbc: true,
+  });
   return {
     Accept: "application/json",
     "Content-Type": "application/json",

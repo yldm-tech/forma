@@ -367,6 +367,10 @@ const evaluateSingleCondition = (
       rightValue = Number(rightValue as string);
     }
 
+    // The substring operators below stringify both operands, and `String(undefined)` is the literal "undefined" — so a question the respondent skipped would satisfy `contains "def"`, `startsWith "und"` or `endsWith "ned"` and route them down a branch meant for an actual answer. A missing operand is not text: it matches nothing, and the three negations are true for it. This has to match the browser engine in `packages/surveys/src/lib/logic.ts` exactly: this copy is what `evaluateQuotas` screens a response against, so a divergence would screen a respondent into a quota the survey they just filled in said they were out of.
+    const hasSubstringOperands =
+      leftValue !== undefined && leftValue !== null && rightValue !== undefined && rightValue !== null;
+
     switch (condition.operator) {
       case "equals":
         if (condition.leftOperand.type === "element") {
@@ -447,17 +451,17 @@ const evaluateSingleCondition = (
 
         return leftValue !== rightValue;
       case "contains":
-        return String(leftValue).includes(String(rightValue));
+        return hasSubstringOperands && String(leftValue).includes(String(rightValue));
       case "doesNotContain":
-        return !String(leftValue).includes(String(rightValue));
+        return !hasSubstringOperands || !String(leftValue).includes(String(rightValue));
       case "startsWith":
-        return String(leftValue).startsWith(String(rightValue));
+        return hasSubstringOperands && String(leftValue).startsWith(String(rightValue));
       case "doesNotStartWith":
-        return !String(leftValue).startsWith(String(rightValue));
+        return !hasSubstringOperands || !String(leftValue).startsWith(String(rightValue));
       case "endsWith":
-        return String(leftValue).endsWith(String(rightValue));
+        return hasSubstringOperands && String(leftValue).endsWith(String(rightValue));
       case "doesNotEndWith":
-        return !String(leftValue).endsWith(String(rightValue));
+        return !hasSubstringOperands || !String(leftValue).endsWith(String(rightValue));
       case "isSubmitted":
         if (typeof leftValue === "string") {
           if (
@@ -751,8 +755,13 @@ const performCalculation = (
     case "hiddenField":
       const val = data[action.value.value];
       if (typeof val === "number" || typeof val === "string") {
-        if (dataType === "number" && !Number.isNaN(Number(val))) {
-          operandValue = Number(val);
+        if (dataType === "number") {
+          // `Number("")` is 0, and an answer the respondent gave and then cleared reaches here as `""` — the response data keeps empty strings and filters only `undefined` — so reading it as a number would fabricate a 0 that matches a `score <= 5` filter the blank answer never matched. Blank is not a number, which is the reading `getLeftOperandValue` above already takes of an empty number input.
+          const numericVal = typeof val === "string" && val.trim() === "" ? Number.NaN : Number(val);
+          // A non-numeric answer leaves the operand unresolved so the calculation is skipped: the `else` arm this replaces assigned `"abc"` straight into a number field, where nothing downstream can compare against it — and the browser engine in `packages/surveys/src/lib/logic.ts` skips it, so the two disagreed about what a response was worth.
+          if (!Number.isNaN(numericVal)) {
+            operandValue = numericVal;
+          }
         } else {
           operandValue = val;
         }

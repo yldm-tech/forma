@@ -1,7 +1,6 @@
 import * as nextHeaders from "next/headers";
 import { describe, expect, test, vi } from "vitest";
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from "@/lib/constants";
-import { appLanguages } from "@/lib/i18n/utils";
+import { DEFAULT_LOCALE } from "@/lib/constants";
 import { findMatchingLocale } from "./locale";
 
 // Mock the Next.js headers function
@@ -9,100 +8,86 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(),
 }));
 
-describe("locale", () => {
+type RequestHeaders = Awaited<ReturnType<typeof nextHeaders.headers>>;
+
+const withAcceptLanguage = (value: string | null) => {
+  const requestHeaders = new Headers(value === null ? undefined : { "accept-language": value });
+  vi.mocked(nextHeaders.headers).mockResolvedValue(requestHeaders as RequestHeaders);
+};
+
+/**
+ * These assertions run against the real `AVAILABLE_LOCALES` — `["en-US", "ja-JP", "zh-Hans-CN", "zh-Hant-TW"]`.
+ *
+ * They used not to: `vitestSetup.ts` overrode the constant with the 15 locales of the upstream project, so the suite exercised a language list this app does not ship (one test asserted `sv-SE` was selectable) and could not see either bug below, both of which only exist because two of the four shipped locales share a base language.
+ */
+describe("findMatchingLocale", () => {
   test("returns DEFAULT_LOCALE when Accept-Language header is missing", async () => {
-    // Set up the mock to return null for accept-language header
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue(null),
-    } as any);
+    withAcceptLanguage(null);
 
-    const result = await findMatchingLocale();
-
-    expect(result).toBe(DEFAULT_LOCALE);
+    expect(await findMatchingLocale()).toBe(DEFAULT_LOCALE);
     expect(nextHeaders.headers).toHaveBeenCalled();
   });
 
-  test("returns exact match when available", async () => {
-    // Assuming we have 'en-US' in AVAILABLE_LOCALES
-    const testLocale = AVAILABLE_LOCALES[0];
+  test("returns an exact match", async () => {
+    withAcceptLanguage("ja-JP,fr-FR,de-DE");
 
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue(`${testLocale},fr-FR,de-DE`),
-    } as any);
-
-    const result = await findMatchingLocale();
-
-    expect(result).toBe(testLocale);
-    expect(nextHeaders.headers).toHaveBeenCalled();
+    expect(await findMatchingLocale()).toBe("ja-JP");
   });
 
-  test("returns normalized match when available", async () => {
-    // Assuming we have 'en-US' in AVAILABLE_LOCALES but not 'en-GB'
-    const availableLocale = AVAILABLE_LOCALES.find((locale) => locale.startsWith("en-"));
+  test("falls back to the same language in another region", async () => {
+    withAcceptLanguage("en-GB,fr-FR");
 
-    if (!availableLocale) {
-      // Skip this test if no English locale is available
-      return;
-    }
-
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue("en-US,fr-FR,de-DE"),
-    } as any);
-
-    const result = await findMatchingLocale();
-
-    expect(result).toBe(availableLocale);
-    expect(nextHeaders.headers).toHaveBeenCalled();
+    expect(await findMatchingLocale()).toBe("en-US");
   });
 
   test("returns DEFAULT_LOCALE when no match is found", async () => {
-    // Use a locale that should not exist in AVAILABLE_LOCALES
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue("xx-XX,yy-YY"),
-    } as any);
+    withAcceptLanguage("xx-XX,yy-YY");
 
-    const result = await findMatchingLocale();
-
-    expect(result).toBe(DEFAULT_LOCALE);
-    expect(nextHeaders.headers).toHaveBeenCalled();
+    expect(await findMatchingLocale()).toBe(DEFAULT_LOCALE);
   });
 
-  test("handles multiple potential matches correctly", async () => {
-    // If we have multiple locales for the same language, it should return the first match
-    const germanLocale = AVAILABLE_LOCALES.find((locale) => locale.toLowerCase().startsWith("de"));
+  test.each([
+    ["zh-TW,zh;q=0.9,en;q=0.8", "zh-Hant-TW"],
+    ["zh-HK,en;q=0.7", "zh-Hant-TW"],
+    ["zh-Hant,en;q=0.7", "zh-Hant-TW"],
+    ["zh-CN,en;q=0.7", "zh-Hans-CN"],
+    ["zh-Hans-CN", "zh-Hans-CN"],
+    // No script and no region: CLDR resolves bare `zh` to Simplified, and so does the list order here.
+    ["zh", "zh-Hans-CN"],
+  ])("routes %s to %s", async (header, expected) => {
+    withAcceptLanguage(header);
 
-    if (!germanLocale) {
-      // Skip this test if no German locale is available
-      return;
-    }
-
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue("de-DE,en-US,fr-FR"),
-    } as any);
-
-    const result = await findMatchingLocale();
-
-    expect(result).toBe(germanLocale);
-    expect(nextHeaders.headers).toHaveBeenCalled();
+    expect(await findMatchingLocale()).toBe(expected);
   });
 
-  test("Swedish locale (sv-SE) is available and selectable", async () => {
-    // Verify sv-SE is in AVAILABLE_LOCALES
-    expect(AVAILABLE_LOCALES).toContain("sv-SE");
+  test("honours entries after the first, which carry a leading space and a q weight", async () => {
+    // Chrome and Safari both write the separator as ", ". The old matcher compared the raw entry, so " ja-JP;q=0.9" matched nothing and this fell through to English.
+    withAcceptLanguage("fr-FR, ja-JP;q=0.9");
 
-    // Verify Swedish has a language entry with proper label
-    const swedishLanguage = appLanguages.find((lang) => lang.code === "sv-SE");
-    expect(swedishLanguage).toBeDefined();
-    expect(swedishLanguage?.label["en-US"]).toBe("Swedish");
+    expect(await findMatchingLocale()).toBe("ja-JP");
+  });
 
-    // Verify the locale can be matched from Accept-Language header
-    vi.mocked(nextHeaders.headers).mockReturnValue({
-      get: vi.fn().mockReturnValue("sv-SE,en-US"),
-    } as any);
+  test("prefers the higher-weighted language over header order", async () => {
+    withAcceptLanguage("en-US;q=0.5, ja-JP;q=0.9");
 
-    const result = await findMatchingLocale();
+    expect(await findMatchingLocale()).toBe("ja-JP");
+  });
 
-    expect(result).toBe("sv-SE");
-    expect(nextHeaders.headers).toHaveBeenCalled();
+  test("ignores a language the client explicitly refused with q=0", async () => {
+    withAcceptLanguage("ja-JP;q=0, en-US;q=0.5");
+
+    expect(await findMatchingLocale()).toBe("en-US");
+  });
+
+  test("matches case-insensitively", async () => {
+    withAcceptLanguage("JA-jp");
+
+    expect(await findMatchingLocale()).toBe("ja-JP");
+  });
+
+  test("returns DEFAULT_LOCALE for a wildcard-only header", async () => {
+    withAcceptLanguage("*");
+
+    expect(await findMatchingLocale()).toBe(DEFAULT_LOCALE);
   });
 });

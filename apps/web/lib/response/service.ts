@@ -1,6 +1,5 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { z } from "zod";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { PrismaErrorType } from "@forma/database/types/error";
@@ -35,6 +34,7 @@ import { getOrganization } from "../organization/service";
 import { getSurvey } from "../survey/service";
 import { convertToCsv, convertToXlsxBuffer } from "../utils/file-conversion";
 import { validateInputs } from "../utils/validate";
+import { TResponseCursor, ZResponseCursor, applyResponseCursor } from "./cursor";
 import {
   calculateTtcTotal,
   extractSurveyDetails,
@@ -310,6 +310,11 @@ const filteringValuesSelection = {
   contactAttributes: true,
 } satisfies Prisma.ResponseSelect;
 
+/**
+ * How many responses the filter dropdowns are derived from. These five JSON columns are unbounded and the consumers below only reduce them to a set of distinct values, so an unbounded scan would pull the whole response table of a large survey into one Node process to build a list of options. The newest rows are the ones whose values a filter is likely to be built from, hence the `createdAt desc` sample rather than an arbitrary page.
+ */
+export const RESPONSE_FILTER_SAMPLE_SIZE = 10_000;
+
 export const getResponseFilteringValues = reactCache(async (surveyId: string) => {
   validateInputs([surveyId, ZId]);
 
@@ -324,6 +329,8 @@ export const getResponseFilteringValues = reactCache(async (surveyId: string) =>
         surveyId,
       },
       select: filteringValuesSelection,
+      orderBy: { createdAt: "desc" },
+      take: RESPONSE_FILTER_SAMPLE_SIZE,
     });
 
     const embeddedValueResponses: TEmbeddedValueResponse[] = responses;
@@ -349,31 +356,28 @@ export const getResponses = reactCache(
     limit?: number,
     offset?: number,
     filterCriteria?: TResponseFilterCriteria,
-    cursor?: string
+    cursor?: TResponseCursor
   ): Promise<TResponseWithQuotas[]> => {
     validateInputs(
       [surveyId, ZId],
       [limit, ZOptionalNumber],
       [offset, ZOptionalNumber],
       [filterCriteria, ZResponseFilterCriteria.optional()],
-      [cursor, z.cuid2().optional()]
+      [cursor, ZResponseCursor.optional()]
     );
 
     limit = limit ?? RESPONSES_PER_PAGE;
     const survey = await getSurvey(surveyId);
     if (!survey) return [];
     try {
-      const whereClause: Prisma.ResponseWhereInput = {
-        surveyId,
-        ...buildWhereClause(survey, filterCriteria),
-      };
-
-      // Add cursor condition for cursor-based pagination
-      if (cursor) {
-        whereClause.id = {
-          lt: cursor, // Get responses with ID less than cursor (for desc order)
-        };
-      }
+      // The cursor predicate has to match the composite sort key below, not just its id half — see cursor.ts.
+      const whereClause: Prisma.ResponseWhereInput = applyResponseCursor(
+        {
+          surveyId,
+          ...buildWhereClause(survey, filterCriteria),
+        },
+        cursor
+      );
 
       const responses = await prisma.response.findMany({
         where: whereClause,
@@ -443,7 +447,7 @@ export const getResponseDownloadFile = async (
 
     // Use cursor-based pagination instead of count + offset to avoid expensive queries
     const responses: TResponse[] = [];
-    let cursor: string | undefined = undefined;
+    let cursor: TResponseCursor | undefined = undefined;
     let hasMore = true;
 
     while (hasMore) {
@@ -453,8 +457,9 @@ export const getResponseDownloadFile = async (
       if (batch.length < batchSize) {
         hasMore = false;
       } else {
-        // Use the last response's ID as cursor for next batch
-        cursor = batch[batch.length - 1].id;
+        // Both sort keys of the last response, so the next batch resumes where this one ended.
+        const last = batch[batch.length - 1];
+        cursor = { createdAt: last.createdAt, id: last.id };
       }
     }
 

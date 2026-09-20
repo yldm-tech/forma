@@ -519,6 +519,7 @@ describe("processWorkflowRunJob", () => {
     await processWorkflowRunJob(data, baseContext);
 
     // Exactly one row claimed (create running) and one terminal update — never two creates for a step.
+    // `sequence: 1` is the contract, not an accident: the stored value is the step number the run drawer renders verbatim, so the first step of a run is 1.
     expect(mockWorkflowRunLogCreate).toHaveBeenCalledTimes(1);
     expect(mockWorkflowRunLogCreate).toHaveBeenCalledWith(
       expect.objectContaining({

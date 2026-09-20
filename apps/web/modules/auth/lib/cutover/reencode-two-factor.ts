@@ -6,6 +6,11 @@ import { ENCRYPTION_KEY } from "@/lib/constants";
 import { symmetricDecrypt } from "@/lib/crypto";
 
 /**
+ * Both columns this module reads are at rest and written by whichever app version enrolled the user, so a pre-GCM enrollee still holds legacy CBC ciphertext. Nothing on a request reaches these bytes, and this is the one pass that migrates them off CBC — refusing them here is what would strand the user.
+ */
+const AT_REST_DECRYPT_OPTIONS = { allowLegacyCbc: true } as const;
+
+/**
  * Re-encode a NextAuth-era 2FA secret + backup codes into Better Auth's TwoFactor format (ENG-1054,
  * spike S3) so existing users keep their authenticator app at cutover — no re-enrollment.
  *
@@ -30,7 +35,7 @@ export const reencodeTwoFactorSecret = async (
   encryptedFormaSecret: string,
   secretConfig: string | SecretConfig
 ): Promise<string> => {
-  const formaSecret = symmetricDecrypt(encryptedFormaSecret, ENCRYPTION_KEY); // otplib base32
+  const formaSecret = symmetricDecrypt(encryptedFormaSecret, ENCRYPTION_KEY, AT_REST_DECRYPT_OPTIONS); // otplib base32
   const keyBytes = Buffer.from(base32.decode(formaSecret));
   return symmetricEncrypt({ key: secretConfig, data: keyBytes.toString("latin1") });
 };
@@ -53,9 +58,9 @@ export const reencodeTwoFactorBackupCodes = async (
   encryptedFormaBackupCodes: string,
   secretConfig: string | SecretConfig
 ): Promise<string> => {
-  const storedCodes = JSON.parse(symmetricDecrypt(encryptedFormaBackupCodes, ENCRYPTION_KEY)) as (
-    string | null
-  )[];
+  const storedCodes = JSON.parse(
+    symmetricDecrypt(encryptedFormaBackupCodes, ENCRYPTION_KEY, AT_REST_DECRYPT_OPTIONS)
+  ) as (string | null)[];
   const displayedCodes = storedCodes
     .filter((code): code is string => typeof code === "string")
     .map((code) => `${code.slice(0, 5)}-${code.slice(5, 10)}`);

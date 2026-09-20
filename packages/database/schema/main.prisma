@@ -230,6 +230,7 @@ model TagsOnResponses {
   tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([responseId, tagId])
+  @@index([tagId]) // the primary key is led by responseId, so tagId-led access (tag filter, tag merge, the cascade from Tag) needs its own index
 }
 
 enum SurveyStatus {
@@ -256,7 +257,7 @@ model Display {
   contactId String?
   response  Response?
 
-  @@index([surveyId])
+  @@index([surveyId, createdAt]) // the summary counts displays by survey and date range; leading with surveyId keeps the bare-surveyId lookups on the same index
   @@index([contactId, createdAt])
 }
 

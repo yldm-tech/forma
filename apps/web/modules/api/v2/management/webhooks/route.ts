@@ -67,6 +67,21 @@ export const POST = async (request: NextRequest) =>
         if (!workspaceIdResult.ok) {
           return handleApiError(request, workspaceIdResult.error, auditLog);
         }
+
+        // The helper only asserts the surveys share a workspace; the webhook fan-out filters on both the workspace and the survey, so a webhook created across the two can never fire. PUT rejects the same body — see `[webhookId]/route.ts`.
+        const surveysWorkspaceId = workspaceIdResult.data;
+        if (surveysWorkspaceId && body.workspaceId !== surveysWorkspaceId) {
+          return handleApiError(
+            request,
+            {
+              type: "bad_request",
+              details: [
+                { field: "surveyIds", issue: "webhook workspace does not match the surveys workspace" },
+              ],
+            },
+            auditLog
+          );
+        }
       }
 
       const createWebhookResult = await createWebhook(body);

@@ -23,16 +23,12 @@ type TListV3WorkspaceResourceConfig<TRow extends { id: string }, TOut> = TV3Work
   fetchAll: (workspaceId: string) => Promise<readonly TRow[]>;
   /** Map a fetched row to its public response shape. */
   serialize: (row: TRow) => TOut;
-  /** Optional entitlement gate, run after auth: return a Response to short-circuit (e.g. 403), or null to allow. */
-  assertEntitlement?: (workspaceId: string) => Promise<Response | null>;
 };
 
 /**
- * Shared handler for the workspace-scoped v3 reference-list endpoints. Resolves workspace access,
- * runs an optional entitlement gate, fetches the full list and paginates it in memory — these are
- * bounded reference collections the codebase already reads as a whole (request-deduped via React
- * cache), so they don't fork the canonical read with a DB-side `take`/`cursor` query (see
- * paginateByIdCursor). A malformed cursor maps to 400; any other failure to 500.
+ * Shared handler for the workspace-scoped v3 reference-list endpoints. Resolves workspace access, fetches the full list and paginates it in memory — these are bounded reference collections the codebase already reads as a whole (request-deduped via React cache), so they don't fork the canonical read with a DB-side `take`/`cursor` query (see paginateByIdCursor). A malformed cursor maps to 400; any other failure to 500.
+ *
+ * There is no entitlement hook here on purpose: this product ships every feature enabled, so a per-feature gate in front of a read is dead code that still costs the query it runs to decide nothing.
  */
 export async function listV3WorkspaceResource<TRow extends { id: string }, TOut>(
   config: TListV3WorkspaceResourceConfig<TRow, TOut>
@@ -60,13 +56,6 @@ export async function listV3WorkspaceResource<TRow extends { id: string }, TOut>
     );
     if (authResult instanceof Response) {
       return authResult;
-    }
-
-    if (config.assertEntitlement) {
-      const denied = await config.assertEntitlement(authResult.workspaceId);
-      if (denied) {
-        return denied;
-      }
     }
 
     const rows = await fetchAll(authResult.workspaceId);

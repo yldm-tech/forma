@@ -189,6 +189,7 @@ export const AddIntegrationModal = ({
   const router = useRouter();
   const [tables, setTables] = useState<TIntegrationAirtableTables["tables"]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { handleSubmit, control, watch, setValue, reset } = useForm<IntegrationModalInputs>();
   const [includeHiddenFields, setIncludeHiddenFields] = useState(false);
   const [includeMetadata, setIncludeMetadata] = useState(false);
@@ -270,17 +271,21 @@ export const AddIntegrationModal = ({
         includeContactAttributes,
       };
 
+      // `airtableIntegrationData.config.data` aliases the `airtableIntegration` server prop's array, so mutate a clone — as `handleDelete` below already does. Without it a failed save leaves the pushed entry behind and the retry persists it twice.
+      const updatedIntegrationData = structuredClone(airtableIntegrationData);
+
       if (isEditMode) {
         // update action
-        airtableIntegrationData.config.data[defaultData.index] = integrationData;
+        updatedIntegrationData.config.data[defaultData.index] = integrationData;
       } else {
         // create action
-        airtableIntegrationData.config?.data.push(integrationData);
+        updatedIntegrationData.config.data.push(integrationData);
       }
 
+      setIsSubmitting(true);
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: airtableIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));
@@ -294,6 +299,8 @@ export const AddIntegrationModal = ({
       handleClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Unknown error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -477,7 +484,9 @@ export const AddIntegrationModal = ({
               </Button>
             )}
 
-            <Button type="submit">{t("common.save")}</Button>
+            <Button type="submit" loading={isSubmitting}>
+              {t("common.save")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

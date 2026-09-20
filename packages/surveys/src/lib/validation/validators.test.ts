@@ -267,9 +267,15 @@ describe("validators", () => {
       expect(result.valid).toBe(false);
     });
 
-    test("should return valid false when value is not an array", () => {
+    test("should return valid false when value is a non-empty non-array", () => {
       const result = validators.minSelections.check("not-array", { min: 2 }, {} as TSurveyElement);
       expect(result.valid).toBe(false);
+    });
+
+    test("should return valid true when value is empty (left to the required check)", () => {
+      expect(validators.minSelections.check(undefined, { min: 2 }, {} as TSurveyElement).valid).toBe(true);
+      expect(validators.minSelections.check([], { min: 2 }, {} as TSurveyElement).valid).toBe(true);
+      expect(validators.minSelections.check("", { min: 2 }, {} as TSurveyElement).valid).toBe(true);
     });
 
     test("should handle 'other' option correctly", () => {

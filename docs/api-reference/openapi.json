@@ -3065,12 +3065,14 @@
             }
           },
           {
-            "description": "Number of items to return",
+            "description": "Number of items to return (1-250, defaults to 25)",
             "example": "{{limit}}",
             "in": "query",
             "name": "limit",
             "schema": {
-              "minimum": 0,
+              "default": 25,
+              "maximum": 250,
+              "minimum": 1,
               "type": "integer"
             }
           },
@@ -4450,7 +4452,7 @@
     },
     "/api/v1/management/surveys": {
       "get": {
-        "description": "Fetches all existing surveys. Each survey includes both `questions` (the legacy structure) and `blocks` (the newer structure). `questions` is always derived from `blocks` for backwards compatibility, so integrations may read either field.",
+        "description": "Fetches existing surveys, most recently updated first. Each survey includes both `questions` (the legacy structure) and `blocks` (the newer structure). `questions` is always derived from `blocks` for backwards compatibility, so integrations may read either field. A response carries at most 250 surveys; page through the rest with `offset`.",
         "parameters": [
           {
             "example": "{{apiKey}}",
@@ -4459,6 +4461,26 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Number of surveys to return (1-250, defaults to 250)",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 250,
+              "maximum": 250,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of surveys to skip",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
             }
           }
         ],

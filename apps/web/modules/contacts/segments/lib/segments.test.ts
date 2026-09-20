@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
+import type { SegmentFindFirstArgs } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
 import { OperationNotAllowedError, ResourceNotFoundError, ValidationError } from "@forma/types/errors";
 import {
@@ -559,7 +560,7 @@ describe("Segment Service Tests", () => {
       expect(getSurvey).toHaveBeenCalledWith(surveyId);
       expect(prisma.$transaction).toHaveBeenCalled();
       expect(prisma.segment.findFirst).toHaveBeenCalledWith({
-        where: { title: surveyId, isPrivate: true },
+        where: { title: surveyId, isPrivate: true, workspaceId },
         select: selectSegment,
       });
       expect(prisma.survey.update).toHaveBeenCalledWith({
@@ -572,6 +573,38 @@ describe("Segment Service Tests", () => {
         select: selectSegment,
       });
       expect(prisma.segment.create).not.toHaveBeenCalled();
+    });
+
+    test("should ignore a same-titled private segment owned by another workspace", async () => {
+      const foreignSegmentPrisma = {
+        ...privateSegmentPrisma,
+        id: "foreign-private-segment-id",
+        workspaceId: "other-workspace-id",
+      };
+      // The store lists the foreign row first: `findFirst` has no ordering, so the database is free to return it.
+      const store = [foreignSegmentPrisma, privateSegmentPrisma];
+      const findFirstFromStore = async (args?: SegmentFindFirstArgs) =>
+        store.find((row) =>
+          Object.entries(args?.where ?? {}).every(
+            ([column, value]) => row[column as keyof typeof row] === value
+          )
+        ) ?? null;
+      // The cast is the shape mismatch every Prisma delegate mock has: the real method is overloaded and returns a `Prisma__SegmentClient`, not a plain promise. `findFirstFromStore` itself is typed, so the `where` this asserts on is checked against the schema.
+      vi.mocked(prisma.segment.findFirst).mockImplementation(
+        findFirstFromStore as unknown as typeof prisma.segment.findFirst
+      );
+
+      await resetSegmentInSurvey(surveyId);
+
+      expect(prisma.survey.update).toHaveBeenCalledWith({
+        where: { id: surveyId },
+        data: { segment: { connect: { id: privateSegmentId } } },
+      });
+      expect(prisma.segment.update).toHaveBeenCalledWith({
+        where: { id: privateSegmentId },
+        data: { filters: [] },
+        select: selectSegment,
+      });
     });
 
     test("should create a new private segment if none exists", async () => {

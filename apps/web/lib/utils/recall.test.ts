@@ -848,3 +848,100 @@ describe("parseRecallInfo — escapeValues", () => {
     expect(plain).toBe(escaped);
   });
 });
+
+// Regression: substitution used to re-scan its own output, so an answer that is itself a recall token never terminated. A respondent can submit one through the public response API, and the follow-up/workflow email path runs this synchronously inside the BullMQ worker — the run pinned the event loop at 100% CPU and stalled every other job on the process. Each of these hangs forever on the old implementation and is killed by the test timeout.
+describe("parseRecallInfo — a recalled value is data, not a token", () => {
+  const recall = (id: string) => `#recall:${id}/fallback:none#`;
+
+  test("returns when the answer is the same recall token it replaces", () => {
+    const result = parseRecallInfo(`Hi #recall:q1/fallback:y#`, { q1: "#recall:q1/fallback:z#" });
+
+    expect(result).toBe("Hi #recall:q1/fallback:z#");
+  });
+
+  test("returns when the answer is the same recall token it replaces, with values escaped", () => {
+    const result = parseRecallInfo(
+      `Hi #recall:q1/fallback:y#`,
+      { q1: "#recall:q1/fallback:z#" },
+      undefined,
+      false,
+      "en-US",
+      undefined,
+      true
+    );
+
+    expect(result).toBe("Hi #recall:q1/fallback:z#");
+  });
+
+  test("does not resolve a recall token that arrived inside another question's answer", () => {
+    const result = parseRecallInfo(`${recall("q1")} then ${recall("q2")}`, {
+      q1: `see ${recall("q2")}`,
+      q2: "second answer",
+    });
+
+    expect(result).toBe(`see ${recall("q2")} then second answer`);
+  });
+
+  test("returns when a variable's value is a recall token", () => {
+    const result = parseRecallInfo(recall("v1"), {}, { v1: "#recall:v1/fallback:loop#" });
+
+    expect(result).toBe("#recall:v1/fallback:loop#");
+  });
+
+  test("substitutes every token in order and keeps the surrounding text", () => {
+    const result = parseRecallInfo(`a ${recall("q1")} b ${recall("q2")} c`, { q1: "1", q2: "2" });
+
+    expect(result).toBe("a 1 b 2 c");
+  });
+});
+
+// Regression: the two remaining loops of the shape finding 8 fixed in `parseRecallInfo`. Each spins forever on the old implementation — there is no timeout to save the test run, because a synchronous loop never yields the event loop.
+describe("recall substitution terminates on text it cannot fully parse", () => {
+  test("leaves a bare #recall: prefix alone instead of looping on it", () => {
+    // `#recall:abc` has no `/fallback:…#` tail, so it is not a token. The old loop asked `includes("#recall:")`, found nothing to replace, and asked again.
+    expect(replaceRecallInfoWithUnderline("See #recall:abc for details")).toBe("See #recall:abc for details");
+  });
+
+  test("still underlines a complete token sitting next to a bare prefix", () => {
+    expect(replaceRecallInfoWithUnderline("#recall:abc and #recall:id1/fallback:v#")).toBe(
+      "#recall:abc and ___"
+    );
+  });
+
+  test("labels a token whose nested recall is only a bare prefix", () => {
+    const headline = { en: "This is #recall:inner/fallback:x#" };
+    const survey = {
+      id: "test-survey",
+      blocks: [{ id: "b1", elements: [{ id: "inner", headline: { en: "Inner #recall:gone" } }] }],
+      hiddenFields: { fieldIds: [] },
+      variables: [],
+    } as unknown as TSurvey;
+
+    expect(recallToHeadline(headline, survey, false, "en").en).toBe("This is @Inner #recall:gone");
+  });
+
+  test("treats $& in a headline as text, not as a replacement-string reference", () => {
+    // `text.replace(token, "@" + label)` expanded `$&` back to the token it had just matched, so the text grew by one label per iteration and never stopped matching.
+    const headline = { en: "Rate #recall:q1/fallback:x# now" };
+    const survey = {
+      id: "test-survey",
+      blocks: [{ id: "b1", elements: [{ id: "q1", headline: { en: "Cost $& fees" } }] }],
+      hiddenFields: { fieldIds: [] },
+      variables: [],
+    } as unknown as TSurvey;
+
+    expect(recallToHeadline(headline, survey, false, "en").en).toBe("Rate @Cost $& fees now");
+  });
+
+  test("keeps $` and $' in a headline verbatim", () => {
+    const headline = { en: "a #recall:q1/fallback:x# b" };
+    const survey = {
+      id: "test-survey",
+      blocks: [{ id: "b1", elements: [{ id: "q1", headline: { en: "before $` after $' end $$" } }] }],
+      hiddenFields: { fieldIds: [] },
+      variables: [],
+    } as unknown as TSurvey;
+
+    expect(recallToHeadline(headline, survey, true, "en").en).toBe("a /before $` after $' end $$\\ b");
+  });
+});

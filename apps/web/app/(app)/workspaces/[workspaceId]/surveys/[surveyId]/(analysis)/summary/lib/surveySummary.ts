@@ -1,6 +1,5 @@
 import "server-only";
 import { cache as reactCache } from "react";
-import { z } from "zod";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { ZId, ZOptionalNumber } from "@forma/types/common";
@@ -34,6 +33,7 @@ import { getQuotasSummary } from "@/app/(app)/workspaces/[workspaceId]/surveys/[
 import { RESPONSES_PER_PAGE } from "@/lib/constants";
 import { getDisplayCountBySurveyId } from "@/lib/display/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
+import { TResponseCursor, ZResponseCursor, applyResponseCursor } from "@/lib/response/cursor";
 import { buildWhereClause } from "@/lib/response/where-clause";
 import { getSurvey } from "@/lib/survey/service";
 import { getElementsFromBlocks } from "@/lib/survey/utils";
@@ -50,6 +50,9 @@ interface TSurveySummaryResponse {
   ttc: TResponseTtc;
   finished: boolean;
 }
+
+// A fetched row, as opposed to what the analysis helpers below need. None of them read `createdAt`; only the pagination loop does, to build the composite cursor, so the extra field stays out of the type every helper takes.
+type TSurveySummaryResponseRow = TSurveySummaryResponse & { createdAt: Date };
 
 const getElementIdToBlockIdMap = (survey: TSurvey): Record<string, string> => {
   return survey.blocks.reduce<Record<string, string>>((acc, block) => {
@@ -1003,8 +1006,8 @@ export const getSurveySummary = reactCache(
       const hasFilter = Object.keys(filterCriteria ?? {}).some((filterKey) => filterKey !== "createdAt");
 
       // Use cursor-based pagination instead of count + offset to avoid expensive queries
-      const responses: TSurveySummaryResponse[] = [];
-      let cursor: string | undefined = undefined;
+      const responses: TSurveySummaryResponseRow[] = [];
+      let cursor: TResponseCursor | undefined = undefined;
       let hasMore = true;
 
       while (hasMore) {
@@ -1014,8 +1017,9 @@ export const getSurveySummary = reactCache(
         if (batch.length < batchSize) {
           hasMore = false;
         } else {
-          // Use the last response's ID as cursor for next batch
-          cursor = batch[batch.length - 1].id;
+          // Both sort keys of the last response, so the next batch resumes where this one ended.
+          const last = batch[batch.length - 1];
+          cursor = { createdAt: last.createdAt, id: last.id };
         }
       }
 
@@ -1055,37 +1059,35 @@ export const getResponsesForSummary = reactCache(
     limit: number,
     offset: number,
     filterCriteria?: TResponseFilterCriteria,
-    cursor?: string
-  ): Promise<TSurveySummaryResponse[]> => {
+    cursor?: TResponseCursor
+  ): Promise<TSurveySummaryResponseRow[]> => {
     validateInputs(
       [surveyId, ZId],
       [limit, ZOptionalNumber],
       [offset, ZOptionalNumber],
       [filterCriteria, ZResponseFilterCriteria.optional()],
-      [cursor, z.cuid2().optional()]
+      [cursor, ZResponseCursor.optional()]
     );
 
     const queryLimit = limit ?? RESPONSES_PER_PAGE;
     const survey = await getSurvey(surveyId);
     if (!survey) return [];
     try {
-      const whereClause: Prisma.ResponseWhereInput = {
-        surveyId,
-        ...buildWhereClause(survey, filterCriteria),
-      };
-
-      // Add cursor condition for cursor-based pagination
-      if (cursor) {
-        whereClause.id = {
-          lt: cursor, // Get responses with ID less than cursor (for desc order)
-        };
-      }
+      // The cursor predicate has to match the composite sort key below, not just its id half — see cursor.ts.
+      const whereClause: Prisma.ResponseWhereInput = applyResponseCursor(
+        {
+          surveyId,
+          ...buildWhereClause(survey, filterCriteria),
+        },
+        cursor
+      );
 
       const responses = await prisma.response.findMany({
         where: whereClause,
         select: {
           id: true,
           data: true,
+          createdAt: true,
           updatedAt: true,
           contact: {
             select: {
@@ -1112,9 +1114,10 @@ export const getResponsesForSummary = reactCache(
         skip: offset,
       });
 
-      const transformedResponses: TSurveySummaryResponse[] = responses.map((responsePrisma) => ({
+      const transformedResponses: TSurveySummaryResponseRow[] = responses.map((responsePrisma) => ({
         id: responsePrisma.id,
         data: (responsePrisma.data ?? {}) as TResponseData,
+        createdAt: responsePrisma.createdAt,
         updatedAt: responsePrisma.updatedAt,
         contact: responsePrisma.contact
           ? {

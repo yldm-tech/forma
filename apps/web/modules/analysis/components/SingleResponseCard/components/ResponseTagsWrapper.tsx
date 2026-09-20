@@ -48,6 +48,8 @@ export const ResponseTagsWrapper: React.FC<ResponseTagsWrapperProps> = ({
 
   const onDelete = async (tagId: string) => {
     setIsLoadingTagOperation(true);
+    // `Tag` drops the row from `tagsState` optimistically before calling back, and nothing syncs the state from the `tags` prop afterwards, so keep the pre-delete list to restore its exact order on failure.
+    const tagsBeforeDelete = tagsState;
     const deleteTagResponse = await deleteTagOnResponseAction({ responseId, tagId });
     if (deleteTagResponse?.data) {
       updateFetchedResponses();
@@ -55,6 +57,8 @@ export const ResponseTagsWrapper: React.FC<ResponseTagsWrapperProps> = ({
       const errorMessage = getFormattedErrorMessage(deleteTagResponse);
       logger.error({ errorMessage }, "Error deleting tag");
       toast.error(t("workspace.surveys.responses.an_error_occurred_deleting_the_tag"));
+      // Revert the optimistic removal if the action failed, matching handleAddTag.
+      setTagsState((prevTags) => (prevTags.some((tag) => tag.tagId === tagId) ? prevTags : tagsBeforeDelete));
     }
     setIsLoadingTagOperation(false);
   };

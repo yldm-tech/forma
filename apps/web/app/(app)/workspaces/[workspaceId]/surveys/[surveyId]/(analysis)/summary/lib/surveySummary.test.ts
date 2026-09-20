@@ -1372,6 +1372,8 @@ describe("getResponsesForSummary", () => {
     // Create mock responses for two batches
     // First batch: 5000 responses (exactly batchSize, triggers continuation)
     // Second batch: 100 responses (less than batchSize, stops loop)
+    // Descending createdAt, one minute apart, because the cursor is a position in the `createdAt desc, id desc` order and a batch of identical timestamps could not tell a correct cursor from a broken one.
+    const batchBase = new Date("2026-06-01T00:00:00.000Z").getTime();
     const createMockResponses = (count: number, startIdx: number) =>
       Array.from({ length: count }, (_, i) => ({
         id: `response-${startIdx + i}`,
@@ -1382,7 +1384,7 @@ describe("getResponsesForSummary", () => {
         language: "en",
         ttc: {},
         finished: true,
-        createdAt: new Date(),
+        createdAt: new Date(batchBase - (startIdx + i) * 60_000),
         meta: {},
         variables: {},
         surveyId: "survey-1",
@@ -1409,13 +1411,22 @@ describe("getResponsesForSummary", () => {
     // Verify that prisma.response.findMany was called twice (two batches)
     expect(prisma.response.findMany).toHaveBeenCalledTimes(2);
 
-    // Second call should have cursor set to last response ID of first batch
+    // Second call resumes from both sort keys of the first batch's last row. An id-only predicate would skip
+    // every older response whose id happens to sort above that one — see lib/response/cursor.ts.
+    const lastOfFirstBatch = firstBatch[firstBatch.length - 1];
     expect(prisma.response.findMany).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         where: expect.objectContaining({
           surveyId: "survey-1",
-          id: { lt: "response-4999" }, // Last ID from first batch
+          AND: [
+            {
+              OR: [
+                { createdAt: { lt: lastOfFirstBatch.createdAt } },
+                { createdAt: { equals: lastOfFirstBatch.createdAt }, id: { lt: "response-4999" } },
+              ],
+            },
+          ],
         }),
       })
     );
@@ -1451,17 +1462,25 @@ describe("getResponsesForSummary", () => {
     vi.mocked(getSurvey).mockResolvedValue(mockSurvey);
     vi.mocked(prisma.response.findMany).mockResolvedValue([mockResponse]);
 
-    const result = await getResponsesForSummary("survey-1", 10, 0, undefined, "cursor-response-id");
+    const cursor = { createdAt: new Date("2026-06-01T00:00:00.000Z"), id: "cursor-response-id" };
+    const result = await getResponsesForSummary("survey-1", 10, 0, undefined, cursor);
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("response-2");
 
-    // Verify that prisma.response.findMany was called with cursor condition
+    // Verify that prisma.response.findMany was called with the composite cursor condition
     expect(prisma.response.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           surveyId: "survey-1",
-          id: { lt: "cursor-response-id" },
+          AND: [
+            {
+              OR: [
+                { createdAt: { lt: cursor.createdAt } },
+                { createdAt: { equals: cursor.createdAt }, id: { lt: cursor.id } },
+              ],
+            },
+          ],
         }),
       })
     );

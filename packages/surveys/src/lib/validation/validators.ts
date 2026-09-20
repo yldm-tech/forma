@@ -271,6 +271,11 @@ export const validators: Record<TValidationRuleType, TValidator> = {
   minSelections: {
     check: (value: TResponseDataValue, params: TValidationRuleParams): TValidatorCheckResult => {
       const typedParams = params as TValidationRuleParamsMinSelections;
+      // Skip validation if value is empty (let required handle empty), like every sibling rule: an optional element left blank must not be held back by a minimum it was never asked to meet.
+      if (isEmpty(value)) {
+        return { valid: true };
+      }
+
       // If value is not an array, check fails (need selections)
       if (!Array.isArray(value)) {
         return { valid: false };

@@ -251,6 +251,46 @@ describe("POST /api/mcp", () => {
     expect(authenticateApiKeyFromHeaders).not.toHaveBeenCalled();
   });
 
+  test("returns 413 for an oversized body that advertises no content-length", async () => {
+    // A chunked body carries no `content-length`, and a header-only check has to read that as "allowed" — so the oversized body reached the MCP handler and was buffered whole. The bytes are now counted as they are read.
+    const request = createMcpRequest(
+      {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/list",
+        params: { padding: "x".repeat(DEFAULT_REQUEST_BODY_LIMIT_BYTES) },
+      },
+      { "x-request-id": "req_chunked" }
+    );
+    // Guards the premise of this test: a constructed Request sets no content-length, so it is the stream count that has to catch this.
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("X-Request-Id")).toBe("req_chunked");
+    expect(authenticateApiKeyFromHeaders).not.toHaveBeenCalled();
+  });
+
+  test("passes a body it had to read itself through to the MCP handler", async () => {
+    // The body is consumed by the size check, so the handler has to be given the bytes rather than a drained stream — otherwise every MCP call fails to parse.
+    const response = await POST(
+      createMcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/list",
+          params: {},
+        },
+        { "x-request-id": "req_rebuilt" }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    const message = await readMcpResponse(response);
+    expect(message.result.tools.length).toBeGreaterThan(0);
+  });
+
   test("lists MCP tools for a valid API key", async () => {
     const response = await POST(
       createMcpRequest(

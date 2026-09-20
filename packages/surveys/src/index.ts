@@ -6,6 +6,10 @@ import { FILE_PICK_EVENT } from "@/lib/constants";
 import { getI18nLanguage } from "@/lib/i18n-utils";
 import { addCustomThemeToDom, addStylesToDom, setStyleNonce } from "@/lib/styles";
 
+// Kept in sync with CONTAINER_ID in packages/js-core/src/lib/common/constants.ts, which is what
+// removes this element again; the two packages ship separately, so the string is declared in each.
+const MODAL_CONTAINER_ID = "forma-modal-container";
+
 export const renderSurveyInline = (props: SurveyContainerProps) => {
   const inlineProps: SurveyContainerProps = {
     ...props,
@@ -74,8 +78,20 @@ export const renderSurvey = (props: SurveyContainerProps) => {
       );
     }
   } else {
+    // A second survey can be rendered while a first one is still on screen (js-core's TimeoutStack
+    // releases `isSurveyRunning` early — see packages/js-core/src/lib/survey/widget.ts), and appending
+    // would then leave two elements carrying this id. `removeWidgetContainer` resolves the first, so
+    // dismissing the second survey would tear down the first one's card and leave the second's preact
+    // tree — timers, beforeunload handler, response queue — mounted in a detached node. Unmount and
+    // drop any existing container first, so at most one ever exists.
+    const existingModalContainer = document.getElementById(MODAL_CONTAINER_ID);
+    if (existingModalContainer) {
+      render(null, existingModalContainer);
+      existingModalContainer.remove();
+    }
+
     const modalContainer = document.createElement("div");
-    modalContainer.id = "forma-modal-container";
+    modalContainer.id = MODAL_CONTAINER_ID;
     document.body.appendChild(modalContainer);
 
     render(

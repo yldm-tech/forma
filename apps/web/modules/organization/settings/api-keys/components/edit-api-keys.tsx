@@ -211,6 +211,7 @@ export const EditAPIKeys = ({
   const handleUpdateAPIKey = async (data: TApiKeyUpdateInput) => {
     if (!activeKey) return;
 
+    setIsLoading(true);
     const updateApiKeyResponse = await updateApiKeyAction({
       apiKeyId: activeKey.id,
       apiKeyData: data,

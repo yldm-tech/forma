@@ -40,14 +40,21 @@ export const replaceRecallInfo = (
   variables: TResponseVariables,
   languageCode: string = "en-US"
 ): string => {
-  let modifiedText = text;
+  // Substitution is non-re-entrant: `substituted` holds the text that has already been written and is
+  // never scanned again, and each pass only looks at `remaining`, the part after the token just
+  // replaced. Rescanning the whole string instead (`modifiedText.replace(...)` in a `while
+  // (includes("recall:"))` loop) hangs the browser whenever a recalled value is itself a recall token —
+  // a hidden field arriving as `?name=%23recall%3Aname%2Ffallback%3Ax%23`, or a respondent typing one
+  // into an open text question — because every pass re-emits the same token and finds it again.
+  let substituted = "";
+  let remaining = text;
 
-  while (modifiedText.includes("recall:")) {
-    const recallInfo = extractRecallInfo(modifiedText);
+  while (remaining.includes("recall:")) {
+    const recallInfo = extractRecallInfo(remaining);
     if (!recallInfo) break; // Exit the loop if no recall info is found
 
     const recallItemId = extractId(recallInfo);
-    if (!recallItemId) return modifiedText; // Return the text if no ID could be extracted
+    if (!recallItemId) return substituted + remaining; // Return the text if no ID could be extracted
 
     const fallback = extractFallbackValue(recallInfo).replace(/nbsp/g, " ").trim();
     let value: string | null = null;
@@ -71,11 +78,15 @@ export const replaceRecallInfo = (
       }
     }
 
-    // Replace the recallInfo in the text with the obtained or fallback value
-    modifiedText = modifiedText.replace(recallInfo, value?.toString() || fallback);
+    // Replace the recallInfo with the obtained or fallback value, then carry on scanning after it.
+    // Sliced rather than `String.replace`, which would also expand `$&` / `$1` in a recalled value
+    // into the token that was just matched.
+    const matchStart = remaining.indexOf(recallInfo);
+    substituted += remaining.slice(0, matchStart) + (value?.toString() || fallback);
+    remaining = remaining.slice(matchStart + recallInfo.length);
   }
 
-  return modifiedText;
+  return substituted + remaining;
 };
 
 export const parseRecallInformation = (

@@ -141,16 +141,18 @@ export const AddChannelMappingModal = ({
         includeCreatedAt,
         includeContactAttributes,
       };
+      // `config.data` aliases the `slackIntegration` server prop's array, so mutate a clone: a failed save otherwise leaves the pushed entry behind and the retry persists the same mapping twice.
+      const updatedIntegrationData = structuredClone(slackIntegrationData);
       if (selectedIntegration) {
         // update action
-        slackIntegrationData.config.data[selectedIntegration.index] = integrationData;
+        updatedIntegrationData.config.data[selectedIntegration.index] = integrationData;
       } else {
         // create action
-        slackIntegrationData.config.data.push(integrationData);
+        updatedIntegrationData.config.data.push(integrationData);
       }
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: slackIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));
@@ -189,12 +191,14 @@ export const AddChannelMappingModal = ({
   };
 
   const deleteLink = async () => {
-    slackIntegrationData.config.data.splice(selectedIntegration!.index, 1);
+    // Same aliasing as above: splicing the prop array in place would make a retry after a failed delete remove a different, already shifted entry.
+    const updatedIntegrationData = structuredClone(slackIntegrationData);
+    updatedIntegrationData.config.data.splice(selectedIntegration!.index, 1);
     try {
       setIsDeleting(true);
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: slackIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));

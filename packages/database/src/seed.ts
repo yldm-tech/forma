@@ -394,7 +394,8 @@ async function seedDemoWorkflowRuns(
           data: {
             id: logId,
             runId,
-            sequence: 0,
+            // 1-based, like every row the runner writes (`runSteps` passes `index + 1`).
+            sequence: 1,
             stepId: spec.actionId,
             stepType: "send_email",
             status: runSeed.log.status,

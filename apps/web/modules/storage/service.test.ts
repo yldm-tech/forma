@@ -406,17 +406,28 @@ describe("storage service", () => {
       expect(deleteFileFromS3).toHaveBeenCalledTimes(1);
     });
 
-    // Regression: the key is `${id}/${accessType}/${fileName}`, so a `..` segment would delete
-    // objects outside the workspace prefix the caller was authorized against.
+    // Regression: the key is `${id}/${accessType}/${fileName}`, so a `..` segment would delete objects outside the workspace prefix the caller was authorized against. The route no longer decodes before calling in, so the encoded case has to be caught here.
     test.each([
       "../../ws-victim/private/secret.pdf",
       "sub/../../../ws-victim/private/secret.pdf",
+      "%2e%2e/%2e%2e/ws-victim/private/secret.pdf",
       "./file.jpg",
     ])("should reject traversal in the file name: %s", async (fileName) => {
       const result = await deleteFile("ws-456", "public" as TAccessType, fileName);
 
       expect(result.ok).toBe(false);
       expect(deleteFileFromS3).not.toHaveBeenCalled();
+    });
+
+    // The guard decodes each segment to catch a double-encoded traversal, so it has to survive a segment that is not valid percent-encoding at all.
+    test("should delete a file whose name holds a literal percent sign", async () => {
+      const mockSuccess = { ok: true, data: undefined } as MockedDeleteFileReturn;
+      vi.mocked(deleteFileFromS3).mockResolvedValue(mockSuccess);
+
+      const result = await deleteFile("ws-456", "private" as TAccessType, "invoice 100%.pdf");
+
+      expect(result).toEqual(mockSuccess);
+      expect(deleteFileFromS3).toHaveBeenCalledWith("ws-456/private/invoice 100%.pdf");
     });
 
     test("should still allow nested file paths without dot segments", async () => {
@@ -472,11 +483,7 @@ describe("storage service", () => {
   });
 
   describe("getFileStreamForDownload", () => {
-    // Regression: `fileName` comes from the `[...filePath]` route param and the key is
-    // `${id}/${accessType}/${fileName}`, so a `..` segment let a caller name an object outside their
-    // own workspace prefix — reachable with no auth at all through the `public/` access type, which
-    // skips authorizePrivateDownload. The `%252e`/`%2e` cases cover the extra decodeURIComponent the
-    // handler applies on top of Next's own param decoding.
+    // Regression: `fileName` comes from the `[...filePath]` route param and the key is `${id}/${accessType}/${fileName}`, so a `..` segment let a caller name an object outside their own workspace prefix — reachable with no auth at all through the `public/` access type, which skips authorizePrivateDownload. The `%2e%2e` case covers a double-encoded traversal: Next decodes `%252e%252e` once, so the guard has to decode each segment itself to see it.
     test.each([
       "../../ws-victim/private/secret.pdf",
       "sub/../../../ws-victim/private/secret.pdf",
@@ -552,25 +559,74 @@ describe("storage service", () => {
       expect(getFileStream).toHaveBeenCalledWith("env-456/private/document.pdf");
     });
 
-    test("should decode URL-encoded filename", async () => {
-      const mockStream = new ReadableStream();
+    // Contract change: this used to decode `fileName` again and assert `my%20file.png` reached S3 as `my file.png`. The caller hands over the stored name — Next decodes the route param, and the export path decodes the stored URL — so a second decode corrupted every name a user could put a `%` in. The name is now used verbatim.
+    test("should use the file name verbatim instead of decoding it again", async () => {
       const mockStreamResult = {
         ok: true,
-        data: {
-          body: mockStream,
-          contentType: "image/png",
-          contentLength: 1000,
-        },
+        data: { body: new ReadableStream(), contentType: "image/png", contentLength: 1000 },
       } as MockedFileStreamReturn;
 
       vi.mocked(getFileStream).mockResolvedValue(mockStreamResult);
 
-      // URL-encoded filename with spaces: "my file.png" -> "my%20file.png"
-      const result = await getFileStreamForDownload("my%20file.png", "env-123", "public" as TAccessType);
+      const result = await getFileStreamForDownload("my file.png", "env-123", "public" as TAccessType);
 
       expect(result.ok).toBe(true);
-      // Should decode %20 to space before passing to getFileStream
       expect(getFileStream).toHaveBeenCalledWith("env-123/public/my file.png");
+    });
+
+    // Regression: `decodeURIComponent` throws `URIError` on a bare `%`, which the catch turned into an Unknown error — HTTP 500 — for a file that uploaded successfully and was then unreachable forever.
+    test("should stream a file whose name holds a literal percent sign", async () => {
+      const mockStreamResult = {
+        ok: true,
+        data: { body: new ReadableStream(), contentType: "application/pdf", contentLength: 10 },
+      } as MockedFileStreamReturn;
+
+      vi.mocked(getFileStream).mockResolvedValue(mockStreamResult);
+
+      const result = await getFileStreamForDownload("invoice 100%.pdf", "ws-123", "private" as TAccessType);
+
+      expect(result.ok).toBe(true);
+      expect(getFileStream).toHaveBeenCalledWith("ws-123/private/invoice 100%.pdf");
+    });
+
+    // The two halves of the round trip have to agree on one key. Upload percent-encodes the stored name into `fileUrl`; Next decodes the `[...filePath]` param once before handing it back to us.
+    test("should resolve the same S3 key that upload stored for a name holding a percent sign", async () => {
+      vi.mocked(getSignedUploadUrl).mockResolvedValue({
+        ok: true,
+        data: { signedUrl: "https://s3.example.com/upload", presignedFields: {} },
+      } as MockedSignedUploadReturn);
+      vi.mocked(getFileStream).mockResolvedValue({
+        ok: true,
+        data: { body: new ReadableStream(), contentType: "application/pdf", contentLength: 10 },
+      } as MockedFileStreamReturn);
+
+      const uploadResult = await getSignedUrlForUpload(
+        "invoice 100%.pdf",
+        "ws-123",
+        "application/pdf",
+        "private" as TAccessType
+      );
+      expect(uploadResult.ok).toBe(true);
+      if (!uploadResult.ok) return;
+
+      const [storedName, , storedPrefix] = vi.mocked(getSignedUploadUrl).mock.calls[0];
+      const uploadedKey = `${storedPrefix}/${storedName}`;
+
+      // What Next hands the route as `params.filePath` for the URL upload returned.
+      const routeFileName = uploadResult.data.fileUrl
+        .replace("/storage/ws-123/private/", "")
+        .split("/")
+        .map(decodeURIComponent)
+        .join("/");
+
+      const downloadResult = await getFileStreamForDownload(
+        routeFileName,
+        "ws-123",
+        "private" as TAccessType
+      );
+
+      expect(downloadResult.ok).toBe(true);
+      expect(getFileStream).toHaveBeenCalledWith(uploadedKey);
     });
 
     test("should return error when getFileStream fails with FileNotFoundError and no fallback", async () => {

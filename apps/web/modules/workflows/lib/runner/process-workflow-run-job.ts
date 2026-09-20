@@ -516,6 +516,7 @@ const runSteps = async (
   const stepResults: TWorkflowStepResult[] = [];
 
   for (const [index, step] of steps.entries()) {
+    // `sequence` is stored 1-based: it is the step number the run drawer and the API expose verbatim, not an array index.
     const result = await runStep(step, index + 1, runId, emailContext, logContext);
     if (result === STEP_BAIL) {
       return { bail: true };

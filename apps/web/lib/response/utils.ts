@@ -124,11 +124,16 @@ export const calculateTtcTotal = (ttc: TResponseTtc) => {
   return result;
 };
 
+/**
+ * The download filename for a response export. Machine-facing, so it is wholly UTC and lowercased without a locale.
+ *
+ * The `utc` marker is what keeps it honest: the rows inside are rendered in the organization's `displayTimeZone`, so a bare timestamp here reads as that zone and is off by the offset. `toLowerCase` rather than `toLocaleLowerCase` because the latter follows the server's locale — under a Turkish one a survey named "IT Survey" came out as `ıt-survey` with a dotless i.
+ */
 export const getResponsesFileName = (surveyName: string, extension: string) => {
   const sanitizedSurveyName = sanitizeString(surveyName);
 
   const formattedDateString = getTodaysDateTimeFormatted("-");
-  return `export-${sanitizedSurveyName.split(" ").join("-")}-${formattedDateString}.${extension}`.toLocaleLowerCase();
+  return `export-${sanitizedSurveyName.split(" ").join("-")}-${formattedDateString}-utc.${extension}`.toLowerCase();
 };
 
 /**

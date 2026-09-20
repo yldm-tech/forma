@@ -1,9 +1,16 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { parseOgParams } from "@/app/api/v1/client/og/lib/og-params";
+import { applyClientApiRateLimit } from "@/modules/core/rate-limit/client-api";
 
 export const GET = async (req: NextRequest) => {
-  let name = req.nextUrl.searchParams.get("name");
-  let brandColor = req.nextUrl.searchParams.get("brandColor");
+  // Unauthenticated, and each distinct query string rasterises a fresh image, so nothing else bounds what one caller can spend here.
+  const rateLimitResponse = await applyClientApiRateLimit(req);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
+  const { name, brandColor, backgroundColor } = parseOgParams(req.nextUrl.searchParams);
 
   return new ImageResponse(
     <div
@@ -13,7 +20,7 @@ export const GET = async (req: NextRequest) => {
         width: "100%",
         height: "100%",
         alignItems: "center",
-        backgroundColor: brandColor ? brandColor + "BF" : "#0000BFBF", // /75 opacity is approximately BF in hex
+        backgroundColor,
         borderRadius: "0.75rem",
       }}>
       <div
@@ -106,7 +113,7 @@ export const GET = async (req: NextRequest) => {
                 style={{
                   borderRadius: "0.75rem",
                   border: "1px solid transparent",
-                  backgroundColor: brandColor ?? "#000",
+                  backgroundColor: brandColor,
                   height: "4.5rem",
                   width: "9.5rem",
                   opacity: 0.5,
@@ -125,7 +132,7 @@ export const GET = async (req: NextRequest) => {
                   justifyContent: "center",
                   borderRadius: "0.75rem",
                   border: "1px solid transparent",
-                  backgroundColor: brandColor ?? "#000",
+                  backgroundColor: brandColor,
                   fontSize: "1.5rem",
                   color: "white",
                   height: "4.5rem",

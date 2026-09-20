@@ -174,16 +174,18 @@ export const AddIntegrationModal = ({
       integrationData.includeMetadata = includeMetadata;
       integrationData.includeCreatedAt = includeCreatedAt;
       integrationData.includeContactAttributes = includeContactAttributes;
+      // `config.data` aliases the `googleSheetIntegration` server prop's array, so mutate a clone: a failed save otherwise leaves the pushed entry behind and the retry persists the same link twice.
+      const updatedIntegrationData = structuredClone(googleSheetIntegrationData);
       if (selectedIntegration) {
         // update action
-        googleSheetIntegrationData.config.data[selectedIntegration.index] = integrationData;
+        updatedIntegrationData.config.data[selectedIntegration.index] = integrationData;
       } else {
         // create action
-        googleSheetIntegrationData.config.data.push(integrationData);
+        updatedIntegrationData.config.data.push(integrationData);
       }
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: googleSheetIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));
@@ -225,12 +227,14 @@ export const AddIntegrationModal = ({
   };
 
   const deleteLink = async () => {
-    googleSheetIntegrationData.config.data.splice(selectedIntegration!.index, 1);
+    // Same aliasing as above: splicing the prop array in place would make a retry after a failed delete remove a different, already shifted entry.
+    const updatedIntegrationData = structuredClone(googleSheetIntegrationData);
+    updatedIntegrationData.config.data.splice(selectedIntegration!.index, 1);
     try {
       setIsDeleting(true);
       const result = await createOrUpdateIntegrationAction({
         workspaceId,
-        integrationData: googleSheetIntegrationData,
+        integrationData: updatedIntegrationData,
       });
       if (result?.serverError) {
         toast.error(getFormattedErrorMessage(result));

@@ -110,7 +110,7 @@ export const WorkspaceLookSettingsLoading = () => {
         </div>
       </SettingsCard>
 
-      <SettingsCard title="Logo" description="Upload your company logo to brand surveys and link previews.">
+      <SettingsCard title={t("common.logo")} description={t("workspace.look.logo_settings_description")}>
         <div className="w-full animate-pulse items-center">
           <div className="relative flex h-52 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:hover:border-slate-500 dark:hover:bg-slate-800">
             <p className="text-xl font-semibold text-slate-700">{t("common.loading")}</p>
@@ -119,8 +119,8 @@ export const WorkspaceLookSettingsLoading = () => {
       </SettingsCard>
 
       <SettingsCard
-        title="In-app Survey Placement"
-        description="Change where surveys will be shown in your web app.">
+        title={t("workspace.look.app_survey_placement")}
+        description={t("workspace.look.app_survey_placement_settings_description")}>
         <div className="w-full items-center">
           <div className="flex cursor-not-allowed select-none">
             <RadioGroup>
@@ -153,8 +153,8 @@ export const WorkspaceLookSettingsLoading = () => {
       </SettingsCard>
 
       <SettingsCard
-        title="Forma Signature"
-        description="We love your support but understand if you toggle it off.">
+        title={t("workspace.look.forma_branding")}
+        description={t("workspace.look.forma_branding_settings_description")}>
         <div className="w-full items-center">
           <div className="pointer-events-none flex cursor-not-allowed items-center gap-x-2 select-none">
             <Switch id="signature" checked={false} />

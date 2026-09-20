@@ -49,13 +49,7 @@ Three things to know before reading the result:
   database, so it only matters locally: a second run without re-seeding turns those operations into
   documented 403s and quietly loses depth.
 
-- **Workflow endpoints need an enterprise license.** Thirteen of the twenty-eight operations (every
-  `/workflows` path, the two `/workflows/runs` reads included — they all authorize through
-  `buildWorkflowApiContext`), plus `contact-attribute-keys`, are entitlement-gated. Without
-  `ENTERPRISE_LICENSE_KEY` they answer a documented 403, so the run stays green but tests those
-  operations shallowly. A licence is necessary but not sufficient: it also has to _grant_ the
-  feature. CI's key grants `contacts` and not `workflows` (ENG-2553), so the 13 workflow operations
-  are shallow there too — the job's post-boot probe says which state you are in on every run.
+- **No operation is entitlement-gated.** Every feature is enabled in every install (AGENTS.md, "Features are not gated") and no `/api/v3` handler calls a licence or entitlement helper, so nothing here answers 403 for want of a licence and `ENTERPRISE_LICENSE_KEY` makes no difference to what this job exercises. That includes the thirteen `/workflows` operations — every `/workflows` path, the two `/workflows/runs` reads included, since they all authorize through `buildWorkflowApiContext`, which checks workspace access and nothing else. Depth is decided by fixtures alone, exactly as described above. The job's post-boot probe reads `/api/v3/workflows` with the seeded key and fails the run on anything but 200: a workflow operation answering 403 now means broken authorization wiring rather than an unlicensed install, so it cannot pass as a green-but-shallow run.
 - **The four `/tags` operations are session-only** (`auth: "session"`, and the spec declares only
   `sessionAuth`), so an API key gets a documented 401 before any handler runs. They are checked
   against that 401, which is a real assertion that they stay session-only — but no tag fixtures

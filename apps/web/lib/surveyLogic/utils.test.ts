@@ -4,7 +4,11 @@ import { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { TResponseData, TResponseVariables } from "@forma/types/responses";
 import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
-import { TConditionGroup, TSingleCondition } from "@forma/types/surveys/logic";
+import {
+  TConditionGroup,
+  TSingleCondition,
+  TSurveyLogicConditionsOperator,
+} from "@forma/types/surveys/logic";
 import { TSurveyLogicAction } from "@forma/types/surveys/types";
 import {
   addConditionBelow,
@@ -515,6 +519,39 @@ describe("surveyLogic", () => {
         "en"
       )
     ).toBe(false);
+  });
+
+  test("does not match the substring operators against a skipped question", () => {
+    // Twin of the browser engine's case in `packages/surveys/src/lib/logic.test.ts`. An unanswered question is absent from the response data, and `String(undefined)` is the literal "undefined" — so every one of these right operands is a substring of it. This copy runs during quota screening, so an unguarded match screens a respondent into a quota the survey itself said they were out of.
+    const skippedElementId = "vjniuob08ggl8dewl0hwed41";
+    const unansweredData: TResponseData = {};
+
+    const evaluateSubstring = (operator: TSurveyLogicConditionsOperator, rightValue: string): boolean =>
+      evaluateLogic(
+        mockSurvey,
+        unansweredData,
+        {},
+        {
+          id: "group1",
+          connector: "and",
+          conditions: [
+            {
+              id: "condition1",
+              operator,
+              leftOperand: { type: "element", value: skippedElementId },
+              rightOperand: { type: "static", value: rightValue },
+            },
+          ],
+        },
+        "default"
+      );
+
+    expect(evaluateSubstring("contains", "def")).toBe(false);
+    expect(evaluateSubstring("startsWith", "und")).toBe(false);
+    expect(evaluateSubstring("endsWith", "ned")).toBe(false);
+    expect(evaluateSubstring("doesNotContain", "def")).toBe(true);
+    expect(evaluateSubstring("doesNotStartWith", "und")).toBe(true);
+    expect(evaluateSubstring("doesNotEndWith", "ned")).toBe(true);
   });
 
   test("performActions handles divide by zero, assign, concat, and missing variable", () => {
@@ -1286,6 +1323,36 @@ describe("surveyLogic", () => {
 
     result = performActions(surveyWithVars, [subtractAction], data, { numVar: 5 });
     expect(result.calculations.numVar).toBe(2); // 5 - 3
+  });
+
+  test("assigning to a number variable takes the number, and skips a non-numeric or cleared answer", () => {
+    const surveyWithVars: TJsWorkspaceStateSurvey = {
+      ...mockSurvey,
+      variables: TWO_VARIABLES,
+      embeddedFields: deriveLegacyEmbeddedData({ variables: TWO_VARIABLES }),
+    };
+
+    const assign = (data: TResponseData) =>
+      performActions(
+        surveyWithVars,
+        [
+          {
+            id: "a1",
+            objective: "calculate",
+            variableId: "numVar",
+            operator: "assign",
+            value: { type: "element", value: "q" },
+          },
+        ] satisfies TSurveyLogicAction[],
+        data,
+        { numVar: 5 }
+      ).calculations.numVar;
+
+    // Matches the browser engine in `packages/surveys/src/lib/logic.ts`, which quota screening has to agree with: a number variable holding "42" matches no numeric response filter, and neither "abc" nor a cleared answer is a number to assign at all.
+    expect(assign({ q: "42" })).toBe(42);
+    expect(assign({ q: "abc" })).toBe(5);
+    // `Number("")` is 0, so an unguarded coercion fabricates a 0 that a `score <= 5` filter matches.
+    expect(assign({ q: "" })).toBe(5);
   });
 
   test("evaluateLogic handles more complex nested condition groups", () => {
