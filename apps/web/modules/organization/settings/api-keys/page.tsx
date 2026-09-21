@@ -64,7 +64,8 @@ export const APIKeysPage = async (props: Readonly<{ params: Promise<{ organizati
       <SettingsCard
         title={t("common.api_keys")}
         description={t("workspace.settings.api_keys.api_keys_description")}
-        bodyVariant="flush">
+        bodyVariant="flush"
+        width="full">
         <ApiKeyList
           organizationId={organization.id}
           locale={locale ?? DEFAULT_LOCALE}

@@ -14,6 +14,7 @@ import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 const Page = async () => {
   const isMultiOrgEnabled = await getIsMultiOrgEnabled();
@@ -35,8 +36,9 @@ const Page = async () => {
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.profile")} />
-      <div>
+      <SettingsCardGrid>
         <SettingsCard
+          width="full"
           title={t("workspace.settings.profile.personal_information")}
           description={t("workspace.settings.profile.update_personal_info")}>
           <EditProfileDetailsForm
@@ -47,15 +49,18 @@ const Page = async () => {
         </SettingsCard>
         {user.identityProvider === "email" && (
           <SettingsCard
+            width="full"
             title={t("common.security")}
             description={t("workspace.settings.profile.security_description")}>
             <AccountSecurity user={user} />
           </SettingsCard>
         )}
 
-        <AuthorizedAppsCard locale={user.locale} />
+        <AuthorizedAppsCard locale={user.locale} width="full" className="xl:col-span-2" />
 
         <SettingsCard
+          width="full"
+          className="xl:col-span-2"
           title={t("workspace.settings.profile.delete_account")}
           description={t("workspace.settings.profile.confirm_delete_account")}>
           <DeleteAccount
@@ -67,8 +72,8 @@ const Page = async () => {
             requiresPasswordConfirmation={requiresPasswordConfirmation}
           />
         </SettingsCard>
-        <IdBadge id={user.id} label={t("common.profile_id")} variant="column" />
-      </div>
+      </SettingsCardGrid>
+      <IdBadge id={user.id} label={t("common.profile_id")} variant="column" />
     </PageContentWrapper>
   );
 };

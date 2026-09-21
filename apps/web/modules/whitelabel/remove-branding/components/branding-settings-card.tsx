@@ -1,17 +1,19 @@
 import { TWorkspace } from "@forma/types/workspace";
 import { getTranslate } from "@/lingodotdev/server";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
-import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCard, type TSettingsCardWidth } from "@/modules/ui/components/settings-card";
 import { EditBranding } from "@/modules/whitelabel/remove-branding/components/edit-branding";
 
 interface BrandingSettingsCardProps {
   workspace: TWorkspace;
   isReadOnly: boolean;
+  width?: TSettingsCardWidth;
 }
 
 export const BrandingSettingsCard = async ({
   workspace,
   isReadOnly,
+  width,
 }: Readonly<BrandingSettingsCardProps>) => {
   const t = await getTranslate();
 
@@ -34,6 +36,7 @@ export const BrandingSettingsCard = async ({
 
   return (
     <SettingsCard
+      width={width}
       title={t("workspace.look.forma_branding")}
       description={t("workspace.look.forma_branding_settings_description")}
       bodyVariant="padded">

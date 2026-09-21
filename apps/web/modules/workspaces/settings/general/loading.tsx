@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LoadingCard } from "@/modules/ui/components/loading-card";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 export const GeneralSettingsLoading = () => {
   const { t } = useTranslation();
@@ -28,9 +29,11 @@ export const GeneralSettingsLoading = () => {
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.workspace_settings")} />
-      {cards.map((card) => (
-        <LoadingCard key={card.title} {...card} />
-      ))}
+      <SettingsCardGrid>
+        {cards.map((card) => (
+          <LoadingCard key={card.title} {...card} width="full" />
+        ))}
+      </SettingsCardGrid>
     </PageContentWrapper>
   );
 };

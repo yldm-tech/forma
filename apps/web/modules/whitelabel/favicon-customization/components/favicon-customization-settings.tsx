@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
 import { FileInput } from "@/modules/ui/components/file-input";
 import { Input } from "@/modules/ui/components/input";
-import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCard, type TSettingsCardWidth } from "@/modules/ui/components/settings-card";
 import { showStorageNotConfiguredToast } from "@/modules/ui/components/storage-not-configured-toast/lib/utils";
 import {
   removeOrganizationFaviconUrlAction,
@@ -30,6 +30,7 @@ const allowedFileExtensions: TAllowedFileExtension[] = ["png", "jpeg", "jpg", "i
 const MAX_FAVICON_SIZE_MB = 0.1; // 100KB
 
 interface FaviconCustomizationSettingsProps {
+  width?: TSettingsCardWidth;
   organization: TOrganization;
   workspaceId: string;
   isReadOnly: boolean;
@@ -37,6 +38,7 @@ interface FaviconCustomizationSettingsProps {
 }
 
 export const FaviconCustomizationSettings = ({
+  width,
   organization,
   workspaceId,
   isReadOnly,
@@ -148,6 +150,7 @@ export const FaviconCustomizationSettings = ({
 
   return (
     <SettingsCard
+      width={width}
       title={t("workspace.settings.domain.favicon_customization")}
       description={t("workspace.settings.domain.favicon_customization_description")}>
       <div className="w-full space-y-4">

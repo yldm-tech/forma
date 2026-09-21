@@ -1,5 +1,4 @@
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { cn } from "@/lib/cn";
 import { IS_STORAGE_CONFIGURED, SURVEY_BG_COLORS, UNSPLASH_ACCESS_KEY } from "@/lib/constants";
 import { getPublicDomain } from "@/lib/getPublicUrl";
 import { getWorkspace } from "@/lib/workspace/service";
@@ -8,6 +7,7 @@ import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 import { BrandingSettingsCard } from "@/modules/whitelabel/remove-branding/components/branding-settings-card";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { EditLogo } from "@/modules/workspaces/settings/look/components/edit-logo";
@@ -36,35 +36,42 @@ export const WorkspaceLookSettingsPage = async (props: { params: Promise<{ works
           <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
         </Alert>
       )}
-      <SettingsCard
-        title={t("workspace.look.theme")}
-        className={cn(!isReadOnly && "max-w-7xl")}
-        description={t("workspace.look.theme_settings_description")}>
-        <ThemeStyling
-          workspaceId={params.workspaceId}
-          workspace={workspace}
-          colors={SURVEY_BG_COLORS}
-          isUnsplashConfigured={!!UNSPLASH_ACCESS_KEY}
-          isReadOnly={isReadOnly}
-          isStorageConfigured={IS_STORAGE_CONFIGURED}
-          publicDomain={publicDomain}
-        />
-      </SettingsCard>
-      <SettingsCard title={t("common.logo")} description={t("workspace.look.logo_settings_description")}>
-        <EditLogo
-          workspace={workspace}
-          workspaceId={params.workspaceId}
-          isReadOnly={isReadOnly}
-          isStorageConfigured={IS_STORAGE_CONFIGURED}
-        />
-      </SettingsCard>
-      <SettingsCard
-        title={t("workspace.look.app_survey_placement")}
-        description={t("workspace.look.app_survey_placement_settings_description")}>
-        <EditPlacementForm workspace={workspace} isReadOnly={isReadOnly} />
-      </SettingsCard>
+      <SettingsCardGrid>
+        <SettingsCard
+          width="full"
+          className="xl:col-span-2"
+          title={t("workspace.look.theme")}
+          description={t("workspace.look.theme_settings_description")}>
+          <ThemeStyling
+            workspaceId={params.workspaceId}
+            workspace={workspace}
+            colors={SURVEY_BG_COLORS}
+            isUnsplashConfigured={!!UNSPLASH_ACCESS_KEY}
+            isReadOnly={isReadOnly}
+            isStorageConfigured={IS_STORAGE_CONFIGURED}
+            publicDomain={publicDomain}
+          />
+        </SettingsCard>
+        <SettingsCard
+          width="full"
+          title={t("common.logo")}
+          description={t("workspace.look.logo_settings_description")}>
+          <EditLogo
+            workspace={workspace}
+            workspaceId={params.workspaceId}
+            isReadOnly={isReadOnly}
+            isStorageConfigured={IS_STORAGE_CONFIGURED}
+          />
+        </SettingsCard>
+        <SettingsCard
+          width="full"
+          title={t("workspace.look.app_survey_placement")}
+          description={t("workspace.look.app_survey_placement_settings_description")}>
+          <EditPlacementForm workspace={workspace} isReadOnly={isReadOnly} />
+        </SettingsCard>
 
-      <BrandingSettingsCard workspace={workspace} isReadOnly={isReadOnly} />
+        <BrandingSettingsCard workspace={workspace} isReadOnly={isReadOnly} width="full" />
+      </SettingsCardGrid>
     </PageContentWrapper>
   );
 };

@@ -2,6 +2,7 @@ import { getTranslate } from "@/lingodotdev/server";
 import { LoadingCard } from "@/modules/ui/components/loading-card";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 const Loading = async () => {
   const t = await getTranslate();
@@ -22,9 +23,11 @@ const Loading = async () => {
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
-      {cards.map((card, index) => (
-        <LoadingCard key={index} {...card} />
-      ))}
+      <SettingsCardGrid>
+        {cards.map((card, index) => (
+          <LoadingCard key={index} {...card} width="full" />
+        ))}
+      </SettingsCardGrid>
     </PageContentWrapper>
   );
 };

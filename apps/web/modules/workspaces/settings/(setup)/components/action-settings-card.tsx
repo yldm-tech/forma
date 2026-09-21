@@ -34,7 +34,8 @@ export const ActionSettingsCard = ({
         }}
         // The "Add action" control lives in the card's header, so the table is the only body content and
         // can run edge to edge with nothing above it needing a gutter.
-        bodyVariant="flush">
+        bodyVariant="flush"
+        width="full">
         <ActionClassesTable actionClasses={actionClasses} isReadOnly={isReadOnly} locale={locale} />
       </SettingsCard>
       <AddActionModal

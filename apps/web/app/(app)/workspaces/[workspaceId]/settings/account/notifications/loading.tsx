@@ -19,7 +19,7 @@ const Loading = () => {
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.notifications")} />
       {cards.map((card, index) => (
-        <LoadingCard key={index} {...card} />
+        <LoadingCard key={index} {...card} width="full" />
       ))}
     </PageContentWrapper>
   );
