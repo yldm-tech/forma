@@ -680,6 +680,32 @@ const runResponseFinishedSideEffects = async ({
         })
       : Promise.resolve(null);
 
+  // Workflow runner (producer): enqueue runs for matching enabled workflows. Isolated so a runner
+  // failure never breaks the response pipeline job, its retries, or the side-effects below.
+  //
+  // Ordered FIRST on purpose. This is the only step here that rethrows — transient DB pool
+  // exhaustion must propagate so BullMQ retries the job — and it is also the only one built to be
+  // replayed: `idempotencyKey = responseId`, a unique index behind it, and a deterministic jobId.
+  // Everything after it appends without any per-response guard, so running them before a step that
+  // asks for a retry meant one pool-exhaustion blip sent the respondent their follow-up twice,
+  // notified members twice, and appended a duplicate row to every connected Sheet/Airtable/Notion
+  // destination. With this first, a retry replays only idempotent work.
+  try {
+    await enqueueResponseCompletedWorkflowRuns({
+      response: data.response,
+      workspaceId,
+      organizationId,
+      stripeCustomerId,
+      dispatch: dispatchWorkflowRunViaJobs,
+      logContext,
+    });
+  } catch (error) {
+    if (isDatabasePoolExhaustionError(error)) {
+      throw error;
+    }
+    logger.error({ ...logContext, err: error }, "Response pipeline workflow run enqueue failed");
+  }
+
   if (integrations.length > 0) {
     try {
       await handleIntegrations(integrations, data, survey, displayTimeZone ?? "UTC");
@@ -715,27 +741,6 @@ const runResponseFinishedSideEffects = async ({
     organizationId,
     survey,
   });
-
-  // Workflow runner (producer): enqueue runs for matching enabled workflows. Isolated so a runner
-  // failure never breaks the response pipeline job, its retries, or the other side-effects above.
-  try {
-    await enqueueResponseCompletedWorkflowRuns({
-      response: data.response,
-      workspaceId,
-      organizationId,
-      stripeCustomerId,
-      dispatch: dispatchWorkflowRunViaJobs,
-      logContext,
-    });
-  } catch (error) {
-    // Transient DB pool exhaustion must propagate so the job retries (same contract as the outer
-    // pipeline catch); otherwise a completed-response trigger is silently lost. Only non-retryable
-    // failures are swallowed, so they never break the other responseFinished side-effects above.
-    if (isDatabasePoolExhaustionError(error)) {
-      throw error;
-    }
-    logger.error({ ...logContext, err: error }, "Response pipeline workflow run enqueue failed");
-  }
 };
 
 const runResponseCreatedSideEffects = async ({

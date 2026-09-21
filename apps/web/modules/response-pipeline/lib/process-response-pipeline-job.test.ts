@@ -269,6 +269,21 @@ describe("processResponsePipelineJob", () => {
     );
   });
 
+  test("a retry-triggering workflow enqueue failure runs before the steps that cannot be replayed", async () => {
+    // Pool exhaustion is rethrown so BullMQ retries the whole job. The follow-up sender, the
+    // notification emails and the integration appends carry no per-response dedupe, so any of them
+    // running before this point would be repeated on every retry: the respondent gets their
+    // follow-up twice and each connected Sheet/Airtable/Notion gains a duplicate row.
+    const poolExhaustionError = new Error("Timed out fetching a new connection from the connection pool");
+    mockEnqueueResponseCompletedWorkflowRuns.mockRejectedValue(poolExhaustionError);
+
+    await expect(
+      processResponsePipelineJob({ ...baseData, event: "responseFinished" }, baseContext)
+    ).rejects.toThrow(poolExhaustionError);
+
+    expect(mockSendFollowUpsForResponse).not.toHaveBeenCalled();
+  });
+
   /**
    * ENG-1845: the pipeline's readers — the notification email, follow-ups and integrations — resolve
    * Embedded Data definitions through the joined rows, and `getSurveyEmbeddedFields` fails closed. A
