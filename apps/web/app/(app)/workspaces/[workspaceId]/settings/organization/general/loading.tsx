@@ -20,7 +20,7 @@ const Loading = async () => {
   ];
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
       {cards.map((card, index) => (
         <LoadingCard key={index} {...card} />

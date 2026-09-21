@@ -17,7 +17,8 @@ export const AccessView = ({ teams }: AccessViewProps) => {
       <SettingsCard
         title={t("common.team_access")}
         description={t("workspace.teams.team_settings_description")}
-        bodyVariant="flush">
+        bodyVariant="flush"
+        width="full">
         {/* The table is edge-to-edge, so the control above it carries the card's gutter itself. */}
         <div className="mb-4 flex justify-end px-4 pt-4">
           <ManageTeam />

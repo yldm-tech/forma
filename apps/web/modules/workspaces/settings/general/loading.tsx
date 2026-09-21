@@ -26,7 +26,7 @@ export const GeneralSettingsLoading = () => {
   ];
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.workspace_settings")} />
       {cards.map((card) => (
         <LoadingCard key={card.title} {...card} />

@@ -22,7 +22,7 @@ export const WorkspaceLookSettingsLoading = () => {
     { name: t("common.centered_modal"), value: "center", disabled: false },
   ];
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.appearance")} />
       <SettingsCard
         title={t("workspace.look.theme")}

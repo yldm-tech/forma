@@ -31,7 +31,8 @@ export const TeamsView = async ({ organizationId, membershipRole, currentUserId 
       title={t("workspace.settings.teams.teams")}
       description={t("workspace.settings.teams.teams_description")}
       // The table runs edge to edge.
-      bodyVariant="flush">
+      bodyVariant="flush"
+      width="full">
       <TeamsTable
         teams={teams}
         membershipRole={membershipRole}

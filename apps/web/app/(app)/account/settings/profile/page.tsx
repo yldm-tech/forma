@@ -33,7 +33,7 @@ const Page = async () => {
   const requiresPasswordConfirmation = requiresPasswordConfirmationForAccountDeletion(user);
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.profile")} />
       <div>
         <SettingsCard

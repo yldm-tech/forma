@@ -28,12 +28,28 @@ const BODY_VARIANT_CLASSES: Record<TSettingsCardBodyVariant, string> = {
   flush: "-mb-4",
 };
 
+/**
+ * How wide the card is allowed to grow. Shares its vocabulary with PageContentWrapper's `width`, and
+ * the two are set together: a card only reaches `full` inside a wrapper that is `full` as well.
+ * - `settings` — the default reading column. Right for form content, whose fields cap at max-w-sm
+ *   anyway, so extra width would only add gutter inside the card.
+ * - `full` — fills the wrapper. For a card whose body is a table (`bodyVariant="flush"`), where the
+ *   columns take up the room instead of leaving it blank.
+ */
+export type TSettingsCardWidth = "settings" | "full";
+
+const WIDTH_CLASSES: Record<TSettingsCardWidth, string> = {
+  settings: "max-w-4xl",
+  full: "",
+};
+
 export const SettingsCard = ({
   title,
   description,
   children,
   soon = false,
   bodyVariant = "padded",
+  width = "settings",
   beta,
   className,
   buttonInfo,
@@ -44,6 +60,7 @@ export const SettingsCard = ({
   children: any;
   soon?: boolean;
   bodyVariant?: TSettingsCardBodyVariant;
+  width?: TSettingsCardWidth;
   beta?: boolean;
   className?: string;
   buttonInfo?: ButtonInfo;
@@ -53,7 +70,8 @@ export const SettingsCard = ({
   return (
     <div
       className={cn(
-        "relative my-4 w-full max-w-4xl rounded-xl border border-slate-200 bg-white py-4 text-left shadow-xs",
+        "relative my-4 w-full rounded-xl border border-slate-200 bg-white py-4 text-left shadow-xs",
+        WIDTH_CLASSES[width],
         bodyVariant === "flush" && "overflow-hidden",
         className
       )}

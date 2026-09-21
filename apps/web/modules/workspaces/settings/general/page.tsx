@@ -21,7 +21,7 @@ export const GeneralSettingsPage = async (props: { params: Promise<{ workspaceId
   const isOwnerOrManager = isOwner || isManager;
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.workspace_settings")} />
       <SettingsCard
         title={t("common.workspace_name")}

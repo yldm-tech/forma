@@ -15,7 +15,8 @@ export const TagsLoading = () => {
       <SettingsCard
         title={t("workspace.tags.manage_tags")}
         description={t("workspace.tags.manage_tags_description")}
-        bodyVariant="flush">
+        bodyVariant="flush"
+        width="full">
         {/*
           Columns come from the table's own factory, so the skeleton cannot drift from the header the way
           the hand-rolled one had.

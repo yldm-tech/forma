@@ -15,7 +15,7 @@ export const LanguagesLoading = () => {
   ];
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.survey_languages")} />
       <SettingsCard
         title={t("workspace.languages.multi_language_surveys")}

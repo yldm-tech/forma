@@ -35,7 +35,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   const isOwnerOrManager = isManager || isOwner;
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.domain")} />
 
       {!IS_STORAGE_CONFIGURED && (

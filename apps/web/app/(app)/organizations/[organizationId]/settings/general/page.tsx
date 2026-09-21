@@ -41,7 +41,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   const isOwnerOrManager = isManager || isOwner;
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
       {!IS_STORAGE_CONFIGURED && (
         <div className="max-w-4xl">

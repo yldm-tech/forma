@@ -150,7 +150,7 @@ const Page = async (props: Readonly<{ searchParams: Promise<Record<string, strin
     user.notificationSettings = setCompleteNotificationSettings(user.notificationSettings, memberships);
   }
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.notifications")} />
       <SettingsCard
         title={t("workspace.settings.notifications.email_alerts_surveys")}

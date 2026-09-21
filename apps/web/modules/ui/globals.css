@@ -81,6 +81,9 @@
   /* max-w-8xl reads from the container scale */
   --container-8xl: 88rem;
 
+  /* The settings reading column. Settings pages are a single column of SettingsCards, which cap themselves at max-w-4xl (56rem); this is that same column measured on PageContentWrapper, so it adds back the wrapper's p-6 gutters (2 x 1.5rem) and the cards keep their exact rendered width. Constraining the wrapper rather than each card is what lets PageHeader's rule end where the cards end instead of running to the viewport edge. */
+  --container-settings: 59rem;
+
   /* Animations */
   --animate-ping-slow: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
   --animate-shake: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;

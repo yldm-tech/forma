@@ -19,7 +19,8 @@ export const TagsPage = async (props: { params: Promise<{ workspaceId: string }>
       <SettingsCard
         title={t("workspace.tags.manage_tags")}
         description={t("workspace.tags.manage_tags_description")}
-        bodyVariant="flush">
+        bodyVariant="flush"
+        width="full">
         <EditTagsWrapper workspaceId={params.workspaceId} isReadOnly={isReadOnly} />
       </SettingsCard>
     </PageContentWrapper>

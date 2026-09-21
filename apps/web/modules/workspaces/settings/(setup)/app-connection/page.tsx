@@ -262,7 +262,7 @@ Forma(
 );`;
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.web_and_mobile_sdk")} />
       <div className="space-y-4">
         <Alert variant="info" role="status" className="max-w-4xl rounded-xl">

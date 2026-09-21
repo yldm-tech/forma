@@ -26,7 +26,7 @@ const Loading = () => {
   ];
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.profile")} />
       {cards.map((card, index) => (
         <LoadingCard key={index} {...card} />

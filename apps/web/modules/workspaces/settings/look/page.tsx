@@ -29,7 +29,7 @@ export const WorkspaceLookSettingsPage = async (props: { params: Promise<{ works
   const publicDomain = getPublicDomain();
 
   return (
-    <PageContentWrapper>
+    <PageContentWrapper width="settings">
       <PageHeader pageTitle={t("common.appearance")} />
       {!IS_STORAGE_CONFIGURED && (
         <Alert variant="warning" role="status">

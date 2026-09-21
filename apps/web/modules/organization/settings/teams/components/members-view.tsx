@@ -53,7 +53,8 @@ export const MembersView = async ({
     <SettingsCard
       title={t("workspace.settings.general.manage_members")}
       description={t("workspace.settings.general.manage_members_description")}
-      bodyVariant="flush">
+      bodyVariant="flush"
+      width="full">
       {/* The table is edge-to-edge, so the controls above it carry the card's gutter themselves. */}
       {membershipRole && (
         <div className="px-4 pt-4">
