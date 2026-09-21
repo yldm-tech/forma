@@ -13,11 +13,15 @@ vi.mock("./i18n", () => ({
 }));
 
 // Mock date-time functions as they are used internally and we want to isolate recall logic
-vi.mock("./date-time", () => ({
-  isValidDateString: (val: string) => /^\d{4}-\d{2}-\d{2}$/.test(val) || /^\d{2}-\d{2}-\d{4}$/.test(val),
+// The real parser is used on purpose. The previous mock re-implemented it and then read the result
+// back with getUTC*, which is exactly the assumption that was wrong in the source: a date-only value
+// must name the same calendar day in the viewer's zone, so only the formatter is stubbed here, and
+// it reads the local getters the real Intl formatter would.
+vi.mock("./date-time", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./date-time")>()),
   formatDateWithOrdinal: vi.fn(
     (date: Date) =>
-      `${date.getUTCFullYear()}-${("0" + (date.getUTCMonth() + 1)).slice(-2)}-${("0" + date.getUTCDate()).slice(-2)}_formatted`
+      `${date.getFullYear()}-${("0" + (date.getMonth() + 1)).slice(-2)}-${("0" + date.getDate()).slice(-2)}_formatted`
   ),
 }));
 

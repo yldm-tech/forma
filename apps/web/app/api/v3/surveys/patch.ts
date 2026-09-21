@@ -132,12 +132,26 @@ type TV3SegmentFilterWrite = {
  * executed so the caller can run it in the same transaction as the survey update. Entitlement for
  * changed targeting is gated upstream in `patchV3Survey`.
  */
-async function buildV3AppSurveyPatchWrites(params: {
+type TV3AppSurveyPatchPlan = {
+  distribution: NonNullable<TV3SurveyDocument["distribution"]>;
+  actionClasses: Awaited<ReturnType<typeof getActionClasses>>;
+  resolvedTriggers: ReturnType<typeof resolveV3SurveyTriggers>;
+  segmentFilterWrite: TV3SegmentFilterWrite | null;
+};
+
+/**
+ * Resolve and check every reference an app survey patch names, writing nothing.
+ *
+ * Kept separate from applying the writes so it can run before `ensureV3WorkspaceLanguages`, which
+ * upserts Language rows into the workspace. Validating afterwards made a 422 a partial write: the
+ * survey was untouched but the requested languages had already been added, with no v3 operation to
+ * remove them. `executeV3SurveyCreate` orders itself the same way for the same reason.
+ */
+async function planV3AppSurveyPatchWrites(params: {
   currentSurvey: TSurvey;
   document: TV3SurveyDocument;
-  data: Prisma.SurveyUpdateInput;
-}): Promise<TV3SegmentFilterWrite | null> {
-  const { currentSurvey, document, data } = params;
+}): Promise<TV3AppSurveyPatchPlan | null> {
+  const { currentSurvey, document } = params;
   const distribution = document.distribution;
   if (!distribution) {
     return null;
@@ -146,15 +160,12 @@ async function buildV3AppSurveyPatchWrites(params: {
   const actionClasses = await getActionClasses(currentSurvey.workspaceId);
   const resolvedTriggers = resolveV3SurveyTriggers(distribution.triggers, actionClasses);
 
-  Object.assign(data, v3DistributionToScalars(distribution));
-  data.triggers = handleTriggerUpdates(resolvedTriggers, currentSurvey.triggers, actionClasses);
-
   const nextFilters = document.targeting?.filters ?? [];
   const segmentId = currentSurvey.segment?.id;
   const filtersChanged = !areV3SurveyTargetingFiltersEqual(currentSurvey.segment?.filters ?? [], nextFilters);
 
   if (!filtersChanged) {
-    return null;
+    return { distribution, actionClasses, resolvedTriggers, segmentFilterWrite: null };
   }
   // App surveys auto-create a private segment; if one is somehow missing we cannot persist the
   // targeting change. Fail loudly instead of returning 200 while silently dropping the filters.
@@ -170,7 +181,21 @@ async function buildV3AppSurveyPatchWrites(params: {
   // Validate attribute-key references on the changed filters before the write (mirrors trigger ids).
   await assertV3SurveyTargetingFilterReferences(currentSurvey.workspaceId, nextFilters);
 
-  return { segmentId, filters: nextFilters };
+  return {
+    distribution,
+    actionClasses,
+    resolvedTriggers,
+    segmentFilterWrite: { segmentId, filters: nextFilters },
+  };
+}
+
+function applyV3AppSurveyPatchWrites(
+  plan: TV3AppSurveyPatchPlan,
+  currentSurvey: TSurvey,
+  data: Prisma.SurveyUpdateInput
+): void {
+  Object.assign(data, v3DistributionToScalars(plan.distribution));
+  data.triggers = handleTriggerUpdates(plan.resolvedTriggers, currentSurvey.triggers, plan.actionClasses);
 }
 
 export async function executeV3SurveyPatch(params: {
@@ -197,8 +222,8 @@ export async function executeV3SurveyPatch(params: {
 
   // ENG-1839: a newly declared field may not take a reserved name. Before the transaction, so a
   // refusal is a validation response rather than a rollback, and before `ensureV3WorkspaceLanguages`
-  // — which writes workspace languages — so a rejected patch creates nothing. Names `currentSurvey`
-  // already declares are grandfathered and pass untouched.
+  // — which writes workspace languages. Names `currentSurvey` already declares are grandfathered
+  // and pass untouched.
   const declaredFieldNameErrors = validateNewDeclaredFieldNames({
     existing: collectDeclaredFieldNames(currentSurvey),
     incoming: collectDeclaredFieldNames(document),
@@ -213,6 +238,10 @@ export async function executeV3SurveyPatch(params: {
       }))
     );
   }
+
+  // Everything that can answer 422 runs before the first write. See planV3AppSurveyPatchWrites.
+  const appSurveyPatchPlan =
+    currentSurvey.type === "app" ? await planV3AppSurveyPatchWrites({ currentSurvey, document }) : null;
 
   const languages = await ensureV3WorkspaceLanguages(currentSurvey.workspaceId, languageRequests, requestId);
   const normalizedScheduling = normalizeSurveyScheduling({
@@ -236,12 +265,12 @@ export async function executeV3SurveyPatch(params: {
     languages: buildSurveyLanguageUpdate(currentSurvey, languages),
   };
 
-  // App-only runtime/distribution settings (display scalars, triggers); also yields the segment
-  // targeting write to perform, if any.
-  const segmentFilterWrite =
-    currentSurvey.type === "app"
-      ? await buildV3AppSurveyPatchWrites({ currentSurvey, document, data })
-      : null;
+  // App-only runtime/distribution settings (display scalars, triggers), from the already-validated
+  // plan; it also carries the segment targeting write to perform, if any.
+  if (appSurveyPatchPlan) {
+    applyV3AppSurveyPatchWrites(appSurveyPatchPlan, currentSurvey, data);
+  }
+  const segmentFilterWrite = appSurveyPatchPlan?.segmentFilterWrite ?? null;
 
   const runSurveyUpdate = (client: Prisma.TransactionClient) =>
     client.survey.update({ where: { id: currentSurvey.id }, data, select: selectSurvey });

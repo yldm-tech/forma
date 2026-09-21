@@ -549,6 +549,44 @@ describe("patchV3Survey", () => {
     expect(prisma.survey.update).not.toHaveBeenCalled();
   });
 
+  test("a rejected app-survey patch does not leave the requested languages behind", async () => {
+    // The workspace has no action classes, so the trigger reference is invalid and the patch is a
+    // 422. Language upserts used to run before that check, so the rejected request still added
+    // `de-DE` to the workspace - visible in workspace settings and every other survey's picker,
+    // with no v3 operation to remove it.
+    vi.mocked(getActionClasses).mockResolvedValue([]);
+
+    await expect(
+      executeV3SurveyPatch({
+        currentSurvey: { ...currentSurvey, type: "app", triggers: [] } as TSurvey,
+        document: {
+          name: currentSurvey.name,
+          status: "draft",
+          metadata: currentSurvey.metadata,
+          defaultLanguage: "en-US",
+          languages: [
+            { code: "en-US", enabled: true },
+            { code: "de-DE", enabled: true },
+          ],
+          welcomeCard: currentSurvey.welcomeCard,
+          blocks: currentSurvey.blocks,
+          endings: currentSurvey.endings,
+          hiddenFields: currentSurvey.hiddenFields,
+          variables: currentSurvey.variables,
+          distribution: { triggers: [{ actionClassId: "clactionmissing0000000000" }] },
+        } as unknown as Parameters<typeof executeV3SurveyPatch>[0]["document"],
+        languageRequests: [
+          { code: "en-US", default: true, enabled: true },
+          { code: "de-DE", default: false, enabled: true },
+        ],
+        requestId: "req_1",
+      })
+    ).rejects.toBeInstanceOf(V3SurveyReferenceValidationError);
+
+    expect(prisma.language.upsert).not.toHaveBeenCalled();
+    expect(prisma.survey.update).not.toHaveBeenCalled();
+  });
+
   /**
    * ENG-1839. `PATCH /api/v3/surveys/*` and the MCP write path reach the survey through here, so the
    * guard has to sit at this boundary too — before the transaction, so a refusal is a validation
