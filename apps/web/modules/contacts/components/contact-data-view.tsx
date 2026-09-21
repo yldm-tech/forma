@@ -96,7 +96,7 @@ export const ContactDataView = ({
       }
     } catch (error) {
       console.error("Error fetching contacts:", error);
-      toast.error(t("workspace.contacts.error_fetching_contacts"));
+      toast.error(t("common.something_went_wrong_please_try_again"));
     }
   }, [workspaceId, itemsPerPage, searchValue, t]);
 
