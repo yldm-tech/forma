@@ -517,29 +517,34 @@ const sendNotificationEmailsSafely = async ({
     return;
   }
 
-  await Promise.all(
-    usersWithNotifications.map(async (user) => {
-      try {
-        await sendResponseFinishedEmail(
-          user.email,
-          user.locale,
-          workspaceId,
-          survey,
-          data.response,
-          responseCount
-        );
-      } catch (error) {
-        logger.error(
-          {
-            ...logContext,
-            err: error,
-            userEmail: user.email,
-          },
-          "Response pipeline notification email failed"
-        );
-      }
-    })
-  );
+  // Bounded rather than one `Promise.all` over the whole list. Each send is a DB lookup, a React
+  // email render and its own SMTP connection, so a survey whose workspace has many subscribed
+  // members opened that many of each at once - on the worker, for every finished response.
+  for (let start = 0; start < usersWithNotifications.length; start += NOTIFICATION_EMAIL_MAX_CONCURRENCY) {
+    await Promise.all(
+      usersWithNotifications.slice(start, start + NOTIFICATION_EMAIL_MAX_CONCURRENCY).map(async (user) => {
+        try {
+          await sendResponseFinishedEmail(
+            user.email,
+            user.locale,
+            workspaceId,
+            survey,
+            data.response,
+            responseCount
+          );
+        } catch (error) {
+          logger.error(
+            {
+              ...logContext,
+              err: error,
+              userEmail: user.email,
+            },
+            "Response pipeline notification email failed"
+          );
+        }
+      })
+    );
+  }
 };
 
 /**
@@ -626,6 +631,9 @@ const handleSurveyAutoCompleteSafely = async ({
     );
   }
 };
+
+/** Upper bound on notification emails in flight at once; each one holds its own SMTP connection. */
+const NOTIFICATION_EMAIL_MAX_CONCURRENCY = 5;
 
 const runResponseFinishedSideEffects = async ({
   data,

@@ -21,6 +21,10 @@ export const createDisplay = async (displayInput: TDisplayCreateInputV2): Promis
         id: surveyId,
         workspaceId,
       },
+      // Only the status is read below, and the display is connected by the input's surveyId rather
+      // than by anything off this row. Without the select every display creation pulls the whole
+      // survey - blocks, endings, styling, every JSON column - out of the database.
+      select: { status: true },
     });
     if (!survey) {
       throw new ResourceNotFoundError("Survey", surveyId);

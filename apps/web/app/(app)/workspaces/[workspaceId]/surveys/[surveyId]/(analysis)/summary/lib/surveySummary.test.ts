@@ -1102,13 +1102,21 @@ describe("getSurveySummary", () => {
         where: expect.objectContaining({ surveyId: mockSurveyId }), // buildWhereClause is mocked
       })
     );
+    // The predicate itself, not the ids it matched: an id list grows one bind parameter per
+    // response, which is unbounded on exactly the surveys whose summary is worth filtering.
     expect(getDisplayCountBySurveyId).toHaveBeenCalledWith(
       mockSurveyId,
-      expect.objectContaining({ responseIds: expect.any(Array) })
+      { createdAt: undefined },
+      {} // buildWhereClause is mocked; what matters is that its predicate is what gets passed
+    );
+    expect(getDisplayCountBySurveyId).not.toHaveBeenCalledWith(
+      mockSurveyId,
+      expect.objectContaining({ responseIds: expect.anything() }),
+      expect.anything()
     );
   });
 
-  test("does not pass responseIds for date-only filterCriteria", async () => {
+  test("passes no response predicate for date-only filterCriteria", async () => {
     const filterCriteria: TResponseFilterCriteria = {
       createdAt: {
         min: new Date("2024-01-01T00:00:00.000Z"),
@@ -1118,9 +1126,11 @@ describe("getSurveySummary", () => {
 
     await getSurveySummary(mockSurveyId, filterCriteria);
 
-    expect(getDisplayCountBySurveyId).toHaveBeenCalledWith(mockSurveyId, {
-      createdAt: filterCriteria.createdAt,
-    });
+    expect(getDisplayCountBySurveyId).toHaveBeenCalledWith(
+      mockSurveyId,
+      { createdAt: filterCriteria.createdAt },
+      undefined
+    );
   });
 });
 
