@@ -115,9 +115,19 @@ describe("Response Utils", () => {
         },
       };
       const result = buildWhereClause(mockSurvey as TSurvey, filterCriteria);
+      // A response with no linked contact, or a contact without this attribute, is "not equals" too.
+      // A bare JSON-path `not` does not match a NULL path on Postgres, so the absent case has to be
+      // ORed in - the same stance the `data` branch and the typed builder already take.
       expect(result.AND).toEqual([
         {
-          AND: [{ contactAttributes: { path: ["email"], not: "blocked@example.com" } }],
+          AND: [
+            {
+              OR: [
+                { contactAttributes: { path: ["email"], not: "blocked@example.com" } },
+                { contactAttributes: { path: ["email"], equals: Prisma.DbNull } },
+              ],
+            },
+          ],
         },
       ]);
     });

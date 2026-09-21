@@ -26,6 +26,7 @@ vi.mock("@/lib/utils/locale", () => ({
 vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
@@ -58,33 +59,54 @@ describe("sendToPipeline", () => {
     expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: "en-US" });
   });
 
-  test("logs enqueue failures and rethrows", async () => {
+  test("retries a failing enqueue rather than surfacing it on the first attempt", async () => {
+    const testError = new Error("Redis unavailable");
+    mockEnqueueResponsePipeline.mockRejectedValueOnce(testError).mockResolvedValueOnce({
+      jobId: "job-1",
+      jobName: "response-pipeline.process",
+      queueName: "background-jobs",
+    });
+
+    await expect(sendToPipeline(testData)).resolves.toBeUndefined();
+
+    // The producer runs with enableOfflineQueue: false, so a sub-second reconnect fails instantly;
+    // one retry is enough to cover it.
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledTimes(2);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  test("gives up without throwing, because the response row is already committed", async () => {
     const testError = new Error("Redis unavailable");
     mockEnqueueResponsePipeline.mockRejectedValue(testError);
 
-    await expect(sendToPipeline(testData)).rejects.toThrow(testError);
+    // Throwing here turned into a 500 on a request whose response already exists. The survey runtime
+    // retries 5xx and only records responseId after a successful create, so each retry POSTed
+    // another response - one submission becoming up to four rows.
+    await expect(sendToPipeline(testData)).resolves.toBeUndefined();
 
     expect(logger.error).toHaveBeenCalledWith(
-      {
-        error: testError,
+      expect.objectContaining({
         event: testData.event,
         surveyId: testData.surveyId,
         workspaceId: testData.workspaceId,
-      },
-      "Error queueing pipeline event"
+        responseId: testData.response.id,
+      }),
+      "Response pipeline event dropped after retries"
     );
   });
 
-  test("throws when BullMQ queueing is disabled", async () => {
+  test("does not throw when BullMQ queueing is disabled", async () => {
     vi.mocked(getJobsQueueingConfig).mockReturnValue({
       enabled: false,
       redisUrl: null,
     });
 
-    await expect(sendToPipeline(testData)).rejects.toThrow(
-      "BullMQ response pipeline queueing is not enabled"
-    );
+    await expect(sendToPipeline(testData)).resolves.toBeUndefined();
     expect(getBackgroundJobProducer).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: testData.event }),
+      "Response pipeline event dropped: BullMQ queueing is not enabled"
+    );
   });
 
   test("falls back to undefined locale when findMatchingLocale throws", async () => {

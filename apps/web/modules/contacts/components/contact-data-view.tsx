@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import { debounce } from "@/lib/utils/debounce";
 import { getContactsAction } from "../actions";
@@ -27,6 +28,7 @@ export const ContactDataView = ({
   initialContacts,
   isQuotasAllowed,
 }: ContactDataViewProps) => {
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState<TContactWithAttributes[]>([...initialContacts]);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [loadingNextPage, setLoadingNextPage] = useState<boolean>(false);
@@ -94,9 +96,9 @@ export const ContactDataView = ({
       }
     } catch (error) {
       console.error("Error fetching contacts:", error);
-      toast.error("Error fetching contacts. Please try again.");
+      toast.error(t("common.something_went_wrong_please_try_again"));
     }
-  }, [workspaceId, itemsPerPage, searchValue]);
+  }, [workspaceId, itemsPerPage, searchValue, t]);
 
   // Only refetch when search value actually changes (debounced)
   useEffect(() => {

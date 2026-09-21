@@ -11,7 +11,7 @@ import {
   ValidationError,
 } from "@forma/types/errors";
 import { ZMembershipUpdateInput } from "@forma/types/memberships";
-import { assertCan, can } from "@/lib/authorization";
+import { assertCan } from "@/lib/authorization";
 import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getOrganization } from "@/lib/organization/service";
@@ -23,6 +23,7 @@ import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { getAccessControlPermission } from "@/modules/license-check/lib/utils";
 import { getInvite } from "@/modules/organization/settings/teams/lib/invite";
 import { getOrganizationOwnerCount } from "@/modules/organization/settings/teams/lib/membership";
+import { assertCanManageOrganizationUsers } from "@/modules/organization/settings/teams/lib/user-management-access";
 import { updateInvite } from "@/modules/role-management/lib/invite";
 import { updateMembership } from "@/modules/role-management/lib/membership";
 import { ZInviteUpdateInput } from "@/modules/role-management/types/invites";
@@ -54,6 +55,8 @@ export const updateInviteAction = authenticatedActionClient.inputSchema(ZUpdateI
     if (!currentUserMembership) {
       throw new AuthenticationError("User not a member of this organization");
     }
+
+    await assertCanManageOrganizationUsers(ctx.user.id, organizationId);
 
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
@@ -97,20 +100,7 @@ export const updateMembershipAction = authenticatedActionClient.inputSchema(ZUpd
     if (!currentUserMembership) {
       throw new AuthenticationError("User not a member of this organization");
     }
-    // `organization.manage_access` *is* this decision in the central vocabulary. The SpiceDB
-    // evaluator maps `USER_MANAGEMENT_MINIMUM_ROLE` onto the schema (`owner` → write, `manager` →
-    // manage_access, `disabled` → deny). Asking centrally makes SpiceDB authoritative for this role
-    // mutation — the highest-risk one in the product. The check
-    // below it stays `organization.manage`, which is a different and additionally required
-    // capability, so both remain.
-    const canManageAccess = await can({ type: "user", id: ctx.user.id }, "organization.manage_access", {
-      type: "organization",
-      id: parsedInput.organizationId,
-    });
-
-    if (!canManageAccess) {
-      throw new OperationNotAllowedError("User management is not allowed for your role");
-    }
+    await assertCanManageOrganizationUsers(ctx.user.id, parsedInput.organizationId);
 
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",

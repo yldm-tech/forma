@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { DatabaseError } from "@forma/types/errors";
-import { getContacts } from "./contacts";
+import { CONTACTS_PAGE_LIMIT_MAX, getContacts } from "./contacts";
 
 vi.mock("@forma/database", () => ({
   prisma: {
@@ -45,10 +45,24 @@ describe("getContacts", () => {
 
     const result = await getContacts(mockWorkspaceIds);
 
+    // Bounded and deterministically ordered: the query used to be neither, so one request pulled
+    // every contact in every workspace the key could reach.
     expect(prisma.contact.findMany).toHaveBeenCalledWith({
       where: { workspaceId: { in: mockWorkspaceIds } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: CONTACTS_PAGE_LIMIT_MAX,
     });
     expect(result).toEqual(mockContacts);
+  });
+
+  test("clamps a caller-supplied limit to the server maximum and passes skip through", async () => {
+    vi.mocked(prisma.contact.findMany).mockResolvedValue(mockContacts);
+
+    await getContacts(mockWorkspaceIds, CONTACTS_PAGE_LIMIT_MAX + 5000, 100);
+
+    expect(prisma.contact.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: CONTACTS_PAGE_LIMIT_MAX, skip: 100 })
+    );
   });
 
   test("should throw DatabaseError on PrismaClientKnownRequestError", async () => {
@@ -59,9 +73,9 @@ describe("getContacts", () => {
     vi.mocked(prisma.contact.findMany).mockRejectedValue(prismaError);
 
     await expect(getContacts(mockWorkspaceIds)).rejects.toThrow(DatabaseError);
-    expect(prisma.contact.findMany).toHaveBeenCalledWith({
-      where: { workspaceId: { in: mockWorkspaceIds } },
-    });
+    expect(prisma.contact.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { workspaceId: { in: mockWorkspaceIds } } })
+    );
   });
 
   test("should throw original error for other errors", async () => {
@@ -69,8 +83,8 @@ describe("getContacts", () => {
     vi.mocked(prisma.contact.findMany).mockRejectedValue(genericError);
 
     await expect(getContacts(mockWorkspaceIds)).rejects.toThrow(genericError);
-    expect(prisma.contact.findMany).toHaveBeenCalledWith({
-      where: { workspaceId: { in: mockWorkspaceIds } },
-    });
+    expect(prisma.contact.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { workspaceId: { in: mockWorkspaceIds } } })
+    );
   });
 });

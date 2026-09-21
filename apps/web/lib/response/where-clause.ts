@@ -310,11 +310,25 @@ export const buildWhereClause = (survey: TSurvey, filterCriteria?: TResponseFilt
           });
           break;
         case "notEquals":
+          // An absent attribute counts as "not equals", matching the `data` branch below and the
+          // typed builder above. A bare JSON-path `not` does not match a NULL path on Postgres, so
+          // without the OR every response with no linked contact - and every contact missing this
+          // key - silently drops out of the list, the summary and the export.
           contactAttributes.push({
-            contactAttributes: {
-              path: [key],
-              not: val.value,
-            },
+            OR: [
+              {
+                contactAttributes: {
+                  path: [key],
+                  not: val.value,
+                },
+              },
+              {
+                contactAttributes: {
+                  path: [key],
+                  equals: Prisma.DbNull,
+                },
+              },
+            ],
           });
           break;
       }

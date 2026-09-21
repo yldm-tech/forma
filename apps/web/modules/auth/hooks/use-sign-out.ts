@@ -33,7 +33,8 @@ export const useSignOut = (sessionUser?: SessionUser | null) => {
     // Log audit event before signing out (server action)
     if (sessionUser?.id) {
       try {
-        await logSignOutAction(sessionUser.id, sessionUser.email ?? "", {
+        // The actor is resolved from the session server-side, so no identity is sent from here.
+        await logSignOutAction({
           reason: options?.reason || "user_initiated", // NOSONAR // We want to check for empty strings
           redirectUrl: options?.redirectUrl || options?.callbackUrl, // NOSONAR // We want to check for empty strings
           organizationId: options?.organizationId,

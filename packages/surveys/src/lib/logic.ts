@@ -404,10 +404,14 @@ const evaluateSingleCondition = (
           rightValue.some((v) => leftValue.includes(v))
         );
       case "doesNotIncludeAllOf":
+        // The negation of includesAllOf, matching the "Does not include all of" label the author
+        // picked. `every(v => !includes(v))` reads as "includes none of", which is the *other*
+        // operator: by De Morgan it is exactly doesNotIncludeOneOf, so the two were duplicates and
+        // this one could never fire on a partial overlap.
         return (
           Array.isArray(leftValue) &&
           Array.isArray(rightValue) &&
-          rightValue.every((v) => !leftValue.includes(v))
+          !rightValue.every((v) => leftValue.includes(v))
         );
       case "doesNotIncludeOneOf":
         return (

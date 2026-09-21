@@ -437,6 +437,35 @@ describe("surveyLogic", () => {
         "en"
       )
     ).toBe(true);
+    // The partial overlap is what separates this operator from doesNotIncludeOneOf. "foo" is
+    // present and "baz" is not, so not all of them are included and the condition holds. The
+    // previous implementation read as "includes none of" and returned false here, making the two
+    // operators identical.
+    expect(
+      evaluateLogic(
+        mockSurvey,
+        { farr: ["foo", "bar"] },
+        vars,
+        group({
+          ...baseCond("doesNotIncludeAllOf", ["foo", "baz"]),
+          leftOperand: { type: "hiddenField", value: "farr" },
+        }),
+        "en"
+      )
+    ).toBe(true);
+    // All of them present -> the condition must not hold.
+    expect(
+      evaluateLogic(
+        mockSurvey,
+        { farr: ["foo", "bar"] },
+        vars,
+        group({
+          ...baseCond("doesNotIncludeAllOf", ["foo", "bar"]),
+          leftOperand: { type: "hiddenField", value: "farr" },
+        }),
+        "en"
+      )
+    ).toBe(false);
     expect(
       evaluateLogic(
         mockSurvey,

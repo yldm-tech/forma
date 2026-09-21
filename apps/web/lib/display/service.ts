@@ -16,8 +16,20 @@ export const selectDisplay = {
   contactId: true,
 } satisfies Prisma.DisplaySelect;
 
+/**
+ * Count displays for a survey.
+ *
+ * `responseWhere` narrows to displays whose response matches a predicate. It is passed as a
+ * predicate rather than as a list of ids on purpose: the summary derives it from a filter that can
+ * match every response in the survey, and sending one bind parameter per matching response grows
+ * the statement without bound on exactly the surveys where the summary matters most.
+ */
 export const getDisplayCountBySurveyId = reactCache(
-  async (surveyId: string, filters?: TDisplayFilters): Promise<number> => {
+  async (
+    surveyId: string,
+    filters?: TDisplayFilters,
+    responseWhere?: Prisma.ResponseWhereInput
+  ): Promise<number> => {
     validateInputs([surveyId, ZId], [filters, ZDisplayFilters.optional()]);
 
     if (filters?.responseIds?.length === 0) {
@@ -41,6 +53,11 @@ export const getDisplayCountBySurveyId = reactCache(
                   in: filters.responseIds,
                 },
               },
+            },
+          }),
+          ...(responseWhere && {
+            response: {
+              is: responseWhere,
             },
           }),
         },

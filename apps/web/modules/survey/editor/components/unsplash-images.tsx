@@ -130,6 +130,11 @@ export const ImageFromUnsplashSurveyBg = ({ handleBgChange }: ImageFromUnsplashS
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    // A request in flight belongs to the query and page that started it. Without this guard a
+    // slower response from the previous query appended its images into the new query's list, and
+    // its `finally` cleared the spinner for a request that was still running.
+    let isCurrent = true;
+
     const fetchData = async (searchQuery: string, currentPage: number) => {
       try {
         setIsLoading(true);
@@ -137,7 +142,7 @@ export const ImageFromUnsplashSurveyBg = ({ handleBgChange }: ImageFromUnsplashS
           searchQuery: searchQuery,
           page: currentPage,
         });
-        if (!getImagesFromUnsplashResponse?.data) return;
+        if (!isCurrent || !getImagesFromUnsplashResponse?.data) return;
 
         const imagesFromUnsplash = getImagesFromUnsplashResponse.data;
         for (let i = 0; i < imagesFromUnsplash.length; i++) {
@@ -148,9 +153,13 @@ export const ImageFromUnsplashSurveyBg = ({ handleBgChange }: ImageFromUnsplashS
         }
         setImages((prevImages) => [...prevImages, ...imagesFromUnsplash]);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Unknown error occurred");
+        if (isCurrent) {
+          toast.error(error instanceof Error ? error.message : "Unknown error occurred");
+        }
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -161,6 +170,7 @@ export const ImageFromUnsplashSurveyBg = ({ handleBgChange }: ImageFromUnsplashS
     }
 
     return () => {
+      isCurrent = false;
       debouncedFetchData.cancel();
     };
   }, [query, page, setImages]);
@@ -172,7 +182,9 @@ export const ImageFromUnsplashSurveyBg = ({ handleBgChange }: ImageFromUnsplashS
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
     setPage(1);
-    setImages([]);
+    // Clearing the box goes back to the seed set. Emptying it unconditionally left the picker blank,
+    // because the effect only fetches for a non-empty query — so there was nothing to put back.
+    setImages(event.target.value.trim() === "" ? defaultImages : []);
   };
 
   const handleImageSelected = async (imageUrl: string, downloadImageUrl?: string) => {

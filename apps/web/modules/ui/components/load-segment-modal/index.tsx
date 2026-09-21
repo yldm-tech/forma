@@ -32,6 +32,7 @@ const SegmentDetail = ({
   currentSegment,
   locale,
 }: SegmentDetailProps) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const handleLoadNewSegment = async (segmentId: string) => {
     try {
@@ -43,7 +44,7 @@ const SegmentDetail = ({
       const updatedSurvey = await onSegmentLoad(surveyId, segmentId);
 
       if (!updatedSurvey?.id || !updatedSurvey?.segment) {
-        toast.error("Error loading survey");
+        toast.error(t("common.error_loading_data"));
         setIsLoading(false);
         setIsSegmentEditorOpen(false);
         setOpen(false);
@@ -53,7 +54,7 @@ const SegmentDetail = ({
       const parsedFilters = ZSegmentFilters.safeParse(updatedSurvey?.segment?.filters);
 
       if (!parsedFilters.success) {
-        toast.error("Error loading survey");
+        toast.error(t("common.error_loading_data"));
         setIsLoading(false);
         setIsSegmentEditorOpen(false);
         setOpen(false);

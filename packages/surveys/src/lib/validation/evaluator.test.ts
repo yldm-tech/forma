@@ -529,6 +529,50 @@ describe("validateElementResponse", () => {
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
+
+    test("an implicit type rule does not become an OR alternative that voids the author's rules", () => {
+      // An email-typed open text restricted to two addresses. The implicit "must be an email" rule
+      // is satisfied by any syntactically valid address, so folding it into the OR group let every
+      // address through and the author's restriction never applied.
+      const element: TSurveyElement = {
+        id: "text1",
+        type: TSurveyElementTypeEnum.OpenText,
+        headline: { default: "Question" },
+        required: false,
+        inputType: "email",
+        charLimit: 0,
+        validation: {
+          rules: [
+            { id: "rule1", type: "equals", params: { value: "alice@corp.com" } },
+            { id: "rule2", type: "equals", params: { value: "bob@corp.com" } },
+          ],
+          logic: "or",
+        },
+      } as unknown as TSurveyOpenTextElement;
+
+      expect(validateElementResponse(element, "mallory@evil.com", "en").valid).toBe(false);
+      expect(validateElementResponse(element, "alice@corp.com", "en").valid).toBe(true);
+    });
+
+    test("the implicit type rule still applies to a listed value that is not a valid address", () => {
+      const element: TSurveyElement = {
+        id: "text1",
+        type: TSurveyElementTypeEnum.OpenText,
+        headline: { default: "Question" },
+        required: false,
+        inputType: "email",
+        charLimit: 0,
+        validation: {
+          rules: [
+            { id: "rule1", type: "equals", params: { value: "not-an-email" } },
+            { id: "rule2", type: "equals", params: { value: "bob@corp.com" } },
+          ],
+          logic: "or",
+        },
+      } as unknown as TSurveyOpenTextElement;
+
+      expect(validateElementResponse(element, "not-an-email", "en").valid).toBe(false);
+    });
   });
 
   describe("implicit validation for OpenText inputType", () => {

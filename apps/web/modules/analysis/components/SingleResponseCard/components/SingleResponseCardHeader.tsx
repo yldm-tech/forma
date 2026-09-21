@@ -96,7 +96,8 @@ export const SingleResponseCardHeader = ({
         </div>
 
         <div className="flex items-center gap-x-2 text-sm">
-          <time className="text-slate-500" dateTime={timeSince(response.createdAt.toISOString(), locale)}>
+          {/* The attribute is the machine-readable instant; the localized relative phrase is the text. */}
+          <time className="text-slate-500" dateTime={response.createdAt.toISOString()}>
             {timeSince(response.createdAt.toISOString(), locale)}
           </time>
           {user &&

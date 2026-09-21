@@ -1,5 +1,14 @@
 "use server";
 
+// `"use server"` is load-bearing here, not a leftover. A client component reaches this module
+// transitively (create-workspace-modal -> lib/utils/helper.ts -> here -> modules/quotas/lib/quotas.ts,
+// which imports "server-only"), and the directive is what makes that an RPC boundary instead of a
+// bundling error. Deleting it fails the build with "'server-only' cannot be imported from a Client
+// Component module".
+//
+// That boundary is also the problem: every export below is a reachable endpoint with no auth of its
+// own. Closing it means giving `helper.ts` a client-safe split so no client component reaches this
+// module at all, which is its own change and not a directive edit.
 import { cache as reactCache } from "react";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";

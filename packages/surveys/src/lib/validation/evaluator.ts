@@ -516,23 +516,44 @@ export const validateElementResponse = (
   const validation = (
     element as TSurveyElement & { validation?: { rules?: TValidationRule[]; logic?: "and" | "or" } }
   ).validation;
-  let rules: TValidationRule[] = [...(validation?.rules ?? [])];
+  const authorRules: TValidationRule[] = [...(validation?.rules ?? [])];
 
-  // Add implicit rules based on element type
-  rules = addImplicitOpenTextRules(element, rules);
-  rules = addImplicitContactInfoRules(element, rules);
+  // Implicit rules come from the element type (an email-typed open text must hold an address), not
+  // from the author, and the editor hides them as redundant. They are therefore always ANDed: folded
+  // into the author's group under `logic: "or"` they become an alternative that the input satisfies
+  // by construction, which short-circuits executeOrLogic and silently voids every rule the author
+  // did write.
+  // Fed a copy of the author's rules so the helpers' "already has this rule" checks still see them;
+  // whatever they append past that point is the implicit set.
+  const withImplicit = addImplicitContactInfoRules(
+    element,
+    addImplicitOpenTextRules(element, [...authorRules])
+  );
+  const implicitRules: TValidationRule[] = withImplicit.slice(authorRules.length);
 
-  if (rules.length === 0) {
+  if (authorRules.length === 0 && implicitRules.length === 0) {
     return { valid: errors.length === 0, errors };
   }
 
   const validationLogic = validation?.logic ?? "and";
 
-  if (validationLogic === "or") {
-    return executeOrLogic(rules, element, value, languageCode, errors, t);
+  const authorResult =
+    authorRules.length === 0
+      ? { valid: errors.length === 0, errors }
+      : validationLogic === "or"
+        ? executeOrLogic(authorRules, element, value, languageCode, errors, t)
+        : executeAndLogic(authorRules, element, value, languageCode, errors, t);
+
+  if (implicitRules.length === 0) {
+    return authorResult;
   }
 
-  return executeAndLogic(rules, element, value, languageCode, errors, t);
+  const implicitResult = executeAndLogic(implicitRules, element, value, languageCode, [], t);
+
+  return {
+    valid: authorResult.valid && implicitResult.valid,
+    errors: [...authorResult.errors, ...implicitResult.errors],
+  };
 };
 
 /**

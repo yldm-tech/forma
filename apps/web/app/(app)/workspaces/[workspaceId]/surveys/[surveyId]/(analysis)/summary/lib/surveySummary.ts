@@ -1023,13 +1023,15 @@ export const getSurveySummary = reactCache(
         }
       }
 
-      const responseIds = hasFilter ? responses.map((response) => response.id) : [];
-
       const [displayCount, quotas] = await Promise.all([
-        getDisplayCountBySurveyId(surveyId, {
-          createdAt: filterCriteria?.createdAt,
-          ...(hasFilter && { responseIds }),
-        }),
+        getDisplayCountBySurveyId(
+          surveyId,
+          { createdAt: filterCriteria?.createdAt },
+          // The same predicate the response list above was read with, handed over as a predicate
+          // rather than as the ids it matched: one statement with a fixed parameter count instead
+          // of one bind parameter per response in the survey.
+          hasFilter ? buildWhereClause(survey, filterCriteria) : undefined
+        ),
         getQuotasSummary(surveyId),
       ]);
 

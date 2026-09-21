@@ -757,15 +757,18 @@ export const getResponseCountBySurveyId = reactCache(
     validateInputs([surveyId, ZId], [filterCriteria, ZResponseFilterCriteria.optional()]);
 
     try {
-      const survey = await getSurvey(surveyId);
-      if (!survey) return 0;
+      // The survey is only read to build the filter predicate. With no criteria there is nothing to
+      // build, and the extra relation-joined read is pure cost - the response pipeline pays it once
+      // per created response just to decide whether the count hits a PostHog milestone. A missing
+      // survey still counts zero, since no response can reference it.
+      let where: Prisma.ResponseWhereInput = { surveyId };
+      if (filterCriteria) {
+        const survey = await getSurvey(surveyId);
+        if (!survey) return 0;
+        where = { surveyId, ...buildWhereClause(survey, filterCriteria) };
+      }
 
-      const responseCount = await prisma.response.count({
-        where: {
-          surveyId: surveyId,
-          ...buildWhereClause(survey, filterCriteria),
-        },
-      });
+      const responseCount = await prisma.response.count({ where });
       return responseCount;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
