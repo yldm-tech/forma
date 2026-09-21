@@ -11,6 +11,7 @@ import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
 import { getTag, getTagsByWorkspaceId } from "@/lib/tag/service";
 import { getTagsOnResponsesCount } from "@/lib/tagOnResponse/service";
 import { deleteTag, mergeTags, updateTagName } from "@/modules/workspaces/settings/lib/tag";
+import { TagError } from "@/modules/workspaces/settings/types/tag";
 import { serializeV3Tag } from "../serializers";
 
 type TBaseParams = {
@@ -87,10 +88,18 @@ export async function renameV3Tag(
   const result = await updateTagName(tagId, name);
   if (!result.ok) {
     // A duplicate name is the caller's problem, not a server fault: the component surfaces it inline.
-    return problemUnprocessableContent(requestId, "Unable to update tag", {
-      instance,
-      invalid_params: [{ name: "name", reason: result.error.code ?? "invalid" }],
-    });
+    // Anything else — `updateTagName` reports every non-unique-constraint failure as
+    // UNEXPECTED_ERROR, including the P2025 a concurrent delete raises — is a server fault, and
+    // answering 422 for it told the caller to fix a `name` that was never the problem. 500 is
+    // already documented for this operation.
+    if (result.error.code === TagError.TAG_NAME_ALREADY_EXISTS) {
+      return problemUnprocessableContent(requestId, "Unable to update tag", {
+        instance,
+        invalid_params: [{ name: "name", reason: result.error.code }],
+      });
+    }
+
+    return problemInternalError(requestId, "Unable to update tag", instance);
   }
 
   if (auditLog) auditLog.newObject = result.data;

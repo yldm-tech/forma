@@ -211,7 +211,7 @@ export const EditContactAttributesModal = ({
         toast.error(errorMessage);
       }
     } catch (error) {
-      toast.error("common.something_went_wrong");
+      toast.error(t("common.something_went_wrong"));
       console.error(error);
     }
   };

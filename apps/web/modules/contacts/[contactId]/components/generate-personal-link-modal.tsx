@@ -57,10 +57,10 @@ export const GeneratePersonalLinkModal = ({
   const [generatedUrl, setGeneratedUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (open) {
-    } else {
+    if (!open) {
       setSelectedSurveyId(undefined);
       setGeneratedUrl("");
+      setIsLoading(false);
     }
   }, [open]);
 
@@ -82,37 +82,42 @@ export const GeneratePersonalLinkModal = ({
       return;
     }
     setIsLoading(true);
-    const response = await generatePersonalSurveyLinkAction({
-      contactId,
-      surveyId: selectedSurveyId,
-    });
+    // `finally`, because two of the paths below return early. They left the flag set, which disables
+    // the whole dialog - Cancel included - so a failed generation could only be escaped by reloading.
+    try {
+      const response = await generatePersonalSurveyLinkAction({
+        contactId,
+        surveyId: selectedSurveyId,
+      });
 
-    if (response?.data) {
-      const surveyUrl = response?.data?.surveyUrl;
-      if (!surveyUrl) {
-        toast.error(t("common.something_went_wrong_please_try_again"));
+      if (response?.data) {
+        const surveyUrl = response?.data?.surveyUrl;
+        if (!surveyUrl) {
+          toast.error(t("common.something_went_wrong_please_try_again"));
+          return;
+        }
+
+        setGeneratedUrl(surveyUrl);
+        const success = await copyToClipboard(surveyUrl);
+
+        if (success) {
+          toast.success(t("common.copied_to_clipboard"));
+        } else {
+          toast.error(
+            t("workspace.contacts.personal_link_generated_but_clipboard_failed", {
+              url: surveyUrl,
+            }) || `${t("workspace.contacts.personal_link_generated")}: ${surveyUrl}`,
+            { duration: 6000 }
+          );
+        }
+      } else {
+        const errorMessage = getTranslatedPersonalLinkError(getFormattedErrorMessage(response), t);
+        toast.error(errorMessage || t("common.something_went_wrong_please_try_again"));
         return;
       }
-
-      setGeneratedUrl(surveyUrl);
-      const success = await copyToClipboard(surveyUrl);
-
-      if (success) {
-        toast.success(t("common.copied_to_clipboard"));
-      } else {
-        toast.error(
-          t("workspace.contacts.personal_link_generated_but_clipboard_failed", {
-            url: surveyUrl,
-          }) || `${t("workspace.contacts.personal_link_generated")}: ${surveyUrl}`,
-          { duration: 6000 }
-        );
-      }
-    } else {
-      const errorMessage = getTranslatedPersonalLinkError(getFormattedErrorMessage(response), t);
-      toast.error(errorMessage || t("common.something_went_wrong_please_try_again"));
-      return;
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const getSelectPlaceholder = () => {

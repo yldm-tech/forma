@@ -105,7 +105,7 @@ export const RecallWrapper = ({
   const addRecallItem = useCallback(
     (recallItem: TSurveyRecallItem) => {
       if (recallItem.label.trim() === "") {
-        toast.error("Recall item label cannot be empty");
+        toast.error(t("workspace.surveys.edit.recall_item_label_cannot_be_empty"));
         return;
       }
 

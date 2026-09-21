@@ -53,12 +53,15 @@ Three things to know before reading the result:
 - **The four `/tags` operations are session-only** (`auth: "session"`, and the spec declares only
   `sessionAuth`), so an API key gets a documented 401 before any handler runs. They are checked
   against that 401, which is a real assertion that they stay session-only — but no tag fixtures
-  exist, because nothing an API key sends can reach them.
-  (Envoy in Cloud, Traefik in the Docker install) straight to the Hub; the Next.js route under
-  rather than test a proxy without an upstream. Their contract is checked by the Hub's own suite and
-  the live smoke recorded in ENG-1259. The bundle therefore documents 36 operations and this job
-  exercises 28 — the four `/tags` operations carry `x-excluded` (no docs page, ENG-2533) but are
-  still tested.
+  exist, because nothing an API key sends can reach them. They carry `x-excluded` (no docs page,
+  ENG-2533) and are still tested.
+- **The eight `/api/v3/responses` operations are documented but not routed.** ENG-2868 agreed the
+  contract before the implementation, deliberately, so the bundle describes them while
+  `apps/web/app/api/v3/` has no handler. `fill-missing` in `schemathesis.toml` would exercise each
+  one the moment it appears, and today each would answer Next.js's HTML 404 against a spec
+  documenting 200/400/401/403/429/500 — so the job passes `--exclude-path-regex '^/api/v3/responses'`
+  and nothing here verifies them (ENG-2959). The bundle therefore documents 36 operations and this
+  job exercises 28.
 - **Rate limiting.** Set `RATE_LIMITING_DISABLED=1`, otherwise a burst of cases can turn into
   documented-but-uninteresting 429s.
 

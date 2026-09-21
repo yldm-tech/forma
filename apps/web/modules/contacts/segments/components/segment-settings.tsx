@@ -94,7 +94,7 @@ export function SegmentSettings({
       }
 
       setIsUpdatingSegment(false);
-      toast.success("Segment updated successfully!");
+      toast.success(t("workspace.segments.segment_updated_successfully"));
     } catch (err: any) {
       toast.error(t("common.something_went_wrong_please_try_again"));
       setIsUpdatingSegment(false);

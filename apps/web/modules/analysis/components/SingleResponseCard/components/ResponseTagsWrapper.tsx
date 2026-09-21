@@ -75,39 +75,45 @@ export const ResponseTagsWrapper: React.FC<ResponseTagsWrapperProps> = ({
 
   const handleCreateTag = async (tagName: string) => {
     setIsLoadingTagOperation(true);
-    const newTagResponse = await createTagAction({ workspaceId, tagName });
+    // `finally`, matching handleAddTag below. The two early returns here left the flag set, which
+    // disables the tag combobox and every tag's delete control for the rest of the card's life -
+    // so one failed tag creation took away tagging on that response until a reload.
+    try {
+      const newTagResponse = await createTagAction({ workspaceId, tagName });
 
-    if (!newTagResponse?.data) {
-      toast.error(t("workspace.surveys.responses.an_error_occurred_creating_the_tag"));
-      return;
-    }
-
-    if (!newTagResponse.data.ok) {
-      const errorMessage = newTagResponse.data.error;
-      if (errorMessage?.code === TagError.TAG_NAME_ALREADY_EXISTS) {
-        toast.error(t("workspace.surveys.responses.tag_already_exists"), {
-          duration: 2000,
-        });
-      } else {
+      if (!newTagResponse?.data) {
         toast.error(t("workspace.surveys.responses.an_error_occurred_creating_the_tag"));
+        return;
       }
-      return;
-    }
 
-    const newTag = newTagResponse.data.data;
-    const createTagToResponseResponse = await createTagToResponseAction({ responseId, tagId: newTag.id });
-    if (createTagToResponseResponse?.data) {
-      setTagsState((prevTags) => [...prevTags, { tagId: newTag.id, tagName: newTag.name }]);
-      setTagIdToHighlight(newTag.id);
-      updateFetchedResponses();
-      setSearchValue("");
-      setOpen(false);
-    } else {
-      const errorMessage = getFormattedErrorMessage(createTagToResponseResponse);
-      logger.error({ errorMessage });
-      toast.error(errorMessage);
+      if (!newTagResponse.data.ok) {
+        const errorMessage = newTagResponse.data.error;
+        if (errorMessage?.code === TagError.TAG_NAME_ALREADY_EXISTS) {
+          toast.error(t("workspace.surveys.responses.tag_already_exists"), {
+            duration: 2000,
+          });
+        } else {
+          toast.error(t("workspace.surveys.responses.an_error_occurred_creating_the_tag"));
+        }
+        return;
+      }
+
+      const newTag = newTagResponse.data.data;
+      const createTagToResponseResponse = await createTagToResponseAction({ responseId, tagId: newTag.id });
+      if (createTagToResponseResponse?.data) {
+        setTagsState((prevTags) => [...prevTags, { tagId: newTag.id, tagName: newTag.name }]);
+        setTagIdToHighlight(newTag.id);
+        updateFetchedResponses();
+        setSearchValue("");
+        setOpen(false);
+      } else {
+        const errorMessage = getFormattedErrorMessage(createTagToResponseResponse);
+        logger.error({ errorMessage });
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsLoadingTagOperation(false);
     }
-    setIsLoadingTagOperation(false);
   };
 
   const handleAddTag = async (tagId: string) => {
