@@ -22,11 +22,10 @@ export const WorkspaceLookSettingsLoading = () => {
     { name: t("common.centered_modal"), value: "center", disabled: false },
   ];
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("common.appearance")} />
       <SettingsCard
         title={t("workspace.look.theme")}
-        className="max-w-7xl"
         description={t("workspace.look.theme_settings_description")}>
         <div className="flex animate-pulse">
           <div className="w-1/2">

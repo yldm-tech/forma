@@ -10,7 +10,7 @@ import {
   getOAuthScopeLabel,
 } from "@/modules/auth/lib/oauth-client-metadata";
 import { Button } from "@/modules/ui/components/button";
-import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCard, type TSettingsCardWidth } from "@/modules/ui/components/settings-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/modules/ui/components/table";
 
 type TOAuthConsent = {
@@ -53,12 +53,18 @@ const getAuthorizedApps = async (): Promise<TAuthorizedApp[]> => {
  * answers a question about the account's security, and a dedicated destination spent a slot in the
  * personal menu on a list that is empty until someone connects an MCP client.
  */
-export const AuthorizedAppsCard = async ({ locale }: Readonly<{ locale: TUserLocale }>) => {
+export const AuthorizedAppsCard = async ({
+  locale,
+  width,
+  className,
+}: Readonly<{ locale: TUserLocale; width?: TSettingsCardWidth; className?: string }>) => {
   const t = await getTranslate();
   const apps = await getAuthorizedApps();
 
   return (
     <SettingsCard
+      width={width}
+      className={className}
       title={t("auth.oauth.authorized_apps_title")}
       description={t("auth.oauth.authorized_apps_description")}
       cta={

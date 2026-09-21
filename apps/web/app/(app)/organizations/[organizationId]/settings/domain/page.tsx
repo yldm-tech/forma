@@ -35,7 +35,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   const isOwnerOrManager = isManager || isOwner;
 
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("common.domain")} />
 
       {!IS_STORAGE_CONFIGURED && (
@@ -47,6 +47,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
       )}
 
       <FaviconCustomizationSettings
+        width="full"
         organization={organization}
         workspaceId={layoutData?.currentWorkspace?.id ?? ""}
         isReadOnly={!isOwnerOrManager}
@@ -54,6 +55,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
       />
 
       <SettingsCard
+        width="full"
         title={t("workspace.settings.domain.title")}
         description={t("workspace.settings.domain.description")}
         bodyVariant="flush">

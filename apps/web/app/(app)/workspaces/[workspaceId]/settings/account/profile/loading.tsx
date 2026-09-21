@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LoadingCard } from "@/modules/ui/components/loading-card";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 const Loading = () => {
   const { t } = useTranslation();
@@ -26,11 +27,13 @@ const Loading = () => {
   ];
 
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("common.profile")} />
-      {cards.map((card, index) => (
-        <LoadingCard key={index} {...card} />
-      ))}
+      <SettingsCardGrid>
+        {cards.map((card, index) => (
+          <LoadingCard key={index} {...card} width="full" />
+        ))}
+      </SettingsCardGrid>
     </PageContentWrapper>
   );
 };

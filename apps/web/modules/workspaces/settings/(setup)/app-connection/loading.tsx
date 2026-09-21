@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LoadingCard } from "@/modules/ui/components/loading-card";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 export const AppConnectionLoading = () => {
   const { t } = useTranslation();
@@ -33,12 +34,14 @@ export const AppConnectionLoading = () => {
   ];
 
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("common.web_and_mobile_sdk")} />
       <div className="mt-4 flex max-w-4xl animate-pulse items-center gap-y-4 rounded-lg border bg-blue-50 p-6 text-sm text-blue-900 shadow-xs md:gap-y-0 md:text-base"></div>
-      {cards.map((card) => (
-        <LoadingCard key={card.title} {...card} />
-      ))}
+      <SettingsCardGrid>
+        {cards.map((card) => (
+          <LoadingCard key={card.title} {...card} width="full" />
+        ))}
+      </SettingsCardGrid>
     </PageContentWrapper>
   );
 };

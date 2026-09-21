@@ -17,7 +17,7 @@ import { showFileUploadErrorToast } from "@/modules/storage/file-upload-error";
 import { Alert, AlertDescription } from "@/modules/ui/components/alert";
 import { Button } from "@/modules/ui/components/button";
 import { Uploader } from "@/modules/ui/components/file-input/components/uploader";
-import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCard, type TSettingsCardWidth } from "@/modules/ui/components/settings-card";
 import { showStorageNotConfiguredToast } from "@/modules/ui/components/storage-not-configured-toast/lib/utils";
 import { Muted, P, Small } from "@/modules/ui/components/typography";
 import {
@@ -29,6 +29,8 @@ import {
 const allowedFileExtensions: TAllowedFileExtension[] = ["jpeg", "png", "jpg", "webp"];
 
 interface EmailCustomizationSettingsProps {
+  width?: TSettingsCardWidth;
+  className?: string;
   organization: TOrganization;
   workspaceId: string;
   isReadOnly: boolean;
@@ -38,6 +40,8 @@ interface EmailCustomizationSettingsProps {
 }
 
 export const EmailCustomizationSettings = ({
+  width,
+  className,
   organization,
   workspaceId,
   isReadOnly,
@@ -178,7 +182,8 @@ export const EmailCustomizationSettings = ({
 
   return (
     <SettingsCard
-      className="overflow-hidden pb-0"
+      width={width}
+      className={cn("overflow-hidden pb-0", className)}
       title={t("workspace.look.email_customization")}
       description={t("workspace.look.email_customization_description")}
       bodyVariant="bleed">

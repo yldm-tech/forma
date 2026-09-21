@@ -16,6 +16,7 @@ import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 import { EmailCustomizationSettings } from "@/modules/whitelabel/email-customization/components/email-customization-settings";
 import packageJson from "@/package.json";
 
@@ -41,7 +42,7 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
   const isOwnerOrManager = isManager || isOwner;
 
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
       {!IS_STORAGE_CONFIGURED && (
         <div className="max-w-4xl">
@@ -51,42 +52,50 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
         </div>
       )}
       {!IS_FORMA_CLOUD && <SecurityListTip />}
-      <SettingsCard
-        title={t("workspace.settings.general.organization_settings")}
-        description={t("workspace.settings.general.organization_settings_description")}>
-        <EditOrganizationSettingsForm organization={organization} membershipRole={currentUserRole} />
-      </SettingsCard>
-      <SettingsCard
-        title={t("workspace.settings.general.ai_enabled")}
-        description={t("workspace.settings.general.ai_enabled_description")}>
-        <AISettingsToggle
+      <SettingsCardGrid>
+        <SettingsCard
+          width="full"
+          title={t("workspace.settings.general.organization_settings")}
+          description={t("workspace.settings.general.organization_settings_description")}>
+          <EditOrganizationSettingsForm organization={organization} membershipRole={currentUserRole} />
+        </SettingsCard>
+        <SettingsCard
+          width="full"
+          title={t("workspace.settings.general.ai_enabled")}
+          description={t("workspace.settings.general.ai_enabled_description")}>
+          <AISettingsToggle
+            organization={organization}
+            membershipRole={currentUserRole}
+            isInstanceAIConfigured={isInstanceAIConfigured()}
+          />
+        </SettingsCard>
+        <EmailCustomizationSettings
+          width="full"
+          className="xl:col-span-2"
           organization={organization}
-          membershipRole={currentUserRole}
-          isInstanceAIConfigured={isInstanceAIConfigured()}
+          workspaceId={layoutData?.currentWorkspace?.id ?? ""}
+          isReadOnly={!isOwnerOrManager}
+          fbLogoUrl={FB_LOGO_URL}
+          user={user}
+          isStorageConfigured={IS_STORAGE_CONFIGURED}
         />
-      </SettingsCard>
-      <EmailCustomizationSettings
-        organization={organization}
-        workspaceId={layoutData?.currentWorkspace?.id ?? ""}
-        isReadOnly={!isOwnerOrManager}
-        fbLogoUrl={FB_LOGO_URL}
-        user={user}
-        isStorageConfigured={IS_STORAGE_CONFIGURED}
-      />
-      {isMultiOrgEnabled && (
-        <>
-          <SettingsCard
-            title={t("workspace.settings.general.delete_organization")}
-            description={t("workspace.settings.general.delete_organization_description")}>
-            <DeleteOrganization
-              organization={organization}
-              isDeleteDisabled={isDeleteDisabled}
-              isUserOwner={currentUserRole === "owner"}
-            />
-          </SettingsCard>
-          <CreateOrganizationCard />
-        </>
-      )}
+        {isMultiOrgEnabled && (
+          <>
+            <SettingsCard
+              width="full"
+              className="xl:col-span-2"
+              title={t("workspace.settings.general.delete_organization")}
+              description={t("workspace.settings.general.delete_organization_description")}>
+              <DeleteOrganization
+                organization={organization}
+                isDeleteDisabled={isDeleteDisabled}
+                isUserOwner={currentUserRole === "owner"}
+              />
+            </SettingsCard>
+          </>
+        )}
+      </SettingsCardGrid>
+      {isMultiOrgEnabled && <CreateOrganizationCard />}
 
       <div className="space-y-2">
         <IdBadge id={organization.id} label={t("common.organization_id")} variant="column" />

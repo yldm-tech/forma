@@ -11,6 +11,7 @@ import { IdBadge } from "@/modules/ui/components/id-badge";
 import { PageContentWrapper } from "@/modules/ui/components/page-content-wrapper";
 import { PageHeader } from "@/modules/ui/components/page-header";
 import { SettingsCard } from "@/modules/ui/components/settings-card";
+import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 import { getWorkspaceAuth } from "@/modules/workspaces/lib/utils";
 import { InstallMethodCards } from "./components/install-method-cards";
 
@@ -262,7 +263,7 @@ Forma(
 );`;
 
   return (
-    <PageContentWrapper width="settings">
+    <PageContentWrapper>
       <PageHeader pageTitle={t("common.web_and_mobile_sdk")} />
       <div className="space-y-4">
         <Alert variant="info" role="status" className="max-w-4xl rounded-xl">
@@ -274,65 +275,71 @@ Forma(
             </Link>
           </AlertButton>
         </Alert>
-        <SettingsCard
-          title={t("workspace.app-connection.app_connection")}
-          description={t("workspace.app-connection.app_connection_description")}>
-          {workspace && (
-            <div className="space-y-4">
-              <WidgetStatusIndicator workspace={workspace} />
-              {workspace.appSetupCompleted && (
-                <Alert variant="warning" role="status">
-                  <AlertTitle>{t("workspace.app-connection.cache_update_delay_title")}</AlertTitle>
+        <SettingsCardGrid>
+          <SettingsCard
+            width="full"
+            title={t("workspace.app-connection.app_connection")}
+            description={t("workspace.app-connection.app_connection_description")}>
+            {workspace && (
+              <div className="space-y-4">
+                <WidgetStatusIndicator workspace={workspace} />
+                {workspace.appSetupCompleted && (
+                  <Alert variant="warning" role="status">
+                    <AlertTitle>{t("workspace.app-connection.cache_update_delay_title")}</AlertTitle>
+                    <AlertDescription>
+                      {t("workspace.app-connection.cache_update_delay_description")}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+          </SettingsCard>
+          <SettingsCard
+            width="full"
+            title={t("workspace.app-connection.workspace_details")}
+            description={t("workspace.app-connection.workspace_details_description")}>
+            <div className="space-y-3">
+              <IdBadge id={workspace.id} label={t("workspace.app-connection.workspace_id")} />
+              {workspace.legacyEnvironmentId && (
+                <IdBadge
+                  id={workspace.legacyEnvironmentId}
+                  label={t("workspace.app-connection.environment_id_legacy")}
+                />
+              )}
+              <IdBadge id={WEBAPP_URL} label={t("workspace.app-connection.webapp_url")} />
+              {workspace.legacyEnvironmentId && (
+                <Alert variant="info" size="small" role="status">
                   <AlertDescription>
-                    {t("workspace.app-connection.cache_update_delay_description")}
+                    <p>
+                      {t("workspace.app-connection.environment_id_legacy_alert")}{" "}
+                      <Link href={workspaceIdMigrationUrl} target="_blank" rel="noopener noreferrer">
+                        {t("workspace.app-connection.environment_id_legacy_alert_link")}
+                      </Link>
+                    </p>
                   </AlertDescription>
                 </Alert>
               )}
             </div>
-          )}
-        </SettingsCard>
-        <SettingsCard
-          title={t("workspace.app-connection.workspace_details")}
-          description={t("workspace.app-connection.workspace_details_description")}>
-          <div className="space-y-3">
-            <IdBadge id={workspace.id} label={t("workspace.app-connection.workspace_id")} />
-            {workspace.legacyEnvironmentId && (
-              <IdBadge
-                id={workspace.legacyEnvironmentId}
-                label={t("workspace.app-connection.environment_id_legacy")}
-              />
-            )}
-            <IdBadge id={WEBAPP_URL} label={t("workspace.app-connection.webapp_url")} />
-            {workspace.legacyEnvironmentId && (
-              <Alert variant="info" size="small" role="status">
-                <AlertDescription>
-                  <p>
-                    {t("workspace.app-connection.environment_id_legacy_alert")}{" "}
-                    <Link href={workspaceIdMigrationUrl} target="_blank" rel="noopener noreferrer">
-                      {t("workspace.app-connection.environment_id_legacy_alert_link")}
-                    </Link>
-                  </p>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </SettingsCard>
-        <SettingsCard
-          title={t("workspace.app-connection.how_to_setup")}
-          description={t("workspace.app-connection.how_to_setup_description")}>
-          <InstallMethodCards
-            htmlSnippet={htmlSnippet}
-            reactSnippet={reactSnippet}
-            nextjsSnippet={nextjsSnippet}
-            vueSnippet={vueSnippet}
-            reactNativeSnippet={reactNativeSnippet}
-            swiftSnippet={swiftSnippet}
-            androidSnippet={androidSnippet}
-            flutterSnippet={flutterSnippet}
-            aiPrompt={aiPrompt}
-            showAIPrompt={showAIPrompt}
-          />
-        </SettingsCard>
+          </SettingsCard>
+          <SettingsCard
+            width="full"
+            className="xl:col-span-2"
+            title={t("workspace.app-connection.how_to_setup")}
+            description={t("workspace.app-connection.how_to_setup_description")}>
+            <InstallMethodCards
+              htmlSnippet={htmlSnippet}
+              reactSnippet={reactSnippet}
+              nextjsSnippet={nextjsSnippet}
+              vueSnippet={vueSnippet}
+              reactNativeSnippet={reactNativeSnippet}
+              swiftSnippet={swiftSnippet}
+              androidSnippet={androidSnippet}
+              flutterSnippet={flutterSnippet}
+              aiPrompt={aiPrompt}
+              showAIPrompt={showAIPrompt}
+            />
+          </SettingsCard>
+        </SettingsCardGrid>
       </div>
     </PageContentWrapper>
   );
