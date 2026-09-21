@@ -56,7 +56,7 @@ export const ActivityTimeline = ({
   const [isReversed, setIsReversed] = useState(false);
 
   const isReadOnly = useMemo(() => {
-    const { isMember } = getAccessFlags(membershipRole);
+    const { isMember } = getAccessFlags(membershipRole ?? undefined);
     const { hasReadAccess } = getTeamPermissionFlags(workspacePermission);
     return isMember && hasReadAccess;
   }, [membershipRole, workspacePermission]);

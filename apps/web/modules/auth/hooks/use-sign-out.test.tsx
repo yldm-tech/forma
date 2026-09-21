@@ -27,7 +27,8 @@ beforeEach(() => {
   vi.stubGlobal("localStorage", localStorageMock);
   vi.clearAllMocks();
   baSignOut.mockResolvedValue({ error: null });
-  mockedLogSignOut.mockResolvedValue(undefined);
+  // The action is a safe-action now, so it resolves to a result object rather than void.
+  mockedLogSignOut.mockResolvedValue({ data: undefined } as never);
 });
 
 afterEach(() => {
@@ -46,7 +47,9 @@ describe("useSignOut", () => {
 
     await signOut({ reason: "user_initiated", organizationId: "org-1" });
 
-    expect(mockedLogSignOut).toHaveBeenCalledWith("user-1", "ada@example.com", {
+    // No identity is sent from the client: the action reads the actor off the session, so a caller
+    // cannot write an audit row naming somebody else.
+    expect(mockedLogSignOut).toHaveBeenCalledWith({
       reason: "user_initiated",
       redirectUrl: undefined,
       organizationId: "org-1",
@@ -60,7 +63,7 @@ describe("useSignOut", () => {
 
     await signOut({ callbackUrl: "/dashboard" });
 
-    expect(mockedLogSignOut).toHaveBeenCalledWith("u", "e@x.com", {
+    expect(mockedLogSignOut).toHaveBeenCalledWith({
       reason: "user_initiated",
       redirectUrl: "/dashboard",
       organizationId: undefined,
