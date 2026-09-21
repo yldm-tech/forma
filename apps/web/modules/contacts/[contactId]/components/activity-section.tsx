@@ -3,6 +3,7 @@ import { TSurvey } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
 import { DEFAULT_LOCALE } from "@/lib/constants";
 import { getDisplaysByContactId } from "@/lib/display/service";
+import { getMembershipByUserIdOrganizationId } from "@/lib/membership/service";
 import { getResponsesByContactId } from "@/lib/response/service";
 import { getSurveys } from "@/lib/survey/service";
 import { getUser } from "@/lib/user/service";
@@ -56,6 +57,7 @@ export const ActivitySection = async ({
   }
 
   const workspacePermission = await getWorkspacePermissionByUserId(session.user.id, workspace.id);
+  const membership = await getMembershipByUserIdOrganizationId(session.user.id, workspace.organizationId);
   const locale = user.locale ?? DEFAULT_LOCALE;
 
   return (
@@ -68,6 +70,7 @@ export const ActivitySection = async ({
       environmentTags={environmentTags}
       locale={locale}
       workspacePermission={workspacePermission}
+      membershipRole={membership?.role ?? null}
     />
   );
 };

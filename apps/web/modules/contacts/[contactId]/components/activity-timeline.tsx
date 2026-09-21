@@ -4,12 +4,12 @@ import { ArrowDownUpIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TDisplay } from "@forma/types/displays";
+import { TOrganizationRole } from "@forma/types/memberships";
 import { TResponseWithQuotas } from "@forma/types/responses";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
 import { TUser, TUserLocale } from "@forma/types/user";
 import { IS_PRODUCTION_BUILD } from "@/lib/env-client";
-import { useMembershipRole } from "@/lib/membership/hooks/useMembershipRole";
 import { getAccessFlags } from "@/lib/membership/utils";
 import { getTeamPermissionFlags } from "@/modules/teams/utils/teams";
 import { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
@@ -30,6 +30,8 @@ interface ActivityTimelineProps {
   environmentTags: TTag[];
   locale: TUserLocale;
   workspacePermission: TTeamPermission | null;
+  /** Resolved on the server: the viewer's role in the organization owning this workspace. */
+  membershipRole: TOrganizationRole | null;
 }
 
 const warnAboutMissingSurvey = (type: TTimelineItem["type"], id: string, surveyId: string) => {
@@ -47,12 +49,11 @@ export const ActivityTimeline = ({
   environmentTags,
   locale,
   workspacePermission,
+  membershipRole,
 }: Readonly<ActivityTimelineProps>) => {
   const { t } = useTranslation();
   const [responses, setResponses] = useState(initialResponses);
   const [isReversed, setIsReversed] = useState(false);
-
-  const { membershipRole } = useMembershipRole(workspaceId, user.id);
 
   const isReadOnly = useMemo(() => {
     const { isMember } = getAccessFlags(membershipRole);

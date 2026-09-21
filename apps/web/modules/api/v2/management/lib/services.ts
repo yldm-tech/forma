@@ -1,5 +1,3 @@
-"use server";
-
 import { cache as reactCache } from "react";
 import { prisma } from "@forma/database";
 import { err, ok } from "@forma/types/error-handlers";

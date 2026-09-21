@@ -25,6 +25,7 @@ import {
   getMembershipsByUserId,
   getOrganizationOwnerCount,
 } from "@/modules/organization/settings/teams/lib/membership";
+import { assertCanManageOrganizationUsers } from "@/modules/organization/settings/teams/lib/user-management-access";
 import { ZInvitees } from "@/modules/organization/settings/teams/types/invites";
 import { checkRoleManagementPermission } from "@/modules/role-management/actions";
 import { getTeamsWhereUserIsAdmin } from "@/modules/teams/lib/roles";
@@ -46,6 +47,7 @@ export const deleteInviteAction = authenticatedActionClient.inputSchema(ZDeleteI
   withAuditLogging("deleted", "invite", async ({ ctx, parsedInput }) => {
     const organizationId = await getOrganizationIdFromInviteId(parsedInput.inviteId);
 
+    await assertCanManageOrganizationUsers(ctx.user.id, organizationId);
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
       id: organizationId,
@@ -66,6 +68,7 @@ export const createInviteTokenAction = authenticatedActionClient.inputSchema(ZCr
   withAuditLogging("updated", "invite", async ({ parsedInput, ctx }) => {
     const organizationId = await getOrganizationIdFromInviteId(parsedInput.inviteId);
 
+    await assertCanManageOrganizationUsers(ctx.user.id, organizationId);
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
       id: organizationId,
@@ -106,6 +109,7 @@ const ZDeleteMembershipAction = z.object({
 
 export const deleteMembershipAction = authenticatedActionClient.inputSchema(ZDeleteMembershipAction).action(
   withAuditLogging("deleted", "membership", async ({ ctx, parsedInput }) => {
+    await assertCanManageOrganizationUsers(ctx.user.id, parsedInput.organizationId);
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
       id: parsedInput.organizationId,
@@ -172,6 +176,7 @@ export const resendInviteAction = authenticatedActionClient.inputSchema(ZResendI
       throw new ValidationError("Invite does not belong to the organization");
     }
 
+    await assertCanManageOrganizationUsers(ctx.user.id, parsedInput.organizationId);
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
       id: parsedInput.organizationId,
@@ -257,6 +262,7 @@ const assertInviterMayInvite = async ({
   userId: string;
 }>): Promise<void> => {
   if (isOrgOwnerOrManager) {
+    await assertCanManageOrganizationUsers(userId, organizationId);
     await assertCan({ type: "user", id: userId }, "organization.manage", {
       type: "organization",
       id: organizationId,
@@ -413,6 +419,7 @@ export const bulkInviteUsersAction = authenticatedActionClient.inputSchema(ZBulk
       throw new AuthenticationError("User not a member of this organization");
     }
 
+    await assertCanManageOrganizationUsers(ctx.user.id, organizationId);
     await assertCan({ type: "user", id: ctx.user.id }, "organization.manage", {
       type: "organization",
       id: organizationId,
