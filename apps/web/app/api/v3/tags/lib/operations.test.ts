@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { requireV3WorkspaceAccess } from "@/app/api/v3/lib/auth";
 import { getTag, getTagsByWorkspaceId } from "@/lib/tag/service";
-import { getTagsOnResponsesCount } from "@/lib/tagOnResponse/service";
+import { getTagOnResponsesCount, getTagsOnResponsesCount } from "@/lib/tagOnResponse/service";
 import { deleteTag, mergeTags, updateTagName } from "@/modules/workspaces/settings/lib/tag";
 import { deleteV3Tag, listV3Tags, mergeV3Tags, renameV3Tag } from "./operations";
 
@@ -9,7 +9,10 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/app/api/v3/lib/auth", () => ({ requireV3WorkspaceAccess: vi.fn() }));
 vi.mock("@/lib/tag/service", () => ({ getTag: vi.fn(), getTagsByWorkspaceId: vi.fn() }));
-vi.mock("@/lib/tagOnResponse/service", () => ({ getTagsOnResponsesCount: vi.fn() }));
+vi.mock("@/lib/tagOnResponse/service", () => ({
+  getTagOnResponsesCount: vi.fn(),
+  getTagsOnResponsesCount: vi.fn(),
+}));
 vi.mock("@/modules/workspaces/settings/lib/tag", () => ({
   deleteTag: vi.fn(),
   mergeTags: vi.fn(),
@@ -44,9 +47,10 @@ const grantAccess = () =>
 
 beforeEach(() => {
   vi.resetAllMocks();
-  // Rename reads the workspace's counts to fill `TagResource.count`, so every rename test needs this
+  // Rename reads the tag's own count to fill `TagResource.count`, so every rename test needs this
   // resolved. Tests where the count itself is the subject override it.
   vi.mocked(getTagsOnResponsesCount).mockResolvedValue([]);
+  vi.mocked(getTagOnResponsesCount).mockResolvedValue(0);
 });
 
 describe("listV3Tags", () => {
@@ -57,6 +61,9 @@ describe("listV3Tags", () => {
 
     const response = await listV3Tags({ ...base, workspaceId });
     const body = await response.json();
+
+    // Scoped by the listed tag ids rather than by the workspace's whole response table.
+    expect(getTagsOnResponsesCount).toHaveBeenCalledWith([tagId, otherTagId]);
 
     expect(response.status).toBe(200);
     expect(body.data).toHaveLength(2);
@@ -138,14 +145,16 @@ describe("renameV3Tag", () => {
     vi.mocked(updateTagName).mockResolvedValue({ ok: true, data: { ...tag, name: "Renamed" } } as Awaited<
       ReturnType<typeof updateTagName>
     >);
-    vi.mocked(getTagsOnResponsesCount).mockResolvedValue([{ tagId, count: 4 }]);
+    vi.mocked(getTagOnResponsesCount).mockResolvedValue(4);
 
     const response = await renameV3Tag({ ...base, tagId, name: "Renamed" });
     const body = await response.json();
 
     // `count` is part of the documented TagResource; answering 0 for a tag in use is false data.
     expect(body.data).toMatchObject({ id: tagId, name: "Renamed", count: 4 });
-    expect(getTagsOnResponsesCount).toHaveBeenCalledWith(workspaceId);
+    // Counted by tag id: the workspace-wide aggregate is not asked for, and never reaches Response.
+    expect(getTagOnResponsesCount).toHaveBeenCalledWith(tagId);
+    expect(getTagsOnResponsesCount).not.toHaveBeenCalled();
   });
 
   test("falls back to zero when the renamed tag is on no responses", async () => {
@@ -154,7 +163,7 @@ describe("renameV3Tag", () => {
     vi.mocked(updateTagName).mockResolvedValue({ ok: true, data: tag } as Awaited<
       ReturnType<typeof updateTagName>
     >);
-    vi.mocked(getTagsOnResponsesCount).mockResolvedValue([{ tagId: otherTagId, count: 9 }]);
+    vi.mocked(getTagOnResponsesCount).mockResolvedValue(0);
 
     const body = await (await renameV3Tag({ ...base, tagId, name: "Renamed" })).json();
 

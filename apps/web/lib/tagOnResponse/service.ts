@@ -1,5 +1,4 @@
 import "server-only";
-import { cache as reactCache } from "react";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { ZId } from "@forma/types/common";
@@ -73,18 +72,25 @@ export const deleteTagOnResponse = async (responseId: string, tagId: string): Pr
   }
 };
 
-export const getTagsOnResponsesCount = reactCache(async (workspaceId: string): Promise<TTagsCount> => {
-  validateInputs([workspaceId, ZId]);
+/**
+ * Counted by tag id, not by walking the response join. A tag belongs to exactly one workspace, so a
+ * caller that already holds the workspace's tag ids has an equivalent — and much tighter — scope: the
+ * aggregate reads `TagsOnResponses.@@index([tagId])` directly instead of semi-joining Response and
+ * Survey, so its cost tracks tagged rows rather than the workspace's total response count.
+ *
+ * Not `reactCache`d: the cache keys on argument identity, and a fresh `tagIds` array never hits.
+ */
+export const getTagsOnResponsesCount = async (tagIds: string[]): Promise<TTagsCount> => {
+  validateInputs([tagIds, ZId.array()]);
+
+  // Prisma would otherwise be asked for `IN ()`, and a workspace with no tags has nothing to count.
+  if (tagIds.length === 0) return [];
 
   try {
     const tagsCount = await prisma.tagsOnResponses.groupBy({
       by: ["tagId"],
       where: {
-        response: {
-          survey: {
-            workspaceId,
-          },
-        },
+        tagId: { in: tagIds },
       },
       _count: {
         _all: true,
@@ -98,4 +104,18 @@ export const getTagsOnResponsesCount = reactCache(async (workspaceId: string): P
     }
     throw error;
   }
-});
+};
+
+/** Single-tag form of the above, for callers that hold one tag and would otherwise aggregate a set. */
+export const getTagOnResponsesCount = async (tagId: string): Promise<number> => {
+  validateInputs([tagId, ZId]);
+
+  try {
+    return await prisma.tagsOnResponses.count({ where: { tagId } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      throw new DatabaseError(error.message);
+    }
+    throw error;
+  }
+};
