@@ -179,7 +179,9 @@ describe("createDisplay", () => {
     vi.mocked(prisma.survey.findUnique).mockResolvedValue(null);
 
     await expect(createDisplay(displayInput)).rejects.toThrow(new ResourceNotFoundError("Survey", surveyId));
-    expect(getContactByUserId).toHaveBeenCalledWith(workspaceId, userId);
+    // The survey is validated first, so a request that 404s leaves no contact behind.
+    expect(getContactByUserId).not.toHaveBeenCalled();
+    expect(prisma.contact.create).not.toHaveBeenCalled();
     expect(prisma.survey.findUnique).toHaveBeenCalledWith({
       where: { id: surveyId, workspaceId },
       // Only the status is read; without the select this pulled every JSON column of the survey.
@@ -195,6 +197,8 @@ describe("createDisplay", () => {
       vi.mocked(prisma.survey.findUnique).mockResolvedValue({ ...mockSurvey, status } as any);
 
       await expect(createDisplay(displayInput)).rejects.toThrow(InvalidInputError);
+      expect(getContactByUserId).not.toHaveBeenCalled();
+      expect(prisma.contact.create).not.toHaveBeenCalled();
       expect(prisma.display.create).not.toHaveBeenCalled();
     }
   );

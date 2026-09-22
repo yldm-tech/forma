@@ -2,8 +2,9 @@ import { headers } from "next/headers";
 import { prisma } from "@forma/database";
 import { getSessionUser } from "@/app/api/v1/management/me/lib/utils";
 import { responses } from "@/lib/api/response";
-import { CONTROL_HASH } from "@/lib/constants";
+import { CONTROL_HASH, GATEWAY_RATE_LIMITING } from "@/lib/constants";
 import { hashSha256, parseApiKeyV2, verifySecret } from "@/lib/crypto";
+import { isRouteRateLimitedByEnvoy } from "@/modules/core/rate-limit/envoy-rate-limit-coverage";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 
@@ -162,7 +163,16 @@ const handleApiKeyAuthentication = async (apiKey: string) => {
     });
   }
 
-  // Rate limiting for apiKey auth is enforced by Envoy in v5 — see envoy-rate-limit-coverage.ts
+  // The Envoy policy set covers this path for apiKey auth (see envoy-rate-limit-coverage.ts), but skipping the in-app limiter on its word only holds where a gateway is actually deployed — GATEWAY_RATE_LIMITING says whether one is. Keyed on the api key id, exactly as withV1ApiWrapper does for every sibling management route.
+  const isEnvoyManagedRateLimit =
+    GATEWAY_RATE_LIMITING &&
+    isRouteRateLimitedByEnvoy({ pathname: "/api/v1/management/me", method: "GET", authType: "apiKey" });
+
+  if (!isEnvoyManagedRateLimit) {
+    const rateLimitError = await checkRateLimit(apiKeyData.id);
+    if (rateLimitError) return rateLimitError;
+  }
+
   if (!isValidApiKeyEnvironment(apiKeyData)) {
     // This legacy endpoint returns a single workspace's (environment's) details, so it only works
     // for keys scoped to exactly one workspace. Organization-only keys (no workspace) and keys with

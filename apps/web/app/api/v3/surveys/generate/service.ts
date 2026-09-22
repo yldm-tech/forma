@@ -507,7 +507,7 @@ export async function finishV3SurveyGeneration(params: {
   const extraLanguages = (params.input.languages ?? []).filter(
     (code) => code.toLowerCase() !== result.language.toLowerCase()
   );
-  if (extraLanguages.length === 0 || !params.userId) return result;
+  if (extraLanguages.length === 0) return result;
 
   const payload = await translateV3SurveyPayloadLanguages({
     payload: result.payload,

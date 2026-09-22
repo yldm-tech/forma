@@ -116,6 +116,9 @@ vi.mock("@forma/database", () => ({
       create: vi.fn(),
       findMany: vi.fn(),
     },
+    display: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 vi.mock("@forma/logger");
@@ -124,6 +127,9 @@ vi.mock("./contact");
 type MockTx = {
   response: {
     create: ReturnType<typeof vi.fn>;
+  };
+  display: {
+    findUnique: ReturnType<typeof vi.fn>;
   };
 };
 let mockTx: MockTx;
@@ -135,6 +141,9 @@ describe("Response Lib Tests", () => {
     mockTx = {
       response: {
         create: vi.fn(),
+      },
+      display: {
+        findUnique: vi.fn().mockResolvedValue({ surveyId }),
       },
     };
     prisma.$transaction = vi.fn(async (cb: any) => cb(mockTx));
@@ -166,6 +175,42 @@ describe("Response Lib Tests", () => {
         })
       );
       expect(response.contact).toEqual({ id: mockContact.id, userId: mockUserId });
+    });
+
+    test("should throw ResourceNotFoundError if the display belongs to another survey", async () => {
+      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(mockOrganization);
+      vi.mocked(mockTx.display.findUnique).mockResolvedValue({ surveyId: "another-survey-id" });
+
+      await expect(
+        createResponse(mockResponseInput, mockTx as unknown as Prisma.TransactionClient)
+      ).rejects.toThrow(ResourceNotFoundError);
+      expect(mockTx.display.findUnique).toHaveBeenCalledWith({
+        where: { id: displayId },
+        select: { surveyId: true },
+      });
+      expect(mockTx.response.create).not.toHaveBeenCalled();
+    });
+
+    test("should throw ResourceNotFoundError if the display does not exist", async () => {
+      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(mockOrganization);
+      vi.mocked(mockTx.display.findUnique).mockResolvedValue(null);
+
+      await expect(
+        createResponse(mockResponseInput, mockTx as unknown as Prisma.TransactionClient)
+      ).rejects.toThrow(ResourceNotFoundError);
+      expect(mockTx.response.create).not.toHaveBeenCalled();
+    });
+
+    test("should not look up a display when no displayId is given", async () => {
+      const { displayId: _omitted, ...inputWithoutDisplay } = mockResponseInput;
+      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(mockOrganization);
+      vi.mocked(calculateTtcTotal).mockReturnValue({ total: 10 });
+      vi.mocked(mockTx.response.create).mockResolvedValue({ ...mockResponsePrisma });
+
+      await createResponse(inputWithoutDisplay, mockTx as unknown as Prisma.TransactionClient);
+
+      expect(mockTx.display.findUnique).not.toHaveBeenCalled();
+      expect(mockTx.response.create).toHaveBeenCalled();
     });
 
     test("should throw ResourceNotFoundError if organization not found", async () => {

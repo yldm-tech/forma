@@ -512,7 +512,8 @@ paths:
                 value:
                   workspaceId: clxx1234567890123456789012
                   type: link
-                  language: en-US
+                  languages:
+                    - en-US
                   prompt: Understand why new users stop during onboarding and what would help them finish setup.
       responses:
         '200':
@@ -5537,12 +5538,14 @@ components:
             - app
           default: link
           description: Survey type to generate. The AI generates the survey content (blocks/questions) for both types; for `app` it additionally seeds a default `distribution` (display once, no triggers, no targeting) that you finish configuring before publishing.
-        language:
-          $ref: '#/components/schemas/AISurveyGenerationLocaleCode'
-          description: |
-            Preferred survey language. Session clients should send the logged-in user's language.
-            The generator uses it when the prompt language is ambiguous or cannot be confidently
-            matched to a supported app locale.
+        languages:
+          type: array
+          minItems: 1
+          maxItems: 15
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AISurveyGenerationLocaleCode'
+          description: Survey languages, in order. The first entry is the survey's default language and the one the generator writes the content in; the remaining entries are attached to the survey so the editor's translation flow can fill them. Session clients should send the logged-in user's language first. Omitted means `en-US`.
       additionalProperties: false
     GeneratedSurveyValidationLanguage:
       type: object
@@ -7440,10 +7443,7 @@ components:
         sequence:
           type: integer
           minimum: 0
-          description: >-
-            Position of the entry within the run, counting from 1. Kept
-            non-negative rather than positive so rows written before the base
-            was pinned still deserialize.
+          description: Position of the entry within the run, counting from 1. Kept non-negative rather than positive so rows written before the base was pinned still deserialize.
         stepId:
           type: string
           minLength: 1

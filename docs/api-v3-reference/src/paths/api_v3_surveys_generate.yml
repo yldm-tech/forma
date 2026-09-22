@@ -46,7 +46,8 @@ post:
             value:
               workspaceId: clxx1234567890123456789012
               type: link
-              language: en-US
+              languages:
+                - en-US
               prompt: >-
                 Understand why new users stop during onboarding and what would
                 help them finish setup.

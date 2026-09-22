@@ -5,13 +5,19 @@ import { V3_SURVEY_GENERATE_ALLOWED_LOCALES, ZGeneratedSurveyDraftForAI } from "
 import {
   V3SurveyGeneratePromptError,
   V3SurveyGeneratedPayloadValidationError,
+  finishV3SurveyGeneration,
   generateV3SurveyCreatePayloadFromPrompt,
 } from "./service";
+import { translateV3SurveyPayloadLanguages } from "./translate-payload";
 
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/ai/service", () => ({
   generateOrganizationAIObject: vi.fn(),
+}));
+
+vi.mock("./translate-payload", () => ({
+  translateV3SurveyPayloadLanguages: vi.fn(),
 }));
 
 const workspaceId = "clxx1234567890123456789012";
@@ -828,5 +834,67 @@ describe("generateV3SurveyCreatePayloadFromPrompt", () => {
         input: generateInput,
       })
     ).rejects.toThrow(V3SurveyGeneratedPayloadValidationError);
+  });
+});
+
+describe("finishV3SurveyGeneration", () => {
+  const draft = {
+    language: "en-US",
+    name: "Onboarding survey",
+    description: "Understand the first-run experience.",
+    welcomeCard: { enabled: false, headline: null, subheader: null, buttonLabel: null },
+    blocks: [
+      {
+        name: "Experience",
+        questions: [generatedElement({ type: "openText", headline: "What should we improve?" })],
+      },
+    ],
+    ending: { headline: "Thanks for your feedback", subheader: null },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // An API-key caller authenticates without a session user, so `userId` is null on a request that
+  // is otherwise fully authorized. Translation is only attributed by it, never gated on it.
+  test("translates the extra languages for a caller with no session user", async () => {
+    vi.mocked(translateV3SurveyPayloadLanguages).mockImplementation(async ({ payload }) => ({
+      ...payload,
+      languages: [
+        { code: "en-US", default: true, enabled: true },
+        { code: "de-DE", default: false, enabled: true },
+      ],
+    }));
+
+    const result = await finishV3SurveyGeneration({
+      input: { ...generateInput, languages: ["en-US", "de-DE"] },
+      draft,
+      organizationId: "org_1",
+      workspaceId,
+      userId: null,
+    });
+
+    expect(translateV3SurveyPayloadLanguages).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceLanguage: "en-US", targetLanguages: ["de-DE"], userId: null })
+    );
+    expect(result.payload.languages.map(({ code }) => code)).toEqual(["en-US", "de-DE"]);
+    expect(result.validation.languages).toEqual([
+      { code: "en-US", default: true, enabled: true },
+      { code: "de-DE", default: false, enabled: true },
+    ]);
+  });
+
+  test("skips translation when the only language asked for is the generated one", async () => {
+    const result = await finishV3SurveyGeneration({
+      input: { ...generateInput, languages: ["en-US"] },
+      draft,
+      organizationId: "org_1",
+      workspaceId,
+      userId: null,
+    });
+
+    expect(translateV3SurveyPayloadLanguages).not.toHaveBeenCalled();
+    expect(result.language).toBe("en-US");
   });
 });

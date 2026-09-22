@@ -97,7 +97,7 @@ export const createResponse = async (
 ): Promise<TResponse> => {
   validateInputs([responseInput, ZResponseInput]);
 
-  const { workspaceId, userId, finished, ttc: initialTtc } = responseInput;
+  const { workspaceId, surveyId, displayId, userId, finished, ttc: initialTtc } = responseInput;
 
   try {
     let contact: { id: string; attributes: TContactAttributes } | null = null;
@@ -105,6 +105,19 @@ export const createResponse = async (
     const organization = await getOrganizationIdFromWorkspaceId(workspaceId);
     if (!organization) {
       throw new ResourceNotFoundError("Organization", null);
+    }
+
+    // `displayId` is caller-supplied and was connected with no ownership check at all. Display<->Response is one-to-one, so naming another workspace's display moved that display onto this response, permanently consuming it and corrupting the other tenant's display and completion counts. A display belongs to exactly one survey, and the route has already asserted that survey belongs to this workspace, so matching surveyId is the tightest check available. Mirrors the guard the v2 management path already carries.
+    if (displayId) {
+      const display = await (tx ?? prisma).display.findUnique({
+        where: { id: displayId },
+        select: { surveyId: true },
+      });
+
+      // Uniform not-found for "does not exist" and "exists but belongs elsewhere": distinguishing the two would confirm that a display id is real, making this endpoint a cross-tenant existence oracle.
+      if (display?.surveyId !== surveyId) {
+        throw new ResourceNotFoundError("Display", displayId);
+      }
     }
 
     if (userId) {
