@@ -332,15 +332,23 @@ const resolveWorkspaceLayoutData = async (
     throw new AuthenticationError("User ID mismatch with session");
   }
 
-  const user = await getUser(userId);
+  // One stage rather than three. The user row, the workspace relation graph and the caller's own
+  // WorkspaceTeam grant are independent reads keyed only on the two ids already in hand, so they
+  // issue together instead of queueing behind one another. `getWorkspaceWithRelations` resolves the
+  // workspace by `id`, so the grant read can key on `workspaceId` directly and no longer has to wait
+  // for `workspace.id` to come back. The checks below keep their original order, so the error a
+  // caller sees for a given failure is unchanged; only the grant read now runs for a caller the
+  // navigation gate is about to refuse, and it reads nothing but that caller's own grant.
+  const [user, relationData, workspacePermission] = await Promise.all([
+    getUser(userId),
+    getWorkspaceWithRelations(workspaceId, userId),
+    getWorkspacePermissionByUserId(userId, workspaceId),
+  ]);
+
   if (!user) {
     throw new AuthenticationError(t("common.not_authenticated"));
   }
 
-  // Resolved first so the navigation gate below can name the owning organization. This is
-  // the same request-memoized read the rest of this function already relied on, so it costs
-  // nothing extra; it only moves.
-  const relationData = await getWorkspaceWithRelations(workspaceId, userId);
   if (!relationData) {
     throw new ResourceNotFoundError(t("common.workspace"), workspaceId);
   }
@@ -361,11 +369,10 @@ const resolveWorkspaceLayoutData = async (
     throw new AuthorizationError(t("common.membership_not_found"));
   }
 
-  const [isAccessControlAllowed, workspacePermission, license] = await Promise.all([
-    getAccessControlPermission(),
-    getWorkspacePermissionByUserId(userId, workspace.id),
-    getEnterpriseLicense(),
-  ]);
+  // Neither of these does I/O — both return a constant on every install (modules/license-check).
+  // Awaiting them plainly keeps that legible instead of dressing them up as a batched round trip.
+  const isAccessControlAllowed = await getAccessControlPermission();
+  const license = await getEnterpriseLicense();
 
   let responseCount = 0;
   if (IS_FORMA_CLOUD) {

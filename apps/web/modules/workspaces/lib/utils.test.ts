@@ -279,6 +279,41 @@ describe("layout navigation gates (ENG-1737)", () => {
       });
     });
 
+    // The three reads that open the layout resolve are independent, so they must be in flight at the
+    // same time rather than queued behind one another. Counting concurrency is what makes this fail
+    // if someone re-serialises them: a sequential version never gets past one in flight.
+    test("issues the user, workspace-relation and grant reads concurrently", async () => {
+      let inFlight = 0;
+      let peakInFlight = 0;
+      const tracked = async <T>(value: T): Promise<T> => {
+        inFlight += 1;
+        peakInFlight = Math.max(peakInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        inFlight -= 1;
+        return value;
+      };
+
+      const relationRow = {
+        id: layoutWorkspaceId,
+        organizationId: layoutOrganizationId,
+        organization: { ...organizationRelation, memberships: [{ userId: layoutUserId, role: "member" }] },
+      };
+      mocks.workspaceFindUnique.mockImplementation(() => tracked(relationRow));
+      vi.mocked(getUser).mockImplementation(
+        () => tracked({ id: layoutUserId }) as ReturnType<typeof getUser>
+      );
+      vi.mocked(getWorkspacePermissionByUserId).mockImplementation(
+        () => tracked("read") as ReturnType<typeof getWorkspacePermissionByUserId>
+      );
+
+      await getWorkspaceLayoutData(layoutWorkspaceId, layoutUserId);
+
+      expect(peakInFlight).toBe(3);
+      // Keyed on the id the caller supplied, not on `workspace.id` read back out of the relation
+      // graph — that is what lets the grant read start without waiting for the workspace row.
+      expect(getWorkspacePermissionByUserId).toHaveBeenCalledWith(layoutUserId, layoutWorkspaceId);
+    });
+
     test("throws AuthorizationError when the user may not navigate there", async () => {
       vi.mocked(canUserNavigateWorkspace).mockResolvedValue(false);
 
