@@ -26,8 +26,13 @@ export const envMock = {
   AUTHZED_TOKEN: "private-token" as string | undefined,
 };
 
+const execute = vi.fn((_operation: string, request: () => Promise<unknown>) => request());
+
 export const retryMocks = {
-  execute: vi.fn((_operation: string, request: () => Promise<unknown>) => request()),
+  // The client binds its process's retry policy once and calls the bound runner everywhere, so the
+  // policy is asserted on this factory rather than on every operation.
+  createRunner: vi.fn((_policy: string) => execute),
+  execute,
 };
 
 vi.mock("@authzed/authzed-node", () => ({
@@ -70,5 +75,5 @@ vi.mock("../config", () => ({
 }));
 
 vi.mock("../retry", () => ({
-  executeAuthzedOperation: retryMocks.execute,
+  createAuthzedOperationRunner: retryMocks.createRunner,
 }));

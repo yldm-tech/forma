@@ -11,7 +11,7 @@ import {
   AUTHZED_RESOURCE_LOOKUP_PAGE_SIZE,
 } from "./constants";
 import { AUTHZED_ERROR_CODES, AuthzedError, mapAuthzedError } from "./errors";
-import { executeAuthzedOperation } from "./retry";
+import { type TAuthzedRetryPolicy, createAuthzedOperationRunner } from "./retry";
 
 export type TAuthzedSchema = Readonly<{
   schemaText: string;
@@ -192,9 +192,32 @@ type TAuthzedConfig =
       token: string;
     }>;
 
+/**
+ * How this process talks to SpiceDB: the channel deadline and the retry policy that goes with it.
+ *
+ * The two are one decision, not two. A request-serving process wants a short deadline *and* a policy
+ * that refuses to answer an overloaded server with more calls, because a user is waiting and the load is
+ * shared; a command-line process wants the long deadline *and* the retrying policy, because finishing
+ * matters more than the load it adds.
+ */
+type TAuthzedClientProfile = Readonly<{
+  requestTimeoutMs: number;
+  retryPolicy: TAuthzedRetryPolicy;
+}>;
+
+const AUTHZED_REQUEST_PROFILE: TAuthzedClientProfile = {
+  requestTimeoutMs: AUTHZED_REQUEST_TIMEOUT_MS,
+  retryPolicy: "request",
+};
+
+const AUTHZED_BULK_PROFILE: TAuthzedClientProfile = {
+  requestTimeoutMs: AUTHZED_BULK_REQUEST_TIMEOUT_MS,
+  retryPolicy: "bulk",
+};
+
 const globalForAuthzed = globalThis as unknown as {
   formaAuthzedClient: TAuthzedClientSingleton | undefined;
-  formaAuthzedRequestTimeoutMs: number | undefined;
+  formaAuthzedProfile: TAuthzedClientProfile | undefined;
 };
 
 const STABLE_SCHEMA_DIFF_KINDS = {
@@ -434,7 +457,7 @@ const toFacadeRelationship = (response: v1.ReadRelationshipsResponse): TAuthzedR
   };
 };
 
-const createAuthzedClient = (requestTimeoutMs: number): TAuthzedClientSingleton => {
+const createAuthzedClient = (profile: TAuthzedClientProfile): TAuthzedClientSingleton => {
   const config = getAuthzedConfig();
 
   if (!config.enabled) {
@@ -452,8 +475,12 @@ const createAuthzedClient = (requestTimeoutMs: number): TAuthzedClientSingleton 
   // The SDK appends its own 30s deadline interceptor last, and that interceptor only sets a deadline
   // when none is present — so whatever is installed here wins for every call on this channel.
   const sdkClient = v1.NewClient(config.token, config.endpoint, security, undefined, {
-    interceptors: [deadlineInterceptor(requestTimeoutMs)],
+    interceptors: [deadlineInterceptor(profile.requestTimeoutMs)],
   });
+
+  // Every call on this channel runs under the process's retry policy, for the same reason every call
+  // runs under its deadline: the facade hands out one client and no call site gets to choose.
+  const executeAuthzedOperation = createAuthzedOperationRunner(profile.retryPolicy);
 
   const facade = Object.freeze<TAuthzedResourceLookupClient>({
     checkPermission: async (check) => {
@@ -784,13 +811,13 @@ export const configureAuthzedClientForBulkWork = (): void => {
     });
   }
 
-  globalForAuthzed.formaAuthzedRequestTimeoutMs = AUTHZED_BULK_REQUEST_TIMEOUT_MS;
+  globalForAuthzed.formaAuthzedProfile = AUTHZED_BULK_PROFILE;
 };
 
 /** The shared client. Deadline sized for a single cheap call unless the process asked for bulk work. */
 export const getAuthzedClient = (): TAuthzedResourceLookupClient => {
   globalForAuthzed.formaAuthzedClient ??= createAuthzedClient(
-    globalForAuthzed.formaAuthzedRequestTimeoutMs ?? AUTHZED_REQUEST_TIMEOUT_MS
+    globalForAuthzed.formaAuthzedProfile ?? AUTHZED_REQUEST_PROFILE
   );
 
   return globalForAuthzed.formaAuthzedClient.facade;
@@ -799,5 +826,5 @@ export const getAuthzedClient = (): TAuthzedResourceLookupClient => {
 export const closeAuthzedClient = (): void => {
   globalForAuthzed.formaAuthzedClient?.close();
   globalForAuthzed.formaAuthzedClient = undefined;
-  globalForAuthzed.formaAuthzedRequestTimeoutMs = undefined;
+  globalForAuthzed.formaAuthzedProfile = undefined;
 };

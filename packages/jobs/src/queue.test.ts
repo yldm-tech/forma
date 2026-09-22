@@ -8,6 +8,7 @@ import {
   JOBS_QUEUE_NAME,
   JOB_NAMES,
 } from "./constants";
+import { setJobsObserver } from "./observability";
 import {
   createJobsQueue,
   enqueueResponsePipelineJob,
@@ -184,7 +185,60 @@ describe("@forma/jobs queue helpers", () => {
     const job = await enqueueResponsePipelineJob(responsePipelineJobData);
 
     expect(job).toBe(mockJob);
-    expect(mockQueueAdd).toHaveBeenCalledWith(JOB_NAMES.responsePipeline, responsePipelineJobData, undefined);
+    expect(mockQueueAdd).toHaveBeenCalledWith(JOB_NAMES.responsePipeline, responsePipelineJobData, {});
+  });
+
+  /**
+   * The deterministic jobId is what makes a replay safe. Without it a recovery path re-enqueueing a lost
+   * event would have to reconcile against a delivered marker to avoid a second webhook and a second
+   * billing event; with it BullMQ rejects the duplicate itself.
+   */
+  test("enqueues the response pipeline job under a caller-supplied deterministic jobId", async () => {
+    const mockJob = { id: "responseCreated:cm8cmpnjj000108jfdr9dfqe6" };
+    mockQueueAdd.mockResolvedValue(mockJob);
+
+    const job = await enqueueResponsePipelineJob(responsePipelineJobData, {
+      jobId: "responseCreated:cm8cmpnjj000108jfdr9dfqe6",
+    });
+
+    expect(job).toBe(mockJob);
+    expect(mockQueueAdd).toHaveBeenCalledWith(JOB_NAMES.responsePipeline, responsePipelineJobData, {
+      jobId: "responseCreated:cm8cmpnjj000108jfdr9dfqe6",
+    });
+  });
+
+  /**
+   * `sendToPipeline` is contractually never-throwing, so a Valkey blip drops the response pipeline event
+   * and the submission still returns 200 — no webhook, no follow-up email, no workflow run, no billing
+   * event, and no error anywhere. This counter is the only trace the loss leaves.
+   */
+  test("counts a failed enqueue and still surfaces the error to the caller", async () => {
+    const onEnqueue = vi.fn();
+    setJobsObserver({ onEnqueue });
+    const enqueueError = new Error("Stream isn't writeable and enableOfflineQueue options is false");
+    mockQueueAdd.mockRejectedValue(enqueueError);
+
+    try {
+      await expect(enqueueResponsePipelineJob(responsePipelineJobData)).rejects.toThrow(enqueueError);
+
+      expect(onEnqueue).toHaveBeenCalledWith({ jobName: JOB_NAMES.responsePipeline, status: "failed" });
+    } finally {
+      setJobsObserver(undefined);
+    }
+  });
+
+  test("counts a successful enqueue", async () => {
+    const onEnqueue = vi.fn();
+    setJobsObserver({ onEnqueue });
+    mockQueueAdd.mockResolvedValue({ id: "job-response-1" });
+
+    try {
+      await enqueueResponsePipelineJob(responsePipelineJobData);
+
+      expect(onEnqueue).toHaveBeenCalledWith({ jobName: JOB_NAMES.responsePipeline, status: "enqueued" });
+    } finally {
+      setJobsObserver(undefined);
+    }
   });
 
   test("enqueues the workflow run job with a deterministic jobId and the shared retry policy", async () => {

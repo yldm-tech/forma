@@ -1,9 +1,16 @@
 import { type JobHandlerOverrides, type JobsRuntimeHandle, startJobsRuntime } from "@forma/jobs";
 import { logger } from "@forma/logger";
 import { getJobsQueueingConfig, getJobsWorkerBootstrapConfig } from "@/lib/jobs/config";
+import { registerJobsMetrics } from "@/lib/jobs/metrics";
 import { RECURRING_JOB_REGISTRATIONS, getJobHandlerOverrides } from "@/lib/jobs/recurring-registrations";
 
 const WORKER_STARTUP_RETRY_DELAY_MS = 30_000;
+
+// At module scope rather than inside the worker bootstrap. This module is imported only from the
+// Node.js runtime branch of `instrumentation.ts`, after the OpenTelemetry SDK has loaded, and the
+// enqueue counter has to cover a deployment that queues here but runs its worker elsewhere
+// (`BULLMQ_EXTERNAL_WORKER_ENABLED`) — those enqueues are exactly the ones whose loss is invisible.
+registerJobsMetrics();
 
 type TJobsRuntimeGlobal = typeof globalThis & {
   formaJobsRecurringRegistration: Promise<void> | undefined;

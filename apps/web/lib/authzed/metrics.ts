@@ -80,6 +80,24 @@ const requestRetriesTotal = meter.createCounter("forma_authzed_request_retries_t
   description: "AuthZed requests retried after a retryable failure",
 });
 
+/**
+ * Request-path circuit breaker state, as a state set: the state in force reports 1 and the other two
+ * report 0, so an alert can name one series (`forma_authzed_request_circuit_state{state="open"} == 1`).
+ *
+ * The signal the runbook has no equivalent of today — "degraded" is currently only inferable from the
+ * ratio of retries to failures. Written on transition only, so a process that never failed exports no
+ * series at all rather than a permanently reassuring zero.
+ */
+const requestCircuitState = meter.createGauge("forma_authzed_request_circuit_state", {
+  description: "Request-path AuthZed circuit breaker state, 1 for the state in force",
+  unit: "{state}",
+});
+
+/** Checks refused locally by the open circuit. These never reached SpiceDB, so they are not failures. */
+const requestShortCircuitsTotal = meter.createCounter("forma_authzed_request_short_circuits_total", {
+  description: "AuthZed requests refused locally by an open request-path circuit",
+});
+
 const outboxDeliveryTotal = meter.createCounter("forma_authzed_projection_outbox_delivery_total", {
   description: "Authorization projection outbox events processed by outcome",
 });
@@ -174,6 +192,23 @@ export const recordAuthzedRequestRetry = ({
   operation,
 }: Readonly<{ code: string; operation: string }>): void => {
   requestRetriesTotal.add(1, { code, operation });
+};
+
+export type TAuthzedCircuitStateMetric = "closed" | "half_open" | "open";
+
+const AUTHZED_CIRCUIT_STATES = ["closed", "half_open", "open"] as const;
+
+export const recordAuthzedRequestCircuitState = (state: TAuthzedCircuitStateMetric): void => {
+  for (const candidate of AUTHZED_CIRCUIT_STATES) {
+    requestCircuitState.record(candidate === state ? 1 : 0, { state: candidate });
+  }
+};
+
+export const recordAuthzedRequestShortCircuit = ({
+  code,
+  operation,
+}: Readonly<{ code: string; operation: string }>): void => {
+  requestShortCircuitsTotal.add(1, { code, operation });
 };
 
 export const recordAuthzedOutboxDelivery = ({

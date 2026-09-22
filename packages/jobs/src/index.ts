@@ -17,6 +17,14 @@ export {
   scheduleTestLogJobAt,
   upsertRecurringTestLogJobSchedule,
 } from "./queue";
+export { UNKNOWN_JOB_NAME, setJobsObserver } from "./observability";
+export type {
+  JobsObserver,
+  TJobEnqueueObservation,
+  TJobEnqueueStatus,
+  TJobOutcomeObservation,
+  TJobOutcomeStatus,
+} from "./observability";
 export { processResponsePipelineJob } from "./processors/response-pipeline";
 export { processTestLogJob } from "./processors/test-log";
 export { processWorkflowRunJob } from "./processors/workflow-run";

@@ -47,5 +47,8 @@ export const toAnyBackgroundJobDefinition = <TData>(
  * remaining one-shot enqueues use the exported `enqueue*Job` functions directly.
  */
 export interface BackgroundJobProducer {
-  enqueueResponsePipeline: (data: TResponsePipelineJobData) => Promise<EnqueuedJob>;
+  enqueueResponsePipeline: (
+    data: TResponsePipelineJobData,
+    options?: { jobId: string }
+  ) => Promise<EnqueuedJob>;
 }
