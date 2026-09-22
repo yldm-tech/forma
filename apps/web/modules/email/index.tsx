@@ -80,6 +80,11 @@ export type TResponseFinishedEmailSurvey = TElementResponseMappingSurvey &
   // EmbeddedData rows the template resolves definitions through (ENG-1837).
   Pick<TSurvey, "id" | "name" | "variables" | "hiddenFields" | "embeddedFields">;
 
+// nodemailer defaults to a 2-minute connect and a 10-minute socket-inactivity window, so one unresponsive relay can hold a request thread — or the single response-pipeline worker slot — for that long. These bounds keep a hung relay to a failure the caller can act on while staying generous enough for a slow one to answer.
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_GREETING_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 20_000;
+
 export const sendEmail = async (emailData: SendEmailDataProps): Promise<boolean> => {
   if (!IS_SMTP_CONFIGURED) {
     logger.info("SMTP is not configured, skipping email sending");
@@ -99,6 +104,9 @@ export const sendEmail = async (emailData: SendEmailDataProps): Promise<boolean>
             },
           }
         : {}),
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
       tls: {
         rejectUnauthorized: SMTP_REJECT_UNAUTHORIZED_TLS,
       },

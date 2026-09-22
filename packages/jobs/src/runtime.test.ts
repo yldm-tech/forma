@@ -1,3 +1,4 @@
+import { cpus } from "node:os";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   type MockRedisConnection,
@@ -12,7 +13,7 @@ import {
 } from "../test/boundary-mocks";
 import { JOBS_PREFIX, JOBS_QUEUE_NAME, JOB_NAMES } from "./constants";
 import type * as QueueModule from "./queue";
-import { startJobsRuntime } from "./runtime";
+import { DEFAULT_WORKER_CONCURRENCY, startJobsRuntime } from "./runtime";
 
 type TQueueModule = typeof QueueModule;
 
@@ -99,7 +100,7 @@ describe("@forma/jobs runtime", () => {
       JOBS_QUEUE_NAME,
       expect.any(Function),
       expect.objectContaining({
-        concurrency: 1,
+        concurrency: DEFAULT_WORKER_CONCURRENCY,
         prefix: JOBS_PREFIX,
       })
     );
@@ -179,7 +180,7 @@ describe("@forma/jobs runtime", () => {
   test("starts multiple workers when configured", async () => {
     const runtime = await startJobsRuntime({
       redisUrl: "redis://localhost:6379",
-      concurrency: 4,
+      concurrency: 6,
       workerCount: 2,
     });
 
@@ -190,7 +191,7 @@ describe("@forma/jobs runtime", () => {
       JOBS_QUEUE_NAME,
       expect.any(Function),
       expect.objectContaining({
-        concurrency: 4,
+        concurrency: 6,
         prefix: JOBS_PREFIX,
       })
     );
@@ -199,7 +200,7 @@ describe("@forma/jobs runtime", () => {
       JOBS_QUEUE_NAME,
       expect.any(Function),
       expect.objectContaining({
-        concurrency: 4,
+        concurrency: 6,
         prefix: JOBS_PREFIX,
       })
     );
@@ -304,5 +305,16 @@ describe("@forma/jobs runtime", () => {
 
     processExitSpy.mockRestore();
     processOnceSpy.mockRestore();
+  });
+
+  // The default is derived from the cpu count, so the invariant is the bound, not the number: it must
+  // stay well inside the Prisma pool (`2 * cpus + 1`, min 2) so background work cannot starve the
+  // request path on a small pod.
+  test("keeps the derived worker concurrency inside the database pool", () => {
+    const pool = Math.max(2 * cpus().length + 1, 2);
+
+    expect(DEFAULT_WORKER_CONCURRENCY).toBeGreaterThanOrEqual(2);
+    expect(DEFAULT_WORKER_CONCURRENCY).toBeLessThanOrEqual(4);
+    expect(pool - DEFAULT_WORKER_CONCURRENCY).toBeGreaterThanOrEqual(1);
   });
 });

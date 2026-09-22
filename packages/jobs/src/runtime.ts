@@ -1,5 +1,6 @@
 import { type Job, type Queue, Worker } from "bullmq";
 import type IORedis from "ioredis";
+import { cpus } from "node:os";
 import { logger } from "@forma/logger";
 import { closeRedisConnection, createProducerConnection, createWorkerConnection } from "@/src/connection";
 import { JOBS_PREFIX, JOBS_QUEUE_NAME } from "@/src/constants";
@@ -7,7 +8,10 @@ import type { JobHandlerOverrides } from "@/src/contracts";
 import { processJob } from "@/src/processors/registry";
 import { createJobsQueue } from "@/src/queue";
 
-const DEFAULT_WORKER_CONCURRENCY = 1;
+// In-flight jobs per worker. A concurrency of 1 serialises every job type behind the slowest handler, so one webhook timeout or a slow SMTP send stalls the response pipeline, workflow runs and AuthZed projection delivery alike. Handlers are written for overlap: they are required to be idempotent (see recurring.ts), the outbox claim is lease-based, and the workflow writes are status-guarded.
+//
+// Derived from the cpu count rather than fixed, because every in-flight job can hold a database connection and the Prisma pool is sized from the same number - `2 * cpus + 1`, minimum 2 (packages/database/src/prisma-adapter.ts). A flat default starves the request path on a small pod: at 2 cpus the pool is 5, so 4 job slots would leave the requests one connection. This formula keeps jobs to at most half the cpus and never more than 4, which leaves at least 3 connections for requests at every pod size we ship. Operators override it with `BULLMQ_WORKER_CONCURRENCY`.
+export const DEFAULT_WORKER_CONCURRENCY = Math.max(2, Math.min(4, cpus().length));
 const DEFAULT_WORKER_COUNT = 1;
 
 export interface JobsRuntimeOptions {

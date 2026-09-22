@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { DEFAULT_WORKER_CONCURRENCY } from "@forma/jobs";
 
 const TEST_TIMEOUT_MS = 15_000;
 
@@ -8,7 +9,7 @@ describe("jobs runtime config", () => {
   });
 
   test(
-    "defaults to one worker with concurrency one outside tests",
+    "defaults to one worker at the runtime's derived concurrency outside tests",
     async () => {
       vi.doMock("@/lib/env", () => ({
         env: {
@@ -26,7 +27,7 @@ describe("jobs runtime config", () => {
       expect(getJobsWorkerBootstrapConfig()).toEqual({
         enabled: true,
         runtimeOptions: {
-          concurrency: 1,
+          concurrency: DEFAULT_WORKER_CONCURRENCY,
           redisUrl: "redis://localhost:6379",
           workerCount: 1,
         },

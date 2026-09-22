@@ -1,8 +1,9 @@
 import "server-only";
-import type { JobsRuntimeOptions } from "@forma/jobs";
+import { DEFAULT_WORKER_CONCURRENCY, type JobsRuntimeOptions } from "@forma/jobs";
 import { env } from "@/lib/env";
 
-const DEFAULT_BULLMQ_WORKER_CONCURRENCY = 1;
+// Imported rather than restated: the runtime derives it from the cpu count, and a second literal here would be a number that silently disagrees with the one the worker actually uses.
+const DEFAULT_BULLMQ_WORKER_CONCURRENCY = DEFAULT_WORKER_CONCURRENCY;
 const DEFAULT_BULLMQ_WORKER_COUNT = 1;
 
 export interface JobsWorkerBootstrapConfig {
