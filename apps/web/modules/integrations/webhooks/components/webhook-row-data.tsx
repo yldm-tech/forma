@@ -7,7 +7,10 @@ import { TSurvey } from "@forma/types/surveys/types";
 import { timeSince } from "@/lib/time";
 import { Badge } from "@/modules/ui/components/badge";
 
-const renderSelectedSurveysText = (webhook: Webhook, allSurveys: TSurvey[]) => {
+// The settings surface never receives the signing secret — see getWebhooks in lib/webhook.ts.
+type WebhookWithoutSecret = Omit<Webhook, "secret">;
+
+const renderSelectedSurveysText = (webhook: WebhookWithoutSecret, allSurveys: TSurvey[]) => {
   let surveyNames: string[];
 
   if (webhook.surveyIds.length === 0) {
@@ -32,7 +35,7 @@ const renderSelectedSurveysText = (webhook: Webhook, allSurveys: TSurvey[]) => {
   );
 };
 
-const renderSelectedTriggersText = (webhook: Webhook, t: TFunction) => {
+const renderSelectedTriggersText = (webhook: WebhookWithoutSecret, t: TFunction) => {
   if (webhook.triggers.length === 0) {
     return <p className="text-slate-400">{t("workspace.integrations.webhooks.no_triggers")}</p>;
   } else {
@@ -66,7 +69,10 @@ const renderSelectedTriggersText = (webhook: Webhook, t: TFunction) => {
   }
 };
 
-export const WebhookRowData = ({ webhook, surveys }: { webhook: Webhook; surveys: TSurvey[] }) => {
+export const WebhookRowData = ({
+  webhook,
+  surveys,
+}: Readonly<{ webhook: WebhookWithoutSecret; surveys: TSurvey[] }>) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? "en-US";
 

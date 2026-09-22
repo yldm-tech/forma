@@ -17,10 +17,13 @@ import {
   DialogTitle,
 } from "@/modules/ui/components/dialog";
 
+// The settings surface never receives the signing secret — see getWebhooks in lib/webhook.ts.
+type WebhookWithoutSecret = Omit<Webhook, "secret">;
+
 interface WebhookModalProps {
   open: boolean;
   setOpen: (v: boolean) => void;
-  webhook: Webhook;
+  webhook: WebhookWithoutSecret;
   surveys: TSurvey[];
   isReadOnly: boolean;
   allowInternalUrls: boolean;

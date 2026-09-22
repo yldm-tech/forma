@@ -8,13 +8,16 @@ import { type TUserLocale } from "@forma/types/user";
 import { formatDateTimeForDisplay } from "@/lib/utils/datetime";
 import { Label } from "@/modules/ui/components/label";
 
+// The settings surface never receives the signing secret — see getWebhooks in lib/webhook.ts.
+type WebhookWithoutSecret = Omit<Webhook, "secret">;
+
 interface ActivityTabProps {
-  webhook: Webhook;
+  webhook: WebhookWithoutSecret;
   surveys: TSurvey[];
   locale: TUserLocale;
 }
 
-const getSurveyNamesForWebhook = (webhook: Webhook, allSurveys: TSurvey[]): string[] => {
+const getSurveyNamesForWebhook = (webhook: WebhookWithoutSecret, allSurveys: TSurvey[]): string[] => {
   if (webhook.surveyIds.length === 0) {
     return allSurveys.map((survey) => survey.name);
   } else {
