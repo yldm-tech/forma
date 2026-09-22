@@ -528,6 +528,8 @@ const evaluateSingleCondition = (
         return leftValue === "accepted";
       case "isClicked":
         return leftValue === "clicked";
+      case "isNotClicked":
+        return leftValue !== "clicked";
       case "isAfter":
         return new Date(String(leftValue)) > new Date(String(rightValue));
       case "isBefore":
@@ -556,6 +558,8 @@ const evaluateSingleCondition = (
         }
         return false;
       default:
+        // Exhaustiveness gate over `ZSurveyLogicConditionsOperator`. Every member must have an arm above, here and in the twin evaluator in `packages/surveys/src/lib/logic.ts`; once they all do, the operator narrows to `never` here, so an operator added to the union — or handled by only one of the two engines — fails `pnpm typecheck` rather than silently evaluating to false. That silence is exactly how `isNotClicked` shipped handled by the browser engine and not by this one, which made every quota built on it screen out every respondent.
+        condition.operator satisfies never;
         return false;
     }
   } catch (e) {
