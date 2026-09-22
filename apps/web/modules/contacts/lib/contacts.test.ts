@@ -21,6 +21,7 @@ import { transformPrismaContact } from "./utils";
 
 vi.mock("@forma/database", () => ({
   prisma: {
+    $transaction: vi.fn(),
     contact: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -102,9 +103,15 @@ const mockTransformedContact = {
   },
 };
 
+const transactionMock = vi.mocked(
+  prisma.$transaction as unknown as (fn: (tx: typeof prisma) => unknown) => unknown
+);
+
 describe("Contacts Lib", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // vitestSetup resets every mock implementation before each test, so re-arm the transaction wrapper here: it runs its callback against the same mocked client, which keeps the mocked delegates the ones being invoked.
+    transactionMock.mockImplementation((fn) => fn(prisma));
   });
 
   describe("buildContactWhereClause", () => {
@@ -578,6 +585,16 @@ describe("Contacts Lib", () => {
       const result = await createContactsFromCSV(csvData, mockWorkspaceId, "overwrite", attributeMap);
 
       expect("contacts" in result).toBe(true);
+      // The attribute wipe and the recreate have to run inside one transaction: a failure between them
+      // leaves the contact with no email attribute, so a re-run of the same CSV duplicates it instead of
+      // matching it.
+      expect(transactionMock).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(prisma.contactAttribute.deleteMany).mock.invocationCallOrder[0]).toBeGreaterThan(
+        transactionMock.mock.invocationCallOrder[0]
+      );
+      expect(vi.mocked(prisma.contact.update).mock.invocationCallOrder[0]).toBeGreaterThan(
+        transactionMock.mock.invocationCallOrder[0]
+      );
     });
 
     test("throws ValidationError when email is missing", async () => {

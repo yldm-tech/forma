@@ -287,20 +287,17 @@ export const cloneSegment = async (segmentId: string, surveyId: string): Promise
 
     const allSegments = await getSegments(segment.workspaceId);
 
-    // Find the last "Copy of" title and extract the number from it
-    const lastCopyTitle = allSegments
+    // Take the highest existing copy number rather than the last row: getSegments issues a findMany with no orderBy, so the order is whatever the query plan yields, and string order would put "(10)" before "(9)" anyway.
+    const copyNumberRegex = /\((\d+)\)$/;
+    const highestSuffix = allSegments
       .map((existingSegment) => existingSegment.title)
       .filter((title) => title.startsWith(`Copy of ${segment.title}`))
-      .pop();
+      .reduce((max, title) => {
+        const match = copyNumberRegex.exec(title);
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+      }, 0);
 
-    let suffix = 1;
-    if (lastCopyTitle) {
-      const regex = /\((\d+)\)$/;
-      const match = regex.exec(lastCopyTitle);
-      if (match) {
-        suffix = parseInt(match[1], 10) + 1;
-      }
-    }
+    const suffix = highestSuffix + 1;
 
     // Construct the title for the cloned segment
     const clonedTitle = `Copy of ${segment.title} (${suffix})`;
