@@ -3,13 +3,11 @@ import { TIntegrationNotionInput } from "@forma/types/integration/notion";
 import { responses } from "@/lib/api/response";
 import { withV1ApiWrapper } from "@/lib/api/with-api-logging";
 import {
-  ENCRYPTION_KEY,
   NOTION_OAUTH_CLIENT_ID,
   NOTION_OAUTH_CLIENT_SECRET,
   NOTION_REDIRECT_URI,
   WEBAPP_URL,
 } from "@/lib/constants";
-import { symmetricEncrypt } from "@/lib/crypto";
 import { createOrUpdateIntegration, getIntegrationByType } from "@/lib/integration/service";
 import {
   IntegrationOAuthStateError,
@@ -116,12 +114,12 @@ export const GET = withV1ApiWrapper({
         }),
       });
 
+      // No encryption here: `createOrUpdateIntegration` encrypts every credential field on the way
+      // into Postgres, for every provider (lib/integration/credential-encryption.ts).
       const tokenData = await response.json();
-      const encryptedAccessToken = symmetricEncrypt(tokenData.access_token, ENCRYPTION_KEY);
-      tokenData.access_token = encryptedAccessToken;
 
       const notionIntegration: TIntegrationNotionInput = {
-        type: "notion" as "notion",
+        type: "notion" as const,
         config: {
           key: tokenData,
           data: [],

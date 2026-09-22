@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TIntegrationNotionConfig } from "@forma/types/integration/notion";
 
-vi.mock("@/lib/crypto", () => ({ symmetricDecrypt: () => "decrypted-notion-token" }));
-
 const integrationServiceMock = vi.hoisted(() => ({ getIntegrationByType: vi.fn() }));
 vi.mock("@/lib/integration/service", () => integrationServiceMock);
 
@@ -10,7 +8,7 @@ const { getNotionDatabases, writeData } = await import("@/lib/notion/service");
 
 const config = {
   key: {
-    access_token: "encrypted",
+    access_token: "ntn_notion-token",
     bot_id: "bot_1",
     token_type: "bearer",
     duplicated_template_id: null,
@@ -55,6 +53,20 @@ describe("writeData", () => {
     fetchMock.mockResolvedValue(new Response("<html>unauthorized</html>", { status: 401 }));
 
     await expect(writeData("db_1", {}, config)).rejects.toThrow(/Notion API error creating page: 401/);
+  });
+});
+
+// ENG: the access token used to be encrypted by the Notion OAuth callback and decrypted here, so Notion
+// was the one provider whose credentials were protected at rest. That moved into the integration store,
+// which decrypts on read for every provider — decrypting a second time here would fail on the plaintext.
+describe("getHeaders", () => {
+  test("authorizes with the token as the store handed it over", async () => {
+    integrationServiceMock.getIntegrationByType.mockResolvedValue({ config });
+    fetchMock.mockResolvedValue(jsonResponse(200, { results: [] }));
+
+    await getNotionDatabases("ws_1");
+
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer ntn_notion-token");
   });
 });
 

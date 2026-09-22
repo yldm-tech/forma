@@ -13,9 +13,15 @@ import {
 } from "@forma/types/integration";
 import { ITEMS_PER_PAGE } from "../constants";
 import { validateInputs } from "../utils/validate";
+import { decryptIntegrationCredentials, encryptIntegrationCredentials } from "./credential-encryption";
 
+/**
+ * The single read boundary for an integration row: every getter below goes through it, so decryption is
+ * a property of the store rather than something each destination has to remember (see
+ * `credential-encryption.ts`).
+ */
 const transformIntegration = (integration: TIntegration): TIntegration => {
-  return {
+  const withParsedDates = {
     ...integration,
     config: {
       ...integration.config,
@@ -25,6 +31,8 @@ const transformIntegration = (integration: TIntegration): TIntegration => {
       })),
     },
   } as TIntegration;
+
+  return decryptIntegrationCredentials(withParsedDates);
 };
 
 export const createOrUpdateIntegration = async (
@@ -32,6 +40,11 @@ export const createOrUpdateIntegration = async (
   integrationData: TIntegrationInput
 ): Promise<TIntegration> => {
   validateInputs([workspaceId, ZId]);
+
+  // The single write boundary, matching `transformIntegration`. Note that what comes back is the stored
+  // row, so its credentials are ciphertext: callers use the id or the fact that it resolved, and the
+  // audit log records the ciphertext rather than the provider's tokens.
+  const dataToStore = encryptIntegrationCredentials(integrationData);
 
   try {
     const integration = await prisma.integration.upsert({
@@ -42,11 +55,11 @@ export const createOrUpdateIntegration = async (
         },
       },
       update: {
-        ...integrationData,
+        ...dataToStore,
         workspace: { connect: { id: workspaceId } },
       },
       create: {
-        ...integrationData,
+        ...dataToStore,
         workspace: { connect: { id: workspaceId } },
       },
     });

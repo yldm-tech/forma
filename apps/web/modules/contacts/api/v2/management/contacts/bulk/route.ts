@@ -56,9 +56,16 @@ export const PUT = async (request: Request) =>
         );
       }
 
-      const emails = contacts.map(
-        (contact) => contact.attributes.find((attr) => attr.attributeKey.key === "email")?.value!
-      );
+      const emails = contacts.map((contact) => {
+        const email = contact.attributes.find((attr) => attr.attributeKey.key === "email")?.value;
+        // `validateEmailAttribute` in the request schema rejects a contact without one, so this is
+        // unreachable. It is here so a later schema change cannot quietly hand `undefined` to an upsert
+        // whose parameter is typed `string[]`.
+        if (email === undefined) {
+          throw new Error("Contact passed schema validation without an email attribute");
+        }
+        return email;
+      });
 
       const upsertBulkContactsResult = await upsertBulkContacts(contacts, workspaceId, emails);
 

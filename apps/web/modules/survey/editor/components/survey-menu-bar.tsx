@@ -21,6 +21,7 @@ import { structuredClone } from "@/lib/pollyfills/structuredClone";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
 import { isDeepEqual } from "@/lib/utils/object";
 import { createSegmentAction } from "@/modules/contacts/segments/actions";
+import { parseSurveyModifiedElsewhereError } from "@/modules/survey/editor/lib/save-conflict";
 import { hasUnsavedSurveyChanges } from "@/modules/survey/editor/lib/unsaved-changes";
 import { scrollElementCardIntoView } from "@/modules/survey/editor/lib/utils";
 import { TSurveyDraft } from "@/modules/survey/editor/types/survey";
@@ -89,6 +90,9 @@ export const SurveyMenuBar = ({
   // rather than aliased, so a later in-place edit of the editor's own survey cannot drag the
   // snapshot along with it and hide the change.
   const lastSavedSurveyRef = useRef<TSurvey | null>(null);
+  // Set once a save is refused because the survey moved on, and holds the stored version the server named. Two things hang off it: autosave stops while it is set, so a conflict cannot be resolved silently in the loser's favour, and the next explicit save sends it as the precondition, which is what lets the editor deliberately overwrite. Cleared by the save that succeeds.
+  const saveConflictVersionRef = useRef<Date | null>(null);
+  const describeSaveFailureRef = useRef<(result?: { serverError?: string }) => string>(() => "");
 
   useEffect(() => {
     if (audiencePrompt && activeId === "settings") {
@@ -139,6 +143,31 @@ export const SurveyMenuBar = ({
       window.removeEventListener("beforeunload", handleWindowClose);
     };
   }, [localSurvey, survey, t]);
+
+  /**
+   * The version a draft save is made conditional on: the one the server last handed this editor, or the stored version a conflict named. It deliberately does not read `localSurvey` — autosave writes its result back into the refs and not into state, so `localSurvey.updatedAt` goes stale the moment the first autosave lands and would make every later save look like somebody else's edit.
+   */
+  const getExpectedSurveyVersion = (): Date =>
+    saveConflictVersionRef.current ?? lastSavedSurveyRef.current?.updatedAt ?? surveyRef.current.updatedAt;
+
+  /**
+   * The message a failed save should report, recording the stored version when the failure was a concurrent edit so the next explicit save can overwrite it.
+   */
+  const describeSaveFailure = (result?: { serverError?: string; validationErrors?: unknown }): string => {
+    const conflictVersion = parseSurveyModifiedElsewhereError(result?.serverError);
+
+    if (conflictVersion) {
+      saveConflictVersionRef.current = conflictVersion;
+      return t("workspace.surveys.edit.error_saving_changes");
+    }
+
+    return getFormattedErrorMessage(result ?? {});
+  };
+
+  // Same reason the survey itself is reached through a ref: the auto-save interval needs the current handler, and naming it as a dependency would re-create the interval on every render — a ten-second timer that restarts before it fires never fires.
+  useEffect(() => {
+    describeSaveFailureRef.current = describeSaveFailure;
+  });
 
   const clearSurveyLocalStorage = () => {
     if (typeof localStorage !== "undefined") {
@@ -352,6 +381,9 @@ export const SurveyMenuBar = ({
       // Skip if already saving, publishing, or auto-saving
       if (isAutoSavingRef.current || isSurveySavingRef.current || isSurveyPublishingRef.current) return;
 
+      // Paused while a concurrent edit is outstanding: resolving it means overwriting somebody else's work, which is the user's call to make from the Save button, not a decision to take every ten seconds without telling them.
+      if (saveConflictVersionRef.current) return;
+
       // Check for changes using refs (avoids re-creating interval on every change), and skip if
       // there are none
       if (!hasUnsavedSurveyChanges(localSurveyRef.current, [surveyRef.current, lastSavedSurveyRef.current]))
@@ -364,9 +396,16 @@ export const SurveyMenuBar = ({
         const updatedSurveyResponse = await updateSurveyDraftAction({
           ...currentSurvey,
           segment: currentSurvey.segment?.id === "temp" ? null : currentSurvey.segment,
+          updatedAt: getExpectedSurveyVersion(),
         } as unknown as TSurveyDraft);
 
-        if (updatedSurveyResponse?.data) {
+        if (!updatedSurveyResponse?.data) {
+          // Autosave stays quiet about a transient failure — it retries in ten seconds. A concurrent edit is not transient: it stops the loop, so it is reported once, here.
+          const message = describeSaveFailureRef.current(updatedSurveyResponse);
+          if (saveConflictVersionRef.current) {
+            toast.error(message);
+          }
+        } else {
           const savedData = updatedSurveyResponse.data;
 
           // If the segment changed on the server (e.g., private segment was deleted when
@@ -401,20 +440,21 @@ export const SurveyMenuBar = ({
     try {
       const segment = await handleSegmentUpdate();
       clearSurveyLocalStorage();
-      const updatedSurveyResponse = await updateSurveyDraftAction(
-        getDraftSurveyToPersist(localSurvey, segment)
-      );
+      const updatedSurveyResponse = await updateSurveyDraftAction({
+        ...getDraftSurveyToPersist(localSurvey, segment),
+        updatedAt: getExpectedSurveyVersion(),
+      });
 
       setIsSurveySaving(false);
       if (updatedSurveyResponse?.data) {
+        saveConflictVersionRef.current = null;
         setLocalSurvey(updatedSurveyResponse.data);
         lastSavedSurveyRef.current = structuredClone(updatedSurveyResponse.data);
         toast.success(t("workspace.surveys.edit.changes_saved"));
         isSuccessfullySavedRef.current = true;
         router.refresh();
       } else {
-        const errorMessage = getFormattedErrorMessage(updatedSurveyResponse);
-        toast.error(errorMessage);
+        toast.error(describeSaveFailure(updatedSurveyResponse));
         return false;
       }
       return true;
@@ -475,6 +515,7 @@ export const SurveyMenuBar = ({
       setIsSurveySaving(false);
       if (updatedSurveyResponse?.data) {
         const updatedSurvey = updatedSurveyResponse.data;
+        saveConflictVersionRef.current = null;
         setLocalSurvey(updatedSurvey);
         lastSavedSurveyRef.current = structuredClone(updatedSurvey);
         toast.success(t("workspace.surveys.edit.changes_saved"));
@@ -558,6 +599,7 @@ export const SurveyMenuBar = ({
         return;
       }
 
+      saveConflictVersionRef.current = null;
       isSurveyPublishingRef.current = false;
       setIsSurveyPublishing(false);
 
@@ -612,6 +654,7 @@ export const SurveyMenuBar = ({
         return;
       }
 
+      saveConflictVersionRef.current = null;
       isSurveyPublishingRef.current = false;
       setIsSurveyPublishing(false);
       isSuccessfullySavedRef.current = true;

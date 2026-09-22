@@ -28,11 +28,15 @@ const SECRET_KEY_FIELD_PATTERN = /(^token$|_token$|secret|password|credential|pr
 /** Always redacted, whatever the pattern says. */
 const SECRET_KEY_FIELDS = ["access_token", "refresh_token"] as const;
 
-const isSecretKeyField = (field: string): boolean =>
+/**
+ * Exported so `credential-encryption.ts` protects at rest exactly the fields this hides from the client:
+ * one predicate, so a credential a provider adds later cannot be covered by one pass and missed by the other.
+ */
+export const isSecretKeyField = (field: string): boolean =>
   SECRET_KEY_FIELDS.includes(field as (typeof SECRET_KEY_FIELDS)[number]) ||
   SECRET_KEY_FIELD_PATTERN.test(field);
 
-type TIntegrationWithConfig = {
+export type TIntegrationWithConfig = {
   config?: { key?: Record<string, unknown> | null } | null;
 };
 

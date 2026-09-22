@@ -1,6 +1,4 @@
 import { TIntegrationNotionConfig, TIntegrationNotionDatabase } from "@forma/types/integration/notion";
-import { ENCRYPTION_KEY } from "@/lib/constants";
-import { symmetricDecrypt } from "@/lib/crypto";
 import { getIntegrationByType } from "../integration/service";
 
 /**
@@ -76,14 +74,13 @@ export const writeData = async (
 };
 
 const getHeaders = (config: TIntegrationNotionConfig) => {
-  // `allowLegacyCbc`: the token is at rest in `Integration.config`, written by whatever version of the app connected the integration, and nothing on a request can influence it. An install that connected Notion before the GCM switch would otherwise lose the integration on the next sync.
-  const decryptedToken = symmetricDecrypt(config.key.access_token, ENCRYPTION_KEY!, {
-    allowLegacyCbc: true,
-  });
+  // The token arrives in cleartext: `transformIntegration` decrypts every credential field as it reads
+  // the row, including the pre-GCM form an install that connected Notion before that switch still holds
+  // (lib/integration/credential-encryption.ts). Decrypting again here would fail on the plaintext.
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
-    Authorization: `Bearer ${decryptedToken}`,
+    Authorization: `Bearer ${config.key.access_token}`,
     "Notion-Version": "2022-06-28",
   };
 };

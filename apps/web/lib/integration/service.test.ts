@@ -4,6 +4,7 @@ import { IntegrationType, Prisma } from "@forma/database/prisma";
 import { DatabaseError } from "@forma/types/errors";
 import { TIntegrationInput } from "@forma/types/integration";
 import { ITEMS_PER_PAGE } from "../constants";
+import { symmetricDecrypt } from "../crypto";
 import {
   createOrUpdateIntegration,
   deleteIntegration,
@@ -11,6 +12,17 @@ import {
   getIntegrationByType,
   getIntegrations,
 } from "./service";
+
+// The global setup pins `ENCRYPTION_KEY` to a value `createCipheriv` rejects, and these tests exercise
+// the real credential encryption the service now applies on write.
+const { TEST_ENCRYPTION_KEY } = vi.hoisted(() => ({
+  TEST_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef",
+}));
+
+vi.mock("@/lib/constants", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/constants")>()),
+  ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
+}));
 
 vi.mock("@forma/database", () => ({
   prisma: {
@@ -23,6 +35,9 @@ vi.mock("@forma/database", () => ({
     },
   },
 }));
+
+/** `iv:ciphertext:tag`, the shape `symmetricEncrypt` produces. */
+const CIPHERTEXT = /^[0-9a-f]{32}:[0-9a-f]+:[0-9a-f]{32}$/;
 
 describe("Integration Service", () => {
   beforeEach(() => {
@@ -77,6 +92,15 @@ describe("Integration Service", () => {
 
       const result = await createOrUpdateIntegration(mockWorkspaceId, mockIntegrationData);
 
+      const expectedConfig = {
+        ...mockIntegrationConfig,
+        key: {
+          ...mockIntegrationConfig.key,
+          access_token: expect.stringMatching(CIPHERTEXT),
+          refresh_token: expect.stringMatching(CIPHERTEXT),
+        },
+      };
+
       expect(prisma.integration.upsert).toHaveBeenCalledWith({
         where: {
           type_workspaceId: {
@@ -85,16 +109,49 @@ describe("Integration Service", () => {
           },
         },
         update: {
-          ...mockIntegrationData,
+          type: mockIntegrationData.type,
+          config: expectedConfig,
           workspace: { connect: { id: mockWorkspaceId } },
         },
         create: {
-          ...mockIntegrationData,
+          type: mockIntegrationData.type,
+          config: expectedConfig,
           workspace: { connect: { id: mockWorkspaceId } },
         },
       });
 
       expect(result).toEqual(mockIntegration);
+    });
+
+    // ENG: Slack, Google Sheets and Airtable wrote their OAuth credentials to Postgres in cleartext —
+    // only Notion encrypted, and it did so in its own callback. The store now owns it for every
+    // provider, so a dump of `Integration.config` carries no usable token.
+    test("encrypts the credentials on the way into Postgres and leaves the rest of the key alone", async () => {
+      vi.mocked(prisma.integration.upsert).mockResolvedValue({
+        id: "int_123",
+        workspaceId: mockWorkspaceId,
+        ...mockIntegrationData,
+      });
+
+      await createOrUpdateIntegration(mockWorkspaceId, mockIntegrationData);
+
+      const written = vi.mocked(prisma.integration.upsert).mock.calls[0][0].create.config as {
+        key: Record<string, unknown>;
+      };
+
+      expect(written.key.access_token).not.toBe("mock-access-token");
+      expect(written.key.refresh_token).not.toBe("mock-refresh-token");
+      expect(symmetricDecrypt(written.key.access_token as string, TEST_ENCRYPTION_KEY)).toBe(
+        "mock-access-token"
+      );
+      expect(symmetricDecrypt(written.key.refresh_token as string, TEST_ENCRYPTION_KEY)).toBe(
+        "mock-refresh-token"
+      );
+      // `token_type` names a scheme and `scope` a grant; neither is a credential, and blanking or
+      // encrypting them would break the Zod literals the provider types declare.
+      expect(written.key.token_type).toBe("Bearer");
+      expect(written.key.scope).toBe(mockIntegrationConfig.key.scope);
+      expect(written.key.expiry_date).toBe(mockIntegrationConfig.key.expiry_date);
     });
 
     test("should throw DatabaseError when Prisma throws an error", async () => {
