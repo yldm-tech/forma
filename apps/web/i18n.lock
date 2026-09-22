@@ -1897,7 +1897,6 @@ checksums:
     workspace/integrations/webhooks/response_finished: 71764de45369a08aacc290af629fa298
     workspace/integrations/webhooks/response_updated: 0b178ffeb39b615db0db036a685f118b
     workspace/integrations/webhooks/secret_copy_warning: 55ac31fc9ee192a66093ba4b6ccd0a91
-    workspace/integrations/webhooks/secret_description: e9ab6e0fd78d49c3e25ee649c62061bd
     workspace/integrations/webhooks/signing_secret: 91594fa8588e4232e155a65d07419bf7
     workspace/integrations/webhooks/source: 6e87903ef260da661b2bf6d858ba68ca
     workspace/integrations/webhooks/test_endpoint: 9ce47af3f982224071e16d5a17190a60

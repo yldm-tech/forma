@@ -1978,7 +1978,6 @@
         "response_finished": "Response Finished",
         "response_updated": "Response Updated",
         "secret_copy_warning": "Store this secret securely. You can view it again in webhook settings.",
-        "secret_description": "Use this secret to verify webhook requests. See documentation for signature verification.",
         "signing_secret": "Signing Secret",
         "source": "Source",
         "test_endpoint": "Test Endpoint",
