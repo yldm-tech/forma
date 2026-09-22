@@ -292,6 +292,7 @@ export const FeaturedTemplates = ({
       <CreateWithAIDialog
         workspaceId={workspace.id}
         language={locale}
+        surveyType={surveyType}
         isAIAvailable={isAIAvailable}
         aiUnavailableReason={aiUnavailableReason}
         open={isAIDialogOpen}

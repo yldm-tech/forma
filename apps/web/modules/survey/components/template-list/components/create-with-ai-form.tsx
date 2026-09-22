@@ -4,6 +4,7 @@ import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import { type TUserLocale, ZUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { AIUnavailableAlert } from "@/modules/ai/components/ai-unavailable-alert";
@@ -23,6 +24,11 @@ import { TooltipRenderer } from "@/modules/ui/components/tooltip";
 type CreateWithAIFormProps = {
   workspaceId: string;
   language: TUserLocale;
+  /**
+   * The type to generate. Defaults to `link` for hosts that have no workspace channel to derive one
+   * from, which is what every caller produced before the workspace's channel was threaded in.
+   */
+  surveyType?: TSurveyType;
   isAIAvailable: boolean;
   aiUnavailableReason?: TAIUnavailableReason;
   onSuccess: (surveyId: string) => void;
@@ -46,6 +52,7 @@ type CreateWithAIFormProps = {
 export const CreateWithAIForm = ({
   workspaceId,
   language,
+  surveyType = "link",
   isAIAvailable,
   aiUnavailableReason,
   onSuccess,
@@ -86,6 +93,7 @@ export const CreateWithAIForm = ({
     // English, not the signed-in person's locale: a survey's audience is not its author, and the
     // common case is writing for readers elsewhere.
     defaultLanguage: DEFAULT_AI_SURVEY_LANGUAGE,
+    surveyType,
     isAIAvailable,
     onSuccess,
   });

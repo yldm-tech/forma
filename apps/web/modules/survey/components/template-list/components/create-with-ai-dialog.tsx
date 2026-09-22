@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import type { TUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { cn } from "@/lib/cn";
@@ -23,6 +24,8 @@ import {
 type CreateWithAIDialogProps = {
   workspaceId: string;
   language: TUserLocale;
+  /** The type to generate; defaults to `link` for hosts that derive none. See `CreateWithAIForm`. */
+  surveyType?: TSurveyType;
   isAIAvailable: boolean;
   aiUnavailableReason?: TAIUnavailableReason;
   trigger?: ReactNode;
@@ -33,6 +36,7 @@ type CreateWithAIDialogProps = {
 export const CreateWithAIDialog = ({
   workspaceId,
   language,
+  surveyType,
   isAIAvailable,
   aiUnavailableReason,
   trigger,
@@ -134,6 +138,7 @@ export const CreateWithAIDialog = ({
           <CreateWithAIForm
             workspaceId={workspaceId}
             language={language}
+            surveyType={surveyType}
             isAIAvailable={isAIAvailable}
             aiUnavailableReason={aiUnavailableReason}
             onSuccess={handleSuccess}

@@ -304,6 +304,11 @@ const parsedEnv = createEnv({
   server: {
     AI_PROVIDER: ZActiveAIProvider.optional(),
     AI_MODEL: z.string().optional(),
+    // Optional per-feature model overrides. Unset means "use AI_MODEL", so an install that sets
+    // neither behaves exactly as it did before they existed. Both name a model of the single
+    // configured AI_PROVIDER - there is no cross-provider routing.
+    AI_MODEL_TRANSLATION: z.string().optional(),
+    AI_MODEL_EXAMPLE_RESPONSES: z.string().optional(),
     AIRTABLE_CLIENT_ID: z.string().optional(),
     AZUREAD_CLIENT_ID: z.string().optional(),
     AZUREAD_CLIENT_SECRET: z.string().optional(),
@@ -501,6 +506,8 @@ const parsedEnv = createEnv({
   runtimeEnv: {
     AI_PROVIDER: process.env.AI_PROVIDER,
     AI_MODEL: process.env.AI_MODEL,
+    AI_MODEL_TRANSLATION: process.env.AI_MODEL_TRANSLATION,
+    AI_MODEL_EXAMPLE_RESPONSES: process.env.AI_MODEL_EXAMPLE_RESPONSES,
     AIRTABLE_CLIENT_ID: process.env.AIRTABLE_CLIENT_ID,
     AZUREAD_CLIENT_ID: process.env.AZUREAD_CLIENT_ID,
     AZUREAD_CLIENT_SECRET: process.env.AZUREAD_CLIENT_SECRET,

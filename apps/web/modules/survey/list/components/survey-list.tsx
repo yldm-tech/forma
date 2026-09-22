@@ -139,6 +139,7 @@ const NewSurveyMenu = ({
       <CreateWithAIDialog
         workspaceId={workspace.id}
         language={language}
+        surveyType={surveyType}
         isAIAvailable={isAIAvailable}
         aiUnavailableReason={aiUnavailableReason}
         open={isAIDialogOpen}

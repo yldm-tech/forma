@@ -136,6 +136,7 @@ export const TemplateList = ({
           <CreateWithAITemplate
             workspaceId={workspaceId}
             language={language}
+            surveyType={surveyType}
             isAIAvailable={isAIAvailable}
             aiUnavailableReason={aiUnavailableReason}
           />

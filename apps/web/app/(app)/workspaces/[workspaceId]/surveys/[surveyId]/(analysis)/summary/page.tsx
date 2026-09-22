@@ -31,31 +31,37 @@ const SurveyPage = async (
 
   const { session, isReadOnly, workspace, organization } = await getSurveyAuth(params.workspaceId, surveyId);
 
-  const survey = await getSurvey(params.surveyId);
+  if (!organization) {
+    throw new ResourceNotFoundError(t("common.organization"), null);
+  }
+
+  // Neither of these touches the database, so resolving them ahead of the reads costs no round trip
+  // and keeps the segment read conditional on the same flag it has always been conditional on.
+  const [isContactsEnabled, isQuotasAllowed] = await Promise.all([
+    getIsContactsEnabled(),
+    getIsQuotasEnabled(),
+  ]);
+
+  // One stage instead of five: nothing below depends on anything else below, and the summary read
+  // is the slow one, so starting it first rather than last is where the latency goes.
+  const [survey, user, segments, aiConfig, initialSurveySummary] = await Promise.all([
+    getSurvey(params.surveyId),
+    getUser(session.user.id),
+    isContactsEnabled ? getSegments(workspace.id) : Promise.resolve([]),
+    getOrganizationAIConfig(organization.id),
+    // Fetched on the server to prevent duplicate API calls during hydration
+    getSurveySummary(surveyId),
+  ]);
 
   if (!survey) {
     throw new ResourceNotFoundError(t("common.survey"), params.surveyId);
   }
 
-  const user = await getUser(session.user.id);
-
   if (!user) {
     throw new AuthenticationError(t("common.not_authenticated"));
   }
 
-  const isContactsEnabled = await getIsContactsEnabled();
-  const segments = isContactsEnabled ? await getSegments(workspace.id) : [];
-
-  if (!organization) {
-    throw new ResourceNotFoundError(t("common.organization"), null);
-  }
-  const isQuotasAllowed = await getIsQuotasEnabled();
-
-  const aiConfig = await getOrganizationAIConfig(organization.id);
   const aiUnavailableReason = getAISmartToolsUnavailableReason(aiConfig) ?? null;
-
-  // Fetch initial survey summary data on the server to prevent duplicate API calls during hydration
-  const initialSurveySummary = await getSurveySummary(surveyId);
 
   const publicDomain = getPublicDomain();
 

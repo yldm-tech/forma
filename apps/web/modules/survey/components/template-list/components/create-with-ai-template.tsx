@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import type { TUserLocale } from "@forma/types/user";
 import type { TAIUnavailableReason } from "@/lib/ai/service";
 import { AiIcon } from "@/modules/ui/components/ai";
@@ -9,6 +10,8 @@ import { CreateWithAIDialog } from "./create-with-ai-dialog";
 type CreateWithAITemplateProps = {
   workspaceId: string;
   language: TUserLocale;
+  /** The workspace channel's survey type — the same value the templates beside this card create with. */
+  surveyType: TSurveyType;
   isAIAvailable: boolean;
   aiUnavailableReason?: TAIUnavailableReason;
 };
@@ -16,6 +19,7 @@ type CreateWithAITemplateProps = {
 export const CreateWithAITemplate = ({
   workspaceId,
   language,
+  surveyType,
   isAIAvailable,
   aiUnavailableReason,
 }: Readonly<CreateWithAITemplateProps>) => {
@@ -25,6 +29,7 @@ export const CreateWithAITemplate = ({
     <CreateWithAIDialog
       workspaceId={workspaceId}
       language={language}
+      surveyType={surveyType}
       isAIAvailable={isAIAvailable}
       aiUnavailableReason={aiUnavailableReason}
       trigger={

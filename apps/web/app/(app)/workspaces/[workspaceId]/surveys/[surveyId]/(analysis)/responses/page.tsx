@@ -26,11 +26,12 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
     params.surveyId
   );
 
-  const [survey, user, tags, isContactsEnabled, responseCount] = await Promise.all([
+  const [survey, user, tags, isContactsEnabled, isQuotasAllowed, responseCount] = await Promise.all([
     getSurvey(params.surveyId),
     getUser(session.user.id),
     getTagsByWorkspaceId(workspace.id),
     getIsContactsEnabled(),
+    getIsQuotasEnabled(),
     getResponseCountBySurveyId(params.surveyId),
   ]);
 
@@ -46,18 +47,19 @@ const Page = async (props: Readonly<{ params: Promise<{ workspaceId: string; sur
     throw new ResourceNotFoundError(t("common.organization"), null);
   }
 
-  const segments = isContactsEnabled ? await getSegments(workspace.id) : [];
+  // Second stage rather than four serial ones: each of these needs something from the first stage
+  // (the survey id, the two flags) but none of them needs another member of this stage.
+  const [segments, quotas, aiConfig, initialResponses] = await Promise.all([
+    isContactsEnabled ? getSegments(workspace.id) : Promise.resolve([]),
+    isQuotasAllowed ? getQuotas(survey.id) : Promise.resolve([]),
+    getOrganizationAIConfig(organization.id),
+    // Fetched on the server to prevent duplicate client-side fetch
+    getResponses(params.surveyId, RESPONSES_PER_PAGE, 0),
+  ]);
 
-  const publicDomain = getPublicDomain();
-
-  const isQuotasAllowed = await getIsQuotasEnabled();
-  const quotas = isQuotasAllowed ? await getQuotas(survey.id) : [];
-
-  const aiConfig = await getOrganizationAIConfig(organization.id);
   const aiUnavailableReason = getAISmartToolsUnavailableReason(aiConfig) ?? null;
 
-  // Fetch initial responses on the server to prevent duplicate client-side fetch
-  const initialResponses = await getResponses(params.surveyId, RESPONSES_PER_PAGE, 0);
+  const publicDomain = getPublicDomain();
 
   return (
     <PageContentWrapper>

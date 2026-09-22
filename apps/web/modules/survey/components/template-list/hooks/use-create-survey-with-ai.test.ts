@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode, createElement } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import type { TSurveyGenerationStreamEvent } from "@/app/api/internal/surveys/generate/lib/events";
 import type { TV3CreateSurveyBody } from "@/app/api/v3/surveys/schemas";
 import { V3ApiError } from "@/modules/api/lib/v3-client";
@@ -52,12 +53,15 @@ const wrapper = ({ children }: { children: ReactNode }) =>
     children
   );
 
-const renderAiHook = (overrides: { isAIAvailable?: boolean; onSuccess?: () => void } = {}) =>
+const renderAiHook = (
+  overrides: { isAIAvailable?: boolean; onSuccess?: () => void; surveyType?: TSurveyType } = {}
+) =>
   renderHook(
     () =>
       useCreateSurveyWithAI({
         workspaceId: "workspace1",
         defaultLanguage: "en-US",
+        surveyType: overrides.surveyType ?? "link",
         isAIAvailable: overrides.isAIAvailable ?? true,
         onSuccess: overrides.onSuccess ?? vi.fn(),
       }),
@@ -119,6 +123,17 @@ describe("useCreateSurveyWithAI", () => {
         type: "link",
         languages: ["en-US"],
       },
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  test("generates the workspace channel's survey type rather than a hardcoded link survey", async () => {
+    const { result } = renderAiHook({ surveyType: "app" });
+
+    await submitWithPrompt(result);
+
+    expect(streamSurveyGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "app" }),
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
