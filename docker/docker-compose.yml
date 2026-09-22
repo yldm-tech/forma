@@ -353,7 +353,8 @@ services:
       # Backfill is the only operation that reads Forma PostgreSQL. The other required values are
       # inert placeholders for the shared server environment validator and are not application secrets.
       <<: *forma-database
-      ENCRYPTION_KEY: authzed-ops-unused
+      # Unused by this one-shot container, but `lib/env.ts` validates the shape at boot, so it has to be a real one: 64 hex characters.
+      ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000a05
       REDIS_URL: redis://localhost
       LOG_LEVEL: fatal
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
@@ -378,7 +379,8 @@ services:
     command: ["upgrade", "prepare"]
     environment:
       <<: *forma-database
-      ENCRYPTION_KEY: authzed-initialize-unused
+      # Unused by this one-shot container, but `lib/env.ts` validates the shape at boot, so it has to be a real one: 64 hex characters.
+      ENCRYPTION_KEY: 000000000000000000000000000000000000000000000000000000000000a0de
       REDIS_URL: redis://localhost
       LOG_LEVEL: fatal
       AUTHZED_ENABLED: ${AUTHZED_ENABLED:-true}
