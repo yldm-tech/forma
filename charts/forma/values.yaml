@@ -164,7 +164,13 @@ deployment:
     digest: "" # If set, digest takes precedence over the tag
     pullPolicy: IfNotPresent
 
-  # Health probes configuration
+  # Health probes configuration. The two HTTP paths answer different questions and must not be aliased:
+  # /health is a static handler that says the process is serving HTTP, which is the only thing liveness may
+  # act on — restarting pods because Postgres is down turns a dependency outage into a crash loop. Readiness
+  # uses /health/ready, which queries Postgres and returns 503 when it cannot be reached, so a rollout whose
+  # new pods have the wrong DATABASE_URL, a rotated credential, or an unapplied NetworkPolicy never goes
+  # Ready and the old pods keep serving. It stays scoped to Postgres on purpose: Redis and SpiceDB outages
+  # would drain every replica out of the Service for dependencies the pod can still degrade around.
   probes:
     startupProbe:
       failureThreshold: 30
@@ -179,7 +185,7 @@ deployment:
       timeoutSeconds: 5
       initialDelaySeconds: 10
       httpGet:
-        path: /health
+        path: /health/ready
         port: 3000
 
     livenessProbe:
@@ -812,7 +818,9 @@ redis:
   enabled: true # Enable/disable bundled Valkey
   # Use this to point Forma jobs and cache traffic at an existing Redis/Valkey deployment.
   # External Redis instances must also be configured with `maxmemory-policy noeviction`
-  # in their redis.conf/valkey.conf (or equivalent managed-service setting) to avoid BullMQ job loss.
+  # in their redis.conf/valkey.conf (or equivalent managed-service setting) to avoid BullMQ job loss,
+  # and with a `maxmemory` below whatever memory ceiling their host enforces — see the note on
+  # `commonConfiguration` below for the retention that ceiling has to hold.
   externalRedisUrl: ""
   fullnameOverride: "forma-redis"
   image:
@@ -821,9 +829,29 @@ redis:
     digest: "sha256:e0eb7c480958d32bdc4357a74bdd70653ae15f2f9b4c93c4a5a9fad1dc471c84"
     pullPolicy: IfNotPresent
   architecture: standalone
+  # `maxmemory` must stay set, and must stay well under `redis.master.resources.limits.memory` below.
+  # Without it Valkey has no ceiling of its own and simply grows until the kernel OOM-kills the container,
+  # which drops whatever queue state sits outside the AOF fsync window and then replays into the same wall.
+  # 256mb is half of the 512Mi limit rather than the more usual 70%: `appendonly yes` means an AOF rewrite
+  # forks the server, and copy-on-write during that rewrite can add most of the dataset again to RSS, on
+  # top of the ~10MB baseline. Raising the limit means raising this line with it.
+  #
+  # The retention this has to hold is BullMQ's, in packages/jobs/src/constants.ts: 1000 completed jobs for
+  # 24h and 5000 failed jobs for 7 days, and a response-pipeline job carries a whole response payload
+  # (ZResponsePipelineJobData embeds ZResponse with its answers, meta and tags). A few KB per job puts the
+  # retained set in the tens of MB before the cache namespace that shares this instance — which is what the
+  # old 192Mi limit could not hold. The limit was raised to match the retention rather than the retention
+  # cut to match the limit, because the retention is what the failed-job triage described in the runbooks
+  # depends on.
+  #
+  # `noeviction` stays: BullMQ job hashes are not cache entries, and an LRU policy silently evicting one
+  # loses the job. The trade is that reaching `maxmemory` fails writes (cache misses degrade quietly,
+  # enqueues fail loudly) while reads keep serving so the worker can drain — a recoverable state, unlike
+  # an OOM kill.
   commonConfiguration: |-
     appendonly yes
     save ""
+    maxmemory 256mb
     maxmemory-policy noeviction
   auth:
     enabled: true
@@ -835,10 +863,13 @@ redis:
     resources:
       limits:
         cpu: 150m
-        memory: 192Mi
+        # Sized for the BullMQ retention documented above the `maxmemory` line in commonConfiguration.
+        # Change this and `maxmemory` together; charts/forma/tests/redis-memory-limits.sh fails if the
+        # ceiling ever stops being comfortably below the limit the kernel enforces.
+        memory: 512Mi
       requests:
         cpu: 100m
-        memory: 128Mi
+        memory: 256Mi
     podSecurityContext: {}
     containerSecurityContext: {}
     podAnnotations: {}
@@ -861,6 +892,10 @@ redis:
 # Service Monitor to collect Prometheus metrices
 ##########################################################
 serviceMonitor:
+  # Only rendered where the Prometheus Operator CRD exists. Enabling it is also what turns on the app's
+  # Prometheus exporter: templates/deployment.yaml sets PROMETHEUS_ENABLED=1 under the same condition, so
+  # the scrape target and the listener cannot drift apart. Overriding PROMETHEUS_ENABLED in deployment.env
+  # wins over that default.
   enabled: true
 
   # Additional labels
@@ -871,9 +906,11 @@ serviceMonitor:
   annotations:
   # key: value
 
-  # List of the endpoints of service from which prometheus will scrape data
+  # List of the endpoints of service from which prometheus will scrape data. 30s matches the Prometheus
+  # default; the previous 5s scraped every pod six times as often — up to 10 pods at autoscaling.maxReplicas
+  # — for metrics whose slowest-moving members (the forma_authzed_* outbox gauges) move far more slowly.
   endpoints:
-    - interval: 5s
+    - interval: 30s
       path: /metrics
       port: metrics
 postgresql:

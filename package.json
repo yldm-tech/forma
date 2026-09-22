@@ -31,7 +31,7 @@
     "format:check": "prettier --check .",
     "generate": "turbo run generate",
     "catalog:check": "node scripts/check-catalog.mjs",
-    "lint": "turbo run lint && pnpm api:v3:lint && pnpm catalog:check && pnpm tenant:check && pnpm tests:run-check",
+    "lint": "pnpm catalog:check && pnpm tests:run-check && pnpm api:v3:lint && pnpm tenant:check && turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --no-cache",
     "test:coverage": "turbo run test:coverage --no-cache",
