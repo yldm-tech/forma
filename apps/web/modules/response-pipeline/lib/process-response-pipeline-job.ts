@@ -584,14 +584,31 @@ const handleSurveyAutoCompleteSafely = async ({
   let logStatus: TAuditStatus = "success";
 
   try {
-    await prisma.survey.update({
+    // Status-guarded terminal write: only complete a survey whose status has not moved since the snapshot
+    // this job read at the top. A 0-row result means the owner (or the scheduler) changed it while the
+    // side-effects above were running — don't clobber that.
+    const completed = await prisma.survey.updateMany({
       where: {
         id: survey.id,
+        workspaceId: survey.workspaceId,
+        status: survey.status,
       },
       data: {
         status: "completed",
       },
     });
+
+    if (completed.count === 0) {
+      logger.info(
+        {
+          ...logContext,
+          snapshotStatus: survey.status,
+        },
+        "Survey status changed since the pipeline snapshot; skipping auto-complete"
+      );
+
+      return;
+    }
   } catch (error) {
     logStatus = "failure";
     logger.error(

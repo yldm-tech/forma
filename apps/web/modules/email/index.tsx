@@ -118,7 +118,11 @@ export const sendEmail = async (emailData: SendEmailDataProps): Promise<boolean>
     return true;
   } catch (error) {
     logger.error(error, "Error in sendEmail");
-    throw new InvalidInputError("Incorrect SMTP credentials");
+    // Surface the real SMTP failure: this message is persisted verbatim as a workflow run's user-visible
+    // failure reason, so a fixed "Incorrect SMTP credentials" sent every timeout, TLS fault and 5xx
+    // rejection to the wrong diagnosis.
+    const reason = error instanceof Error ? error.message : "Unknown SMTP error";
+    throw new InvalidInputError(`Failed to send email: ${reason}`);
   }
 };
 
