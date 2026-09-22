@@ -303,6 +303,33 @@ describe("parseRecallInformation", () => {
     expect(result.headline.en).toBe("Data: "); // nonExistentData not found, empty fallback used
   });
 
+  test("returns the input untouched when neither headline nor subheader carries a recall token", () => {
+    const question: TSurveyOpenTextElement = {
+      ...baseQuestion,
+      headline: { en: "A simple question." },
+      subheader: { en: "With a simple subheader." },
+    };
+    const result = parseRecallInformation(question, "en", responseData, variables);
+    // Identity, not just equality: the deep clone is skipped when there is nothing to substitute.
+    expect(result).toBe(question);
+    expect(result.headline.en).toBe("A simple question.");
+    expect(result.subheader?.en).toBe("With a simple subheader.");
+  });
+
+  test("clones rather than mutating the input when a recall token is present", () => {
+    const question: TSurveyOpenTextElement = {
+      ...baseQuestion,
+      headline: { en: "Welcome, #recall:name/fallback:Guest#!" },
+      subheader: { en: "Role: #recall:userRole/fallback:None#" },
+    };
+    const result = parseRecallInformation(question, "en", responseData, variables);
+    expect(result).not.toBe(question);
+    expect(result.headline.en).toBe("Welcome, John Doe!");
+    expect(result.subheader?.en).toBe("Role: Admin");
+    expect(question.headline.en).toBe("Welcome, #recall:name/fallback:Guest#!");
+    expect(question.subheader?.en).toBe("Role: #recall:userRole/fallback:None#");
+  });
+
   test("should handle recall info if subheader is present but no text for languageCode", () => {
     const question: TSurveyOpenTextElement = {
       ...baseQuestion,

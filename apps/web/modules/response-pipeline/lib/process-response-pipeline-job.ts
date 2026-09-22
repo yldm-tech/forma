@@ -835,10 +835,28 @@ export const processResponsePipelineJob: JobHandler<TResponsePipelineJobData> = 
   const logContext = getPipelineLogContext(data, context);
 
   try {
+    // `responseUpdated` fans out to nothing but webhook delivery — the two side-effect branches below are
+    // keyed on the `responseFinished` and `responseCreated` literals — so with no webhook to render, the
+    // organization row and the survey (whose `blocks` JSON is the largest read in this handler) are loaded
+    // for nothing. A partial respondent generates one of these per page, so resolve the webhooks first for
+    // that event alone and bail before the other two reads. The check is keyed on the explicit literal so a
+    // new event kind added to `ZResponsePipelineEvent` falls through to the full path with its side-effects
+    // intact, and every other event still loads all three concurrently.
+    const webhooksOnlyEvent = data.event === "responseUpdated";
+    const webhooksForWebhookOnlyEvent = webhooksOnlyEvent
+      ? await getWebhooksForPipeline(data.workspaceId, data.event as PipelineTriggers, data.surveyId)
+      : undefined;
+
+    if (webhooksForWebhookOnlyEvent?.length === 0) {
+      logger.debug(logContext, "Response pipeline job skipped: no webhooks subscribed to responseUpdated");
+      return;
+    }
+
     const [organization, survey, webhooks] = await Promise.all([
       getOrganizationForPipeline(data.workspaceId),
       getSurveyForPipeline(data.surveyId),
-      getWebhooksForPipeline(data.workspaceId, data.event as PipelineTriggers, data.surveyId),
+      webhooksForWebhookOnlyEvent ??
+        getWebhooksForPipeline(data.workspaceId, data.event as PipelineTriggers, data.surveyId),
     ]);
 
     if (!survey) {

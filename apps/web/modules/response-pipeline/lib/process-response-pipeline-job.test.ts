@@ -385,6 +385,64 @@ describe("processResponsePipelineJob", () => {
     expect(firstHeaders["webhook-id"]).toBe(secondHeaders["webhook-id"]);
   });
 
+  // A partial respondent emits one `responseUpdated` job per page, and the event has no side effect of its
+  // own: the two branches below the webhook delivery are keyed on `responseFinished` and `responseCreated`.
+  // With nothing subscribed, the organization row and the survey `blocks` JSON were read for a job that then
+  // did nothing at all.
+  test("skips the organization and survey reads for a responseUpdated event with no webhooks", async () => {
+    mockPrismaWebhookFindMany.mockResolvedValue([]);
+
+    await expect(
+      processResponsePipelineJob({ ...baseData, event: "responseUpdated" }, baseContext)
+    ).resolves.toBeUndefined();
+
+    expect(mockPrismaWebhookFindMany).toHaveBeenCalledTimes(1);
+    expect(mockPrismaOrganizationFindFirst).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyFindUnique).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockEnqueueResponseCompletedWorkflowRuns).not.toHaveBeenCalled();
+    expect(mockSendTelemetryEvents).not.toHaveBeenCalled();
+  });
+
+  test("still loads the survey and delivers the webhook for a subscribed responseUpdated event", async () => {
+    mockPrismaWebhookFindMany.mockResolvedValue([
+      {
+        id: "webhook_123",
+        secret: null,
+        url: "https://example.com/webhook",
+      },
+    ]);
+
+    await expect(
+      processResponsePipelineJob({ ...baseData, event: "responseUpdated" }, baseContext)
+    ).resolves.toBeUndefined();
+
+    expect(mockPrismaWebhookFindMany).toHaveBeenCalledTimes(1);
+    expect(mockPrismaSurveyFindUnique).toHaveBeenCalledTimes(1);
+    expect(mockPrismaOrganizationFindFirst).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/webhook",
+      expect.objectContaining({
+        body: expect.stringContaining('"event":"responseUpdated"'),
+        method: "POST",
+      })
+    );
+  });
+
+  // The short-circuit is keyed on the `responseUpdated` literal rather than on "no branch matched", so an
+  // event that does carry side effects keeps loading both rows even when nothing is subscribed to it.
+  test("still loads the organization and survey for other events with no webhooks", async () => {
+    mockPrismaWebhookFindMany.mockResolvedValue([]);
+
+    await expect(
+      processResponsePipelineJob({ ...baseData, event: "responseFinished" }, baseContext)
+    ).resolves.toBeUndefined();
+
+    expect(mockPrismaOrganizationFindFirst).toHaveBeenCalledTimes(1);
+    expect(mockPrismaSurveyFindUnique).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueResponseCompletedWorkflowRuns).toHaveBeenCalledTimes(1);
+  });
+
   test("processes responseFinished jobs and preserves legacy side effects", async () => {
     mockGetIntegrations.mockResolvedValue([{ id: "integration_123", type: "slack" }]);
     mockPrismaSurveyFindUnique.mockResolvedValue({

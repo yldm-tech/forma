@@ -49,6 +49,20 @@ describe("sendEmail", () => {
     expect(mockLoggerError).toHaveBeenCalled();
   });
 
+  // Without these the transport inherits nodemailer's 2-minute connect and 10-minute socket defaults, so a hung relay holds a request thread or the single pipeline worker slot for that long.
+  test("bounds the transport with explicit connect, greeting and socket timeouts", async () => {
+    mockSendMail.mockResolvedValue({ messageId: "id" });
+
+    await expect(sendEmail(emailData)).resolves.toBe(true);
+    expect(mockCreateTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
+      })
+    );
+  });
+
   test("falls back to a generic reason when the thrown value is not an Error", async () => {
     mockSendMail.mockRejectedValue("socket hang up");
 

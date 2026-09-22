@@ -25,6 +25,19 @@ interface MockRedisClient {
   isOpen: boolean;
 }
 
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+}
+
+const createDeferred = <T>(): Deferred<T> => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
 describe("CacheService", () => {
   let mockRedis: MockRedisClient;
   let cacheService: CacheService;
@@ -808,6 +821,82 @@ describe("CacheService", () => {
       // Should not attempt any cache operations when validation fails
       expect(mockRedis.get).not.toHaveBeenCalled();
       expect(mockRedis.setEx).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("in-process single-flight", () => {
+    const flush = async (): Promise<void> => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    test("should run fn once for concurrent misses on one cold key", async () => {
+      const key = "test:single-flight" as CacheKey;
+      const gate = createDeferred<{ data: string }>();
+      const fn = vi.fn(() => gate.promise);
+
+      mockRedis.get.mockResolvedValue(null);
+
+      const calls = Array.from({ length: 50 }, () => cacheService.withCache(fn, key, 60000));
+      await flush();
+      gate.resolve({ data: "fresh" });
+      const results = await Promise.all(calls);
+
+      expect(fn).toHaveBeenCalledOnce();
+      expect(results).toHaveLength(50);
+      expect(results.every((result) => result === results[0])).toBe(true);
+      expect(results[0]).toEqual({ data: "fresh" });
+      // The shared flight also collapses the write-back to a single Redis round trip.
+      expect(mockRedis.setEx).toHaveBeenCalledOnce();
+    });
+
+    test("should run a nullable fn once for concurrent misses on one cold key", async () => {
+      const key = "test:single-flight-nullable" as CacheKey;
+      const gate = createDeferred<{ data: string } | null>();
+      const fn = vi.fn(() => gate.promise);
+
+      mockRedis.get.mockResolvedValue(null);
+
+      const calls = Array.from({ length: 50 }, () => cacheService.withCacheNullable(fn, key, 60000));
+      await flush();
+      gate.resolve(null);
+      const results = await Promise.all(calls);
+
+      expect(fn).toHaveBeenCalledOnce();
+      expect(results).toHaveLength(50);
+      expect(results.every((result) => result === null)).toBe(true);
+      expect(mockRedis.setEx).toHaveBeenCalledOnce();
+    });
+
+    test("should not memoise a rejected flight", async () => {
+      const key = "test:single-flight-error" as CacheKey;
+      const fn = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("transient failure"))
+        .mockResolvedValue({ data: "recovered" });
+
+      mockRedis.get.mockResolvedValue(null);
+
+      await expect(cacheService.withCache(fn, key, 60000)).rejects.toThrow("transient failure");
+      await expect(cacheService.withCache(fn, key, 60000)).resolves.toEqual({ data: "recovered" });
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    test("should keep nullable and non-nullable flights separate on the same key", async () => {
+      const key = "test:single-flight-mixed" as CacheKey;
+      const nullableFn = vi.fn().mockResolvedValue(null);
+      const plainFn = vi.fn().mockResolvedValue({ data: "plain" });
+
+      mockRedis.get.mockResolvedValue(null);
+
+      const [nullableResult, plainResult] = await Promise.all([
+        cacheService.withCacheNullable(nullableFn, key, 60000),
+        cacheService.withCache(plainFn, key, 60000),
+      ]);
+
+      expect(nullableResult).toBeNull();
+      expect(plainResult).toEqual({ data: "plain" });
+      expect(nullableFn).toHaveBeenCalledOnce();
+      expect(plainFn).toHaveBeenCalledOnce();
     });
   });
 });

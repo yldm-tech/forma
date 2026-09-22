@@ -9,8 +9,10 @@ scheduling, and [Workflows](/workflows/overview). Forma starts the worker inside
 application by default, so a standard self-hosted deployment does not need a separate worker container.
 
 <Note>
-  Every Forma web process starts one worker with a concurrency of one by default. You can tune these
-  values with environment variables after you have measured your workload.
+  Every Forma web process starts one worker whose default concurrency is derived from the host's cpu
+  count - at most half the logical cpus, and never more than four. Each concurrent job can hold a
+  database connection, and the Prisma pool is sized `2 * logical_cpus + 1`, so the default always leaves
+  connections free for the request path. Raise it only after measuring your workload.
 </Note>
 
 ## Runtime architecture
@@ -21,7 +23,7 @@ The web application creates jobs and consumes them from a shared Redis-backed qu
 - Redis key prefix: `{forma:jobs}`
 - Worker startup: Next.js server instrumentation
 - Default workers per web process: `1`
-- Default concurrent jobs per worker: `1`
+- Default concurrent jobs per worker: `4`
 
 Redis is also used to coordinate recurring jobs. The web process retries worker and recurring-job registration
 after 30 seconds if startup fails.
@@ -70,7 +72,7 @@ additional background work.
     ```env
     BULLMQ_WORKER_ENABLED=1
     BULLMQ_WORKER_COUNT=1
-    BULLMQ_WORKER_CONCURRENCY=1
+    BULLMQ_WORKER_CONCURRENCY=4
     ```
 
     Restart every Forma web process after changing these values.
@@ -92,8 +94,11 @@ claims so one available worker ordinarily processes a queued job. Total processi
 web replicas x BULLMQ_WORKER_COUNT x BULLMQ_WORKER_CONCURRENCY
 ```
 
-Increase concurrency gradually and monitor database, Redis, and downstream service capacity. Adding replicas
-also adds workers, so account for both scaling controls.
+Increase concurrency gradually and monitor database, Redis, and downstream service capacity. The binding
+constraint is usually the Prisma connection pool, sized `2 * logical_cpus + 1` per process: a 2-core pod has
+a pool of 5 and a default concurrency of 2, leaving three connections for the request path; an 8-core pod
+has a pool of 17 and a default of 4. Adding replicas also adds workers, so account for both scaling
+controls.
 
 ## Retry behavior
 

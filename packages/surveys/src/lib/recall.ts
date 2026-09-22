@@ -96,24 +96,31 @@ export const parseRecallInformation = (
   responseData: TResponseData,
   variables: TResponseVariables
 ): TSurveyElement => {
-  const modifiedQuestion = JSON.parse(JSON.stringify(question));
   // Use getLocalizedValue (falls back to the `default` key) instead of indexing by languageCode
   // directly — a code that isn't a content key (e.g. a legacy SDK language) would otherwise throw.
-  if (getLocalizedValue(question.headline, languageCode).includes("recall:")) {
+  const headline = getLocalizedValue(question.headline, languageCode);
+  const subheader = getLocalizedValue(question.subheader, languageCode);
+  const headlineHasRecall = headline.includes("recall:");
+  const subheaderHasRecall = subheader.includes("recall:");
+
+  // Detect before cloning: this runs for every element of the active block on every keystroke, and
+  // most surveys carry no recall token at all, so the deep clone below was pure waste in the common
+  // case. Returning the input is safe because the result is read-only to callers — the sole
+  // production call site (survey.tsx) spreads it into a fresh block object and never writes to it.
+  if (!headlineHasRecall && !subheaderHasRecall) return question;
+
+  const modifiedQuestion = JSON.parse(JSON.stringify(question));
+  if (headlineHasRecall) {
     modifiedQuestion.headline[languageCode] = replaceRecallInfo(
-      getLocalizedValue(modifiedQuestion.headline, languageCode),
+      headline,
       responseData,
       variables,
       languageCode
     );
   }
-  if (
-    question.subheader &&
-    getLocalizedValue(question.subheader, languageCode).includes("recall:") &&
-    modifiedQuestion.subheader
-  ) {
+  if (subheaderHasRecall && modifiedQuestion.subheader) {
     modifiedQuestion.subheader[languageCode] = replaceRecallInfo(
-      getLocalizedValue(modifiedQuestion.subheader, languageCode),
+      subheader,
       responseData,
       variables,
       languageCode

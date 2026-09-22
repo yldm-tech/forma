@@ -666,11 +666,11 @@ describe("widget-file", () => {
       const appendChildMock = vi.mocked(document.head.appendChild);
       for (const call of appendChildMock.mock.calls) {
         const el = call[0] as unknown as Record<string, unknown>;
-        if (typeof el.src === "string" && el.src.includes("surveys.umd.cjs")) {
+        if (typeof el.src === "string" && el.src.includes("surveys.umd.js")) {
           return el;
         }
       }
-      throw new Error("No script element for surveys.umd.cjs was appended to document.head");
+      throw new Error("No script element for surveys.umd.js was appended to document.head");
     };
 
     beforeEach(() => {
@@ -693,7 +693,7 @@ describe("widget-file", () => {
 
       const scriptEl = getAppendedScript();
 
-      expect(scriptEl.src).toBe("https://fake.app/js/surveys.umd.cjs");
+      expect(scriptEl.src).toBe("https://fake.app/js/surveys.umd.js");
       expect(scriptEl.async).toBe(true);
 
       // Simulate network error
@@ -802,7 +802,7 @@ describe("widget-file", () => {
       // No new script element should have been appended (dedup via early return or cached promise)
       const scriptAppendCalls = appendChildSpy.mock.calls.filter((call: unknown[]) => {
         const el = call[0] as Record<string, unknown> | undefined;
-        return typeof el?.src === "string" && el.src.includes("surveys.umd.cjs");
+        return typeof el?.src === "string" && el.src.includes("surveys.umd.js");
       });
       expect(scriptAppendCalls.length).toBe(0);
 
@@ -812,10 +812,23 @@ describe("widget-file", () => {
     });
   });
 
-  test("prefetchSurveysScript adds a prefetch link and deduplicates subsequent calls", () => {
+  // One test rather than three: the prefetch guard is module state, so the "not yet prefetched" case
+  // exists only once per file and the three assertions have to share it.
+  test("prefetchSurveysScript waits for an eligible survey, then adds a prefetch link once", () => {
+    const configWithSurveys = (filteredSurveys: TWorkspaceStateSurvey[]): Config =>
+      ({ get: vi.fn().mockReturnValue({ filteredSurveys }), update: vi.fn() }) as unknown as Config;
+
     const createElementSpy = vi.spyOn(document, "createElement");
     const appendChildSpy = vi.spyOn(document.head, "appendChild");
 
+    // No survey can render on this page, so nothing is worth warming the cache for.
+    getInstanceConfigMock.mockReturnValue(configWithSurveys([]));
+    widget.prefetchSurveysScript("https://fake.app");
+    expect(appendChildSpy).not.toHaveBeenCalled();
+
+    // ...but the set can become non-empty later (identification, workspace-state refresh), and the
+    // skipped call must not have latched the guard.
+    getInstanceConfigMock.mockReturnValue(configWithSurveys([mockSurvey]));
     widget.prefetchSurveysScript("https://fake.app");
 
     expect(createElementSpy).toHaveBeenCalledWith("link");
@@ -824,7 +837,7 @@ describe("widget-file", () => {
     const linkEl = createElementSpy.mock.results[0].value as Record<string, string>;
     expect(linkEl.rel).toBe("prefetch");
     expect(linkEl.as).toBeUndefined();
-    expect(linkEl.href).toBe("https://fake.app/js/surveys.umd.cjs");
+    expect(linkEl.href).toBe("https://fake.app/js/surveys.umd.js");
 
     // Second call should be a no-op (deduplication)
     widget.prefetchSurveysScript("https://fake.app");

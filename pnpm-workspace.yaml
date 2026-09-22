@@ -433,3 +433,8 @@ patchedDependencies:
   # ENG-2559: a failed secondary-storage session read bypasses Better Auth's configured database
   # fallback. Remove this version-pinned patch once upstream handles Redis read failures here.
   "better-auth@1.7.0": patches/better-auth@1.7.0.patch
+  # zod 4.3.6: drops the `export * as locales` re-export from the classic, core and mini entries so the 1.2 MB of bundled locale error tables (46 languages) never reaches the client bundle — it sits in the shared zod chunk of the root-layout client entry, including the public survey route every respondent loads.
+  # Removing it from `v4/classic/external.js` alone changes nothing: that file also does `export * as core from "../core/index.js"`, and `v4/core/index.js` re-exports the same locales namespace, so both have to go — and `v4/mini/external.js` with them, or `zod/mini` would pull the tables straight back in.
+  # The direct `import en from "../locales/en.js"` that installs the default error map is left intact, and the `zod/locales` subpath export still resolves, so localized messages stay available to anyone who imports them explicitly.
+  # pnpm fails the install loudly on a hash mismatch, so the next zod bump means re-doing the patch, not force-applying this one.
+  "zod@4.3.6": patches/zod@4.3.6.patch

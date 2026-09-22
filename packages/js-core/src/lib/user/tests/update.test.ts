@@ -2,6 +2,7 @@ import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiClient } from "@/lib/common/api";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
+import { prefetchSurveysScript } from "@/lib/survey/widget";
 import {
   mockAppUrl,
   mockAttributes,
@@ -37,6 +38,10 @@ vi.mock("@/lib/common/api", () => ({
   ApiClient: vi.fn(function MockApiClient(this: { createOrUpdateUser: ReturnType<typeof vi.fn> }) {
     this.createOrUpdateUser = vi.fn();
   }),
+}));
+
+vi.mock("@/lib/survey/widget", () => ({
+  prefetchSurveysScript: vi.fn(),
 }));
 
 describe("sendUpdatesToBackend", () => {
@@ -169,6 +174,10 @@ describe("sendUpdates", () => {
     if (result.ok) {
       expect(result.data.hasWarnings).toBe(false);
     }
+
+    // Identification is one of the two points where an empty survey set can become non-empty, so the
+    // prefetch setup skipped has to be retried here.
+    expect(prefetchSurveysScript).toHaveBeenCalledWith(mockAppUrl);
   });
 
   test("handles backend errors", async () => {
@@ -193,6 +202,7 @@ describe("sendUpdates", () => {
     if (!result.ok) {
       expect(result.error.code).toBe("invalid_request");
     }
+    expect(prefetchSurveysScript).not.toHaveBeenCalled();
   });
 
   test("handles unexpected errors", async () => {

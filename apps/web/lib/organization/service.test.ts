@@ -18,6 +18,7 @@ import {
   deleteOrganization,
   getMonthlyOrganizationWorkflowRunCount,
   getOrganization,
+  getOrganizationByWorkspaceId,
   getOrganizationsByUserId,
   select as organizationSelect,
   subscribeOrganizationMembersToSurveyResponses,
@@ -29,6 +30,7 @@ vi.mock("@forma/database", () => ({
     $transaction: vi.fn(),
     organization: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -129,6 +131,61 @@ describe("Organization Service", () => {
       vi.mocked(prisma.organization.findUnique).mockRejectedValue(prismaError);
 
       await expect(getOrganization("org1")).rejects.toThrow(DatabaseError);
+    });
+  });
+
+  describe("getOrganizationByWorkspaceId", () => {
+    const workspaceId = "clzabc123def456ghi789jkl";
+
+    const mockOrganization = {
+      id: "org1",
+      name: "Test Org",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      billing: {
+        limits: {
+          workspaces: 3,
+          monthly: {
+            responses: 1500,
+          },
+        },
+        stripeCustomerId: null,
+        usageCycleAnchor: new Date(),
+      },
+      isAISmartToolsEnabled: false,
+      displayTimeZone: null,
+      whitelabel: false,
+    };
+
+    test("should select only the mapped organization columns and load no relations beyond billing", async () => {
+      vi.mocked(prisma.organization.findFirst).mockResolvedValue(mockOrganization);
+
+      const result = await getOrganizationByWorkspaceId(workspaceId);
+
+      expect(result).toEqual(mockOrganization);
+      expect(prisma.organization.findFirst).toHaveBeenCalledWith({
+        where: { workspaces: { some: { id: workspaceId } } },
+        select: organizationSelect,
+      });
+      // Guard against re-adding a relation the mapper drops: `memberships` cost one extra query plus a row per member on every call site.
+      const passedSelect = vi.mocked(prisma.organization.findFirst).mock.calls[0][0]?.select;
+      expect(passedSelect).not.toHaveProperty("memberships");
+    });
+
+    test("should return null when no organization matches the workspace", async () => {
+      vi.mocked(prisma.organization.findFirst).mockResolvedValue(null);
+
+      await expect(getOrganizationByWorkspaceId(workspaceId)).resolves.toBeNull();
+    });
+
+    test("should throw DatabaseError on prisma error", async () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError("Database error", {
+        code: "P2002",
+        clientVersion: "5.0.0",
+      });
+      vi.mocked(prisma.organization.findFirst).mockRejectedValue(prismaError);
+
+      await expect(getOrganizationByWorkspaceId(workspaceId)).rejects.toThrow(DatabaseError);
     });
   });
 

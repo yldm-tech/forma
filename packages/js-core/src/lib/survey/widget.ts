@@ -399,7 +399,7 @@ const loadFormaSurveysExternally = (): Promise<TFormaSurveys> => {
   surveysLoadPromise = new Promise<TFormaSurveys>((resolve, reject: (error: unknown) => void) => {
     const config = Config.getInstance();
     const script = document.createElement("script");
-    script.src = `${config.get().appUrl}/js/surveys.umd.cjs`;
+    script.src = `${config.get().appUrl}/js/surveys.umd.js`;
     script.async = true;
     script.onload = () => {
       waitForSurveysGlobal()
@@ -437,9 +437,20 @@ export const prefetchSurveysScript = (appUrl: string): void => {
   if (globalThis.window.formaSurveys) return;
   if (isPrefetched) return;
 
+  // Nothing can render here, so the megabyte the prefetch costs would buy nothing: link-survey-only
+  // workspaces, users matching no segment, and users who have already seen every `displayOnce` survey
+  // all sit in this case. `isPrefetched` deliberately stays false, because the set can become non-empty
+  // later — `sendUpdates` identifies the user, the workspace state refreshes on expiry — and both of
+  // those call back in here so the cache is still warm before any trigger fires.
+  const { filteredSurveys } = Config.getInstance().get();
+  const hasEligibleSurvey = Boolean(filteredSurveys) && filteredSurveys.length > 0;
+  if (!hasEligibleSurvey) return;
+
   isPrefetched = true;
   const link = document.createElement("link");
   link.rel = "prefetch";
-  link.href = `${appUrl}/js/surveys.umd.cjs`;
+  // `.umd.js`, not the `.umd.cjs` the same build also writes: `.cjs` is not on Cloudflare's
+  // cacheable-extension list, so only this name is served from the edge under `s-maxage`.
+  link.href = `${appUrl}/js/surveys.umd.js`;
   document.head.appendChild(link);
 };

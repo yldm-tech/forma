@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { createCacheKey } from "@forma/cache";
+import { cache } from "@/lib/cache";
 import { findMatchingLocale } from "@/lib/utils/locale";
 import { getTranslate } from "@/lingodotdev/server";
 import { verifyContactSurveyToken } from "@/modules/contacts/lib/contact-survey-link";
@@ -17,6 +19,9 @@ import {
 import type { TLinkSurveySearchParams } from "@/modules/survey/link/lib/types";
 import { getWorkspaceContextForLinkSurvey } from "@/modules/survey/link/lib/workspace";
 import { getWorkspaceById } from "@/modules/survey/link/lib/workspace";
+
+/** Welcome-card response counts are social proof, so a minute of staleness is acceptable. */
+const RESPONSE_COUNT_CACHE_TTL_MS = 60 * 1000;
 
 interface ContactSurveyPageProps {
   params: Promise<{
@@ -136,18 +141,26 @@ export const ContactSurveyPage = async (props: ContactSurveyPageProps) => {
     singleUseId = validatedSingleUseId;
   }
 
-  // Parallel fetch of environment context and locale
-  const [workspaceContext, locale, singleUseResponse] = await Promise.all([
+  // The count is only ever rendered by the welcome card, which is only mounted when the card itself
+  // is enabled - fetching it on showResponseCount alone pays for a number nothing displays.
+  const needsResponseCount = survey.welcomeCard.enabled && survey.welcomeCard.showResponseCount;
+
+  // Parallel fetch of environment context, locale and the conditional welcome-card response count
+  const [workspaceContext, locale, singleUseResponse, responseCount] = await Promise.all([
     getWorkspaceContextForLinkSurvey(survey.workspaceId),
     findMatchingLocale(),
     // Fetch existing response for this contact
     getExistingContactResponse(survey.id, contactId)(),
+    // Social proof on a welcome card: an O(rows) COUNT(*) per page view is not worth exactness, so
+    // it is served from Redis for up to a minute. Nothing that gates behaviour may read this key.
+    needsResponseCount
+      ? cache.withCache(
+          () => getResponseCountBySurveyId(surveyId),
+          createCacheKey.response.countBySurveyId(surveyId),
+          RESPONSE_COUNT_CACHE_TTL_MS
+        )
+      : Promise.resolve(undefined),
   ]);
-
-  // Fetch responseCount only if needed
-  const responseCount = survey.welcomeCard.showResponseCount
-    ? await getResponseCountBySurveyId(survey.id)
-    : undefined;
 
   return renderSurvey({
     survey,

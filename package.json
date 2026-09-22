@@ -51,7 +51,8 @@
     "api:v3:check": "node docs/api-v3-reference/scripts/bundle.mjs --check",
     "dev:setup": "bash scripts/setup-dev-env.sh",
     "tenant:check": "pnpm --filter @forma/database check:tenant-scoping",
-    "tests:run-check": "node scripts/check-tests-run.mjs"
+    "tests:run-check": "node scripts/check-tests-run.mjs",
+    "bundle:check": "node scripts/check-bundle-budget.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

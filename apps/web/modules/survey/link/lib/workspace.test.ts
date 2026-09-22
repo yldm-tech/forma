@@ -124,17 +124,6 @@ describe("getWorkspaceContextForLinkSurvey", () => {
       organizationId: "clh1a2b3c4d5e6f7g8h9k",
       organization: {
         id: "clh1a2b3c4d5e6f7g8h9k",
-        billing: {
-          stripeCustomerId: null,
-          limits: {
-            monthly: {
-              responses: 100,
-            },
-            workspaces: 3,
-          },
-          usageCycleAnchor: new Date("2026-01-01T00:00:00.000Z"),
-          stripe: null,
-        },
         whitelabel: null,
       },
     };
@@ -153,14 +142,6 @@ describe("getWorkspaceContextForLinkSurvey", () => {
         customHeadScripts: null,
       },
       organizationId: "clh1a2b3c4d5e6f7g8h9k",
-      organizationBilling: {
-        stripeCustomerId: null,
-        limits: {
-          monthly: { responses: 100 },
-          workspaces: 3,
-        },
-        usageCycleAnchor: new Date("2026-01-01T00:00:00.000Z"),
-      },
       organizationWhitelabel: null,
     });
 
@@ -177,14 +158,6 @@ describe("getWorkspaceContextForLinkSurvey", () => {
         organization: {
           select: {
             id: true,
-            billing: {
-              select: {
-                stripeCustomerId: true,
-                limits: true,
-                usageCycleAnchor: true,
-                stripe: true,
-              },
-            },
             whitelabel: true,
           },
         },
@@ -254,17 +227,6 @@ describe("getWorkspaceContextForLinkSurvey", () => {
       organizationId: "clh1a2b3c4d5e6f7g8h9u",
       organization: {
         id: "clh1a2b3c4d5e6f7g8h9u",
-        billing: {
-          stripeCustomerId: null,
-          limits: {
-            monthly: {
-              responses: 100,
-            },
-            workspaces: 3,
-          },
-          usageCycleAnchor: new Date("2026-01-01T00:00:00.000Z"),
-          stripe: null,
-        },
         whitelabel: null,
       },
     };
@@ -283,14 +245,6 @@ describe("getWorkspaceContextForLinkSurvey", () => {
         customHeadScripts: null,
       },
       organizationId: "clh1a2b3c4d5e6f7g8h9u",
-      organizationBilling: {
-        stripeCustomerId: null,
-        limits: {
-          monthly: { responses: 100 },
-          workspaces: 3,
-        },
-        usageCycleAnchor: new Date("2026-01-01T00:00:00.000Z"),
-      },
       organizationWhitelabel: null,
     });
   });

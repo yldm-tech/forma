@@ -127,7 +127,19 @@ jobs:
           # already runs tsc over the same sources on this PR. The in-build type pass is where the
           # build peaks, and it was getting the runner reclaimed right after "Compiled successfully".
           NEXT_SKIP_TYPE_CHECK: "1"
-        run: pnpm build --filter=@forma/web...
+        # `@forma/js-core` is not a dependency of `@forma/web`, so `@forma/web...` alone does not produce
+        # `forma.umd.cjs` and the bundle budget below would only ever see half of what a respondent
+        # downloads. It is one small Vite lib build with no workspace dependencies of its own, so turbo
+        # runs it alongside the app build rather than after it — no measurable wall clock.
+        run: pnpm build --filter=@forma/web... --filter=@forma/js-core
+        shell: bash
+
+      # The build artifacts are here and nowhere else in the PR gate, so this is where the two browser
+      # bundles get weighed. One gzip per file, no extra build: see scripts/check-bundle-budget.mjs for
+      # what is budgeted and how to re-baseline it.
+      - name: Check client bundle budgets
+        if: steps.harness.outputs.present == 'true'
+        run: pnpm bundle:check
         shell: bash
 
       # Keep the fixture offline during the build: a successful build still proves importing the

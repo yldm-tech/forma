@@ -18,6 +18,13 @@ interface NullableCacheBox<T> {
  * Core cache service providing basic Redis operations with JSON serialization
  */
 export class CacheService {
+  /**
+   * In-process computations currently running behind a cache miss, keyed by cache key.
+   * Concurrent misses on one key share a single execution instead of each issuing their own;
+   * entries live only for the duration of that execution.
+   */
+  private readonly inFlight = new Map<string, Promise<unknown>>();
+
   constructor(private readonly redis: RedisClient) {}
 
   /**
@@ -247,6 +254,7 @@ export class CacheService {
    *
    * Bare JSON null is treated as a miss; use withCacheNullable for intentional null values.
    * Never throws due to cache errors; function errors propagate without retry.
+   * Concurrent misses on one key share a single execution of fn within this process.
    *
    * @param fn - Function to execute (and optionally cache).
    * @param key - Cache key
@@ -267,15 +275,18 @@ export class CacheService {
       return cachedValue;
     }
 
-    const fresh = await fn();
-    await this.trySetCache(key, fresh, ttlMs);
-    return fresh;
+    return await this.singleFlight(`value:${key}`, async () => {
+      const fresh = await fn();
+      await this.trySetCache(key, fresh, ttlMs);
+      return fresh;
+    });
   }
 
   /**
    * Cache wrapper for functions whose result may legitimately be `null`.
    *
    * Stores results in a marked envelope so cached nulls are distinct from misses.
+   * Concurrent misses on one key share a single execution of fn within this process.
    *
    * @param fn - Function to execute (and optionally cache); may return null.
    * @param key - Cache key
@@ -303,14 +314,41 @@ export class CacheService {
       );
     }
 
-    const fresh = await fn();
-    // Guard against type-erased callers resolving undefined.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- types exclude undefined; this guards against type-erasure bugs
-    if (fresh !== undefined) {
-      const box: NullableCacheBox<T> = { [NULLABLE_BOX_MARKER]: true, value: fresh };
-      await this.trySetCache(key, box, ttlMs);
+    // Namespaced apart from withCache: the two store different shapes under the same key,
+    // so a caller of one must never be handed the other's in-flight promise.
+    return await this.singleFlight(`nullable:${key}`, async () => {
+      const fresh = await fn();
+      // Guard against type-erased callers resolving undefined.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- types exclude undefined; this guards against type-erasure bugs
+      if (fresh !== undefined) {
+        const box: NullableCacheBox<T> = { [NULLABLE_BOX_MARKER]: true, value: fresh };
+        await this.trySetCache(key, box, ttlMs);
+      }
+      return fresh;
+    });
+  }
+
+  /**
+   * Runs `compute` once per in-flight `flightKey`, handing every concurrent caller the same
+   * promise. This is in-process only — it deduplicates within one Node process and coordinates
+   * nothing across pods.
+   *
+   * The entry is dropped as soon as the promise settles, rejection included: memoising a
+   * rejection would replay one transient failure to every later caller until the map was cleared.
+   */
+  private singleFlight<T>(flightKey: string, compute: () => Promise<T>): Promise<T> {
+    const existing = this.inFlight.get(flightKey);
+    if (existing !== undefined) {
+      return existing as Promise<T>;
     }
-    return fresh;
+
+    const flight = compute().finally(() => {
+      if (this.inFlight.get(flightKey) === flight) {
+        this.inFlight.delete(flightKey);
+      }
+    });
+    this.inFlight.set(flightKey, flight);
+    return flight;
   }
 
   /** Returns false when callers should bypass cache and execute directly. */

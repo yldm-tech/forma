@@ -78,7 +78,7 @@ authzed_cli() {
     AUTHZED_SYSTEM_KEY=forma \
     AUTHZED_TOKEN="${token}" \
     DATABASE_URL=https://database.forma.local/forma \
-    ENCRYPTION_KEY=authzed-smoke-encryption-key \
+    ENCRYPTION_KEY=5305e0f83fe11b0ca4396c36dd1a7ad1ec6e14e8e0d0fda222b6cd0d55f53b8c \
     HUB_API_KEY=authzed-smoke-hub-key \
     HUB_API_URL=https://hub.forma.local \
     LOG_LEVEL=fatal \
