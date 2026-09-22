@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => ({
   getIsAISmartToolsEnabled: vi.fn(),
   loggerError: vi.fn(),
   wrapAiModelWithTracing: vi.fn(),
+  recordAIGenerationUsage: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -85,6 +86,18 @@ vi.mock("@/modules/license-check/lib/utils", () => ({
 vi.mock("@/lib/posthog/ai-tracing", () => ({
   wrapAiModelWithTracing: mocks.wrapAiModelWithTracing,
 }));
+
+vi.mock("./usage-metrics", () => ({
+  recordAIGenerationUsage: mocks.recordAIGenerationUsage,
+}));
+
+// The AI SDK reports usage on every result, and the service now reads it to record what the call
+// cost — so a stand-in result has to carry it or it is not the shape the service is handed.
+const USAGE = {
+  inputTokens: 1_200,
+  outputTokens: 800,
+  outputTokenDetails: { reasoningTokens: 300 },
+};
 
 describe("AI organization service", () => {
   beforeEach(() => {
@@ -142,7 +155,7 @@ describe("AI organization service", () => {
   });
 
   test("generates organization AI text with the configured package abstraction", async () => {
-    const generatedText = { text: "Translated text" };
+    const generatedText = { text: "Translated text", usage: USAGE };
     mocks.generateText.mockResolvedValueOnce(generatedText);
 
     const result = await generateOrganizationAIText({
@@ -165,7 +178,7 @@ describe("AI organization service", () => {
   });
 
   test("wraps the model with PostHog tracing when aiTracing is provided (text)", async () => {
-    mocks.generateText.mockResolvedValueOnce({ text: "Translated text" });
+    mocks.generateText.mockResolvedValueOnce({ text: "Translated text", usage: USAGE });
 
     await generateOrganizationAIText({
       organizationId: "org_1",
@@ -186,7 +199,7 @@ describe("AI organization service", () => {
   });
 
   test("generates organization AI objects with the configured package abstraction", async () => {
-    const generatedObject = { object: { name: "Generated survey" } };
+    const generatedObject = { object: { name: "Generated survey" }, usage: USAGE };
     const schema = { type: "object" };
     mocks.generateObject.mockResolvedValueOnce(generatedObject);
 
@@ -212,7 +225,7 @@ describe("AI organization service", () => {
   });
 
   test("wraps the model with PostHog tracing when aiTracing is provided (object)", async () => {
-    mocks.generateObject.mockResolvedValueOnce({ object: { name: "Generated survey" } });
+    mocks.generateObject.mockResolvedValueOnce({ object: { name: "Generated survey" }, usage: USAGE });
 
     await generateOrganizationAIObject({
       organizationId: "org_1",
@@ -414,7 +427,7 @@ describe("AI organization service", () => {
 
     test("routes a feature to its own model and keeps the provider credentials", async () => {
       envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
-      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
 
       await generateOrganizationAIObject(objectInput("ai_translation"));
 
@@ -429,7 +442,7 @@ describe("AI organization service", () => {
     });
 
     test("an unset override leaves the feature on AI_MODEL", async () => {
-      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
 
       await generateOrganizationAIObject(objectInput("ai_translation"));
 
@@ -438,7 +451,7 @@ describe("AI organization service", () => {
 
     test("one feature's override does not move another feature", async () => {
       envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
-      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
 
       await generateOrganizationAIObject(objectInput("ai_example_responses"));
 
@@ -448,7 +461,7 @@ describe("AI organization service", () => {
     test("a call that names no feature is unaffected", async () => {
       envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
       envValues.AI_MODEL_EXAMPLE_RESPONSES = "gemini-2.5-flash-lite";
-      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
 
       await generateOrganizationAIObject(objectInput());
 
@@ -457,7 +470,7 @@ describe("AI organization service", () => {
 
     test("the override is not passed to the model options", async () => {
       envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
-      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
 
       await generateOrganizationAIObject(objectInput("ai_translation"));
 
@@ -483,7 +496,7 @@ describe("AI organization service", () => {
 
     test("text generation routes the same way", async () => {
       envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
-      mocks.generateText.mockResolvedValueOnce({ text: "ok" });
+      mocks.generateText.mockResolvedValueOnce({ text: "ok", usage: USAGE });
 
       await generateOrganizationAIText({
         organizationId: "org_1",
@@ -492,6 +505,99 @@ describe("AI organization service", () => {
       });
 
       expect(environmentOf(mocks.generateText.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash-lite");
+    });
+  });
+
+  describe("token usage recording", () => {
+    const objectInput = (extra: Record<string, unknown> = {}) =>
+      ({
+        organizationId: "org_1",
+        schema: { type: "object" },
+        prompt: "Generate a survey",
+        ...extra,
+      }) as unknown as Parameters<typeof generateOrganizationAIObject>[0];
+
+    test("records what a completed object generation cost, under its tracing feature", async () => {
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
+
+      await generateOrganizationAIObject(
+        objectInput({ aiTracing: { distinctId: "user_1", feature: "ai_survey_generation" } })
+      );
+
+      expect(mocks.recordAIGenerationUsage).toHaveBeenCalledWith({
+        organizationId: "org_1",
+        feature: "ai_survey_generation",
+        model: "gemini-2.5-flash",
+        inputTokens: 1_200,
+        outputTokens: 800,
+        reasoningTokens: 300,
+      });
+    });
+
+    test("attributes the spend to the model the feature override actually ran on", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      mocks.generateText.mockResolvedValueOnce({ text: "ok", usage: USAGE });
+
+      await generateOrganizationAIText({
+        organizationId: "org_1",
+        feature: "ai_translation",
+        prompt: "Translate this survey",
+      });
+
+      expect(mocks.recordAIGenerationUsage).toHaveBeenCalledWith(
+        expect.objectContaining({ feature: "ai_translation", model: "gemini-2.5-flash-lite" })
+      );
+    });
+
+    test("an API-key caller carries no tracing context and is recorded as unknown", async () => {
+      mocks.generateObject.mockResolvedValueOnce({ object: {}, usage: USAGE });
+
+      await generateOrganizationAIObject(objectInput());
+
+      expect(mocks.recordAIGenerationUsage).toHaveBeenCalledWith(
+        expect.objectContaining({ feature: "unknown", model: "gemini-2.5-flash" })
+      );
+    });
+
+    test("a failed generation is not a cost record", async () => {
+      mocks.generateObject.mockRejectedValueOnce(new Error("provider boom"));
+
+      await expect(generateOrganizationAIObject(objectInput())).rejects.toThrow("provider boom");
+
+      expect(mocks.recordAIGenerationUsage).not.toHaveBeenCalled();
+    });
+
+    test("a stream records on completion, not when the generation is created", async () => {
+      mocks.streamObject.mockReturnValueOnce({
+        partialObjectStream: {},
+        completion: Promise.resolve({}),
+      });
+      const callerOnFinish = vi.fn();
+
+      await streamOrganizationAIObject({
+        organizationId: "org_1",
+        aiTracing: { distinctId: "user_1", feature: "ai_survey_generation" },
+        prompt: "Generate",
+        schema: { type: "object" },
+        onFinish: callerOnFinish,
+      } as unknown as Parameters<typeof streamOrganizationAIObject>[0]);
+
+      // Creating the stream costs nothing yet — the provider has not been reached.
+      expect(mocks.recordAIGenerationUsage).not.toHaveBeenCalled();
+
+      const event = { totalUsage: USAGE };
+      await mocks.streamObject.mock.calls[0][0].onFinish(event);
+
+      expect(mocks.recordAIGenerationUsage).toHaveBeenCalledWith({
+        organizationId: "org_1",
+        feature: "ai_survey_generation",
+        model: "gemini-2.5-flash",
+        inputTokens: 1_200,
+        outputTokens: 800,
+        reasoningTokens: 300,
+      });
+      // Composed over the caller's own hook, not substituted for it.
+      expect(callerOnFinish).toHaveBeenCalledWith(event);
     });
   });
 
