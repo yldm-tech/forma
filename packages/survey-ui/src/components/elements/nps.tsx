@@ -28,6 +28,11 @@ interface NPSProps {
   required?: boolean;
   /** Custom label for the required indicator */
   requiredLabel?: string;
+  /**
+   * Accessible name for a single scale option. The survey runtime supplies a translated one; the
+   * English default only covers consumers that render this component outside a survey.
+   */
+  optionLabel?: (value: number) => string;
   /** Error message to display */
   errorMessage?: string;
   /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'auto' (auto-detect from content) */
@@ -52,6 +57,7 @@ function NPS({
   colorCoding = false,
   required = false,
   requiredLabel,
+  optionLabel = (value) => `Rate ${String(value)} out of 10`,
   errorMessage,
   dir = "auto",
   disabled = false,
@@ -143,7 +149,7 @@ function NPS({
           }}
           disabled={disabled}
           className="sr-only"
-          aria-label={`Rate ${String(number)} out of 10`}
+          aria-label={optionLabel(number)}
           {...getRadioProps(String(number))}
         />
         <span className="text-sm">{number}</span>

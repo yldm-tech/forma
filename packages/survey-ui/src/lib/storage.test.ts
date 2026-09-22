@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { getImageAltFromUrl, getOriginalFileNameFromUrl } from "./storage";
+import { getImageAltFromUrl, getOriginalFileNameFromUrl, resolveImageAltText } from "./storage";
 
 describe("getImageAltFromUrl", () => {
   test("decodes URL-encoded file names and strips the extension", () => {
@@ -136,5 +136,28 @@ describe("getOriginalFileNameFromUrl", () => {
       const url = "https://example.com/files/document.pdf?version=2#page10";
       expect(getOriginalFileNameFromUrl(url)).toBe("document.pdf");
     });
+  });
+});
+
+describe("resolveImageAltText", () => {
+  test("returns an explicitly supplied alt unchanged", () => {
+    expect(resolveImageAltText("Company Logo", "https://example.com/storage/whatever.png")).toBe(
+      "Company Logo"
+    );
+  });
+
+  test("honours an explicit empty alt rather than deriving one", () => {
+    expect(resolveImageAltText("", "https://example.com/storage/Team%20Photo.png")).toBe("");
+  });
+
+  test("derives the alt from the stored file name when none was supplied", () => {
+    expect(resolveImageAltText(undefined, "https://example.com/storage/Team%20Photo--fid--abc.png")).toBe(
+      "Team Photo"
+    );
+  });
+
+  test("falls back to decorative rather than to a placeholder word", () => {
+    expect(resolveImageAltText(undefined, "https://example.com/files/path/")).toBe("");
+    expect(resolveImageAltText(undefined, undefined)).toBe("");
   });
 });

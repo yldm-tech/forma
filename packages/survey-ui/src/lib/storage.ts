@@ -36,14 +36,26 @@ export const getOriginalFileNameFromUrl = (fileURL: string): string => {
     const fileId = fileNameFromURL?.split("--fid--")[1] ?? "";
 
     if (!fileId) {
-      const fileName = originalFileName ? decodeURIComponent(originalFileName || "") : "";
-      return fileName;
+      return originalFileName ? decodeURIComponent(originalFileName) : "";
     }
 
-    const fileName = originalFileName ? decodeURIComponent(`${originalFileName}.${fileExt}` || "") : "";
-    return fileName;
+    return originalFileName ? decodeURIComponent(`${originalFileName}.${fileExt}`) : "";
   } catch (error) {
-    console.error(`Error parsing file URL: ${error}`);
+    console.error(`Error parsing file URL: ${String(error)}`);
     return "";
   }
+};
+
+/**
+ * What an image's `alt` should be, given the alt the caller supplied and the image's own URL.
+ *
+ * An undescribed image must be exposed as decorative (`alt=""`), never as a placeholder word: a
+ * screen reader skips `alt=""` but reads `alt="Image"` aloud for every image in the survey, which is
+ * strictly worse than silence because the headline beside it already carries the meaning. The stored
+ * file name is used in between — it is authored content often enough to beat nothing — and an author
+ * who supplies an explicit alt (including an explicit empty one) always wins.
+ */
+export const resolveImageAltText = (altText: string | undefined, imgUrl: string | undefined): string => {
+  if (altText !== undefined) return altText;
+  return getImageAltFromUrl(imgUrl ?? "");
 };

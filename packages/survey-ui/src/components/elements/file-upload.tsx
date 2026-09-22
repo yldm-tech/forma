@@ -57,6 +57,11 @@ interface FileUploadProps {
   placeholderText?: string;
   /** Text to display while uploading */
   uploadingText?: string;
+  /**
+   * Accessible name for an uploaded file's delete button. The survey runtime supplies a translated
+   * one; the English default only covers consumers that render this component outside a survey.
+   */
+  deleteFileLabel?: (fileName: string) => string;
 }
 
 interface UploadedFileItemProps {
@@ -64,6 +69,7 @@ interface UploadedFileItemProps {
   index: number;
   disabled: boolean;
   onDelete: (index: number, e: React.MouseEvent) => void;
+  deleteFileLabel: (fileName: string) => string;
 }
 
 function UploadedFileItem({
@@ -71,6 +77,7 @@ function UploadedFileItem({
   index,
   disabled,
   onDelete,
+  deleteFileLabel,
 }: Readonly<UploadedFileItemProps>): React.JSX.Element {
   return (
     <div
@@ -89,7 +96,7 @@ function UploadedFileItem({
             "bg-background hover:bg-accent",
             disabled && "cursor-not-allowed opacity-50"
           )}
-          aria-label={`Delete ${file.name}`}>
+          aria-label={deleteFileLabel(file.name)}>
           <X className="text-foreground h-5" />
         </button>
       </div>
@@ -109,12 +116,14 @@ interface UploadedFilesListProps {
   files: UploadedFile[];
   disabled: boolean;
   onDelete: (index: number, e: React.MouseEvent) => void;
+  deleteFileLabel: (fileName: string) => string;
 }
 
 function UploadedFilesList({
   files,
   disabled,
   onDelete,
+  deleteFileLabel,
 }: Readonly<UploadedFilesListProps>): React.JSX.Element | null {
   if (files.length === 0) {
     return null;
@@ -129,6 +138,7 @@ function UploadedFilesList({
           index={index}
           disabled={disabled}
           onDelete={onDelete}
+          deleteFileLabel={deleteFileLabel}
         />
       ))}
     </div>
@@ -236,6 +246,7 @@ function FileUpload({
   imageAltText,
   placeholderText = "Click or drag to upload files",
   uploadingText = "Uploading...",
+  deleteFileLabel = (fileName) => `Delete ${fileName}`,
 }: Readonly<FileUploadProps>): React.JSX.Element {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const errorAria = getElementErrorAria(inputId, errorMessage);
@@ -305,7 +316,12 @@ function FileUpload({
             errorMessage ? "border-destructive" : "border-input-border",
             disabled && "cursor-not-allowed opacity-50"
           )}>
-          <UploadedFilesList files={uploadedFiles} disabled={disabled} onDelete={handleDeleteFile} />
+          <UploadedFilesList
+            files={uploadedFiles}
+            disabled={disabled}
+            onDelete={handleDeleteFile}
+            deleteFileLabel={deleteFileLabel}
+          />
 
           <div className="w-full">
             {isUploading ? (
