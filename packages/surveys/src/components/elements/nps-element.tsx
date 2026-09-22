@@ -64,6 +64,7 @@ export function NPSElement({
         colorCoding={element.isColorCodingEnabled}
         required={isRequired}
         requiredLabel={t("common.required")}
+        optionLabel={(number) => t("common.rate_x_out_of_y", { number, total: 10 })}
         errorMessage={errorMessage}
         dir={dir}
         imageUrl={element.imageUrl}

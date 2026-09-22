@@ -1,0 +1,84 @@
+name: Warm Turbo Cache
+
+# Produces the one thing every PR job is missing: a populated `.turbo/cache` they can restore from.
+#
+# Nothing in this repository has ever persisted a Turbo cache, and no workflow ran on push to main, so
+# every PR job rebuilt the same eleven workspace packages from scratch — lint, unit tests, typecheck,
+# integration tests and the v3 contract tests each pay for it separately. Actions caches are readable by
+# any run whose branch descends from the branch that wrote them, so a save on main is readable from every
+# PR branch; that is the producer this job supplies.
+#
+# Two earlier caching experiments in this repository were measured and rejected, and this is deliberately
+# neither of them. docker-build-validation.yml tried a BuildKit layer cache (`type=gha`): exporting it cost
+# 222-407s per run against 12s of restorable work, because `COPY . .` sits ahead of `pnpm install` in the
+# Dockerfile. e2e.yml tried Next's `.next/cache`: the warm build (4m17s) was no faster than cold (3m46s),
+# and its note says outright that "a real reduction needs a Turbo cache backend, not local actions/cache".
+# Neither touched `.turbo/cache`, and both notes name the absent main-branch producer as the reason to
+# revisit. The ratio is what makes this one different: tens of MB restored in seconds against ~52s of
+# serial package-build work per consuming job.
+#
+# DATABASE_URL is deliberately absent from this job's environment. `@forma/database#build` and
+# `#generate` declare it in `env` (turbo.json), so it is hashed — a producer that sets it writes cache
+# entries under a key no consumer can ever match. The consumers run it unset; so does this.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warm-turbo-cache
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    name: Build and save the Turbo cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js (version from .nvmrc)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --config.platform=linux --config.architecture=x64
+
+      # apps/web's typegen and @forma/database's build read variables from the root .env, exactly as the
+      # consuming jobs do.
+      - name: Create .env
+        run: pnpm dev:setup
+
+      # `^...` is dependencies only — the workspace packages every consuming job builds before it can run.
+      # The Next.js app itself is excluded on purpose: its build misses on any PR that touches apps/web,
+      # which is most of them, so caching it would spend most of the cache budget to be replayed rarely.
+      # This is the same filter .github/workflows/integration-tests.yml builds with.
+      - name: Build workspace packages
+        run: pnpm build --filter=@forma/web^...
+
+      # Deliberately no `restore` before this save. Restoring here and saving the result would chain
+      # entries through `restore-keys` on every main push, and the cache would grow without bound against
+      # a 10GB repository quota shared with the pnpm store that setup-node depends on. A cold build each
+      # time keeps the saved entry exactly as large as the packages it holds.
+      - name: Save the Turbo cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-${{ github.sha }}

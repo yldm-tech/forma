@@ -1,10 +1,12 @@
 "use client";
 
-import { InboxIcon } from "lucide-react";
+import { EyeIcon, InboxIcon, SkipForwardIcon } from "lucide-react";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey, TSurveyElementSummary } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
+import { useElementImpressions } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/element-impressions-context";
+import { getElementDenominator } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/lib/element-denominator";
 import { recallToHeadline } from "@/lib/utils/recall";
 import { formatTextWithSlashes } from "@/modules/survey/editor/lib/utils";
 import { getElementTypes } from "@/modules/survey/lib/elements";
@@ -25,6 +27,12 @@ export const ElementSummaryHeader = ({
 }: HeadProps) => {
   const { t } = useTranslation();
   const elementType = getElementTypes(t).find((type) => type.id === elementSummary.element.type);
+  // The CTA card renders its own impressions/clicks/skips row and passes `showResponses={false}`, so
+  // keying the denominator off that flag keeps it from being stated twice on the one card that had it.
+  const impressionCount = useElementImpressions(elementSummary.element.id);
+  const denominator = showResponses
+    ? getElementDenominator(impressionCount, elementSummary.responseCount)
+    : null;
 
   return (
     <div className="space-y-2 px-4 pt-6 pb-5 md:px-6">
@@ -49,6 +57,18 @@ export const ElementSummaryHeader = ({
           <div className="flex items-center rounded-lg bg-slate-100 p-2">
             <InboxIcon className="mr-2 size-4" />
             {t("common.count_responses", { count: elementSummary.responseCount })}
+          </div>
+        )}
+        {denominator && (
+          <div className="flex items-center rounded-lg bg-slate-100 p-2">
+            <EyeIcon className="mr-2 size-4" />
+            {`${denominator.impressionCount} ${t("common.impressions")}`}
+          </div>
+        )}
+        {denominator && denominator.skipCount > 0 && (
+          <div className="flex items-center rounded-lg bg-slate-100 p-2">
+            <SkipForwardIcon className="mr-2 size-4" />
+            {`${denominator.skipCount} ${t("common.skips")} (${denominator.skipPercentage}%)`}
           </div>
         )}
         {additionalInfo}

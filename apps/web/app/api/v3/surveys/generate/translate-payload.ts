@@ -48,6 +48,16 @@ const collectTranslatableFields = (
   }
 };
 
+/**
+ * Where a translation run has got to. `index` is 1-based, so it reads as "index of total" wherever a
+ * caller puts it in front of a user.
+ */
+export interface TV3TranslationProgress {
+  languageCode: string;
+  index: number;
+  total: number;
+}
+
 export const translateV3SurveyPayloadLanguages = async ({
   payload,
   sourceLanguage,
@@ -55,6 +65,7 @@ export const translateV3SurveyPayloadLanguages = async ({
   organizationId,
   workspaceId,
   userId,
+  onLanguageStart,
 }: {
   payload: TV3CreateSurveyBody;
   sourceLanguage: string;
@@ -63,6 +74,13 @@ export const translateV3SurveyPayloadLanguages = async ({
   workspaceId: string;
   // Attribution only. An API-key caller has no user, so the translation runs untraced.
   userId?: string | null;
+  /**
+   * Called before each language's model call. This phase runs after the last generated token and
+   * takes tens of seconds per language, so a streaming caller has nothing to send in the meantime —
+   * and a body that goes quiet for minutes is indistinguishable from a dead socket to any proxy with
+   * an idle read timeout.
+   */
+  onLanguageStart?: (progress: TV3TranslationProgress) => void;
 }): Promise<TV3CreateSurveyBody> => {
   const wanted = targetLanguages.filter((code) => code.toLowerCase() !== sourceLanguage.toLowerCase());
   if (wanted.length === 0) return payload;
@@ -83,9 +101,11 @@ export const translateV3SurveyPayloadLanguages = async ({
   // Sequential rather than parallel: each language is a separate model call against the same
   // organization's quota, and a burst of them is what trips the provider's rate limit.
   const added: string[] = [];
-  for (const targetLanguage of wanted) {
+  for (const [position, targetLanguage] of wanted.entries()) {
+    onLanguageStart?.({ languageCode: targetLanguage, index: position + 1, total: wanted.length });
+
     try {
-      const translations = await translateFields({
+      const { translations, failedPaths } = await translateFields({
         organizationId,
         workspaceId,
         userId,
@@ -93,6 +113,17 @@ export const translateV3SurveyPayloadLanguages = async ({
         sourceLanguage,
         targetLanguage,
       });
+
+      // A partial result cannot be attached here even though it is worth keeping elsewhere:
+      // `prepareV3SurveyCreateInput` rejects a payload whose translatable fields are missing a
+      // configured language, so a language with a gap in it has to be dropped like a failed one.
+      if (failedPaths.length > 0) {
+        logger.error(
+          { targetLanguage, sourceLanguage, workspaceId, failedCount: failedPaths.length },
+          "Dropped a generated survey language that was only partially translated"
+        );
+        continue;
+      }
 
       for (const [path, value] of fieldsByPath) {
         const text = translations[path];

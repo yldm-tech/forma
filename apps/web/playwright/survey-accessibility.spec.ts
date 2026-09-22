@@ -5,13 +5,21 @@ import { test } from "./lib/fixtures";
 import {
   A11Y_ANSWERED_STATES_SURVEY_NAME,
   A11Y_SURVEY_NAME,
+  ADDRESS_HEADLINE,
   CAL_EMBED_ORIGIN,
   CAL_HEADLINE,
+  CONSENT_CHECKBOX_LABEL,
+  CONSENT_HEADLINE,
+  CONTACT_INFO_HEADLINE,
   CTA_EXTERNAL_BUTTON_LABEL,
   CTA_EXTERNAL_HEADLINE,
   DATE_HEADLINE,
+  DROPDOWN_CHOICE_LABELS,
+  DROPDOWN_HEADLINE,
+  DROPDOWN_SELECTED_CHOICE_LABEL,
   ENDING_CARD_HEADLINE,
   FILE_UPLOAD_HEADLINE,
+  NPS_HEADLINE,
   OPEN_TEXT_HEADLINE,
   SINGLE_SELECT_HEADLINE,
   type SeededAccessibilitySurveys,
@@ -31,8 +39,11 @@ import { mockStorageUploads } from "./utils/helper";
  *
  * A tenth variant scans the second, "answered states" fixture (ENG-1298): the cards
  * whose DOM only exists after an interaction, which the walker — which scans each card
- * once, before answering it — structurally cannot reach, plus the Cal.com scheduler
- * wrapper, which cannot live in the kitchen sink at all.
+ * once, before answering it — structurally cannot reach, plus the element types no
+ * fixture rendered at all: the Cal.com scheduler wrapper (which cannot go in the kitchen
+ * sink, as it would pull a live third-party iframe into every walk), and consent, NPS,
+ * address, contact info and the dropdown display branch of the single select (which
+ * could, but the kitchen-sink walk is paid nine times over and this one is paid once).
  *
  * Tagged @slow — it provisions surveys and walks them across many variants. It runs
  * in the standard `pnpm test:e2e` job (testMatch **\/*.spec.ts); the tag is metadata
@@ -651,13 +662,20 @@ test.describe("Survey accessibility (axe-core) @slow", () => {
    * Every state is asserted BEFORE it is scanned, so a click that silently did nothing fails
    * here instead of being reported as clean — the same rule the walker's stall detection applies.
    *
+   * The cards after the scheduler cover the other half of the gap: the element types no fixture
+   * in this suite rendered, so axe had never graded them in any variant — consent, NPS, address,
+   * contact info, and the dropdown display branch an author reaches by flipping the editor's
+   * display-type switch. They ride this walk rather than the kitchen sink because that one is
+   * paid nine times over. `csat` and `ces` stay uncovered on purpose: both map to the same
+   * `RatingElement` the kitchen sink already scans (see `buildAnsweredStatesQuestions`).
+   *
    * One test, desktop only. These are card-local DOM states, so a second viewport, theme or
    * direction would re-scan the same nodes for the price of another full walk.
    */
-  test("answered states: selected date, external CTA, uploaded file and scheduler wrapper have no WCAG AA violations", async ({
-    page,
-  }) => {
-    test.setTimeout(180_000);
+  test("answered states and never-scanned element types have no WCAG AA violations", async ({ page }) => {
+    // Ten cards, each with its own axe pass, on one walk. The budget is per card, not per suite:
+    // raise it with the fixture rather than dropping cards to fit.
+    test.setTimeout(300_000);
     await blockCalEmbedRequests(page);
 
     const variant = "answered-states";
@@ -751,6 +769,142 @@ test.describe("Survey accessibility (axe-core) @slow", () => {
       ).toHaveCount(0);
       await waitForCardSettled(page, cardId);
       await scan(page, variant, "cal-scheduler-wrapper", violations);
+    });
+
+    await test.step("consent checkbox", async () => {
+      cardId = await advanceToNextCard(page, cardId);
+      const card = page.locator(`[id="${cardId}"]`);
+      await expect(
+        card.getByRole("heading", { level: 2, name: CONSENT_HEADLINE }),
+        "the scheduler card should advance to the consent card"
+      ).toBeVisible({ timeout: CARD_TIMEOUT });
+
+      // Consent is the only element that exposes a Radix button as role="checkbox" rather than a
+      // native input, so neither the kitchen-sink walk nor anything else ever scanned this shape.
+      const consentBox = card.getByRole("checkbox");
+      await expect(consentBox, "the consent card should render exactly one checkbox").toHaveCount(1);
+      // `label` is the consent element's own field, distinct from `headline`; asserting it reached
+      // the DOM is what proves the transform passed it through, as CTA does for `ctaButtonLabel`.
+      await expect(
+        card.getByText(CONSENT_CHECKBOX_LABEL),
+        "the consent checkbox should carry its fixture label"
+      ).toBeVisible({ timeout: ACTION_TIMEOUT });
+      await waitForCardSettled(page, cardId);
+      await scan(page, variant, "consent-checkbox", violations);
+
+      await answerCurrentCard(card);
+      // The card is required, so this is also what makes the next advance possible at all.
+      await expect(consentBox, "consent must be accepted before the walk can advance").toBeChecked();
+    });
+
+    await test.step("NPS scale", async () => {
+      cardId = await advanceToNextCard(page, cardId);
+      const card = page.locator(`[id="${cardId}"]`);
+      await expect(
+        card.getByRole("heading", { level: 2, name: NPS_HEADLINE }),
+        "the consent card should advance to the NPS card"
+      ).toBeVisible({ timeout: CARD_TIMEOUT });
+
+      // 0-10 inclusive, in one group named by the headline: eleven sr-only radios sharing a roving
+      // tabindex is the densest radio group in the runtime, and none of it had been scanned.
+      const npsGroup = card.getByRole("radiogroup", { name: NPS_HEADLINE });
+      await expect(npsGroup.getByRole("radio"), "an NPS scale runs 0-10").toHaveCount(11);
+      await waitForCardSettled(page, cardId);
+      await scan(page, variant, "nps-scale", violations);
+
+      await answerCurrentCard(card);
+      await expect(
+        npsGroup.getByRole("radio", { checked: true }),
+        "a score must be selected before the walk can advance past a required NPS card"
+      ).toHaveCount(1);
+    });
+
+    await test.step("open single-select dropdown", async () => {
+      cardId = await advanceToNextCard(page, cardId);
+      const card = page.locator(`[id="${cardId}"]`);
+      await expect(
+        card.getByRole("heading", { level: 2, name: DROPDOWN_HEADLINE }),
+        "the NPS card should advance to the dropdown single-select card"
+      ).toBeVisible({ timeout: CARD_TIMEOUT });
+
+      // Matched by data-slot rather than accessible name: the trigger is named by the headline AND
+      // its own visible value (aria-labelledby), so its name changes the moment a row is picked.
+      const trigger = card.locator('button[data-slot="dropdown-menu-trigger"]');
+      await expect(trigger, "the dropdown variant should render one menu trigger").toHaveCount(1);
+      await waitForCardSettled(page, cardId);
+      await scan(page, variant, "dropdown-closed", violations);
+
+      await trigger.click({ timeout: ACTION_TIMEOUT });
+
+      // The menu is portalled OUT of the card, so it is located on the page, not on the card. Both
+      // of these are asserted before scanning: an open menu that rendered no rows would let a scan
+      // of the trigger alone pass as coverage of the dropdown.
+      const menu = page.getByRole("menu");
+      await expect(menu, "the dropdown menu should open").toBeVisible({ timeout: ACTION_TIMEOUT });
+      await expect(
+        menu.getByRole("menuitemradio"),
+        "every choice should render as a menuitemradio row"
+      ).toHaveCount(DROPDOWN_CHOICE_LABELS.length);
+      await expect(
+        menu.getByRole("search"),
+        "more choices than SEARCH_THRESHOLD should also render the in-menu search box"
+      ).toHaveCount(1);
+
+      // Radix fades and zooms the menu in; scanning mid-animation gives axe blended colours, the
+      // same reason every card scan waits for its own fade to settle.
+      await waitForLocatorSettled(menu);
+      await scan(page, variant, "dropdown-open", violations);
+
+      // Selecting closes the menu, and the value is committed on close (useDropdownCommitState), so
+      // the trigger's own label is the proof that the selection landed.
+      await menu.getByRole("menuitemradio", { name: DROPDOWN_SELECTED_CHOICE_LABEL }).click({
+        timeout: ACTION_TIMEOUT,
+      });
+      await expect(menu, "picking a row should close the menu").toHaveCount(0);
+      await expect(
+        trigger,
+        "the closed trigger should show the selected choice, proving the pick was committed"
+      ).toContainText(DROPDOWN_SELECTED_CHOICE_LABEL);
+    });
+
+    await test.step("address form fields", async () => {
+      cardId = await advanceToNextCard(page, cardId);
+      const card = page.locator(`[id="${cardId}"]`);
+      await expect(
+        card.getByRole("heading", { level: 2, name: ADDRESS_HEADLINE }),
+        "the dropdown card should advance to the address card"
+      ).toBeVisible({ timeout: CARD_TIMEOUT });
+
+      // Four of the six configured fields are `show: true`. Asserting the count keeps the scan
+      // honest about what it graded: a card that silently rendered all six would be a different,
+      // uniform form from the mixed required/optional one this fixture describes.
+      await expect(
+        card.getByRole("textbox"),
+        "only the address fields configured with show: true should render"
+      ).toHaveCount(4);
+      await waitForCardSettled(page, cardId);
+      await scan(page, variant, "address-fields", violations);
+
+      await answerCurrentCard(card);
+    });
+
+    await test.step("contact info form fields", async () => {
+      cardId = await advanceToNextCard(page, cardId);
+      const card = page.locator(`[id="${cardId}"]`);
+      await expect(
+        card.getByRole("heading", { level: 2, name: CONTACT_INFO_HEADLINE }),
+        "the address card should advance to the contact info card"
+      ).toBeVisible({ timeout: CARD_TIMEOUT });
+
+      // First name, last name and email; phone and company are `show: false`.
+      await expect(
+        card.getByRole("textbox"),
+        "only the contact fields configured with show: true should render"
+      ).toHaveCount(3);
+      await waitForCardSettled(page, cardId);
+      await scan(page, variant, "contact-info-fields", violations);
+
+      await answerCurrentCard(card);
     });
 
     await test.step("reaches the ending card", async () => {

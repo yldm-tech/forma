@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 import { ElementError, getElementErrorAria } from "@/components/general/element-error";
 import { ElementHeader } from "@/components/general/element-header";
+import { reorderRankedIds } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,6 +19,17 @@ export interface RankingOption {
   id: string;
   /** Display label for the option */
   label: string;
+}
+
+/** A single ranking change, handed to `onAnnounce` so the host can phrase it in the survey's language. */
+export interface RankingChange {
+  type: "add" | "remove" | "move";
+  /** Display label of the option that changed. */
+  label: string;
+  /** 1-based rank the option now holds, or 0 once it is no longer ranked. */
+  position: number;
+  /** How many options are ranked after the change. */
+  total: number;
 }
 
 interface RankingProps {
@@ -39,6 +51,22 @@ interface RankingProps {
   required?: boolean;
   /** Custom label for the required indicator */
   requiredLabel?: string;
+  /**
+   * Accessible names for the item and reorder controls. The survey runtime supplies translated ones;
+   * the English defaults only cover consumers that render this component outside a survey.
+   */
+  addLabel?: (label: string) => string;
+  removeLabel?: (label: string) => string;
+  moveUpLabel?: (label: string) => string;
+  moveDownLabel?: (label: string) => string;
+  /** Accessible name of the ranking group, rendered as a visually hidden <legend>. */
+  legendLabel?: string;
+  /**
+   * Called after every add, remove or reorder. A reorder is otherwise conveyed only by the rank
+   * number painted in a <span>, so without this a screen-reader user gets no confirmation that a
+   * keypress did anything. The host phrases and announces it — survey-ui holds no live region.
+   */
+  onAnnounce?: (change: RankingChange) => void;
   /** Error message to display */
   errorMessage?: string;
   /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'auto' (auto-detect from content) */
@@ -58,6 +86,11 @@ interface RankingItemProps {
   onMove: (itemId: string, direction: "up" | "down") => void;
   disabled: boolean;
   dir?: TextDirection;
+  addLabel: (label: string) => string;
+  removeLabel: (label: string) => string;
+  moveUpLabel: (label: string) => string;
+  moveDownLabel: (label: string) => string;
+  registerButton: (itemId: string, part: "item" | "up" | "down", el: HTMLButtonElement | null) => void;
 }
 
 function RankingItem({
@@ -67,6 +100,11 @@ function RankingItem({
   onMove,
   disabled,
   dir,
+  addLabel,
+  removeLabel,
+  moveUpLabel,
+  moveDownLabel,
+  registerButton,
 }: Readonly<RankingItemProps>): React.ReactNode {
   const isRanked = rankedIds.includes(item.id);
   const rankIndex = rankedIds.indexOf(item.id);
@@ -89,6 +127,9 @@ function RankingItem({
       )}>
       <button
         type="button"
+        ref={(el) => {
+          registerButton(item.id, "item", el);
+        }}
         onClick={() => {
           onItemClick(item);
         }}
@@ -101,7 +142,7 @@ function RankingItem({
           }
         }}
         className="group flex h-full grow items-center gap-4 text-start focus:outline-none"
-        aria-label={isRanked ? `Remove ${item.label} from ranking` : `Add ${item.label} to ranking`}>
+        aria-label={isRanked ? removeLabel(item.label) : addLabel(item.label)}>
         <span
           className={cn(
             "border-brand flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
@@ -121,25 +162,31 @@ function RankingItem({
         <div className={cn("border-option-border -mx-3 flex h-full grow-0 flex-col")} dir={dir}>
           <button
             type="button"
+            ref={(el) => {
+              registerButton(item.id, "up", el);
+            }}
             tabIndex={isFirst ? -1 : 0}
             onClick={(e) => {
               e.preventDefault();
               onMove(item.id, "up");
             }}
             disabled={isFirst || disabled}
-            aria-label={`Move ${item.label} up`}
+            aria-label={moveUpLabel(item.label)}
             className={cn("flex flex-1 items-center justify-center px-2 transition-colors")}>
             <ChevronUp className="h-5 w-5" />
           </button>
           <button
             type="button"
+            ref={(el) => {
+              registerButton(item.id, "down", el);
+            }}
             tabIndex={isLast ? -1 : 0}
             onClick={(e) => {
               e.preventDefault();
               onMove(item.id, "down");
             }}
             disabled={isLast || disabled}
-            aria-label={`Move ${item.label} down`}
+            aria-label={moveDownLabel(item.label)}
             className={cn(
               "border-option-border flex flex-1 items-center justify-center border-t px-2 transition-colors"
             )}>
@@ -161,6 +208,12 @@ function Ranking({
   onChange,
   required = false,
   requiredLabel,
+  addLabel = (label) => `Add ${label} to ranking`,
+  removeLabel = (label) => `Remove ${label} from ranking`,
+  moveUpLabel = (label) => `Move ${label} up`,
+  moveDownLabel = (label) => `Move ${label} down`,
+  legendLabel = "Ranking options",
+  onAnnounce,
   errorMessage,
   dir = "auto",
   disabled = false,
@@ -183,6 +236,39 @@ function Ranking({
     return options.filter((opt) => !rankedIds.includes(opt.id));
   }, [options, rankedIds]);
 
+  // Every button the list renders, so the one that was pressed can be refocused after the reorder.
+  // React keeps the <li> alive across a move, but the pressed button is disabled the moment the item
+  // reaches an end of the list, and a disabled control loses focus to <body> — after which the
+  // respondent has to Tab back through the whole card to press it again.
+  const buttonRefs = React.useRef(new Map<string, HTMLButtonElement>());
+  const pendingFocusRef = React.useRef<{ itemId: string; part: "item" | "up" | "down" } | null>(null);
+
+  const registerButton = React.useCallback(
+    (itemId: string, part: "item" | "up" | "down", el: HTMLButtonElement | null): void => {
+      const key = `${itemId}:${part}`;
+      if (el) buttonRefs.current.set(key, el);
+      else buttonRefs.current.delete(key);
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    const pending = pendingFocusRef.current;
+    if (!pending) return;
+    pendingFocusRef.current = null;
+
+    const requested = buttonRefs.current.get(`${pending.itemId}:${pending.part}`);
+    // At the ends of the list the requested button is disabled, so focus lands on the item's own
+    // button instead of nowhere. It stays inside the item either way.
+    const target =
+      requested && !requested.disabled ? requested : buttonRefs.current.get(`${pending.itemId}:item`);
+    target?.focus();
+  }, [rankedIds]);
+
+  const announce = (type: RankingChange["type"], label: string, position: number, total: number): void => {
+    onAnnounce?.({ type, label, position, total });
+  };
+
   // Handle item click (add to ranking or remove from ranking)
   const handleItemClick = (item: RankingOption): void => {
     if (disabled) return;
@@ -190,22 +276,28 @@ function Ranking({
     const isAlreadyRanked = rankedIds.includes(item.id);
     const newRankedIds = isAlreadyRanked ? rankedIds.filter((id) => id !== item.id) : [...rankedIds, item.id];
 
+    pendingFocusRef.current = { itemId: item.id, part: "item" };
     onChange(newRankedIds);
+    announce(
+      isAlreadyRanked ? "remove" : "add",
+      item.label,
+      isAlreadyRanked ? 0 : newRankedIds.length,
+      newRankedIds.length
+    );
   };
 
   // Handle move up/down
   const handleMove = (itemId: string, direction: "up" | "down"): void => {
     if (disabled) return;
 
-    const index = rankedIds.indexOf(itemId);
-    if (index === -1) return;
+    const result = reorderRankedIds(rankedIds, itemId, direction);
+    if (!result.changed) return;
 
-    const newRankedIds = [...rankedIds];
-    const [movedItem] = newRankedIds.splice(index, 1);
-    const newIndex = direction === "up" ? Math.max(0, index - 1) : Math.min(newRankedIds.length, index + 1);
-    newRankedIds.splice(newIndex, 0, movedItem);
+    pendingFocusRef.current = { itemId, part: direction };
+    onChange(result.rankedIds);
 
-    onChange(newRankedIds);
+    const movedLabel = options.find((opt) => opt.id === itemId)?.label ?? "";
+    announce("move", movedLabel, result.index + 1, result.rankedIds.length);
   };
 
   // Combine sorted and unsorted items for display
@@ -241,7 +333,7 @@ function Ranking({
           dir={dir}
           aria-invalid={errorAria.ariaInvalid}
           aria-describedby={errorAria.ariaDescribedBy}>
-          <legend className="sr-only">Ranking options</legend>
+          <legend className="sr-only">{legendLabel}</legend>
           {/* Semantic ordered list so screen readers announce rank position and count;
               role="list" is kept explicitly because list-style removal (Tailwind preflight)
               makes Safari/VoiceOver drop implicit list semantics. */}
@@ -256,6 +348,11 @@ function Ranking({
                 onMove={handleMove}
                 disabled={disabled}
                 dir={dir}
+                addLabel={addLabel}
+                removeLabel={removeLabel}
+                moveUpLabel={moveUpLabel}
+                moveDownLabel={moveDownLabel}
+                registerButton={registerButton}
               />
             ))}
           </ol>

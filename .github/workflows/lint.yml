@@ -159,5 +159,12 @@ jobs:
           SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/forma_migration_shadow?schema=public
         run: pnpm --filter @forma/database check:migration-drift
 
+      # Sits beside `pnpm lint` rather than inside it: the root package.json `lint` script is where the
+      # other four repo-level gates live (`catalog:check`, `tests:run-check`, `api:v3:lint`,
+      # `tenant:check`) and where this one belongs, so that a developer sees the failure before pushing.
+      # Moving it there is a one-line change to that script; until then this is the enforcement.
+      - name: Check /api/v3 route and OpenAPI parity
+        run: node scripts/check-v3-route-parity.mjs
+
       - name: Lint
         run: pnpm lint

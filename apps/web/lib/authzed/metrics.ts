@@ -125,6 +125,45 @@ const reconciliationRepairTotal = meter.createCounter("forma_authzed_reconciliat
   description: "Attributable relationship repair results from scheduled reconciliation",
 });
 
+/**
+ * Wall-clock cost of one pass of the scheduled reconciliation, by pass and outcome.
+ *
+ * The job is the largest recurring unit of work the web process runs — a full-graph sweep, in-process,
+ * on whatever channel deadline the process happens to hold — and until this instrument existed it
+ * reported only what it found, never what it cost. That left an open question the tree answers two ways:
+ * `client.ts` argues the request-path deadline strands a sweep on its first slow page, while
+ * `constants.ts` argues a 250-relationship page leaves generous headroom under it. Both are assertions;
+ * neither is a measurement, and the scheduled job runs at the request deadline either way. This is the
+ * measurement, and `reconciliationFailureTotal` below is what says whether a page was stranded.
+ *
+ * Seconds, with the unit in the name, for the reason the projection histogram spells out at length.
+ */
+const reconciliationDuration = meter.createHistogram("forma_authzed_reconciliation_duration_seconds", {
+  // A different scale from every other histogram here, because this measures a sweep rather than a call.
+  // A pass enumerates every organization and streams every managed relationship, so the interesting
+  // range runs from seconds on an empty deployment to minutes on a large one, and the top boundary sits
+  // an order of magnitude below the six-hour period so a pass approaching its own cadence is visible
+  // rather than buried in an overflow bucket.
+  advice: {
+    explicitBucketBoundaries: [1, 5, 10, 30, 60, 120, 300, 600, 1_800, 3_600],
+  },
+  description: "Duration of one pass of the scheduled authorization reconciliation",
+  unit: "s",
+});
+
+/**
+ * Reconciliation unit failures by error code and pass.
+ *
+ * `forma_authzed_reconciliation_drift_total{kind="failure"}` already carries the total, but a total is
+ * exactly what cannot answer the question the duration histogram raises: `authzed_timeout` means a page
+ * ran through the channel deadline and the sweep repaired nothing for that organization, while every
+ * other code means the sweep reached SpiceDB and something else went wrong. Those call for opposite
+ * responses, and the audit counter cannot tell them apart.
+ */
+const reconciliationFailureTotal = meter.createCounter("forma_authzed_reconciliation_failure_total", {
+  description: "Scheduled authorization reconciliation unit failures by error code",
+});
+
 const revocationDeliveryDuration = meter.createHistogram(
   "forma_authzed_projection_revocation_delivery_duration_seconds",
   {
@@ -287,5 +326,57 @@ export const recordAuthzedReconciliationRepair = ({
     if (failed > 0) reconciliationRepairTotal.add(failed, { status: "failed" });
   } catch {
     // The second verification audit must still run when a metrics exporter is unavailable.
+  }
+};
+
+/**
+ * Which of the scheduled job's three sweeps this was.
+ *
+ * `confirm` is the dry run that re-reads the graph after a repair, and it is deliberately distinct from
+ * the opening `dry_run`: the two do identical work but answer different questions, and a deployment
+ * where only `confirm` is slow is a deployment where repair, not observation, is what costs.
+ */
+export type TAuthzedReconciliationPass = "apply" | "confirm" | "dry_run";
+
+/**
+ * The `code` attributed to failures the run counted but did not name.
+ *
+ * A backfill result carries every failure's code in a list capped at 100 entries, while its `failed`
+ * counter carries the true total — so on a badly broken instance the codes account for less than the
+ * count. Booking the difference under one bounded sentinel keeps the counter's sum equal to `failed`,
+ * which is what lets it be compared against `forma_authzed_reconciliation_drift_total{kind="failure"}`
+ * at all. Silently dropping the remainder would make the two disagree exactly when it matters most.
+ */
+const RECONCILIATION_FAILURE_CODE_UNREPORTED = "unreported";
+
+export const recordAuthzedReconciliationPass = ({
+  durationMs,
+  failed,
+  failureCodes,
+  pass,
+  status,
+}: Readonly<{
+  durationMs: number;
+  failed: number;
+  failureCodes: ReadonlyArray<string>;
+  pass: TAuthzedReconciliationPass;
+  status: "drifted" | "failed" | "reconciled";
+}>): void => {
+  try {
+    reconciliationDuration.record(Math.max(0, durationMs) / 1_000, { pass, status });
+
+    const countsByCode = new Map<string, number>();
+    for (const code of failureCodes) {
+      countsByCode.set(code, (countsByCode.get(code) ?? 0) + 1);
+    }
+    const unreported = Math.max(0, failed - failureCodes.length);
+    if (unreported > 0) countsByCode.set(RECONCILIATION_FAILURE_CODE_UNREPORTED, unreported);
+
+    for (const [code, count] of countsByCode) {
+      reconciliationFailureTotal.add(count, { code, pass });
+    }
+  } catch {
+    // Observability cannot turn a completed sweep into a failed one: the pruning and dead-letter
+    // recovery that follow this pass matter more than the measurement of it.
   }
 };

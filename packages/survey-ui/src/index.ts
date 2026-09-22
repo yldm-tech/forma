@@ -35,6 +35,7 @@ export {
 export { Matrix, type MatrixProps, type MatrixOption } from "@/components/elements/matrix";
 export { DateElement, type DateElementProps } from "@/components/elements/date";
 export { getDateFnsLocale } from "@/lib/locale";
+export { getImageAltFromUrl, getOriginalFileNameFromUrl, resolveImageAltText } from "@/lib/storage";
 export { sanitizeSurveyHtml } from "@/lib/utils";
 export { isSafeMediaUrl } from "@/lib/video";
 export { isSafeLinkUrl } from "@/lib/url";
@@ -47,6 +48,11 @@ export { FileUpload, type FileUploadProps, type UploadedFile } from "@/component
 export { FormField, type FormFieldProps, type FormFieldConfig } from "@/components/elements/form-field";
 export { Rating, type RatingProps } from "@/components/elements/rating";
 export { NPS, type NPSProps } from "@/components/elements/nps";
-export { Ranking, type RankingProps, type RankingOption } from "@/components/elements/ranking";
+export {
+  Ranking,
+  type RankingProps,
+  type RankingOption,
+  type RankingChange,
+} from "@/components/elements/ranking";
 export { CTA, type CTAProps } from "@/components/elements/cta";
 export { Consent, type ConsentProps } from "@/components/elements/consent";

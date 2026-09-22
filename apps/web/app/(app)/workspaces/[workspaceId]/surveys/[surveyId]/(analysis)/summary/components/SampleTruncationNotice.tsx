@@ -30,7 +30,7 @@ export const SampleTruncationNotice = ({
   const workspaceId = typeof params?.workspaceId === "string" ? params.workspaceId : null;
   const surveyId = typeof params?.surveyId === "string" ? params.surveyId : null;
   const responsesHref =
-    workspaceId && surveyId ? `/workspaces/${workspaceId}/surveys/${surveyId}/responses?referer=true` : null;
+    workspaceId && surveyId ? `/workspaces/${workspaceId}/surveys/${surveyId}/responses` : null;
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-3 text-sm text-slate-500">

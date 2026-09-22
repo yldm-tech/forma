@@ -1,5 +1,6 @@
 import { Download, ExternalLink } from "lucide-react";
 import * as React from "react";
+import { resolveImageAltText } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import {
   checkForLoomUrl,
@@ -35,10 +36,15 @@ const asSafeMediaUrl = (url: string | undefined): string | undefined =>
 interface ElementMediaProps {
   imgUrl?: string;
   videoUrl?: string;
+  /**
+   * The image's accessible description. Omitted, it is derived from the stored file name and falls
+   * back to `""` (decorative) — see `resolveImageAltText`. Pass `""` explicitly for an image that
+   * carries no information of its own.
+   */
   altText?: string;
 }
 
-function ElementMedia({ imgUrl, videoUrl, altText = "Image" }: Readonly<ElementMediaProps>): React.ReactNode {
+function ElementMedia({ imgUrl, videoUrl, altText }: Readonly<ElementMediaProps>): React.ReactNode {
   // Every sink is validated, not just the href. `ZStorageUrl` now rejects unsafe schemes on write, but
   // this component renders survey JSON straight from the API, and rows written before that validation
   // can still carry a `javascript:`/`data:` URL. An unsafe value in `<iframe src>` executes; in
@@ -46,6 +52,7 @@ function ElementMedia({ imgUrl, videoUrl, altText = "Image" }: Readonly<ElementM
   const safeVideoUrl = asSafeMediaUrl(videoUrl ? getVideoUrlWithParams(videoUrl) : undefined);
   const safeImgUrl = asSafeMediaUrl(imgUrl);
   const safeHref = asSafeMediaUrl(imgUrl ?? convertToEmbedUrl(videoUrl ?? ""));
+  const resolvedAltText = resolveImageAltText(altText, safeImgUrl);
   const [isLoading, setIsLoading] = React.useState(true);
 
   if (!safeImgUrl && !safeVideoUrl) {
@@ -61,7 +68,7 @@ function ElementMedia({ imgUrl, videoUrl, altText = "Image" }: Readonly<ElementM
         <img
           key={safeImgUrl}
           src={safeImgUrl}
-          alt={altText}
+          alt={resolvedAltText}
           className={cn("mx-auto max-h-[40dvh] rounded-md object-contain", isLoading ? "opacity-0" : "")}
           onLoad={() => {
             setIsLoading(false);

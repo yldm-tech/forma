@@ -51,8 +51,11 @@ describe("translateFields", () => {
     const result = await translateFields({ ...baseInput, fields });
 
     expect(result).toEqual({
-      "welcomeCard.headline.default": "Willkommen",
-      "questions.0.html.default": "<p>Hallo</p>",
+      translations: {
+        "welcomeCard.headline.default": "Willkommen",
+        "questions.0.html.default": "<p>Hallo</p>",
+      },
+      failedPaths: [],
     });
   });
 
@@ -99,38 +102,92 @@ describe("translateFields", () => {
     });
   });
 
-  test("clamps maxOutputTokens to the maximum for large translation batches", async () => {
+  test("splits a batch larger than one call's budget into sequential chunks", async () => {
+    // 51 = the 8192-token output cap divided by the 160-token per-field budget the module declares.
+    // Above that the model is asked for a reply it is not allowed to finish, so the request is split
+    // instead of being clamped into a truncated response.
     const largeBatchFields = makeFields(60);
     mockTranslationsFor(largeBatchFields);
 
     await translateFields({ ...baseInput, fields: largeBatchFields });
 
-    expect(mockGenerateOrganizationAIObject.mock.calls[0][0]).toMatchObject({
-      maxOutputTokens: 8192,
+    expect(mockGenerateOrganizationAIObject).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(mockGenerateOrganizationAIObject.mock.calls[0][0].prompt)).toHaveLength(51);
+    expect(JSON.parse(mockGenerateOrganizationAIObject.mock.calls[1][0].prompt)).toHaveLength(9);
+    expect(mockGenerateOrganizationAIObject.mock.calls[0][0]).toMatchObject({ maxOutputTokens: 8160 });
+    expect(mockGenerateOrganizationAIObject.mock.calls[1][0]).toMatchObject({ maxOutputTokens: 1440 });
+  });
+
+  test("runs chunks one at a time rather than in parallel", async () => {
+    const largeBatchFields = makeFields(60);
+    let inFlight = 0;
+    mockGenerateOrganizationAIObject.mockImplementation(async (args: { prompt: string }) => {
+      inFlight += 1;
+      expect(inFlight).toBe(1);
+      await Promise.resolve();
+      inFlight -= 1;
+      const items = JSON.parse(args.prompt) as { id: string }[];
+      return { object: Object.fromEntries(items.map((item) => [item.id, `translated ${item.id}`])) };
     });
+
+    await translateFields({ ...baseInput, fields: largeBatchFields });
+
+    expect(mockGenerateOrganizationAIObject).toHaveBeenCalledTimes(2);
+  });
+
+  test("keeps the chunks that came back when one chunk's call fails", async () => {
+    const largeBatchFields = makeFields(60);
+    mockGenerateOrganizationAIObject
+      .mockRejectedValueOnce(new Error("provider unavailable"))
+      .mockImplementationOnce(async (args: { prompt: string }) => {
+        const items = JSON.parse(args.prompt) as { id: string }[];
+        return { object: Object.fromEntries(items.map((item) => [item.id, `translated ${item.id}`])) };
+      });
+
+    const result = await translateFields({ ...baseInput, fields: largeBatchFields });
+
+    // The nine fields of the second chunk survive the first chunk's failure; before chunking, one
+    // provider error cost every field in the batch.
+    expect(Object.keys(result.translations)).toHaveLength(9);
+    expect(result.failedPaths).toHaveLength(51);
+    expect(result.failedPaths).toContain("questions.0.headline.default");
   });
 
   test("returns empty object without calling the model when no fields are provided", async () => {
     const result = await translateFields({ ...baseInput, fields: [] });
 
-    expect(result).toEqual({});
+    expect(result).toEqual({ translations: {}, failedPaths: [] });
     expect(mockGenerateOrganizationAIObject).not.toHaveBeenCalled();
   });
 
-  test("throws when the model omits any requested ID from the response", async () => {
+  test("keeps what came back and names the paths that did not when the model omits an ID", async () => {
     mockGenerateOrganizationAIObject.mockResolvedValue({
       object: { t0: "Willkommen" }, // t1 missing
     });
 
-    await expect(translateFields({ ...baseInput, fields })).rejects.toThrow(
-      "AI translation returned incomplete result"
-    );
+    const result = await translateFields({ ...baseInput, fields });
+
+    expect(result).toEqual({
+      translations: { "welcomeCard.headline.default": "Willkommen" },
+      failedPaths: ["questions.0.html.default"],
+    });
   });
 
-  test("throws when the model returns an empty string for any ID", async () => {
+  test("treats an empty string as a field that did not translate", async () => {
     mockGenerateOrganizationAIObject.mockResolvedValue({
-      object: { t0: "Willkommen", t1: "" }, // empty string treated as missing
+      object: { t0: "Willkommen", t1: "" },
     });
+
+    const result = await translateFields({ ...baseInput, fields });
+
+    expect(result.translations).toEqual({ "welcomeCard.headline.default": "Willkommen" });
+    expect(result.failedPaths).toEqual(["questions.0.html.default"]);
+  });
+
+  test("throws rather than reporting an empty success when no field translated at all", async () => {
+    // A partial result the caller can keep and an empty one it cannot are different outcomes, and
+    // the second still has to reach the caller as the failure it is.
+    mockGenerateOrganizationAIObject.mockResolvedValue({ object: {} });
 
     await expect(translateFields({ ...baseInput, fields })).rejects.toThrow(
       "AI translation returned incomplete result"
@@ -138,6 +195,8 @@ describe("translateFields", () => {
   });
 
   test("propagates errors thrown by the AI provider", async () => {
+    // Rethrown rather than flattened: the code on it (quota, timeout) is what the caller maps to a
+    // message, and a chunked run must not swallow it into the generic incomplete-result error.
     mockGenerateOrganizationAIObject.mockRejectedValue(new Error("provider failed"));
 
     await expect(translateFields({ ...baseInput, fields })).rejects.toThrow("provider failed");
@@ -152,8 +211,11 @@ describe("translateFields", () => {
     const result = await translateFields({ ...baseInput, fields: allEmpty });
 
     expect(result).toEqual({
-      "welcomeCard.subheader.default": "",
-      "endings.0.subheader.default": "",
+      translations: {
+        "welcomeCard.subheader.default": "",
+        "endings.0.subheader.default": "",
+      },
+      failedPaths: [],
     });
     expect(mockGenerateOrganizationAIObject).not.toHaveBeenCalled();
   });
@@ -174,9 +236,12 @@ describe("translateFields", () => {
     const result = await translateFields({ ...baseInput, fields: mixed });
 
     expect(result).toEqual({
-      "welcomeCard.headline.default": "Willkommen",
-      "welcomeCard.subheader.default": "",
-      "questions.0.headline.default": "Wie geht es dir?",
+      translations: {
+        "welcomeCard.headline.default": "Willkommen",
+        "welcomeCard.subheader.default": "",
+        "questions.0.headline.default": "Wie geht es dir?",
+      },
+      failedPaths: [],
     });
 
     // Confirm the model never saw the empty field in the payload.

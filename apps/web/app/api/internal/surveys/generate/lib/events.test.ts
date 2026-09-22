@@ -21,6 +21,7 @@ describe("encodeStreamEvent", () => {
     const events: TSurveyGenerationStreamEvent[] = [
       { type: "start", requestId: "req_1" },
       { type: "partial", seq: 3, draft: { name: "Onboarding" } },
+      { type: "translating", languageCode: "ja-JP", index: 2, total: 3 },
       {
         type: "done",
         language: "en",

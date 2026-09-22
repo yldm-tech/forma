@@ -5,10 +5,61 @@ import { createAuthzedBackfillApply, createAuthzedBackfillNoopApply } from "./ba
 import { getAuthzedClient } from "./client";
 import { isAuthzedEnabled } from "./config";
 import { AUTHZED_MAX_PRUNED_RESOURCES_PER_RUN } from "./constants";
-import { recordAuthzedReconciliationAudit, recordAuthzedReconciliationRepair } from "./metrics";
+import {
+  type TAuthzedReconciliationPass,
+  recordAuthzedReconciliationAudit,
+  recordAuthzedReconciliationPass,
+  recordAuthzedReconciliationRepair,
+} from "./metrics";
 import { pruneAuthzedOutboxHistory, replayAuthzedOutboxDeadLetters } from "./outbox-repository";
 
-/** Six-hour full audit. It repairs attributable missing/mismatched edges and never prunes unknown data. */
+/**
+ * Run one sweep and record what it cost.
+ *
+ * Deliberately measures only a pass that returned. A pass that throws leaves no duration here, because
+ * this job's contract with the scheduler is unchanged by instrumentation: the throw is the signal, and
+ * swallowing it to emit a number would be a behaviour change wearing a measurement's clothes.
+ */
+const runInstrumentedPass = async (
+  pass: TAuthzedReconciliationPass,
+  run: () => Promise<Awaited<ReturnType<typeof runAuthzedBackfill>>>
+): Promise<Awaited<ReturnType<typeof runAuthzedBackfill>>> => {
+  const startedAt = Date.now();
+  const result = await run();
+
+  recordAuthzedReconciliationPass({
+    durationMs: Date.now() - startedAt,
+    failed: result.counters.failed,
+    failureCodes: result.failures.map((failure) => failure.code),
+    pass,
+    status: result.status,
+  });
+
+  return result;
+};
+
+/**
+ * Six-hour full audit. It repairs attributable missing/mismatched edges and never prunes unknown data.
+ *
+ * It runs in the web process, so it sweeps the whole graph on the request path's one-second channel
+ * deadline and shares that channel with live permission checks. Whether that is a problem is an open
+ * question, and it stays open until `forma_authzed_reconciliation_duration_seconds` and
+ * `forma_authzed_reconciliation_failure_total` have said something. Three restructures are on the table,
+ * each with the reading that would justify it and none worth doing before then:
+ *
+ * - **A second channel at `AUTHZED_BULK_REQUEST_TIMEOUT_MS`** — justified by a sustained
+ *   `forma_authzed_reconciliation_failure_total{code="authzed_timeout"}` above zero, which is a page
+ *   stranded on the deadline and an organization the sweep repaired nothing for. Nothing below that
+ *   justifies it: the deadline is a property of the process today (see `configureAuthzedClientForBulkWork`
+ *   in `client.ts`), so a second channel means a second connection and a second circuit breaker.
+ * - **Bounded per-organization scopes** — the cheaper answer to the same reading, and the one to reach
+ *   for first, since it needs no second channel. Also the answer if the duration histogram shows a pass
+ *   in the minutes: a unit that fits the request deadline is schedulable, a whole-graph sweep is not.
+ * - **Dropping the confirming pass, or narrowing it to what `apply` touched** — justified only if
+ *   `confirm` is a material share of the total duration, which needs the `pass` attribute to show it.
+ *   It costs something real: the audit counter currently attests to the state of the whole graph after
+ *   repair, and a narrowed confirm changes what `forma_authzed_reconciliation_audit_total` means.
+ */
 export const processAuthzedScheduledReconciliationJob = async (): Promise<void> => {
   if (!isAuthzedEnabled()) return;
   const client = getAuthzedClient();
@@ -17,24 +68,21 @@ export const processAuthzedScheduledReconciliationJob = async (): Promise<void> 
     prune: false,
     scope: { kind: "all" },
   } as const;
-  const observed = await runAuthzedBackfill(
-    { ...request, mode: "dry_run" },
-    { apply: createAuthzedBackfillNoopApply(), client }
+  const observed = await runInstrumentedPass("dry_run", () =>
+    runAuthzedBackfill({ ...request, mode: "dry_run" }, { apply: createAuthzedBackfillNoopApply(), client })
   );
   let result = observed;
 
   if (observed.status === "drifted") {
-    const applied = await runAuthzedBackfill(
-      { ...request, mode: "apply" },
-      { apply: createAuthzedBackfillApply(), client }
+    const applied = await runInstrumentedPass("apply", () =>
+      runAuthzedBackfill({ ...request, mode: "apply" }, { apply: createAuthzedBackfillApply(), client })
     );
     recordAuthzedReconciliationRepair({
       failed: applied.counters.failed,
       repaired: applied.counters.reconciled,
     });
-    result = await runAuthzedBackfill(
-      { ...request, mode: "dry_run" },
-      { apply: createAuthzedBackfillNoopApply(), client }
+    result = await runInstrumentedPass("confirm", () =>
+      runAuthzedBackfill({ ...request, mode: "dry_run" }, { apply: createAuthzedBackfillNoopApply(), client })
     );
   }
 

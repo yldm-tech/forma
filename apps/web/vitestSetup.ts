@@ -1,9 +1,27 @@
 // mock these globally used functions
-import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
-import ResizeObserver from "resize-observer-polyfill";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { ValidationError } from "@forma/types/errors";
+
+// The DOM half of this setup is loaded only where there is a DOM. `unit` is a node project and holds the
+// large majority of the suite's spec files; a static import made every one of those workers parse
+// @testing-library/react and resize-observer-polyfill before running a test that cannot touch either.
+// The gate is the real environment rather than the project name, so the jsdom `components` project and
+// the `@vitest-environment jsdom` specs that sit inside `unit` get exactly what they got before.
+//
+// `@testing-library/jest-dom/vitest` used to be imported here too. It is gone because no spec in this
+// app asserts with a jest-dom matcher — the shared setup was paying to register 33 matchers nothing
+// calls. A spec that wants them can import it itself, as eleven already do.
+let cleanupDom: (() => void) | undefined;
+
+if (typeof document !== "undefined") {
+  cleanupDom = (await import("@testing-library/react")).cleanup;
+  const { default: ResizeObserverPolyfill } = await import("resize-observer-polyfill");
+
+  // Make ResizeObserver available globally (Vitest/Jest environment). This is used by radix-ui.
+  if (!global.ResizeObserver) {
+    global.ResizeObserver = ResizeObserverPolyfill;
+  }
+}
 
 // mock our useSignOut hook directly to avoid auth issues in tests
 vi.mock("@/modules/auth/hooks/use-sign-out", () => ({
@@ -11,12 +29,6 @@ vi.mock("@/modules/auth/hooks/use-sign-out", () => ({
     signOut: vi.fn().mockResolvedValue(undefined),
   }),
 }));
-
-// Make ResizeObserver available globally (Vitest/Jest environment)
-// This is used by radix-ui
-if (!global.ResizeObserver) {
-  global.ResizeObserver = ResizeObserver;
-}
 
 // Mock useIsMobile hook that depends on window.matchMedia
 vi.mock("@/modules/ui/hooks/use-mobile", () => ({
@@ -183,7 +195,8 @@ afterEach(() => {
   // and keep calling shared module mocks, so a later test's assertions can count work it never did.
   // Called here rather than as its own afterEach so the order against clearAllMocks is explicit:
   // unmount first, while mock implementations are still in place for any cleanup effects.
-  cleanup();
+  // Optional because the node projects never loaded React Testing Library — see the top of this file.
+  cleanupDom?.();
   vi.clearAllMocks();
 });
 

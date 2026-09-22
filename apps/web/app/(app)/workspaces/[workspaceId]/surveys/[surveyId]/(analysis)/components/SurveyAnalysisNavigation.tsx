@@ -24,14 +24,14 @@ export const SurveyAnalysisNavigation = ({ survey, activeId }: SurveyAnalysisNav
       id: "summary",
       label: t("common.summary"),
       icon: <PresentationIcon className="size-5" />,
-      href: `${url}/summary?referer=true`,
+      href: `${url}/summary`,
       current: pathname?.includes("/summary"),
     },
     {
       id: "responses",
       label: t("common.responses"),
       icon: <InboxIcon className="size-5" />,
-      href: `${url}/responses?referer=true`,
+      href: `${url}/responses`,
       current: pathname?.includes("/responses"),
     },
   ];

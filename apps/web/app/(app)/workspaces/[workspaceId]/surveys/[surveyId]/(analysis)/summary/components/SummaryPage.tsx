@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -15,6 +14,7 @@ import { useResponseFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/
 import ScrollToTop from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/ScrollToTop";
 import { SummaryDropOffs } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SummaryDropOffs";
 import { SummaryImpressions } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/SummaryImpressions";
+import { ElementImpressionsProvider } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/summary/components/element-impressions-context";
 import { CustomFilter } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/components/CustomFilter";
 import { getFormattedFilters } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/lib/surveys";
 import { getFormattedErrorMessage } from "@/lib/utils/helper";
@@ -61,7 +61,6 @@ export const SummaryPage = ({
   isReadOnly,
 }: Readonly<SummaryPageProps>) => {
   const { t } = useTranslation();
-  const searchParams = useSearchParams();
 
   const [surveySummary, setSurveySummary] = useState<TSurveySummary>(
     initialSurveySummary || defaultSurveySummary
@@ -70,7 +69,7 @@ export const SummaryPage = ({
   const [tab, setTab] = useState<"dropOffs" | "quotas" | "impressions" | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(!initialSurveySummary);
 
-  const { selectedFilter, dateRange, resetState, registerAnalysisRefreshHandler } = useResponseFilter();
+  const { selectedFilter, dateRange, registerAnalysisRefreshHandler } = useResponseFilter();
 
   const [displays, setDisplays] = useState<TDisplayWithContact[]>([]);
   const [isDisplaysLoading, setIsDisplaysLoading] = useState(false);
@@ -216,12 +215,6 @@ export const SummaryPage = ({
     return replaceHeadlineRecall(survey, "default");
   }, [survey]);
 
-  useEffect(() => {
-    if (!searchParams?.get("referer")) {
-      resetState();
-    }
-  }, [searchParams, resetState]);
-
   return (
     <>
       <SummaryMetadata
@@ -249,13 +242,15 @@ export const SummaryPage = ({
         <CustomFilter survey={surveyMemoized} />
       </div>
       <ScrollToTop containerId="mainContent" />
-      <SummaryList
-        summary={surveySummary.summary}
-        responseCount={surveySummary.meta.totalResponses}
-        survey={surveyMemoized}
-        locale={locale}
-        isReadOnly={isReadOnly}
-      />
+      <ElementImpressionsProvider dropOff={surveySummary.dropOff}>
+        <SummaryList
+          summary={surveySummary.summary}
+          responseCount={surveySummary.meta.totalResponses}
+          survey={surveyMemoized}
+          locale={locale}
+          isReadOnly={isReadOnly}
+        />
+      </ElementImpressionsProvider>
     </>
   );
 };

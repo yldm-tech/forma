@@ -1,9 +1,10 @@
 import { useMemo, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { Ranking, type RankingOption } from "@forma/survey-ui";
+import { Ranking, type RankingChange, type RankingOption } from "@forma/survey-ui";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import type { TSurveyRankingElement } from "@forma/types/surveys/elements";
 import { getLocalizedValue } from "@/lib/i18n";
+import { announceToLiveRegion } from "@/lib/live-region";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 import { getShuffledChoicesIds } from "@/lib/utils";
 
@@ -113,6 +114,23 @@ export function RankingElement({
     setTtc(updatedTtcObj);
   };
 
+  // The rank an option lands at is otherwise painted only in a <span>, so a keyboard user gets no
+  // confirmation that the keypress did anything.
+  const handleAnnounce = (change: RankingChange) => {
+    const { label, position, total } = change;
+    if (change.type === "remove") {
+      announceToLiveRegion(t("common.ranking_removed", { label }));
+      return;
+    }
+    // Both keys spelled out rather than selected into a variable: `scan-translations` matches literal
+    // `t("...")` arguments, so a computed key reads as unused and fails the translation gate.
+    announceToLiveRegion(
+      change.type === "add"
+        ? t("common.ranking_added", { label, position, total })
+        : t("common.ranking_moved", { label, position, total })
+    );
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <Ranking
@@ -126,6 +144,12 @@ export function RankingElement({
         onChange={handleChange}
         required={isRequired}
         requiredLabel={t("common.required")}
+        addLabel={(label) => t("common.add_x_to_ranking", { label })}
+        removeLabel={(label) => t("common.remove_x_from_ranking", { label })}
+        moveUpLabel={(label) => t("common.move_x_up", { label })}
+        moveDownLabel={(label) => t("common.move_x_down", { label })}
+        legendLabel={t("common.ranking_options")}
+        onAnnounce={handleAnnounce}
         errorMessage={errorMessage}
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}
