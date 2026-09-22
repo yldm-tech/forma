@@ -5,9 +5,9 @@ import { createCacheKey } from "./cache-keys";
 import { getCacheService } from "./client";
 import type { CacheService } from "./service";
 
-// Check if Redis is available
-let isRedisAvailable = false;
-let cacheService: CacheService | null = null;
+// Assigned by the availability probe below. Definite assignment rather than `| null`, because
+// `describe.skipIf` keeps every hook and test in this file from running when the probe found no Redis.
+let cacheService!: CacheService;
 
 // Helper to reduce nesting depth
 const delay = (ms: number): Promise<void> =>
@@ -37,6 +37,16 @@ async function checkRedisAvailability(): Promise<boolean> {
     logger.error({ error }, "Error checking Redis availability");
     return false;
   }
+}
+
+// Probed at collection time, not in `beforeAll`: `describe.skipIf` has to know the answer before the suite
+// is registered, and that is what makes a Redis-less run report these tests as SKIPPED. An early `return`
+// inside each test body reported them as PASSED instead, so the suite claimed coverage it never ran.
+const isRedisAvailable = await checkRedisAvailability();
+
+if (!isRedisAvailable) {
+  logger.info("🟡 Cache Integration Tests: Redis not available - the suite below is reported as skipped");
+  logger.info("   To run these tests locally, ensure Redis is running and REDIS_URL is set");
 }
 
 /**
@@ -114,38 +124,22 @@ async function checkRedisAvailability(): Promise<boolean> {
  * ❌ Poor error handling
  */
 
-describe("Cache Integration Tests - End-to-End Redis Operations", () => {
+describe.skipIf(!isRedisAvailable)("Cache Integration Tests - End-to-End Redis Operations", () => {
   beforeAll(async () => {
-    // Check Redis availability first
-    isRedisAvailable = await checkRedisAvailability();
-
-    if (!isRedisAvailable) {
-      logger.info("🟡 Cache Integration Tests: Redis not available - tests will be skipped");
-      logger.info("   To run these tests locally, ensure Redis is running and REDIS_URL is set");
-      return;
-    }
-
     logger.info("🟢 Cache Integration Tests: Redis available - tests will run");
 
     // Clear any existing test keys
-    if (cacheService) {
-      const redis = cacheService.getRedisClient();
-      if (redis) {
-        const testKeys = await redis.keys("fb:cache:test:*");
-        if (testKeys.length > 0) {
-          await redis.del(testKeys);
-        }
+    const redis = cacheService.getRedisClient();
+    if (redis) {
+      const testKeys = await redis.keys("fb:cache:test:*");
+      if (testKeys.length > 0) {
+        await redis.del(testKeys);
       }
     }
   });
 
   afterAll(async () => {
     // Clean up test keys
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping cleanup: Redis not available");
-      return;
-    }
-
     const redis = cacheService.getRedisClient();
     if (redis) {
       const testKeys = await redis.keys("fb:cache:test:*");
@@ -156,11 +150,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   });
 
   test("Basic cache operations: set, get, exists, del", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const key = createCacheKey.workspace.state("basic-ops-test");
     const testValue = { message: "Hello Cache!", timestamp: Date.now(), count: 42 };
 
@@ -208,11 +197,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 10000);
 
   test("withCache miss/hit pattern: first call miss, second call hit", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const key = createCacheKey.workspace.state("miss-hit-test");
     let executionCount = 0;
 
@@ -250,11 +234,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 15000);
 
   test("Cache invalidation: del() clears cache and forces recomputation", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const key = createCacheKey.workspace.state("invalidation-test");
     let executionCount = 0;
 
@@ -304,11 +283,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 15000);
 
   test("TTL expiry behavior: cache expires automatically", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const key = createCacheKey.workspace.state("ttl-expiry-test");
     let executionCount = 0;
 
@@ -361,11 +335,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 20000);
 
   test("Concurrent cache operations: thread safety", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const baseKey = "concurrent-test";
     let globalExecutionCount = 0;
 
@@ -398,8 +367,8 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
       const key = createCacheKey.workspace.state(`${baseKey}-${i}`);
 
       // Each "thread" makes the same call twice - first should miss, second should hit
-      const firstCall = await cacheService!.withCache(() => expensiveFunction(i), key, 30000);
-      const secondCall = await cacheService!.withCache(() => expensiveFunction(i), key, 30000);
+      const firstCall = await cacheService.withCache(() => expensiveFunction(i), key, 30000);
+      const secondCall = await cacheService.withCache(() => expensiveFunction(i), key, 30000);
 
       return { i, firstCall, secondCall };
     });
@@ -427,11 +396,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 30000);
 
   test("Different data types: serialization correctness", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     // Null serialization is covered below via withCacheNullable.
     const testCases = [
       { name: "string", value: "Hello, World!" },
@@ -533,11 +497,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 20000);
 
   test("Error handling: graceful degradation when operations fail", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     // Test with invalid TTL (should handle gracefully)
     const validKey = createCacheKey.workspace.state("error-test");
     const invalidTtl = -1000; // Negative TTL should be invalid
@@ -572,11 +531,6 @@ describe("Cache Integration Tests - End-to-End Redis Operations", () => {
   }, 15000);
 
   test("withCacheNullable: round-trips real values and cached nulls without re-executing fn", async () => {
-    if (!isRedisAvailable || !cacheService) {
-      logger.info("Skipping test: Redis not available");
-      return;
-    }
-
     const realKey = createCacheKey.workspace.state("nullable-real");
     const nullKey = createCacheKey.workspace.state("nullable-null");
     let realCalls = 0;

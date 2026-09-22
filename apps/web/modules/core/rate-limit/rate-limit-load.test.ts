@@ -4,9 +4,6 @@ import { applyRateLimit } from "./helpers";
 import { checkRateLimit } from "./rate-limit";
 import { TRateLimitConfig } from "./types/rate-limit";
 
-// Check if Redis is available (basic requirements)
-let isRedisAvailable = false;
-
 // Test Redis availability
 async function checkRedisAvailability() {
   try {
@@ -24,6 +21,24 @@ async function checkRedisAvailability() {
     console.error("Error checking Redis availability:", error);
     return false;
   }
+}
+
+// Probed at collection time, not in `beforeAll`: `describe.skipIf` has to know the answer before the suite
+// is registered, and that is what makes a Redis-less run report these tests as SKIPPED. An early `return`
+// inside each test body reported them as PASSED instead, so the suite claimed coverage it never ran.
+const isRedisAvailable = await checkRedisAvailability();
+
+// Opt-in even when Redis is there. This suite drives concurrency, window boundaries and throughput; its
+// timings have never been observed on a shared CI runner, and a throughput benchmark on the critical path
+// of every PR buys flakes rather than signal. CI sets this on a schedule or by hand; `pnpm db:up` plus
+// `RUN_RATE_LIMIT_LOAD_TESTS=1` runs it locally.
+const isLoadSuiteEnabled = process.env.RUN_RATE_LIMIT_LOAD_TESTS === "1";
+
+if (!isRedisAvailable) {
+  console.log("🟡 Rate Limiter Load Tests: Redis not available - the suite below is reported as skipped");
+  console.log("   To run these tests locally, ensure Redis is running and REDIS_URL is set");
+} else if (!isLoadSuiteEnabled) {
+  console.log("🟡 Rate Limiter Load Tests: set RUN_RATE_LIMIT_LOAD_TESTS=1 to run the suite below");
 }
 
 /**
@@ -106,8 +121,6 @@ async function checkRedisAvailability() {
  * ❌ Window boundary failures: TTL or timestamp calculation errors
  */
 
-// The availability check and logging is now handled in the beforeAll hook
-
 // Test configurations
 const TEST_CONFIGS = {
   // Very restrictive for race condition testing
@@ -132,17 +145,8 @@ const TEST_CONFIGS = {
   } as TRateLimitConfig,
 } as const;
 
-describe("Rate Limiter Load Tests - Race Conditions", () => {
+describe.skipIf(!isRedisAvailable || !isLoadSuiteEnabled)("Rate Limiter Load Tests - Race Conditions", () => {
   beforeAll(async () => {
-    // Check Redis availability first
-    isRedisAvailable = await checkRedisAvailability();
-
-    if (!isRedisAvailable) {
-      console.log("🟡 Rate Limiter Load Tests: Redis not available - tests will be skipped");
-      console.log("   To run these tests locally, ensure Redis is running and REDIS_URL is set");
-      return;
-    }
-
     console.log("🟢 Rate Limiter Load Tests: Redis available - tests will run");
 
     // Clear any existing test keys
@@ -158,13 +162,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
 
   afterAll(async () => {
     // Clean up test keys
-    isRedisAvailable = await checkRedisAvailability();
-
-    if (!isRedisAvailable) {
-      console.log("Skipping cleanup: Redis not available");
-      return;
-    }
-
     const redis = await cache.getRedisClient();
     if (redis) {
       const testKeys = await redis.keys("fb:rate_limit:test:*");
@@ -175,11 +172,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   });
 
   test("Weighted requests preserve the first-write TTL and reject without consuming quota", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config: TRateLimitConfig = {
       interval: 3600,
       allowedPerInterval: 5,
@@ -218,11 +210,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   });
 
   test("Race condition test: concurrent requests to same identifier", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.strict;
     const identifier = "race-test-same-id";
     const concurrentRequests = 20; // More than allowed (3)
@@ -246,11 +233,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 15000);
 
   test("Race condition test: multiple waves of concurrent requests", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.medium;
     const identifier = "race-test-waves";
     const wavesCount = 3;
@@ -279,11 +261,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 20000);
 
   test("Race condition test: different identifiers should not interfere", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.strict;
     const identifiersCount = 5;
     const requestsPerIdentifier = 10;
@@ -324,11 +301,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 20000);
 
   test("Window boundary race condition test", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = {
       interval: 2, // Very short window for testing
       allowedPerInterval: 5,
@@ -360,11 +332,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 15000);
 
   test("High throughput stress test", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.high;
     const totalRequests = 200;
     const identifier = "stress-test";
@@ -398,11 +365,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 30000);
 
   test("applyRateLimit function race condition test", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.strict;
     const identifier = "apply-rate-limit-test";
     const concurrentRequests = 15;
@@ -436,11 +398,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 15000);
 
   test("Mixed identifier patterns under load", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     const config = TEST_CONFIGS.medium;
     const patterns = ["user-123", "ip-192.168.1.1", "api-key-abc", "session-xyz"];
 
@@ -484,11 +441,6 @@ describe("Rate Limiter Load Tests - Race Conditions", () => {
   }, 25000);
 
   test("TTL expiration test: rate limit key should expire and unblock requests", async () => {
-    if (!isRedisAvailable) {
-      console.log("Skipping test: Redis not available");
-      return;
-    }
-
     // Use a very short interval for faster testing
     const config: TRateLimitConfig = {
       interval: 3, // 3 seconds
