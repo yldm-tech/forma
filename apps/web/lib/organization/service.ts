@@ -131,7 +131,7 @@ export const getOrganizationByWorkspaceId = reactCache(
             },
           },
         },
-        select: { ...select, memberships: true },
+        select,
       });
 
       return organization ? mapOrganization(organization) : null;
