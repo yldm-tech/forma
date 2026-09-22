@@ -37,14 +37,13 @@ properties:
       Survey type to generate. The AI generates the survey content (blocks/questions) for both types;
       for `app` it additionally seeds a default `distribution` (display once, no triggers, no targeting)
       that you finish configuring before publishing.
-  language:
-    $ref: ./AISurveyGenerationLocaleCode.yml
-    description: >
-      Preferred survey language. Session clients should send the logged-in
-      user's language.
-
-      The generator uses it when the prompt language is ambiguous or cannot be
-      confidently
-
-      matched to a supported app locale.
+  languages:
+    type: array
+    minItems: 1
+    maxItems: 15
+    uniqueItems: true
+    items:
+      $ref: ./AISurveyGenerationLocaleCode.yml
+    description: >-
+      Survey languages, in order. The first entry is the survey's default language and the one the generator writes the content in; the remaining entries are attached to the survey so the editor's translation flow can fill them. Session clients should send the logged-in user's language first. Omitted means `en-US`.
 additionalProperties: false

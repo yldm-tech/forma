@@ -140,6 +140,7 @@ function getImmutableElementIdIssues(
   }
 
   const patchedElementIds = getElementIds(patchedDocument);
+  const currentElementIds = getElementIds(currentDocument);
   const issues: InvalidParam[] = [];
 
   currentDocument.blocks.forEach((currentBlock) => {
@@ -154,8 +155,15 @@ function getImmutableElementIdIssues(
         return;
       }
 
+      // The comparison is positional, so a deletion shifts every later element down one slot. A slot now
+      // holding an id the current document already knows is a survivor that moved, not a renamed element;
+      // only an id that is new to the survey can be a rename.
       const patchedElement = patchedBlock.elements[elementIndex];
-      if (!patchedElement || patchedElement.id === currentElement.id) {
+      if (
+        !patchedElement ||
+        patchedElement.id === currentElement.id ||
+        currentElementIds.has(patchedElement.id)
+      ) {
         return;
       }
 

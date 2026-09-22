@@ -119,9 +119,12 @@ export const WorkflowsListPage = ({
     nameContains: debouncedSearchValue.trim(),
     statusIn,
     sortBy,
+    // Hold the first request until the stored filters have been read, so the list is not fetched once with the defaults and again with the hydrated filters (mirrors the surveys list).
+    enabled: isFilterInitialized,
   });
 
-  const showInitialLoading = isLoading && workflows.length === 0;
+  // While the query is disabled it is pending-but-idle, so `isLoading` is false; without the first clause the pre-hydration render would fall through to the empty state instead of the skeleton.
+  const showInitialLoading = !isFilterInitialized || (isLoading && workflows.length === 0);
   const hasActiveFilters = selectedStatuses.length > 0 || searchValue.length > 0;
 
   // Reported once per screen the user lands on; `null` while loading or erroring, neither of which

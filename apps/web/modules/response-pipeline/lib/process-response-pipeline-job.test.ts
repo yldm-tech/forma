@@ -18,7 +18,7 @@ const {
   mockLoggerWarn,
   mockPrismaOrganizationFindFirst,
   mockPrismaSurveyFindUnique,
-  mockPrismaSurveyUpdate,
+  mockPrismaSurveyUpdateMany,
   mockPrismaUserFindMany,
   mockPrismaWebhookFindMany,
   mockQueueAuditEventWithoutRequest,
@@ -44,7 +44,7 @@ const {
     mockLoggerWarn: vi.fn(),
     mockPrismaOrganizationFindFirst: vi.fn(),
     mockPrismaSurveyFindUnique: vi.fn(),
-    mockPrismaSurveyUpdate: vi.fn(),
+    mockPrismaSurveyUpdateMany: vi.fn(),
     mockPrismaUserFindMany: vi.fn(),
     mockPrismaWebhookFindMany: vi.fn(),
     mockQueueAuditEventWithoutRequest: vi.fn(),
@@ -63,7 +63,7 @@ vi.mock("@forma/database", () => ({
     },
     survey: {
       findUnique: mockPrismaSurveyFindUnique,
-      update: mockPrismaSurveyUpdate,
+      updateMany: mockPrismaSurveyUpdateMany,
     },
     webhook: {
       findMany: mockPrismaWebhookFindMany,
@@ -239,7 +239,7 @@ describe("processResponsePipelineJob", () => {
     mockSendFollowUpsForResponse.mockResolvedValue({ ok: true, data: [] });
     mockEnqueueResponseCompletedWorkflowRuns.mockResolvedValue(undefined);
     mockSendTelemetryEvents.mockResolvedValue(undefined);
-    mockPrismaSurveyUpdate.mockResolvedValue(undefined);
+    mockPrismaSurveyUpdateMany.mockResolvedValue({ count: 1 });
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -491,12 +491,14 @@ describe("processResponsePipelineJob", () => {
       // completed-only count the response limit uses.
       7
     );
-    expect(mockPrismaSurveyUpdate).toHaveBeenCalledWith({
+    expect(mockPrismaSurveyUpdateMany).toHaveBeenCalledWith({
       data: {
         status: "completed",
       },
       where: {
         id: "survey_123",
+        workspaceId: "workspace_123",
+        status: "inProgress",
       },
     });
     expect(mockQueueAuditEventWithoutRequest).toHaveBeenCalledWith(
@@ -534,7 +536,7 @@ describe("processResponsePipelineJob", () => {
     // The auto-complete decision must be based on finished responses only.
     expect(mockGetFinishedResponseCountBySurveyId).toHaveBeenCalledWith("survey_123");
     // 3 finished responses < limit of 5 → the survey must stay open.
-    expect(mockPrismaSurveyUpdate).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
   });
 
   test("auto-completes the survey once finished responses reach the limit", async () => {
@@ -554,14 +556,85 @@ describe("processResponsePipelineJob", () => {
       )
     ).resolves.toBeUndefined();
 
-    expect(mockPrismaSurveyUpdate).toHaveBeenCalledWith({
+    expect(mockPrismaSurveyUpdateMany).toHaveBeenCalledWith({
       data: {
         status: "completed",
       },
       where: {
         id: "survey_123",
+        workspaceId: "workspace_123",
+        status: "inProgress",
       },
     });
+  });
+
+  // The job decides to auto-complete from a survey snapshot read at the very top, then awaits webhooks,
+  // integrations, follow-ups and notification emails before writing. An unguarded write clobbered a status
+  // the owner changed inside that window, and `completed` is terminal for the scheduler.
+  test("does not clobber a survey status that changed since the pipeline snapshot", async () => {
+    mockGetFinishedResponseCountBySurveyId.mockResolvedValue(5);
+    mockPrismaSurveyFindUnique.mockResolvedValue({
+      ...survey,
+      autoComplete: 5,
+    });
+    // The owner paused the survey while the side-effects above were running, so the guarded write
+    // matches no row.
+    mockPrismaSurveyUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      processResponsePipelineJob(
+        {
+          ...baseData,
+          event: "responseFinished",
+        },
+        baseContext
+      )
+    ).resolves.toBeUndefined();
+
+    expect(mockPrismaSurveyUpdateMany).toHaveBeenCalledWith({
+      data: {
+        status: "completed",
+      },
+      where: {
+        id: "survey_123",
+        workspaceId: "workspace_123",
+        status: "inProgress",
+      },
+    });
+    // No row was written, so nothing may claim the system completed the survey.
+    expect(mockQueueAuditEventWithoutRequest).not.toHaveBeenCalled();
+  });
+
+  // The workflow enqueue is the only responseFinished side-effect whose failure retries the whole job, and
+  // every other one is non-idempotent. Running it last meant a pool-exhaustion retry re-sent every
+  // follow-up and notification email and re-appended every integration row.
+  test("enqueues workflow runs before any non-idempotent side effect", async () => {
+    mockGetIntegrations.mockResolvedValue([{ id: "integration_123", type: "slack" }]);
+    mockGetFinishedResponseCountBySurveyId.mockResolvedValue(5);
+    mockPrismaSurveyFindUnique.mockResolvedValue({
+      ...survey,
+      autoComplete: 5,
+      followUps: [{ id: "followup_123" }],
+    });
+    mockPrismaUserFindMany.mockResolvedValue([
+      {
+        email: "owner@example.com",
+        locale: "en",
+      },
+    ]);
+    mockEnqueueResponseCompletedWorkflowRuns.mockRejectedValue(
+      new Error("Timed out fetching a new connection from the connection pool")
+    );
+
+    await expect(
+      processResponsePipelineJob({ ...baseData, event: "responseFinished" }, baseContext)
+    ).rejects.toThrow(/connection pool/i);
+
+    // The job will be retried from the top, so nothing irreversible may have happened yet.
+    expect(mockHandleIntegrations).not.toHaveBeenCalled();
+    expect(mockSendFollowUpsForResponse).not.toHaveBeenCalled();
+    expect(mockSendResponseFinishedEmail).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
   });
 
   test("does not count finished responses when no response limit is set", async () => {
@@ -577,7 +650,7 @@ describe("processResponsePipelineJob", () => {
     ).resolves.toBeUndefined();
 
     expect(mockGetFinishedResponseCountBySurveyId).not.toHaveBeenCalled();
-    expect(mockPrismaSurveyUpdate).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
   });
 
   test("does not re-close a survey that is already completed", async () => {
@@ -599,7 +672,7 @@ describe("processResponsePipelineJob", () => {
     ).resolves.toBeUndefined();
 
     expect(mockGetFinishedResponseCountBySurveyId).not.toHaveBeenCalled();
-    expect(mockPrismaSurveyUpdate).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
     expect(mockQueueAuditEventWithoutRequest).not.toHaveBeenCalled();
   });
 
@@ -645,7 +718,7 @@ describe("processResponsePipelineJob", () => {
       }),
       "Response pipeline survey auto-complete skipped because the finished response count could not be loaded"
     );
-    expect(mockPrismaSurveyUpdate).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
   });
 
   test("logs responseFinished side-effect failures without failing the job", async () => {
@@ -663,7 +736,7 @@ describe("processResponsePipelineJob", () => {
         message: "not allowed",
       },
     });
-    mockPrismaSurveyUpdate.mockRejectedValue(new Error("update failed"));
+    mockPrismaSurveyUpdateMany.mockRejectedValue(new Error("update failed"));
     mockPrismaSurveyFindUnique.mockResolvedValue({
       ...survey,
       autoComplete: 1,
@@ -738,7 +811,7 @@ describe("processResponsePipelineJob", () => {
     expect(mockHandleIntegrations).not.toHaveBeenCalled();
     expect(mockSendFollowUpsForResponse).not.toHaveBeenCalled();
     expect(mockSendResponseFinishedEmail).not.toHaveBeenCalled();
-    expect(mockPrismaSurveyUpdate).not.toHaveBeenCalled();
+    expect(mockPrismaSurveyUpdateMany).not.toHaveBeenCalled();
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
         err: webhookError,
@@ -784,7 +857,7 @@ describe("processResponsePipelineJob", () => {
     expect(mockHandleIntegrations).toHaveBeenCalledTimes(1);
     expect(mockSendFollowUpsForResponse).toHaveBeenCalledWith("response_123", undefined);
     expect(mockSendResponseFinishedEmail).toHaveBeenCalledTimes(1);
-    expect(mockPrismaSurveyUpdate).toHaveBeenCalledTimes(1);
+    expect(mockPrismaSurveyUpdateMany).toHaveBeenCalledTimes(1);
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
         attempt: 3,

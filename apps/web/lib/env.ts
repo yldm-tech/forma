@@ -204,6 +204,11 @@ const ZSurveySchedulingTimeZone = z.string().trim().min(1).refine(isValidIanaTim
 
 const ZSurveySchedulingLocalHour = z.coerce.number().int().min(0).max(23);
 const ZSurveySchedulingLocalMinute = z.coerce.number().int().min(0).max(59);
+
+// `lib/crypto.ts` derives the buffer encoding from the length: exactly 32 characters are read as latin1, anything else as hex. Only those two shapes decode to the 32-byte key AES-256 needs, so every other value — including the empty string, which `z.string()` accepts — reaches `createCipheriv` and throws `Invalid key length` on the first request that encrypts. Reject it at boot instead. Same predicate as `scripts/setup-dev-env.sh`.
+const ZEncryptionKey = z.string().refine((value) => value.length === 32 || /^[0-9a-fA-F]{64}$/.test(value), {
+  message: "ENCRYPTION_KEY must be 64 hex characters (openssl rand -hex 32) or exactly 32 characters",
+});
 const ZAuthzedBoolean = z.enum(["true", "false", "1", "0"]);
 const ZAuthzedConsistency = z.enum(["minimize_latency", "fully_consistent"]).optional();
 const ZAuthzedToken = z
@@ -335,7 +340,7 @@ const parsedEnv = createEnv({
     E2E_TESTING: z.enum(["1", "0"]).optional(),
     EMAIL_AUTH_DISABLED: z.enum(["1", "0"]).optional(),
     EMAIL_VERIFICATION_DISABLED: z.enum(["1", "0"]).optional(),
-    ENCRYPTION_KEY: z.string(),
+    ENCRYPTION_KEY: ZEncryptionKey,
     ENVIRONMENT: z.enum(["production", "staging"]).prefault("production"),
     GITHUB_ID: z.string().optional(),
     GITHUB_SECRET: z.string().optional(),

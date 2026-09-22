@@ -20,7 +20,8 @@ const AI_TRANSLATION_OUTPUT_TOKENS_PER_FIELD = 160;
 interface TranslateFieldsInput {
   organizationId: string;
   workspaceId: string;
-  userId: string;
+  // Attribution only. An API-key caller has no user, so the call runs untraced.
+  userId?: string | null;
   fields: TAITranslationField[];
   sourceLanguage: string;
   targetLanguage: string;
@@ -79,7 +80,9 @@ Rules:
 
   const result = await generateOrganizationAIObject({
     organizationId,
-    aiTracing: { distinctId: userId, feature: AI_TRACING_FEATURE.Translation, workspaceId },
+    aiTracing: userId
+      ? { distinctId: userId, feature: AI_TRACING_FEATURE.Translation, workspaceId }
+      : undefined,
     schema,
     system: systemPrompt,
     prompt: userPayload,

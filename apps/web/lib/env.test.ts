@@ -93,6 +93,26 @@ describe("env", () => {
     await expect(import("./env")).rejects.toThrow(/ENCRYPTION_KEY[\s\S]*expected string/);
   });
 
+  test.each([
+    ["", "empty"],
+    ["too-short", "shorter than 32 characters"],
+    ["0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde", "63 hex characters"],
+    ["zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "64 non-hex characters"],
+  ])("rejects an ENCRYPTION_KEY that is %s", async (encryptionKey) => {
+    setTestEnv({ ENCRYPTION_KEY: encryptionKey });
+
+    await expect(import("./env")).rejects.toThrow(/ENCRYPTION_KEY[\s\S]*64 hex characters/);
+  });
+
+  test("accepts a 64 hex character ENCRYPTION_KEY", async () => {
+    const encryptionKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    setTestEnv({ ENCRYPTION_KEY: encryptionKey });
+
+    const { env } = await import("./env");
+
+    expect(env.ENCRYPTION_KEY).toBe(encryptionKey);
+  });
+
   test("fails to load when the password reset token lifetime is not an integer", async () => {
     setTestEnv({
       PASSWORD_RESET_TOKEN_LIFETIME_MINUTES: "30minutes",

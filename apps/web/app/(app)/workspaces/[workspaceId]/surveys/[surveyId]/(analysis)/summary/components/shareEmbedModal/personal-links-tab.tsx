@@ -87,8 +87,9 @@ export const PersonalLinksTab = ({ segments, surveyId }: PersonalLinksTabProps) 
     const result = await generatePersonalLinksAction({
       surveyId: surveyId,
       segmentId: selectedSegment,
+      // The picker hands back local midnight of the chosen day while the token lifetime is measured from now, so round the partial day up — flooring it would expire the links a calendar day early.
       expirationDays: expiryDate
-        ? Math.max(1, Math.floor((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+        ? Math.max(1, Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
         : undefined,
     });
 

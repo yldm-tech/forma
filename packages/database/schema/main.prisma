@@ -141,7 +141,7 @@ model Contact {
   attributes  ContactAttribute[]
   displays    Display[]
 
-  @@index([workspaceId])
+  @@index([workspaceId, createdAt]) // the contacts list pages by workspace ordered by created_at; leading with workspaceId keeps the bare-workspaceId lookups on the same index
 }
 
 /// Stores a user's response to a survey, including their answers and metadata.
@@ -504,6 +504,8 @@ model SurveyFollowUp {
   trigger   Json
   /// [SurveyFollowUpAction]
   action    Json
+
+  @@index([surveyId]) // the follow-ups relation is loaded on every survey read and once per processed response, and the cascade from Survey needs it too
 }
 
 enum ActionType {

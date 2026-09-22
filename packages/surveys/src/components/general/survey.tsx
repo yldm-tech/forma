@@ -1556,7 +1556,7 @@ export function Survey({
       <Subheader
         subheader={replaceRecallInfo(
           getLocalizedValue(localSurvey.welcomeCard.subheader, selectedLanguage),
-          responseData,
+          recallValues,
           currentVariables,
           selectedLanguage
         )}

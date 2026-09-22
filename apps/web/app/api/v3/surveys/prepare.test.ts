@@ -503,6 +503,31 @@ describe("v3 survey preparation", () => {
     }
   });
 
+  test("accepts deleting a non-trailing element from a non-draft survey", () => {
+    const clarityElement = {
+      id: "clarity",
+      type: "openText",
+      headline: { "en-US": "Was anything unclear?", "de-DE": "War etwas unklar?" },
+      required: true,
+    };
+    const currentBlock = {
+      ...rawCreateBody.blocks[0],
+      elements: [rawCreateBody.blocks[0].elements[0], clarityElement],
+    };
+    const preparation = prepareV3SurveyPatchInput(
+      {
+        ...survey,
+        status: "inProgress",
+        blocks: ZV3CreateSurveyBody.parse({ ...rawCreateBody, blocks: [currentBlock] }).blocks,
+      } as TSurvey,
+      {
+        blocks: [{ ...currentBlock, elements: [clarityElement] }],
+      }
+    );
+
+    expect(preparation.ok).toBe(true);
+  });
+
   test("rejects non-draft element id changes on non-draft surveys", () => {
     const preparation = prepareV3SurveyPatchInput(
       {

@@ -613,20 +613,25 @@ const handleDuplicateContact = async (
     });
   }
 
-  // duplicateContactsAction = "overwrite" here
-  await prisma.contactAttribute.deleteMany({
-    where: { contactId: existingContact.id },
-  });
+  // duplicateContactsAction = "overwrite" here. The delete and the recreate have to be atomic: a failure between them leaves the contact with zero attributes, so it has no email and a re-run of the same CSV cannot match it any more.
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.contactAttribute.deleteMany({
+        where: { contactId: existingContact.id },
+      });
 
-  return prisma.contact.update({
-    where: { id: existingContact.id },
-    data: {
-      attributes: {
-        create: createAttributeConnections(recordToProcess, workspaceId, attributeTypeMap),
-      },
+      return tx.contact.update({
+        where: { id: existingContact.id },
+        data: {
+          attributes: {
+            create: createAttributeConnections(recordToProcess, workspaceId, attributeTypeMap),
+          },
+        },
+        include: contactAttributesInclude,
+      });
     },
-    include: contactAttributesInclude,
-  });
+    { timeout: 10 * 1000 }
+  );
 };
 
 export type TCreateContactsFromCSVResult =

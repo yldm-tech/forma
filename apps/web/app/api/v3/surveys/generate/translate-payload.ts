@@ -61,8 +61,8 @@ export const translateV3SurveyPayloadLanguages = async ({
   targetLanguages: string[];
   organizationId: string;
   workspaceId: string;
-  // Required by `translateFields`, which attributes the call. A generation always has an author.
-  userId: string;
+  // Attribution only. An API-key caller has no user, so the translation runs untraced.
+  userId?: string | null;
 }): Promise<TV3CreateSurveyBody> => {
   const wanted = targetLanguages.filter((code) => code.toLowerCase() !== sourceLanguage.toLowerCase());
   if (wanted.length === 0) return payload;

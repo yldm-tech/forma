@@ -1113,6 +1113,34 @@ describe("utils.ts", () => {
       expect(closestSpy).not.toHaveBeenCalled(); // closest() is only a fallback
     });
 
+    test("returns false instead of throwing when the browser cannot parse the cssSelector", () => {
+      const targetElement = document.createElement("div");
+
+      // An unparseable selector (`:contains("Buy")`, or one using syntax this browser lacks) makes both
+      // DOM calls throw SyntaxError; the click handler loops over every action, so a throw here would
+      // kill click tracking for every action after this one.
+      targetElement.matches = vi.fn(() => {
+        throw new Error("SyntaxError");
+      });
+      targetElement.closest = vi.fn(() => {
+        throw new Error("SyntaxError");
+      });
+
+      const action: TWorkspaceStateActionClass = {
+        id: "clabc123abc",
+        name: "Test Action",
+        type: "noCode",
+        key: null,
+        noCodeConfig: {
+          type: "click",
+          urlFilters: [],
+          elementSelector: { cssSelector: ':contains("Buy")' },
+        },
+      };
+
+      expect(evaluateNoCodeConfigClick(targetElement, action)).toBe(false);
+    });
+
     test("handles multiple cssSelectors correctly", () => {
       const targetElement = document.createElement("div");
       targetElement.className = "test other";

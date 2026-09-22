@@ -191,8 +191,8 @@ export const getSurveySummaryDropOff = (
   // When the welcome card is disabled, the first element's impressions should equal displayCount
   // because every survey display is an impression of the first element
   if (!survey.welcomeCard.enabled) {
-    dropOffArr[0] = displayCount - impressionsArr[0];
-    if (impressionsArr[0] > displayCount) dropOffPercentageArr[0] = 0;
+    // Impressions are counted from response data while displayCount comes from Display rows, so a response with no display row (a link survey, a swallowed display POST, or a filtered app survey) can push impressions past displayCount. Clamp the count the way the percentage below already clamps itself, otherwise the Drop-offs table renders a negative number.
+    dropOffArr[0] = Math.max(0, displayCount - impressionsArr[0]);
 
     dropOffPercentageArr[0] =
       impressionsArr[0] - displayCount >= 0

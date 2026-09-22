@@ -469,6 +469,43 @@ describe("Segment Service Tests", () => {
       );
     });
 
+    test("should take the highest copy number regardless of the order findMany returns", async () => {
+      // getSegments issues a findMany with no orderBy, so the highest-numbered copy can come back first.
+      const copyOne = { ...mockSegmentPrisma, id: "copy-1", title: "Copy of Test Segment (1)" };
+      const copyTwo = { ...mockSegmentPrisma, id: "copy-2", title: "Copy of Test Segment (2)" };
+      vi.mocked(prisma.segment.findMany).mockResolvedValue([copyTwo, mockSegmentPrisma, copyOne]);
+      vi.mocked(prisma.segment.create).mockResolvedValue({
+        ...clonedSegmentPrisma,
+        title: "Copy of Test Segment (3)",
+      });
+
+      await cloneSegment(segmentId, surveyId);
+
+      expect(prisma.segment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ title: "Copy of Test Segment (3)" }),
+        })
+      );
+    });
+
+    test("should number the eleventh copy above (10) rather than by string order", async () => {
+      const copyNine = { ...mockSegmentPrisma, id: "copy-9", title: "Copy of Test Segment (9)" };
+      const copyTen = { ...mockSegmentPrisma, id: "copy-10", title: "Copy of Test Segment (10)" };
+      vi.mocked(prisma.segment.findMany).mockResolvedValue([copyTen, copyNine]);
+      vi.mocked(prisma.segment.create).mockResolvedValue({
+        ...clonedSegmentPrisma,
+        title: "Copy of Test Segment (11)",
+      });
+
+      await cloneSegment(segmentId, surveyId);
+
+      expect(prisma.segment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ title: "Copy of Test Segment (11)" }),
+        })
+      );
+    });
+
     test("should throw ResourceNotFoundError if original segment not found", async () => {
       vi.mocked(prisma.segment.findUnique).mockResolvedValue(null);
       await expect(cloneSegment(segmentId, surveyId)).rejects.toThrow(ResourceNotFoundError);
