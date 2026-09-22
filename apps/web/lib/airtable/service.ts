@@ -3,6 +3,7 @@ import { logger } from "@forma/logger";
 import { DatabaseError } from "@forma/types/errors";
 import { TIntegrationItem } from "@forma/types/integration";
 import {
+  TIntegrationAirtableConfig,
   TIntegrationAirtableConfigData,
   TIntegrationAirtableCredential,
   ZIntegrationAirtableBases,
@@ -85,50 +86,62 @@ export const fetchAirtableAuthToken = async (formData: Record<string, any>) => {
   };
 };
 
+/** Refresh slightly ahead of the stored expiry, the way `googleSheet/service.ts` does. */
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+/**
+ * Token lifecycle belongs to the credential, not to the caller: the settings UI refreshed through
+ * `getAirtableToken` while the response pipeline read `integration.config.key` straight off the record,
+ * so an Airtable integration stopped delivering the moment its stored `expiry_date` passed and only
+ * resumed when a human happened to open the settings page. Both paths now come through here.
+ *
+ * Airtable rotates the refresh token on use, so the stored one is dead as soon as this call returns:
+ * the rotation is persisted before the new access token is handed back, and a failure to persist is
+ * surfaced rather than swallowed. Concurrent deliveries for one workspace would race that single-use
+ * token; the response pipeline worker runs at concurrency 1 today, which is what makes this safe.
+ */
+export const resolveAirtableCredential = async (
+  workspaceId: string,
+  config: TIntegrationAirtableConfig
+): Promise<TIntegrationAirtableCredential> => {
+  const credential = ZIntegrationAirtableCredential.parse(config.key);
+  const expiresAt = new Date(credential.expiry_date).getTime();
+
+  // An unparseable `expiry_date` is treated as expired: refreshing costs one request, using a dead
+  // token costs the response.
+  if (Number.isFinite(expiresAt) && expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
+    return credential;
+  }
+
+  const newToken = await fetchAirtableAuthToken({
+    grant_type: "refresh_token",
+    refresh_token: credential.refresh_token,
+    client_id: AIRTABLE_CLIENT_ID,
+  });
+
+  await createOrUpdateIntegration(workspaceId, {
+    type: "airtable",
+    config: {
+      data: config.data,
+      email: config.email,
+      key: newToken,
+    },
+  });
+
+  return newToken;
+};
+
 export const getAirtableToken = async (workspaceId: string) => {
   try {
     const airtableIntegration = await getIntegrationByType(workspaceId, "airtable");
 
-    const { access_token, expiry_date, refresh_token } = ZIntegrationAirtableCredential.parse(
-      airtableIntegration?.config.key
-    );
-
-    const expiryDate = new Date(expiry_date);
-    const currentDate = new Date();
-
-    if (currentDate >= expiryDate) {
-      const client_id = AIRTABLE_CLIENT_ID;
-
-      const newToken = await fetchAirtableAuthToken({
-        grant_type: "refresh_token",
-        refresh_token,
-        client_id,
-      });
-
-      if (!newToken) {
-        logger.error(
-          {
-            workspaceId,
-            airtableIntegration,
-          },
-          "Failed to fetch new Airtable token"
-        );
-        throw new Error("Failed to fetch new Airtable token");
-      }
-
-      await createOrUpdateIntegration(workspaceId, {
-        type: "airtable",
-        config: {
-          data: airtableIntegration?.config?.data ?? [],
-          email: airtableIntegration?.config?.email ?? "",
-          key: newToken,
-        },
-      });
-
-      return newToken.access_token;
+    if (!airtableIntegration) {
+      throw new Error(`No Airtable integration found for workspace ${workspaceId}`);
     }
 
-    return access_token;
+    const credential = await resolveAirtableCredential(workspaceId, airtableIntegration.config);
+
+    return credential.access_token;
   } catch (error) {
     logger.error(
       {
@@ -137,7 +150,9 @@ export const getAirtableToken = async (workspaceId: string) => {
       },
       "Failed to get Airtable token"
     );
-    throw new Error("Failed to get Airtable token");
+    // Keep the cause: flattening every failure into one string hid a revoked grant behind a generic
+    // message, which is the only signal the delivery path has to go on.
+    throw new Error("Failed to get Airtable token", { cause: error });
   }
 };
 
@@ -174,6 +189,12 @@ const addRecords = async (
       typecast: true,
     }),
   });
+
+  if (!req.ok) {
+    const body = await req.text().catch(() => "");
+    throw new Error(`Airtable API error creating record: ${req.status} ${req.statusText} ${body}`);
+  }
+
   const res = await req.json();
 
   return res;

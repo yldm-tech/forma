@@ -21,6 +21,10 @@ export const createCacheKey = {
     config: (workspaceId: string): CacheKey => makeCacheKey("env", workspaceId, "config"),
     segments: (workspaceId: string): CacheKey => makeCacheKey("env", workspaceId, "segments"),
     languages: (workspaceId: string): CacheKey => makeCacheKey("env", workspaceId, "languages"),
+    // Keyed on the raw URL id, which may be a workspace id *or* a legacy environment id, so both forms of
+    // the same public request get their own entry. Do not reuse this key for anything keyed on the
+    // resolved workspace id — the whole point is that the input side is not yet known to be either.
+    idResolution: (rawId: string): CacheKey => makeCacheKey("env", rawId, "id-resolution"),
   },
 
   // Organization-related keys

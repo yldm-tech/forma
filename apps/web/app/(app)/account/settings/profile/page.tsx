@@ -17,15 +17,17 @@ import { SettingsCard } from "@/modules/ui/components/settings-card";
 import { SettingsCardGrid } from "@/modules/ui/components/settings-card-grid";
 
 const Page = async () => {
-  const isMultiOrgEnabled = await getIsMultiOrgEnabled();
   const t = await getTranslate();
   const session = await getSession();
   if (!session?.user) {
     throw new AuthenticationError(t("common.not_authenticated"));
   }
 
-  const organizationsWithSingleOwner = await getOrganizationsWhereUserIsSingleOwner(session.user.id);
-  const user = await getUser(session.user.id);
+  const [isMultiOrgEnabled, organizationsWithSingleOwner, user] = await Promise.all([
+    getIsMultiOrgEnabled(),
+    getOrganizationsWhereUserIsSingleOwner(session.user.id),
+    getUser(session.user.id),
+  ]);
   if (!user) {
     throw new AuthenticationError(t("common.not_authenticated"));
   }

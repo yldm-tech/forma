@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic, { type DynamicOptionsLoadingProps } from "next/dynamic";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { ActionClass, Language, OrganizationRole, Workspace } from "@forma/database/prisma-browser";
 import { TContactAttributeKey } from "@forma/types/contact-attribute-key";
@@ -13,18 +14,54 @@ import { useDocumentVisibility } from "@/lib/useDocumentVisibility";
 import { EditPublicSurveyAlertDialog } from "@/modules/survey/components/edit-public-survey-alert-dialog";
 import { ElementsView } from "@/modules/survey/editor/components/elements-view";
 import { LoadingSkeleton } from "@/modules/survey/editor/components/loading-skeleton";
-import { SettingsView } from "@/modules/survey/editor/components/settings-view";
-import { StylingView } from "@/modules/survey/editor/components/styling-view";
 import { SurveyEditorTabs } from "@/modules/survey/editor/components/survey-editor-tabs";
 import { SurveyMenuBar } from "@/modules/survey/editor/components/survey-menu-bar";
 import { TFollowUpEmailToUser } from "@/modules/survey/editor/types/survey-follow-up";
-import { FollowUpsView } from "@/modules/survey/follow-ups/components/follow-ups-view";
 import { shouldShowFollowUpsTab } from "@/modules/survey/follow-ups/lib/deprecation";
-import { LanguageView } from "@/modules/survey/multi-language-surveys/components/language-view";
 import { type TSurveySchedulingConfig } from "@/modules/survey/scheduling/lib/config";
 import { TTeamPermission } from "@/modules/teams/workspace-teams/types/team";
 import { PreviewSurvey } from "@/modules/ui/components/preview-survey";
 import { getWorkspaceLanguagesAction, refetchWorkspaceAction } from "../actions";
+
+// The route always opens on the Elements tab, so the other four views are code-split: their
+// subtrees stay out of the editor's first-load JS and arrive with the first switch to that tab.
+//
+// Three things about the shape below are load-bearing:
+//
+// - `dynamic` is called at module scope. Declaring it inside `SurveyEditor` would mint a fresh
+//   component type on every render, so React would unmount and remount the open tab — losing any
+//   state it holds — on each keystroke in the editor.
+// - The loader resolves the *named* export. `next/dynamic` with `ssr: false` hands whatever the
+//   loader resolves straight to `React.createElement` unless it has a `default`, so returning the
+//   module namespace would render an object.
+// - Each loaded module is cached by `next/dynamic`, so leaving a tab and coming back is synchronous
+//   after the first visit. The tabs are still mounted conditionally, exactly as before — this
+//   changes when their code arrives, not when they render.
+const DeferredViewFallback = ({ pastDelay }: Readonly<DynamicOptionsLoadingProps>) =>
+  // `pastDelay` stays false for the first 200ms of the chunk fetch, so a quick load keeps the tab
+  // switch looking instant instead of flashing a skeleton.
+  pastDelay ? <LoadingSkeleton /> : null;
+
+const StylingView = dynamic(
+  () => import("@/modules/survey/editor/components/styling-view").then((m) => m.StylingView),
+  { ssr: false, loading: DeferredViewFallback }
+);
+
+const SettingsView = dynamic(
+  () => import("@/modules/survey/editor/components/settings-view").then((m) => m.SettingsView),
+  { ssr: false, loading: DeferredViewFallback }
+);
+
+const LanguageView = dynamic(
+  () =>
+    import("@/modules/survey/multi-language-surveys/components/language-view").then((m) => m.LanguageView),
+  { ssr: false, loading: DeferredViewFallback }
+);
+
+const FollowUpsView = dynamic(
+  () => import("@/modules/survey/follow-ups/components/follow-ups-view").then((m) => m.FollowUpsView),
+  { ssr: false, loading: DeferredViewFallback }
+);
 
 interface SurveyEditorProps {
   survey: TSurvey;

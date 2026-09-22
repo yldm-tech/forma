@@ -1,6 +1,7 @@
 import "server-only";
 import {
   AIConfigurationError,
+  type AIEnvironment,
   type AIResolvedLanguageModel,
   type TGenerateObjectOptions,
   type TGenerateObjectResult,
@@ -17,6 +18,7 @@ import { OperationNotAllowedError, ResourceNotFoundError, TooManyRequestsError }
 import { env } from "@/lib/env";
 import { getOrganization } from "@/lib/organization/service";
 import { type AITracingContext, wrapAiModelWithTracing } from "@/lib/posthog/ai-tracing";
+import { AI_TRACING_FEATURE } from "@/lib/posthog/ai-tracing-feature";
 import { getIsAISmartToolsEnabled } from "@/modules/license-check/lib/utils";
 
 export const AI_ERROR_CODES = {
@@ -36,6 +38,46 @@ export interface TOrganizationAIConfig {
 }
 
 export const isInstanceAIConfigured = (): boolean => isAiConfigured(env);
+
+/**
+ * The AI features an operator can point at a different model from the instance-wide `AI_MODEL`.
+ *
+ * The keys are the tracing feature ids because they are already the one stable name each feature has
+ * on this path — reusing them keeps a caller from inventing a second, drifting identifier.
+ *
+ * This is a tier knob *inside* the configured provider, not a route across providers: `AI_PROVIDER`
+ * is single (`packages/ai/src/types.ts`), so an override must name a model that provider serves
+ * (Sonnet -> Haiku on Bedrock, pro -> flash on Google). Note also that `isAiConfigured` validates
+ * only `AI_MODEL`, so a typo'd override leaves the AI settings surface reading "configured" while
+ * that one feature fails at the provider.
+ */
+const AI_FEATURE_MODEL_ENV_KEYS = {
+  [AI_TRACING_FEATURE.Translation]: "AI_MODEL_TRANSLATION",
+  [AI_TRACING_FEATURE.ExampleResponses]: "AI_MODEL_EXAMPLE_RESPONSES",
+} as const;
+
+/**
+ * Named by the caller rather than derived from its `aiTracing` context: tracing is absent for
+ * API-key callers, so deriving the route would run the same feature on two different models
+ * depending on how the request authenticated.
+ */
+export type TAIModelRoutedFeature = keyof typeof AI_FEATURE_MODEL_ENV_KEYS;
+
+/**
+ * Resolves the environment a generation runs against. Returns `env` itself unless the feature has an
+ * override set, so an install that configures nothing is byte-identical to one without this knob.
+ *
+ * The spread is safe on purpose: `env` is the `createEnv` proxy from `@t3-oss/env-nextjs`, which
+ * installs only a `get` trap over a plain object — `ownKeys` falls through to the target, so the
+ * provider and its credentials come along. Were that not true, every overridden call would fail as
+ * an `AIConfigurationError` rather than run on a cheaper model, which is what the spec pins.
+ */
+const resolveAIEnvironment = (feature?: TAIModelRoutedFeature): AIEnvironment => {
+  if (!feature) return env;
+
+  const overriddenModel = env[AI_FEATURE_MODEL_ENV_KEYS[feature]];
+  return overriddenModel ? { ...env, AI_MODEL: overriddenModel } : env;
+};
 
 /**
  * A cancelled generation, as it reaches us: the fetch the provider is holding rejects with an
@@ -140,11 +182,14 @@ export const assertOrganizationAIConfigured = async (
 type TGenerateOrganizationAITextInput = {
   organizationId: string;
   aiTracing?: Omit<AITracingContext, "organizationId">;
+  /** Routes this generation to the feature's own model; see `TAIModelRoutedFeature`. */
+  feature?: TAIModelRoutedFeature;
 } & Parameters<typeof generateText>[0];
 
 export const generateOrganizationAIText = async ({
   organizationId,
   aiTracing,
+  feature,
   ...options
 }: TGenerateOrganizationAITextInput): Promise<Awaited<ReturnType<typeof generateText>>> => {
   const aiConfig = await assertOrganizationAIConfigured(organizationId);
@@ -154,7 +199,7 @@ export const generateOrganizationAIText = async ({
     : undefined;
 
   try {
-    return await generateText(options, env, wrapModel);
+    return await generateText(options, resolveAIEnvironment(feature), wrapModel);
   } catch (error) {
     classifyOrganizationAIFailure(error, {
       organizationId,
@@ -167,11 +212,14 @@ export const generateOrganizationAIText = async ({
 type TGenerateOrganizationAIObjectInput<T = unknown> = {
   organizationId: string;
   aiTracing?: Omit<AITracingContext, "organizationId">;
+  /** Routes this generation to the feature's own model; see `TAIModelRoutedFeature`. */
+  feature?: TAIModelRoutedFeature;
 } & TGenerateObjectOptions<T>;
 
 export const generateOrganizationAIObject = async <T = unknown>({
   organizationId,
   aiTracing,
+  feature,
   ...options
 }: TGenerateOrganizationAIObjectInput<T>): Promise<TGenerateObjectResult<T>> => {
   const aiConfig = await assertOrganizationAIConfigured(organizationId);
@@ -181,7 +229,7 @@ export const generateOrganizationAIObject = async <T = unknown>({
     : undefined;
 
   try {
-    return await generateObject<T>(options, env, wrapModel);
+    return await generateObject<T>(options, resolveAIEnvironment(feature), wrapModel);
   } catch (error) {
     classifyOrganizationAIFailure(error, {
       organizationId,
@@ -194,6 +242,8 @@ export const generateOrganizationAIObject = async <T = unknown>({
 type TStreamOrganizationAIObjectInput<T = unknown> = {
   organizationId: string;
   aiTracing?: Omit<AITracingContext, "organizationId">;
+  /** Routes this generation to the feature's own model; see `TAIModelRoutedFeature`. */
+  feature?: TAIModelRoutedFeature;
 } & TStreamObjectOptions<T>;
 
 /**
@@ -209,6 +259,7 @@ type TStreamOrganizationAIObjectInput<T = unknown> = {
 export const streamOrganizationAIObject = async <T = unknown>({
   organizationId,
   aiTracing,
+  feature,
   ...options
 }: TStreamOrganizationAIObjectInput<T>): Promise<TStreamObjectResult<T>> => {
   const aiConfig = await assertOrganizationAIConfigured(organizationId);
@@ -225,7 +276,7 @@ export const streamOrganizationAIObject = async <T = unknown>({
     });
 
   try {
-    const result = streamObject<T>(options, env, wrapModel);
+    const result = streamObject<T>(options, resolveAIEnvironment(feature), wrapModel);
     const completion = result.completion.catch(classify);
     // The caller may only consume the partial stream (client aborted); keep the classified
     // rejection from surfacing as an unhandled one.

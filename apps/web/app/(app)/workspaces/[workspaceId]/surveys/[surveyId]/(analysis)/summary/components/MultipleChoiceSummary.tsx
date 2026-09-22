@@ -16,6 +16,7 @@ import { ProgressBar } from "@/modules/ui/components/progress-bar";
 import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { convertFloatToNDecimal } from "../lib/utils";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
+import { SampleTruncationNotice } from "./SampleTruncationNotice";
 
 interface MultipleChoiceSummaryProps {
   elementSummary: TSurveyElementSummaryMultipleChoice;
@@ -174,12 +175,17 @@ export const MultipleChoiceSummary = ({
                           )}
                         </div>
                       ))}
-                    {visibleOtherResponses < result.others.length && (
+                    {visibleOtherResponses < result.others.length ? (
                       <div className="flex justify-center py-4">
                         <Button onClick={handleLoadMore} variant="secondary" size="sm">
                           {t("common.load_more")}
                         </Button>
                       </div>
+                    ) : (
+                      <SampleTruncationNotice
+                        sampleCount={result.others.length}
+                        responseCount={result.count}
+                      />
                     )}
                   </div>
                 )}

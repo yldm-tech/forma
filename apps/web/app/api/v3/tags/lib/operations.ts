@@ -9,7 +9,7 @@ import {
 } from "@/app/api/v3/lib/response";
 import type { TV3AuditLog, TV3Authentication } from "@/app/api/v3/lib/types";
 import { getTag, getTagsByWorkspaceId } from "@/lib/tag/service";
-import { getTagsOnResponsesCount } from "@/lib/tagOnResponse/service";
+import { getTagOnResponsesCount, getTagsOnResponsesCount } from "@/lib/tagOnResponse/service";
 import { deleteTag, mergeTags, updateTagName } from "@/modules/workspaces/settings/lib/tag";
 import { TagError } from "@/modules/workspaces/settings/types/tag";
 import { serializeV3Tag } from "../serializers";
@@ -58,10 +58,10 @@ export async function listV3Tags(params: TBaseParams & { workspaceId: string }):
   const access = await requireV3WorkspaceAccess(authentication, workspaceId, "read", requestId, instance);
   if (access instanceof Response) return access;
 
-  const [tags, counts] = await Promise.all([
-    getTagsByWorkspaceId(access.workspaceId),
-    getTagsOnResponsesCount(access.workspaceId),
-  ]);
+  // Sequential on purpose: counting by tag id costs an index lookup per listed tag instead of an
+  // aggregate over every response in the workspace, and the ids only exist once the tags are loaded.
+  const tags = await getTagsByWorkspaceId(access.workspaceId);
+  const counts = await getTagsOnResponsesCount(tags.map((tag) => tag.id));
 
   const countByTagId = new Map(counts.map((entry) => [entry.tagId, entry.count]));
 
@@ -106,10 +106,9 @@ export async function renameV3Tag(
 
   // `count` is part of the documented `TagResource`, so a rename cannot answer 0 for a tag that is in
   // use — that would be false data, not merely an omission. A rename does not change the count, so this
-  // reads the current one. `getTagsOnResponsesCount` is workspace-wide and `reactCache`d, the same call
-  // the list route makes.
-  const counts = await getTagsOnResponsesCount(authorized.tag.workspaceId);
-  const count = counts.find((entry) => entry.tagId === tagId)?.count ?? 0;
+  // reads the current one, for this tag alone: the workspace-wide aggregate this used to call answered
+  // the same number after discarding every other tag's group.
+  const count = await getTagOnResponsesCount(tagId);
 
   return successResponse(serializeV3Tag(result.data, count), { requestId });
 }

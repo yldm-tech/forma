@@ -37,8 +37,12 @@ export const responseSelection = {
   contact: {
     select: {
       id: true,
+      // `userId` is the only attribute anything reads off this relation, so the join stays narrow.
+      // Selecting the whole `attributeKey` row dragged all ten of its columns (including the nullable
+      // `description` text) along for every attribute of every contact on every response read.
       attributes: {
-        select: { attributeKey: true, value: true },
+        where: { attributeKey: { key: "userId" } },
+        select: { attributeKey: { select: { key: true } }, value: true },
       },
     },
   },

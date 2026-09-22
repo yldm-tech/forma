@@ -11,6 +11,7 @@ import { PersonAvatar } from "@/modules/ui/components/avatars";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
+import { SampleTruncationNotice } from "./SampleTruncationNotice";
 
 interface AddressSummaryProps {
   elementSummary: TSurveyElementSummaryAddress;
@@ -74,6 +75,10 @@ export const AddressSummary = ({ elementSummary, survey, locale }: AddressSummar
             })
           )}
         </div>
+        <SampleTruncationNotice
+          sampleCount={elementSummary.samples.length}
+          responseCount={elementSummary.responseCount}
+        />
       </div>
     </div>
   );

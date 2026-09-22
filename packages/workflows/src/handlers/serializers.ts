@@ -13,6 +13,7 @@ import type {
   WorkflowRunRow,
   WorkflowRunWithLogsRow,
 } from "../services/ports";
+import type { TWorkflowRunData } from "../types/runs";
 
 /**
  * Map Prisma rows to the public v3 resource shapes. Serializer output is validated against the
@@ -62,10 +63,20 @@ export const toWorkflowRunLogResource = (log: WorkflowRunLogRow): TWorkflowRunLo
   finishedAt: toIso(log.finishedAt),
 });
 
+/**
+ * `data.trigger` is the same value as the `triggerPayload` column — the runner parses one object from
+ * the other and persists both — so the detail response shipped the whole trigger snapshot, answer
+ * document included, twice, and the run drawer rendered it under both "Trigger payload" and "Run
+ * data". Drop the copy here: `trigger` is optional in `ZWorkflowRunData`, so the documented contract is
+ * unchanged, and stripping at the read boundary also covers the rows already persisted with it rather
+ * than only the ones written after the writer stops duplicating.
+ */
+const withoutDuplicateTrigger = ({ trigger: _trigger, ...rest }: TWorkflowRunData): TWorkflowRunData => rest;
+
 export const toWorkflowRunResource = (run: WorkflowRunWithLogsRow): TWorkflowRunResource => ({
   ...toWorkflowRunSummary(run),
   triggerPayload: run.triggerPayload,
-  data: run.data,
+  data: withoutDuplicateTrigger(run.data),
   logs: run.logs.map(toWorkflowRunLogResource),
   idempotencyKey: run.idempotencyKey,
   nextAttemptAt: toIso(run.nextAttemptAt),

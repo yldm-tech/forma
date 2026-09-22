@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { type SyntheticEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TSurveyType } from "@forma/types/surveys/types";
 import type { TUserLocale } from "@forma/types/user";
 import type { TSurveyGenerationDraftSnapshot } from "@/app/api/internal/surveys/generate/lib/events";
 import type { TV3CreateSurveyBody } from "@/app/api/v3/surveys/schemas";
@@ -26,6 +27,12 @@ type UseCreateSurveyWithAIProps = {
    * not its author, and the common case is writing for readers elsewhere.
    */
   defaultLanguage: TUserLocale;
+  /**
+   * The type the workspace's channel implies, so a generated draft matches what "Start from scratch"
+   * beside it would have built. It reaches the model (an app survey is prompted for widget-sized
+   * questions) and the create payload (an app survey is seeded a default distribution).
+   */
+  surveyType: TSurveyType;
   isAIAvailable: boolean;
   onSuccess: (surveyId: string) => void;
 };
@@ -33,6 +40,7 @@ type UseCreateSurveyWithAIProps = {
 export const useCreateSurveyWithAI = ({
   workspaceId,
   defaultLanguage,
+  surveyType,
   isAIAvailable,
   onSuccess,
 }: UseCreateSurveyWithAIProps) => {
@@ -124,7 +132,7 @@ export const useCreateSurveyWithAI = ({
 
     try {
       await streamSurveyGeneration(
-        { workspaceId, prompt: prompt.trim(), type: "link", languages },
+        { workspaceId, prompt: prompt.trim(), type: surveyType, languages },
         {
           signal: controller.signal,
           onEvent: (event) => {
@@ -159,7 +167,7 @@ export const useCreateSurveyWithAI = ({
         abortControllerRef.current = null;
       }
     }
-  }, [flushSnapshot, languages, prompt, queueSnapshot, workspaceId]);
+  }, [flushSnapshot, languages, prompt, queueSnapshot, surveyType, workspaceId]);
 
   // What both entry points need: AI on, and a prompt worth sending. `canCreate` adds the one thing
   // that is only true of the first generation — that nothing is running yet.

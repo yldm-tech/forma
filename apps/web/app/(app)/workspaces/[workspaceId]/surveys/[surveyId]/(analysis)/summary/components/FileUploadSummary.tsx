@@ -14,6 +14,7 @@ import { Button } from "@/modules/ui/components/button";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
+import { SampleTruncationNotice } from "./SampleTruncationNotice";
 
 interface FileUploadSummaryProps {
   elementSummary: TSurveyElementSummaryFileUpload;
@@ -112,12 +113,17 @@ export const FileUploadSummary = ({ elementSummary, survey, locale }: FileUpload
             ))
           )}
         </div>
-        {elementSummary.files.length > 0 && visibleResponses < elementSummary.files.length && (
+        {visibleResponses < elementSummary.files.length ? (
           <div className="flex justify-center py-4">
             <Button onClick={handleLoadMore} variant="secondary" size="sm">
               {t("common.load_more")}
             </Button>
           </div>
+        ) : (
+          <SampleTruncationNotice
+            sampleCount={elementSummary.files.length}
+            responseCount={elementSummary.responseCount}
+          />
         )}
       </div>
     </div>

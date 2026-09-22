@@ -15,6 +15,7 @@ import { IdBadge } from "@/modules/ui/components/id-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/modules/ui/components/table";
 import { ElementSummaryHeader } from "./ElementSummaryHeader";
 import { ResponseSampleModal } from "./ResponseSampleModal";
+import { SampleTruncationNotice } from "./SampleTruncationNotice";
 
 interface OpenTextSummaryProps {
   elementSummary: TSurveyElementSummaryOpenText;
@@ -110,12 +111,17 @@ export const OpenTextSummary = ({
               ))}
             </TableBody>
           </Table>
-          {visibleResponses < elementSummary.samples.length && (
+          {visibleResponses < elementSummary.samples.length ? (
             <div className="flex justify-center py-4">
               <Button onClick={handleLoadMore} variant="secondary" size="sm">
                 {t("common.load_more")}
               </Button>
             </div>
+          ) : (
+            <SampleTruncationNotice
+              sampleCount={elementSummary.samples.length}
+              responseCount={elementSummary.responseCount}
+            />
           )}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import next from "@forma/config-eslint/next";
 
 /*
@@ -14,6 +15,92 @@ import next from "@forma/config-eslint/next";
  * because a lint selector cannot follow a value across assignments. Nobody reaches for those by
  * accident, and someone determined to bypass the rule can just write an eslint-disable comment.
  */
+/*
+ * ESLint-baseline ratchet (ENG-2264).
+ *
+ * `@forma/config-eslint/next` downgrades all 85 error-severity rules of `js.configs.recommended` and `tseslint.configs.recommended` to warnings, because apps/web was never linted against them and turning them on in one step would block every PR. This block promotes back to `error` every one of those rules that is already at zero here, so new code cannot reintroduce a defect class the app has already paid off. The severity-only entry keeps whatever options the baseline configured — none of the 85 ships any, but that is the rule the form relies on.
+ *
+ * The arithmetic, measured with `eslint . -f json` in apps/web: 18 rules still have findings and stay at `warn` (RATCHET_PENDING below, with their counts); 20 more are already switched off here rather than merely downgraded, so promoting them would change nothing — 19 are off for `.ts`/`.tsx` via `typescript-eslint/eslint-recommended` because `tsc --noEmit` reports them instead (`no-const-assign`, `no-undef`, `getter-return`, `constructor-super` and the rest of that set), and `eslint-config-prettier` deliberately switches off `no-unexpected-multiline`. The remaining 47 are the list below.
+ *
+ * To promote one: fix its findings, delete its line from RATCHET_PENDING, add it here, and confirm `pnpm --filter @forma/web lint` reports no errors. The counts are a ratchet baseline, not an assertion — they drift as code lands, and a stale count is a diff a reviewer can see, which is the point of keeping them in code rather than on the ticket.
+ */
+const RATCHET_PENDING = {
+  "@typescript-eslint/no-explicit-any": 1367,
+  "prefer-const": 104,
+  "@typescript-eslint/no-unused-vars": 43,
+  "@typescript-eslint/no-unsafe-function-type": 16,
+  "@typescript-eslint/ban-ts-comment": 15,
+  "@typescript-eslint/no-unused-expressions": 10,
+  "no-useless-catch": 8,
+  "@typescript-eslint/no-empty-object-type": 7,
+  "no-case-declarations": 6,
+  "@typescript-eslint/no-require-imports": 5,
+  "no-prototype-builtins": 5,
+  "@typescript-eslint/no-wrapper-object-types": 5,
+  "no-extra-boolean-cast": 4,
+  "no-useless-escape": 3,
+  "no-var": 3,
+  "@typescript-eslint/no-non-null-asserted-optional-chain": 3,
+  "@typescript-eslint/prefer-as-const": 2,
+  "no-control-regex": 1,
+};
+
+// At zero in apps/web and enforced. Every entry is a defect class rather than a style preference, so a new violation is a bug report rather than a formatting quibble.
+const PROMOTED_TO_ERROR = [
+  "@typescript-eslint/no-array-constructor",
+  "@typescript-eslint/no-duplicate-enum-values",
+  "@typescript-eslint/no-extra-non-null-assertion",
+  "@typescript-eslint/no-misused-new",
+  "@typescript-eslint/no-namespace",
+  "@typescript-eslint/no-this-alias",
+  "@typescript-eslint/no-unnecessary-type-constraint",
+  "@typescript-eslint/no-unsafe-declaration-merging",
+  "@typescript-eslint/prefer-namespace-keyword",
+  "@typescript-eslint/triple-slash-reference",
+  "for-direction",
+  "no-async-promise-executor",
+  "no-compare-neg-zero",
+  "no-cond-assign",
+  "no-constant-binary-expression",
+  "no-constant-condition",
+  "no-debugger",
+  "no-delete-var",
+  "no-dupe-else-if",
+  "no-duplicate-case",
+  "no-empty",
+  "no-empty-character-class",
+  "no-empty-pattern",
+  "no-empty-static-block",
+  "no-ex-assign",
+  "no-fallthrough",
+  "no-global-assign",
+  "no-invalid-regexp",
+  "no-irregular-whitespace",
+  "no-loss-of-precision",
+  "no-misleading-character-class",
+  "no-nonoctal-decimal-escape",
+  "no-octal",
+  "no-regex-spaces",
+  "no-self-assign",
+  "no-shadow-restricted-names",
+  "no-sparse-arrays",
+  "no-unsafe-finally",
+  "no-unsafe-optional-chaining",
+  "no-unused-labels",
+  "no-unused-private-class-members",
+  "no-useless-backreference",
+  "prefer-rest-params",
+  "prefer-spread",
+  "require-yield",
+  "use-isnan",
+  "valid-typeof",
+];
+
+// The files under `modules/` that still import from `app/`. The list is committed at `scripts/modules-app-imports-baseline.json` and read here so the count lives in exactly one place — `scripts/check-modules-app-imports.mjs` is what keeps it shrinking (it fails on a new violation and on an entry that no longer violates), and `scripts/check-modules-app-imports.test.ts` is what runs that check in CI. Paths are repo-relative there and config-relative here.
+const MODULES_APP_IMPORT_BACKLOG = JSON.parse(
+  readFileSync(new URL("../../scripts/modules-app-imports-baseline.json", import.meta.url), "utf8")
+).files.map((file) => file.replace("apps/web/", ""));
+
 const PROCESS_ENV_MESSAGE =
   "Read environment variables through the validated env module: `@/lib/env` (or the derived constants in `@/lib/constants`) on the server, `@/lib/env-client` in client components. Direct `process.env` access skips schema validation, so a missing or mistyped variable fails at use-time instead of at boot. Bootstrap, config, script and test files are exempt — see apps/web/eslint.config.mjs.";
 
@@ -82,6 +169,10 @@ const config = [
   },
   ...next,
   {
+    // See RATCHET_PENDING above: the recommended baselines arrive downgraded to warnings, and every rule already at zero is put back to error here.
+    rules: Object.fromEntries(PROMOTED_TO_ERROR.map((rule) => [rule, "error"])),
+  },
+  {
     rules: {
       // runtime-only env read in integration/gen-boolean-client.mjs; hashing it in turbo.json is tracked separately (ENG-1682)
       "turbo/no-undeclared-env-vars": ["error", { allowList: ["PATH"] }],
@@ -143,7 +234,7 @@ const config = [
     //
     // Tests are exempt: reaching for a fixture or mock that lives beside the route it was written for is a different thing from production code depending upward, and five specs legitimately do it.
     //
-    // `modules/` is not covered yet — 67 files there still import from `app/`, mostly route components under `(app)/workspaces` and helpers under `api/v3`. That is a design problem rather than a misplacement, so it needs its own change before a rule like this can be turned on for that directory.
+    // The same rule runs for `modules/` in the block below, against a frozen backlog rather than from zero.
     files: ["lib/**/*.ts", "lib/**/*.tsx"],
     ignores: ["lib/**/*.test.ts", "lib/**/*.test.tsx", "lib/**/*.integration.test.ts"],
     rules: {
@@ -155,6 +246,35 @@ const config = [
               group: ["@/app/*", "@/app"],
               message:
                 "lib/ must not import from app/. Routes and modules depend on lib/, not the other way round — move the shared code into lib/ instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The other half of the same rule, and the direction AGENTS.md has only ever stated in prose: a feature module must not reach up into a route. A route component several modules need belongs in `modules/`; a module reaching into a route's own `lib/` wants the dependency inverted.
+    //
+    // This one cannot start from zero — the files in MODULES_APP_IMPORT_BACKLOG already do it, and each needs its own judgement call. So they are exempted by path and the rule gates everything else, which is what turns "do not add new ones" from a sentence into a check. The backlog file is the only place the number lives; the two prose counts that used to state it had already drifted apart (AGENTS.md said 35, the comment above said 67, the real figure is 24).
+    //
+    // Specs are exempt for the same reason they are above: reaching for a fixture beside the route it was written for is not production code depending upward.
+    files: ["modules/**/*.ts", "modules/**/*.tsx"],
+    ignores: [
+      ...MODULES_APP_IMPORT_BACKLOG,
+      "modules/**/*.test.ts",
+      "modules/**/*.test.tsx",
+      "modules/**/*.integration.test.ts",
+      "modules/**/__mocks__/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/app/*", "@/app"],
+              message:
+                "modules/ must not import from app/. A route component several modules need belongs in modules/; a module reaching into a route's lib/ wants the dependency inverted. The remaining offenders are frozen in scripts/modules-app-imports-baseline.json — that list may only shrink.",
             },
           ],
         },

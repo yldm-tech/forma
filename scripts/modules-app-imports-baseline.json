@@ -1,0 +1,30 @@
+{
+  "files": [
+    "apps/web/modules/api/lib/verify-response-recaptcha.ts",
+    "apps/web/modules/contacts/api/v1/management/contact-attribute-keys/route.ts",
+    "apps/web/modules/mcp/auth.ts",
+    "apps/web/modules/mcp/errors.ts",
+    "apps/web/modules/mcp/tools/run-mcp-mutation.ts",
+    "apps/web/modules/mcp/tools/surveys.ts",
+    "apps/web/modules/mcp/tools/workflows.ts",
+    "apps/web/modules/mcp/tools/workspaces.ts",
+    "apps/web/modules/settings/components/settings-navigation.tsx",
+    "apps/web/modules/settings/components/settings-shell.tsx",
+    "apps/web/modules/settings/lib/navigation-data.ts",
+    "apps/web/modules/setup/organization/create/components/create-organization.tsx",
+    "apps/web/modules/survey/components/template-list/hooks/use-create-survey-with-ai.ts",
+    "apps/web/modules/survey/components/template-list/lib/ai-create-machine.ts",
+    "apps/web/modules/survey/components/template-list/lib/ai-draft-reducer.ts",
+    "apps/web/modules/survey/components/template-list/lib/ai-generate-stream-client.ts",
+    "apps/web/modules/survey/list/components/copy-survey-modal.tsx",
+    "apps/web/modules/survey/list/lib/initial-page.ts",
+    "apps/web/modules/survey/list/lib/v3-surveys-client.ts",
+    "apps/web/modules/workspaces/components/create-workspace-modal/index.tsx",
+    "apps/web/modules/workspaces/settings/(setup)/app-connection/page.tsx",
+    "apps/web/modules/workspaces/settings/general/lib/post-workspace-deletion-redirect.ts",
+    "apps/web/modules/workspaces/settings/tags/components/edit-tags-wrapper.tsx",
+    "apps/web/modules/workspaces/settings/tags/lib/api-client.ts"
+  ],
+  "regenerate": "node scripts/check-modules-app-imports.mjs --update",
+  "why": "Files under apps/web/modules/ that still import from apps/web/app/. This list may only shrink — see the script for why, and invert the dependency rather than adding a line here. apps/web/eslint.config.mjs reads it as the `ignores` of its modules/ layering rule."
+}

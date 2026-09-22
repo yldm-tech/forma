@@ -10,6 +10,25 @@ import {
   streamOrganizationAIObject,
 } from "./service";
 
+const envValues = vi.hoisted(() => ({
+  AI_PROVIDER: "google" as string | undefined,
+  AI_MODEL: "gemini-2.5-flash" as string | undefined,
+  AI_MODEL_TRANSLATION: undefined as string | undefined,
+  AI_MODEL_EXAMPLE_RESPONSES: undefined as string | undefined,
+  AI_GOOGLE_CLOUD_PROJECT: "google-cloud-project" as string | undefined,
+  AI_GOOGLE_CLOUD_LOCATION: "us-central1" as string | undefined,
+  AI_GOOGLE_CLOUD_CREDENTIALS_JSON: undefined as string | undefined,
+  AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS: "/tmp/google-cloud.json" as string | undefined,
+  AI_AWS_REGION: "us-east-1" as string | undefined,
+  AI_AWS_ACCESS_KEY_ID: "aws-access-key-id" as string | undefined,
+  AI_AWS_SECRET_ACCESS_KEY: "aws-secret-access-key" as string | undefined,
+  AI_AWS_SESSION_TOKEN: undefined as string | undefined,
+  AI_AZURE_BASE_URL: "https://example-resource.openai.azure.com/openai" as string | undefined,
+  AI_AZURE_RESOURCE_NAME: undefined as string | undefined,
+  AI_AZURE_API_KEY: "azure-api-key" as string | undefined,
+  AI_AZURE_API_VERSION: "v1" as string | undefined,
+}));
+
 const mocks = vi.hoisted(() => ({
   generateObject: vi.fn(),
   streamObject: vi.fn(),
@@ -46,23 +65,13 @@ vi.mock("@forma/logger", () => ({
   },
 }));
 
+// A get-only Proxy over a plain object, which is exactly the shape `createEnv` from
+// `@t3-oss/env-nextjs` returns. The service spreads this to apply a per-feature model override, and
+// a plain-object stand-in would not prove that the spread carries the provider and credentials over.
 vi.mock("@/lib/env", () => ({
-  env: {
-    AI_PROVIDER: "google",
-    AI_MODEL: "gemini-2.5-flash",
-    AI_GOOGLE_CLOUD_PROJECT: "google-cloud-project",
-    AI_GOOGLE_CLOUD_LOCATION: "us-central1",
-    AI_GOOGLE_CLOUD_CREDENTIALS_JSON: undefined,
-    AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS: "/tmp/google-cloud.json",
-    AI_AWS_REGION: "us-east-1",
-    AI_AWS_ACCESS_KEY_ID: "aws-access-key-id",
-    AI_AWS_SECRET_ACCESS_KEY: "aws-secret-access-key",
-    AI_AWS_SESSION_TOKEN: undefined,
-    AI_AZURE_BASE_URL: "https://example-resource.openai.azure.com/openai",
-    AI_AZURE_RESOURCE_NAME: undefined,
-    AI_AZURE_API_KEY: "azure-api-key",
-    AI_AZURE_API_VERSION: "v1",
-  },
+  env: new Proxy(envValues, {
+    get: (target, prop) => (typeof prop === "string" ? Reflect.get(target, prop) : undefined),
+  }),
 }));
 
 vi.mock("@/lib/organization/service", () => ({
@@ -80,6 +89,8 @@ vi.mock("@/lib/posthog/ai-tracing", () => ({
 describe("AI organization service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    envValues.AI_MODEL_TRANSLATION = undefined;
+    envValues.AI_MODEL_EXAMPLE_RESPONSES = undefined;
 
     mocks.isAiConfigured.mockReturnValue(true);
     mocks.classifyAIProviderError.mockReturnValue(undefined);
@@ -387,6 +398,100 @@ describe("AI organization service", () => {
         retryAfter: 30,
       });
       expect(mocks.loggerError).toHaveBeenCalled();
+    });
+  });
+
+  describe("per-feature model routing", () => {
+    const objectInput = (feature?: "ai_translation" | "ai_example_responses") =>
+      ({
+        organizationId: "org_1",
+        schema: { type: "object" },
+        prompt: "Translate this survey",
+        ...(feature ? { feature } : {}),
+      }) as unknown as Parameters<typeof generateOrganizationAIObject>[0];
+
+    const environmentOf = (call: unknown[]) => call[1] as Record<string, string | undefined>;
+
+    test("routes a feature to its own model and keeps the provider credentials", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+
+      await generateOrganizationAIObject(objectInput("ai_translation"));
+
+      // The credentials matter as much as the model: `env` is a Proxy, and a spread that dropped
+      // them would turn every overridden call into an AIConfigurationError.
+      expect(environmentOf(mocks.generateObject.mock.calls[0])).toMatchObject({
+        AI_MODEL: "gemini-2.5-flash-lite",
+        AI_PROVIDER: "google",
+        AI_GOOGLE_CLOUD_PROJECT: "google-cloud-project",
+        AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS: "/tmp/google-cloud.json",
+      });
+    });
+
+    test("an unset override leaves the feature on AI_MODEL", async () => {
+      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+
+      await generateOrganizationAIObject(objectInput("ai_translation"));
+
+      expect(environmentOf(mocks.generateObject.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash");
+    });
+
+    test("one feature's override does not move another feature", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+
+      await generateOrganizationAIObject(objectInput("ai_example_responses"));
+
+      expect(environmentOf(mocks.generateObject.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash");
+    });
+
+    test("a call that names no feature is unaffected", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      envValues.AI_MODEL_EXAMPLE_RESPONSES = "gemini-2.5-flash-lite";
+      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+
+      await generateOrganizationAIObject(objectInput());
+
+      expect(environmentOf(mocks.generateObject.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash");
+    });
+
+    test("the override is not passed to the model options", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      mocks.generateObject.mockResolvedValueOnce({ object: {} });
+
+      await generateOrganizationAIObject(objectInput("ai_translation"));
+
+      expect(mocks.generateObject.mock.calls[0][0]).not.toHaveProperty("feature");
+    });
+
+    test("streaming routes the same way", async () => {
+      envValues.AI_MODEL_EXAMPLE_RESPONSES = "gemini-2.5-flash-lite";
+      mocks.streamObject.mockReturnValueOnce({
+        partialObjectStream: {},
+        completion: Promise.resolve({}),
+      });
+
+      await streamOrganizationAIObject({
+        organizationId: "org_1",
+        feature: "ai_example_responses",
+        prompt: "Generate",
+        schema: { type: "object" },
+      } as unknown as Parameters<typeof streamOrganizationAIObject>[0]);
+
+      expect(environmentOf(mocks.streamObject.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash-lite");
+    });
+
+    test("text generation routes the same way", async () => {
+      envValues.AI_MODEL_TRANSLATION = "gemini-2.5-flash-lite";
+      mocks.generateText.mockResolvedValueOnce({ text: "ok" });
+
+      await generateOrganizationAIText({
+        organizationId: "org_1",
+        feature: "ai_translation",
+        prompt: "Translate this survey",
+      });
+
+      expect(environmentOf(mocks.generateText.mock.calls[0]).AI_MODEL).toBe("gemini-2.5-flash-lite");
     });
   });
 

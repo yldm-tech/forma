@@ -22,13 +22,15 @@ const Page = async (props: { params: Promise<{ organizationId: string }> }) => {
     return redirect(`/auth/login`);
   }
 
-  const user = await getUser(session.user.id);
+  const [user, isMultiOrgEnabled, membership] = await Promise.all([
+    getUser(session.user.id),
+    getIsMultiOrgEnabled(),
+    getMembershipByUserIdOrganizationId(session.user.id, organization.id),
+  ]);
   if (!user) return notFound();
 
-  const isMultiOrgEnabled = await getIsMultiOrgEnabled();
   const publicDomain = getPublicDomain();
 
-  const membership = await getMembershipByUserIdOrganizationId(session.user.id, organization.id);
   const isMembershipPending = membership?.role === undefined;
   const { isOwner, isManager } = getAccessFlags(membership?.role);
   const isOwnerOrManager = isOwner || isManager;

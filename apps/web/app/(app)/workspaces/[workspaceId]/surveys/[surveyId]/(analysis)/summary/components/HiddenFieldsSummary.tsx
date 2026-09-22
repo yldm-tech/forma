@@ -11,6 +11,7 @@ import { PersonAvatar } from "@/modules/ui/components/avatars";
 import { Button } from "@/modules/ui/components/button";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 import { useWorkspace } from "@/modules/workspaces/context/workspace-context";
+import { SampleTruncationNotice } from "./SampleTruncationNotice";
 
 interface HiddenFieldsSummaryProps {
   elementSummary: TSurveyElementSummaryHiddenFields;
@@ -90,12 +91,17 @@ export const HiddenFieldsSummary = ({ elementSummary, locale }: HiddenFieldsSumm
             </div>
           ))
         )}
-        {elementSummary.samples.length > 0 && visibleResponses < elementSummary.samples.length && (
+        {visibleResponses < elementSummary.samples.length ? (
           <div className="flex justify-center py-4">
             <Button onClick={handleLoadMore} variant="secondary" size="sm">
               {t("common.load_more")}
             </Button>
           </div>
+        ) : (
+          <SampleTruncationNotice
+            sampleCount={elementSummary.samples.length}
+            responseCount={elementSummary.responseCount}
+          />
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getOpenTextAutocomplete } from "@/components/elements/autocomplete";
 import { ElementError, getElementErrorAria } from "@/components/general/element-error";
 import { ElementHeader } from "@/components/general/element-header";
 import { Input } from "@/components/general/input";
@@ -72,6 +73,8 @@ function OpenText({
   const describedBy = [descriptionId, errorAria.ariaDescribedBy].filter(Boolean).join(" ");
   // "phone" is the survey element's input type, not an HTML one; the HTML equivalent is "tel". An unknown type falls back to "text", which costs the respondent the telephone keypad and every tel autofill hint.
   const htmlInputType = inputType === "phone" ? "tel" : inputType;
+  // WCAG 1.3.5: only the two input types whose subject is unambiguously the respondent.
+  const autocomplete = getOpenTextAutocomplete(inputType);
 
   return (
     <div className="w-full space-y-4" id={elementId} dir={dir}>
@@ -110,6 +113,7 @@ function OpenText({
             <Input
               id={inputId}
               type={htmlInputType}
+              autoComplete={autocomplete}
               placeholder={placeholder}
               value={value}
               onChange={handleChange}

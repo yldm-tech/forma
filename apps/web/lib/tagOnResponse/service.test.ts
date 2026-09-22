@@ -3,13 +3,19 @@ import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { DatabaseError } from "@forma/types/errors";
 import { getResponse } from "../response/service";
-import { addTagToRespone, deleteTagOnResponse, getTagsOnResponsesCount } from "./service";
+import {
+  addTagToRespone,
+  deleteTagOnResponse,
+  getTagOnResponsesCount,
+  getTagsOnResponsesCount,
+} from "./service";
 
 vi.mock("server-only", () => ({}));
 
 vi.mock("@forma/database", () => ({
   prisma: {
     tagsOnResponses: {
+      count: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
       groupBy: vi.fn(),
@@ -104,7 +110,7 @@ describe("TagOnResponse Service", () => {
     });
   });
 
-  test("getTagsOnResponsesCount should return tag counts for a workspace", async () => {
+  test("getTagsOnResponsesCount should return tag counts for the given tag ids", async () => {
     const mockTagsCount = [
       { tagId: "tag1", _count: { _all: 5 } },
       { tagId: "tag2", _count: { _all: 3 } },
@@ -112,26 +118,51 @@ describe("TagOnResponse Service", () => {
 
     vi.mocked(prisma.tagsOnResponses.groupBy).mockResolvedValue(mockTagsCount as any);
 
-    const result = await getTagsOnResponsesCount("env1");
+    const result = await getTagsOnResponsesCount(["tag1", "tag2"]);
 
     expect(result).toEqual([
       { tagId: "tag1", count: 5 },
       { tagId: "tag2", count: 3 },
     ]);
 
+    // Keyed on tagId so the aggregate reads `@@index([tagId])`; nothing walks Response or Survey.
     expect(prisma.tagsOnResponses.groupBy).toHaveBeenCalledWith({
       by: ["tagId"],
       where: {
-        response: {
-          survey: {
-            workspaceId: "env1",
-          },
-        },
+        tagId: { in: ["tag1", "tag2"] },
       },
       _count: {
         _all: true,
       },
     });
+  });
+
+  test("getTagsOnResponsesCount should not query at all for an empty tag list", async () => {
+    const result = await getTagsOnResponsesCount([]);
+
+    expect(result).toEqual([]);
+    // `IN ()` is not valid SQL, and a workspace with no tags has nothing to count.
+    expect(prisma.tagsOnResponses.groupBy).not.toHaveBeenCalled();
+  });
+
+  test("getTagOnResponsesCount should count a single tag without an aggregate", async () => {
+    vi.mocked(prisma.tagsOnResponses.count).mockResolvedValue(4);
+
+    const result = await getTagOnResponsesCount("tag1");
+
+    expect(result).toBe(4);
+    expect(prisma.tagsOnResponses.count).toHaveBeenCalledWith({ where: { tagId: "tag1" } });
+    expect(prisma.tagsOnResponses.groupBy).not.toHaveBeenCalled();
+  });
+
+  test("getTagOnResponsesCount should throw DatabaseError for prisma errors", async () => {
+    const prismaError = new Prisma.PrismaClientKnownRequestError("Database error", {
+      code: "P2010",
+      clientVersion: "5.0.0",
+    });
+    vi.mocked(prisma.tagsOnResponses.count).mockRejectedValue(prismaError);
+
+    await expect(getTagOnResponsesCount("tag1")).rejects.toThrow(DatabaseError);
   });
 
   test("addTagToRespone should be a no-op when the tag is already on the response (P2002)", async () => {
@@ -242,12 +273,12 @@ describe("TagOnResponse Service", () => {
     });
     vi.mocked(prisma.tagsOnResponses.groupBy).mockRejectedValue(prismaError);
 
-    await expect(getTagsOnResponsesCount("env1")).rejects.toThrow(DatabaseError);
+    await expect(getTagsOnResponsesCount(["tag1"])).rejects.toThrow(DatabaseError);
   });
 
   test("getTagsOnResponsesCount should rethrow non-prisma errors", async () => {
     vi.mocked(prisma.tagsOnResponses.groupBy).mockRejectedValue(new Error("boom"));
 
-    await expect(getTagsOnResponsesCount("env1")).rejects.toThrow("boom");
+    await expect(getTagsOnResponsesCount(["tag1"])).rejects.toThrow("boom");
   });
 });

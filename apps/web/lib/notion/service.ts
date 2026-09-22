@@ -3,23 +3,40 @@ import { ENCRYPTION_KEY } from "@/lib/constants";
 import { symmetricDecrypt } from "@/lib/crypto";
 import { getIntegrationByType } from "../integration/service";
 
-const fetchPages = async (config: TIntegrationNotionConfig) => {
-  try {
-    const res = await fetch("https://api.notion.com/v1/search", {
-      headers: getHeaders(config),
-      method: "POST",
-      body: JSON.stringify({
-        page_size: 100,
-        filter: {
-          value: "database",
-          property: "object",
-        },
-      }),
-    });
-    return (await res.json()).results;
-  } catch (error) {
-    throw error;
+/**
+ * Notion answers a rejected request with a 4xx and a `{ code, message }` body. Both calls below used to
+ * discard the response, so a revoked grant or a renamed column read exactly like a success: the delivery
+ * pipeline logged nothing and the mapping modal showed an empty database list. The body is read
+ * defensively because an error response is not guaranteed to be JSON.
+ */
+const readNotionError = async (res: Response): Promise<string> => {
+  const body: unknown = await res.json().catch(() => null);
+  if (!body || typeof body !== "object") return "";
+  const { code, message } = body as { code?: unknown; message?: unknown };
+  return [code, message].filter((part) => typeof part === "string").join(" ");
+};
+
+const fetchPages = async (config: TIntegrationNotionConfig): Promise<TIntegrationNotionDatabase[]> => {
+  const res = await fetch("https://api.notion.com/v1/search", {
+    headers: getHeaders(config),
+    method: "POST",
+    body: JSON.stringify({
+      page_size: 100,
+      filter: {
+        value: "database",
+        property: "object",
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Notion API error fetching databases: ${res.status} ${res.statusText} ${await readNotionError(res)}`
+    );
   }
+
+  const body: { results?: TIntegrationNotionDatabase[] } = await res.json();
+  return body.results ?? [];
 };
 
 export const getNotionDatabases = async (workspaceId: string): Promise<TIntegrationNotionDatabase[]> => {
@@ -40,19 +57,21 @@ export const writeData = async (
   properties: Record<string, Object>,
   config: TIntegrationNotionConfig
 ) => {
-  try {
-    await fetch(`https://api.notion.com/v1/pages`, {
-      headers: getHeaders(config),
-      method: "POST",
-      body: JSON.stringify({
-        parent: {
-          database_id: databaseId,
-        },
-        properties: properties,
-      }),
-    });
-  } catch (error) {
-    throw error;
+  const res = await fetch(`https://api.notion.com/v1/pages`, {
+    headers: getHeaders(config),
+    method: "POST",
+    body: JSON.stringify({
+      parent: {
+        database_id: databaseId,
+      },
+      properties: properties,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Notion API error creating page: ${res.status} ${res.statusText} ${await readNotionError(res)}`
+    );
   }
 };
 

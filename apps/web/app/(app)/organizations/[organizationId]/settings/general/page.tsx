@@ -30,9 +30,8 @@ const Page = async (props: Readonly<{ params: Promise<{ organizationId: string }
     params.organizationId
   );
 
-  const user = session?.user?.id ? await getUser(session.user.id) : null;
-
-  const [isMultiOrgEnabled, layoutData] = await Promise.all([
+  const [user, isMultiOrgEnabled, layoutData] = await Promise.all([
+    session?.user?.id ? getUser(session.user.id) : Promise.resolve(null),
     getIsMultiOrgEnabled(),
     getSettingsLayoutData(session.user.id, organization.id),
   ]);
