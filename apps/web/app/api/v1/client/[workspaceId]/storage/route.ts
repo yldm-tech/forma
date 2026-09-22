@@ -3,15 +3,15 @@ import { ZUploadPrivateFileRequest } from "@forma/types/storage";
 import { parseAndValidateJsonBody } from "@/lib/api/parse-and-validate-json-body";
 import { responses } from "@/lib/api/response";
 import { THandlerParams, withV1ApiWrapper } from "@/lib/api/with-api-logging";
-import { MAX_FILE_UPLOAD_SIZES } from "@/lib/constants";
+import { MAX_FILE_UPLOAD_SIZE_BYTES } from "@/lib/constants";
 import { getOrganization } from "@/lib/organization/service";
 import { getSurvey } from "@/lib/survey/service";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { resolveClientApiIds } from "@/lib/utils/resolve-client-id";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
-import { getBiggerUploadFileSizePermission } from "@/modules/license-check/lib/utils";
 import { getSignedUrlForUpload } from "@/modules/storage/service";
+import { getSurveyFileUploadConfigs } from "@/modules/storage/survey-file-upload-elements";
 import { getErrorResponseFromStorageError, validateSurveyAllowsFileUpload } from "@/modules/storage/utils";
 
 export const OPTIONS = async (): Promise<Response> => {
@@ -129,10 +129,18 @@ export const POST = withV1ApiWrapper({
       };
     }
 
-    const isBiggerFileUploadAllowed = await getBiggerUploadFileSizePermission();
-    const maxFileUploadSize = isBiggerFileUploadAllowed
-      ? MAX_FILE_UPLOAD_SIZES.big
-      : MAX_FILE_UPLOAD_SIZES.standard;
+    // The size the survey advertises to the respondent is the size the server enforces. `maxSizeInMB` is otherwise checked only in the respondent's browser (packages/surveys/src/components/elements/file-upload-element.tsx), so a direct POST to the presigned URL writes up to the ceiling against a survey that shows 5 MB.
+    //
+    // An element that advertises nothing still gets the ceiling: this is an abuse control on an unauthenticated endpoint, and nothing about it is licensed.
+    const advertisedMaxSizeInMB = getSurveyFileUploadConfigs({
+      blocks: survey.blocks,
+      questions: survey.questions,
+    }).find((config) => config.id === elementId)?.maxSizeInMB;
+
+    const maxFileUploadSize =
+      typeof advertisedMaxSizeInMB === "number" && advertisedMaxSizeInMB > 0
+        ? Math.min(Math.ceil(advertisedMaxSizeInMB * 1024 * 1024), MAX_FILE_UPLOAD_SIZE_BYTES)
+        : MAX_FILE_UPLOAD_SIZE_BYTES;
 
     const signedUrlResponse = await getSignedUrlForUpload(
       fileName,

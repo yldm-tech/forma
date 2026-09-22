@@ -46,6 +46,7 @@ jobs:
 
           helm lint "$chart" --set forma.webappUrl=https://qa.example.com
           bash charts/forma/tests/authzed-operations.sh
+          bash charts/forma/tests/deployment-hardening.sh
 
           helm template qa "$chart" \
             --set forma.webappUrl=https://qa.example.com \

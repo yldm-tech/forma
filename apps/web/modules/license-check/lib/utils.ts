@@ -35,8 +35,6 @@ export const getWhiteLabelPermission = async (): Promise<boolean> => true;
 
 export const getBulkInvitePermission = async (): Promise<boolean> => true;
 
-export const getBiggerUploadFileSizePermission = async (): Promise<boolean> => true;
-
 /** No licence caps the count, so nothing here does either. */
 export const getOrganizationWorkspacesLimit = async (): Promise<number> => Infinity;
 
