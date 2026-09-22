@@ -1978,7 +1978,6 @@
         "response_finished": "响应 完成",
         "response_updated": "更新 响应",
         "secret_copy_warning": "请妥善保存此密钥。您可以在 Webhook 设置中再次查看。",
-        "secret_description": "使用此密钥验证 Webhook 请求。有关签名验证，请参阅文档。",
         "signing_secret": "签名密钥",
         "source": "来源",
         "test_endpoint": "测试 端点",

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { prisma } from "@forma/database";
 import { InvalidInputError } from "@forma/types/errors";
 import { generateStandardWebhookSignature } from "@/lib/crypto";
 import {
@@ -8,7 +9,7 @@ import {
 } from "@/lib/utils/validate-webhook-url";
 import { getTranslate } from "@/lingodotdev/server";
 import { isDiscordWebhook } from "@/modules/integrations/webhooks/lib/utils";
-import { testEndpoint } from "./webhook";
+import { getWebhooks, testEndpoint } from "./webhook";
 
 vi.mock("@forma/database", () => ({
   prisma: {
@@ -189,6 +190,36 @@ describe("testEndpoint", () => {
 
     await expect(testEndpoint("https://example.com/webhook")).rejects.toThrow(
       "Error while fetching the URL: socket hang up"
+    );
+  });
+});
+
+describe("getWebhooks", () => {
+  const workspaceId = "cltestworkspaceid0000001";
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  test("never selects the signing secret", async () => {
+    vi.mocked(prisma.webhook.findMany).mockResolvedValue([]);
+
+    await getWebhooks(workspaceId);
+
+    // The settings page serializes this result into the payload of every workspace member who opens it,
+    // so the HMAC signing key must not be part of the row. Mirrors the v2 management path.
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith(expect.objectContaining({ omit: { secret: true } }));
+    const [query] = vi.mocked(prisma.webhook.findMany).mock.calls[0];
+    expect(query).not.toHaveProperty("select");
+  });
+
+  test("still scopes the query to the workspace and orders by creation date", async () => {
+    vi.mocked(prisma.webhook.findMany).mockResolvedValue([]);
+
+    await getWebhooks(workspaceId);
+
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { workspaceId }, orderBy: { createdAt: "desc" } })
     );
   });
 });

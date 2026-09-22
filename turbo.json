@@ -357,10 +357,12 @@
     },
     "test": {
       "cache": false,
+      "env": ["RUN_RATE_LIMIT_LOAD_TESTS"],
       "outputs": []
     },
     "test:coverage": {
       "cache": false,
+      "env": ["RUN_RATE_LIMIT_LOAD_TESTS"],
       "outputs": []
     },
     "typecheck": {

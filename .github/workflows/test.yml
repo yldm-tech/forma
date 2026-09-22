@@ -12,6 +12,21 @@ jobs:
     permissions:
       contents: read
 
+    # The Redis-backed suites - BullMQ end-to-end processing, the cache's miss/hit/TTL behaviour - used to
+    # be blanked out of this job and reported as passing anyway. They now report as skipped without a
+    # server, so the honest way to get the coverage back is to give the job a server. Same pinned image as
+    # docker-compose.dev.yml, so CI and a developer's machine run against the same build.
+    services:
+      valkey:
+        image: valkey/valkey@sha256:e0eb7c480958d32bdc4357a74bdd70653ae15f2f9b4c93c4a5a9fad1dc471c84
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -36,9 +51,11 @@ jobs:
       - name: Create .env
         run: pnpm dev:setup
 
-      - name: Adjust CI-specific env values
-        run: |
-          sed -i "s|REDIS_URL=.*|REDIS_URL=|" .env
-
+      # `test:coverage`, not `test`: the two 80% thresholds in `apps/web/vite.config.mts`
+      # (`modules/auth/lib/**` and `lib/authzed/**`) are only evaluated under `--coverage`, and no job
+      # here ran it, so neither gate had ever executed. Coverage also writes the six `lcov.info` files
+      # `sonar-project.properties` points at. Measured on the `@forma/web` workspace: 46s for `test`
+      # against 55s for `test:coverage` warm, 52s against 99s cold - small enough next to this job's
+      # 15-minute budget that coverage replaces the plain run instead of becoming a second job.
       - name: Test
-        run: pnpm test
+        run: pnpm test:coverage

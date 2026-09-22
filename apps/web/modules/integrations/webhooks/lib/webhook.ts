@@ -139,13 +139,20 @@ export const createWebhook = async (
   }
 };
 
-export const getWebhooks = async (workspaceId: string): Promise<Webhook[]> => {
+// Safe by default — the signing secret stays in the database, matching the v2 management path.
+// This feeds the workspace settings page, so anything returned here is serialized into the page payload
+// of every member who opens it, read-only members included. The plaintext secret is shown exactly once,
+// by the creation flow, from the value the create action already has in hand.
+export const getWebhooks = async (workspaceId: string): Promise<Omit<Webhook, "secret">[]> => {
   validateInputs([workspaceId, ZId]);
 
   try {
     const webhooks = await prisma.webhook.findMany({
       where: {
         workspaceId,
+      },
+      omit: {
+        secret: true,
       },
       orderBy: {
         createdAt: "desc",

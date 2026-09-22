@@ -146,10 +146,10 @@ export const S3_REGION = env.S3_REGION;
 export const S3_ENDPOINT_URL = env.S3_ENDPOINT_URL;
 export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
 export const S3_FORCE_PATH_STYLE = env.S3_FORCE_PATH_STYLE === "1";
-export const MAX_FILE_UPLOAD_SIZES = {
-  standard: 1024 * 1024 * 10, // 10MB
-  big: 1024 * 1024 * 1024, // 1GB
-} as const;
+// The hard ceiling on a single respondent upload, in bytes. The cap actually enforced is the `maxSizeInMB` the survey advertises to the respondent; this is what applies when an element advertises nothing, and what clamps one that advertises more.
+//
+// It is an abuse control on an unauthenticated endpoint, not an entitlement — no licence widens or narrows it. It used to be selected by `getBiggerUploadFileSizePermission()`, which returns `true` for every install, so the branch always picked this value.
+export const MAX_FILE_UPLOAD_SIZE_BYTES = 1024 * 1024 * 1024; // 1GB
 export const IS_STORAGE_CONFIGURED = Boolean(S3_BUCKET_NAME);
 
 // Colors for Survey Bg

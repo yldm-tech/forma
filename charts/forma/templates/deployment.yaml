@@ -86,6 +86,10 @@ spec:
         - name: {{ template "forma.name" . }}
           image: {{ include "forma.deploymentImage" . }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
+          {{- with .Values.deployment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if .Values.deployment.command }}
           command:
             {{- toYaml .Values.deployment.command | nindent 12 }}

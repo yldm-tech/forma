@@ -7,9 +7,12 @@ import { TSurvey } from "@forma/types/surveys/types";
 import { WebhookModal } from "@/modules/integrations/webhooks/components/webhook-detail-modal";
 import { EmptyState } from "@/modules/ui/components/empty-state";
 
+// The settings surface never receives the signing secret — see getWebhooks in lib/webhook.ts.
+type WebhookWithoutSecret = Omit<Webhook, "secret">;
+
 interface WebhookTableProps {
   workspaceId: string;
-  webhooks: Webhook[];
+  webhooks: WebhookWithoutSecret[];
   surveys: TSurvey[];
   children: [JSX.Element, JSX.Element[]];
   isReadOnly: boolean;
@@ -26,7 +29,7 @@ export const WebhookTable = ({
 }: WebhookTableProps) => {
   const [isWebhookDetailModalOpen, setWebhookDetailModalOpen] = useState(false);
   const { t } = useTranslation();
-  const [activeWebhook, setActiveWebhook] = useState<Webhook>({
+  const [activeWebhook, setActiveWebhook] = useState<WebhookWithoutSecret>({
     workspaceId,
     id: "",
     name: "",
@@ -36,10 +39,9 @@ export const WebhookTable = ({
     surveyIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
-    secret: null,
   });
 
-  const handleOpenWebhookDetailModalClick = (e: React.MouseEvent, webhook: Webhook) => {
+  const handleOpenWebhookDetailModalClick = (e: React.MouseEvent, webhook: WebhookWithoutSecret) => {
     e.preventDefault();
     setActiveWebhook(webhook);
     setWebhookDetailModalOpen(true);

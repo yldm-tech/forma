@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { type TEmbeddedValueResponse, deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
 import { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { TSurveyQuota } from "@forma/types/quota";
 import { TResponseData, TResponseVariables } from "@forma/types/responses";
 import { TSurveyBlockLogic, TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
@@ -10,6 +11,7 @@ import {
   TSurveyLogicConditionsOperator,
 } from "@forma/types/surveys/logic";
 import { TSurveyLogicAction } from "@forma/types/surveys/types";
+import { evaluateQuotas } from "@/modules/quotas/lib/utils";
 import {
   addConditionBelow,
   buildServerEmbeddedValues,
@@ -31,6 +33,14 @@ vi.mock("@/lib/i18n/utils", () => ({
 vi.mock("@paralleldrive/cuid2", () => ({
   createId: () => "fixed-id",
 }));
+// `evaluateQuotas` is imported for real — it is the path the assertions below exercise — so only its
+// module's own side imports are stubbed. `@/lib/surveyLogic/utils` is deliberately NOT mocked here:
+// the quota suite beside it mocks the evaluator away, which is why an operator missing from the
+// evaluator could not fail anything there.
+vi.mock("@forma/database/prisma", () => ({ Prisma: {} }));
+vi.mock("@forma/logger", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@/lib/response/service", () => ({ updateResponse: vi.fn() }));
+vi.mock("@/lib/utils/validate", () => ({ validateInputs: vi.fn() }));
 
 describe("surveyLogic", () => {
   const mockSurvey: TJsWorkspaceStateSurvey = {
@@ -1975,5 +1985,79 @@ describe("reserved field operands, server engine (ENG-1840)", () => {
         durationSeconds: "150",
       })
     ).toBe(true);
+  });
+});
+
+describe("quota screening on CTA operators", () => {
+  const ctaSurvey = {
+    id: "cm9gptbhg0000192zceq9ayuc",
+    blocks: [
+      {
+        id: "block1",
+        name: "Block 1",
+        elements: [
+          {
+            id: "cta1",
+            type: TSurveyElementTypeEnum.CTA,
+            headline: { default: "Read the docs" },
+            required: false,
+          },
+        ],
+      },
+    ],
+    variables: [],
+    embeddedFields: [],
+  } as unknown as TJsWorkspaceStateSurvey;
+
+  const ctaQuota = (operator: TSurveyLogicConditionsOperator): TSurveyQuota => ({
+    id: "quota1",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    surveyId: "cm9gptbhg0000192zceq9ayuc",
+    name: "Did not click through",
+    limit: 100,
+    logic: {
+      connector: "and",
+      conditions: [{ id: "condition1", leftOperand: { type: "element", value: "cta1" }, operator }],
+    },
+    action: "continueSurvey",
+    endingCardId: null,
+    countPartialSubmissions: false,
+  });
+
+  test("a quota on isNotClicked screens in a respondent who did not click", () => {
+    // The operator is in `ZSurveyLogicConditionsOperator` and offered by the quota builder, but the
+    // server evaluator had no arm for it, so every respondent fell through to `default: return false`
+    // and the quota filled to zero with no error anywhere.
+    const { passedQuotas, failedQuotas } = evaluateQuotas(
+      ctaSurvey,
+      {},
+      {},
+      [ctaQuota("isNotClicked")],
+      "en"
+    );
+
+    expect(passedQuotas.map((quota) => quota.id)).toEqual(["quota1"]);
+    expect(failedQuotas).toEqual([]);
+  });
+
+  test("a quota on isNotClicked screens out a respondent who clicked", () => {
+    const { passedQuotas, failedQuotas } = evaluateQuotas(
+      ctaSurvey,
+      { cta1: "clicked" },
+      {},
+      [ctaQuota("isNotClicked")],
+      "en"
+    );
+
+    expect(passedQuotas).toEqual([]);
+    expect(failedQuotas.map((quota) => quota.id)).toEqual(["quota1"]);
+  });
+
+  test("the isClicked twin still screens on the value, not on presence", () => {
+    expect(
+      evaluateQuotas(ctaSurvey, { cta1: "clicked" }, {}, [ctaQuota("isClicked")], "en").passedQuotas
+    ).toHaveLength(1);
+    expect(evaluateQuotas(ctaSurvey, {}, {}, [ctaQuota("isClicked")], "en").failedQuotas).toHaveLength(1);
   });
 });

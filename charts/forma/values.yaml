@@ -200,10 +200,21 @@ deployment:
       memory: 1Gi
       cpu: "1"
 
-  # Container security context
+  # Container security context. This is rendered onto the app container, so it must stay runnable: the image
+  # runs as the non-numeric `USER nextjs` (uid 1001, apps/web/Dockerfile), and kubelet can only enforce
+  # runAsNonRoot when an explicit numeric runAsUser is supplied. readOnlyRootFilesystem stays off because the
+  # app writes to apps/web/uploads and the Next.js standalone cache on the root filesystem; turning it on
+  # requires emptyDir mounts supplied through deployment.extraVolumes / deployment.extraVolumeMounts.
   containerSecurityContext:
-    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
     runAsNonRoot: true
+    runAsUser: 1001
+    readOnlyRootFilesystem: false
+    seccompProfile:
+      type: RuntimeDefault
 
   # Pod security context
   securityContext: {}

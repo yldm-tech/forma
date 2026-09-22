@@ -34,7 +34,6 @@ const ALWAYS_ON = [
   "getRemoveBrandingPermission",
   "getWhiteLabelPermission",
   "getBulkInvitePermission",
-  "getBiggerUploadFileSizePermission",
 ] as const;
 
 beforeEach(() => {

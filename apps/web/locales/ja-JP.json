@@ -1978,7 +1978,6 @@
         "response_finished": "回答完了",
         "response_updated": "回答更新",
         "secret_copy_warning": "このシークレットを安全に保管してください。Webhook 設定で再度確認できます。",
-        "secret_description": "このシークレットを使用して Webhook リクエストを検証します。署名検証についてはドキュメントを参照してください。",
         "signing_secret": "署名シークレット",
         "source": "ソース",
         "test_endpoint": "エンドポイントをテスト",
