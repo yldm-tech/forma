@@ -331,6 +331,42 @@ describe("getSurveySummaryDropOff", () => {
     expect(dropOff[1].ttc).toBe(10); // block-level TTC uses max block time per response
   });
 
+  test("clamps the first element's dropOffCount when responses outnumber displays", () => {
+    // A link survey whose responses carry no Display row: impressions are counted from response data, so they outrun displayCount.
+    const responses = [
+      {
+        id: "r1",
+        data: { q1: "a", q2: "b" },
+        updatedAt: new Date(),
+        contact: null,
+        contactAttributes: {},
+        language: "en",
+        ttc: { q1: 10, q2: 10 },
+        finished: true,
+      },
+      {
+        id: "r2",
+        data: { q1: "c", q2: "d" },
+        updatedAt: new Date(),
+        contact: null,
+        contactAttributes: {},
+        language: "en",
+        ttc: { q1: 10, q2: 10 },
+        finished: true,
+      },
+    ] as any;
+
+    const dropOff = getSurveySummaryDropOff(
+      surveyWithBlocks,
+      getElementsFromBlocks(surveyWithBlocks.blocks),
+      responses,
+      0
+    );
+
+    expect(dropOff[0].dropOffCount).toBe(0);
+    expect(dropOff[0].dropOffPercentage).toBe(0);
+  });
+
   test("drop-off attributed to last seen element when user doesn't reach next question", () => {
     // Welcome card enabled so first element drop-off is NOT overridden by displayCount
     const surveyWithWelcome: TSurvey = {

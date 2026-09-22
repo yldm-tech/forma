@@ -26,7 +26,8 @@ export const downloadResponsesFile = (
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
   } else {
-    file = new File([fileContents], normalizedFileName, {
+    // A Blob's charset parameter never reaches the saved file, so Excel on Windows decodes a BOM-less CSV with the system ANSI codepage and non-ASCII answers open as mojibake. Only this human-facing download gets the BOM; machine-facing CSVs built by convertToCsv stay byte-identical.
+    file = new File(["\uFEFF", fileContents], normalizedFileName, {
       type: "text/csv;charset=utf-8",
     });
   }

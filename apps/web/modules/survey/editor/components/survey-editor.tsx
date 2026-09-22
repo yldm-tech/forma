@@ -153,24 +153,6 @@ export const SurveyEditor = ({
     setLocalSurvey((current) => current ?? structuredClone(survey));
   }, [survey]);
 
-  useEffect(() => {
-    const listener = () => {
-      if (document.visibilityState === "visible") {
-        const fetchLatestWorkspace = async () => {
-          const refetchWorkspaceResponse = await refetchWorkspaceAction({ workspaceId: localWorkspace.id });
-          if (refetchWorkspaceResponse?.data) {
-            setLocalWorkspace(refetchWorkspaceResponse.data);
-          }
-        };
-        fetchLatestWorkspace();
-      }
-    };
-    document.addEventListener("visibilitychange", listener);
-    return () => {
-      document.removeEventListener("visibilitychange", listener);
-    };
-  }, [localWorkspace.id]);
-
   // when the survey type changes, we need to reset the active element id to the first element
   useEffect(() => {
     const firstBlock = localSurvey?.blocks[0];
