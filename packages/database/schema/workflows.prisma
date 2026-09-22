@@ -22,23 +22,29 @@ enum WorkflowRunLogStatus {
 }
 
 model Workflow {
-  id          String            @id @default(cuid(2))
-  createdAt   DateTime          @default(now()) @map(name: "created_at")
-  updatedAt   DateTime          @updatedAt @map(name: "updated_at")
-  name        String
-  description String?
-  status      WorkflowStatus    @default(draft)
-  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId String
-  creator     User?             @relation("workflowCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  createdBy   String?
+  id              String            @id @default(cuid(2))
+  createdAt       DateTime          @default(now()) @map(name: "created_at")
+  updatedAt       DateTime          @updatedAt @map(name: "updated_at")
+  name            String
+  description     String?
+  status          WorkflowStatus    @default(draft)
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId     String
+  creator         User?             @relation("workflowCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdBy       String?
   /// [WorkflowDefinition]
-  definition  Json
-  versions    WorkflowVersion[]
-  runs        WorkflowRun[]
+  definition      Json
+  /// The survey the **current published version's** `response.completed` trigger targets, denormalised off `WorkflowVersion.definition` so a finished response can narrow the enabled workflows in SQL instead of fetching every one of them with its full definition JSON.
+  ///
+  /// **Null means "matches every survey".** It is not "matches nothing", and nothing may read it as such: a null is what a row the backfill did not reach carries, what a workflow whose published trigger is not `response.completed` carries, and what a future trigger targeting several surveys would carry. The candidate query therefore filters with `OR: [{ triggerSurveyId: surveyId }, { triggerSurveyId: null }]`, so this column can only widen the candidate set relative to the published definition — `matchWorkflowsForResponse` stays the sole authority on whether a workflow fires, which bounds a drifted value to a wasted fetch rather than a workflow that silently stops firing.
+  ///
+  /// Writing it is all-or-nothing per publish. `enableWorkflow` is the only path that publishes a version today, and it must set this column in the same transaction as the version it publishes. Any future path that changes which version is current must do the same, or write null — which costs a fetch and stays correct.
+  triggerSurveyId String?
+  versions        WorkflowVersion[]
+  runs            WorkflowRun[]
 
   @@unique([id, workspaceId])
-  @@index([workspaceId, status])
+  @@index([workspaceId, status, triggerSurveyId])
   @@index([workspaceId, updatedAt])
 }
 

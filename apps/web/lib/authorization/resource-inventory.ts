@@ -38,6 +38,7 @@ export const PRISMA_AUTHORIZATION_RESOURCE_INVENTORY = {
   // This is a Prisma model name and a classification label, not a credential or credential value.
   PasswordResetToken: "authentication_or_application", // NOSONAR
   Response: "direct_authorization_resource",
+  ResponsePipelineOutbox: "authentication_or_application",
   ResponseQuotaLink: "parent_derived_or_data_integrity",
   Segment: "workspace_inherited_resource",
   Session: "authentication_or_application",

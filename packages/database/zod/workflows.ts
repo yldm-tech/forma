@@ -23,6 +23,10 @@ export const ZWorkflow = z.object({
   workspaceId: z.cuid2().describe("The workspace ID of the workflow"),
   createdBy: z.cuid2().nullable().describe("The user who created the workflow"),
   definition: ZWorkflowDefinition.describe("The persisted workflow definition"),
+  triggerSurveyId: z
+    .cuid2()
+    .nullable()
+    .describe("Denormalised trigger survey; null matches every survey, never none"),
 }) satisfies z.ZodType<Workflow>;
 
 export const ZWorkflowVersion = z.object({

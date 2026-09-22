@@ -6,6 +6,7 @@ import { TResponse } from "@forma/types/responses";
 import { getJobsQueueingConfig } from "@/lib/jobs/config";
 import { sendToPipeline } from "@/lib/pipelines";
 import { findMatchingLocale } from "@/lib/utils/locale";
+import { recordDroppedResponsePipelineEvent } from "@/modules/response-pipeline/lib/outbox-repository";
 
 const mockEnqueueResponsePipeline = vi.fn();
 
@@ -30,13 +31,20 @@ vi.mock("@forma/logger", () => ({
   },
 }));
 
+vi.mock("@/modules/response-pipeline/lib/outbox-repository", () => ({
+  recordDroppedResponsePipelineEvent: vi.fn(),
+  toOutboxErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+}));
+
 describe("sendToPipeline", () => {
+  const responseUpdatedAt = new Date("2026-09-22T10:00:00.000Z");
   const testData: TResponsePipelineJobData = {
     event: PipelineTriggers.responseCreated,
     surveyId: "cm8ckvchx000008lb710n0gdn",
     workspaceId: "cm8cmp9hp000008jf7l570ml2",
-    response: { id: "cm8cmpnjj000108jfdr9dfqe6" } as TResponse,
+    response: { id: "cm8cmpnjj000108jfdr9dfqe6", updatedAt: responseUpdatedAt } as TResponse,
   };
+  const expectedJobId = `response-pipeline:responseCreated:cm8cmpnjj000108jfdr9dfqe6:${responseUpdatedAt.getTime()}`;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,7 +64,10 @@ describe("sendToPipeline", () => {
     await sendToPipeline(testData);
 
     expect(getBackgroundJobProducer).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: "en-US" });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: "en-US" },
+      { jobId: expectedJobId }
+    );
   });
 
   test("retries a failing enqueue rather than surfacing it on the first attempt", async () => {
@@ -87,10 +98,84 @@ describe("sendToPipeline", () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({
         event: testData.event,
+        responseId: testData.response.id,
         surveyId: testData.surveyId,
         workspaceId: testData.workspaceId,
-        responseId: testData.response.id,
       }),
+      "Response pipeline event deferred to the outbox after retries"
+    );
+  });
+
+  test("reuses one jobId across the whole retry loop, so a retry cannot double-deliver", async () => {
+    mockEnqueueResponsePipeline.mockRejectedValueOnce(new Error("Redis unavailable")).mockResolvedValueOnce({
+      jobId: "job-1",
+      jobName: "response-pipeline.process",
+      queueName: "background-jobs",
+    });
+
+    await sendToPipeline(testData);
+
+    // Both attempts carry the same deterministic id, so if the first attempt in fact reached Valkey and
+    // only its acknowledgement was lost, the second is a no-op at the queue rather than a second run of
+    // every webhook, follow-up email and billing event hanging off this response.
+    expect(mockEnqueueResponsePipeline.mock.calls.map(([, options]) => options)).toEqual([
+      { jobId: expectedJobId },
+      { jobId: expectedJobId },
+    ]);
+  });
+
+  test("gives different jobIds to two events about the same response version", async () => {
+    mockEnqueueResponsePipeline.mockResolvedValue({
+      jobId: "job-1",
+      jobName: "response-pipeline.process",
+      queueName: "background-jobs",
+    });
+
+    await sendToPipeline(testData);
+    await sendToPipeline({ ...testData, event: PipelineTriggers.responseFinished });
+
+    const [firstOptions, secondOptions] = mockEnqueueResponsePipeline.mock.calls.map(([, opts]) => opts);
+    expect(firstOptions).not.toEqual(secondOptions);
+  });
+
+  test("enqueues without a jobId rather than a fabricated one when the response has no version", async () => {
+    mockEnqueueResponsePipeline.mockResolvedValue({
+      jobId: "job-1",
+      jobName: "response-pipeline.process",
+      queueName: "background-jobs",
+    });
+
+    await sendToPipeline({ ...testData, response: { id: "cm8cmpnjj000108jfdr9dfqe6" } as TResponse });
+
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(expect.objectContaining({}), undefined);
+  });
+
+  test("writes the event to the outbox once the retry budget is exhausted", async () => {
+    mockEnqueueResponsePipeline.mockRejectedValue(new Error("Redis unavailable"));
+
+    await sendToPipeline(testData);
+
+    expect(recordDroppedResponsePipelineEvent).toHaveBeenCalledWith(
+      expectedJobId,
+      { ...testData, locale: "en-US" },
+      "Redis unavailable"
+    );
+  });
+
+  test("still does not throw when the outbox write fails as well", async () => {
+    mockEnqueueResponsePipeline.mockRejectedValue(new Error("Redis unavailable"));
+    vi.mocked(recordDroppedResponsePipelineEvent).mockRejectedValueOnce(new Error("response deleted"));
+
+    // The response row is committed and its foreign key cascades, so this insert can legitimately lose
+    // a race with a deletion. Escaping here would be the 500 the never-throw contract exists to prevent.
+    await expect(sendToPipeline(testData)).resolves.toBeUndefined();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: testData.response.id }),
+      "Response pipeline outbox write failed"
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ recovered: false }),
       "Response pipeline event dropped after retries"
     );
   });
@@ -119,7 +204,10 @@ describe("sendToPipeline", () => {
 
     await sendToPipeline(testData);
 
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: undefined });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: undefined },
+      { jobId: expectedJobId }
+    );
   });
 
   test("preserves an existing job.locale instead of resolving it", async () => {
@@ -132,6 +220,9 @@ describe("sendToPipeline", () => {
     await sendToPipeline({ ...testData, locale: "de-DE" });
 
     expect(findMatchingLocale).not.toHaveBeenCalled();
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: "de-DE" });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: "de-DE" },
+      { jobId: expectedJobId }
+    );
   });
 });
