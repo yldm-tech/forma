@@ -33,6 +33,7 @@ import {
 import { captureWorkflowRunFailed } from "@/modules/workflows/lib/analytics/run-failure";
 
 /** Strips CR/LF and other control chars from the subject — defense against SMTP header injection. */
+// eslint-disable-next-line no-control-regex -- matching control characters is the point: they are what an SMTP header injection smuggles in
 const CONTROL_CHARS_PATTERN = /[\x00-\x1f\x7f\u2028\u2029]/g;
 const stripControlChars = (value: string): string => value.replace(CONTROL_CHARS_PATTERN, "");
 
@@ -452,15 +453,31 @@ const claimRun = async (
  *
  * `steps` is taken (already planned by the caller) only to decide whether the recipient allowlist is
  * needed at all — see `allowedRecipientEmails` below.
+ *
+ * All of it is loaded in one fan-out. Nothing here feeds anything else here: the guards below only read
+ * values the fan-out already resolved, so sequencing the organization and member-email reads behind the
+ * survey/response pair bought three sequential round trips where one does. The trade is that a run which
+ * fails a guard now pays for lookups it will not use — one or two wasted queries on an already-failing
+ * run, against two saved round trips on every run that works.
  */
 const loadRunEmailContext = async (
   triggerPayload: TWorkflowTriggerRunPayload,
   workspaceId: string,
   steps: TWorkflowExecutableStep[]
 ): Promise<RunEmailContext> => {
-  const [response, survey] = await Promise.all([
+  // Only literal `to` recipients are allowlist-checked, so the member query is skipped entirely for
+  // the common respondent-field-only run rather than paying an unbounded lookup on every response.
+  // Scoped to the workspace, matching the enable-time gate: an org member whose team lost access to
+  // this workspace is no longer allowed (ENG-2186). Fail closed: a workspace that resolves to nobody
+  // yields an empty allowlist, so a literal external recipient is rejected rather than allowed
+  // through unchecked.
+  const needsRecipientAllowlist = steps.some((step) => isLiteralEmailRecipient(step.node.config.to));
+
+  const [response, survey, organization, allowedRecipientEmails] = await Promise.all([
     getResponse(triggerPayload.responseId),
     getSurvey(triggerPayload.surveyId),
+    getOrganizationByWorkspaceId(workspaceId),
+    needsRecipientAllowlist ? getWorkspaceMemberEmails(workspaceId) : Promise.resolve(new Set<string>()),
   ]);
 
   if (!response) {
@@ -483,18 +500,7 @@ const loadRunEmailContext = async (
     );
   }
 
-  const organization = await getOrganizationByWorkspaceId(workspaceId);
   const logoUrl = organization?.whitelabel?.logoUrl ?? "";
-  // Only literal `to` recipients are allowlist-checked, so the member query is skipped entirely for
-  // the common respondent-field-only run rather than paying an unbounded lookup on every response.
-  // Scoped to the workspace, matching the enable-time gate: an org member whose team lost access to
-  // this workspace is no longer allowed (ENG-2186). Fail closed: a workspace that resolves to nobody
-  // yields an empty allowlist, so a literal external recipient is rejected rather than allowed
-  // through unchecked.
-  const needsRecipientAllowlist = steps.some((step) => isLiteralEmailRecipient(step.node.config.to));
-  const allowedRecipientEmails = needsRecipientAllowlist
-    ? await getWorkspaceMemberEmails(workspaceId)
-    : new Set<string>();
 
   return { survey, response, logoUrl, allowedRecipientEmails };
 };
