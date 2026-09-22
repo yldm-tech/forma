@@ -289,7 +289,15 @@ export const evaluateNoCodeConfigClick = (
       matchesDirectly = false;
     }
     if (!matchesDirectly) {
-      const ancestor = targetElement.closest(cssSelector);
+      // `closest` throws the same SyntaxError as `matches` on a selector the visitor's browser cannot
+      // parse, and an unparseable selector always reaches it because the catch above leaves
+      // `matchesDirectly` false. Unguarded it would abort the caller's loop over every click action.
+      let ancestor: Element | null = null;
+      try {
+        ancestor = targetElement.closest(cssSelector);
+      } catch {
+        return false;
+      }
       if (!ancestor) return false;
       matchedElement = ancestor as HTMLElement;
     }

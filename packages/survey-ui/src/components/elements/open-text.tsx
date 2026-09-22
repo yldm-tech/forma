@@ -70,6 +70,8 @@ function OpenText({
   const descriptionId = description ? `${inputId}-description` : undefined;
   const errorAria = getElementErrorAria(inputId, errorMessage);
   const describedBy = [descriptionId, errorAria.ariaDescribedBy].filter(Boolean).join(" ");
+  // "phone" is the survey element's input type, not an HTML one; the HTML equivalent is "tel". An unknown type falls back to "text", which costs the respondent the telephone keypad and every tel autofill hint.
+  const htmlInputType = inputType === "phone" ? "tel" : inputType;
 
   return (
     <div className="w-full space-y-4" id={elementId} dir={dir}>
@@ -107,7 +109,7 @@ function OpenText({
           ) : (
             <Input
               id={inputId}
-              type={inputType}
+              type={htmlInputType}
               placeholder={placeholder}
               value={value}
               onChange={handleChange}
