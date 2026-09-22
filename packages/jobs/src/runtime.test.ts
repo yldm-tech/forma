@@ -12,6 +12,7 @@ import {
   createMockWorker,
 } from "../test/boundary-mocks";
 import { JOBS_PREFIX, JOBS_QUEUE_NAME, JOB_NAMES } from "./constants";
+import { UNKNOWN_JOB_NAME, setJobsObserver } from "./observability";
 import type * as QueueModule from "./queue";
 import { DEFAULT_WORKER_CONCURRENCY, startJobsRuntime } from "./runtime";
 
@@ -175,6 +176,98 @@ describe("@forma/jobs runtime", () => {
     expect(worker.close).toHaveBeenCalledTimes(1);
     expect(queueMock.close).toHaveBeenCalledTimes(1);
     expect(mockCloseRedisConnection).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * The queue that carries every survey response emitted nothing an operator could alert on: with a
+   * single worker it can grow without bound while logging nothing, because nothing fails — jobs wait.
+   * The wait is measured from the job's intended run time so a recurring sweep queued 24h ahead does not
+   * report a day of backlog on an empty queue.
+   */
+  test("reports settled jobs to the observer with a delay-corrected wait", async () => {
+    const onJobOutcome = vi.fn();
+    setJobsObserver({ onJobOutcome });
+
+    const runtime = await startJobsRuntime({ redisUrl: "redis://localhost:6379" });
+
+    try {
+      const worker = workerMocks[0];
+      const registeredWorkerEvents = new Map<string, (...args: unknown[]) => void>(
+        worker.on.mock.calls.map(([event, handler]) => [event, handler])
+      );
+
+      registeredWorkerEvents.get("completed")?.({
+        attemptsMade: 1,
+        delay: 60_000,
+        finishedOn: 1_000_250,
+        id: "job-1",
+        name: JOB_NAMES.surveyScheduling,
+        processedOn: 1_000_000,
+        queueName: JOBS_QUEUE_NAME,
+        timestamp: 936_000,
+      });
+
+      expect(onJobOutcome).toHaveBeenCalledWith({
+        attemptsMade: 1,
+        durationMs: 250,
+        jobName: JOB_NAMES.surveyScheduling,
+        status: "completed",
+        waitDurationMs: 4_000,
+      });
+    } finally {
+      setJobsObserver(undefined);
+      await runtime.close();
+    }
+  });
+
+  /**
+   * BullMQ emits `failed` without a job when it cannot load one back, and the job name it does emit
+   * comes from Redis — a schedule outliving its code feeds an arbitrary string in. Both are counted, and
+   * both land in the bounded `unknown` bucket rather than becoming a metric attribute Redis chooses.
+   */
+  test("counts failures under a bounded job name, with or without a job", async () => {
+    const onJobOutcome = vi.fn();
+    setJobsObserver({ onJobOutcome });
+
+    const runtime = await startJobsRuntime({ redisUrl: "redis://localhost:6379" });
+
+    try {
+      const worker = workerMocks[0];
+      const registeredWorkerEvents = new Map<string, (...args: unknown[]) => void>(
+        worker.on.mock.calls.map(([event, handler]) => [event, handler])
+      );
+
+      registeredWorkerEvents.get("failed")?.(
+        {
+          attemptsMade: 3,
+          delay: 0,
+          id: "job-2",
+          name: "response-pipeline.process-v2",
+          queueName: JOBS_QUEUE_NAME,
+          timestamp: 1_000_000,
+        },
+        new Error("job failed")
+      );
+      registeredWorkerEvents.get("failed")?.(undefined, new Error("job lost"));
+
+      expect(onJobOutcome).toHaveBeenNthCalledWith(1, {
+        attemptsMade: 3,
+        durationMs: undefined,
+        jobName: UNKNOWN_JOB_NAME,
+        status: "failed",
+        waitDurationMs: undefined,
+      });
+      expect(onJobOutcome).toHaveBeenNthCalledWith(2, {
+        attemptsMade: 0,
+        durationMs: undefined,
+        jobName: UNKNOWN_JOB_NAME,
+        status: "failed",
+        waitDurationMs: undefined,
+      });
+    } finally {
+      setJobsObserver(undefined);
+      await runtime.close();
+    }
   });
 
   test("starts multiple workers when configured", async () => {

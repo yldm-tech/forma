@@ -26,7 +26,7 @@ import {
 import { TResponse, TResponseMeta } from "@forma/types/responses";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey, TSurveyQuestionTypeEnum } from "@forma/types/surveys/types";
-import { writeData as airtableWriteData } from "@/lib/airtable/service";
+import { writeData as airtableWriteData, resolveAirtableCredential } from "@/lib/airtable/service";
 import { writeData as googleSheetWriteData } from "@/lib/googleSheet/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
 import { writeData as writeNotionData } from "@/lib/notion/service";
@@ -294,6 +294,7 @@ describe("handleIntegrations", () => {
     vi.mocked(parseRecallInfo).mockImplementation((text, _, __) => text || "");
     vi.mocked(getFormattedDateTimeString).mockReturnValue("2024-01-01 12:00");
     vi.mocked(truncateText).mockImplementation((text, limit) => text.slice(0, limit));
+    vi.mocked(resolveAirtableCredential).mockResolvedValue(mockAirtableIntegration.config.key);
   });
 
   afterEach(() => {
@@ -342,6 +343,46 @@ describe("handleIntegrations", () => {
     expect(googleSheetWriteData).not.toHaveBeenCalled();
     expect(writeDataToSlack).not.toHaveBeenCalled();
     expect(writeNotionData).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  test("should dispatch every destination concurrently", async () => {
+    const deferred = () => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+    const airtable = deferred();
+    const googleSheets = deferred();
+    const slack = deferred();
+    const notion = deferred();
+    vi.mocked(airtableWriteData).mockReturnValue(airtable.promise);
+    vi.mocked(googleSheetWriteData).mockReturnValue(googleSheets.promise);
+    vi.mocked(writeDataToSlack).mockReturnValue(slack.promise);
+    vi.mocked(writeNotionData).mockReturnValue(notion.promise);
+
+    const pending = handleIntegrations(
+      [mockAirtableIntegration, mockGoogleSheetsIntegration, mockSlackIntegration, mockNotionIntegration],
+      mockPipelineInput,
+      mockSurvey
+    );
+
+    // Sequentially, only the first destination would be in flight while the others wait on it.
+    await vi.waitFor(() => {
+      expect(airtableWriteData).toHaveBeenCalledTimes(1);
+      expect(googleSheetWriteData).toHaveBeenCalledTimes(1);
+      expect(writeDataToSlack).toHaveBeenCalledTimes(1);
+      expect(writeNotionData).toHaveBeenCalledTimes(1);
+    });
+
+    airtable.resolve();
+    googleSheets.resolve();
+    slack.resolve();
+    notion.resolve();
+    await pending;
+
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -401,6 +442,63 @@ describe("handleIntegrations", () => {
 
       // Verify error was logged, remove checks on the return value
       expect(logger.error).toHaveBeenCalledWith(error, "Error in airtable integration");
+    });
+
+    test("should deliver with the refreshed credential rather than the stored one", async () => {
+      const refreshed = {
+        access_token: "refreshed_token",
+        refresh_token: "new_refresh_token",
+        expiry_date: new Date(Date.now() + 3_600_000).toISOString(),
+      } as TIntegrationAirtableCredential;
+      vi.mocked(resolveAirtableCredential).mockResolvedValue(refreshed);
+      vi.mocked(airtableWriteData).mockResolvedValue(undefined);
+
+      await handleIntegrations([mockAirtableIntegration], mockPipelineInput, mockSurvey);
+
+      expect(resolveAirtableCredential).toHaveBeenCalledWith("env1", mockAirtableIntegration.config);
+      expect(airtableWriteData).toHaveBeenCalledWith(
+        refreshed,
+        mockAirtableIntegration.config.data[0],
+        expect.anything(),
+        expect.anything()
+      );
+    });
+
+    test("should resolve the credential once for several matching config entries", async () => {
+      const twoEntries: TIntegrationAirtable = {
+        ...mockAirtableIntegration,
+        config: {
+          ...mockAirtableIntegration.config,
+          data: [
+            mockAirtableIntegration.config.data[0],
+            { ...mockAirtableIntegration.config.data[0], tableId: "table2" },
+          ],
+        },
+      };
+      vi.mocked(airtableWriteData).mockResolvedValue(undefined);
+
+      await handleIntegrations([twoEntries], mockPipelineInput, mockSurvey);
+
+      expect(airtableWriteData).toHaveBeenCalledTimes(2);
+      expect(resolveAirtableCredential).toHaveBeenCalledTimes(1);
+    });
+
+    test("should not spend a token refresh when no config entry targets the response's survey", async () => {
+      const differentSurveyInput = { ...mockPipelineInput, surveyId: "otherSurvey" };
+
+      await handleIntegrations([mockAirtableIntegration], differentSurveyInput, mockSurvey);
+
+      expect(resolveAirtableCredential).not.toHaveBeenCalled();
+    });
+
+    test("should log the failure when the credential cannot be refreshed", async () => {
+      const refreshError = new Error("Failed to get Airtable token");
+      vi.mocked(resolveAirtableCredential).mockRejectedValue(refreshError);
+
+      await handleIntegrations([mockAirtableIntegration], mockPipelineInput, mockSurvey);
+
+      expect(airtableWriteData).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(refreshError, "Error in airtable integration");
     });
   });
 

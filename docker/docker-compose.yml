@@ -323,11 +323,14 @@ services:
     env_file:
       - path: .env
         required: false
+    # The application runs with SKIP_STARTUP_MIGRATION=true, so it never creates its own schema. Waiting for the one-shot `forma-migrate` here is what keeps a plain `docker compose up -d` from serving against an unmigrated database, and turns a failed migration into a Compose-visible `dependency failed to start` instead of a running app on the old schema. Same edge `authzed-initialize` already declares. No spicedb condition on purpose — see the authzed-initialize comment on why startup must not depend on SpiceDB.
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      forma-migrate:
+        condition: service_completed_successfully
     ports:
       - 3000:3000
     volumes:

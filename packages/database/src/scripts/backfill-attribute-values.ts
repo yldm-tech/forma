@@ -28,7 +28,11 @@ const ISO_DATE_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2
 // How many attribute keys to process in a single batch
 const KEY_BATCH_SIZE = 10;
 
-const prisma = new PrismaClient({ adapter: createPrismaPgAdapter().adapter });
+// applyQueryTimeouts: false — this is a recovery path that rewrites whole ContactAttribute
+// batches; a statement here legitimately runs longer than any ceiling the app is bounded by.
+const prisma = new PrismaClient({
+  adapter: createPrismaPgAdapter(undefined, { applyQueryTimeouts: false }).adapter,
+});
 
 const SAFE_CAST_FUNCTION_NAME = "_backfill_safe_to_timestamp";
 

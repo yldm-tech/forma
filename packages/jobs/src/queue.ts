@@ -11,6 +11,7 @@ import {
 } from "@/src/constants";
 import type { BackgroundJobProducer, EnqueuedJob } from "@/src/contracts";
 import { getBackgroundJobDefinition } from "@/src/definitions";
+import { recordJobEnqueue, toBoundedJobName } from "@/src/observability";
 import { type RecurringJobDescriptor, type TRecurringJobKey, recurringJobDescriptors } from "@/src/recurring";
 import {
   type TBackgroundJobScheduleIdentity,
@@ -139,20 +140,38 @@ const toEnqueuedJob = (
   };
 };
 
+/**
+ * Every enqueue reports its outcome, success or failure.
+ *
+ * The failure count is the only signal that a dropped event ever existed. `sendToPipeline`
+ * (apps/web/lib/pipelines.ts) is contractually never-throwing — the Response row is already committed
+ * when it runs, and throwing turned one submission into up to four rows — so a Valkey blip loses the
+ * response pipeline event with no webhook, no follow-up email, no workflow run and no billing event,
+ * and nothing downstream is ever the wiser. A counter on this path turns that into an alertable series
+ * rather than a log line nobody reads.
+ */
 const enqueueBackgroundJob = async <TData>(
   jobName: string,
   data: TData,
   options?: JobsOptions
 ): Promise<Job> => {
-  const definition = getBackgroundJobDefinition(jobName);
+  try {
+    const definition = getBackgroundJobDefinition(jobName);
 
-  if (!definition) {
-    throw new Error(`No background job definition registered for job: ${jobName}`);
+    if (!definition) {
+      throw new Error(`No background job definition registered for job: ${jobName}`);
+    }
+
+    const parsedData = definition.schema.parse(data);
+    const { queue } = await getJobsQueue();
+    const job = await queue.add(definition.name, parsedData, options);
+    recordJobEnqueue({ jobName: toBoundedJobName(jobName), status: "enqueued" });
+
+    return job;
+  } catch (error) {
+    recordJobEnqueue({ jobName: toBoundedJobName(jobName), status: "failed" });
+    throw error;
   }
-
-  const parsedData = definition.schema.parse(data);
-  const { queue } = await getJobsQueue();
-  return await queue.add(definition.name, parsedData, options);
 };
 
 const scheduleBackgroundJobAt = async <TData>(
@@ -215,9 +234,20 @@ export const enqueueTestLogJob = async (data: TTestLogJobData): Promise<Job> => 
   }
 };
 
-export const enqueueResponsePipelineJob = async (data: TResponsePipelineJobData): Promise<Job> => {
+export const enqueueResponsePipelineJob = async (
+  data: TResponsePipelineJobData,
+  options?: { jobId: string }
+): Promise<Job> => {
   try {
-    return await enqueueBackgroundJob(JOB_NAMES.responsePipeline, data);
+    // An optional deterministic jobId, the same seam `enqueueWorkflowRunJob` uses. The caller derives it
+    // from the event and the response (id + updatedAt), which makes both the caller's own retry loop and
+    // any later replay of a lost event idempotent at the queue: BullMQ rejects a second job holding the
+    // id, so a recovery path can re-enqueue blindly instead of reconciling against a delivered marker.
+    // Bounded by `removeOnComplete` in JOBS_DEFAULT_JOB_OPTIONS — once the completed job is evicted the
+    // id is free again, so this dedupes a replay, not a redelivery days later.
+    return await enqueueBackgroundJob(JOB_NAMES.responsePipeline, data, {
+      ...(options?.jobId ? { jobId: options.jobId } : {}),
+    });
   } catch (error) {
     logger.error(
       { err: error, jobName: JOB_NAMES.responsePipeline },
@@ -362,7 +392,8 @@ export const ONE_SHOT_JOB_NAMES = Object.freeze({
 });
 
 export const getBackgroundJobProducer = (): BackgroundJobProducer => ({
-  enqueueResponsePipeline: async (data) => toEnqueuedJob(await enqueueResponsePipelineJob(data)),
+  enqueueResponsePipeline: async (data, options) =>
+    toEnqueuedJob(await enqueueResponsePipelineJob(data, options)),
 });
 
 export const resetJobsQueueFactory = async (): Promise<void> => {

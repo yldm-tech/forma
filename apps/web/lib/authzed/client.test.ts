@@ -21,6 +21,7 @@ describe("AuthZed client facade", () => {
     sdkMocks.writeRelationships.mockReset();
     sdkMocks.writeSchema.mockReset();
     configMocks.isAuthzedEnabled.mockReset();
+    retryMocks.createRunner.mockClear();
     retryMocks.execute.mockClear();
     envMock.AUTHZED_CONSISTENCY = undefined;
     envMock.AUTHZED_ENDPOINT = "spicedb:50051";
@@ -138,6 +139,21 @@ describe("AuthZed client facade", () => {
       undefined,
       { interceptors: [{ timeoutMs: 30_000 }] }
     );
+  });
+
+  test("binds the retry policy to the same process decision as the deadline", () => {
+    getAuthzedClient();
+
+    // The request path must not answer an overloaded SpiceDB with two more Checks.
+    expect(retryMocks.createRunner).toHaveBeenCalledWith("request");
+
+    closeAuthzedClient();
+    retryMocks.createRunner.mockClear();
+    configureAuthzedClientForBulkWork();
+    getAuthzedClient();
+
+    // A backfill is the load, nobody is waiting on it, and a stranded unit costs more than the retry.
+    expect(retryMocks.createRunner).toHaveBeenCalledWith("bulk");
   });
 
   test("refuses to widen the deadline once a client exists, rather than silently leaving it short", () => {

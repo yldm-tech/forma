@@ -5,6 +5,12 @@ import { logger } from "@forma/logger";
 import { closeRedisConnection, createProducerConnection, createWorkerConnection } from "@/src/connection";
 import { JOBS_PREFIX, JOBS_QUEUE_NAME } from "@/src/constants";
 import type { JobHandlerOverrides } from "@/src/contracts";
+import {
+  type TJobOutcomeObservation,
+  type TJobOutcomeStatus,
+  recordJobOutcome,
+  toBoundedJobName,
+} from "@/src/observability";
 import { processJob } from "@/src/processors/registry";
 import { createJobsQueue } from "@/src/queue";
 
@@ -42,6 +48,37 @@ const getPositiveInteger = (value: number, label: string): number => {
   return value;
 };
 
+/**
+ * Turns a settled BullMQ job into the bounded facts the observer reports.
+ *
+ * The wait is measured from the job's *intended* run time (`timestamp + delay`), not from when it was
+ * created: recurring sweeps are queued as delayed jobs up to 24h ahead, so measuring from creation would
+ * report a day of backlog on a queue that is empty. Clamped at zero because the two clocks are BullMQ's
+ * own and a delayed job is picked up a few milliseconds early often enough to matter.
+ *
+ * `job` is optional on the `failed` event — BullMQ emits it without one when it cannot load the job
+ * back — and the outcome is still counted, under the `unknown` bucket, so failures are never undercounted.
+ */
+const toJobOutcomeObservation = (job: Job | undefined, status: TJobOutcomeStatus): TJobOutcomeObservation => {
+  const processedOn = job?.processedOn;
+  const finishedOn = job?.finishedOn;
+  const runnableAt = job === undefined ? undefined : job.timestamp + (job.delay || 0);
+
+  return {
+    attemptsMade: job?.attemptsMade ?? 0,
+    durationMs:
+      processedOn !== undefined && finishedOn !== undefined
+        ? Math.max(0, finishedOn - processedOn)
+        : undefined,
+    jobName: toBoundedJobName(job?.name),
+    status,
+    waitDurationMs:
+      processedOn !== undefined && runnableAt !== undefined
+        ? Math.max(0, processedOn - runnableAt)
+        : undefined,
+  };
+};
+
 const registerWorkerLogging = (worker: Worker, workerNumber: number): void => {
   worker.on("error", (error) => {
     logger.error({ err: error, queueName: JOBS_QUEUE_NAME, workerNumber }, "BullMQ worker error");
@@ -59,6 +96,8 @@ const registerWorkerLogging = (worker: Worker, workerNumber: number): void => {
       },
       "BullMQ job failed"
     );
+
+    recordJobOutcome(toJobOutcomeObservation(job, "failed"));
   });
 
   worker.on("completed", (job) => {
@@ -72,6 +111,8 @@ const registerWorkerLogging = (worker: Worker, workerNumber: number): void => {
       },
       "BullMQ job completed"
     );
+
+    recordJobOutcome(toJobOutcomeObservation(job, "completed"));
   });
 };
 

@@ -20,6 +20,7 @@ import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { createActionClass } from "@/modules/survey/editor/lib/action-class";
 import { checkExternalUrlsPermission } from "@/modules/survey/editor/lib/check-external-urls-permission";
+import { assertSurveyNotModifiedElsewhere } from "@/modules/survey/editor/lib/save-conflict";
 import { updateSurvey, updateSurveyDraft } from "@/modules/survey/editor/lib/survey";
 import { ZSurveyDraft } from "@/modules/survey/editor/types/survey";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
@@ -204,6 +205,9 @@ export const updateSurveyDraftAction = authenticatedActionClient.inputSchema(ZSu
     ctx.auditLoggingCtx.surveyId = survey.id;
     const oldObject = await getSurvey(survey.id);
 
+    // Optimistic-concurrency precondition, on the read this action already performs. `updatedAt` on the payload is the version the client loaded; a stored row newer than it means this write would replace blocks, logic rules and translations saved by an editor this client never saw.
+    assertSurveyNotModifiedElsewhere(survey.updatedAt, oldObject.updatedAt);
+
     if (survey.followUps.length) {
       const oldFollowUpIds = new Set((oldObject?.followUps ?? []).map((f) => f.id));
       await checkSurveyFollowUpsPermission(
@@ -251,6 +255,8 @@ export const updateSurveyAction = authenticatedActionClient.inputSchema(ZSurvey)
     ctx.auditLoggingCtx.organizationId = organizationId;
     ctx.auditLoggingCtx.surveyId = parsedInput.id;
     const oldObject = await getSurvey(parsedInput.id);
+
+    // No precondition here yet, deliberately. Three callers outside the editor (the status dropdown and the share modal's link-settings and custom-HTML tabs) re-submit the survey object they rendered with and never adopt the one the action returns, so their second save in a session already carries a superseded `updatedAt` and would start failing. They have to refresh their copy first; until then a precondition here would break a working flow to guard against a rarer one.
 
     if (parsedInput.followUps?.length) {
       const oldFollowUpIds = new Set((oldObject?.followUps ?? []).map((f) => f.id));

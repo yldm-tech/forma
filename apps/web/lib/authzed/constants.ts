@@ -96,3 +96,28 @@ export const AUTHZED_MAX_PRUNED_RESOURCES_PER_RUN = 500;
  * prune cap, so nothing is deleted on the strength of it.
  */
 export const AUTHZED_MAX_TRACKED_ORPHAN_REFS = 50_000;
+
+/**
+ * Consecutive terminal saturation failures before the request-path circuit opens.
+ *
+ * Counted across the whole process, and only for the classes that mean SpiceDB is saturated or
+ * unreachable (`authzed_overloaded`, `authzed_timeout`, `authzed_unavailable`) — never a denial, never a
+ * configuration fault. Five is high enough that a single slow or racing call cannot trip it and low
+ * enough that a real outage stops costing a deadline per check within one page render, which asks three
+ * distinct questions on workspace navigation alone.
+ *
+ * Opening the circuit changes latency and load, not decisions: a check that is short-circuited throws
+ * the same typed `AuthzedError` it would have thrown after burning the deadline, and an operational
+ * error has always failed closed as an error rather than as a denial.
+ */
+export const AUTHZED_CIRCUIT_FAILURE_THRESHOLD = 5;
+
+/**
+ * How long the request-path circuit stays open before it admits one probe.
+ *
+ * Long enough that a restarting or overloaded SpiceDB gets a quiet window rather than a retry storm at
+ * the moment it is least able to absorb one, short enough that recovery is invisible to a user who
+ * reloads the page. Exactly one probe is admitted per cooldown and it runs single-attempt, so a still-
+ * sick server pays one call per cooldown instead of one per check.
+ */
+export const AUTHZED_CIRCUIT_COOLDOWN_MS = 5_000;

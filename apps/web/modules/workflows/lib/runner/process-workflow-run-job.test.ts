@@ -487,6 +487,35 @@ describe("processWorkflowRunJob", () => {
     expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "teammate@example.com" }));
   });
 
+  test("issues every context load in one fan-out rather than three sequential round trips", async () => {
+    // The organization and member-email reads depend on nothing the survey/response pair returns, so
+    // they must be in flight while `getResponse` is still pending. Re-sequencing any of them behind
+    // another turns this red.
+    let releaseResponse: () => void = () => {};
+    mockGetResponse.mockReturnValue(
+      new Promise((resolve) => {
+        releaseResponse = () => resolve(mockResponse);
+      })
+    );
+    mockWorkflowRunFindFirst.mockResolvedValue({
+      ...baseRun,
+      workflowVersion: { definition: makeDefinition("teammate@example.com") },
+      workflow: { definition: makeDefinition("teammate@example.com") },
+    });
+
+    const job = processWorkflowRunJob(data, baseContext);
+    // One macrotask drains every microtask the job can make progress on; it then parks on `getResponse`.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(mockGetSurvey).toHaveBeenCalledWith(triggerPayload.surveyId);
+    expect(mockGetOrganizationByWorkspaceId).toHaveBeenCalledWith(data.workspaceId);
+    expect(mockGetWorkspaceMemberEmails).toHaveBeenCalledWith(data.workspaceId);
+
+    releaseResponse();
+    await expect(job).resolves.toBeUndefined();
+    expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "teammate@example.com" }));
+  });
+
   test("resolves a contact-info array `to` using index [2]", async () => {
     mockGetResponse.mockResolvedValue({
       ...mockResponse,

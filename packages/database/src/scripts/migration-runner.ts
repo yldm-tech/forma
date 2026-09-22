@@ -37,7 +37,12 @@ const getMigrationDatabaseUrl = (): string | undefined => {
 };
 
 const migrationDatabaseUrl = getMigrationDatabaseUrl();
-const prisma = new PrismaClient({ adapter: createPrismaPgAdapter(migrationDatabaseUrl).adapter });
+// applyQueryTimeouts: false — a data migration runs inside the 30-minute transaction below,
+// and the JS between its statements can leave the session idle far longer than the pool-wide
+// idle_in_transaction ceiling the app runs with. A migration must not be abortable by it.
+const prisma = new PrismaClient({
+  adapter: createPrismaPgAdapter(migrationDatabaseUrl, { applyQueryTimeouts: false }).adapter,
+});
 const TRANSACTION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 // Determine if we're running from built or source code

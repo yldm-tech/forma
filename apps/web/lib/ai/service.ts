@@ -20,6 +20,7 @@ import { getOrganization } from "@/lib/organization/service";
 import { type AITracingContext, wrapAiModelWithTracing } from "@/lib/posthog/ai-tracing";
 import { AI_TRACING_FEATURE } from "@/lib/posthog/ai-tracing-feature";
 import { getIsAISmartToolsEnabled } from "@/modules/license-check/lib/utils";
+import { type TAIUsageFeature, recordAIGenerationUsage } from "./usage-metrics";
 
 export const AI_ERROR_CODES = {
   FEATURES_NOT_ENABLED: "ai_features_not_enabled",
@@ -77,6 +78,39 @@ const resolveAIEnvironment = (feature?: TAIModelRoutedFeature): AIEnvironment =>
 
   const overriddenModel = env[AI_FEATURE_MODEL_ENV_KEYS[feature]];
   return overriddenModel ? { ...env, AI_MODEL: overriddenModel } : env;
+};
+
+type TAIUsageContext = Readonly<{ organizationId: string; feature: TAIUsageFeature; model: string }>;
+
+/**
+ * The dimensions one generation's spend is attributed to.
+ *
+ * The feature name comes from `aiTracing`, which every UI path carries; an API-key caller has no
+ * tracing context, so fall back to the model-routing feature — the two are the same string enum —
+ * before giving up on the name. The model is the *resolved* one, so a per-feature override shows up
+ * as the model it actually ran on rather than as `AI_MODEL`.
+ */
+const buildUsageContext = (
+  organizationId: string,
+  aiTracing: Pick<AITracingContext, "feature"> | undefined,
+  feature: TAIModelRoutedFeature | undefined,
+  aiEnvironment: AIEnvironment
+): TAIUsageContext => ({
+  organizationId,
+  feature: aiTracing?.feature ?? feature ?? "unknown",
+  model: aiEnvironment.AI_MODEL ?? "unknown",
+});
+
+type TStreamFinishEvent<T> = Parameters<NonNullable<TStreamObjectOptions<T>["onFinish"]>>[0];
+
+/** Flattens the SDK's `LanguageModelUsage` onto the recorded shape; every field is provider-optional. */
+const recordUsage = (usage: TGenerateObjectResult["usage"], context: TAIUsageContext): void => {
+  recordAIGenerationUsage({
+    ...context,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    reasoningTokens: usage.outputTokenDetails.reasoningTokens,
+  });
 };
 
 /**
@@ -198,8 +232,11 @@ export const generateOrganizationAIText = async ({
     ? (model: AIResolvedLanguageModel) => wrapAiModelWithTracing(model, { organizationId, ...aiTracing })
     : undefined;
 
+  const aiEnvironment = resolveAIEnvironment(feature);
+
+  let result: Awaited<ReturnType<typeof generateText>>;
   try {
-    return await generateText(options, resolveAIEnvironment(feature), wrapModel);
+    result = await generateText(options, aiEnvironment, wrapModel);
   } catch (error) {
     classifyOrganizationAIFailure(error, {
       organizationId,
@@ -207,6 +244,12 @@ export const generateOrganizationAIText = async ({
       message: "Failed to generate organization AI text",
     });
   }
+
+  // Outside the try on purpose: recording is total, but were it ever to throw from inside it, the
+  // classifier would report an instrumentation bug to the caller as a provider failure.
+  recordUsage(result.usage, buildUsageContext(organizationId, aiTracing, feature, aiEnvironment));
+
+  return result;
 };
 
 type TGenerateOrganizationAIObjectInput<T = unknown> = {
@@ -228,8 +271,11 @@ export const generateOrganizationAIObject = async <T = unknown>({
     ? (model: AIResolvedLanguageModel) => wrapAiModelWithTracing(model, { organizationId, ...aiTracing })
     : undefined;
 
+  const aiEnvironment = resolveAIEnvironment(feature);
+
+  let result: TGenerateObjectResult<T>;
   try {
-    return await generateObject<T>(options, resolveAIEnvironment(feature), wrapModel);
+    result = await generateObject<T>(options, aiEnvironment, wrapModel);
   } catch (error) {
     classifyOrganizationAIFailure(error, {
       organizationId,
@@ -237,6 +283,11 @@ export const generateOrganizationAIObject = async <T = unknown>({
       message: "Failed to generate organization AI object",
     });
   }
+
+  // See `generateOrganizationAIText` for why this sits outside the try.
+  recordUsage(result.usage, buildUsageContext(organizationId, aiTracing, feature, aiEnvironment));
+
+  return result;
 };
 
 type TStreamOrganizationAIObjectInput<T = unknown> = {
@@ -275,8 +326,26 @@ export const streamOrganizationAIObject = async <T = unknown>({
       message: "Failed to stream organization AI object",
     });
 
+  const aiEnvironment = resolveAIEnvironment(feature);
+  const usageContext = buildUsageContext(organizationId, aiTracing, feature, aiEnvironment);
+
   try {
-    const result = streamObject<T>(options, resolveAIEnvironment(feature), wrapModel);
+    const result = streamObject<T>(
+      {
+        ...options,
+        // The streaming leg's only usage hook. `onFinish` runs when the generation actually
+        // completed — an aborted stream lands on the SDK's separate `onAbort`, so a user pressing
+        // Stop records nothing rather than reporting a phantom cost. `totalUsage` rather than the
+        // final step's own `usage` so a request that ever grows a tool loop still reports the whole
+        // call; with no tools configured the two are the same number today.
+        onFinish: async (event: TStreamFinishEvent<T>) => {
+          recordUsage(event.totalUsage, usageContext);
+          await options.onFinish?.(event);
+        },
+      },
+      aiEnvironment,
+      wrapModel
+    );
     const completion = result.completion.catch(classify);
     // The caller may only consume the partial stream (client aborted); keep the classified
     // rejection from surfacing as an unhandled one.

@@ -73,4 +73,61 @@ if [[ -n "$(container_security_context "${cleared_deployment}")" ]]; then
   exit 1
 fi
 
+# --- Liveness and readiness must not be the same signal -------------------------------------------------
+#
+# /health is a static handler: it can only fail when the process is gone, which is exactly what liveness
+# wants and exactly what makes it useless as readiness. Aliasing the two lets a rollout whose pods cannot
+# reach Postgres go Ready and replace every serving pod.
+probe_block() {
+  sed -n "/^          $2:\$/,/^          [a-zA-Z]/p" <<<"$1" | sed '$d'
+}
+
+readiness_probe="$(probe_block "${default_deployment}" readinessProbe)"
+liveness_probe="$(probe_block "${default_deployment}" livenessProbe)"
+
+assert_contains "${readiness_probe}" "              path: /health/ready" \
+  "Readiness must probe the dependency-aware /health/ready route, not the static /health stub."
+assert_contains "${liveness_probe}" "              path: /health" \
+  "Liveness must stay on /health so a dependency outage cannot restart every pod."
+if grep --fixed-strings --line-regexp "              path: /health/ready" <<<"${liveness_probe}" >/dev/null; then
+  printf '%s\n' "Liveness must not probe the readiness route: a Postgres outage would become a crash loop." >&2
+  exit 1
+fi
+
+# --- The metrics exporter binds exactly where something scrapes it --------------------------------------
+#
+# apps/web/instrumentation.ts only loads the Prometheus exporter when PROMETHEUS_ENABLED is set, so a
+# ServiceMonitor rendered without it scrapes a closed :9464 and the install exports nothing.
+prometheus_env_count() {
+  grep --fixed-strings --line-regexp --count "            - name: PROMETHEUS_ENABLED" <<<"$1" || true
+}
+
+if [[ "$(prometheus_env_count "${default_deployment}")" != "0" ]]; then
+  printf '%s\n' "Without the Prometheus Operator CRD nothing scrapes the app, so PROMETHEUS_ENABLED must stay unset." >&2
+  exit 1
+fi
+
+scraped_deployment="$(render_deployment hardening-scraped --api-versions monitoring.coreos.com/v1)"
+assert_contains "${scraped_deployment}" "            - name: PROMETHEUS_ENABLED" \
+  "A rendered ServiceMonitor must come with the PROMETHEUS_ENABLED that makes :9464 listen."
+assert_contains "${scraped_deployment}" '              value: "1"' \
+  "PROMETHEUS_ENABLED must be the literal \"1\" the exporter checks for."
+
+unscraped_deployment="$(render_deployment hardening-unscraped \
+  --api-versions monitoring.coreos.com/v1 --set serviceMonitor.enabled=false)"
+if [[ "$(prometheus_env_count "${unscraped_deployment}")" != "0" ]]; then
+  printf '%s\n' "With serviceMonitor disabled nothing scrapes the app, so PROMETHEUS_ENABLED must stay unset." >&2
+  exit 1
+fi
+
+# An operator who sets the variable themselves owns it, in either direction.
+opted_out_deployment="$(render_deployment hardening-opted-out \
+  --api-versions monitoring.coreos.com/v1 --set deployment.env.PROMETHEUS_ENABLED=0)"
+if [[ "$(prometheus_env_count "${opted_out_deployment}")" != "1" ]]; then
+  printf '%s\n' "deployment.env must override the chart default rather than render PROMETHEUS_ENABLED twice." >&2
+  exit 1
+fi
+assert_contains "${opted_out_deployment}" '              value: "0"' \
+  "An explicit deployment.env.PROMETHEUS_ENABLED must win over the ServiceMonitor default."
+
 printf '%s\n' "Forma app container hardening contracts are valid."

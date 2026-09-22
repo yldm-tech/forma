@@ -17,6 +17,7 @@ const mockDebug = vi.fn();
 const mockError = vi.fn();
 const mockWarn = vi.fn();
 const mockGetJobsQueueingConfig = vi.fn();
+const mockRegisterJobsMetrics = vi.fn();
 const mockGetJobsWorkerBootstrapConfig = vi.fn();
 const mockProcessResponsePipelineJob = vi.fn();
 const mockProcessSurveySchedulingJob = vi.fn();
@@ -95,6 +96,10 @@ vi.mock("@forma/jobs", () => ({
 vi.mock("@/lib/jobs/config", () => ({
   getJobsQueueingConfig: mockGetJobsQueueingConfig,
   getJobsWorkerBootstrapConfig: mockGetJobsWorkerBootstrapConfig,
+}));
+
+vi.mock("@/lib/jobs/metrics", () => ({
+  registerJobsMetrics: mockRegisterJobsMetrics,
 }));
 
 vi.mock("@forma/logger", () => ({
@@ -194,6 +199,18 @@ describe("instrumentation-jobs", () => {
         recurringJobs[key as keyof typeof recurringJobs]
       );
     }
+  });
+
+  /**
+   * Registration sits at module scope rather than in the worker bootstrap: a deployment that queues here
+   * and runs its worker elsewhere still has to report enqueue failures, which are the only trace a
+   * dropped response pipeline event leaves.
+   */
+  test("registers the jobs metrics observer on import, before any worker starts", async () => {
+    await import("./instrumentation-jobs");
+
+    expect(mockRegisterJobsMetrics).toHaveBeenCalledTimes(1);
+    expect(mockStartJobsRuntime).not.toHaveBeenCalled();
   });
 
   slowTest("skips worker startup when disabled", async () => {

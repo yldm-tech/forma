@@ -21,6 +21,16 @@ const PRISMA_ONLY_PARAMS = new Set([
   "statement_cache_size",
 ]);
 
+// Params that pg itself understands but that this adapter reads and translates. They have to
+// be stripped for the same reason as the Prisma-only ones: pg merges the parsed connection
+// string *over* the explicit PoolConfig (pg/lib/connection-parameters.js), so a value left in
+// the URL would silently win over the number computed here — as a string, and in the wrong unit.
+const ADAPTER_HANDLED_PARAMS = new Set([
+  "statement_timeout",
+  "query_timeout",
+  "idle_in_transaction_session_timeout",
+]);
+
 // Strictly positive — for params where 0 makes no sense (e.g. connection pool size).
 const toPositiveInt = (value: string | null): number | undefined => {
   if (value === null || value.trim() === "") {
@@ -55,7 +65,7 @@ const DEFAULT_CONNECTION_LIMIT = Math.max(2 * cpus().length + 1, 2);
 const getConnectionString = (url: URL): string => {
   const sanitizedUrl = new URL(url.toString());
 
-  PRISMA_ONLY_PARAMS.forEach((param) => {
+  [...PRISMA_ONLY_PARAMS, ...ADAPTER_HANDLED_PARAMS].forEach((param) => {
     sanitizedUrl.searchParams.delete(param);
   });
 
@@ -84,7 +94,46 @@ const sslConfigFromSslAccept = (value: string | null): PoolConfig["ssl"] | undef
   }
 };
 
-export const createPrismaPgAdapter = (databaseUrl = process.env.DATABASE_URL): TParsedPrismaPgConfig => {
+// Postgres takes statement_timeout and idle_in_transaction_session_timeout in
+// milliseconds, but every other duration in DATABASE_URL here is expressed in seconds
+// (Prisma's convention), so these are read in seconds too and converted. 0 disables, which
+// is what both Postgres and the other knobs in this file already mean by it.
+//
+// Only idle_in_transaction_session_timeout is defaulted. It cannot fire on a session that is
+// doing work — it reclaims the locks of a transaction whose client went away — and 60s clears
+// the longest interactive transaction the app declares (30s, the summary's example-response
+// persistence; the next longest are the 20s survey copy/update transactions). A
+// statement_timeout ceiling is a deployment fact: it has to clear the slowest legitimate
+// statement on that install's hardware, so it stays opt-in via the URL rather than guessed here.
+const DEFAULT_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS = 60_000;
+
+const buildQueryTimeoutConfig = (url: URL): PoolConfig => {
+  const statementTimeout = toMillis(toNonNegativeInt(url.searchParams.get("statement_timeout")));
+  const queryTimeout = toMillis(toNonNegativeInt(url.searchParams.get("query_timeout")));
+  const idleInTransactionSessionTimeout =
+    toMillis(toNonNegativeInt(url.searchParams.get("idle_in_transaction_session_timeout"))) ??
+    DEFAULT_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS;
+
+  return {
+    ...(statementTimeout !== undefined && { statement_timeout: statementTimeout }),
+    ...(queryTimeout !== undefined && { query_timeout: queryTimeout }),
+    idle_in_transaction_session_timeout: idleInTransactionSessionTimeout,
+  };
+};
+
+export interface TPrismaPgAdapterOptions {
+  // Long-running entry points opt out entirely: the migration runner wraps a data migration in
+  // a 30-minute transaction whose JS between statements can idle well past any pool-wide
+  // ceiling, and the attribute backfill issues raw statements over whole tables. Setting this
+  // to false ignores the three timeout params in the URL as well, so an operator-set ceiling
+  // meant for the app cannot abort a migration.
+  applyQueryTimeouts?: boolean;
+}
+
+export const createPrismaPgAdapter = (
+  databaseUrl = process.env.DATABASE_URL,
+  { applyQueryTimeouts = true }: TPrismaPgAdapterOptions = {}
+): TParsedPrismaPgConfig => {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required to create a Prisma PostgreSQL adapter.");
   }
@@ -131,6 +180,7 @@ export const createPrismaPgAdapter = (databaseUrl = process.env.DATABASE_URL): T
     max: connectionLimit,
     ...(maxConnectionLifetime !== undefined && { maxLifetimeSeconds: maxConnectionLifetime }),
     ...(ssl !== undefined && { ssl }),
+    ...(applyQueryTimeouts ? buildQueryTimeoutConfig(parsedUrl) : {}),
   };
 
   return {

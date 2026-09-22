@@ -47,6 +47,7 @@ jq --exit-status --arg token "${AUTHZED_TOKEN}" '
   .services.forma.environment.AUTHZED_INSECURE == "true" and
   .services.forma.environment.AUTHZED_CONSISTENCY == "fully_consistent" and
   .services.forma.depends_on.spicedb? == null and
+  .services.forma.depends_on["forma-migrate"].condition == "service_completed_successfully" and
   .services["authzed-ops"].image == .services.forma.image and
   .services["authzed-ops"].profiles == ["authzed-ops"] and
   .services["authzed-ops"].entrypoint == ["forma-authzed"] and

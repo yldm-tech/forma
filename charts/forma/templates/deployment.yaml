@@ -148,6 +148,15 @@ spec:
             - name: MCP_OAUTH_JWKS_URL
               value: {{ .Values.forma.mcpOauthJwksUrl | quote }}
             {{- end }}
+            {{- if and (.Values.serviceMonitor).enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") (not (hasKey .Values.deployment.env "PROMETHEUS_ENABLED")) }}
+            # The Prometheus exporter only binds :9464 when this is set (apps/web/instrumentation.ts), so a
+            # ServiceMonitor without it scrapes a closed port and the install exports nothing while reading
+            # as instrumented. The condition is deliberately identical to templates/servicemonitor.yaml, so
+            # the exporter — and the OpenTelemetry auto-instrumentation its import starts — is paid for only
+            # where something actually scrapes it. Set PROMETHEUS_ENABLED in deployment.env to override.
+            - name: PROMETHEUS_ENABLED
+              value: "1"
+            {{- end }}
             {{- if .Values.authzed.enabled }}
             {{- if not (hasKey .Values.deployment.env "AUTHZED_ENABLED") }}
             - name: AUTHZED_ENABLED

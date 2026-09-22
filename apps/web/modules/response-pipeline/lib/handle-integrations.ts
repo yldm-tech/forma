@@ -10,7 +10,7 @@ import { TResponse, TResponseDataValue, TResponseMeta } from "@forma/types/respo
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
-import { writeData as airtableWriteData } from "@/lib/airtable/service";
+import { writeData as airtableWriteData, resolveAirtableCredential } from "@/lib/airtable/service";
 import { NOTION_RICH_TEXT_LIMIT } from "@/lib/constants";
 import { writeData } from "@/lib/googleSheet/service";
 import { getLocalizedValue } from "@/lib/i18n/utils";
@@ -149,59 +149,86 @@ const processDataForIntegration = async (
   };
 };
 
+type TIntegrationDispatch = {
+  /** Interpolated into the failure log line; the four values are the ones the sequential version logged. */
+  label: string;
+  run: () => Promise<Result<void, Error>>;
+};
+
+const toIntegrationDispatch = (
+  integration: TIntegration,
+  data: TIntegrationPipelineData,
+  survey: TPipelineIntegrationSurvey,
+  displayTimeZone: string
+): TIntegrationDispatch | undefined => {
+  switch (integration.type) {
+    case "googleSheets":
+      return {
+        label: "google sheets",
+        run: () =>
+          handleGoogleSheetsIntegration(
+            integration as TIntegrationGoogleSheets,
+            data,
+            survey,
+            displayTimeZone
+          ),
+      };
+    case "slack":
+      return {
+        label: "slack",
+        run: () => handleSlackIntegration(integration as TIntegrationSlack, data, survey, displayTimeZone),
+      };
+    case "airtable":
+      return {
+        label: "airtable",
+        run: () =>
+          handleAirtableIntegration(integration as TIntegrationAirtable, data, survey, displayTimeZone),
+      };
+    case "notion":
+      return {
+        label: "notion",
+        run: () => handleNotionIntegration(integration as TIntegrationNotion, data, survey),
+      };
+    default:
+      return undefined;
+  }
+};
+
+/**
+ * The destinations are independent of one another and each already contains its own failures in a
+ * `Result`, so waiting for one vendor before calling the next only added its latency to the job. They now
+ * run concurrently: the step costs the slowest single destination rather than the sum, which for a
+ * workspace with several configured destinations is worth one to three vendor round trips per finished
+ * response of worker-slot time. No bound is needed — `@@unique([type, workspaceId])` caps a workspace at
+ * four integrations, one per type.
+ *
+ * What stays sequential is the loop *inside* each handler over that destination's config entries: row
+ * order into a given sheet/table, and each vendor's own rate limiting, both depend on it.
+ */
 export const handleIntegrations = async (
   integrations: TIntegration[],
   data: TIntegrationPipelineData,
   survey: TPipelineIntegrationSurvey,
   displayTimeZone: string = "UTC"
 ) => {
-  for (const integration of integrations) {
-    switch (integration.type) {
-      case "googleSheets": {
-        const googleResult = await handleGoogleSheetsIntegration(
-          integration as TIntegrationGoogleSheets,
-          data,
-          survey,
-          displayTimeZone
-        );
-        if (!googleResult.ok) {
-          logger.error(googleResult.error, "Error in google sheets integration");
-        }
-        break;
-      }
-      case "slack": {
-        const slackResult = await handleSlackIntegration(
-          integration as TIntegrationSlack,
-          data,
-          survey,
-          displayTimeZone
-        );
-        if (!slackResult.ok) {
-          logger.error(slackResult.error, "Error in slack integration");
-        }
-        break;
-      }
-      case "airtable": {
-        const airtableResult = await handleAirtableIntegration(
-          integration as TIntegrationAirtable,
-          data,
-          survey,
-          displayTimeZone
-        );
-        if (!airtableResult.ok) {
-          logger.error(airtableResult.error, "Error in airtable integration");
-        }
-        break;
-      }
-      case "notion": {
-        const notionResult = await handleNotionIntegration(integration as TIntegrationNotion, data, survey);
-        if (!notionResult.ok) {
-          logger.error(notionResult.error, "Error in notion integration");
-        }
-        break;
-      }
+  const dispatches = integrations
+    .map((integration) => toIntegrationDispatch(integration, data, survey, displayTimeZone))
+    .filter((dispatch): dispatch is TIntegrationDispatch => dispatch !== undefined);
+
+  const outcomes = await Promise.allSettled(dispatches.map(({ run }) => run()));
+
+  outcomes.forEach((outcome, index) => {
+    const message = `Error in ${dispatches[index].label} integration`;
+
+    if (outcome.status === "rejected") {
+      logger.error(outcome.reason, message);
+      return;
     }
-  }
+
+    if (!outcome.value.ok) {
+      logger.error(outcome.value.error, message);
+    }
+  });
 };
 
 const handleAirtableIntegration = async (
@@ -211,18 +238,26 @@ const handleAirtableIntegration = async (
   displayTimeZone: string
 ): Promise<Result<void, Error>> => {
   try {
-    if (integration.config.data.length > 0) {
-      for (const element of integration.config.data) {
-        if (element.surveyId === data.surveyId) {
-          const values = await processDataForIntegration(
-            "airtable",
-            data,
-            survey,
-            toIntegrationFieldSelection(element),
-            displayTimeZone
-          );
-          await airtableWriteData(integration.config.key, element, values.responses, values.elements);
-        }
+    const configEntries = integration.config.data.filter((element) => element.surveyId === data.surveyId);
+
+    if (configEntries.length > 0) {
+      // Airtable access tokens expire and this path used to read `config.key` straight off the record, so a
+      // delivery kept presenting a dead token and the integration silently stopped writing until a human
+      // opened the settings page — the one place that refreshed. It now resolves through the same credential
+      // lifecycle the settings path uses, which rotates and persists the refresh token. Resolved once per
+      // job, after the survey filter so a response for an unrelated survey never spends a refresh, and
+      // reused for every row this response writes.
+      const credential = await resolveAirtableCredential(integration.workspaceId, integration.config);
+
+      for (const element of configEntries) {
+        const values = await processDataForIntegration(
+          "airtable",
+          data,
+          survey,
+          toIntegrationFieldSelection(element),
+          displayTimeZone
+        );
+        await airtableWriteData(credential, element, values.responses, values.elements);
       }
     }
 
