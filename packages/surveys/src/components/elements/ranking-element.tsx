@@ -122,8 +122,13 @@ export function RankingElement({
       announceToLiveRegion(t("common.ranking_removed", { label }));
       return;
     }
-    const key = change.type === "add" ? "common.ranking_added" : "common.ranking_moved";
-    announceToLiveRegion(t(key, { label, position, total }));
+    // Both keys spelled out rather than selected into a variable: `scan-translations` matches literal
+    // `t("...")` arguments, so a computed key reads as unused and fails the translation gate.
+    announceToLiveRegion(
+      change.type === "add"
+        ? t("common.ranking_added", { label, position, total })
+        : t("common.ranking_moved", { label, position, total })
+    );
   };
 
   return (
