@@ -75,6 +75,42 @@ describe("streamV3SurveyGeneration", () => {
     });
   });
 
+  test("puts one event on the wire per language while translation runs", async () => {
+    // Translation happens after the last generated token, so without these the body emits nothing
+    // between the final `partial` and `done` — tens of seconds per language of a socket that looks
+    // dead to any proxy with an idle read timeout, and a status ladder frozen on its last phase.
+    mocks.streamOrganizationAIObject.mockResolvedValue({
+      partialObjectStream: asyncIterable([{ name: "Onboarding" }]),
+      completion: Promise.resolve({ name: "Onboarding" }),
+    });
+    mocks.finishV3SurveyGeneration.mockImplementation(
+      async ({
+        onTranslationProgress,
+      }: {
+        onTranslationProgress?: (progress: { languageCode: string; index: number; total: number }) => void;
+      }) => {
+        onTranslationProgress?.({ languageCode: "ja-JP", index: 1, total: 2 });
+        onTranslationProgress?.({ languageCode: "de-DE", index: 2, total: 2 });
+        return {
+          language: "en-US",
+          payload: { name: "Onboarding" },
+          validation: { valid: true, invalid_params: [], languages: [] },
+        };
+      }
+    );
+
+    const events = await readEvents(await call());
+
+    expect(events.filter((event) => event.type === "translating")).toEqual([
+      { type: "translating", languageCode: "ja-JP", index: 1, total: 2 },
+      { type: "translating", languageCode: "de-DE", index: 2, total: 2 },
+    ]);
+    // Ordering is the point: they land after the draft and before the result.
+    const types = events.map((event) => event.type);
+    expect(types.lastIndexOf("partial")).toBeLessThan(types.indexOf("translating"));
+    expect(types.indexOf("translating")).toBeLessThan(types.indexOf("done"));
+  });
+
   test("answers with problem+json and never opens a stream when AI is not entitled", async () => {
     // The invariant the whole design turns on: once a 200 with a body has begun there is no way back
     // to an RFC 9457 response, so every guard has to run before the first byte.

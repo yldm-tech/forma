@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -46,7 +45,7 @@ export const ResponsePage = ({
   const [page, setPage] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(initialResponses.length >= responsesPerPage);
   const [isFetchingFirstPage, setIsFetchingFirstPage] = useState<boolean>(false);
-  const { selectedFilter, dateRange, resetState, registerAnalysisRefreshHandler } = useResponseFilter();
+  const { selectedFilter, dateRange, registerAnalysisRefreshHandler } = useResponseFilter();
   const { t } = useTranslation();
   const computedFilters = useMemo(
     () => getFormattedFilters(survey, selectedFilter, dateRange),
@@ -65,8 +64,6 @@ export const ResponsePage = ({
   // analysis refresh handler and would collapse the infinite-scroll list back to page 1.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the filter value, not its identity
   const filters = useMemo(() => computedFilters, [filtersKey]);
-
-  const searchParams = useSearchParams();
 
   const fetchNextPage = useCallback(async () => {
     if (page === null) return;
@@ -129,19 +126,13 @@ export const ResponsePage = ({
     return replaceHeadlineRecall(survey, "default");
   }, [survey]);
 
-  useEffect(() => {
-    if (!searchParams?.get("referer")) {
-      resetState();
-    }
-  }, [searchParams, resetState]);
-
   // Only fetch if filters are applied (not on initial mount with no filters)
   const hasFilters =
     selectedFilter?.responseStatus !== "all" ||
     (selectedFilter?.filter && selectedFilter.filter.length > 0) ||
     (dateRange.from && dateRange.to);
 
-  // The inputs of the last page-1 fetch, by VALUE — the guard SummaryPage uses, for the same reason. The effect above calls `resetState()` on every load without `?referer`, i.e. every direct visit or reload, and it hands back fresh `selectedFilter`/`dateRange` object literals holding identical content. Keyed on their identity alone this effect would re-run, skip the `page === null` branch (page is 1 by then) and refetch offset 0 with the very same empty filters — discarding the server-seeded `initialResponses` and flashing a spinner on every such load.
+  // The inputs of the last page-1 fetch, by VALUE — the guard SummaryPage uses, for the same reason. `selectedFilter`/`dateRange` are object literals held in the provider, and a route refresh or the URL-filter hydration hands back fresh identities for identical content. Keyed on their identity alone this effect would re-run, skip the `page === null` branch (page is 1 by then) and refetch offset 0 with the very same filters — discarding the server-seeded `initialResponses` and flashing a spinner.
   const lastFetchedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
