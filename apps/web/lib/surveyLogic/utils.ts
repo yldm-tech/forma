@@ -592,7 +592,8 @@ const getLeftOperandValue = (
       }
 
       if (currentElement.type === "multipleChoiceSingle" || currentElement.type === "multipleChoiceMulti") {
-        const isOthersEnabled = currentElement.choices.at(-1)?.id === "other";
+        // Membership, not position: the editor orders special choices `[…regular, other, none]`, so on any element that offers both an "Other" box and a "None of the above" choice the last id is `none`, and `at(-1)` read the Other box as disabled. A free-text answer then resolved to `undefined` here while the browser engine in `packages/surveys/src/lib/logic.ts` — which has always used this membership test — resolved it to `other`, so a quota condition on `other` screened out the very respondents the survey had just routed as `other`.
+        const isOthersEnabled = currentElement.choices.some((choice) => choice.id === "other");
 
         if (typeof responseValue === "string") {
           const choice = currentElement.choices.find((choice) => {

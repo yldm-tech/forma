@@ -49,6 +49,33 @@ const recordOneProjection = async () => {
   return { provider, value: histogram?.dataPoints[0]?.value };
 };
 
+const RECONCILIATION_HISTOGRAM_NAME = "forma_authzed_reconciliation_duration_seconds";
+
+const recordOneReconciliationPass = async (durationMs: number) => {
+  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
+  const reader = new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 60_000 });
+  const provider = new MeterProvider({ readers: [reader] });
+  metrics.setGlobalMeterProvider(provider);
+
+  const { recordAuthzedReconciliationPass } = await import("./metrics");
+  recordAuthzedReconciliationPass({
+    durationMs,
+    failed: 0,
+    failureCodes: [],
+    pass: "dry_run",
+    status: "reconciled",
+  });
+
+  await reader.forceFlush();
+  const histogram = exporter
+    .getMetrics()
+    .flatMap((resourceMetric) => resourceMetric.scopeMetrics)
+    .flatMap((scopeMetric) => scopeMetric.metrics)
+    .find((metric) => metric.descriptor.name === RECONCILIATION_HISTOGRAM_NAME);
+
+  return { provider, value: histogram?.dataPoints[0]?.value };
+};
+
 describe("projection duration histogram", () => {
   let shutdown: (() => Promise<void>) | undefined;
 
@@ -81,5 +108,40 @@ describe("projection duration histogram", () => {
 
     // 100ms in, 0.1 recorded. A unit mismatch here would be invisible to the bucket assertions above.
     expect((value as Readonly<{ sum?: number }> | undefined)?.sum).toBeCloseTo(0.1);
+  });
+});
+
+/**
+ * The same hazard on a different scale. This histogram measures a full-graph sweep rather than a single
+ * call, so the projection histogram's boundaries would be as wrong here as the SDK defaults are there:
+ * every pass on any deployment past a handful of organizations would land in the final overflow bucket,
+ * and a p95 over an overflow bucket is unbounded above. The point of this instrument is to say whether a
+ * pass fits inside the request-path channel deadline it shares with live permission checks, which means
+ * the seconds either side of that deadline have to be resolvable.
+ */
+describe("reconciliation duration histogram", () => {
+  let shutdown: (() => Promise<void>) | undefined;
+
+  afterEach(async () => {
+    await shutdown?.();
+    shutdown = undefined;
+    metrics.disable();
+  });
+
+  test("resolves a sweep from seconds to the hour, in seconds", async () => {
+    const { provider, value } = await recordOneReconciliationPass(92_500);
+    shutdown = () => provider.shutdown();
+
+    const boundaries = (value as Readonly<{ buckets: Readonly<{ boundaries: number[] }> }> | undefined)
+      ?.buckets.boundaries;
+
+    expect(boundaries).toBeDefined();
+    // A pass that overran the one-second request-path deadline must be distinguishable from one that did
+    // not, which is the whole question this instrument exists to settle.
+    expect(boundaries).toContain(1);
+    // And a minutes-long sweep must not be indistinguishable from an hours-long one.
+    expect((boundaries ?? []).filter((boundary) => boundary > 60).length).toBeGreaterThanOrEqual(3);
+    // 92.5s in, 92.5 recorded — seconds, like every other duration here.
+    expect((value as Readonly<{ sum?: number }> | undefined)?.sum).toBeCloseTo(92.5);
   });
 });
