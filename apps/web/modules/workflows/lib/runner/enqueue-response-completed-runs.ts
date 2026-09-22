@@ -45,13 +45,22 @@ const isUniqueConstraintError = (error: unknown): boolean =>
  * an enabled workflow with no published version (enable always publishes one — a data-integrity guard),
  * and a published version whose definition has no usable `response.completed` trigger (a malformed or
  * corrupt snapshot — the definition is unvalidated DB JSON).
+ *
+ * `triggerSurveyId` denormalises the published definition's trigger survey onto the row the query already reads, so the candidate set is narrowed in SQL — served by `@@index([workspaceId, status, triggerSurveyId])` — instead of fetching every enabled workflow's definition JSON and discarding most of it in memory.
+ *
+ * **A null `triggerSurveyId` matches every survey.** That is what makes the narrowing safe: a row the backfill did not reach, one whose published trigger is not `response.completed`, and one a future multi-survey trigger leaves null all stay in the candidate set and reach the matcher exactly as before. Reading null as "matches nothing" would silently stop those workflows firing. `matchWorkflowsForResponse` stays the sole authority on whether a workflow fires, so a column that has drifted from its published definition can only cost a wasted fetch, never a run that should not have happened.
  */
 const loadEnabledWorkflowCandidates = async (
   workspaceId: string,
+  surveyId: string,
   logContext?: Record<string, unknown>
 ): Promise<WorkflowMatchCandidate[]> => {
   const workflows = await prisma.workflow.findMany({
-    where: { workspaceId, status: "enabled" },
+    where: {
+      workspaceId,
+      status: "enabled",
+      OR: [{ triggerSurveyId: surveyId }, { triggerSurveyId: null }],
+    },
     select: {
       id: true,
       versions: { orderBy: { version: "desc" }, take: 1, select: { id: true, definition: true } },
@@ -297,7 +306,7 @@ export const enqueueResponseCompletedWorkflowRuns = async ({
   }
   const endingId = response.endingId ?? null;
 
-  const candidates = await loadEnabledWorkflowCandidates(workspaceId, logContext);
+  const candidates = await loadEnabledWorkflowCandidates(workspaceId, response.surveyId, logContext);
   const matches = matchWorkflowsForResponse(candidates, { surveyId: response.surveyId, endingId });
   if (matches.length === 0) {
     return;

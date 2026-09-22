@@ -196,6 +196,8 @@ const organization = {
     stripeCustomerId: "cus_123",
   },
   displayTimeZone: null,
+  workflowRunRetentionDays: null,
+  displayRetentionDays: null,
   id: "org_123",
 };
 

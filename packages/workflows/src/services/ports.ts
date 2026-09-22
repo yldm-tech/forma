@@ -59,9 +59,13 @@ export interface WorkflowRunRow {
   finishedAt: Date | null;
 }
 
-/** A workflow row with its most recent run eagerly loaded (for `lastRun`) and its total run count. */
-export type WorkflowRowWithLastRun = WorkflowRow & {
+/** A workflow row with its most recent run eagerly loaded (for `lastRun`). */
+export type WorkflowRowWithRuns = WorkflowRow & {
   runs: WorkflowRunRow[];
+};
+
+/** A workflow row with its most recent run eagerly loaded (for `lastRun`) and its total run count. */
+export type WorkflowRowWithLastRun = WorkflowRowWithRuns & {
   _count: { runs: number };
 };
 
@@ -79,6 +83,14 @@ export interface LastRunInclude {
   runs: { take: number; orderBy: { createdAt: "desc" } };
   creator: { select: { name: true } };
   _count: { select: { runs: true } };
+}
+
+/**
+ * The same eager-load without the relation count, used by the list. `_count` asks for an aggregate over a workflow's whole run history once per row the page returns, and that history grows with its survey's responses and is bounded by nothing. The list reads the same numbers from a single grouped query restricted to the page's workflow ids instead (see `listWorkflows`), which costs one extra round-trip and makes the aggregate's scope the page rather than each row's unbounded relation.
+ */
+export interface LastRunListInclude {
+  runs: { take: number; orderBy: { createdAt: "desc" } };
+  creator: { select: { name: true } };
 }
 
 /** Narrow `where` filter the service builds — a deliberately small slice of Prisma's WhereInput. */
@@ -108,8 +120,8 @@ export interface WorkflowDelegate {
     where: WorkflowWhereInput;
     orderBy: WorkflowOrderByInput[];
     take: number;
-    include: LastRunInclude;
-  }) => Promise<WorkflowRowWithLastRun[]>;
+    include: LastRunListInclude;
+  }) => Promise<WorkflowRowWithRuns[]>;
   findUnique: (args: {
     where: { id: string };
     include: LastRunInclude;
@@ -139,10 +151,14 @@ export interface WorkflowDelegate {
    * Conditional status transition. `enable` uses it inside its transaction to flip a draft/disabled
    * row to enabled and assert exactly one row changed — the row lock serializes concurrent enables,
    * so the guard can't be bypassed the way a pre-transaction status read could.
+   *
+   * `triggerSurveyId` rides along because the same transaction publishes the version this column
+   * denormalises; see `enableWorkflow`. It is nullable, and null means "matches every survey" to the
+   * runner that reads it — never "matches nothing".
    */
   updateMany: (args: {
     where: { id: string; workspaceId: string; status: { in: TWorkflowStatus[] } };
-    data: { status: TWorkflowStatus };
+    data: { status: TWorkflowStatus; triggerSurveyId?: string | null };
   }) => Promise<{ count: number }>;
   delete: (args: {
     where: { id_workspaceId: { id: string; workspaceId: string } };
@@ -258,6 +274,27 @@ export interface WorkflowRunDelegate {
     where: { id: string };
     include: WorkflowRunLogInclude;
   }) => Promise<WorkflowRunWithLogsRow | null>;
+  /**
+   * Per-workflow run totals for one page of the workflow list, workspace-scoped and restricted to the
+   * page's ids so the aggregate is served by `@@index([workflowId, workspaceId, createdAt])`.
+   *
+   * The return type is `unknown` on purpose, and `readWorkflowRunCounts` narrows it. Prisma's real
+   * `groupBy` overload infers one of its type parameters (`InputErrors`) from the *declared return
+   * type* of whatever signature it is checked against, and then demands `args` be an intersection with
+   * it — so a port that names the grouped row shape here makes the real client fail to satisfy this
+   * interface, with no way to bridge it (the adapter injects `prisma` wholesale, uncast).
+   */
+  groupBy: (args: {
+    by: ["workflowId"];
+    where: { workflowId: { in: string[] }; workspaceId: string };
+    _count: { _all: true };
+  }) => Promise<unknown>;
+}
+
+/** One row of the `groupBy` above: a workflow id and how many runs it has. */
+export interface WorkflowRunCountGroup {
+  workflowId: string;
+  _count: { _all: number };
 }
 
 export interface WorkflowsDb {
