@@ -72,6 +72,16 @@ vi.mock("@/modules/billing/lib/organization-billing", () => ({
   cleanupStripeCustomer: vi.fn().mockResolvedValue(undefined),
 }));
 
+// The mocked Prisma rows carry every column, because that is what the client's return type demands.
+// `select` in the service deliberately omits the retention windows (the retention sweep reads those
+// itself), so the mapper drops them. Strip them from the expectation rather than from the fixture.
+const withoutRetentionWindows = <T extends Record<string, unknown>>(row: T) => {
+  const { workflowRunRetentionDays, displayRetentionDays, ...mapped } = row;
+  void workflowRunRetentionDays;
+  void displayRetentionDays;
+  return mapped;
+};
+
 describe("Organization Service", () => {
   beforeEach(() => {
     vi.mocked(ensureCloudStripeSetupForOrganization).mockResolvedValue(undefined);
@@ -101,6 +111,8 @@ describe("Organization Service", () => {
         },
         isAISmartToolsEnabled: false,
         displayTimeZone: null,
+        workflowRunRetentionDays: null,
+        displayRetentionDays: null,
         whitelabel: false,
       };
 
@@ -108,7 +120,7 @@ describe("Organization Service", () => {
 
       const result = await getOrganization("org1");
 
-      expect(result).toEqual(mockOrganization);
+      expect(result).toEqual(withoutRetentionWindows(mockOrganization));
       expect(prisma.organization.findUnique).toHaveBeenCalledWith({
         where: { id: "org1" },
         select: expect.any(Object),
@@ -154,6 +166,8 @@ describe("Organization Service", () => {
       },
       isAISmartToolsEnabled: false,
       displayTimeZone: null,
+      workflowRunRetentionDays: null,
+      displayRetentionDays: null,
       whitelabel: false,
     };
 
@@ -162,7 +176,7 @@ describe("Organization Service", () => {
 
       const result = await getOrganizationByWorkspaceId(workspaceId);
 
-      expect(result).toEqual(mockOrganization);
+      expect(result).toEqual(withoutRetentionWindows(mockOrganization));
       expect(prisma.organization.findFirst).toHaveBeenCalledWith({
         where: { workspaces: { some: { id: workspaceId } } },
         select: organizationSelect,
@@ -209,6 +223,8 @@ describe("Organization Service", () => {
           },
           isAISmartToolsEnabled: false,
           displayTimeZone: null,
+          workflowRunRetentionDays: null,
+          displayRetentionDays: null,
           whitelabel: false,
         },
       ];
@@ -217,7 +233,7 @@ describe("Organization Service", () => {
 
       const result = await getOrganizationsByUserId("user1");
 
-      expect(result).toEqual(mockOrganizations);
+      expect(result).toEqual(mockOrganizations.map(withoutRetentionWindows));
       expect(prisma.organization.findMany).toHaveBeenCalledWith({
         where: {
           id: { in: ["org1"] },
@@ -258,6 +274,8 @@ describe("Organization Service", () => {
         billing: expectedBilling,
         isAISmartToolsEnabled: false,
         displayTimeZone: null,
+        workflowRunRetentionDays: null,
+        displayRetentionDays: null,
         whitelabel: false,
       };
 
@@ -265,7 +283,7 @@ describe("Organization Service", () => {
 
       const result = await createOrganization({ name: "Test Org" });
 
-      expect(result).toEqual(mockOrganization);
+      expect(result).toEqual(withoutRetentionWindows(mockOrganization));
       expect(prisma.organization.create).toHaveBeenCalledWith({
         data: {
           name: "Test Org",
@@ -319,6 +337,8 @@ describe("Organization Service", () => {
         },
         isAISmartToolsEnabled: false,
         displayTimeZone: null,
+        workflowRunRetentionDays: null,
+        displayRetentionDays: null,
         whitelabel: false,
         memberships: [{ userId: "user1" }, { userId: "user2" }],
         workspaces: [

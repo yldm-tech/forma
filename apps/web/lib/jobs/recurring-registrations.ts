@@ -12,6 +12,8 @@ import {
 } from "@forma/jobs";
 import { processAuthzedProjectionDeliveryJob } from "@/lib/authzed/outbox-processor";
 import { processAuthzedScheduledReconciliationJob } from "@/lib/authzed/scheduled-reconciliation";
+import { RETENTION_SWEEP_INTERVAL_MS } from "@/lib/jobs/retention/constants";
+import { processRetentionSweepJob } from "@/lib/jobs/retention/process-retention-sweep-job";
 import { USAGE_TELEMETRY_DAILY_CRON_PATTERN, USAGE_TELEMETRY_TIME_ZONE } from "@/lib/telemetry/constants";
 import { processUsageTelemetryJob } from "@/lib/telemetry/process-usage-telemetry-job";
 import { processResponsePipelineJob } from "@/modules/response-pipeline/lib/process-response-pipeline-job";
@@ -78,6 +80,14 @@ export const RECURRING_JOB_REGISTRATIONS_BY_KEY: Record<TRecurringJobKey, Recurr
     job: recurringJobs.authzedReconciliationAudit,
     schedule: {
       everyMs: 6 * 60 * 60 * 1_000,
+      kind: "every",
+    },
+  },
+  retentionSweep: {
+    handler: processRetentionSweepJob,
+    job: recurringJobs.retentionSweep,
+    schedule: {
+      everyMs: RETENTION_SWEEP_INTERVAL_MS,
       kind: "every",
     },
   },

@@ -74,6 +74,14 @@ describe("Integration Service", () => {
     ],
   };
 
+  // Delivery-health columns are NOT NULL on the row, so every fixture standing in for a persisted
+  // integration has to carry them. Kept in one place rather than repeated at each fixture.
+  const mockDeliveryHealth = {
+    consecutiveFailures: 0,
+    lastErrorAt: null,
+    lastErrorMessage: null,
+  };
+
   describe("createOrUpdateIntegration", () => {
     const mockWorkspaceId = "clg123456789012345678901234";
     const mockIntegrationData: TIntegrationInput = {
@@ -86,6 +94,7 @@ describe("Integration Service", () => {
         id: "int_123",
         workspaceId: mockWorkspaceId,
         ...mockIntegrationData,
+        ...mockDeliveryHealth,
       };
 
       vi.mocked(prisma.integration.upsert).mockResolvedValue(mockIntegration);
@@ -130,6 +139,7 @@ describe("Integration Service", () => {
       vi.mocked(prisma.integration.upsert).mockResolvedValue({
         id: "int_123",
         workspaceId: mockWorkspaceId,
+        ...mockDeliveryHealth,
         ...mockIntegrationData,
       });
 
@@ -176,6 +186,7 @@ describe("Integration Service", () => {
         workspaceId: mockWorkspaceId,
         type: IntegrationType.googleSheets,
         config: mockIntegrationConfig,
+        ...mockDeliveryHealth,
       },
     ];
 
@@ -229,6 +240,7 @@ describe("Integration Service", () => {
       workspaceId: "clg123456789012345678901234",
       type: IntegrationType.googleSheets,
       config: mockIntegrationConfig,
+      ...mockDeliveryHealth,
     };
 
     test("should get an integration by ID", async () => {
@@ -273,6 +285,7 @@ describe("Integration Service", () => {
       workspaceId: mockWorkspaceId,
       type: mockType,
       config: mockIntegrationConfig,
+      ...mockDeliveryHealth,
     };
 
     test("should get an integration by type", async () => {
@@ -317,6 +330,7 @@ describe("Integration Service", () => {
       workspaceId: "clg123456789012345678901234",
       type: IntegrationType.googleSheets,
       config: mockIntegrationConfig,
+      ...mockDeliveryHealth,
     };
 
     test("should delete an integration", async () => {
