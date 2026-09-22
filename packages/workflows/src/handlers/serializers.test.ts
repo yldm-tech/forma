@@ -199,6 +199,26 @@ describe("run serializers", () => {
     expect(resource.logs[0].startedAt).toBe("2026-06-12T10:00:30.000Z");
   });
 
+  test("drops the data.trigger duplicate of triggerPayload while keeping the rest of data", () => {
+    const resource = toWorkflowRunResource({
+      ...detailRun,
+      data: {
+        trigger: triggerPayload,
+        steps: [{ stepId: "send-email", stepType: "send_email", status: "succeeded" }],
+        // `ZWorkflowRunData` has a catchall, so unrecognized keys must survive the strip.
+        attempt: 2,
+      },
+    });
+
+    expect(resource.data).toEqual({
+      steps: [{ stepId: "send-email", stepType: "send_email", status: "succeeded" }],
+      attempt: 2,
+    });
+    expect(resource.data).not.toHaveProperty("trigger");
+    // The payload is still reachable once, under its own column.
+    expect(resource.triggerPayload).toEqual(triggerPayload);
+  });
+
   test("serializes non-null nextAttemptAt / lastErrorAt as ISO strings", () => {
     const resource = toWorkflowRunResource({
       ...detailRun,

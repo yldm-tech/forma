@@ -1,4 +1,5 @@
 import * as React from "react";
+import { getFormFieldAutocomplete } from "@/components/elements/autocomplete";
 import { ElementError, getElementErrorAria } from "@/components/general/element-error";
 import { ElementHeader } from "@/components/general/element-header";
 import { Input } from "@/components/general/input";
@@ -20,6 +21,11 @@ export interface FormFieldConfig {
   required?: boolean;
   /** Whether this field should be shown */
   show?: boolean;
+  /**
+   * HTML autofill token (WCAG 2.1 SC 1.3.5). Left unset, it is derived from `id` for the built-in
+   * contact-info and address fields; a plain string so an author-facing control can set it later.
+   */
+  autocomplete?: string;
 }
 
 interface FormFieldProps {
@@ -137,6 +143,9 @@ function FormField({
               inputType = "tel";
             }
 
+            // An explicit token wins; otherwise the built-in field ids carry a known subject.
+            const autocomplete = field.autocomplete ?? getFormFieldAutocomplete(field.id);
+
             return (
               <div key={field.id} className="space-y-2">
                 <Label htmlFor={fieldInputId} variant="default">
@@ -152,6 +161,7 @@ function FormField({
                   required={fieldRequired}
                   disabled={disabled}
                   dir={dir}
+                  autoComplete={autocomplete}
                   aria-invalid={errorAria.ariaInvalid || undefined}
                 />
               </div>
