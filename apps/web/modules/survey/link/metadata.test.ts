@@ -63,11 +63,6 @@ describe("getMetadataForLinkSurvey", () => {
         customHeadScripts: null,
       },
       organizationId: "org-123",
-      organizationBilling: {
-        usageCycleAnchor: new Date(),
-        stripeCustomerId: null,
-        limits: { workspaces: 3, monthly: { responses: 1500 } },
-      },
       organizationWhitelabel: null,
     });
   });

@@ -2,6 +2,7 @@ import { ApiClient } from "@/lib/common/api";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getIsDebug } from "@/lib/common/utils";
+import { prefetchSurveysScript } from "@/lib/survey/widget";
 import { type TUpdates, type TUserState } from "@/types/config";
 import { type ApiErrorResponse, type Result, type ResultError, err, ok } from "@/types/error";
 
@@ -106,6 +107,10 @@ export const sendUpdates = async ({
       },
       filteredSurveys,
     });
+
+    // Identification can turn an empty survey set non-empty, which is the case setup skipped the
+    // prefetch for. Cheap and idempotent when it already ran.
+    prefetchSurveysScript(appUrl);
 
     return ok({ hasWarnings: Boolean(errors?.length) });
   } catch (e) {

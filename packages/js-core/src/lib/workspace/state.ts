@@ -2,6 +2,7 @@ import { ApiClient } from "@/lib/common/api";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys, getIsDebug } from "@/lib/common/utils";
+import { prefetchSurveysScript } from "@/lib/survey/widget";
 import type { TWorkspaceState } from "@/types/config";
 import { type ApiErrorResponse, type Result, err, ok } from "@/types/error";
 
@@ -102,6 +103,10 @@ export const addWorkspaceStateExpiryCheckListener = (): void => {
             workspace: state,
             filteredSurveys,
           });
+
+          // A survey published since setup lands here, so warm the cache for it now. Idempotent when
+          // the prefetch already ran, and still a no-op while the set is empty.
+          prefetchSurveysScript(appConfig.get().appUrl);
         } else {
           throw new Error(
             `Error fetching workspace state: ${workspace.error.code} - ${workspace.error.responseMessage ?? workspace.error.message}`

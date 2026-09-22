@@ -5,7 +5,7 @@ import { Prisma, Workspace } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
 import { ZId } from "@forma/types/common";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
-import { TOrganizationBilling, TOrganizationWhitelabel } from "@forma/types/organizations";
+import { TOrganizationWhitelabel } from "@forma/types/organizations";
 import { validateInputs } from "@/lib/utils/validate";
 
 type TWorkspaceForLinkSurvey = Pick<
@@ -16,17 +16,15 @@ type TWorkspaceForLinkSurvey = Pick<
 export interface TWorkspaceContextForLinkSurvey {
   workspace: TWorkspaceForLinkSurvey;
   organizationId: string;
-  organizationBilling: TOrganizationBilling;
   organizationWhitelabel: TOrganizationWhitelabel | null;
 }
 
 /**
  * Fetches all workspace-related data needed for link surveys in a single optimized query.
- * Combines workspace, organization, and billing data using Prisma relationships to minimize
- * database round trips.
+ * Combines workspace and organization data using Prisma relationships to minimize database round trips.
  *
  * @param workspaceId - The workspace identifier
- * @returns Object containing workspace styling data, organization ID, and billing information
+ * @returns Object containing workspace styling data, organization ID, and whitelabel settings
  * @throws ResourceNotFoundError if workspace or organization not found
  * @throws DatabaseError if database query fails
  */
@@ -48,14 +46,6 @@ export const getWorkspaceContextForLinkSurvey = reactCache(
           organization: {
             select: {
               id: true,
-              billing: {
-                select: {
-                  stripeCustomerId: true,
-                  limits: true,
-                  usageCycleAnchor: true,
-                  stripe: true,
-                },
-              },
               whitelabel: true,
             },
           },
@@ -70,10 +60,6 @@ export const getWorkspaceContextForLinkSurvey = reactCache(
         throw new ResourceNotFoundError("Organization", null);
       }
 
-      if (!workspace.organization.billing) {
-        throw new ResourceNotFoundError("OrganizationBilling", workspace.organization.id);
-      }
-
       return {
         workspace: {
           id: workspace.id,
@@ -84,14 +70,6 @@ export const getWorkspaceContextForLinkSurvey = reactCache(
           customHeadScripts: workspace.customHeadScripts,
         },
         organizationId: workspace.organizationId,
-        organizationBilling: {
-          stripeCustomerId: workspace.organization.billing.stripeCustomerId,
-          limits: workspace.organization.billing.limits as TOrganizationBilling["limits"],
-          usageCycleAnchor: workspace.organization.billing.usageCycleAnchor,
-          ...(workspace.organization.billing.stripe === null
-            ? {}
-            : { stripe: workspace.organization.billing.stripe }),
-        },
         organizationWhitelabel: workspace.organization.whitelabel ?? null,
       };
     } catch (error) {

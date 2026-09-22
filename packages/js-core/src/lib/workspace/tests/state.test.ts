@@ -4,6 +4,7 @@ import { ApiClient } from "@/lib/common/api";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { filterSurveys } from "@/lib/common/utils";
+import { prefetchSurveysScript } from "@/lib/survey/widget";
 import {
   addWorkspaceStateExpiryCheckListener,
   clearWorkspaceStateExpiryCheckListener,
@@ -34,6 +35,10 @@ vi.mock("@/lib/common/logger", () => ({
 vi.mock("@/lib/common/utils", () => ({
   filterSurveys: vi.fn(),
   getIsDebug: vi.fn(),
+}));
+
+vi.mock("@/lib/survey/widget", () => ({
+  prefetchSurveysScript: vi.fn(),
 }));
 
 // Mock Config
@@ -218,6 +223,9 @@ describe("environment/state.ts", () => {
 
       // Verify the update was called
       expect(mockConfig.update).toHaveBeenCalled();
+
+      // A survey published since setup becomes eligible here, so the prefetch has to be retried.
+      expect(prefetchSurveysScript).toHaveBeenCalledWith("https://test.com");
     });
 
     test("extends expiry on error", async () => {
