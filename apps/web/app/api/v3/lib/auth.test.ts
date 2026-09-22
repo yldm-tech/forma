@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyPermission } from "@forma/database/prisma";
 import { AuthorizationError } from "@forma/types/errors";
 import { assertCan, can } from "@/lib/authorization";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { getWorkspace } from "@/lib/workspace/service";
 import { getV3AuthorizationActor, requireSessionWorkspaceAccess, requireV3WorkspaceAccess } from "./auth";
 import type { TV3Authentication } from "./types";
@@ -14,10 +13,6 @@ vi.mock("@forma/logger", () => ({
       error: vi.fn(),
     })),
   },
-}));
-
-vi.mock("@/lib/utils/helper", () => ({
-  getOrganizationIdFromWorkspaceId: vi.fn(),
 }));
 
 vi.mock("@/lib/workspace/service", () => ({
@@ -95,8 +90,7 @@ describe("requireSessionWorkspaceAccess", () => {
   });
 
   test("returns 403 when user has no access to workspace", async () => {
-    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_abc" } as any);
-    vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org_1");
+    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_abc", organizationId: "org_1" } as any);
     vi.mocked(assertCan).mockRejectedValueOnce(new AuthorizationError("Not authorized"));
     const result = await requireSessionWorkspaceAccess(
       { user: { id: "user_1" }, expires: "" } as any,
@@ -116,8 +110,7 @@ describe("requireSessionWorkspaceAccess", () => {
   });
 
   test("returns workspace context when session is valid and user has access", async () => {
-    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_abc" } as any);
-    vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org_1");
+    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_abc", organizationId: "org_1" } as any);
     vi.mocked(assertCan).mockResolvedValueOnce(undefined);
     const result = await requireSessionWorkspaceAccess(
       { user: { id: "user_1" }, expires: "" } as any,
@@ -155,8 +148,7 @@ function wsPerm(workspaceId: string, permission: ApiKeyPermission = ApiKeyPermis
 describe("requireV3WorkspaceAccess", () => {
   beforeEach(() => {
     vi.mocked(can).mockResolvedValue(true);
-    vi.mocked(getWorkspace).mockResolvedValue({ id: "proj_k" } as any);
-    vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue("org_k");
+    vi.mocked(getWorkspace).mockResolvedValue({ id: "proj_k", organizationId: "org_k" } as any);
   });
 
   test("401 when authentication is null", async () => {
@@ -165,8 +157,7 @@ describe("requireV3WorkspaceAccess", () => {
   });
 
   test("delegates to session flow when user is present", async () => {
-    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_s" } as any);
-    vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org_s");
+    vi.mocked(getWorkspace).mockResolvedValueOnce({ id: "proj_s", organizationId: "org_s" } as any);
     vi.mocked(assertCan).mockResolvedValueOnce(undefined);
     const r = await requireV3WorkspaceAccess(
       { user: { id: "user_1" }, expires: "" } as any,

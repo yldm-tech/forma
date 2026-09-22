@@ -1,50 +1,69 @@
 import { describe, expect, test, vi } from "vitest";
+import { prisma } from "@forma/database";
+import type { Workspace } from "@forma/database/prisma";
 import { ResourceNotFoundError } from "@forma/types/errors";
-import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
-import { getWorkspace } from "@/lib/workspace/service";
 import { resolveV3WorkspaceContext } from "./workspace-context";
 
-vi.mock("@/lib/workspace/service", () => ({
-  getWorkspace: vi.fn(),
+// The real `getWorkspace` runs here on purpose: the point of these tests is how many database reads one
+// resolution costs, which a mock of the service layer would hide.
+vi.mock("@forma/database", () => ({
+  prisma: {
+    workspace: {
+      findUnique: vi.fn(),
+    },
+  },
 }));
 
-vi.mock("@/lib/utils/helper", () => ({
-  getOrganizationIdFromWorkspaceId: vi.fn(),
+vi.mock("@/lib/authorization/resource-list", () => ({
+  lookupAuthorizedOrganizationIds: vi.fn(),
+  lookupAuthorizedWorkspaceIds: vi.fn(),
 }));
+
+const mockWorkspace = {
+  id: "ws_abc",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  name: "Test Workspace",
+  organizationId: "org_123",
+  languages: [],
+  recontactDays: 0,
+  linkSurveyBranding: false,
+  inAppSurveyBranding: false,
+  config: { channel: "link", industry: "saas" },
+  placement: "bottomRight",
+  clickOutsideClose: false,
+  overlay: "none",
+  appSetupCompleted: false,
+  styling: { allowStyleOverwrite: false },
+  logo: null,
+} as unknown as Workspace;
 
 describe("resolveV3WorkspaceContext", () => {
   test("returns workspaceId and organizationId when workspace exists", async () => {
-    vi.mocked(getWorkspace).mockResolvedValueOnce({
-      id: "ws_abc",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      name: "Test Workspace",
-      organizationId: "org_123",
-      recontactDays: 0,
-      linkSurveyBranding: false,
-      inAppSurveyBranding: false,
-      placement: "bottomRight",
-      clickOutsideClose: false,
-      overlay: "none",
-      appSetupCompleted: false,
-      languages: [],
-      config: { channel: "link", industry: "saas" },
-      styling: { allowStyleOverwrite: false },
-    });
-    vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValueOnce("org_123");
+    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(mockWorkspace);
+
     const result = await resolveV3WorkspaceContext("ws_abc");
+
     expect(result).toEqual({
       workspaceId: "ws_abc",
       organizationId: "org_123",
     });
-    expect(getWorkspace).toHaveBeenCalledWith("ws_abc");
-    expect(getOrganizationIdFromWorkspaceId).toHaveBeenCalledWith("ws_abc");
+  });
+
+  test("reads the workspace row once, taking organizationId from the row it already fetched", async () => {
+    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(mockWorkspace);
+
+    await resolveV3WorkspaceContext("ws_abc");
+
+    expect(prisma.workspace.findUnique).toHaveBeenCalledExactlyOnceWith({
+      where: { id: "ws_abc" },
+      select: expect.any(Object),
+    });
   });
 
   test("throws when workspace does not exist", async () => {
-    vi.mocked(getWorkspace).mockResolvedValueOnce(null);
+    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(null);
+
     await expect(resolveV3WorkspaceContext("ws_nonexistent")).rejects.toThrow(ResourceNotFoundError);
-    expect(getWorkspace).toHaveBeenCalledWith("ws_nonexistent");
-    expect(getOrganizationIdFromWorkspaceId).not.toHaveBeenCalled();
   });
 });
