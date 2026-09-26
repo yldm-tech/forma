@@ -405,32 +405,78 @@ export const updateAttributes = async (
         // transaction above (ENG-2252): a deterministic order — key is the identity the
         // (key, workspaceId) unique index locks on — plus a bounded deadlock retry. A deadlock rolls
         // the whole batch back, so re-running it is safe.
+        //
+        // The key creation has to be idempotent, not a plain `create`. `getContactAttributeKeys` is
+        // only a per-request react cache, so two identifies introducing the same brand-new key both
+        // read a list without it and both try to create it; the loser violates
+        // @@unique([key, workspaceId]) with P2002, which `retryOnDeadlock` does not retry. That used
+        // to roll back the whole batch — including this request's other, unrelated new keys — and
+        // escape to the route as a 500, leaving the widget with no person state and no survey.
+        // `createMany({ skipDuplicates })` turns the collision into ON CONFLICT DO NOTHING: the loser
+        // waits for the winner to commit, then skips. Reading the ids back afterwards — rather than
+        // trusting what createMany inserted — is what makes this contact's attribute row land on a
+        // key the other request created, and the upsert on contactId_attributeKeyId absorbs the same
+        // race on the attribute row itself.
+        //
+        // The two writes are no longer one transaction, because the id read has to sit between them
+        // and an interactive transaction would hold every one of those row locks across up to
+        // MAX_ATTRIBUTE_CLASSES_PER_ENVIRONMENT round trips. The exposure is an attribute key created
+        // without this contact's row if the second write fails — an unused key in the workspace's
+        // list, which the next identify fills in through the existing-attribute path above. Both
+        // steps are idempotent, which is what keeps the deadlock retry (and a client retry) safe.
         const orderedNewAttributes = [...preparedNewAttributes].sort((a, b) =>
           compareCodeUnits(a.key, b.key)
         );
         await retryOnDeadlock(
-          () =>
-            prisma.$transaction(
-              orderedNewAttributes.map(({ key, dataType, columns }) =>
-                prisma.contactAttributeKey.create({
-                  data: {
-                    key,
-                    name: formatSnakeCaseToTitleCase(key),
-                    type: "custom",
-                    dataType,
-                    workspaceId,
-                    attributes: {
-                      create: {
-                        contactId,
-                        value: columns.value,
-                        valueNumber: columns.valueNumber,
-                        valueDate: columns.valueDate,
-                      },
-                    },
+          async () => {
+            await prisma.contactAttributeKey.createMany({
+              data: orderedNewAttributes.map(({ key, dataType }) => ({
+                key,
+                name: formatSnakeCaseToTitleCase(key),
+                type: "custom" as const,
+                dataType,
+                workspaceId,
+              })),
+              skipDuplicates: true,
+            });
+
+            const createdKeys = await prisma.contactAttributeKey.findMany({
+              where: { workspaceId, key: { in: orderedNewAttributes.map(({ key }) => key) } },
+              select: { id: true, key: true },
+            });
+            const attributeKeyIdByKey = new Map(createdKeys.map(({ id, key }) => [key, id]));
+
+            // Order the attribute-row locks by attributeKeyId, exactly as the existing-attribute
+            // transaction above does, so the two paths cannot form a lock cycle against each other.
+            const attributeRows = orderedNewAttributes
+              .flatMap(({ key, columns }) => {
+                const attributeKeyId = attributeKeyIdByKey.get(key);
+                return attributeKeyId ? [{ attributeKeyId, columns }] : [];
+              })
+              .sort((a, b) => compareCodeUnits(a.attributeKeyId, b.attributeKeyId));
+
+            if (attributeRows.length === 0) return;
+
+            await prisma.$transaction(
+              attributeRows.map(({ attributeKeyId, columns }) =>
+                prisma.contactAttribute.upsert({
+                  where: { contactId_attributeKeyId: { contactId, attributeKeyId } },
+                  update: {
+                    value: columns.value,
+                    valueNumber: columns.valueNumber,
+                    valueDate: columns.valueDate,
+                  },
+                  create: {
+                    contactId,
+                    attributeKeyId,
+                    value: columns.value,
+                    valueNumber: columns.valueNumber,
+                    valueDate: columns.valueDate,
                   },
                 })
               )
-            ),
+            );
+          },
           { operation: "updateAttributes.newAttributeKeys", contactId, workspaceId }
         );
       }

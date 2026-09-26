@@ -92,7 +92,7 @@ describe("Follow-ups", () => {
     vi.mocked(getSurvey).mockResolvedValue(mockSurvey);
     vi.mocked(getOrganizationByWorkspaceId).mockResolvedValue(mockOrganization);
     vi.mocked(getSurveyFollowUpsPermission).mockResolvedValue(true);
-    vi.mocked(sendFollowUpEmail).mockResolvedValue(undefined);
+    vi.mocked(sendFollowUpEmail).mockResolvedValue(true);
     vi.mocked(applyRateLimit).mockResolvedValue({ allowed: true });
   });
 
@@ -120,6 +120,25 @@ describe("Follow-ups", () => {
           attachResponseData: true,
           logoUrl: "https://example.com/logo.png",
         });
+      }
+    });
+
+    test("should report an error when the mailer reports no delivery", async () => {
+      // sendEmail returns false rather than throwing when the deployment has no SMTP configured, so a
+      // follow-up must not be reported as sent.
+      vi.mocked(sendFollowUpEmail).mockResolvedValue(false);
+
+      const result = await sendFollowUpsForResponse("response1");
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data).toEqual([
+          {
+            followUpId: "followup1",
+            status: "error",
+            error: "SMTP is not configured; follow-up email was not sent",
+          },
+        ]);
       }
     });
 

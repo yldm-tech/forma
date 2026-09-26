@@ -1217,6 +1217,21 @@ describe("JWT Functions - Comprehensive Security Tests", () => {
         });
       });
 
+      test("mints SSO relink intents that outlive the 24h recovery magic link they travel inside", () => {
+        const intent = createSsoRelinkIntent({
+          userId: mockUser.id,
+          email: mockUser.email,
+          provider: "google",
+          providerAccountId: "provider-123",
+          callbackUrl: "http://localhost:3000",
+        });
+
+        const decoded = jwt.decode(intent) as { iat: number; exp: number };
+        const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
+
+        expect(decoded.exp - decoded.iat).toBe(ONE_DAY_IN_SECONDS);
+      });
+
       test("rejects expired SSO relink intents", () => {
         const expiredIntent = jwt.sign(
           {

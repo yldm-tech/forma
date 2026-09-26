@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Webhook } from "../src/prisma";
+import { type Webhook, WebhookSource } from "../src/prisma";
 
 export const ZWebhook = z.object({
   id: z.cuid2().describe("The ID of the webhook"),
@@ -17,7 +17,8 @@ export const ZWebhook = z.object({
     })
     .describe("The date and time the webhook was last updated"),
   url: z.url().describe("The URL of the webhook"),
-  source: z.enum(["user", "zapier", "make", "n8n"]).describe("The source of the webhook"),
+  // Derived from the Prisma enum rather than restated, so a new member cannot be missed here: a hand-written mirror silently dropped `activepieces` and made every create request from that integration a 400.
+  source: z.enum(WebhookSource).describe("The source of the webhook"),
   workspaceId: z.cuid2().describe("The ID of the workspace"),
   triggers: z
     .array(z.enum(["responseFinished", "responseCreated", "responseUpdated"]))

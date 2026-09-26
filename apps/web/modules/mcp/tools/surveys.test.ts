@@ -12,11 +12,13 @@ import {
   successResponse,
 } from "@/app/api/v3/lib/response";
 import {
+  archiveV3Survey,
   createV3SurveyResponseFromRawInput,
   deleteV3Survey,
   getV3Survey,
   listV3Surveys,
   patchV3SurveyResponse,
+  restoreV3Survey,
   validateV3SurveyFromRawInput,
 } from "@/app/api/v3/surveys/lib/operations";
 import { buildListSurveysSearchParams, registerSurveyTools } from "./surveys";
@@ -28,11 +30,13 @@ import { buildListSurveysSearchParams, registerSurveyTools } from "./surveys";
 const ABSOLUTE_MCP_AUDIT_URL = expect.stringMatching(/^https?:\/\/[^/]+\/api\/mcp$/);
 
 vi.mock("@/app/api/v3/surveys/lib/operations", () => ({
+  archiveV3Survey: vi.fn(),
   createV3SurveyResponseFromRawInput: vi.fn(),
   deleteV3Survey: vi.fn(),
   getV3Survey: vi.fn(),
   listV3Surveys: vi.fn(),
   patchV3SurveyResponse: vi.fn(),
+  restoreV3Survey: vi.fn(),
   validateV3SurveyFromRawInput: vi.fn(),
 }));
 
@@ -150,6 +154,17 @@ describe("buildListSurveysSearchParams", () => {
     expect(params.getAll("filter[status][in]")).toEqual(["draft", "inProgress"]);
     expect(params.getAll("filter[type][in]")).toEqual(["link"]);
   });
+
+  test("forwards the archived pseudo-status the v3 list parser understands", () => {
+    const params = buildListSurveysSearchParams({
+      workspaceId: "clxx1234567890123456789012",
+      limit: 20,
+      includeTotalCount: true,
+      filter: { status: { in: ["archived", "paused"] } },
+    });
+
+    expect(params.getAll("filter[status][in]")).toEqual(["archived", "paused"]);
+  });
 });
 
 describe("registerSurveyTools", () => {
@@ -161,7 +176,7 @@ describe("registerSurveyTools", () => {
   test("registers survey tools with planning annotations", () => {
     const { server, tools } = createToolServer();
 
-    expect(server.registerTool).toHaveBeenCalledTimes(6);
+    expect(server.registerTool).toHaveBeenCalledTimes(8);
     expect(tools.get("list_surveys")?.config).toMatchObject({
       title: "List surveys",
       annotations: {
@@ -228,6 +243,24 @@ describe("registerSurveyTools", () => {
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
+        idempotentHint: false,
+      },
+    });
+    // The reversible lifecycle pair the UI offers beside Delete, mirroring archive_workflow /
+    // unarchive_workflow: without them an agent asked to archive a survey has only the permanent delete.
+    expect(tools.get("archive_survey")?.config).toMatchObject({
+      title: "Archive survey",
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+      },
+    });
+    expect(tools.get("restore_survey")?.config).toMatchObject({
+      title: "Restore survey",
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
         idempotentHint: false,
       },
     });
@@ -439,8 +472,8 @@ describe("registerSurveyTools", () => {
 
   test("delete_survey queues a successful audit log", async () => {
     const { tools } = createToolServer();
-    const auditLog = { status: "failure" };
-    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog as any);
+    const auditLog = { status: "failure" } as NonNullable<ReturnType<typeof buildV3AuditLog>>;
+    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog);
     vi.mocked(deleteV3Survey).mockResolvedValue(noContentResponse({ requestId: "req_tool" }));
 
     const result = await tools.get("delete_survey")!.handler(
@@ -466,8 +499,8 @@ describe("registerSurveyTools", () => {
 
   test("delete_survey preserves forbidden errors without leaking resource existence", async () => {
     const { tools } = createToolServer();
-    const auditLog = { status: "failure" };
-    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog as any);
+    const auditLog = { status: "failure" } as NonNullable<ReturnType<typeof buildV3AuditLog>>;
+    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog);
     vi.mocked(deleteV3Survey).mockResolvedValue(
       problemForbidden("req_forbidden", "You are not authorized to access this resource", "/api/mcp")
     );
@@ -491,6 +524,92 @@ describe("registerSurveyTools", () => {
       eventId: "req_tool",
     });
     expect(queueV3AuditLog).toHaveBeenCalledWith(auditLog, "req_tool", expect.any(Object));
+  });
+
+  test("archive_survey calls the shared v3 archive operation and audits it as archived", async () => {
+    const { tools } = createToolServer();
+    const auditLog = { status: "failure" } as NonNullable<ReturnType<typeof buildV3AuditLog>>;
+    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog);
+    vi.mocked(archiveV3Survey).mockResolvedValue(
+      successResponse(
+        { id: "clxx1234567890123456789012", status: "paused", archivedAt: "2026-01-01T00:00:00.000Z" },
+        { requestId: "req_tool" }
+      )
+    );
+
+    const result = await tools.get("archive_survey")!.handler(
+      {
+        surveyId: "clxx1234567890123456789012",
+      },
+      { http: { authInfo } }
+    );
+
+    expect(buildV3AuditLog).toHaveBeenCalledWith(apiKeyAuth, "archived", "survey", ABSOLUTE_MCP_AUDIT_URL);
+    expect(archiveV3Survey).toHaveBeenCalledWith({
+      surveyId: "clxx1234567890123456789012",
+      authentication: apiKeyAuth,
+      requestId: "req_tool",
+      instance: "/api/mcp",
+      auditLog,
+    });
+    expect(auditLog.status).toBe("success");
+    expect(queueV3AuditLog).toHaveBeenCalledWith(auditLog, "req_tool", expect.any(Object));
+    expect(result.structuredContent).toEqual({
+      data: { id: "clxx1234567890123456789012", status: "paused", archivedAt: "2026-01-01T00:00:00.000Z" },
+      requestId: "req_tool",
+    });
+  });
+
+  test("restore_survey calls the shared v3 restore operation and audits it as restored", async () => {
+    const { tools } = createToolServer();
+    const auditLog = { status: "failure" } as NonNullable<ReturnType<typeof buildV3AuditLog>>;
+    vi.mocked(buildV3AuditLog).mockReturnValue(auditLog);
+    vi.mocked(restoreV3Survey).mockResolvedValue(
+      successResponse(
+        { id: "clxx1234567890123456789012", status: "paused", archivedAt: null },
+        { requestId: "req_tool" }
+      )
+    );
+
+    const result = await tools.get("restore_survey")!.handler(
+      {
+        surveyId: "clxx1234567890123456789012",
+      },
+      { http: { authInfo } }
+    );
+
+    expect(buildV3AuditLog).toHaveBeenCalledWith(apiKeyAuth, "restored", "survey", ABSOLUTE_MCP_AUDIT_URL);
+    expect(restoreV3Survey).toHaveBeenCalledWith({
+      surveyId: "clxx1234567890123456789012",
+      authentication: apiKeyAuth,
+      requestId: "req_tool",
+      instance: "/api/mcp",
+      auditLog,
+    });
+    expect(auditLog.status).toBe("success");
+    expect(result.structuredContent).toEqual({
+      data: { id: "clxx1234567890123456789012", status: "paused", archivedAt: null },
+      requestId: "req_tool",
+    });
+  });
+
+  test("archive_survey returns an MCP error for read-only OAuth scopes", async () => {
+    const { tools } = createToolServer();
+
+    const result = await tools.get("archive_survey")!.handler(
+      {
+        surveyId: "clxx1234567890123456789012",
+      },
+      { http: { authInfo: readOnlyOAuthAuthInfo } }
+    );
+
+    expect(archiveV3Survey).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent.error).toMatchObject({
+      status: 403,
+      code: "forbidden",
+      detail: "OAuth token does not include the required MCP scope: surveys:write",
+    });
   });
 
   test("write tools return MCP errors for read-only OAuth scopes", async () => {
@@ -674,6 +793,27 @@ describe("tool arguments are validated by the SDK (ENG-2256)", () => {
     expect(outcome.result?.isError).toBe(true);
     expect(errorText(outcome)).toContain(expected);
     expect(listV3Surveys).not.toHaveBeenCalled();
+  });
+
+  // Red before the filter was widened: ZSurveyStatus rejected "archived", so the SDK failed the call and
+  // archived surveys were unreachable from MCP even though the HTTP parser accepts the pseudo-status.
+  test("accepts the archived pseudo-status in the status filter", async () => {
+    vi.mocked(listV3Surveys).mockResolvedValue(
+      new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    const outcome = await callTool("list_surveys", {
+      workspaceId: "clxx1234567890123456789012",
+      filter: { status: { in: ["archived"] } },
+    });
+
+    expect(outcome.result?.isError).toBeUndefined();
+    expect(vi.mocked(listV3Surveys).mock.calls[0][0].searchParams.getAll("filter[status][in]")).toEqual([
+      "archived",
+    ]);
   });
 
   test("accepts the declared spelling and reaches the operation", async () => {

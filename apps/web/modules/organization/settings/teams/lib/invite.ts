@@ -181,6 +181,8 @@ export const getInvite = reactCache(async (inviteId: string): Promise<InviteWith
       },
       select: {
         email: true,
+        // Both other fields are redacted as PII by the audit logger, so without the role the audit entry for a revoked invite records nothing about what was revoked.
+        role: true,
         creator: {
           select: {
             name: true,

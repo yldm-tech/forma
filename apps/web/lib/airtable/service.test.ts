@@ -10,6 +10,9 @@ const integrationServiceMock = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/integration/service", () => integrationServiceMock);
 
+const cacheMock = vi.hoisted(() => ({ cache: { tryLock: vi.fn(), del: vi.fn() } }));
+vi.mock("@/lib/cache", () => cacheMock);
+
 const { getAirtableToken, resolveAirtableCredential, writeData } = await import("@/lib/airtable/service");
 
 const jsonResponse = (status: number, body: unknown) =>
@@ -46,6 +49,9 @@ const tablesResponse = jsonResponse(200, {
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
+  // Uncontended by default: every test that is not about the lock behaves as the sole refresher.
+  cacheMock.cache.tryLock.mockResolvedValue({ ok: true, data: true });
+  cacheMock.cache.del.mockResolvedValue({ ok: true, data: undefined });
 });
 
 // The record POST discarded its response, so a rejected write — a 422 from a field Airtable refuses, a
@@ -132,6 +138,61 @@ describe("resolveAirtableCredential", () => {
     await expect(resolveAirtableCredential("ws_1", config(new Date(Date.now() - 1000)))).rejects.toThrow(
       "write failed"
     );
+  });
+
+  // The worker runs at DEFAULT_WORKER_CONCURRENCY (2-4), so two deliveries for one workspace can reach
+  // an expired token together. Airtable rotates the refresh token on first use, so the second POST
+  // would come back invalid_grant and lose its response.
+  test("reads back the winner's rotation instead of spending the single-use refresh token twice", async () => {
+    cacheMock.cache.tryLock.mockResolvedValue({ ok: true, data: false });
+    integrationServiceMock.getIntegrationByType.mockResolvedValue({
+      config: {
+        ...config(new Date(Date.now() + 3_600_000)),
+        key: {
+          access_token: "at_rotated",
+          refresh_token: "rt_rotated",
+          expiry_date: new Date(Date.now() + 3_600_000).toISOString(),
+        },
+      },
+    });
+
+    const resolved = await resolveAirtableCredential("ws_1", config(new Date(Date.now() - 1000)));
+
+    expect(resolved.access_token).toBe("at_rotated");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(integrationServiceMock.createOrUpdateIntegration).not.toHaveBeenCalled();
+  });
+
+  test("refreshes unserialised when Redis cannot hand out the lock", async () => {
+    cacheMock.cache.tryLock.mockResolvedValue({ ok: false, error: { code: "redis_connection_error" } });
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { access_token: "at_2", refresh_token: "rt_2", expires_in: 3600 })
+    );
+
+    const resolved = await resolveAirtableCredential("ws_1", config(new Date(Date.now() - 1000)));
+
+    expect(resolved.access_token).toBe("at_2");
+    expect(cacheMock.cache.del).not.toHaveBeenCalled();
+  });
+
+  test("refreshes anyway when the lock holder never publishes a rotation", async () => {
+    vi.useFakeTimers();
+    cacheMock.cache.tryLock.mockResolvedValue({ ok: true, data: false });
+    integrationServiceMock.getIntegrationByType.mockResolvedValue({
+      config: config(new Date(Date.now() - 1000)),
+    });
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { access_token: "at_2", refresh_token: "rt_2", expires_in: 3600 })
+    );
+
+    try {
+      const pending = resolveAirtableCredential("ws_1", config(new Date(Date.now() - 1000)));
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      await expect(pending).resolves.toMatchObject({ access_token: "at_2" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

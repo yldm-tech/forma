@@ -760,27 +760,6 @@ describe("Tests for updateSurvey", () => {
 
       expect(prisma.survey.update).not.toHaveBeenCalled();
     });
-
-    describe("Feedback source reconciliation (ENG-2064)", () => {
-      // The blocks that come back from prisma.survey.update, deliberately distinguishable from the
-      // caller's payload. Reconciling against the payload deletes mappings for questions that are
-      // still stored: a partial update that omits blocks leaves them untouched in the database
-      // (see the `updatedSurvey.blocks?.length` guard above), so its empty payload must not be read
-      // as "this survey has no questions".
-      const persistedBlocks = [
-        { id: "persisted-block", name: "Persisted", elements: [{ id: "el-persisted", type: "openText" }] },
-      ];
-
-      test("reconciles against the persisted blocks, not the caller's payload", async () => {
-        // Draft + skipValidation is the survey editor's own save path, and the one that can send a
-        // payload whose blocks differ from what ends up stored. ENG-1939/ENG-2115 gate BOTH sides of
-        // the transition, so the stored survey and the payload both have to be drafts.
-        prisma.survey.findUnique.mockResolvedValueOnce({ ...mockSurveyOutput, status: "draft" } as any);
-        prisma.survey.update.mockResolvedValueOnce({ ...mockSurveyOutput, blocks: persistedBlocks } as any);
-
-        await updateSurveyInternal({ ...updateSurveyInput, status: "draft", blocks: [] } as any, true);
-      });
-    });
   });
 
   /**

@@ -5,7 +5,7 @@ import { Prisma } from "@forma/database/prisma";
 import { PrismaErrorType } from "@forma/database/types/error";
 import { logger } from "@forma/logger";
 import { ZOptionalNumber, ZString } from "@forma/types/common";
-import { DatabaseError, UnknownError } from "@forma/types/errors";
+import { DatabaseError, UnknownError, ValidationError } from "@forma/types/errors";
 import { TMember, TMembership } from "@forma/types/memberships";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { runPostCommitProjection } from "@/lib/authzed/projection-boundary";
@@ -136,9 +136,16 @@ export const getOrganizationOwnerCount = async (
   return getOrganizationOwnerCountCached(organizationId);
 };
 
+/**
+ * Pass `requireRemainingOwner` when the membership being deleted is an owner's. The owner count is
+ * then read inside the same Serializable transaction as the delete, so two concurrent removals of
+ * two different owners conflict and Postgres aborts one instead of both committing and leaving the
+ * organization with no owner. This mirrors the demotion guard in updateMembershipAction.
+ */
 export const deleteMembership = async (
   userId: string,
-  organizationId: string
+  organizationId: string,
+  requireRemainingOwner = false
 ): Promise<
   {
     userId: string;
@@ -150,6 +157,14 @@ export const deleteMembership = async (
 
   try {
     const deletedTeamMemberships = await runSerializableTransactionWithRetry(async (tx) => {
+      if (requireRemainingOwner) {
+        const ownerCount = await getOrganizationOwnerCount(organizationId, tx);
+
+        if (ownerCount <= 1) {
+          throw new ValidationError("You cannot delete the last owner of the organization");
+        }
+      }
+
       const teamMemberships = await tx.teamUser.findMany({
         where: {
           userId,

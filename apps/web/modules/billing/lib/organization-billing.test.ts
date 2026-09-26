@@ -415,7 +415,11 @@ describe("organization-billing", () => {
     expect(mocks.customersCreate).not.toHaveBeenCalled();
   });
 
-  test("ensureStripeCustomerForOrganization always creates a fresh Stripe customer", async () => {
+  // Replaces "always creates a fresh Stripe customer", which pinned the bug rather than the behaviour:
+  // retryStripeSetupAction reaches this for any caller with organization.manage_billing, and once the
+  // 24h idempotency window has passed a paid org got a second customer, a snapshot reset to hobby, and
+  // its paying subscription stranded on the first customer.
+  test("ensureStripeCustomerForOrganization reuses the Stripe customer the organization already has", async () => {
     mocks.prismaOrganizationFindUnique.mockResolvedValue({
       id: "org_1",
       name: "Org 1",
@@ -423,26 +427,19 @@ describe("organization-billing", () => {
     mocks.prismaMembershipFindFirst.mockResolvedValue({
       user: { email: "owner@example.com", name: "Owner Name" },
     });
+    mocks.prismaOrganizationBillingFindUnique.mockResolvedValue({
+      stripeCustomerId: "cus_existing",
+      limits: { workspaces: 3, monthly: { responses: 1500 } },
+      usageCycleAnchor: new Date(),
+      stripe: { plan: "pro", subscriptionId: "sub_1", lastSyncedAt: new Date().toISOString() },
+    });
     mocks.customersCreate.mockResolvedValue({ id: "cus_new" });
 
     const result = await ensureStripeCustomerForOrganization("org_1");
 
-    expect(result).toEqual({ customerId: "cus_new" });
-    expect(mocks.customersCreate).toHaveBeenCalledWith(
-      {
-        name: "Owner Name",
-        email: "owner@example.com",
-        metadata: { organizationId: "org_1", organizationName: "Org 1" },
-      },
-      { idempotencyKey: "ensure-customer-org_1" }
-    );
-    expect(mocks.prismaOrganizationBillingUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { organizationId: "org_1" },
-        create: expect.objectContaining({ stripeCustomerId: "cus_new" }),
-        update: expect.objectContaining({ stripeCustomerId: "cus_new" }),
-      })
-    );
+    expect(result).toEqual({ customerId: "cus_existing" });
+    expect(mocks.customersCreate).not.toHaveBeenCalled();
+    expect(mocks.prismaOrganizationBillingUpsert).not.toHaveBeenCalled();
   });
 
   test("ensureStripeCustomerForOrganization creates and stores a Stripe customer", async () => {
@@ -483,12 +480,10 @@ describe("organization-billing", () => {
         organizationId: "org_1",
         stripeCustomerId: "cus_new",
       }),
-      update: expect.objectContaining({
-        stripeCustomerId: "cus_new",
-        stripe: expect.objectContaining({
-          lastSyncedAt: expect.any(String),
-        }),
-      }),
+      // The customer id and nothing else: the update branch used to overwrite the whole `stripe`
+      // snapshot with {plan: "hobby", lastSyncedAt: now}, discarding subscriptionId, hasPaymentMethod,
+      // interval, pendingChange and trialEnd while making the result look freshly synced.
+      update: { stripeCustomerId: "cus_new" },
     });
     expect(mocks.cacheDel).toHaveBeenCalledWith(["billing-cache-key"]);
   });
@@ -3087,6 +3082,19 @@ describe("organization-billing", () => {
     });
     mocks.prismaMembershipFindFirst.mockResolvedValue({
       user: { email: "owner@example.com", name: "Owner Name" },
+    });
+    // The first read is ensureStripeCustomerForOrganization checking for an existing customer — none
+    // yet, so it creates one; every later read (reconcile, sync) sees the customer it just stored.
+    mocks.prismaOrganizationBillingFindUnique.mockResolvedValueOnce({
+      stripeCustomerId: null,
+      limits: {
+        workspaces: 3,
+        monthly: {
+          responses: 1500,
+        },
+      },
+      usageCycleAnchor: new Date(),
+      stripe: {},
     });
     mocks.prismaOrganizationBillingFindUnique.mockResolvedValue({
       stripeCustomerId: "cus_new",
