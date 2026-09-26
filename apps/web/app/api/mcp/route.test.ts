@@ -79,8 +79,10 @@ vi.mock("@/modules/core/rate-limit/helpers", () => ({
 }));
 
 vi.mock("@/app/api/v3/surveys/lib/operations", () => ({
+  archiveV3Survey: vi.fn(),
   createV3SurveyResponseFromRawInput: vi.fn(),
   deleteV3Survey: vi.fn(),
+  restoreV3Survey: vi.fn(),
   getV3Survey: vi.fn(),
   listV3Surveys: vi.fn(),
   patchV3SurveyResponse: vi.fn(),
@@ -316,6 +318,8 @@ describe("POST /api/mcp", () => {
       "validate_survey",
       "patch_survey",
       "delete_survey",
+      "archive_survey",
+      "restore_survey",
       "list_workflows",
       "get_workflow",
       "list_workflow_runs",

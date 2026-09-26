@@ -41,8 +41,12 @@ const contactStateSelect = {
  * Comprehensive contact data fetcher - gets everything needed in one query
  * Eliminates redundant queries by fetching contact + user state data together
  */
-const getContactWithFullData = async (workspaceId: string, userId: string) => {
-  return prisma.contact.findFirst({
+const getContactWithFullData = async (
+  workspaceId: string,
+  userId: string,
+  client: Prisma.TransactionClient = prisma
+) => {
+  return client.contact.findFirst({
     where: {
       workspaceId,
       attributes: {
@@ -59,8 +63,12 @@ const getContactWithFullData = async (workspaceId: string, userId: string) => {
 /**
  * Creates contact with comprehensive data structure
  */
-const createContact = async (workspaceId: string, userId: string) => {
-  return prisma.contact.create({
+const createContact = async (
+  workspaceId: string,
+  userId: string,
+  client: Prisma.TransactionClient = prisma
+) => {
+  return client.contact.create({
     data: {
       workspace: {
         connect: { id: workspaceId },
@@ -77,6 +85,46 @@ const createContact = async (workspaceId: string, userId: string) => {
       },
     },
     select: contactStateSelect,
+  });
+};
+
+/**
+ * Returns the workspace's contact for `userId`, creating it on the first identify.
+ *
+ * The read and the create have to be serialized, because nothing in the schema can stop two of them
+ * landing at once. A contact's `userId` is not a Contact column — it is a ContactAttribute row — so
+ * the nearest available unique index would be `(attributeKeyId, value)`, which would also forbid two
+ * contacts from ever sharing an ordinary attribute value like `plan = "pro"`. Denormalizing `userId`
+ * onto Contact to carry a `@@unique([workspaceId, userId])` is the durable fix, but it needs a
+ * backfill migration that existing duplicate rows would block, so it is a migration of its own rather
+ * than part of this change.
+ *
+ * Without serialization two concurrent identifies for one brand-new userId both read null and both
+ * create, leaving the workspace with two permanent contacts for one person. Later reads are
+ * `findFirst`, so they pick between them arbitrarily and the person's displays and responses split
+ * across both — the recontact check stops seeing the response it recorded on the sibling row and
+ * re-shows an answered survey.
+ *
+ * So the miss path takes a transaction-scoped Postgres advisory lock on the (workspaceId, userId)
+ * pair, then re-reads inside the lock: the loser of the race blocks until the winner commits, finds
+ * the contact, and skips its create. The lock is released when the transaction ends, whether it
+ * commits or aborts. A hash collision between two unrelated pairs only makes one of them wait.
+ *
+ * Two deliberate limits. The fast path is unchanged — an already-known contact is served by the same
+ * single `findFirst` as before and never opens a transaction, so only the rare first identify pays.
+ * And the lock is cooperative: other paths that create contacts (CSV import, the management API) do
+ * not take it, so it closes this endpoint racing itself, which is the case the widget actually
+ * produces. It is safe on a database that already holds duplicates — there is no constraint to
+ * violate, and `findFirst` keeps returning one of them as it does today.
+ */
+const findOrCreateContact = async (workspaceId: string, userId: string) => {
+  const existingContact = await getContactWithFullData(workspaceId, userId);
+  if (existingContact) return existingContact;
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`contact:${workspaceId}:${userId}`}, 0))`;
+    const contact = await getContactWithFullData(workspaceId, userId, tx);
+    return contact ?? (await createContact(workspaceId, userId, tx));
   });
 };
 
@@ -167,13 +215,8 @@ export const updateUser = async (
   device: "phone" | "desktop",
   attributes?: TContactAttributesInput
 ): Promise<{ state: TJsPersonState; messages?: string[]; errors?: string[] }> => {
-  // Single comprehensive query - gets contact + user state data
-  let contactData = await getContactWithFullData(workspaceId, userId);
-
-  // Create contact if doesn't exist
-  if (!contactData) {
-    contactData = await createContact(workspaceId, userId);
-  }
+  // Single comprehensive query - gets contact + user state data, creating the contact on first sight
+  const contactData = await findOrCreateContact(workspaceId, userId);
 
   // Process contact attributes efficiently (single pass)
   let contactAttributes = contactData.attributes.reduce(

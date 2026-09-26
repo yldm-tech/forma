@@ -44,6 +44,7 @@ vi.mock("@forma/logger", () => ({
 }));
 
 type MockTx = {
+  $queryRaw: ReturnType<typeof vi.fn>;
   responseQuotaLink: {
     deleteMany: ReturnType<typeof vi.fn>;
     createMany: ReturnType<typeof vi.fn>;
@@ -177,6 +178,7 @@ describe("Quota Utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTx = {
+      $queryRaw: vi.fn(),
       responseQuotaLink: {
         deleteMany: vi.fn(),
         createMany: vi.fn(),
@@ -197,6 +199,7 @@ describe("Quota Utils", () => {
     vi.mocked(mockTx.responseQuotaLink.updateMany).mockResolvedValue({ count: 0 });
     vi.mocked(mockTx.responseQuotaLink.count).mockResolvedValue(0);
     vi.mocked(mockTx.responseQuotaLink.groupBy).mockResolvedValue([]);
+    vi.mocked(mockTx.$queryRaw).mockResolvedValue([]);
     vi.mocked(updateResponse).mockResolvedValue({} as any);
     vi.mocked(logger.error).mockImplementation(() => {});
   });
@@ -609,6 +612,27 @@ describe("Quota Utils", () => {
 
       expect(result).toBeNull();
       expect(mockTx.responseQuotaLink.groupBy).not.toHaveBeenCalled();
+      expect(mockTx.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    test("locks the candidate quota rows before counting, so concurrent admissions cannot both pass a full quota", async () => {
+      // Counting screened-in links and then inserting one is a read-modify-write, and the enclosing transaction is Read Committed: without this lock two responses arriving at limit-1 both read a count below the limit and both get screened in.
+      vi.mocked(mockTx.responseQuotaLink.groupBy).mockResolvedValueOnce([]);
+
+      await handleQuotas(mockSurveyId, mockResponseId, mockResult, true, asTx(mockTx));
+
+      expect(mockTx.$queryRaw).toHaveBeenCalledTimes(1);
+
+      const [statementParts, quotaIds] = mockTx.$queryRaw.mock.calls[0];
+      const statement = (statementParts as string[]).join("?");
+      expect(statement).toContain('FROM "SurveyQuota"');
+      // ORDER BY fixes the lock order, which is what keeps two responses matching the same quotas in a different order from deadlocking.
+      expect(statement).toContain('ORDER BY "id" FOR UPDATE');
+      expect(quotaIds.values).toEqual([mockQuotaId, "quota456"]);
+
+      expect(mockTx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        mockTx.responseQuotaLink.groupBy.mock.invocationCallOrder[0]
+      );
     });
 
     test("should handle quota limit exactly equal to screened in count", async () => {

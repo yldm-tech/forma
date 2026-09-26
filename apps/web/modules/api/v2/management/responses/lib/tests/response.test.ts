@@ -108,8 +108,6 @@ describe("Response Lib", () => {
       vi.mocked(prisma.response.create).mockResolvedValue(response);
 
       vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(50));
 
       const result = await createResponse(workspaceId, responseInput);
       expect(prisma.response.create).toHaveBeenCalled();
@@ -123,8 +121,6 @@ describe("Response Lib", () => {
       vi.mocked(prisma.response.create).mockResolvedValue(response);
 
       vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(50));
 
       const result = await createResponse(workspaceId, responseInputNotFinished);
       expect(prisma.response.create).toHaveBeenCalled();
@@ -138,8 +134,6 @@ describe("Response Lib", () => {
       vi.mocked(prisma.response.create).mockResolvedValue(response);
 
       vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(50));
 
       const result = await createResponse(workspaceId, responseInputWithoutTtc);
       expect(prisma.response.create).toHaveBeenCalled();
@@ -153,8 +147,6 @@ describe("Response Lib", () => {
       vi.mocked(prisma.response.create).mockResolvedValue(response);
 
       vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(50));
 
       const result = await createResponse(workspaceId, responseInputWithoutDisplay);
       expect(prisma.response.create).toHaveBeenCalled();
@@ -178,73 +170,23 @@ describe("Response Lib", () => {
       }
     });
 
-    test("return error if getOrganizationBilling fails", async () => {
-      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-      vi.mocked(getOrganizationBilling).mockResolvedValue(
-        err({ type: "not_found", details: [{ field: "organization", issue: "not found" }] })
-      );
-      const result = await createResponse(workspaceId, responseInput);
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toEqual({
-          type: "not_found",
-          details: [{ field: "organization", issue: "not found" }],
-        });
-      }
-    });
-
-    test("send plan limit event when in cloud and responses limit is reached", async () => {
+    test("does not query billing, so a failing usage aggregate cannot fail a response that is already committed", async () => {
+      // These two reads were made on every create and their results discarded — nothing enforced a limit. The count also ran on the global client while the caller's transaction was open, and its error returned after `response.create` had committed, so the API answered 500 on a durably persisted row and a retrying client duplicated it.
       vi.mocked(prisma.response.create).mockResolvedValue(response);
-
       vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-
       vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(100));
-
-      const result = await createResponse(workspaceId, responseInput);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data).toEqual(response);
-      }
-    });
-
-    test("handle error getting monthly organization response count", async () => {
-      vi.mocked(prisma.response.create).mockResolvedValue(response);
-
-      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-
       vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(
         err({ type: "internal_server_error", details: [{ field: "organization", issue: "Aggregate error" }] })
       );
 
       const result = await createResponse(workspaceId, responseInput);
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toEqual({
-          type: "internal_server_error",
-          details: [{ field: "organization", issue: "Aggregate error" }],
-        });
-      }
-    });
 
-    test("handle error sending plan limits reached event", async () => {
-      vi.mocked(prisma.response.create).mockResolvedValue(response);
-
-      vi.mocked(getOrganizationIdFromWorkspaceId).mockResolvedValue(ok(organizationId));
-
-      vi.mocked(getOrganizationBilling).mockResolvedValue(ok(organizationBilling));
-
-      vi.mocked(getMonthlyOrganizationResponseCount).mockResolvedValue(ok(100));
-
-      const result = await createResponse(workspaceId, responseInput);
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.data).toEqual(response);
       }
+      expect(getOrganizationBilling).not.toHaveBeenCalled();
+      expect(getMonthlyOrganizationResponseCount).not.toHaveBeenCalled();
     });
 
     test("return an internal_server_error error if prisma create fails", async () => {

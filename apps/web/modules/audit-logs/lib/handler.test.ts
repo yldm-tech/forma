@@ -238,6 +238,47 @@ describe("withAuditLogging", () => {
     expect(callArgs.target.id).toBe("t1");
   });
 
+  // Each of these used to fall through the target switch's `default` and record `target.id: "unknown"`, so the trail could not say which team, user or attribute key the event was about. The switch is now a Record over the whole `ZAuditTarget` union, which is what stops a new member from doing the same, but these three are the ones that were actually broken.
+  test.each([
+    ["team", { teamId: "team-1" }, "team-1"],
+    ["twoFactorAuth", { userId: "user-1" }, "user-1"],
+    ["contactAttributeKey", { contactAttributeKeyId: "cak-1" }, "cak-1"],
+  ] as const)(
+    "resolves target.id from the action context for %s",
+    async (targetType, ctxFields, expectedId) => {
+      const ctx = { ...mockCtxBase, auditLoggingCtx: { ...mockCtxBase.auditLoggingCtx, ...ctxFields } };
+      const wrapped = OriginalHandler.withAuditLogging(
+        "updated",
+        targetType,
+        vi.fn().mockResolvedValue("ok")
+      );
+
+      await wrapped({
+        ctx: ctx as unknown as Parameters<typeof wrapped>[0]["ctx"],
+        parsedInput: mockParsedInput,
+      });
+      await new Promise(setImmediate);
+
+      expect(serviceLogAuditEventMockHandle.mock.calls[0][0].target).toEqual({
+        id: expectedId,
+        type: targetType,
+      });
+    }
+  );
+
+  // "file" is only ever emitted by routes calling queueAuditEvent with an explicit targetId, so the wrapper has nothing to resolve and must say so rather than invent one.
+  test("falls back to unknown for a target the action context cannot identify", async () => {
+    const wrapped = OriginalHandler.withAuditLogging("deleted", "file", vi.fn().mockResolvedValue("ok"));
+
+    await wrapped({
+      ctx: mockCtxBase as unknown as Parameters<typeof wrapped>[0]["ctx"],
+      parsedInput: mockParsedInput,
+    });
+    await new Promise(setImmediate);
+
+    expect(serviceLogAuditEventMockHandle.mock.calls[0][0].target.id).toBe("unknown");
+  });
+
   test("logs audit event for failed handler and throws", async () => {
     const handlerImpl = vi.fn().mockRejectedValue(new Error("fail"));
     const wrapped = OriginalHandler.withAuditLogging("created", "survey", handlerImpl);

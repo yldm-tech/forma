@@ -144,12 +144,19 @@ export const handleQuotas = async (
     let fullQuota: TSurveyQuota[] = [];
     let otherQuota: TSurveyQuota[] = [];
 
+    const passedQuotaIds = result.passedQuotas.map((quota) => quota.id);
+
+    if (passedQuotaIds.length > 0) {
+      // Admission is a read-modify-write: count the screened-in links, compare against the limit, insert one more. The enclosing transaction runs at Read Committed and takes no lock, so two responses matching the same quota at limit-1 both read a count below the limit and both insert, and the quota commits over its limit by the size of the concurrency window. Locking the candidate quota rows first makes the second response wait for the first to commit, so its count sees that link. `ORDER BY "id"` is what stops two responses matching the same quotas in a different order from deadlocking on each other.
+      await tx.$queryRaw`SELECT "id" FROM "SurveyQuota" WHERE "id" IN (${Prisma.join(passedQuotaIds)}) ORDER BY "id" FOR UPDATE`;
+    }
+
     const quotaCounts =
-      result.passedQuotas.length > 0
+      passedQuotaIds.length > 0
         ? await tx.responseQuotaLink.groupBy({
             by: ["quotaId"],
             where: {
-              quotaId: { in: result.passedQuotas.map((q) => q.id) },
+              quotaId: { in: passedQuotaIds },
               status: "screenedIn",
               response: {
                 id: { not: responseId },

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
-import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { DatabaseError, ResourceNotFoundError, ValidationError } from "@forma/types/errors";
 import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
 import { selectSurveyEmbeddedDataLinks } from "@/lib/embedded-data/survey-fields";
 import { getWorkspaceStateData } from "./data";
@@ -25,10 +25,6 @@ vi.mock("@forma/logger", () => ({
   logger: {
     error: vi.fn(),
   },
-}));
-
-vi.mock("@/lib/utils/validate", () => ({
-  validateInputs: vi.fn(),
 }));
 
 vi.mock("@/modules/storage/utils", () => ({
@@ -251,9 +247,15 @@ describe("getWorkspaceStateData", () => {
     });
   });
 
-  test("should validate workspaceId input", async () => {
-    // Invalid CUID should throw validation error
-    await expect(getWorkspaceStateData("invalid-id")).rejects.toThrow();
+  // This endpoint is reached unauthenticated by the public SDK, so the id it forwards to Prisma has
+  // to be rejected at the boundary. `validateInputs` is deliberately NOT mocked in this spec: a
+  // no-op stub makes the rejection come from the not-found path instead, which a bare
+  // `rejects.toThrow()` would happily accept. The negative assertion is what pins that down — only
+  // the validation path can reject before the query runs.
+  test("rejects a workspaceId that is not a cuid before it reaches the database", async () => {
+    await expect(getWorkspaceStateData("invalid-id")).rejects.toThrow(ValidationError);
+
+    expect(prisma.workspace.findUnique).not.toHaveBeenCalled();
   });
 
   test("should handle appSetupCompleted false", async () => {

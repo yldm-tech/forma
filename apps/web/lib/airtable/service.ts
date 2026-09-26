@@ -1,3 +1,4 @@
+import { createCacheKey } from "@forma/cache";
 import { Prisma } from "@forma/database/prisma";
 import { logger } from "@forma/logger";
 import { DatabaseError } from "@forma/types/errors";
@@ -12,6 +13,7 @@ import {
   ZIntegrationAirtableTablesWithFields,
   ZIntegrationAirtableTokenSchema,
 } from "@forma/types/integration/airtable";
+import { cache } from "../cache";
 import { AIRTABLE_CLIENT_ID, AIRTABLE_MESSAGE_LIMIT } from "../constants";
 import { createOrUpdateIntegration, getIntegrationByType } from "../integration/service";
 import { delay } from "../utils/promises";
@@ -89,6 +91,45 @@ export const fetchAirtableAuthToken = async (formData: Record<string, any>) => {
 /** Refresh slightly ahead of the stored expiry, the way `googleSheet/service.ts` does. */
 const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
+// Comfortably covers one token POST plus the encrypted write that persists it, and short enough that a
+// holder that dies mid-refresh stops blocking the workspace within one job's backoff.
+const REFRESH_LOCK_TTL_MS = 30 * 1000;
+const REFRESH_WAIT_INTERVAL_MS = 500;
+const REFRESH_WAIT_ATTEMPTS = 6;
+
+const refreshLockKey = (workspaceId: string) =>
+  createCacheKey.custom("oauth", "airtable-token-refresh", workspaceId);
+
+// An unparseable `expiry_date` counts as expired: refreshing costs one request, using a dead token
+// costs the response.
+const isCredentialFresh = (credential: TIntegrationAirtableCredential): boolean => {
+  const expiresAt = new Date(credential.expiry_date).getTime();
+  return Number.isFinite(expiresAt) && expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS;
+};
+
+/**
+ * Wait for whoever holds the refresh lock to persist its rotation and hand back the token it wrote.
+ * Returns null if nothing usable is published inside the budget, which leaves the caller to refresh on
+ * its own — no worse than the unserialised behaviour it replaces.
+ */
+const awaitRotatedCredential = async (
+  workspaceId: string
+): Promise<TIntegrationAirtableCredential | null> => {
+  for (let attempt = 0; attempt < REFRESH_WAIT_ATTEMPTS; attempt++) {
+    const integration = await getIntegrationByType(workspaceId, "airtable");
+    if (!integration) return null;
+
+    const parsed = ZIntegrationAirtableCredential.safeParse(integration.config.key);
+    if (parsed.success && isCredentialFresh(parsed.data)) {
+      return parsed.data;
+    }
+
+    await delay(REFRESH_WAIT_INTERVAL_MS);
+  }
+
+  return null;
+};
+
 /**
  * Token lifecycle belongs to the credential, not to the caller: the settings UI refreshed through
  * `getAirtableToken` while the response pipeline read `integration.config.key` straight off the record,
@@ -97,20 +138,38 @@ const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
  *
  * Airtable rotates the refresh token on use, so the stored one is dead as soon as this call returns:
  * the rotation is persisted before the new access token is handed back, and a failure to persist is
- * surfaced rather than swallowed. Concurrent deliveries for one workspace would race that single-use
- * token; the response pipeline worker runs at concurrency 1 today, which is what makes this safe.
+ * surfaced rather than swallowed. That makes the refresh single-use, and the response worker runs at
+ * `DEFAULT_WORKER_CONCURRENCY` (2-4), so two deliveries for one workspace can reach it at once — the
+ * second call gets `invalid_grant` and loses its write. A Redis lock therefore elects one refresher per
+ * workspace and everyone else reads back the rotation it persisted.
+ *
+ * Two gaps stay open by design. With Redis unavailable, or with the holder publishing nothing inside
+ * the wait budget, the caller refreshes unserialised exactly as before. And the read-back goes through
+ * `getIntegrationByType`, which is request-memoised by React `cache()`: under the RSC/route runtime a
+ * loser re-reads its own first result and gives up, where the worker — the path that actually runs
+ * concurrently — hits the database each time.
  */
 export const resolveAirtableCredential = async (
   workspaceId: string,
   config: TIntegrationAirtableConfig
 ): Promise<TIntegrationAirtableCredential> => {
   const credential = ZIntegrationAirtableCredential.parse(config.key);
-  const expiresAt = new Date(credential.expiry_date).getTime();
 
-  // An unparseable `expiry_date` is treated as expired: refreshing costs one request, using a dead
-  // token costs the response.
-  if (Number.isFinite(expiresAt) && expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
+  if (isCredentialFresh(credential)) {
     return credential;
+  }
+
+  const lockKey = refreshLockKey(workspaceId);
+  const lock = await cache.tryLock(lockKey, "1", REFRESH_LOCK_TTL_MS);
+
+  if (lock.ok && !lock.data) {
+    const rotated = await awaitRotatedCredential(workspaceId);
+    if (rotated) return rotated;
+
+    logger.warn(
+      { workspaceId },
+      "Airtable refresh lock is held but no rotated token was persisted; refreshing unserialised"
+    );
   }
 
   const newToken = await fetchAirtableAuthToken({
@@ -128,6 +187,12 @@ export const resolveAirtableCredential = async (
     },
   });
 
+  // The lock is left to expire rather than released here. The cache facade offers only an unconditional
+  // `del`, and having won the lock is not the same as still holding it: the token fetch has no timeout, so
+  // a refresh that overruns the TTL would let the next caller acquire and then have its lock deleted by
+  // this one, admitting a third concurrent refresher — the exact race the lock exists to stop. Expiry costs
+  // the next delivery inside the window one read-back, which returns the rotation this call just
+  // persisted. `organization-billing.ts` takes the same decision for the same reason.
   return newToken;
 };
 

@@ -5,6 +5,7 @@ import { addCleanupEventListeners, addEventListeners } from "@/lib/common/event-
 import { Logger } from "@/lib/common/logger";
 import { handleErrorOnFirstSetup, setup, tearDown } from "@/lib/common/setup";
 import { setIsSetup } from "@/lib/common/status";
+import { TimeoutStack } from "@/lib/common/timeout-stack";
 import { filterSurveys, getIsDebug, isNowExpired } from "@/lib/common/utils";
 import type * as Utils from "@/lib/common/utils";
 import { addLiveRegionContainer } from "@/lib/survey/widget";
@@ -928,6 +929,33 @@ describe("setup.ts", () => {
         })
       );
       expect(filterSurveys).toHaveBeenCalled();
+    });
+
+    test("cancels surveys still waiting out their delay, so they cannot render for the next identity", () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspace: { data: { surveys: [] } },
+          user: { data: { userId: "XYZ" } },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+
+      vi.useFakeTimers();
+
+      const timeoutStack = TimeoutStack.getInstance();
+      const pending = vi.fn();
+      timeoutStack.add("checkout-done", setTimeout(pending, 20_000));
+
+      tearDown();
+
+      expect(timeoutStack.getTimeouts()).toEqual([]);
+
+      vi.advanceTimersByTime(20_000);
+      expect(pending).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
     });
   });
 

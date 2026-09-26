@@ -75,10 +75,15 @@ export const ZMcpListSurveysInput = z
           .optional(),
         status: z
           .strictObject({
+            // "archived" is a pseudo-status, not a real survey status: the v3 list parser translates it
+            // into an archivedAt filter (parse-v3-surveys-list-query.ts). Without it here an archived
+            // survey is unreachable from MCP, while restore_survey names a survey the agent cannot find.
             in: z
-              .array(ZSurveyStatus)
+              .array(z.union([ZSurveyStatus, z.literal("archived")]))
               .optional()
-              .describe("Survey statuses to include, for example draft or inProgress."),
+              .describe(
+                "Survey statuses to include, for example draft or inProgress. Archived surveys are excluded unless archived is listed: on its own it returns only archived surveys, alongside real statuses it widens the result to both."
+              ),
           })
           .describe("Filter by survey status.")
           .optional(),
@@ -174,6 +179,18 @@ export const ZMcpDeleteSurveyInput = z
   })
   .strict();
 
+export const ZMcpArchiveSurveyInput = z
+  .object({
+    surveyId: z.cuid2().describe("Survey ID to archive."),
+  })
+  .strict();
+
+export const ZMcpRestoreSurveyInput = z
+  .object({
+    surveyId: z.cuid2().describe("Survey ID to restore from the archive."),
+  })
+  .strict();
+
 // list_workspaces takes no arguments — it returns the workspaces the authenticated caller can access.
 //
 // The one schema where `.strict()` buys no ENG-2256 protection: with no declared keys there is nothing to
@@ -194,3 +211,5 @@ export type TMcpCreateSurveyInput = z.infer<typeof ZMcpCreateSurveyInput>;
 export type TMcpPatchSurveyInput = z.infer<typeof ZMcpPatchSurveyInput>;
 export type TMcpValidateSurveyInput = z.infer<typeof ZMcpValidateSurveyInput>;
 export type TMcpDeleteSurveyInput = z.infer<typeof ZMcpDeleteSurveyInput>;
+export type TMcpArchiveSurveyInput = z.infer<typeof ZMcpArchiveSurveyInput>;
+export type TMcpRestoreSurveyInput = z.infer<typeof ZMcpRestoreSurveyInput>;

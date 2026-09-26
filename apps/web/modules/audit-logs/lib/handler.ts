@@ -1,6 +1,6 @@
 import { logger } from "@forma/logger";
 import { AUDIT_LOG_ENABLED, AUDIT_LOG_GET_USER_IP } from "@/lib/constants";
-import { ActionClientCtx } from "@/lib/utils/action-client/types/context";
+import { ActionClientCtx, AuditLoggingCtx } from "@/lib/utils/action-client/types/context";
 import { getClientIpFromHeaders } from "@/lib/utils/client-ip";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { deepDiff, redactPII } from "@/lib/utils/logger-helpers";
@@ -31,6 +31,49 @@ export type TAuditEventInput = {
 
 type TBuildAuditEventInput = TAuditEventInput & {
   ipAddress: string;
+};
+
+/** The `AuditLoggingCtx` fields that carry a resource id, i.e. the ones a `target.id` can be read from. */
+type TAuditLoggingCtxIdField = {
+  [K in keyof AuditLoggingCtx]-?: NonNullable<AuditLoggingCtx[K]> extends string ? K : never;
+}[keyof AuditLoggingCtx];
+
+/**
+ * The `auditLoggingCtx` field `withAuditLogging` reads `target.id` out of, per target type. `null` marks a target that never reaches the wrapper because it is only ever emitted from an API route or a worker calling `queueAuditEvent*` with an explicit `targetId`.
+ *
+ * A `Record` over the whole union rather than a `switch` on purpose: TypeScript fails the build when a member is added to `ZAuditTarget` and left out here, where a `switch` fell through to its `default` and wrote `target.id: "unknown"` — a record naming neither the team nor the user it was about. That is how "team", "twoFactorAuth" and "contactAttributeKey" went unattributable for as long as they did.
+ */
+const AUDIT_TARGET_ID_CTX_FIELD: Record<TAuditTarget, TAuditLoggingCtxIdField | null> = {
+  actionClass: "actionClassId",
+  apiKey: "apiKeyId",
+  contact: "contactId",
+  contactAttributeKey: "contactAttributeKeyId",
+  cubeQuery: null,
+  file: null,
+  integration: "integrationId",
+  invite: "inviteId",
+  language: "languageId",
+  membership: "membershipId",
+  organization: "organizationId",
+  quota: "quotaId",
+  response: "responseId",
+  segment: "segmentId",
+  survey: "surveyId",
+  tag: "tagId",
+  team: "teamId",
+  // The subject of a 2FA change is the user whose second factor it is, so the wrapper reports the user id.
+  twoFactorAuth: "userId",
+  user: "userId",
+  webhook: "webhookId",
+  workflow: null,
+  workspace: "workspaceId",
+  workspaceTeam: null,
+};
+
+/** Resolves the audited resource's id from the action context, falling back to `UNKNOWN_DATA` when the handler did not record one. */
+export const resolveAuditTargetId = (targetType: TAuditTarget, auditLoggingCtx: AuditLoggingCtx): string => {
+  const field = AUDIT_TARGET_ID_CTX_FIELD[targetType];
+  return (field ? auditLoggingCtx[field] : undefined) ?? UNKNOWN_DATA;
 };
 
 /**
@@ -262,62 +305,7 @@ export const withAuditLogging = <
           }
         }
 
-        let targetId: string | undefined;
-        switch (targetType) {
-          case "segment":
-            targetId = auditLoggingCtx.segmentId;
-            break;
-          case "survey":
-            targetId = auditLoggingCtx.surveyId;
-            break;
-          case "organization":
-            targetId = auditLoggingCtx.organizationId;
-            break;
-          case "tag":
-            targetId = auditLoggingCtx.tagId;
-            break;
-          case "webhook":
-            targetId = auditLoggingCtx.webhookId;
-            break;
-          case "user":
-            targetId = auditLoggingCtx.userId;
-            break;
-          case "workspace":
-            targetId = auditLoggingCtx.workspaceId;
-            break;
-          case "language":
-            targetId = auditLoggingCtx.languageId;
-            break;
-          case "invite":
-            targetId = auditLoggingCtx.inviteId;
-            break;
-          case "membership":
-            targetId = auditLoggingCtx.membershipId;
-            break;
-          case "actionClass":
-            targetId = auditLoggingCtx.actionClassId;
-            break;
-          case "contact":
-            targetId = auditLoggingCtx.contactId;
-            break;
-          case "apiKey":
-            targetId = auditLoggingCtx.apiKeyId;
-            break;
-          case "response":
-            targetId = auditLoggingCtx.responseId;
-            break;
-          case "integration":
-            targetId = auditLoggingCtx.integrationId;
-            break;
-          case "quota":
-            targetId = auditLoggingCtx.quotaId;
-            break;
-          default:
-            targetId = UNKNOWN_DATA;
-            break;
-        }
-
-        targetId ??= UNKNOWN_DATA;
+        const targetId = resolveAuditTargetId(targetType, auditLoggingCtx);
 
         await buildAndLogAuditEvent({
           action,

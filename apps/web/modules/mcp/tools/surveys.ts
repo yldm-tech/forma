@@ -1,10 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
+  archiveV3Survey,
   createV3SurveyResponseFromRawInput,
   deleteV3Survey,
   getV3Survey,
   listV3Surveys,
   patchV3SurveyResponse,
+  restoreV3Survey,
   validateV3SurveyFromRawInput,
 } from "@/app/api/v3/surveys/lib/operations";
 import { MCP_API_ROUTE } from "@/modules/mcp/constants";
@@ -13,17 +15,21 @@ import { responseToMcpToolResult } from "../errors";
 import { registerScopedTool } from "./guard-scopes";
 import { runMcpMutation } from "./run-mcp-mutation";
 import {
+  type TMcpArchiveSurveyInput,
   type TMcpCreateSurveyInput,
   type TMcpDeleteSurveyInput,
   type TMcpGetSurveyInput,
   type TMcpListSurveysInput,
   type TMcpPatchSurveyInput,
+  type TMcpRestoreSurveyInput,
   type TMcpValidateSurveyInput,
+  ZMcpArchiveSurveyInput,
   ZMcpCreateSurveyInput,
   ZMcpDeleteSurveyInput,
   ZMcpGetSurveyInput,
   ZMcpListSurveysInput,
   ZMcpPatchSurveyInput,
+  ZMcpRestoreSurveyInput,
   ZMcpValidateSurveyInput,
 } from "./schemas";
 
@@ -221,7 +227,10 @@ export function registerSurveyTools(server: McpServer): void {
     "delete_survey",
     {
       title: "Delete survey",
-      description: "Delete a Forma survey using the v3 Surveys API contract.",
+      description: [
+        "Permanently delete a Forma survey and its responses using the v3 Surveys API contract.",
+        "This cannot be undone — use archive_survey for the reversible soft delete the product offers beside it.",
+      ].join(" "),
       inputSchema: ZMcpDeleteSurveyInput,
       annotations: {
         readOnlyHint: false,
@@ -237,6 +246,73 @@ export function registerSurveyTools(server: McpServer): void {
         { action: "deleted", resource: "survey", logContext: { surveyId: input.surveyId } },
         ({ authentication, requestId, auditLog }) =>
           deleteV3Survey({
+            surveyId: input.surveyId,
+            authentication,
+            requestId,
+            instance: MCP_API_ROUTE,
+            auditLog,
+          })
+      )
+  );
+
+  registerScopedTool(
+    server,
+    "archive_survey",
+    {
+      title: "Archive survey",
+      description: [
+        "Archive a Forma survey using the v3 Surveys API contract.",
+        "Archiving is reversible with restore_survey and excludes the survey from default reads.",
+      ].join(" "),
+      inputSchema: ZMcpArchiveSurveyInput,
+      annotations: {
+        readOnlyHint: false,
+        // Soft-deletes and hides the survey from default reads, as archive_workflow does.
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    ["surveys:write"],
+    async (input: TMcpArchiveSurveyInput, ctx) =>
+      runMcpMutation(
+        ctx,
+        { action: "archived", resource: "survey", logContext: { surveyId: input.surveyId } },
+        ({ authentication, requestId, auditLog }) =>
+          archiveV3Survey({
+            surveyId: input.surveyId,
+            authentication,
+            requestId,
+            instance: MCP_API_ROUTE,
+            auditLog,
+          })
+      )
+  );
+
+  registerScopedTool(
+    server,
+    "restore_survey",
+    {
+      title: "Restore survey",
+      description: [
+        "Restore an archived Forma survey using the v3 Surveys API contract.",
+        "Archived surveys are returned by list_surveys only when the status filter includes archived.",
+      ].join(" "),
+      inputSchema: ZMcpRestoreSurveyInput,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    ["surveys:write"],
+    async (input: TMcpRestoreSurveyInput, ctx) =>
+      runMcpMutation(
+        ctx,
+        { action: "restored", resource: "survey", logContext: { surveyId: input.surveyId } },
+        ({ authentication, requestId, auditLog }) =>
+          restoreV3Survey({
             surveyId: input.surveyId,
             authentication,
             requestId,

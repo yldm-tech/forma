@@ -61,10 +61,10 @@
       "dependsOn": ["@forma/logger#build", "@forma/database#build"]
     },
     "@forma/database#test": {
-      "dependsOn": ["@forma/i18n-utils#build"]
+      "dependsOn": ["@forma/i18n-utils#build", "@forma/database#build"]
     },
     "@forma/database#test:coverage": {
-      "dependsOn": ["@forma/i18n-utils#build"]
+      "dependsOn": ["@forma/i18n-utils#build", "@forma/database#build"]
     },
     "@forma/database#typecheck": {
       "dependsOn": ["@forma/logger#build", "@forma/database#build"]

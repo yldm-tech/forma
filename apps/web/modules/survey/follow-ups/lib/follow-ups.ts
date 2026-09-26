@@ -18,6 +18,11 @@ import { sendFollowUpEmail } from "@/modules/survey/follow-ups/lib/email";
 import { getSurveyFollowUpsPermission } from "@/modules/survey/follow-ups/lib/utils";
 import { FollowUpResult, FollowUpSendError } from "@/modules/survey/follow-ups/types/follow-up";
 
+// sendEmail resolves false instead of throwing when the deployment has no SMTP configured, so every send
+// site has to read the result or the follow-up reports success having delivered nothing. Wording mirrors the
+// workflow runner's send-email step.
+const SMTP_NOT_CONFIGURED_ERROR = "SMTP is not configured; follow-up email was not sent";
+
 const evaluateFollowUp = async (
   followUp: TSurveyFollowUp,
   survey: TSurvey,
@@ -35,7 +40,7 @@ const evaluateFollowUp = async (
     const parsedEmailTo = z.email().safeParse(to);
     if (parsedEmailTo.success) {
       // 'to' is a valid email address, send email directly
-      await sendFollowUpEmail({
+      const sent = await sendFollowUpEmail({
         followUp,
         to: parsedEmailTo.data,
         replyTo,
@@ -47,6 +52,14 @@ const evaluateFollowUp = async (
         logoUrl,
         locale,
       });
+
+      if (!sent) {
+        return {
+          followUpId: followUp.id,
+          status: "error",
+          error: SMTP_NOT_CONFIGURED_ERROR,
+        };
+      }
 
       return {
         followUpId: followUp.id,
@@ -68,7 +81,7 @@ const evaluateFollowUp = async (
       const parsedResult = z.email().safeParse(toValueFromResponse);
       if (parsedResult.success) {
         // send email to this email address
-        await sendFollowUpEmail({
+        const sent = await sendFollowUpEmail({
           followUp,
           to: parsedResult.data,
           replyTo,
@@ -80,6 +93,14 @@ const evaluateFollowUp = async (
           includeHiddenFields: properties.includeHiddenFields,
           locale,
         });
+
+        if (!sent) {
+          return {
+            followUpId: followUp.id,
+            status: "error",
+            error: SMTP_NOT_CONFIGURED_ERROR,
+          };
+        }
 
         return {
           followUpId: followUp.id,
@@ -104,7 +125,7 @@ const evaluateFollowUp = async (
 
       const parsedResult = z.email().safeParse(emailAddress);
       if (parsedResult.data) {
-        await sendFollowUpEmail({
+        const sent = await sendFollowUpEmail({
           followUp,
           to: parsedResult.data,
           replyTo,
@@ -116,6 +137,14 @@ const evaluateFollowUp = async (
           includeHiddenFields: properties.includeHiddenFields,
           locale,
         });
+
+        if (!sent) {
+          return {
+            followUpId: followUp.id,
+            status: "error",
+            error: SMTP_NOT_CONFIGURED_ERROR,
+          };
+        }
 
         return {
           followUpId: followUp.id,

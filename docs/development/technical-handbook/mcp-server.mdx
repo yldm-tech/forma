@@ -96,7 +96,7 @@ Supported scopes:
 | Scope | Use |
 | --- | --- |
 | `surveys:read` | `list_surveys`, `get_survey`, `validate_survey` |
-| `surveys:write` | `create_survey`, `patch_survey`, `delete_survey` |
+| `surveys:write` | `create_survey`, `patch_survey`, `delete_survey`, `archive_survey`, `restore_survey` |
 | `workflows:read` | `list_workflows`, `get_workflow`, `list_workflow_runs`, `get_workflow_run`, `test_workflow` |
 | `workflows:write` | `create_workflow`, `patch_workflow`, `duplicate_workflow`, `delete_workflow`, and the enable/disable/archive/unarchive mutations |
 | `openid` | OpenID Connect subject interoperability |
@@ -170,6 +170,8 @@ API key permissions are enforced through the same workspace access checks as the
 | `validate_survey` | `read` — a dry run; it validates a create or patch payload without writing |
 | `patch_survey` | `write` or `manage` |
 | `delete_survey` | `write` or `manage` |
+| `archive_survey` | `write` or `manage` |
+| `restore_survey` | `write` or `manage` |
 | `list_workflows` | `read` |
 | `get_workflow` | `read` |
 | `list_workflow_runs` | `read` |
@@ -769,6 +771,24 @@ so callers can correlate the audit trail:
 }
 ```
 
+### archive_survey / restore_survey
+
+Archive is the reversible counterpart of `delete_survey`: it soft-deletes the survey, hides it from the
+default list, and `restore_survey` brings it back. Both take only a `surveyId` and return the lifecycle
+acknowledgement the v3 routes return (`id`, `status`, `archivedAt`) rather than the full survey document.
+
+```json
+{
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+An archived survey is excluded from `list_surveys` unless the status filter asks for it:
+`filter.status.in: ["archived"]`. That value is a pseudo-status accepted only by the list filter — it is
+translated into an `archivedAt` filter, not matched against a real survey status. On its own it returns
+*only* archived surveys; combine it with real statuses to get both. `patch_survey` refuses an archived
+survey with a 422 telling the caller to restore it first.
+
 ### Workflow tools
 
 Workflow tools operate on the v3 Workflows API (trigger → condition → action automations). They reuse
@@ -939,6 +959,8 @@ survey operations used by the REST routes:
 | `validate_survey` | `POST /api/v3/surveys/validate`     |
 | `patch_survey`    | `PATCH /api/v3/surveys/{surveyId}`  |
 | `delete_survey`   | `DELETE /api/v3/surveys/{surveyId}` |
+| `archive_survey`  | `POST /api/v3/surveys/{surveyId}/archive` |
+| `restore_survey`  | `POST /api/v3/surveys/{surveyId}/restore` |
 
 When the v3 OpenAPI contract changes, update the MCP schemas and this page together. The hand-maintained
 v3 OpenAPI spec lives at `docs/api-v3-reference/openapi.yml`.

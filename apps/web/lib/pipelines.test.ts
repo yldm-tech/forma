@@ -56,7 +56,10 @@ describe("sendToPipeline", () => {
     await sendToPipeline(testData);
 
     expect(getBackgroundJobProducer).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: "en-US" });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: "en-US" },
+      { jobId: expect.any(String) }
+    );
   });
 
   test("retries a failing enqueue rather than surfacing it on the first attempt", async () => {
@@ -119,7 +122,10 @@ describe("sendToPipeline", () => {
 
     await sendToPipeline(testData);
 
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: undefined });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: undefined },
+      { jobId: expect.any(String) }
+    );
   });
 
   test("preserves an existing job.locale instead of resolving it", async () => {
@@ -132,6 +138,56 @@ describe("sendToPipeline", () => {
     await sendToPipeline({ ...testData, locale: "de-DE" });
 
     expect(findMatchingLocale).not.toHaveBeenCalled();
-    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith({ ...testData, locale: "de-DE" });
+    expect(mockEnqueueResponsePipeline).toHaveBeenCalledWith(
+      { ...testData, locale: "de-DE" },
+      { jobId: expect.any(String) }
+    );
+  });
+
+  describe("enqueue idempotency", () => {
+    const enqueuedJob = {
+      jobId: "job-1",
+      jobName: "response-pipeline.process",
+      queueName: "background-jobs",
+    };
+
+    const getJobIds = () =>
+      mockEnqueueResponsePipeline.mock.calls.map(([, options]) => options?.jobId as string | undefined);
+
+    test("retries under one jobId, so a dropped Valkey reply cannot run the pipeline twice", async () => {
+      // The Lua script can have executed before the connection drops: attempt 1's job is in the queue
+      // and its reply is lost. With a random id per attempt the retry appends a second job for the same
+      // response - duplicate follow-up email, duplicate integration rows, duplicate webhook POSTs.
+      mockEnqueueResponsePipeline
+        .mockRejectedValueOnce(new Error("Redis unavailable"))
+        .mockResolvedValueOnce(enqueuedJob);
+
+      await sendToPipeline(testData);
+
+      const [first, second] = getJobIds();
+      expect(first).toEqual(expect.any(String));
+      expect(second).toBe(first);
+    });
+
+    test("separates the two events one submission emits, and each revision of a response", async () => {
+      mockEnqueueResponsePipeline.mockResolvedValue(enqueuedJob);
+      const updatedAt = new Date("2026-03-01T10:00:00.000Z");
+      const response = { ...testData.response, updatedAt } as TResponse;
+
+      // A finished submission sends both events for the same row in the same request, so the event has
+      // to be part of the key - otherwise `responseFinished` is swallowed as a duplicate of
+      // `responseCreated` and no follow-up email is ever sent.
+      await sendToPipeline({ ...testData, response });
+      await sendToPipeline({ ...testData, response, event: PipelineTriggers.responseFinished });
+      await sendToPipeline({
+        ...testData,
+        response: { ...response, updatedAt: new Date("2026-03-01T10:05:00.000Z") } as TResponse,
+      });
+      await sendToPipeline({ ...testData, response });
+
+      const [created, finished, revised, createdAgain] = getJobIds();
+      expect(new Set([created, finished, revised]).size).toBe(3);
+      expect(createdAgain).toBe(created);
+    });
   });
 });

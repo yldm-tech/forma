@@ -101,6 +101,8 @@ export const getOrganizationsByUserId = reactCache(
           id: { in: [...organizationIds] },
         },
         select,
+        // Callers treat index 0 as "the" organization (see app/page.tsx and the settings sidebar) and paginate with take/skip, both of which need a total order. Tie-break on id because two rows created in one request can share a createdAt.
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: page ? ITEMS_PER_PAGE : undefined,
         skip: page ? ITEMS_PER_PAGE * (page - 1) : undefined,
       });

@@ -4,6 +4,7 @@ import { addCleanupEventListeners, addEventListeners } from "@/lib/common/event-
 import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { getIsSetup, setIsSetup } from "@/lib/common/status";
+import { TimeoutStack } from "@/lib/common/timeout-stack";
 import { filterSurveys, getIsDebug, isNowExpired, wrapThrows } from "@/lib/common/utils";
 import { addLiveRegionContainer, closeSurvey, prefetchSurveysScript } from "@/lib/survey/widget";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
@@ -427,6 +428,9 @@ export const tearDown = (): void => {
     user: DEFAULT_USER_STATE_NO_USER_ID,
     filteredSurveys,
   });
+
+  // Identity is gone, so a survey still waiting out its `delay` must not arrive after it. Without this the timeout fires against the new (or anonymous) user: it renders a survey that user never triggered, burns their recontact/display caps, and attributes the display and response to their contact id. Nothing pending was scheduled for the identity we are switching to, so cancelling all of it cannot drop a timeout that should still run.
+  TimeoutStack.getInstance().clear();
 
   closeSurvey();
 };
