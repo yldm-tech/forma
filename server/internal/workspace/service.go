@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -220,6 +221,9 @@ func (s *Service) update(ctx context.Context, userID, workspaceID uuid.UUID, in 
 			}
 		}
 	}
+	if err := checkDocumentRefinements(in.Styling, in.Logo); err != nil {
+		return nil, nil, err
+	}
 	configPatch, err := parseConfigPatch(in.Config)
 	if err != nil {
 		return nil, nil, err
@@ -263,6 +267,50 @@ func (s *Service) update(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		return old, nil, err
 	}
 	return old, updated, nil
+}
+
+// checkDocumentRefinements ports the zod refinements the exported schemas cannot carry: a logo URL must be an http(s) URL or a relative /storage/ path (ZStorageUrl; rendered straight into src attributes, so a javascript: URL would be stored XSS), and an uploaded styling background needs its image (ZSurveyStylingBackground). Both documents already passed their schemas.
+func checkDocumentRefinements(styling, logo json.RawMessage) error {
+	type logoDoc struct {
+		URL *string `json:"url"`
+	}
+	if logo != nil {
+		var l logoDoc
+		_ = json.Unmarshal(logo, &l)
+		if l.URL != nil && !validStorageURL(*l.URL) {
+			return apperr.Validation([]apperr.FieldError{{Field: "logo.url", Rule: "storage_url"}})
+		}
+	}
+	if styling != nil {
+		var st struct {
+			Logo       *logoDoc `json:"logo"`
+			Background *struct {
+				Bg     *string `json:"bg"`
+				BgType *string `json:"bgType"`
+			} `json:"background"`
+		}
+		_ = json.Unmarshal(styling, &st)
+		if st.Logo != nil && st.Logo.URL != nil && !validStorageURL(*st.Logo.URL) {
+			return apperr.Validation([]apperr.FieldError{{Field: "styling.logo.url", Rule: "storage_url"}})
+		}
+		if bg := st.Background; bg != nil && bg.BgType != nil && *bg.BgType == "upload" && (bg.Bg == nil || *bg.Bg == "") {
+			return apperr.Validation([]apperr.FieldError{{Field: "styling.background", Rule: "background"}})
+		}
+	}
+	return nil
+}
+
+// validStorageURL is ZStorageUrl: a relative storage path, or an absolute URL whose scheme is http or https.
+func validStorageURL(s string) bool {
+	if strings.HasPrefix(s, "/storage/") {
+		return true
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return false
+	}
+	scheme := strings.ToLower(u.Scheme)
+	return scheme == "https" || scheme == "http"
 }
 
 // configKeys are ZWorkspaceConfig's keys; anything else in a patch is dropped, as zod's object schema strips unknown keys.
