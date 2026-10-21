@@ -139,8 +139,8 @@ func TestPromotionMakesTheUserAdminOfTheirTeams(t *testing.T) {
 	e.member(c.ID, member, RoleMember)
 	e.member(other.ID, member, RoleMember)
 	team, foreignTeam := e.team(c.ID), e.team(other.ID)
-	e.teamMember(team, member, "contributor")
-	e.teamMember(foreignTeam, member, "contributor")
+	e.teamMember(team, member)
+	e.teamMember(foreignTeam, member)
 
 	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, member), map[string]string{"role": RoleManager}), http.StatusOK, nil)
 	if e.count(`SELECT count(*) FROM team_members WHERE team_id = ? AND user_id = ? AND role = 'admin'`, team, member) != 1 {
@@ -187,7 +187,7 @@ func TestRemoveMember(t *testing.T) {
 	e.member(c.ID, manager, RoleManager)
 	e.member(c.ID, member, RoleMember)
 	team := e.team(c.ID)
-	e.teamMember(team, member, "contributor")
+	e.teamMember(team, member)
 
 	e.fails(e.do(owner, http.MethodDelete, memberPath(c.ID, owner), nil), http.StatusForbidden, apperr.CodeOperationNotAllowed, "You cannot delete yourself from the organization")
 	e.fails(e.do(manager, http.MethodDelete, memberPath(c.ID, owner), nil), http.StatusForbidden, apperr.CodeOperationNotAllowed, "You cannot delete the owner of the organization")
@@ -223,7 +223,7 @@ func TestLeave(t *testing.T) {
 
 	e.organization(member, "Own")
 	team := e.team(c.ID)
-	e.teamMember(team, member, "contributor")
+	e.teamMember(team, member)
 	e.ok(e.do(member, http.MethodPost, leave, nil), http.StatusNoContent, nil)
 	if e.role(c.ID, member) != "" || e.count(`SELECT count(*) FROM team_members WHERE user_id = ?`, member) != 0 {
 		t.Fatal("membership or team membership survived leaving")

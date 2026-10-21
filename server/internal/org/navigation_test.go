@@ -52,7 +52,7 @@ func TestHome(t *testing.T) {
 		t.Fatalf("member home %+v", h)
 	}
 	team := e.team(c.ID)
-	e.teamMember(team, member, "contributor")
+	e.teamMember(team, member)
 	e.workspaceTeam(c.WorkspaceID, team, "read")
 	// Their own organization comes later than Acme, so Acme's workspace is listed first.
 	own := e.organization(member, "Own")

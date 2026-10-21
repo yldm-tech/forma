@@ -469,7 +469,7 @@ func (s *Service) delete(ctx context.Context, userID, workspaceID uuid.UUID, con
 		return nil, org.String(), apperr.NotFound("workspace", workspaceID.String())
 	}
 	// Compared trimmed and lowercased, as forma2's hasMatchingWorkspaceDeleteConfirmation did.
-	if strings.ToLower(strings.TrimSpace(confirmationName)) != strings.ToLower(strings.TrimSpace(ws.Name)) {
+	if !strings.EqualFold(strings.TrimSpace(confirmationName), strings.TrimSpace(ws.Name)) {
 		return nil, org.String(), apperr.InvalidInput(CodeDeleteConfirmationMismatch, "Workspace name confirmation does not match")
 	}
 	deleted, err := s.repo.deleteIfNotLast(ctx, workspaceID, *org)

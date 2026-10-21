@@ -169,8 +169,9 @@ func (e *env) team(org uuid.UUID) uuid.UUID {
 	return e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, ?) RETURNING id`, org, "Team "+uuid.NewString())
 }
 
-func (e *env) teamMember(team, user uuid.UUID, role string) {
-	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)`, team, user, role)
+// teamMember adds user to team as a contributor.
+func (e *env) teamMember(team, user uuid.UUID) {
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'contributor')`, team, user)
 }
 
 func (e *env) workspaceTeam(ws, team uuid.UUID, permission string) {
