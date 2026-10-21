@@ -10,33 +10,215 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteRouteImport } from './routes/auth/route'
+import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
+import { Route as InviteRouteImport } from './routes/invite'
+import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AuthSignupWithoutVerificationSuccessRouteImport } from './routes/auth/signup-without-verification-success'
+import { Route as AuthSsoRecoveryRouteImport } from './routes/auth/sso-recovery'
+import { Route as AuthVerificationRequestedRouteImport } from './routes/auth/verification-requested'
+import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
+import { Route as AuthForgotPasswordIndexRouteImport } from './routes/auth/forgot-password/index'
+import { Route as AuthForgotPasswordEmailSentRouteImport } from './routes/auth/forgot-password/email-sent'
+import { Route as AuthForgotPasswordResetIndexRouteImport } from './routes/auth/forgot-password/reset/index'
+import { Route as AuthForgotPasswordResetSuccessRouteImport } from './routes/auth/forgot-password/reset/success'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRouteRoute = AuthRouteRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailChangeWithoutVerificationSuccessRoute =
+  EmailChangeWithoutVerificationSuccessRouteImport.update({
+    id: '/email-change-without-verification-success',
+    path: '/email-change-without-verification-success',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
+  id: '/verify-email-change',
+  path: '/verify-email-change',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthSignupWithoutVerificationSuccessRoute =
+  AuthSignupWithoutVerificationSuccessRouteImport.update({
+    id: '/signup-without-verification-success',
+    path: '/signup-without-verification-success',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
+const AuthSsoRecoveryRoute = AuthSsoRecoveryRouteImport.update({
+  id: '/sso-recovery',
+  path: '/sso-recovery',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthVerificationRequestedRoute =
+  AuthVerificationRequestedRouteImport.update({
+    id: '/verification-requested',
+    path: '/verification-requested',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthForgotPasswordIndexRoute = AuthForgotPasswordIndexRouteImport.update({
+  id: '/forgot-password/',
+  path: '/forgot-password/',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthForgotPasswordEmailSentRoute =
+  AuthForgotPasswordEmailSentRouteImport.update({
+    id: '/forgot-password/email-sent',
+    path: '/forgot-password/email-sent',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
+const AuthForgotPasswordResetIndexRoute =
+  AuthForgotPasswordResetIndexRouteImport.update({
+    id: '/forgot-password/reset/',
+    path: '/forgot-password/reset/',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
+const AuthForgotPasswordResetSuccessRoute =
+  AuthForgotPasswordResetSuccessRouteImport.update({
+    id: '/forgot-password/reset/success',
+    path: '/forgot-password/reset/success',
+    getParentRoute: () => AuthRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
+  '/invite': typeof InviteRoute
+  '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
+  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
+  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
+  '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
+  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
+  '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
+  '/invite': typeof InviteRoute
+  '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
+  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
+  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
+  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
+  '/auth/forgot-password/reset': typeof AuthForgotPasswordResetIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
+  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
+  '/invite': typeof InviteRoute
+  '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
+  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
+  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
+  '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
+  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
+  '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/email-change-without-verification-success'
+    | '/invite'
+    | '/verify-email-change'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/auth/signup-without-verification-success'
+    | '/auth/sso-recovery'
+    | '/auth/verification-requested'
+    | '/auth/verify-email'
+    | '/auth/forgot-password/email-sent'
+    | '/auth/forgot-password/'
+    | '/auth/forgot-password/reset/success'
+    | '/auth/forgot-password/reset/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/email-change-without-verification-success'
+    | '/invite'
+    | '/verify-email-change'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/auth/signup-without-verification-success'
+    | '/auth/sso-recovery'
+    | '/auth/verification-requested'
+    | '/auth/verify-email'
+    | '/auth/forgot-password/email-sent'
+    | '/auth/forgot-password'
+    | '/auth/forgot-password/reset/success'
+    | '/auth/forgot-password/reset'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/email-change-without-verification-success'
+    | '/invite'
+    | '/verify-email-change'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/auth/signup-without-verification-success'
+    | '/auth/sso-recovery'
+    | '/auth/verification-requested'
+    | '/auth/verify-email'
+    | '/auth/forgot-password/email-sent'
+    | '/auth/forgot-password/'
+    | '/auth/forgot-password/reset/success'
+    | '/auth/forgot-password/reset/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRouteRoute: typeof AuthRouteRouteWithChildren
+  EmailChangeWithoutVerificationSuccessRoute: typeof EmailChangeWithoutVerificationSuccessRoute
+  InviteRoute: typeof InviteRoute
+  VerifyEmailChangeRoute: typeof VerifyEmailChangeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +230,145 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-change-without-verification-success': {
+      id: '/email-change-without-verification-success'
+      path: '/email-change-without-verification-success'
+      fullPath: '/email-change-without-verification-success'
+      preLoaderRoute: typeof EmailChangeWithoutVerificationSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email-change': {
+      id: '/verify-email-change'
+      path: '/verify-email-change'
+      fullPath: '/verify-email-change'
+      preLoaderRoute: typeof VerifyEmailChangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/signup-without-verification-success': {
+      id: '/auth/signup-without-verification-success'
+      path: '/signup-without-verification-success'
+      fullPath: '/auth/signup-without-verification-success'
+      preLoaderRoute: typeof AuthSignupWithoutVerificationSuccessRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/sso-recovery': {
+      id: '/auth/sso-recovery'
+      path: '/sso-recovery'
+      fullPath: '/auth/sso-recovery'
+      preLoaderRoute: typeof AuthSsoRecoveryRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/verification-requested': {
+      id: '/auth/verification-requested'
+      path: '/verification-requested'
+      fullPath: '/auth/verification-requested'
+      preLoaderRoute: typeof AuthVerificationRequestedRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/verify-email': {
+      id: '/auth/verify-email'
+      path: '/verify-email'
+      fullPath: '/auth/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/forgot-password/': {
+      id: '/auth/forgot-password/'
+      path: '/forgot-password'
+      fullPath: '/auth/forgot-password/'
+      preLoaderRoute: typeof AuthForgotPasswordIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/forgot-password/email-sent': {
+      id: '/auth/forgot-password/email-sent'
+      path: '/forgot-password/email-sent'
+      fullPath: '/auth/forgot-password/email-sent'
+      preLoaderRoute: typeof AuthForgotPasswordEmailSentRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/forgot-password/reset/': {
+      id: '/auth/forgot-password/reset/'
+      path: '/forgot-password/reset'
+      fullPath: '/auth/forgot-password/reset/'
+      preLoaderRoute: typeof AuthForgotPasswordResetIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/forgot-password/reset/success': {
+      id: '/auth/forgot-password/reset/success'
+      path: '/forgot-password/reset/success'
+      fullPath: '/auth/forgot-password/reset/success'
+      preLoaderRoute: typeof AuthForgotPasswordResetSuccessRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
   }
 }
 
+interface AuthRouteRouteChildren {
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+  AuthSignupWithoutVerificationSuccessRoute: typeof AuthSignupWithoutVerificationSuccessRoute
+  AuthSsoRecoveryRoute: typeof AuthSsoRecoveryRoute
+  AuthVerificationRequestedRoute: typeof AuthVerificationRequestedRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthForgotPasswordEmailSentRoute: typeof AuthForgotPasswordEmailSentRoute
+  AuthForgotPasswordIndexRoute: typeof AuthForgotPasswordIndexRoute
+  AuthForgotPasswordResetSuccessRoute: typeof AuthForgotPasswordResetSuccessRoute
+  AuthForgotPasswordResetIndexRoute: typeof AuthForgotPasswordResetIndexRoute
+}
+
+const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
+  AuthSignupWithoutVerificationSuccessRoute:
+    AuthSignupWithoutVerificationSuccessRoute,
+  AuthSsoRecoveryRoute: AuthSsoRecoveryRoute,
+  AuthVerificationRequestedRoute: AuthVerificationRequestedRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthForgotPasswordEmailSentRoute: AuthForgotPasswordEmailSentRoute,
+  AuthForgotPasswordIndexRoute: AuthForgotPasswordIndexRoute,
+  AuthForgotPasswordResetSuccessRoute: AuthForgotPasswordResetSuccessRoute,
+  AuthForgotPasswordResetIndexRoute: AuthForgotPasswordResetIndexRoute,
+}
+
+const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
+  AuthRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRouteRoute: AuthRouteRouteWithChildren,
+  EmailChangeWithoutVerificationSuccessRoute:
+    EmailChangeWithoutVerificationSuccessRoute,
+  InviteRoute: InviteRoute,
+  VerifyEmailChangeRoute: VerifyEmailChangeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
