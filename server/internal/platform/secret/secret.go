@@ -29,9 +29,16 @@ func HashToken(token string) []byte {
 	return sum[:]
 }
 
-// HashPassword bcrypts a password. bcrypt reads at most 72 bytes; callers enforce the policy maximum before this.
+// bcryptMaxBytes is the most of a password bcrypt reads. The password policy allows 128 characters, so a longer password is cut here, the way forma2's bcryptjs did; CheckPassword reads the same prefix, so the full password still verifies.
+const bcryptMaxBytes = 72
+
+// HashPassword bcrypts a password.
 func HashPassword(password string) (string, error) {
-	h, err := bcrypt.GenerateFromPassword([]byte(password), PasswordCost)
+	b := []byte(password)
+	if len(b) > bcryptMaxBytes {
+		b = b[:bcryptMaxBytes]
+	}
+	h, err := bcrypt.GenerateFromPassword(b, PasswordCost)
 	if err != nil {
 		return "", fmt.Errorf("hash password: %w", err)
 	}

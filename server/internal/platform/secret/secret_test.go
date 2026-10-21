@@ -2,6 +2,7 @@ package secret
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -41,6 +42,21 @@ func TestPasswords(t *testing.T) {
 	}
 	if ok, err := CheckPassword("", "anything"); err != nil || ok {
 		t.Fatalf("missing hash accepted: %v", err)
+	}
+}
+
+// The policy allows passwords longer than bcrypt's 72-byte input; they hash, and the full password verifies.
+func TestLongPasswords(t *testing.T) {
+	long := strings.Repeat("Aa1-", 32)
+	h, err := HashPassword(long)
+	if err != nil {
+		t.Fatalf("HashPassword(128 chars): %v", err)
+	}
+	if ok, err := CheckPassword(h, long); err != nil || !ok {
+		t.Fatalf("long password rejected: %v", err)
+	}
+	if ok, _ := CheckPassword(h, long[:71]); ok {
+		t.Fatal("a shorter prefix verified")
 	}
 }
 
