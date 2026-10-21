@@ -1,37 +1,13 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { api } from "../lib/api";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { homeTarget } from "../lib/home";
+import { homeQuery } from "../lib/queries/organizations";
+import { WORKSPACE_ID_KEY, readStorage } from "../lib/storage";
 
-interface Readiness {
-  status: "ok" | "error";
-  main_database: boolean;
-}
-
-const readinessQuery = queryOptions({
-  queryKey: ["health", "ready"],
-  queryFn: ({ signal }) => api.get<Readiness>("/health/ready", { signal }),
-  retry: false,
-});
-
+// forma2's root page: the server decides between the setup intro, sign-in, creating an organization, onboarding and the landing page; otherwise the browser reopens the workspace it last used, or the first one the user can open.
 export const Route = createFileRoute("/")({
-  component: Home,
+  beforeLoad: async ({ context }) => {
+    const home = await context.queryClient.fetchQuery(homeQuery);
+    const target = homeTarget(home, readStorage(WORKSPACE_ID_KEY));
+    if (target) throw redirect({ href: target, replace: true });
+  },
 });
-
-// The admin UI arrives module by module (see the migration plan); until sign-in lands, the root page reports whether this deployment can reach its database.
-function Home() {
-  const readiness = useQuery(readinessQuery);
-  const label = readiness.isPending
-    ? "Checking server…"
-    : readiness.isSuccess
-      ? "Server and database are reachable"
-      : "Server is not ready";
-
-  return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-2xl font-semibold">Forma</h1>
-      <p className="mt-4 text-sm text-slate-600" role="status">
-        {label}
-      </p>
-    </main>
-  );
-}
