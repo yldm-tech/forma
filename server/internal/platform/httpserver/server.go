@@ -28,7 +28,7 @@ type Server struct {
 func NewEngine(log *slog.Logger) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	// Client IPs come from TRUSTED_PROXY_HOP_COUNT once the client API lands; until then no proxy header is trusted.
+	// gin's own ClientIP is never consulted: httpapi.ClientIPResolver derives the address from TRUSTED_PROXY_HOP_COUNT, and trusting no proxy here keeps the two from disagreeing.
 	if err := r.SetTrustedProxies(nil); err != nil {
 		panic(fmt.Sprintf("disable trusted proxies: %v", err))
 	}
@@ -76,6 +76,11 @@ func (s *Server) Run(ctx context.Context) error {
 	return <-errCh
 }
 
+// RequestID returns the id the requestID middleware assigned to this request.
+func RequestID(c *gin.Context) string {
+	return c.GetString(requestIDHeader)
+}
+
 // requestID keeps an inbound X-Request-Id (a gateway may already have set one) or mints one, and echoes it back.
 func requestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -120,7 +125,8 @@ func recovery(log *slog.Logger) gin.HandlerFunc {
 			"route", routeOf(c),
 			"panic", recovered,
 		)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": "internal_error", "message": "Internal server error"})
+		// Same envelope and wording as an unexpected error returned by a handler (see httpapi.ErrorHandler).
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": "internal_server_error", "message": "Something went wrong while executing the operation."})
 	})
 }
 

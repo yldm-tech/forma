@@ -53,8 +53,8 @@ func TestRecoveryReturnsJSONAndLogs(t *testing.T) {
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/boom", nil))
 
-	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), `"code":"internal_error"`) {
-		t.Fatalf("got %d %q, want 500 internal_error", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), `"code":"internal_server_error"`) {
+		t.Fatalf("got %d %q, want 500 internal_server_error", rec.Code, rec.Body.String())
 	}
 	if strings.Contains(rec.Body.String(), "kaboom") {
 		t.Fatalf("panic value leaked to the client: %q", rec.Body.String())

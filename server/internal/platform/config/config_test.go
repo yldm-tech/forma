@@ -10,6 +10,7 @@ func setRequired(t *testing.T) {
 	t.Helper()
 	t.Setenv("WEBAPP_URL", "http://localhost:3000")
 	t.Setenv("DATABASE_URL", "postgres://forma:forma@localhost:5432/forma?sslmode=disable")
+	t.Setenv("REDIS_URL", "redis://localhost:6379")
 }
 
 func TestLoadDefaults(t *testing.T) {
@@ -34,14 +35,70 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.PublicURL != nil {
 		t.Errorf("PublicURL = %v, want nil when unset", cfg.PublicURL)
 	}
+	if cfg.TrustedProxyHopCount != 1 {
+		t.Errorf("TrustedProxyHopCount = %d, want 1", cfg.TrustedProxyHopCount)
+	}
+	if cfg.RateLimitingDisabled {
+		t.Error("RateLimitingDisabled defaults to true, want false")
+	}
+	if !cfg.AuditLogEnabled || cfg.AuditLogGetUserIP {
+		t.Errorf("audit flags = %v/%v, want enabled without the user IP", cfg.AuditLogEnabled, cfg.AuditLogGetUserIP)
+	}
+	if !cfg.SMTPAuthenticated || !cfg.SMTPRejectUnauthorizedTLS || cfg.SMTPSecureEnabled {
+		t.Errorf("SMTP flags = auth %v, reject-unauthorized %v, secure %v; want true, true, false", cfg.SMTPAuthenticated, cfg.SMTPRejectUnauthorizedTLS, cfg.SMTPSecureEnabled)
+	}
+	if cfg.MailFrom != "noreply@forma.ylam.ai" || cfg.MailFromName != "Forma" {
+		t.Errorf("mail from = %q <%s>, want Forma <noreply@forma.ylam.ai>", cfg.MailFromName, cfg.MailFrom)
+	}
+	if cfg.SMTPConfigured() {
+		t.Error("SMTPConfigured() = true without SMTP_HOST and SMTP_PORT")
+	}
+}
+
+// An empty TRUSTED_PROXY_HOP_COUNT is what docker-compose and Helm render for an unset value; forma2 read it as unset (1) rather than as the "trust nothing" 0.
+func TestLoadTreatsEmptyHopCountAsUnset(t *testing.T) {
+	setRequired(t)
+	t.Setenv("TRUSTED_PROXY_HOP_COUNT", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.TrustedProxyHopCount != 1 {
+		t.Fatalf("TrustedProxyHopCount = %d, want 1", cfg.TrustedProxyHopCount)
+	}
+
+	t.Setenv("TRUSTED_PROXY_HOP_COUNT", "0")
+	if cfg, err = Load(); err != nil || cfg.TrustedProxyHopCount != 0 {
+		t.Fatalf("explicit 0: hop count %d, err %v; want 0", cfg.TrustedProxyHopCount, err)
+	}
+}
+
+func TestLoadFlags(t *testing.T) {
+	setRequired(t)
+	t.Setenv("RATE_LIMITING_DISABLED", "1")
+	t.Setenv("SMTP_AUTHENTICATED", "0")
+	t.Setenv("SMTP_HOST", "smtp.example.com")
+	t.Setenv("SMTP_PORT", "465")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.RateLimitingDisabled || cfg.SMTPAuthenticated || !cfg.SMTPConfigured() {
+		t.Fatalf("cfg = %+v, want rate limiting disabled, SMTP unauthenticated and configured", cfg)
+	}
 }
 
 func TestLoadRejectsMissingRequired(t *testing.T) {
-	t.Setenv("WEBAPP_URL", "http://localhost:3000")
-	t.Setenv("DATABASE_URL", "")
-
-	if _, err := Load(); err == nil {
-		t.Fatal("Load succeeded without DATABASE_URL")
+	for _, name := range []string{"WEBAPP_URL", "DATABASE_URL", "REDIS_URL"} {
+		t.Run(name, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(name, "")
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load succeeded without %s", name)
+			}
+		})
 	}
 }
 
@@ -51,6 +108,15 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"zero pool size":       {"DATABASE_MAX_OPEN_CONNS", "0"},
 		"unparseable duration": {"SHUTDOWN_TIMEOUT", "soon"},
 		"unparseable level":    {"LOG_LEVEL", "loud"},
+		"hop count too high":   {"TRUSTED_PROXY_HOP_COUNT", "11"},
+		"negative hop count":   {"TRUSTED_PROXY_HOP_COUNT", "-1"},
+		"flag spelled true":    {"RATE_LIMITING_DISABLED", "true"},
+		"non-numeric port":     {"SMTP_PORT", "smtp"},
+		"port out of range":    {"SMTP_PORT", "70000"},
+		"mail from with name":  {"MAIL_FROM", "Forma <noreply@example.com>"},
+		"mail from not email":  {"MAIL_FROM", "noreply"},
+		"relative privacy url": {"PRIVACY_URL", "/privacy"},
+		"negative concurrency": {"WORKER_CONCURRENCY", "-1"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {
