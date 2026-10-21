@@ -23,6 +23,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 )
 
 const templateDB = "forma_template"
@@ -34,7 +35,7 @@ var (
 	container *tcpostgres.PostgresContainer
 )
 
-// start runs PostgreSQL 18 once per test binary and migrates a template database. The container is reaped by testcontainers' Ryuk when the binary exits.
+// start runs PostgreSQL 18 once per test binary and migrates a template database exactly as `forma migrate` does: the goose schema, then River's tables. The container is reaped by testcontainers' Ryuk when the binary exits.
 func start() {
 	ctx := context.Background()
 	container, setupErr = tcpostgres.Run(ctx, "postgres:18",
@@ -54,7 +55,11 @@ func start() {
 	if setupErr = exec(adminDSN, "CREATE DATABASE "+templateDB); setupErr != nil {
 		return
 	}
-	setupErr = database.MigrateUp(ctx, withDatabase(adminDSN, templateDB), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	if setupErr = database.MigrateUp(ctx, withDatabase(adminDSN, templateDB), log); setupErr != nil {
+		return
+	}
+	setupErr = jobs.Migrate(ctx, withDatabase(adminDSN, templateDB), log)
 }
 
 func exec(dsn, statement string) error {
