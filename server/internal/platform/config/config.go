@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/google/uuid"
 )
 
 type Config struct {
@@ -88,6 +89,9 @@ type Config struct {
 	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
 	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
 
+	// SSO is single sign-on through Google, GitHub, Azure AD and a generic OpenID Connect provider.
+	SSO SSOConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -103,6 +107,69 @@ type AuthzConfig struct {
 	Insecure bool `env:"AUTHZED_INSECURE" envDefault:"0"`
 	// Consistency is what permission checks and resource lookups ask SpiceDB for: fully_consistent (the default, and what forma2 always used) evaluates at the newest revision; minimize_latency lets SpiceDB answer from its quantized cache, so a delivered revocation can take effect a few seconds later. Operational reads always use fully_consistent.
 	Consistency string `env:"AUTHZED_CONSISTENCY" envDefault:"fully_consistent"`
+}
+
+// SSOConfig is forma2's single sign-on configuration. A provider is offered exactly when its own credentials are set; there is no other switch.
+type SSOConfig struct {
+	GoogleClientID     string `env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
+	GitHubID           string `env:"GITHUB_ID"`
+	GitHubSecret       string `env:"GITHUB_SECRET"`
+	// AzureADTenantID is the Microsoft Entra tenant: a directory ID or verified domain gets full id_token verification; unset means common, the multi-tenant authority.
+	AzureADClientID     string `env:"AZUREAD_CLIENT_ID"`
+	AzureADClientSecret string `env:"AZUREAD_CLIENT_SECRET"`
+	AzureADTenantID     string `env:"AZUREAD_TENANT_ID"`
+	// OIDCIssuer is the generic provider's issuer; its discovery document is read from OIDCIssuer + "/.well-known/openid-configuration". OIDCDisplayName labels its button.
+	OIDCClientID     string `env:"OIDC_CLIENT_ID"`
+	OIDCClientSecret string `env:"OIDC_CLIENT_SECRET"`
+	OIDCIssuer       string `env:"OIDC_ISSUER"`
+	OIDCDisplayName  string `env:"OIDC_DISPLAY_NAME"`
+	// DefaultOrganizationID names the organization every new SSO user joins, created on the first such sign-up; DefaultOrganizationRole is the role later sign-ups get in it (manager when unset).
+	DefaultOrganizationID   string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ID"`
+	DefaultOrganizationRole string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE"`
+	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
+	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
+	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
+}
+
+// GoogleEnabled, GitHubEnabled, AzureADEnabled and OIDCEnabled are forma2's *_OAUTH_ENABLED: a provider needs its client id and secret (and the generic one its issuer).
+func (s SSOConfig) GoogleEnabled() bool { return s.GoogleClientID != "" && s.GoogleClientSecret != "" }
+
+func (s SSOConfig) GitHubEnabled() bool { return s.GitHubID != "" && s.GitHubSecret != "" }
+
+func (s SSOConfig) AzureADEnabled() bool {
+	return s.AzureADClientID != "" && s.AzureADClientSecret != ""
+}
+
+func (s SSOConfig) OIDCEnabled() bool {
+	return s.OIDCClientID != "" && s.OIDCClientSecret != "" && s.OIDCIssuer != ""
+}
+
+func (s SSOConfig) validate() error {
+	if s.DefaultOrganizationID != "" {
+		if _, err := uuid.Parse(s.DefaultOrganizationID); err != nil {
+			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID), got %q", s.DefaultOrganizationID)
+		}
+	}
+	switch s.DefaultOrganizationRole {
+	case "", "owner", "manager", "member", "billing":
+	default:
+		return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ROLE must be owner, manager, member or billing, got %q", s.DefaultOrganizationRole)
+	}
+	if s.OIDCEnabled() {
+		if u, err := url.Parse(s.OIDCIssuer); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("OIDC_ISSUER must be an absolute http(s) URL, got %q", s.OIDCIssuer)
+		}
+	}
+	for _, base := range []struct {
+		name  string
+		value *url.URL
+	}{{"BETTER_AUTH_URL", s.BetterAuthURL}, {"NEXTAUTH_URL", s.NextAuthURL}} {
+		if base.value != nil && ((base.value.Scheme != "http" && base.value.Scheme != "https") || base.value.Host == "") {
+			return fmt.Errorf("%s must be an absolute http(s) URL, got %q", base.name, base.value.String())
+		}
+	}
+	return nil
 }
 
 // parseFlag reads every bool as a "1"/"0" switch. forma2 accepted exactly those two values, so anything else fails the start instead of being read as one or the other.
@@ -165,6 +232,9 @@ func (c Config) validate() error {
 		return fmt.Errorf("WORKER_CONCURRENCY must not be negative, got %d", c.WorkerConcurrency)
 	}
 	if err := c.Authz.validate(); err != nil {
+		return err
+	}
+	if err := c.SSO.validate(); err != nil {
 		return err
 	}
 	switch c.UserManagementMinimumRole {

@@ -43,6 +43,7 @@ func TestRules(t *testing.T) {
 		{BADeleteUser, "ba:delete-user", 3600 * time.Second, 5},
 		{BADeleteUserCallback, "ba:delete-user-callback", 60 * time.Second, 5},
 		{BAChangePassword, "ba:change-password", 60 * time.Second, 5},
+		{BASSORecovery, "ba:sso-recovery", 60 * time.Second, 5},
 		{StorageUpload, "storage:upload", 60 * time.Second, 5},
 		{StorageUploadPerWorkspace, "storage:upload:workspace", 60 * time.Second, 100},
 		{StorageDelete, "storage:delete", 60 * time.Second, 5},

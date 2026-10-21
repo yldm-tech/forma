@@ -1,4 +1,4 @@
-// Package auth is the credential identity module: sign-up, email verification, sign-in and sign-out, browser sessions, password reset and change, email change and account deletion, with forma2's rules (apps/web/modules/auth, modules/account, and the Better Auth configuration they ran on).
+// Package auth is the identity module: sign-up, email verification, sign-in and sign-out, browser sessions, password reset and change, email change and account deletion, and single sign-on through Google, GitHub, Azure AD and OpenID Connect, with forma2's rules (apps/web/modules/auth, modules/account, modules/sso, and the Better Auth configuration they ran on).
 package auth
 
 import (
@@ -148,14 +148,17 @@ func (s *Service) logFailure(ctx context.Context, action audit.Action, targetID 
 	s.logEvent(ctx, audit.Event{Action: action, TargetType: audit.TargetUser, TargetID: targetID, Status: audit.StatusFailure})
 }
 
-// signInMethodPassword is the authMethod forma2 recorded for every credential sign-in completion.
-const signInMethodPassword = "password"
+// The authMethod forma2 recorded for a sign-in completion: password for the credential paths (the password check, email verification and the second factor), sso for an identity provider's callback and SSO recovery.
+const (
+	signInMethodPassword = "password"
+	signInMethodSSO      = "sso"
+)
 
 // finalizeSignIn is what forma2 ran after every sign-in completion: the signedIn audit event and the user's last login time. Neither may fail a sign-in that already succeeded.
-func (s *Service) finalizeSignIn(ctx context.Context, userID uuid.UUID) {
+func (s *Service) finalizeSignIn(ctx context.Context, userID uuid.UUID, method string) {
 	s.logEvent(ctx, audit.Event{
 		Action: audit.ActionSignedIn, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(),
-		Status: audit.StatusSuccess, NewObject: map[string]string{"authMethod": signInMethodPassword, "sessionStrategy": "database"},
+		Status: audit.StatusSuccess, NewObject: map[string]string{"authMethod": method, "sessionStrategy": "database"},
 	})
 	if err := s.repo.touchLastLogin(ctx, userID, s.now()); err != nil {
 		s.log.ErrorContext(ctx, "Failed to record successful sign-in", "err", err, "userId", userID.String())

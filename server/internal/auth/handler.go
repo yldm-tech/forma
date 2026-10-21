@@ -77,6 +77,9 @@ type optionsResponse struct {
 	EmailVerificationRequired bool   `json:"emailVerificationRequired"`
 	SMTPConfigured            bool   `json:"smtpConfigured"`
 	TurnstileSiteKey          string `json:"turnstileSiteKey,omitempty"`
+	// SSOProviders are the identity providers offered (google, github, azuread, openid), in the order the page shows them; OIDCDisplayName labels the generic one's button.
+	SSOProviders    []string `json:"ssoProviders"`
+	OIDCDisplayName string   `json:"oidcDisplayName,omitempty"`
 }
 
 // options tells the sign-in and sign-up pages what this instance offers.
@@ -92,6 +95,10 @@ func (h *Handler) options(c *gin.Context) {
 		PasswordResetEnabled:      !h.cfg.PasswordResetDisabled,
 		EmailVerificationRequired: !h.cfg.EmailVerificationDisabled,
 		SMTPConfigured:            h.cfg.SMTPConfigured(),
+		SSOProviders:              enabledSSOProviders(h.cfg.SSO),
+	}
+	if h.cfg.SSO.OIDCEnabled() {
+		res.OIDCDisplayName = h.cfg.SSO.OIDCDisplayName
 	}
 	if h.cfg.TurnstileConfigured() {
 		res.TurnstileSiteKey = h.cfg.TurnstileSiteKey

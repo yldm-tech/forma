@@ -47,9 +47,11 @@ type account struct {
 	CreatedAt     time.Time
 	LastLoginAt   sql.NullTime
 	// PasswordHash is the credential identity's bcrypt hash; empty when the user has no password.
-	PasswordHash        sql.NullString
-	HasExternalIdentity bool
-	TwoFactorEnabled    bool
+	PasswordHash sql.NullString
+	// HasCredentialIdentity is true while the user has a credential identity, even one whose password SSO recovery removed.
+	HasCredentialIdentity bool
+	HasExternalIdentity   bool
+	TwoFactorEnabled      bool
 }
 
 // hasPassword reports whether the user has a credential identity.
@@ -73,6 +75,7 @@ func (a *account) identityProvider() string {
 const accountQuery = `
 SELECT u.id, u.name, u.email, u.email_verified, u.locale, u.is_active, u.created_at, u.last_login_at,
        (SELECT i.password_hash FROM user_identities i WHERE i.user_id = u.id AND i.provider = 'credential' ORDER BY i.created_at LIMIT 1) AS password_hash,
+       EXISTS (SELECT 1 FROM user_identities i WHERE i.user_id = u.id AND i.provider = 'credential') AS has_credential_identity,
        EXISTS (SELECT 1 FROM user_identities i WHERE i.user_id = u.id AND i.provider <> 'credential') AS has_external_identity,
        EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id AND t.verified) AS two_factor_enabled
 FROM users u`
@@ -232,44 +235,72 @@ var defaultContactAttributeKeys = []struct {
 
 // provisionOrganization gives a new user what forma2's sign-up gave an uninvited one: "<name>'s Organization" with the user as its owner, a default workspace, and organization alerts switched off for that organization.
 func (r *Repository) provisionOrganization(ctx context.Context, userID uuid.UUID, userName string) (uuid.UUID, error) {
-	db := r.db.WithContext(ctx)
 	orgID, err := r.scanID(ctx, `INSERT INTO organizations (name) VALUES (?) RETURNING id`, userName+"'s Organization")
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("create organization: %w", err)
 	}
-	if err := db.Exec(
-		`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'owner', true)`, userID, orgID,
-	).Error; err != nil {
-		return uuid.Nil, fmt.Errorf("create membership: %w", err)
+	if err := r.addMembership(ctx, userID, orgID, "owner"); err != nil {
+		return uuid.Nil, err
 	}
+	if err := r.createDefaultWorkspace(ctx, orgID); err != nil {
+		return uuid.Nil, err
+	}
+	if err := r.unsubscribeOrganizationAlerts(ctx, userID, orgID); err != nil {
+		return uuid.Nil, err
+	}
+	return orgID, nil
+}
+
+// addMembership makes the user an accepted member with the role. A membership that already exists is left as it is, so a retried write converges.
+func (r *Repository) addMembership(ctx context.Context, userID, orgID uuid.UUID, role string) error {
+	if err := r.db.WithContext(ctx).Exec(
+		`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, ?, true) ON CONFLICT (user_id, organization_id) DO NOTHING`, userID, orgID, role,
+	).Error; err != nil {
+		return fmt.Errorf("create membership: %w", err)
+	}
+	return nil
+}
+
+// createDefaultWorkspace adds the workspace forma2's createWorkspace gave a new organization.
+func (r *Repository) createDefaultWorkspace(ctx context.Context, orgID uuid.UUID) error {
+	db := r.db.WithContext(ctx)
 	workspaceID, err := r.scanID(ctx,
 		`INSERT INTO workspaces (organization_id, name, config) VALUES (?, ?, '{"channel": null, "industry": null}') RETURNING id`,
 		orgID, defaultWorkspaceName,
 	)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("create workspace: %w", err)
+		return fmt.Errorf("create workspace: %w", err)
 	}
 	if err := db.Exec(`INSERT INTO languages (workspace_id, code) VALUES (?, 'en-US')`, workspaceID).Error; err != nil {
-		return uuid.Nil, fmt.Errorf("create workspace language: %w", err)
+		return fmt.Errorf("create workspace language: %w", err)
 	}
 	for _, k := range defaultContactAttributeKeys {
 		if err := db.Exec(
 			`INSERT INTO contact_attribute_keys (workspace_id, key, name, description, type, is_unique) VALUES (?, ?, ?, ?, 'default', ?)`,
 			workspaceID, k.key, k.name, k.description, k.unique,
 		).Error; err != nil {
-			return uuid.Nil, fmt.Errorf("create contact attribute key %s: %w", k.key, err)
+			return fmt.Errorf("create contact attribute key %s: %w", k.key, err)
 		}
 	}
-	if err := db.Exec(
+	return nil
+}
+
+// unsubscribeOrganizationAlerts switches the organization's alerts off for the user, as forma2 did for every organization a user was added to on sign-up. An organization already in the list is not added twice.
+func (r *Repository) unsubscribeOrganizationAlerts(ctx context.Context, userID, orgID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Exec(
 		`UPDATE users SET notification_settings = jsonb_build_object(
 		     'alert', COALESCE(notification_settings -> 'alert', '{}'::jsonb),
-		     'unsubscribedOrganizationIds', COALESCE(notification_settings -> 'unsubscribedOrganizationIds', '[]'::jsonb) || jsonb_build_array(?::text))
+		     'unsubscribedOrganizationIds', CASE
+		         WHEN COALESCE(notification_settings -> 'unsubscribedOrganizationIds', '[]'::jsonb) @> jsonb_build_array(?::text)
+		         THEN notification_settings -> 'unsubscribedOrganizationIds'
+		         ELSE COALESCE(notification_settings -> 'unsubscribedOrganizationIds', '[]'::jsonb) || jsonb_build_array(?::text)
+		     END)
 		 WHERE id = ?`,
-		orgID.String(), userID,
+		orgID.String(), orgID.String(), userID,
 	).Error; err != nil {
-		return uuid.Nil, fmt.Errorf("update notification settings: %w", err)
+		return fmt.Errorf("update notification settings: %w", err)
 	}
-	return orgID, nil
+	return nil
 }
 
 // soleOwnedOrganizations lists the organizations the user owns with no other owner; they cannot outlive the account.

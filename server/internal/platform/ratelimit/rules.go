@@ -61,6 +61,8 @@ var (
 	BADeleteUserCallback = Rule{Namespace: "ba:delete-user-callback", Window: time.Minute, Limit: 5}
 	// BAChangePassword guards the current-password check of a password change. Better Auth left /change-password on its global flood guard only; this applies the sign-in limit to the same password check.
 	BAChangePassword = Rule{Namespace: "ba:change-password", Window: time.Minute, Limit: 5}
+	// BASSORecovery is forma2's /sso-recovery/* limit. It guards both halves of linking an identity provider to an existing account: starting it, which mails the address on record, and redeeming the emailed link.
+	BASSORecovery = Rule{Namespace: "ba:sso-recovery", Window: time.Minute, Limit: 5}
 
 	StorageUpload             = Rule{Namespace: "storage:upload", Window: time.Minute, Limit: 5}
 	StorageUploadPerWorkspace = Rule{Namespace: "storage:upload:workspace", Window: time.Minute, Limit: 100}

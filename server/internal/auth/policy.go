@@ -20,6 +20,14 @@ const (
 // nameFormat is ZUserName's allow-list: letters, combining marks, space, and ' , . & ( ) digits -. JavaScript's \d without the u flag is ASCII only.
 var nameFormat = regexp.MustCompile(`^[\p{L}\p{M} ',.&()0-9-]+$`)
 
+// nameDisallowed is every run of characters ZUserName does not allow.
+var nameDisallowed = regexp.MustCompile(`[^\p{L}\p{M} ',.&()0-9-]+`)
+
+// normalizeUserName is forma2's normalizeUserName for untrusted display names, such as an identity provider's: disallowed characters become one space, whitespace collapses, and the result is trimmed, so whatever is left satisfies ZUserName. It returns "" when nothing survives.
+func normalizeUserName(name string) string {
+	return strings.Join(strings.Fields(nameDisallowed.ReplaceAllString(name, " ")), " ")
+}
+
 // emailFormat is zod 4's email pattern without its two lookaheads, which RE2 lacks; validEmail checks those separately.
 var emailFormat = regexp.MustCompile(`^[A-Za-z0-9_'+\-.]*[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$`)
 

@@ -57,6 +57,7 @@ type env struct {
 	svc      *Service
 	sessions *Sessions
 	factor   *SecondFactor
+	sso      *SSO
 	engine   *gin.Engine
 
 	// breached holds the SHA-1 suffixes the stubbed range API reports; hibpStatus overrides its status.
@@ -145,6 +146,10 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	r.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	group := r.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg))
 	NewHandler(cfg, e.svc, e.sessions).Register(group)
+	e.sso = NewSSO(cfg, e.svc, log)
+	ssoHandler := NewSSOHandler(cfg, e.sso)
+	ssoHandler.Register(group)
+	ssoHandler.RegisterCallbacks(r)
 	// Stand-ins for the two-factor module's routes, which drive SecondFactor the way it will.
 	group.GET("/test/two-factor/pending", func(c *gin.Context) {
 		id, err := e.factor.PendingUser(c)
@@ -322,6 +327,12 @@ func (r response) cookie(name string) *http.Cookie {
 
 func (b *browser) do(method, path string, body any) response {
 	b.e.t.Helper()
+	return b.request(method, "/api/app"+path, body, nil)
+}
+
+// request sends to any path of the server, with extra headers.
+func (b *browser) request(method, target string, body any, header http.Header) response {
+	b.e.t.Helper()
 	var reader io.Reader
 	if body != nil {
 		raw, err := json.Marshal(body)
@@ -330,7 +341,10 @@ func (b *browser) do(method, path string, body any) response {
 		}
 		reader = bytes.NewReader(raw)
 	}
-	req := httptest.NewRequest(method, "/api/app"+path, reader)
+	req := httptest.NewRequest(method, target, reader)
+	for k, v := range header {
+		req.Header[k] = v
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

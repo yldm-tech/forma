@@ -46,12 +46,12 @@ func (s *Service) requestReset(ctx context.Context, email string) error {
 	return nil
 }
 
-// canResetPassword is forma2's rule: a password user may always reset; an SSO user who still has a password (one left over from before moving to SSO) only while email and password sign-in is enabled, since on an SSO-only instance the password could never be used.
+// canResetPassword is forma2's rule: a password user may always reset; an SSO user who still has a credential identity (a password left over from before moving to SSO, or the identity whose password SSO recovery removed) only while email and password sign-in is enabled, since on an SSO-only instance the password could never be used.
 func (s *Service) canResetPassword(acc *account) bool {
-	if !acc.hasPassword() {
-		return false
+	if acc.emailIdentity() {
+		return true
 	}
-	return acc.emailIdentity() || !s.cfg.EmailAuthDisabled
+	return acc.HasCredentialIdentity && !s.cfg.EmailAuthDisabled
 }
 
 // sendResetLink issues a reset token and mails it. A mailer without SMTP counts as a failed send.

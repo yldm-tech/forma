@@ -93,6 +93,18 @@ type InviteAccepted struct {
 func (InviteAccepted) template() string   { return "invite_accepted" }
 func (InviteAccepted) subjectKey() string { return "emails.invite_accepted_email_subject" }
 
+// SSORecoveryFactorsRemoved tells a user that linking single sign-on to their account removed the password and two-factor authentication set on it while its address was unproven, and where to set them up again.
+type SSORecoveryFactorsRemoved struct {
+	PasswordRemoved      bool
+	TwoFactorRemoved     bool
+	SecuritySettingsLink string
+}
+
+func (SSORecoveryFactorsRemoved) template() string { return "sso_recovery_factors_removed" }
+func (SSORecoveryFactorsRemoved) subjectKey() string {
+	return "emails.sso_recovery_factors_removed_email_subject"
+}
+
 type legal struct {
 	PrivacyURL     string
 	ImprintURL     string

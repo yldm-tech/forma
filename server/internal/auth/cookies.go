@@ -14,14 +14,16 @@ const (
 	sessionCookieName      = "forma.session_token"
 	twoFactorCookieName    = "forma.two_factor"
 	signupIntentCookieName = "forma.signup_intent"
+	oauthStateCookieName   = "forma.oauth_state"
 )
 
-// cookieSettings writes the three auth cookies with forma2's attributes: HttpOnly, SameSite=Lax, Path=/, and Secure when the app is served over HTTPS.
+// cookieSettings writes the auth cookies with forma2's attributes: HttpOnly, SameSite=Lax, Path=/, and Secure when the app is served over HTTPS.
 type cookieSettings struct {
 	secure       bool
 	session      string
 	twoFactor    string
 	signupIntent string
+	oauthState   string
 }
 
 func newCookieSettings(cfg config.Config) cookieSettings {
@@ -34,6 +36,7 @@ func newCookieSettings(cfg config.Config) cookieSettings {
 		session:      prefix + sessionCookieName,
 		twoFactor:    prefix + twoFactorCookieName,
 		signupIntent: prefix + signupIntentCookieName,
+		oauthState:   prefix + oauthStateCookieName,
 	}
 }
 
