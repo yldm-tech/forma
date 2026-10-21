@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -26,6 +27,7 @@ func (e *env) orgWith(members map[uuid.UUID]string) uuid.UUID {
 
 // forma2's better-auth-account-deletion integration tests: the password is required, sole-owned organizations and sent invites go with the account, and the rest cascades.
 func TestDeleteAccount(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
@@ -80,6 +82,7 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestDeleteAccountOnFormaCloudGoesToTheSurvey(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
@@ -92,12 +95,14 @@ func TestDeleteAccountOnFormaCloudGoesToTheSurvey(t *testing.T) {
 }
 
 func TestDeleteAccountNeedsASession(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	expectStatus(t, e.browser().post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusUnauthorized, apperr.CodeNotAuthenticated)
 }
 
 // forma2's better-auth-account-deletion-request tests: a user without a password confirms by mail; the link deletes only from that user's own session.
 func TestDeleteAccountByEmailLink(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	sso := e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true})
 	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
@@ -129,6 +134,7 @@ func TestDeleteAccountByEmailLink(t *testing.T) {
 }
 
 func TestDeleteAccountLinkRules(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	password := e.browser()
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -156,15 +162,27 @@ func TestDeleteAccountLinkRules(t *testing.T) {
 // action:account-delete allows five deletion mails per user per hour; Better Auth's /delete-user allowed five password attempts per address per hour.
 func TestDeleteAccountRateLimits(t *testing.T) {
 	e := newEnv(t)
-	sso := e.sessionFor(e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true}))
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
-	b := e.browser()
-	b.signIn("ada@example.com", strongPassword)
+	signedIn := e.browser()
+	signedIn.signIn("ada@example.com", strongPassword)
 	e.enableRateLimits()
-	for i := 0; i < 5; i++ {
-		expectStatus(t, sso.post("/auth/account/delete/request", nil), http.StatusOK, "")
-		expectStatus(t, b.post("/auth/account/delete", map[string]string{"password": "Guess-Number-1"}), http.StatusBadRequest, CodeInvalidPassword)
-	}
-	expectStatus(t, sso.post("/auth/account/delete/request", nil), http.StatusTooManyRequests, "")
-	expectStatus(t, b.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusTooManyRequests, "")
+	e.inOneWindow(time.Hour, func(run int, ip string) error {
+		sso := e.sessionFor(e.seedUser(fmt.Sprintf("sso%d@example.com", run), "", userOpts{noPassword: true, sso: true}))
+		b := e.browser()
+		b.ip = ip
+		b.cookies = signedIn.cookies
+		if err := repeat(5, func() response { return sso.post("/auth/account/delete/request", nil) }, http.StatusOK, ""); err != nil {
+			return err
+		}
+		if err := statusErr(sso.post("/auth/account/delete/request", nil), http.StatusTooManyRequests, ""); err != nil {
+			return err
+		}
+		guess := func() response {
+			return b.post("/auth/account/delete", map[string]string{"password": "Guess-Number-1"})
+		}
+		if err := repeat(5, guess, http.StatusBadRequest, CodeInvalidPassword); err != nil {
+			return err
+		}
+		return statusErr(b.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusTooManyRequests, "")
+	})
 }

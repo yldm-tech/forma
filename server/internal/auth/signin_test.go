@@ -18,6 +18,7 @@ func credentials(email, password string) map[string]string {
 
 // forma2's auth-email-password.integration.test.ts: the right password issues a database session, the wrong one does not.
 func TestSignInIssuesASession(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
@@ -60,6 +61,7 @@ func TestSignInIssuesASession(t *testing.T) {
 
 // Better Auth's INVALID_EMAIL_OR_PASSWORD: a wrong password, an unknown address and an account without a password get the same answer.
 func TestSignInRejectsBadCredentialsAlike(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true})
@@ -84,6 +86,7 @@ func TestSignInRejectsBadCredentialsAlike(t *testing.T) {
 
 // Better Auth's requireEmailVerification with sendOnSignIn: an unverified user with the right password gets a fresh link and 403; with the wrong password, nothing.
 func TestSignInRequiresVerification(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{unverified: true})
 	b := e.browser()
@@ -106,6 +109,7 @@ func TestSignInRequiresVerification(t *testing.T) {
 
 // forma2's better-auth-active-user-gate: a deactivated user with the right password gets the inactive message and no session row.
 func TestSignInRejectsDeactivatedUsers(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{inactive: true})
 	r := e.browser().post("/auth/sign-in", credentials("ada@example.com", strongPassword))
@@ -119,6 +123,7 @@ func TestSignInRejectsDeactivatedUsers(t *testing.T) {
 }
 
 func TestSignInWithEmailAuthDisabled(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = true })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	expectStatus(t, e.browser().post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusBadRequest, CodeEmailPasswordDisabled)
@@ -128,6 +133,7 @@ func TestSignInWithEmailAuthDisabled(t *testing.T) {
 }
 
 func TestSignInValidation(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	r := e.browser().post("/auth/sign-in", map[string]string{"email": "nope", "password": ""})
 	expectStatus(t, r, http.StatusBadRequest, apperr.CodeValidation)
@@ -135,6 +141,7 @@ func TestSignInValidation(t *testing.T) {
 
 // HTTPS deployments get the __Secure- cookie names and the Secure attribute.
 func TestSecureCookies(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.WebAppURL.Scheme = "https" })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	r := e.browser().post("/auth/sign-in", credentials("ada@example.com", strongPassword))
@@ -147,6 +154,7 @@ func TestSecureCookies(t *testing.T) {
 
 // forma2 audited a rejected sign-in against a hashed identity, never the address, and throttled the records under brute force.
 func TestSignInFailuresAreAuditedWithoutTheAddress(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{inactive: true})
 	b := e.browser()
@@ -209,15 +217,20 @@ func TestFailureThrottle(t *testing.T) {
 func TestSignInRateLimit(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	b := e.browser()
-	for i := 0; i < 5; i++ {
-		expectStatus(t, b.post("/auth/sign-in", credentials("ada@example.com", "Wrong-Password-1")), http.StatusUnauthorized, "")
-	}
-	expectStatus(t, b.post("/auth/sign-in", credentials("ada@example.com", "Wrong-Password-1")), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	e.inOneWindow(time.Minute, func(_ int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		send := func() response { return b.post("/auth/sign-in", credentials("ada@example.com", "Wrong-Password-1")) }
+		if err := repeat(5, send, http.StatusUnauthorized, CodeInvalidEmailOrPassword); err != nil {
+			return err
+		}
+		return statusErr(send(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	})
 }
 
 // forma2's auth-two-factor.integration.test.ts: with a second factor the password yields a challenge, not a session; completing it issues the session.
 func TestSignInWithTwoFactor(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
@@ -261,6 +274,7 @@ func TestSignInWithTwoFactor(t *testing.T) {
 }
 
 func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
@@ -279,6 +293,7 @@ func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
 
 // A password reset ends sign-ins that are waiting for their second factor: they were authorized by the old password.
 func TestPasswordResetCancelsPendingSecondFactor(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()

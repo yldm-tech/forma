@@ -78,7 +78,7 @@ func TestCheckEmail(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
 			var errs fieldErrors
-			checkEmail(&errs, "email", tc.in)
+			checkEmail(&errs, tc.in)
 			if got := rulesOf(t, errs.err())["email"]; got != tc.rule {
 				t.Fatalf("checkEmail(%q) rule %q, want %q", tc.in, got, tc.rule)
 			}
@@ -130,26 +130,29 @@ func TestCheckLocale(t *testing.T) {
 
 // forma2's signup-email-domain.test.ts.
 func TestIsBlockedEmailDomain(t *testing.T) {
-	cases := map[string]bool{
-		"ada@gmail.com":                true,
-		"Ada@GMAIL.com":                true,
-		"ada@gmail.com.":               true,
-		"ada@gmail.com...":             true,
-		" ada@outlook.com ":            true,
-		"ada@proton.me":                true,
-		"ada@sub.gmail.com":            false,
-		"ada@example.com":              false,
-		"ada@gmail.company":            false,
-		"@gmail.com":                   false,
-		"ada@":                         false,
-		"gmail.com":                    false,
-		"":                             false,
-		"a@b@gmail.com":                true,
-		"ada@privaterelay.appleid.com": true,
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{"ada@gmail.com", true},
+		{"Ada@GMAIL.com", true},
+		{"ada@gmail.com.", true},
+		{"ada@gmail.com...", true},
+		{"  ada@outlook.com  ", true},
+		{"ada@proton.me", true},
+		{"ada@privaterelay.appleid.com", true},
+		{"a@b@gmail.com", true},
+		{"ada@sub.gmail.com", false},
+		{"ada@example.com", false},
+		{"ada@gmail.company", false},
+		{"@gmail.com", false},
+		{"ada@", false},
+		{"gmail.com", false},
+		{"", false},
 	}
-	for in, want := range cases {
-		if got := isBlockedEmailDomain(in); got != want {
-			t.Errorf("isBlockedEmailDomain(%q) = %v, want %v", in, got, want)
+	for _, tc := range cases {
+		if got := isBlockedEmailDomain(tc.in); got != tc.want {
+			t.Errorf("isBlockedEmailDomain(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
 }

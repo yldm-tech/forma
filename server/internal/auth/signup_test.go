@@ -2,9 +2,11 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -19,6 +21,7 @@ func signupBody(email string) map[string]any {
 
 // forma2's signup-duplicate-email and auth-email-password tests: a first sign-up creates the user with a bcrypt credential, the organization a new user gets, and one verification mail; the intent cookie marks this browser.
 func TestSignupCreatesTheAccount(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b := e.browser()
 	body := signupBody("Ada@Example.com")
@@ -87,6 +90,7 @@ func TestSignupCreatesTheAccount(t *testing.T) {
 
 // forma2's ENG-2091/ENG-2099: a duplicate (in any case) is answered exactly like a new account, a Set-Cookie included, and writes, mails and audits nothing.
 func TestSignupDuplicateIsIndistinguishable(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.E2ETesting = true })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	users := e.count(`SELECT count(*) FROM users`)
@@ -115,6 +119,7 @@ func TestSignupDuplicateIsIndistinguishable(t *testing.T) {
 
 // forma2's signup-closed-instance tests: a self-hosted instance admits its first administrator, then refuses uninvited sign-ups the same way for registered and unregistered addresses.
 func TestSignupOnAClosedInstance(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b := e.browser()
 	expectStatus(t, b.post("/auth/signup", signupBody("admin@example.com")), http.StatusOK, "")
@@ -135,6 +140,7 @@ func TestSignupOnAClosedInstance(t *testing.T) {
 }
 
 func TestSignupOpenOnFormaCloudAndForE2E(t *testing.T) {
+	t.Parallel()
 	for name, set := range map[string]func(*config.Config){
 		"cloud": func(c *config.Config) { c.IsFormaCloud = true },
 		"e2e":   func(c *config.Config) { c.E2ETesting = true },
@@ -152,6 +158,7 @@ func TestSignupOpenOnFormaCloudAndForE2E(t *testing.T) {
 
 // Forma Cloud refuses personal mail domains; a self-hosted instance never does.
 func TestSignupEmailDomainBlock(t *testing.T) {
+	t.Parallel()
 	cloud := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	expectStatus(t, cloud.browser().post("/auth/signup", signupBody("ada@Gmail.com")), http.StatusBadRequest, CodeEmailDomainNotAllowed)
 	if cloud.count(`SELECT count(*) FROM users`) != 0 {
@@ -163,6 +170,7 @@ func TestSignupEmailDomainBlock(t *testing.T) {
 
 // An invite token cannot be verified until the organization module issues them, and an unverifiable invite is refused before anything is created; a blank one means no invite.
 func TestSignupInviteToken(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	body := signupBody("ada@example.com")
 	body["inviteToken"] = "eyJhbGciOiJIUzI1NiJ9.e30.x"
@@ -176,6 +184,7 @@ func TestSignupInviteToken(t *testing.T) {
 
 // forma2's better-auth-hibp.integration.test.ts: a breached password creates no user; an unreachable breach service lets the sign-up through.
 func TestSignupBreachCheck(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.breach(strongPassword)
 	expectStatus(t, e.browser().post("/auth/signup", signupBody("ada@example.com")), http.StatusBadRequest, CodePasswordCompromised)
@@ -183,7 +192,7 @@ func TestSignupBreachCheck(t *testing.T) {
 		t.Fatal("a breached password created a user")
 	}
 
-	e.hibpStatus = http.StatusServiceUnavailable
+	e.setHIBPStatus(http.StatusServiceUnavailable)
 	expectStatus(t, e.browser().post("/auth/signup", signupBody("ada@example.com")), http.StatusOK, "")
 	if e.count(`SELECT count(*) FROM users`) != 1 {
 		t.Fatal("the check did not fail open")
@@ -192,12 +201,13 @@ func TestSignupBreachCheck(t *testing.T) {
 	off := newEnv(t, func(c *config.Config) { c.PasswordHIBPCheckDisabled = true })
 	off.breach(strongPassword)
 	expectStatus(t, off.browser().post("/auth/signup", signupBody("ada@example.com")), http.StatusOK, "")
-	if off.hibpCalls != 0 {
+	if off.hibpCallCount() != 0 {
 		t.Fatal("PASSWORD_HIBP_CHECK_DISABLED still called the service")
 	}
 }
 
 func TestSignupValidation(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	r := e.browser().post("/auth/signup", map[string]any{"name": " ", "email": "not-an-email", "password": "short", "userLocale": "xx"})
 	expectStatus(t, r, http.StatusBadRequest, apperr.CodeValidation)
@@ -218,6 +228,7 @@ func TestSignupValidation(t *testing.T) {
 }
 
 func TestSignupTurnstile(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.TurnstileSiteKey, c.TurnstileSecretKey = "site", "secret" })
 	r := e.browser().post("/auth/signup", signupBody("ada@example.com"))
 	expectStatus(t, r, http.StatusBadRequest, apperr.CodeValidation)
@@ -227,14 +238,15 @@ func TestSignupTurnstile(t *testing.T) {
 
 	body := signupBody("ada@example.com")
 	body["turnstileToken"] = "token"
-	e.turnstileOK = false
+	e.setTurnstile(false)
 	expectStatus(t, e.browser().post("/auth/signup", body), http.StatusBadRequest, CodeCaptchaFailed)
-	e.turnstileOK = true
+	e.setTurnstile(true)
 	expectStatus(t, e.browser().post("/auth/signup", body), http.StatusOK, "")
 }
 
 // forma2's signup-verification-send.integration.test.ts: whatever happens to the verification mail, the account exists and the response is byte-identical.
 func TestSignupResponseIgnoresMailFailures(t *testing.T) {
+	t.Parallel()
 	states := map[string]func(*config.Config){
 		"working":        nil,
 		"failing":        nil,
@@ -270,6 +282,7 @@ func TestSignupResponseIgnoresMailFailures(t *testing.T) {
 }
 
 func TestSignupWithEmailAuthDisabled(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = true })
 	expectStatus(t, e.browser().post("/auth/signup", signupBody("ada@example.com")), http.StatusBadRequest, CodeEmailPasswordDisabled)
 }
@@ -277,18 +290,24 @@ func TestSignupWithEmailAuthDisabled(t *testing.T) {
 // auth:signup allows 30 attempts per client address per hour, counted before any other check.
 func TestSignupRateLimit(t *testing.T) {
 	e := newEnv(t)
-	e.enableRateLimits()
 	e.seedUser("admin@example.com", strongPassword, userOpts{})
-	b := e.browser()
-	for i := 0; i < 30; i++ {
-		expectStatus(t, b.post("/auth/signup", signupBody("x@example.com")), http.StatusBadRequest, CodeSignupDisabled)
-	}
-	r := b.post("/auth/signup", signupBody("x@example.com"))
-	expectStatus(t, r, http.StatusTooManyRequests, apperr.CodeTooManyRequests)
-	if r.Header().Get("Retry-After") == "" {
-		t.Fatal("no Retry-After")
-	}
-	other := e.browser()
-	other.ip = "198.51.100.20"
-	expectStatus(t, other.post("/auth/signup", signupBody("x@example.com")), http.StatusBadRequest, CodeSignupDisabled)
+	e.enableRateLimits()
+	e.inOneWindow(time.Hour, func(run int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		send := func() response { return b.post("/auth/signup", signupBody("x@example.com")) }
+		if err := repeat(30, send, http.StatusBadRequest, CodeSignupDisabled); err != nil {
+			return err
+		}
+		r := send()
+		if err := statusErr(r, http.StatusTooManyRequests, apperr.CodeTooManyRequests); err != nil {
+			return err
+		}
+		if r.Header().Get("Retry-After") == "" {
+			return errors.New("no Retry-After")
+		}
+		other := e.browser()
+		other.ip = fmt.Sprintf("203.0.113.%d", 50+run)
+		return statusErr(other.post("/auth/signup", signupBody("x@example.com")), http.StatusBadRequest, CodeSignupDisabled)
+	})
 }

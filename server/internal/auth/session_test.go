@@ -14,6 +14,7 @@ import (
 )
 
 func TestRequireRejectsMissingAndUnknownSessions(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b := e.browser()
 	r := b.post("/test/protected", nil)
@@ -27,6 +28,7 @@ func TestRequireRejectsMissingAndUnknownSessions(t *testing.T) {
 }
 
 func TestOptionalLetsEveryoneThrough(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
@@ -41,6 +43,7 @@ func TestOptionalLetsEveryoneThrough(t *testing.T) {
 
 // A session ends at its expiry and is deleted when seen; with the default lifetime it is not extended before then.
 func TestSessionExpires(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
@@ -61,6 +64,7 @@ func TestSessionExpires(t *testing.T) {
 
 // With a lifetime longer than a day, a session older than a day is extended to a full lifetime from now and the cookie re-sent (Better Auth's updateAge rule).
 func TestSessionSlides(t *testing.T) {
+	t.Parallel()
 	week := 7 * 24 * time.Hour
 	e := newEnv(t, func(c *config.Config) { c.SessionMaxAge = int(week / time.Second) })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -89,6 +93,7 @@ func TestSessionSlides(t *testing.T) {
 
 // forma2's getSession re-read User.isActive on every request: deactivating a user ends their sessions at once.
 func TestDeactivationEndsSessionsImmediately(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
@@ -101,6 +106,7 @@ func TestDeactivationEndsSessionsImmediately(t *testing.T) {
 
 // forma2's auth-signout.integration.test.ts and logSignOutAction: the session row is deleted, the reason recorded, and the organization kept only when the user belongs to it.
 func TestSignOut(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	member := e.insertID(`INSERT INTO organizations (name) VALUES ('Mine') RETURNING id`)
@@ -146,6 +152,7 @@ func TestSignOut(t *testing.T) {
 }
 
 func TestRevokeAllKeepsOneSession(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b1, b2, b3 := e.browser(), e.browser(), e.browser()
@@ -168,6 +175,7 @@ func TestRevokeAllKeepsOneSession(t *testing.T) {
 
 // Every mutation under /api/app passes the platform CSRF check, sign-in included.
 func TestAuthMutationsRequireCSRFHeaders(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	for _, path := range []string{"/auth/sign-in", "/auth/signup", "/auth/password/forgot", "/auth/sign-out"} {
@@ -181,6 +189,7 @@ func TestAuthMutationsRequireCSRFHeaders(t *testing.T) {
 }
 
 func TestOptions(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	r := e.browser().get("/auth/options")
 	expectStatus(t, r, http.StatusOK, "")

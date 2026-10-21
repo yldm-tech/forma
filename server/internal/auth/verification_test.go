@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -45,6 +46,7 @@ func withheldReasons(e *env) []any {
 
 // forma2's better-auth-verification-autosignin.integration.test.ts: the browser that signed up is signed in by the link; its intent is spent.
 func TestVerifySignsInTheSignupBrowser(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b, token := e.signUp("ada@example.com", strongPassword)
 	r := b.post("/auth/verification/verify", map[string]string{"token": token})
@@ -66,6 +68,7 @@ func TestVerifySignsInTheSignupBrowser(t *testing.T) {
 
 // ENG-2562: any other browser verifies the address but is not signed in, and the reason is recorded.
 func TestVerifyWithholdsTheSessionFromOtherBrowsers(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	_, token := e.signUp("ada@example.com", strongPassword)
 	other := e.browser()
@@ -86,6 +89,7 @@ func TestVerifyWithholdsTheSessionFromOtherBrowsers(t *testing.T) {
 }
 
 func TestVerifyClassifiesTheIntent(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, openSignup)
 	attacker, _ := e.signUp("mallory@example.com", strongPassword)
 	_, victimToken := e.signUp("victim@example.com", strongPassword)
@@ -110,6 +114,7 @@ func TestVerifyClassifiesTheIntent(t *testing.T) {
 
 // The documented residual: whoever registered an address keeps a working password until the owner resets it.
 func TestVerifyLeavesThePreRegisteredPassword(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	_, token := e.signUp("victim@example.com", "Attacker-Chosen-1")
 	victim := e.browser()
@@ -122,6 +127,7 @@ func TestVerifyLeavesThePreRegisteredPassword(t *testing.T) {
 
 // An already verified address short-circuits: no second sign-in, even from the browser that signed up.
 func TestVerifyIsUsefulOnce(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b, token := e.signUp("ada@example.com", strongPassword)
 	expectStatus(t, e.browser().post("/auth/verification/verify", map[string]string{"token": token}), http.StatusOK, "")
@@ -139,6 +145,7 @@ func TestVerifyIsUsefulOnce(t *testing.T) {
 }
 
 func TestVerifyRejectsBadTokens(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, openSignup)
 	b, token := e.signUp("ada@example.com", strongPassword)
 	expectStatus(t, b.post("/auth/verification/verify", map[string]string{"token": "unknown"}), http.StatusBadRequest, CodeInvalidToken)
@@ -158,6 +165,7 @@ func TestVerifyRejectsBadTokens(t *testing.T) {
 
 // forma2's resendVerificationEmailAction, without its existence oracle: unknown and verified addresses get the same answer and no mail.
 func TestResendVerification(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("verified@example.com", strongPassword, userOpts{})
 	id := e.seedUser("pending@example.com", strongPassword, userOpts{unverified: true})
@@ -184,6 +192,7 @@ func TestResendVerification(t *testing.T) {
 
 // The intent is renewed with a resend only for a browser that already holds a valid intent for the same account; it is never created by a resend.
 func TestResendRenewsTheIntent(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	b, _ := e.signUp("ada@example.com", strongPassword)
 	old := b.cookies[signupIntentCookieName].Value
@@ -213,14 +222,24 @@ func TestResendRenewsTheIntent(t *testing.T) {
 func TestVerificationRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	b := e.browser()
-	for i := 0; i < 10; i++ {
-		expectStatus(t, b.post("/auth/verification/resend", map[string]string{"email": "nobody@example.com"}), http.StatusOK, "")
-	}
-	expectStatus(t, b.post("/auth/verification/resend", map[string]string{"email": "nobody@example.com"}), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
-
-	for i := 0; i < 30; i++ {
-		expectStatus(t, b.post("/auth/verification/verify", map[string]string{"token": "unknown"}), http.StatusBadRequest, CodeInvalidToken)
-	}
-	expectStatus(t, b.post("/auth/verification/verify", map[string]string{"token": "unknown"}), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		send := func() response {
+			return b.post("/auth/verification/resend", map[string]string{"email": "nobody@example.com"})
+		}
+		if err := repeat(10, send, http.StatusOK, ""); err != nil {
+			return err
+		}
+		return statusErr(send(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	})
+	e.inOneWindow(time.Minute, func(run int, _ string) error {
+		b := e.browser()
+		b.ip = fmt.Sprintf("192.0.2.%d", 10+run)
+		send := func() response { return b.post("/auth/verification/verify", map[string]string{"token": "unknown"}) }
+		if err := repeat(30, send, http.StatusBadRequest, CodeInvalidToken); err != nil {
+			return err
+		}
+		return statusErr(send(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	})
 }

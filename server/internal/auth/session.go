@@ -173,10 +173,8 @@ func (s *Sessions) RevokeAll(ctx context.Context, tx *gorm.DB, userID, keep uuid
 
 // authenticate reads the session cookie and, for a valid session, records the actor and re-sends the cookie when the session was extended.
 func (s *Sessions) authenticate(c *gin.Context) (bool, error) {
-	token, err := c.Cookie(s.cookies.session)
-	if err != nil {
-		return false, nil
-	}
+	// A missing cookie reads as the empty token, which validate treats as no session.
+	token, _ := c.Cookie(s.cookies.session)
 	sess, err := s.validate(c.Request.Context(), token)
 	if err != nil || sess == nil {
 		return false, err

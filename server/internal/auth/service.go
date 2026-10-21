@@ -32,7 +32,7 @@ const (
 const (
 	verifyEmailPath           = "/auth/verify-email"
 	verificationRequestedPath = "/auth/verification-requested"
-	resetPasswordPath         = "/auth/forgot-password/reset"
+	resetPasswordPath         = "/auth/forgot-password/reset" //nolint:gosec // a page path, not a credential
 	verifyEmailChangePath     = "/verify-email-change"
 	deleteAccountPath         = "/auth/delete-account"
 	loginPath                 = "/auth/login"
@@ -109,8 +109,8 @@ func (s *Service) pageURL(path string) string {
 	return u.String()
 }
 
-// sendVerificationEmail mails a fresh verification link. A failure, including a mailer with no SMTP server, is logged with the user id and the address's domain only, never the address or the link, and returned.
-func (s *Service) sendVerificationEmail(ctx context.Context, acc *account) error {
+// sendVerificationEmail mails a fresh verification link and reports whether it went out. A failure, including a mailer with no SMTP server, is logged with the user id and the address's domain only, never the address or the link.
+func (s *Service) sendVerificationEmail(ctx context.Context, acc *account) bool {
 	token, err := s.issueVerification(ctx, s.repo, purposeEmailVerification, acc.ID, normalizeEmail(acc.Email), emailVerificationTTL)
 	if err == nil {
 		var sent bool
@@ -124,8 +124,9 @@ func (s *Service) sendVerificationEmail(ctx context.Context, acc *account) error
 	}
 	if err != nil {
 		s.log.ErrorContext(ctx, "Failed to send verification email", "err", err, "userId", acc.ID.String(), "emailDomain", emailDomain(acc.Email))
+		return false
 	}
-	return err
+	return true
 }
 
 // errMailNotSent is a send the mailer skipped because no SMTP server is configured; forma2 treated it as a failed send so it would not pass for a delivered one.

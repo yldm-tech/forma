@@ -147,7 +147,7 @@ type signupRequest struct {
 func (r *signupRequest) validate() error {
 	var errs fieldErrors
 	r.Name = checkName(&errs, "name", r.Name)
-	checkEmail(&errs, "email", r.Email)
+	checkEmail(&errs, r.Email)
 	checkPassword(&errs, "password", r.Password)
 	checkLocale(&errs, "userLocale", r.UserLocale)
 	if r.turnstileRequired && r.TurnstileToken == "" {
@@ -179,7 +179,7 @@ type signInRequest struct {
 
 func (r *signInRequest) validate() error {
 	var errs fieldErrors
-	checkEmail(&errs, "email", r.Email)
+	checkEmail(&errs, r.Email)
 	if r.Password == "" {
 		errs.add("password", "required", "")
 	}
@@ -246,7 +246,7 @@ type emailRequest struct {
 
 func (r *emailRequest) validate() error {
 	var errs fieldErrors
-	checkEmail(&errs, "email", r.Email)
+	checkEmail(&errs, r.Email)
 	return errs.err()
 }
 
@@ -385,7 +385,7 @@ type emailChangeRequest struct {
 
 func (r *emailChangeRequest) validate() error {
 	var errs fieldErrors
-	checkEmail(&errs, "email", r.Email)
+	checkEmail(&errs, r.Email)
 	return errs.err()
 }
 

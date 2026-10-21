@@ -52,7 +52,7 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 	}
 	// Only a caller who knows the password learns that the address is unverified; the fresh link replaces one that may have expired.
 	if s.requireEmailVerification() && !acc.EmailVerified {
-		_ = s.sendVerificationEmail(ctx, acc)
+		s.sendVerificationEmail(ctx, acc)
 		return signInResult{}, errEmailNotVerified()
 	}
 	if !acc.IsActive {

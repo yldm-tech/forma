@@ -42,6 +42,7 @@ func (s cookieSettings) set(c *gin.Context, name string, t issuedToken) {
 	if maxAge <= 0 {
 		maxAge = -1
 	}
+	//nolint:gosec // Secure follows WEBAPP_URL's scheme, forma2's USE_SECURE_COOKIES: browsers reject Secure cookies on a plain-HTTP development instance.
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    t.Value,
@@ -55,6 +56,7 @@ func (s cookieSettings) set(c *gin.Context, name string, t issuedToken) {
 
 // clear deletes a cookie with the attributes it was set with, so the browser matches and drops it.
 func (s cookieSettings) clear(c *gin.Context, name string) {
+	//nolint:gosec // as in set
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    "",

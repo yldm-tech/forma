@@ -63,15 +63,15 @@ func validEmail(email string) bool {
 	return !strings.HasPrefix(email, ".") && !strings.Contains(email, "..") && emailFormat.MatchString(email)
 }
 
-// checkEmail validates an address as ZUserEmail does. The address is not trimmed: zod rejects surrounding whitespace rather than removing it.
-func checkEmail(errs *fieldErrors, field, email string) {
+// checkEmail validates the request's "email" field as ZUserEmail does. The address is not trimmed: zod rejects surrounding whitespace rather than removing it.
+func checkEmail(errs *fieldErrors, email string) {
 	switch {
 	case email == "":
-		errs.add(field, "required", "")
+		errs.add("email", "required", "")
 	case utf16Len(email) > emailMaxLength:
-		errs.add(field, "max", strconv.Itoa(emailMaxLength))
+		errs.add("email", "max", strconv.Itoa(emailMaxLength))
 	case !validEmail(email):
-		errs.add(field, "email", "")
+		errs.add("email", "email", "")
 	}
 }
 

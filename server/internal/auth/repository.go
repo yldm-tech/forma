@@ -209,13 +209,6 @@ func (r *Repository) emailTaken(ctx context.Context, email string) (bool, error)
 	return exists, nil
 }
 
-func (r *Repository) setLocale(ctx context.Context, userID uuid.UUID, locale string) error {
-	if err := r.db.WithContext(ctx).Exec(`UPDATE users SET locale = ? WHERE id = ?`, locale, userID).Error; err != nil {
-		return fmt.Errorf("update locale: %w", err)
-	}
-	return nil
-}
-
 func (r *Repository) touchLastLogin(ctx context.Context, userID uuid.UUID, now time.Time) error {
 	if err := r.db.WithContext(ctx).Exec(`UPDATE users SET last_login_at = ? WHERE id = ?`, now, userID).Error; err != nil {
 		return fmt.Errorf("update last login: %w", err)

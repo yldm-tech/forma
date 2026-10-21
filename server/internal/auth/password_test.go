@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -21,6 +22,7 @@ func forgot(b *browser, email string) response {
 
 // forma2's forgotPasswordAction: the same answer for every address; a link only for accounts that can reset, and an audit record only when one was sent.
 func TestForgotPassword(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true})
@@ -54,6 +56,7 @@ func TestForgotPassword(t *testing.T) {
 
 // canResetPassword: an SSO user who still has a password may reset only while email and password sign-in is enabled; a password user always may.
 func TestForgotPasswordForSSOUsersWithAPassword(t *testing.T) {
+	t.Parallel()
 	for _, disabled := range []bool{false, true} {
 		e := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = disabled })
 		e.seedUser("moved@example.com", strongPassword, userOpts{sso: true})
@@ -75,18 +78,27 @@ func TestPasswordResetDisabled(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.PasswordResetDisabled = true })
 	e.enableRateLimits()
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
-	b := e.browser()
-	for i := 0; i < 5; i++ {
-		r := forgot(b, "ada@example.com")
-		expectStatus(t, r, http.StatusForbidden, apperr.CodeOperationNotAllowed)
-		if r.json()["message"] != "Password reset is disabled" {
-			t.Fatalf("message %v", r.json()["message"])
+	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		send := func() response { return forgot(b, "ada@example.com") }
+		r := send()
+		if err := statusErr(r, http.StatusForbidden, apperr.CodeOperationNotAllowed); err != nil {
+			return err
 		}
-	}
-	expectStatus(t, forgot(b, "ada@example.com"), http.StatusTooManyRequests, "")
-	for i := 0; i < 7; i++ {
-		expectStatus(t, b.post("/auth/password/reset", map[string]string{"token": "t", "password": newPassword}), http.StatusForbidden, apperr.CodeOperationNotAllowed)
-	}
+		if r.json()["message"] != "Password reset is disabled" {
+			return fmt.Errorf("message %v", r.json()["message"])
+		}
+		if err := repeat(4, send, http.StatusForbidden, apperr.CodeOperationNotAllowed); err != nil {
+			return err
+		}
+		if err := statusErr(send(), http.StatusTooManyRequests, ""); err != nil {
+			return err
+		}
+		return repeat(7, func() response {
+			return b.post("/auth/password/reset", map[string]string{"token": "t", "password": newPassword})
+		}, http.StatusForbidden, apperr.CodeOperationNotAllowed)
+	})
 	if len(e.mail.Messages()) != 0 {
 		t.Fatal("a disabled reset sent mail")
 	}
@@ -94,6 +106,7 @@ func TestPasswordResetDisabled(t *testing.T) {
 
 // forma2's auth-email-verification.integration.test.ts (reset): the password is re-hashed, every session ends, the old password stops working, and the link is single-use.
 func TestResetPassword(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	signedIn := e.browser()
@@ -132,6 +145,7 @@ func TestResetPassword(t *testing.T) {
 
 // forma2's better-auth-hibp.integration.test.ts: a breached password is refused without spending the link, so a retry with a clean password succeeds.
 func TestResetPasswordBreachKeepsTheToken(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	expectStatus(t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
@@ -143,6 +157,7 @@ func TestResetPasswordBreachKeepsTheToken(t *testing.T) {
 }
 
 func TestResetPasswordTokenExpiresAndValidates(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.PasswordResetTokenLifetimeMinutes = 5 })
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	expectStatus(t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
@@ -161,19 +176,29 @@ func TestResetPasswordTokenExpiresAndValidates(t *testing.T) {
 func TestPasswordResetRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	b := e.browser()
-	for i := 0; i < 5; i++ {
-		expectStatus(t, forgot(b, "nobody@example.com"), http.StatusOK, "")
-	}
-	expectStatus(t, forgot(b, "nobody@example.com"), http.StatusTooManyRequests, "")
-	for i := 0; i < 5; i++ {
-		expectStatus(t, b.post("/auth/password/reset", map[string]string{"token": "x", "password": newPassword}), http.StatusBadRequest, CodeInvalidPasswordResetToken)
-	}
-	expectStatus(t, b.post("/auth/password/reset", map[string]string{"token": "x", "password": newPassword}), http.StatusTooManyRequests, "")
+	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		request := func() response { return forgot(b, "nobody@example.com") }
+		if err := repeat(5, request, http.StatusOK, ""); err != nil {
+			return err
+		}
+		if err := statusErr(request(), http.StatusTooManyRequests, ""); err != nil {
+			return err
+		}
+		redeem := func() response {
+			return b.post("/auth/password/reset", map[string]string{"token": "x", "password": newPassword})
+		}
+		if err := repeat(5, redeem, http.StatusBadRequest, CodeInvalidPasswordResetToken); err != nil {
+			return err
+		}
+		return statusErr(redeem(), http.StatusTooManyRequests, "")
+	})
 }
 
 // Changing the password checks the current one, applies the password policy and breach check, keeps this session and ends the others.
 func TestChangePassword(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b, other := e.browser(), e.browser()
@@ -214,17 +239,26 @@ func TestChangePassword(t *testing.T) {
 func TestChangePasswordRateLimit(t *testing.T) {
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
-	b := e.browser()
-	b.signIn("ada@example.com", strongPassword)
+	signedIn := e.browser()
+	signedIn.signIn("ada@example.com", strongPassword)
 	e.enableRateLimits()
-	for i := 0; i < 5; i++ {
-		expectStatus(t, b.post("/auth/password/change", map[string]string{"currentPassword": "Guess-Number-1", "newPassword": newPassword}), http.StatusBadRequest, CodeInvalidPassword)
-	}
-	expectStatus(t, b.post("/auth/password/change", map[string]string{"currentPassword": strongPassword, "newPassword": newPassword}), http.StatusTooManyRequests, "")
+	e.inOneWindow(time.Minute, func(_ int, ip string) error {
+		b := e.browser()
+		b.ip = ip
+		b.cookies = signedIn.cookies
+		guess := func() response {
+			return b.post("/auth/password/change", map[string]string{"currentPassword": "Guess-Number-1", "newPassword": newPassword})
+		}
+		if err := repeat(5, guess, http.StatusBadRequest, CodeInvalidPassword); err != nil {
+			return err
+		}
+		return statusErr(b.post("/auth/password/change", map[string]string{"currentPassword": strongPassword, "newPassword": newPassword}), http.StatusTooManyRequests, "")
+	})
 }
 
 // forma2's in-app reset on the profile page: password users get a link; SSO users and disabled instances are refused.
 func TestRequestResetLink(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()

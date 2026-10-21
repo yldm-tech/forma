@@ -98,7 +98,7 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	}
 
 	// Better Auth sent this mail even with verification disabled, and a failed send never failed the sign-up: the account exists either way and the response must not vary with what happened to one address.
-	_ = s.sendVerificationEmail(ctx, &account{ID: userID, Email: email, Locale: locale})
+	s.sendVerificationEmail(ctx, &account{ID: userID, Email: email, Locale: locale})
 	s.logEvent(ctx, audit.Event{
 		Action: audit.ActionCreated, TargetType: audit.TargetUser, TargetID: userID.String(), OrganizationID: orgID.String(), Status: audit.StatusSuccess,
 		NewObject: map[string]any{"id": userID.String(), "name": in.Name, "email": email, "locale": locale},

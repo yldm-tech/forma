@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -42,6 +43,7 @@ func (e *env) emailOf(id uuid.UUID) (string, bool) {
 
 // forma2's handleEmailUpdate and verifyEmailChangeAction: the change is confirmed from the new mailbox, in any browser, and the link works once.
 func TestEmailChange(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{unverified: true})
 	b := e.browser()
@@ -87,6 +89,7 @@ func TestEmailChange(t *testing.T) {
 }
 
 func TestEmailChangeRules(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	e.seedUser("taken@example.com", strongPassword, userOpts{})
@@ -123,6 +126,7 @@ func TestEmailChangeRules(t *testing.T) {
 
 // With EMAIL_VERIFICATION_DISABLED the address changes at once, keeping its verification state.
 func TestEmailChangeWithoutVerification(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t, func(c *config.Config) { c.EmailVerificationDisabled = true })
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{unverified: true})
 	expectStatus(t, changeEmail(e.sessionFor(id), "new@example.com", strongPassword), http.StatusNoContent, "")
@@ -136,6 +140,7 @@ func TestEmailChangeWithoutVerification(t *testing.T) {
 
 // ENG-2106: a password reset or change, or another email change, kills every outstanding change link; the link also expires after a day.
 func TestEmailChangeLinksDie(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	sess := e.sessionFor(id)
@@ -174,6 +179,7 @@ func TestEmailChangeLinksDie(t *testing.T) {
 
 // A link for an address someone else took in the meantime fails and stays unused.
 func TestEmailChangeToATakenAddress(t *testing.T) {
+	t.Parallel()
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	expectStatus(t, changeEmail(e.sessionFor(id), "new@example.com", strongPassword), http.StatusNoContent, "")
@@ -189,18 +195,25 @@ func TestEmailChangeToATakenAddress(t *testing.T) {
 func TestEmailChangeRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	sess := e.sessionFor(e.seedUser("ada@example.com", strongPassword, userOpts{}))
-	for i := 0; i < 5; i++ {
-		expectStatus(t, changeEmail(sess, "ada@example.com", ""), http.StatusNoContent, "")
-	}
-	for i := 0; i < 3; i++ {
-		expectStatus(t, changeEmail(sess, "new@example.com", "Wrong-Password-1"), http.StatusForbidden, "")
-	}
-	expectStatus(t, changeEmail(sess, "new@example.com", strongPassword), http.StatusTooManyRequests, "")
-
-	b := e.browser()
-	for i := 0; i < 10; i++ {
-		expectStatus(t, b.post("/auth/email/verify", map[string]string{"token": "x"}), http.StatusBadRequest, CodeInvalidToken)
-	}
-	expectStatus(t, b.post("/auth/email/verify", map[string]string{"token": "x"}), http.StatusTooManyRequests, "")
+	e.inOneWindow(time.Hour, func(run int, ip string) error {
+		email := fmt.Sprintf("ada%d@example.com", run)
+		sess := e.sessionFor(e.seedUser(email, strongPassword, userOpts{}))
+		sess.ip = ip
+		if err := repeat(5, func() response { return changeEmail(sess, email, "") }, http.StatusNoContent, ""); err != nil {
+			return err
+		}
+		if err := repeat(3, func() response { return changeEmail(sess, "new@example.com", "Wrong-Password-1") }, http.StatusForbidden, ""); err != nil {
+			return err
+		}
+		if err := statusErr(changeEmail(sess, "new@example.com", strongPassword), http.StatusTooManyRequests, ""); err != nil {
+			return err
+		}
+		b := e.browser()
+		b.ip = ip
+		confirm := func() response { return b.post("/auth/email/verify", map[string]string{"token": "x"}) }
+		if err := repeat(10, confirm, http.StatusBadRequest, CodeInvalidToken); err != nil {
+			return err
+		}
+		return statusErr(confirm(), http.StatusTooManyRequests, "")
+	})
 }

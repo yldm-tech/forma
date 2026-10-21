@@ -15,6 +15,7 @@ import (
 )
 
 func TestCleanupDeletesOnlyExpiredRows(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, pgtest.DSN(t))
 	if err != nil {

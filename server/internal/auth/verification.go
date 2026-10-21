@@ -28,7 +28,7 @@ func (s *Service) resend(ctx context.Context, email, intentToken string) (*issue
 	if err != nil || acc == nil || acc.EmailVerified {
 		return nil, err
 	}
-	if s.sendVerificationEmail(ctx, acc) != nil {
+	if !s.sendVerificationEmail(ctx, acc) {
 		return nil, nil
 	}
 	s.logEvent(ctx, audit.Event{Action: audit.ActionVerificationEmailSent, TargetType: audit.TargetUser, TargetID: acc.ID.String(), Status: audit.StatusSuccess})

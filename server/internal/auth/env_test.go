@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -132,7 +133,10 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	t.Cleanup(hibp.Close)
 	e.svc.breaches.rangeURL = hibp.URL + "/range/"
 	turnstile := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]bool{"success": e.turnstileOK})
+		e.mu.Lock()
+		ok := e.turnstileOK
+		e.mu.Unlock()
+		_ = json.NewEncoder(w).Encode(map[string]bool{"success": ok})
 	}))
 	t.Cleanup(turnstile.Close)
 	e.svc.turnstile.verifyURL = turnstile.URL
@@ -206,6 +210,24 @@ func sha1Hex(s string) string {
 	return strings.ToUpper(hex.EncodeToString(sum[:]))
 }
 
+func (e *env) setTurnstile(ok bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.turnstileOK = ok
+}
+
+func (e *env) setHIBPStatus(status int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.hibpStatus = status
+}
+
+func (e *env) hibpCallCount() int {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.hibpCalls
+}
+
 // breach adds a password to the stubbed corpus.
 func (e *env) breach(password string) {
 	e.mu.Lock()
@@ -218,6 +240,43 @@ func (e *env) enableRateLimits() {
 	cfg := e.cfg
 	cfg.RateLimitingDisabled = false
 	e.svc.limiter = ratelimit.New(cfg, e.rdb, slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
+// inOneWindow runs a rate-limit scenario until one run starts and ends inside the same window of the given length, so a window boundary cannot split the count; a run under the race detector can take tens of seconds. Each run gets its own number and client address, so whatever an interrupted run counted does not carry over. The scenario reports a failed expectation as an error.
+func (e *env) inOneWindow(window time.Duration, scenario func(run int, ip string) error) {
+	e.t.Helper()
+	for run := 0; run < 3; run++ {
+		start := time.Now().Truncate(window)
+		err := scenario(run, fmt.Sprintf("198.51.100.%d", 10+run))
+		if time.Now().Truncate(window).Equal(start) {
+			if err != nil {
+				e.t.Fatal(err)
+			}
+			return
+		}
+	}
+	e.t.Fatalf("no run fit in one %v window", window)
+}
+
+// statusErr reports a response that does not have the status and, when given, the error code.
+func statusErr(r response, status int, code string) error {
+	if r.Code != status {
+		return fmt.Errorf("status %d, want %d: %s", r.Code, status, r.Body.String())
+	}
+	if code != "" && r.code() != code {
+		return fmt.Errorf("code %q, want %q: %s", r.code(), code, r.Body.String())
+	}
+	return nil
+}
+
+// repeat sends the same request n times and expects the same outcome each time.
+func repeat(n int, send func() response, status int, code string) error {
+	for i := 0; i < n; i++ {
+		if err := statusErr(send(), status, code); err != nil {
+			return fmt.Errorf("request %d: %w", i+1, err)
+		}
+	}
+	return nil
 }
 
 // browser is one cookie jar talking to the routes from one client address.
@@ -312,11 +371,8 @@ func (b *browser) has(cookie string) bool {
 // expectStatus fails the test unless the response has the status and, when given, the error code.
 func expectStatus(t *testing.T, r response, status int, code string) {
 	t.Helper()
-	if r.Code != status {
-		t.Fatalf("status %d, want %d: %s", r.Code, status, r.Body.String())
-	}
-	if code != "" && r.code() != code {
-		t.Fatalf("code %q, want %q: %s", r.code(), code, r.Body.String())
+	if err := statusErr(r, status, code); err != nil {
+		t.Fatal(err)
 	}
 }
 
