@@ -170,7 +170,7 @@ func enrolmentLinks(key []byte, account string) (keyURI, dataURI string, err err
 	return k.URL(), "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// ImportBetterAuthTwoFactor decrypts a forma2 TwoFactor row, Better Auth's secret and backupCodes columns, into the material of a user_totp row. Better Auth keyed the HMAC with the UTF-8 bytes of the decrypted secret string: a secret it generated is 32 random characters, and a secret forma2 re-encoded from its legacy columns is the original key bytes read as Latin-1, all below 0x80 because otplib masked them to ASCII, so its UTF-8 bytes are the original key. Either way the bytes are the key the user's authenticator app holds.
+// ImportBetterAuthTwoFactor decrypts a forma2 TwoFactor row, Better Auth's secret and backupCodes columns, into the material of a user_totp row. Better Auth keyed the HMAC with the UTF-8 bytes of the decrypted secret string: a secret it generated is 32 random characters, and a secret forma2 re-encoded from its legacy columns is the original key bytes read as Latin-1, all below 0x80 because otplib masked them to ASCII, so its UTF-8 bytes are the original key. Either way the bytes are the key the user's authenticator app holds. Only a row Better Auth marked verified (verified not false) was an enabled second factor; the caller stores the material as verified for those rows alone.
 func ImportBetterAuthTwoFactor(secrets secret.BetterAuthSecrets, secretCiphertext, backupCodesCiphertext string) (TOTPMaterial, error) {
 	s, err := secret.DecryptBetterAuth(secrets, secretCiphertext)
 	if err != nil {
