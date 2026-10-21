@@ -28,7 +28,7 @@ Phases, in order: P0 foundation (this skeleton, the new schema, recorded contrac
 Everything runs from the repository root. The TypeScript side uses [Vite+](https://viteplus.dev/) (`vp`): Vite (Rolldown) for dev and build, Vitest for tests, Oxlint and Oxfmt for lint and format, tsgolint for type checks, and `vp run` as the workspace task runner. There is no ESLint, Prettier or Turborepo. `pnpm` is the version pinned in `package.json` (`packageManager`) and Node.js the one in `.node-version`; Go comes from `server/go.mod`.
 
 - `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`).
-- `cp .env.example .env`, then `make dev-server` — run the Go server on `:3000`.
+- `cp .env.example .env`, `make migrate`, then `make dev-server` — apply the schema and run the Go server on `:3000`.
 - `make dev-web` — run the Vite dev server on `:5173`; it proxies `/api` and `/health` to the Go server.
 - `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.
 - `make generate` — regenerate `server/internal/app/wire_gen.go` after changing a provider.
@@ -45,6 +45,14 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - Every process reads configuration once, at startup, through `internal/platform/config`. A missing or malformed variable fails the start.
 - Logs are structured (`log/slog`). Never log secrets, tokens, raw request bodies, or raw URL paths that can carry a token.
 - `golangci-lint` (config in `server/.golangci.yml`) and `gofmt`/`goimports` are enforced in CI.
+
+## Database
+
+- The schema is defined only by the goose SQL files in `server/migrations/`, applied by `forma migrate` (it needs `DATABASE_URL` alone). GORM never runs `AutoMigrate`. A schema change is a new numbered file with both `Up` and `Down`; never edit one that has shipped.
+- PostgreSQL 18 or newer: primary keys default to `uuidv7()`. Closed value sets are `text` with a `CHECK`, not PostgreSQL enums.
+- Rows migrated from forma2 get `uuidv5(<forma legacy namespace>, <old id>)` as their id, so an old id that arrives from outside (a survey link, an SDK snippet) is resolved by computing the same function.
+- Every table that carries authorization data has a trigger that enqueues an `authz_projection_outbox` row in the same transaction; a new table of that kind needs one too.
+- `server/internal/platform/database/migrate_test.go` runs the migrations against a real PostgreSQL in Docker (testcontainers) and checks the constraints and triggers; `go test -short` skips it.
 
 ## API contracts
 

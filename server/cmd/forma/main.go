@@ -10,6 +10,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/database"
 	"github.com/yldm-tech/forma/server/internal/platform/logger"
 )
 
@@ -17,6 +18,7 @@ const usage = `usage: forma <command>
 
 commands:
   serve    run the HTTP server (API, public survey pages and the admin UI)
+  migrate  apply pending database migrations, then exit
 `
 
 func main() {
@@ -36,6 +38,8 @@ func run(args []string) int {
 	switch args[0] {
 	case "serve":
 		err = serve(ctx)
+	case "migrate":
+		err = migrate(ctx)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return 0
@@ -48,6 +52,14 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+func migrate(ctx context.Context) error {
+	cfg, err := config.LoadForMigrate()
+	if err != nil {
+		return err
+	}
+	return database.MigrateUp(ctx, cfg.DatabaseURL, logger.New(cfg, os.Stdout))
 }
 
 func serve(ctx context.Context) error {

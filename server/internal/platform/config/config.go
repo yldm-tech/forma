@@ -42,3 +42,21 @@ func Load() (Config, error) {
 	}
 	return cfg, nil
 }
+
+type migrateEnv struct {
+	DatabaseURL string     `env:"DATABASE_URL,required,notEmpty"`
+	LogLevel    slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat   string     `env:"LOG_FORMAT" envDefault:"json"`
+}
+
+// LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone.
+func LoadForMigrate() (Config, error) {
+	e, err := env.ParseAs[migrateEnv]()
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	if e.LogFormat != "json" && e.LogFormat != "text" {
+		return Config{}, fmt.Errorf("load config: LOG_FORMAT must be json or text, got %q", e.LogFormat)
+	}
+	return Config{DatabaseURL: e.DatabaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+}
