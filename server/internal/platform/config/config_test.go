@@ -11,6 +11,7 @@ func setRequired(t *testing.T) {
 	t.Setenv("WEBAPP_URL", "http://localhost:3000")
 	t.Setenv("DATABASE_URL", "postgres://forma:forma@localhost:5432/forma?sslmode=disable")
 	t.Setenv("REDIS_URL", "redis://localhost:6379")
+	t.Setenv("ENCRYPTION_KEY", testHexKey)
 }
 
 func TestLoadDefaults(t *testing.T) {
@@ -131,7 +132,7 @@ func TestLoadFlags(t *testing.T) {
 }
 
 func TestLoadRejectsMissingRequired(t *testing.T) {
-	for _, name := range []string{"WEBAPP_URL", "DATABASE_URL", "REDIS_URL"} {
+	for _, name := range []string{"WEBAPP_URL", "DATABASE_URL", "REDIS_URL", "ENCRYPTION_KEY"} {
 		t.Run(name, func(t *testing.T) {
 			setRequired(t)
 			t.Setenv(name, "")

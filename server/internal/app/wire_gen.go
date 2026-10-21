@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"log/slog"
@@ -73,7 +74,15 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	repository := auth.NewRepository(db)
 	sessions := auth.NewSessions(cfg, db, log)
 	service := auth.NewService(cfg, repository, sessions, limiter, mailerMailer, emitter, client, log)
-	authHandler := auth.NewHandler(cfg, service, sessions)
+	cipher, err := secret.NewCipher(cfg)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	twoFactor := auth.NewTwoFactor(cfg, service, cipher)
+	authHandler := auth.NewHandler(cfg, service, sessions, twoFactor)
 	sso := auth.NewSSO(cfg, service, log)
 	ssoHandler := auth.NewSSOHandler(cfg, sso)
 	webuiHandler, err := webui.New()
@@ -129,7 +138,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // wire.go:
 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
-var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, wire.Struct(new(Platform), "*"))
+var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
-// authSet is the identity module: sessions, sign-up, sign-in and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewTwoFactor, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)

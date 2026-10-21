@@ -16,14 +16,15 @@ import (
 
 // Handler serves /api/app/auth.
 type Handler struct {
-	cfg      config.Config
-	svc      *Service
-	sessions *Sessions
-	cookies  cookieSettings
+	cfg       config.Config
+	svc       *Service
+	sessions  *Sessions
+	twoFactor *TwoFactor
+	cookies   cookieSettings
 }
 
-func NewHandler(cfg config.Config, svc *Service, sessions *Sessions) *Handler {
-	return &Handler{cfg: cfg, svc: svc, sessions: sessions, cookies: newCookieSettings(cfg)}
+func NewHandler(cfg config.Config, svc *Service, sessions *Sessions, twoFactor *TwoFactor) *Handler {
+	return &Handler{cfg: cfg, svc: svc, sessions: sessions, twoFactor: twoFactor, cookies: newCookieSettings(cfg)}
 }
 
 // Register mounts the routes on the /api/app group, which already applies the error envelope and the CSRF check to every mutation.
@@ -45,6 +46,11 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.POST("/account/delete", h.sessions.Require(), h.deleteAccount)
 	g.POST("/account/delete/request", h.sessions.Require(), h.requestAccountDeletion)
 	g.POST("/account/delete/confirm", h.sessions.Require(), h.confirmAccountDeletion)
+	g.POST("/two-factor/setup", h.sessions.Require(), h.setupTwoFactor)
+	g.POST("/two-factor/enable", h.sessions.Require(), h.enableTwoFactor)
+	g.POST("/two-factor/disable", h.sessions.Require(), h.disableTwoFactor)
+	g.POST("/two-factor/verify-totp", h.verifyTOTP)
+	g.POST("/two-factor/verify-backup-code", h.verifyBackupCode)
 }
 
 // bind decodes the body and runs the request's own field rules.

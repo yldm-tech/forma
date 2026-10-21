@@ -228,7 +228,7 @@ func TestSignInRateLimit(t *testing.T) {
 	})
 }
 
-// forma2's auth-two-factor.integration.test.ts: with a second factor the password yields a challenge, not a session; completing it issues the session.
+// forma2's auth-two-factor.integration.test.ts: with a second factor the password yields a challenge, not a session; the code completes it and issues the session.
 func TestSignInWithTwoFactor(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
@@ -249,28 +249,22 @@ func TestSignInWithTwoFactor(t *testing.T) {
 	}
 	expectStatus(t, b.post("/test/protected", nil), http.StatusUnauthorized, apperr.CodeNotAuthenticated)
 
-	p := b.get("/test/two-factor/pending")
-	expectStatus(t, p, http.StatusOK, "")
-	if p.json()["userId"] != id.String() {
-		t.Fatalf("pending user %v", p.json())
-	}
 	stolen := pending.Value
-	c := b.post("/test/two-factor/complete", nil)
-	expectStatus(t, c, http.StatusNoContent, "")
-	if !b.has(sessionCookieName) || b.has(twoFactorCookieName) {
-		t.Fatalf("after completion cookies %v", b.cookies)
+	c := b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)})
+	expectStatus(t, c, http.StatusOK, "")
+	if c.json()["status"] != "signed_in" || !b.has(sessionCookieName) || b.has(twoFactorCookieName) {
+		t.Fatalf("after completion %s, cookies %v", c.Body.String(), b.cookies)
 	}
 	expectStatus(t, b.post("/test/protected", nil), http.StatusOK, "")
-	if len(e.auditEvents(audit.ActionSignedIn)) != 1 {
-		t.Fatal("the completed sign-in was not audited")
+	if len(e.auditEvents(audit.ActionSignedIn)) != 1 || e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 1 {
+		t.Fatal("the completed sign-in was not audited or not stored")
 	}
 
-	// The pending sign-in is single-use.
+	// The pending sign-in is single-use, even with a valid code.
 	replay := e.browser()
 	replay.cookies[twoFactorCookieName] = &http.Cookie{Name: twoFactorCookieName, Value: stolen}
-	expectStatus(t, replay.post("/test/two-factor/complete", nil), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
-	expectStatus(t, replay.get("/test/two-factor/pending"), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
-	expectStatus(t, e.browser().get("/test/two-factor/pending"), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
+	expectStatus(t, replay.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
+	expectStatus(t, e.browser().post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
 }
 
 func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
@@ -278,14 +272,13 @@ func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	expectStatus(t, b.post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusOK, "")
+	b.signInPending()
 	e.advance(10*time.Minute + time.Second)
-	expectStatus(t, b.get("/test/two-factor/pending"), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
-	expectStatus(t, b.post("/test/two-factor/complete", nil), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
+	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
 
-	expectStatus(t, b.post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusOK, "")
+	b.signInPending()
 	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, id)
-	expectStatus(t, b.post("/test/two-factor/complete", nil), http.StatusForbidden, CodeAccountInactive)
+	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusForbidden, CodeAccountInactive)
 	if e.count(`SELECT count(*) FROM sessions`) != 0 {
 		t.Fatal("a deactivated user completed a sign-in")
 	}
@@ -295,11 +288,11 @@ func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
 func TestPasswordResetCancelsPendingSecondFactor(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
-	e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	expectStatus(t, b.post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusOK, "")
+	b.signInPending()
 	expectStatus(t, e.browser().post("/auth/password/forgot", map[string]string{"email": "ada@example.com"}), http.StatusOK, "")
 	token := e.lastToken("ada@example.com", subjectReset)
 	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": token, "password": "New-Password-77"}), http.StatusOK, "")
-	expectStatus(t, b.post("/test/two-factor/complete", nil), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
+	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
 }
