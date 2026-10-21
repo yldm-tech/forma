@@ -118,6 +118,7 @@ func (e *env) userByEmail(email string) *storedUser {
 }
 
 func TestSSOStart(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	b := e.browser()
 
@@ -173,6 +174,7 @@ func TestSSOStart(t *testing.T) {
 
 // forma2's provisioning path: a first sign-in creates the user with the provider's name, the address lowercased, the provider's verdict on it and the browser's locale; no organization unless one is configured.
 func TestSSOSignUp(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "Ada@Example.com") })
 	b := e.browser()
@@ -208,6 +210,7 @@ func TestSSOSignUp(t *testing.T) {
 }
 
 func TestSSOSignUpNames(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, email, want string
 	}{
@@ -217,6 +220,7 @@ func TestSSOSignUpNames(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.want, func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerOpenID)
 			fake.set(func(f *fakeIdP) { f.profile = map[string]any{"sub": "o-1", "email": tc.email, "name": tc.name} })
 			expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), webApp+"/")
@@ -229,6 +233,7 @@ func TestSSOSignUpNames(t *testing.T) {
 
 // forma2's better-auth-hooks.test.ts: an account the provider did not vouch for is created unverified, logged and audited, without the address in either.
 func TestSSOSignUpUnverified(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	fake.set(func(f *fakeIdP) {
 		f.profile = googleProfile("g-1", "ada@example.com")
@@ -256,6 +261,7 @@ func TestSSOSignUpUnverified(t *testing.T) {
 
 // A returning user is found by provider and subject. The provider's name is synchronized; its address never replaces the account's; an unverified account it vouches for becomes verified.
 func TestSSOSignInLinked(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
 	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
@@ -305,6 +311,7 @@ func TestSSOSignInLinked(t *testing.T) {
 
 // The state cookie binds the callback to the browser and the request that started it, once.
 func TestSSOCallbackState(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
 
@@ -387,6 +394,7 @@ func TestSSOCallbackState(t *testing.T) {
 
 // The id_token is verified (signature, issuer, audience, expiry, nonce); anything it does not establish fails closed and creates nothing.
 func TestSSOIDTokenVerification(t *testing.T) {
+	t.Parallel()
 	forged, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -407,6 +415,7 @@ func TestSSOIDTokenVerification(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerGoogle)
 			fake.set(func(f *fakeIdP) {
 				f.profile = googleProfile("g-1", "ada@example.com")
@@ -424,6 +433,7 @@ func TestSSOIDTokenVerification(t *testing.T) {
 
 // forma2's better-auth-oidc-email-verified.test.ts: the generic provider takes the raw email_verified claim, and falls back to userinfo when the id_token lacks the address.
 func TestSSOGenericOIDC(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name         string
 		profile      map[string]any
@@ -438,6 +448,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerOpenID)
 			fake.set(func(f *fakeIdP) {
 				f.profile = tc.profile
@@ -452,6 +463,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 	}
 
 	t.Run("userinfo must name the id_token's subject", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerOpenID)
 		fake.set(func(f *fakeIdP) {
 			f.profile = map[string]any{"sub": "o-1", "email": "ada@example.com"}
@@ -461,6 +473,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 	})
 
 	t.Run("without an id_token identity comes from userinfo", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerOpenID)
 		fake.set(func(f *fakeIdP) {
 			f.profile = map[string]any{"sub": "o-1", "email": "ada@example.com"}
@@ -470,6 +483,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 	})
 
 	t.Run("discovery failure", func(t *testing.T) {
+		t.Parallel()
 		e, _ := ssoEnv(t, providerOpenID)
 		e.sso.providers[providerOpenID].discoveryURL = "http://127.0.0.1:1/.well-known/openid-configuration"
 		r := e.browser().post("/auth/sso/sign-in", map[string]string{"provider": "openid"})
@@ -479,7 +493,9 @@ func TestSSOGenericOIDC(t *testing.T) {
 
 // forma2's ENG-2343/ENG-2750 cases: a concrete tenant verifies the id_token against the issuer its discovery document names, which may differ from the URL it was read from; the placeholder authorities take identity from Graph only.
 func TestSSOAzureAD(t *testing.T) {
+	t.Parallel()
 	t.Run("a concrete tenant verifies the id_token", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerAzureAD, func(cfg *config.Config) { cfg.SSO.AzureADTenantID = "contoso.onmicrosoft.com" })
 		e.sso.providers[providerAzureAD].discoveryURL = fake.URL() + "/contoso.onmicrosoft.com/v2.0/.well-known/openid-configuration"
 		fake.set(func(f *fakeIdP) {
@@ -525,6 +541,7 @@ func TestSSOAzureAD(t *testing.T) {
 		{"Graph names no subject", func(f *fakeIdP) { f.profile = map[string]any{"email": "ada@contoso.com"} }},
 	} {
 		t.Run(tc.name+" fails closed", func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerAzureAD)
 			fake.set(func(f *fakeIdP) {
 				f.profile = map[string]any{"sub": "graph-sub", "email": "ada@contoso.com"}
@@ -538,6 +555,7 @@ func TestSSOAzureAD(t *testing.T) {
 	}
 
 	t.Run("the current callback path serves Azure AD too", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerAzureAD)
 		fake.set(func(f *fakeIdP) { f.profile = map[string]any{"sub": "graph-sub", "email": "ada@contoso.com"} })
 		b := e.browser()
@@ -548,6 +566,7 @@ func TestSSOAzureAD(t *testing.T) {
 
 // Better Auth's GitHub provider: the numeric id is the subject, the login stands in for a missing name, and /user/emails supplies a missing address and whether it is verified.
 func TestSSOGitHub(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name         string
 		profile      map[string]any
@@ -566,6 +585,7 @@ func TestSSOGitHub(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerGitHub)
 			fake.set(func(f *fakeIdP) {
 				f.profile = tc.profile
@@ -590,6 +610,7 @@ func TestSSOGitHub(t *testing.T) {
 	}
 
 	t.Run("no address anywhere", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerGitHub)
 		fake.set(func(f *fakeIdP) { f.profile = map[string]any{"id": 1, "login": "ghost"} })
 		expectRedirect(t, e.browser().ssoSignIn(fake, "github", ""), loginError("email_not_found"))
@@ -598,6 +619,7 @@ func TestSSOGitHub(t *testing.T) {
 
 // forma2's sso-provisioning.test.ts: Forma Cloud refuses personal mail domains before creating anything.
 func TestSSOCloudDomainBlock(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) { cfg.IsFormaCloud = true })
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@Gmail.com.") })
 	b := e.browser()
@@ -611,6 +633,7 @@ func TestSSOCloudDomainBlock(t *testing.T) {
 
 // forma2's default-organization.test.ts: the sign-up that creates AUTH_SSO_DEFAULT_ORGANIZATION_ID's organization owns it; later ones get the configured role, manager by default.
 func TestSSODefaultOrganization(t *testing.T) {
+	t.Parallel()
 	orgID := uuid.New()
 	cases := []struct {
 		name       string
@@ -625,6 +648,7 @@ func TestSSODefaultOrganization(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) {
 				cfg.SSO.DefaultOrganizationID = orgID.String()
 				cfg.SSO.DefaultOrganizationRole = tc.role
@@ -673,6 +697,7 @@ func (e *env) recoveryToken(to string) string {
 
 // forma2's sso-recovery.test.ts and its security notes: an identity provider asserting a registered address links nothing until the mailbox owner uses the emailed link, which the starting browser never sees.
 func TestSSORecovery(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ADA@example.com") })
@@ -732,6 +757,7 @@ func TestSSORecovery(t *testing.T) {
 
 // forma2's ENG-554/ENG-2557: linking an account whose address was never proven strips what its registrant set (the password, two-factor authentication) and signs everyone else out, and the owner is told.
 func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
+	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) { cfg.EmailVerificationDisabled = true })
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{unverified: true, twoFactor: true})
 	// Whoever registered the address holds a session.
@@ -791,6 +817,7 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 }
 
 func TestSSORecoveryRefusals(t *testing.T) {
+	t.Parallel()
 	start := func(t *testing.T) (*env, uuid.UUID, string) {
 		e, fake := ssoEnv(t, providerGoogle)
 		id := e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -807,12 +834,14 @@ func TestSSORecoveryRefusals(t *testing.T) {
 	}
 
 	t.Run("expired", func(t *testing.T) {
+		t.Parallel()
 		e, _, token := start(t)
 		e.advance(ssoRecoveryTTL + 1)
 		expectStatus(t, e.browser().post("/auth/sso/recovery/complete", map[string]string{"token": token}), http.StatusBadRequest, "token_expired")
 	})
 
 	t.Run("the account moved to another address", func(t *testing.T) {
+		t.Parallel()
 		e, id, token := start(t)
 		e.exec(`UPDATE users SET email = 'ada@new.example' WHERE id = ?`, id)
 		expectStatus(t, e.browser().post("/auth/sso/recovery/complete", map[string]string{"token": token}), http.StatusBadRequest, "account_not_linked")
@@ -822,6 +851,7 @@ func TestSSORecoveryRefusals(t *testing.T) {
 	})
 
 	t.Run("the identity was linked to someone else meanwhile", func(t *testing.T) {
+		t.Parallel()
 		e, _, token := start(t)
 		other := e.seedUser("grace@example.com", strongPassword, userOpts{})
 		e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'google', 'g-1')`, other)
@@ -833,17 +863,20 @@ func TestSSORecoveryRefusals(t *testing.T) {
 	})
 
 	t.Run("deactivated", func(t *testing.T) {
+		t.Parallel()
 		e, id, token := start(t)
 		e.exec(`UPDATE users SET is_active = false WHERE id = ?`, id)
 		expectStatus(t, e.browser().post("/auth/sso/recovery/complete", map[string]string{"token": token}), http.StatusForbidden, "account_inactive")
 	})
 
 	t.Run("an unknown token", func(t *testing.T) {
+		t.Parallel()
 		e, _, _ := start(t)
 		expectStatus(t, e.browser().post("/auth/sso/recovery/complete", map[string]string{"token": "nope"}), http.StatusBadRequest, "invalid_token")
 	})
 
 	t.Run("without SMTP nothing pretends a mail went out", func(t *testing.T) {
+		t.Parallel()
 		e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) { cfg.SMTPHost = "" })
 		e.seedUser("ada@example.com", strongPassword, userOpts{})
 		fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
@@ -854,6 +887,7 @@ func TestSSORecoveryRefusals(t *testing.T) {
 	})
 
 	t.Run("rate limited", func(t *testing.T) {
+		t.Parallel()
 		e, _, _ := start(t)
 		e.enableRateLimits()
 		e.inOneWindow(time.Minute, func(run int, ip string) error {
@@ -872,6 +906,7 @@ func TestSSORecoveryRefusals(t *testing.T) {
 
 // The state payload never carries anything the browser could use: it is stored server-side and named by the cookie's hash.
 func TestSSOStatePayload(t *testing.T) {
+	t.Parallel()
 	e, _ := ssoEnv(t, providerGoogle)
 	b := e.browser()
 	b.ssoStart("google", "/x")
