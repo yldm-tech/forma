@@ -180,6 +180,17 @@ func TestSchemaConstraints(t *testing.T) {
 	t.Run("an integration error has both a time and a message or neither", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
 	})
+
+	t.Run("an organization holds one invite per address regardless of case, and its links go with it", func(t *testing.T) {
+		inviteID := mustScanID(t, db, `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'grace@example.com', $2, now() + interval '7 days') RETURNING id`, orgID, userID)
+		wantViolation(t, db, "23505", `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'Grace@Example.com', $2, now() + interval '7 days')`, orgID, userID)
+		mustExec(t, db, `INSERT INTO invite_tokens (token_hash, invite_id, expires_at) VALUES ('\x01', $1, now() + interval '7 days')`, inviteID)
+		mustExec(t, db, `DELETE FROM invites WHERE id = $1`, inviteID)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM invite_tokens`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("invite tokens left after the invite was deleted: %d, %v", left, err)
+		}
+	})
 }
 
 type outboxRow struct {

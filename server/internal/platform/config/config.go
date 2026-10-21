@@ -70,6 +70,12 @@ type Config struct {
 
 	// IsFormaCloud marks the hosted service: public sign-up is open and personal email domains are refused at sign-up.
 	IsFormaCloud bool `env:"IS_FORMA_CLOUD" envDefault:"0"`
+	// SignupDomainCheckOnInvites applies Forma Cloud's personal email domain refusal to invited sign-ups too; by default an invite exempts its holder.
+	SignupDomainCheckOnInvites bool `env:"SIGNUP_DOMAIN_CHECK_ON_INVITES" envDefault:"0"`
+	// InviteDisabled switches inviting members off. Pending invites can still be accepted, revoked and shared.
+	InviteDisabled bool `env:"INVITE_DISABLED" envDefault:"0"`
+	// InviteRateLimitPer24Hours is how many invite recipients one organization may be sent per day on a self-hosted instance; Forma Cloud allows 500.
+	InviteRateLimitPer24Hours int `env:"INVITE_RATE_LIMIT_PER_24_HOURS" envDefault:"50"`
 	// E2ETesting opens public sign-up for end-to-end test runs, as on Forma Cloud.
 	E2ETesting bool `env:"E2E_TESTING" envDefault:"0"`
 	// EmailAuthDisabled switches email and password sign-up and sign-in off, for SSO-only instances.
@@ -174,6 +180,9 @@ func (c Config) validate() error {
 	}
 	if c.PasswordResetTokenLifetimeMinutes < 5 || c.PasswordResetTokenLifetimeMinutes > 120 {
 		return fmt.Errorf("PASSWORD_RESET_TOKEN_LIFETIME_MINUTES must be between 5 and 120, got %d", c.PasswordResetTokenLifetimeMinutes)
+	}
+	if c.InviteRateLimitPer24Hours < 1 {
+		return fmt.Errorf("INVITE_RATE_LIMIT_PER_24_HOURS must be at least 1, got %d", c.InviteRateLimitPer24Hours)
 	}
 	if c.SessionMaxAge < 1 {
 		return fmt.Errorf("SESSION_MAX_AGE must be a positive number of seconds, got %d", c.SessionMaxAge)
