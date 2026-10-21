@@ -13,15 +13,16 @@ func TestDecisionMemoSharesOneEvaluationAndNeverCachesFailures(t *testing.T) {
 	m := memoFrom(WithDecisionMemo(context.Background()))
 	var calls atomic.Int32
 	release := make(chan struct{})
-	slow := func() (bool, error) {
-		calls.Add(1)
-		<-release
-		return false, nil
-	}
 	var wg sync.WaitGroup
 	results := make([]bool, 5)
 	for i := range results {
-		wg.Go(func() { results[i], _ = m.do("k", slow) })
+		wg.Go(func() {
+			results[i], _ = m.do("k", func() (bool, error) {
+				calls.Add(1)
+				<-release
+				return false, nil
+			})
+		})
 	}
 	time.Sleep(20 * time.Millisecond)
 	close(release)
