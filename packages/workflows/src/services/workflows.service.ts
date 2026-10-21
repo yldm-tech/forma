@@ -21,9 +21,13 @@ import type { TWorkflowStatus } from "../types/common";
 import type { TWorkflowDefinition, TWorkflowExecutableDefinition } from "../types/document";
 import type {
   LastRunInclude,
+  LastRunListInclude,
   WorkflowDelegate,
   WorkflowOrderByInput,
   WorkflowRowWithLastRun,
+  WorkflowRowWithRuns,
+  WorkflowRunCountGroup,
+  WorkflowRunDelegate,
   WorkflowRunListRow,
   WorkflowRunWhereInput,
   WorkflowRunWithLogsRow,
@@ -46,13 +50,65 @@ export interface WorkflowUpdateInput {
 
 /**
  * Eagerly load the most recent run and the creating user's name so the serializer can emit
- * `lastRun` and `creator` without an N+1. Every resource-returning path uses this include.
+ * `lastRun` and `creator` without an N+1. Every single-row resource path uses this include.
  */
 const LAST_RUN_INCLUDE: LastRunInclude = {
   runs: { take: 1, orderBy: { createdAt: "desc" } },
   creator: { select: { name: true } },
   _count: { select: { runs: true } },
 };
+
+/**
+ * The list's eager-load: the same shape minus the relation count, which the list reads with one grouped
+ * query over the page instead of one unbounded per-row aggregate. See `LastRunListInclude`.
+ */
+const LIST_INCLUDE: LastRunListInclude = {
+  runs: { take: 1, orderBy: { createdAt: "desc" } },
+  creator: { select: { name: true } },
+};
+
+/** Narrows one row of the `groupBy` result the port deliberately types as `unknown`; see `WorkflowRunDelegate`. */
+const isWorkflowRunCountGroup = (row: unknown): row is WorkflowRunCountGroup =>
+  typeof row === "object" &&
+  row !== null &&
+  typeof (row as { workflowId?: unknown }).workflowId === "string" &&
+  typeof (row as { _count?: { _all?: unknown } })._count?._all === "number";
+
+/**
+ * Total runs per workflow for one page of the list, in a single grouped query. Workflows with no runs
+ * are absent from the result, so the caller reads a missing id as 0. An empty page issues no query at
+ * all rather than an `IN ()`.
+ */
+const readWorkflowRunCounts = async (
+  workflowRun: WorkflowRunDelegate,
+  workflowIds: string[],
+  workspaceId: string
+): Promise<Map<string, number>> => {
+  const counts = new Map<string, number>();
+  if (workflowIds.length === 0) {
+    return counts;
+  }
+
+  const result: unknown = await workflowRun.groupBy({
+    by: ["workflowId"],
+    where: { workflowId: { in: workflowIds }, workspaceId },
+    _count: { _all: true },
+  });
+  const groups: unknown[] = Array.isArray(result) ? result : [];
+
+  for (const group of groups) {
+    if (isWorkflowRunCountGroup(group)) {
+      counts.set(group.workflowId, group._count._all);
+    }
+  }
+  return counts;
+};
+
+/** Re-attach the grouped run count in the `_count` shape the serializers already read. */
+const withRunCount = (row: WorkflowRowWithRuns, counts: Map<string, number>): WorkflowRowWithLastRun => ({
+  ...row,
+  _count: { runs: counts.get(row.id) ?? 0 },
+});
 
 /** Every field a workflow update may set; mirrors the injected delegate's `update` data shape. */
 type WorkflowUpdateData = Parameters<WorkflowDelegate["update"]>[0]["data"];
@@ -188,12 +244,21 @@ export const createWorkflowsService = ({ prisma }: { prisma: WorkflowsDb }): Wor
       where: buildListWhere(input, cursor),
       orderBy: getOrderBy(input.sortBy),
       take: input.limit + 1,
-      include: LAST_RUN_INCLUDE,
+      include: LIST_INCLUDE,
     });
 
     const hasMore = rows.length > input.limit;
-    const workflows = hasMore ? rows.slice(0, input.limit) : rows;
-    const lastRow = workflows.at(-1);
+    const page = hasMore ? rows.slice(0, input.limit) : rows;
+    const lastRow = page.at(-1);
+
+    // Counted after the page is sliced, so the extra `take: limit + 1` row is never counted for a
+    // result that is thrown away.
+    const counts = await readWorkflowRunCounts(
+      prisma.workflowRun,
+      page.map((row) => row.id),
+      input.workspaceId
+    );
+    const workflows = page.map((row) => withRunCount(row, counts));
 
     return {
       workflows,
@@ -293,7 +358,14 @@ export const createWorkflowsService = ({ prisma }: { prisma: WorkflowsDb }): Wor
       return await prisma.$transaction(async (tx) => {
         const { count } = await tx.workflow.updateMany({
           where: { id: workflowId, workspaceId, status: { in: ["draft", "disabled"] } },
-          data: { status: "enabled" },
+          // `triggerSurveyId` denormalises the version published just below, so it is written in the
+          // same transaction and from the same already-validated definition — no extra query, no extra
+          // parse, and no window in which the column describes a version that is not the current one.
+          // The runner filters its candidates on it but still re-reads the published definition, so the
+          // column can only narrow work, never decide whether a workflow fires. Any future path that
+          // changes which version is current must write this column too, or write null — null means
+          // "matches every survey", which costs a wasted fetch and stays correct.
+          data: { status: "enabled", triggerSurveyId: definition.trigger.config.surveyId },
         });
         if (count !== 1) {
           throw new WorkflowConflictError("The workflow is no longer in a state that can be enabled.");

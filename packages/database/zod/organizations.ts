@@ -68,6 +68,10 @@ export const ZOrganization = z.object({
   updatedAt: z.coerce.date(),
   name: z.string(),
   whitelabel: ZOrganizationWhiteLabel,
-  isAISmartToolsEnabled: z.boolean().default(false) as z.ZodType<Organization["isAISmartToolsEnabled"]>,
+  isAISmartToolsEnabled: z.boolean().default(false),
   displayTimeZone: z.string().nullable(),
+  // Null means keep forever: the sweep only selects organizations where at least one window is set, so
+  // an unconfigured organization is never visited and nothing of its is deleted.
+  workflowRunRetentionDays: z.number().int().positive().nullable(),
+  displayRetentionDays: z.number().int().positive().nullable(),
 }) satisfies z.ZodType<Organization>;

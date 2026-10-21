@@ -336,4 +336,53 @@ describe("enqueueResponseCompletedWorkflowRuns", () => {
     expect(getIsWorkflowsEnabled).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
   });
+
+  test("narrows candidates in SQL to this survey plus the rows that match every survey", async () => {
+    findMany.mockResolvedValue([]);
+
+    await run();
+
+    // A null `triggerSurveyId` means "matches every survey" — a row the backfill skipped, one whose
+    // published trigger is not response.completed, and one a future multi-survey trigger leaves null
+    // all have to stay in the candidate set. Dropping the null arm would silently stop them firing.
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      workspaceId,
+      status: "enabled",
+      OR: [{ triggerSurveyId: surveyId }, { triggerSurveyId: null }],
+    });
+  });
+
+  test("does not fire a workflow whose denormalised trigger survey disagrees with its published definition", async () => {
+    // The column said this workflow targets the response's survey (which is why SQL returned it), but
+    // the published definition targets another one. The in-memory matcher is the authority, so drift
+    // costs a wasted fetch and nothing else.
+    const otherSurveyId = "cm9zr4q7i000108l84gozfgg9";
+    findMany.mockResolvedValue([
+      {
+        id: "wf_drifted",
+        versions: [{ id: "ver_1", definition: definition({ surveyId: otherSurveyId, endingCardIds: [] }) }],
+      },
+    ]);
+
+    await run();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  test("fires a workflow the SQL filter admitted through the null arm", async () => {
+    // Stands in for an un-backfilled row: `triggerSurveyId` is null, so SQL let it through, and its
+    // published definition really does target this survey.
+    findMany.mockResolvedValue([enabledWorkflow("wf_unbackfilled", "ver_1")]);
+    create.mockResolvedValue({ id: "run_1" });
+
+    await run();
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      workflowRunId: "run_1",
+      workflowId: "wf_unbackfilled",
+      workspaceId,
+    });
+  });
 });

@@ -156,30 +156,30 @@ model Contact {
 /// @property ttc - Time to completion metrics
 /// @property meta - Additional metadata about the response
 model Response {
-  id                String              @id @default(cuid())
-  createdAt         DateTime            @default(now()) @map(name: "created_at")
-  updatedAt         DateTime            @default(now()) @updatedAt @map(name: "updated_at")
-  finished          Boolean             @default(false)
-  survey            Survey              @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  id                String                   @id @default(cuid())
+  createdAt         DateTime                 @default(now()) @map(name: "created_at")
+  updatedAt         DateTime                 @default(now()) @updatedAt @map(name: "updated_at")
+  finished          Boolean                  @default(false)
+  survey            Survey                   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId          String
-  contact           Contact?            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contact           Contact?                 @relation(fields: [contactId], references: [id], onDelete: Cascade)
   contactId         String?
   endingId          String?
   /// [ResponseData]
-  data              Json                @default("{}")
+  data              Json                     @default("{}")
   /// [ResponseVariables]
-  variables         Json                @default("{}")
+  variables         Json                     @default("{}")
   /// [ResponseTtc]
-  ttc               Json                @default("{}")
+  ttc               Json                     @default("{}")
   /// [ResponseMeta]
-  meta              Json                @default("{}")
+  meta              Json                     @default("{}")
   /// Why a value in `data` will not read back as its declared Embedded Data type — a failed coercion
   /// or a truncated oversize value (ENG-1845). Server-computed on every ingest and never accepted
   /// from the client. Null means no ingest boundary has written it, which is not the same claim as
   /// an empty list: without this column a wrong-typed value is indistinguishable from an absent one,
   /// and surfacing that in the UI (v2) would have nothing to read.
   /// [ResponseIngestFlags]
-  ingestFlags       Json?               @map(name: "ingest_flags")
+  ingestFlags       Json?                    @map(name: "ingest_flags")
   tags              TagsOnResponses[]
   quotaLinks        ResponseQuotaLink[]
   /// [ResponseContactAttributes]
@@ -187,9 +187,10 @@ model Response {
   // singleUseId, used to prevent multiple responses
   singleUseId       String?
   language          String?
-  displayId         String?             @unique
-  display           Display?            @relation(fields: [displayId], references: [id])
+  displayId         String?                  @unique
+  display           Display?                 @relation(fields: [displayId], references: [id])
   workflowRuns      WorkflowRun[]
+  pipelineOutbox    ResponsePipelineOutbox[]
 
   @@unique([surveyId, singleUseId])
   @@index([createdAt])
@@ -555,13 +556,22 @@ enum IntegrationType {
 /// @property type - The service being integrated (Google Sheets, Notion, etc.)
 /// @property workspace - The workspace this integration belongs to
 /// @property config - Service-specific configuration details
+/// @property lastErrorAt - When delivery to this integration last failed
+/// @property lastErrorMessage - Why it failed, for the integration's manage page
+/// @property consecutiveFailures - Failures in a row since the last success; 0 means healthy
 model Integration {
-  id          String          @id @default(cuid())
-  type        IntegrationType
+  id                  String          @id @default(cuid())
+  type                IntegrationType
   /// [IntegrationConfig]
-  config      Json
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId String
+  config              Json
+  workspace           Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId         String
+  /// When the last delivery to this integration failed. Null means no failure has been recorded since the last success, or that none has ever been recorded — the two are indistinguishable on purpose, because there is no success timestamp to compare against.
+  lastErrorAt         DateTime?
+  /// The message from the failure `lastErrorAt` records, surfaced on the integration's manage page. Null exactly when `lastErrorAt` is null. Provider error text, so treat it as untrusted when rendering.
+  lastErrorMessage    String?
+  /// Delivery failures in a row since the last success. 0 means healthy, and the manage page prompts for a reconnect once this crosses its threshold. There is deliberately no `lastSyncAt` beside it: stamping one on every successful delivery would make every response in a workspace contend on this one row, so the healthy path writes nothing and this column is only touched on a state transition (a failure, or the first success after one).
+  consecutiveFailures Int             @default(0)
 
   @@unique([type, workspaceId])
   @@index([workspaceId])
@@ -667,21 +677,27 @@ model Workspace {
 /// @property whitelabel - Whitelabel configuration for the organization
 /// @property isAISmartToolsEnabled - Controls access to AI smart tools (e.g. translations) that never touch collected data
 /// @property displayTimeZone - Optional IANA time zone used for human-facing response timestamps (exports, integrations); null means UTC
+/// @property workflowRunRetentionDays - Days of terminal WorkflowRun history to keep; null means keep forever
+/// @property displayRetentionDays - Days of unconverted Display history to keep; null means keep forever
 model Organization {
-  id                    String               @id @default(cuid())
-  createdAt             DateTime             @default(now()) @map(name: "created_at")
-  updatedAt             DateTime             @updatedAt @map(name: "updated_at")
-  name                  String
-  memberships           Membership[]
-  workspaces            Workspace[]
-  billing               OrganizationBilling?
+  id                       String               @id @default(cuid())
+  createdAt                DateTime             @default(now()) @map(name: "created_at")
+  updatedAt                DateTime             @updatedAt @map(name: "updated_at")
+  name                     String
+  memberships              Membership[]
+  workspaces               Workspace[]
+  billing                  OrganizationBilling?
   /// [OrganizationWhitelabel]
-  whitelabel            Json                 @default("{}")
-  invites               Invite[]
-  isAISmartToolsEnabled Boolean              @default(false)
-  displayTimeZone       String?
-  teams                 Team[]
-  apiKeys               ApiKey[]
+  whitelabel               Json                 @default("{}")
+  invites                  Invite[]
+  isAISmartToolsEnabled    Boolean              @default(false)
+  displayTimeZone          String?
+  /// Days of terminal `WorkflowRun` history the retention sweep keeps for this organization. **Null means keep forever and disables the sweep for this organization**, which is deliberately what every existing row gets on upgrade: an additive migration must never arm an irreversible delete, so retention is something an operator turns on rather than something an upgrade turns on for them. A `WorkflowRun` carries the full response payload a second time, so this is the one retention window a compliance answer usually needs.
+  workflowRunRetentionDays Int?
+  /// Days of `Display` (survey impression) history the retention sweep keeps for this organization, counting only impressions that never became a response — a converted impression is the one an operator wants kept, and `Response.displayId` is what makes that checkable. Null means keep forever and disables the pass, with the same reasoning as above.
+  displayRetentionDays     Int?
+  teams                    Team[]
+  apiKeys                  ApiKey[]
 }
 
 /// Stores billing and Stripe synchronization data for an organization.
@@ -1491,4 +1507,41 @@ model AuthzedProjectionOutbox {
   lastErrorCode     String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+/// Durable fallback for a response pipeline event that `sendToPipeline` could not hand to the queue.
+///
+/// `sendToPipeline` (apps/web/lib/pipelines.ts) never throws — every caller reaches it after the Response row is committed, so a throw would turn a successful submission into a 500 the survey runtime retries as a new response. That contract is why a Valkey outage currently loses the event outright: no webhook, no follow-up email, no integration row, no workflow run and no billing meter, with only a log line. A row here is written on the fast path's retry exhaustion and drained by a recurring job modelled on `claimAuthzedOutboxEvents` / `markAuthzedOutboxEventsDelivered` (apps/web/lib/authzed/outbox-repository.ts), which converts that silent loss into delayed delivery.
+///
+/// Unlike `AuthzedProjectionOutbox`, this one declares its indexes here rather than in SQL: none of them needs a `WHERE`, because the table only ever holds rows written while the queue was unreachable, so carrying delivered history in every index costs nothing at this size.
+///
+/// The row holds a copy of the response payload, so it holds respondent data. The `Response` foreign key cascades, so deleting a response (or the workspace above it) takes its undelivered copy with it, and the drain must still prune delivered and dead-lettered rows on the same schedule the AuthZed outbox uses.
+model ResponsePipelineOutbox {
+  id               String           @id @default(cuid(2))
+  createdAt        DateTime         @default(now()) @map(name: "created_at")
+  updatedAt        DateTime         @updatedAt @map(name: "updated_at")
+  /// The deterministic BullMQ job id the fast path derived for this event, from the event plus the response id and its `updatedAt`. Unique, so writing the row is an upsert and a replay re-enqueues under the same id that the lost attempt would have used — BullMQ rejects the duplicate, which is what makes redelivery idempotent without a delivered-marker reconciliation.
+  jobId            String           @unique
+  event            PipelineTriggers
+  responseId       String
+  response         Response         @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  surveyId         String
+  workspaceId      String
+  /// The exact `TResponsePipelineJobData` the fast path failed to enqueue, minus nothing. Persisted DB JSON that is never parsed on write, so the drain must validate it with `ZResponsePipelineJobData` and dead-letter a row it cannot parse rather than trusting the shape.
+  payload          Json
+  /// Delivery attempts made by the drain, not by the fast path's own in-process retries. Drives the backoff that sets `availableAt` and, past its limit, `deadLetteredAt`.
+  attempts         Int              @default(0)
+  availableAt      DateTime         @default(now())
+  leasedAt         DateTime?
+  leaseExpiresAt   DateTime?
+  leaseOwner       String?
+  processedAt      DateTime?
+  deadLetteredAt   DateTime?
+  lastAttemptAt    DateTime?
+  lastErrorMessage String?
+
+  @@index([availableAt])
+  @@index([processedAt])
+  @@index([responseId])
+  @@index([workspaceId, createdAt])
 }

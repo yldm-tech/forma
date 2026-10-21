@@ -60,6 +60,14 @@ export const ZSurveyArchivePurgeJobData = ZGlobalScopeJobData;
 
 export type TSurveyArchivePurgeJobData = TGlobalScopeJobData;
 
+/**
+ * Retention sweep (r228). Global like its siblings: the windows it honours live on `Organization`, so
+ * the handler resolves which organizations opted in from the database rather than being told.
+ */
+export const ZRetentionSweepJobData = ZGlobalScopeJobData;
+
+export type TRetentionSweepJobData = TGlobalScopeJobData;
+
 export const ZUsageTelemetryJobData = ZGlobalScopeJobData;
 
 export type TUsageTelemetryJobData = TGlobalScopeJobData;

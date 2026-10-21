@@ -69,9 +69,10 @@ const versionFindFirst = vi.fn<WorkflowVersionDelegate["findFirst"]>();
 const versionCreate = vi.fn<WorkflowVersionDelegate["create"]>();
 const runFindMany = vi.fn<WorkflowRunDelegate["findMany"]>();
 const runFindUnique = vi.fn<WorkflowRunDelegate["findUnique"]>();
+const runGroupBy = vi.fn<WorkflowRunDelegate["groupBy"]>();
 const workflow = { findMany, findUnique, create, update, delete: deleteFn, updateMany };
 const workflowVersion = { findFirst: versionFindFirst, create: versionCreate };
-const workflowRun = { findMany: runFindMany, findUnique: runFindUnique };
+const workflowRun = { findMany: runFindMany, findUnique: runFindUnique, groupBy: runGroupBy };
 const prisma: WorkflowsDb = {
   workflow,
   workflowVersion,
@@ -121,6 +122,8 @@ const makeRunDetail = (overrides: Partial<WorkflowRunWithLogsRow> = {}): Workflo
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no workflow on the page has any runs. Tests that care set their own groups.
+  runGroupBy.mockResolvedValue([]);
 });
 
 describe("createWorkflow", () => {
@@ -200,6 +203,49 @@ describe("listWorkflows", () => {
 
     expect(page.workflows).toHaveLength(2);
     expect(page.nextCursor).toEqual(expect.any(String));
+  });
+
+  test("reads the page's run counts with one grouped query, scoped to the page and workspace", async () => {
+    const first = makeRow({ id: "cm9zr4t2b000208l8h2m1aq30" });
+    const second = makeRow({ id: "cm9zr4t2b000208l8h2m1aq31" });
+    findMany.mockResolvedValue([first, second]);
+    runGroupBy.mockResolvedValue([{ workflowId: first.id, _count: { _all: 41234 } }]);
+
+    const page = await service.listWorkflows({ workspaceId, limit: 20, sortBy: "updatedAt" });
+
+    // One aggregate for the whole page rather than one per row, and the per-row `_count` relation
+    // aggregate is gone from the row query that used to carry it.
+    expect(runGroupBy).toHaveBeenCalledTimes(1);
+    expect(runGroupBy.mock.calls[0][0]).toEqual({
+      by: ["workflowId"],
+      where: { workflowId: { in: [first.id, second.id] }, workspaceId },
+      _count: { _all: true },
+    });
+    expect(findMany.mock.calls[0][0].include).toEqual({
+      runs: { take: 1, orderBy: { createdAt: "desc" } },
+      creator: { select: { name: true } },
+    });
+    // A workflow with no runs is absent from a grouped result; it must read 0, not undefined.
+    expect(page.workflows.map((workflow) => workflow._count.runs)).toEqual([41234, 0]);
+  });
+
+  test("counts only the rows it returns, never the over-fetched cursor probe row", async () => {
+    const rows = [
+      makeRow({ id: "cm9zr4t2b000208l8h2m1aq30" }),
+      makeRow({ id: "cm9zr4t2b000208l8h2m1aq31" }),
+      makeRow({ id: "cm9zr4t2b000208l8h2m1aq32" }),
+    ];
+    findMany.mockResolvedValue(rows);
+
+    await service.listWorkflows({ workspaceId, limit: 2, sortBy: "updatedAt" });
+
+    expect(runGroupBy.mock.calls[0][0].where.workflowId.in).toEqual([rows[0].id, rows[1].id]);
+  });
+
+  test("issues no run-count query at all for an empty page", async () => {
+    findMany.mockResolvedValue([]);
+    await service.listWorkflows({ workspaceId, limit: 20, sortBy: "updatedAt" });
+    expect(runGroupBy).not.toHaveBeenCalled();
   });
 });
 
@@ -351,7 +397,9 @@ describe("enableWorkflow", () => {
     // The status guard runs inside the transaction, scoped to draft/disabled rows only.
     expect(updateMany.mock.calls[0][0]).toEqual({
       where: { id: "cm9zr4t2b000208l8h2m1aq3c", workspaceId, status: { in: ["draft", "disabled"] } },
-      data: { status: "enabled" },
+      // The denormalised trigger survey is written by the same statement that publishes the version it
+      // describes, so the runner's SQL filter can never point at a version that is not the current one.
+      data: { status: "enabled", triggerSurveyId: surveyId },
     });
     expect(versionCreate.mock.calls[0][0].data).toMatchObject({
       workflowId: "cm9zr4t2b000208l8h2m1aq3c",
