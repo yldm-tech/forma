@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -31,11 +32,20 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
+// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+var authSet = wire.NewSet(
+	auth.NewRepository,
+	auth.NewSessions,
+	auth.NewService,
+	auth.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool and the Valkey client.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
 		database.Open,
 		platformSet,
+		authSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -49,7 +59,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	wire.Build(
 		jobs.OpenPool,
-		jobs.NewRegistry,
+		NewJobRegistry,
 		jobs.NewWorker,
 	)
 	return nil, nil, nil
