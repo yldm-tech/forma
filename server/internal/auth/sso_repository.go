@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -74,8 +75,12 @@ func (r *Repository) insertPayloadVerification(ctx context.Context, purpose stri
 
 // payloadVerification is a token together with its payload.
 type payloadVerification struct {
-	verification
-	Payload []byte
+	ID         uuid.UUID
+	UserID     uuid.NullUUID
+	Email      string
+	ExpiresAt  time.Time
+	ConsumedAt sql.NullTime
+	Payload    []byte
 }
 
 // findPayloadVerification returns the token whatever its state, or nil when it does not exist.

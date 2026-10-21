@@ -126,10 +126,15 @@ func TestSchemaConstraints(t *testing.T) {
 		wantViolation(t, db, "23505", `INSERT INTO users (name, email) VALUES ('Ada 2', 'ADA@example.com')`)
 	})
 
-	t.Run("a credential identity needs a password hash and only it may have one", func(t *testing.T) {
-		wantViolation(t, db, "23514", `INSERT INTO user_identities (user_id, provider, subject) VALUES ($1, 'credential', 'ada@example.com')`, userID)
+	t.Run("only a credential identity may have a password hash, and it may outlive its password", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES ($1, 'google', '123', 'x')`, userID)
 		mustExec(t, db, `INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES ($1, 'credential', 'ada@example.com', '$2a$12$hash')`, userID)
+		mustExec(t, db, `UPDATE user_identities SET password_hash = NULL WHERE user_id = $1 AND provider = 'credential'`, userID)
+	})
+
+	t.Run("an authorization request in flight is a verification", func(t *testing.T) {
+		mustExec(t, db, `INSERT INTO verifications (purpose, email, token_hash, expires_at) VALUES ('oauth_state', '', '\x01', now())`)
+		wantViolation(t, db, "23514", `INSERT INTO verifications (purpose, email, token_hash, expires_at) VALUES ('oauth_other', '', '\x02', now())`)
 	})
 
 	t.Run("a contact attribute holds exactly one typed value", func(t *testing.T) {
