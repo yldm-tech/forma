@@ -30,16 +30,25 @@ export const DropdownMenuItem = ({
   className,
   children,
   icon,
+  asChild,
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & { icon?: ReactNode }) => (
   <DropdownMenuPrimitive.Item
+    asChild={asChild}
     className={cn(
       "relative flex w-full cursor-pointer items-center gap-x-2 rounded-lg px-2 py-1.5 text-sm font-medium outline-hidden select-none focus:bg-slate-100 data-disabled:pointer-events-none data-disabled:opacity-50",
       className
     )}
     {...props}>
-    {icon}
-    {children}
+    {/* With asChild the item becomes its one child element (a link), which carries its own icon. */}
+    {asChild ? (
+      children
+    ) : (
+      <>
+        {icon}
+        {children}
+      </>
+    )}
   </DropdownMenuPrimitive.Item>
 );
 

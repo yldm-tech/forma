@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon, UsersIcon, XIcon } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import { LoadingBlock, SettingsCard } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Muted } from "../../components/ui/typography";
+import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
 import { type Member, type OrganizationDetail, membersQuery } from "../../lib/queries/organizations";
 import {
@@ -151,6 +152,7 @@ const CreateTeamModal = ({
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const create = useCreateTeam(organizationId);
+  const queryClient = useQueryClient();
 
   const close = () => {
     setOpen(false);
@@ -160,7 +162,9 @@ const CreateTeamModal = ({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await create.mutateAsync(name.trim());
+      const { id } = await create.mutateAsync(name.trim());
+      // The team is managed right after this; wait until its permissions have arrived.
+      await untilAuthorized(() => queryClient.fetchQuery(teamQuery(id)));
       toast.success(t("workspace.settings.teams.team_created_successfully"));
       close();
     } catch (error) {

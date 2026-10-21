@@ -12,6 +12,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ]),
+  resolve: {
+    // The hoisted install nests a second React under react-i18next (packages/surveys resolves it against another React version); two Reacts in one page break every hook, so the SPA always takes the root copy.
+    dedupe: ["react", "react-dom"],
+  },
   server: {
     port: 5173,
     proxy: {

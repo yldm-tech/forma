@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
 import { workspaceHomePath } from "../../lib/navigation";
+import { organizationKeys } from "../../lib/queries/organizations";
 import { teamsQuery } from "../../lib/queries/teams";
-import { useCreateWorkspace } from "../../lib/queries/workspaces";
+import { useCreateWorkspace, workspaceQuery } from "../../lib/queries/workspaces";
 import { toast } from "../../lib/toast";
 import { workspaceNameError } from "../../lib/validation";
 import { Button } from "../ui/button";
@@ -27,6 +29,7 @@ export const CreateWorkspaceModal = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [nameError, setNameError] = useState("");
@@ -54,6 +57,8 @@ export const CreateWorkspaceModal = ({
     }
     try {
       const workspace = await create.mutateAsync({ name: name.trim(), teamIds });
+      await untilAuthorized(() => queryClient.fetchQuery(workspaceQuery(workspace.id)));
+      await queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organizationId) });
       toast.success(t("common.workspace_created_successfully"));
       close();
       await navigate({ href: workspaceHomePath(workspace.id) });

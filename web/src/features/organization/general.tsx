@@ -21,10 +21,12 @@ import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
+import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
 import {
   type OrganizationDetail,
   organizationKeys,
+  organizationQuery,
   useCreateOrganization,
   useDeleteOrganization,
   useUpdateOrganization,
@@ -327,6 +329,7 @@ export const CreateOrganizationModal = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const create = useCreateOrganization();
 
@@ -340,6 +343,8 @@ export const CreateOrganizationModal = ({
     if (name.trim() === "") return;
     try {
       const organization = await create.mutateAsync(name.trim());
+      await untilAuthorized(() => queryClient.fetchQuery(organizationQuery(organization.id)));
+      await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
       toast.success(t("workspace.settings.general.organization_created_successfully"));
       close();
       await navigate({ href: `/organizations/${organization.id}/` });

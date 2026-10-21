@@ -1,11 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { FormError } from "../../components/ui/form-error";
 import { Input } from "../../components/ui/input";
+import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
-import { useCreateOrganization } from "../../lib/queries/organizations";
+import { organizationKeys, organizationQuery, useCreateOrganization } from "../../lib/queries/organizations";
 import { toast } from "../../lib/toast";
 import { organizationNameError } from "../../lib/validation";
 
@@ -13,6 +15,7 @@ import { organizationNameError } from "../../lib/validation";
 export const CreateOrganization = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [touched, setTouched] = useState(false);
   const create = useCreateOrganization();
@@ -24,6 +27,8 @@ export const CreateOrganization = () => {
     if (organizationNameError(name)) return;
     try {
       const organization = await create.mutateAsync(name.trim());
+      await untilAuthorized(() => queryClient.fetchQuery(organizationQuery(organization.id)));
+      await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
       await navigate({ href: `/setup/organization/${organization.id}/invite` });
     } catch (err) {
       toast.error(errorMessage(t, err));
