@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { type TSurveyStyling } from "@forma/types/surveys/types";
 import { type TWorkspaceStyling } from "@forma/types/workspace";
 import { AA_CONTRAST_RATIO, getContrastRatio } from "./color";
@@ -8,7 +8,7 @@ import { addCustomThemeToDom, addStylesToDom, getStyleNonce, setStyleNonce } fro
 // Mock CSS module imports
 vi.mock("@/styles/global.css?inline", () => ({ default: ".global {}" }));
 vi.mock("@/styles/preflight.css?inline", () => ({ default: ".preflight {}" }));
-vi.mock("../../../../apps/web/modules/ui/components/editor/styles-editor-frontend.css?inline", () => ({
+vi.mock("@/styles/editor-frontend.css?inline", () => ({
   default: ".editor {}",
 }));
 

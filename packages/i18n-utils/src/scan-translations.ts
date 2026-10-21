@@ -23,12 +23,6 @@ import objectHash from "object-hash";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Configuration for Web App
-const WEB_APP_DIR = path.join(__dirname, "..", "..", "..", "apps", "web");
-const EMAIL_PKG_DIR = path.join(__dirname, "..", "..", "..", "packages", "email");
-const WEB_APP_LOCALES_DIR = path.join(WEB_APP_DIR, "locales");
-const WEB_APP_DEFAULT_LOCALE = "en-US";
-
 // Configuration for Surveys Package
 const SURVEYS_PKG_DIR = path.join(__dirname, "..", "..", "..", "packages", "surveys");
 const SURVEYS_LOCALES_DIR = path.join(SURVEYS_PKG_DIR, "locales");
@@ -629,15 +623,7 @@ async function main(): Promise<void> {
   console.log();
 
   try {
-    // Validate Web App
-    const webAppResults = await validatePackage(
-      [WEB_APP_DIR, EMAIL_PKG_DIR],
-      WEB_APP_LOCALES_DIR,
-      WEB_APP_DEFAULT_LOCALE,
-      "Web App"
-    );
-
-    // Validate Surveys Package
+    // Validate Surveys Package. The admin UI (web/) joins this scan once it has locale files of its own.
     const surveysResults = await validatePackage(
       SURVEYS_PKG_DIR,
       SURVEYS_LOCALES_DIR,
@@ -645,25 +631,11 @@ async function main(): Promise<void> {
       "Surveys Package"
     );
 
-    // Check if any package has issues
-    const hasWebAppLockfileIssues =
-      !webAppResults.lockfileValidation ||
-      webAppResults.lockfileValidation.missing.length > 0 ||
-      webAppResults.lockfileValidation.outOfSync.length > 0 ||
-      webAppResults.lockfileValidation.extra.length > 0;
-
     const hasSurveysLockfileIssues =
       !surveysResults.lockfileValidation ||
       surveysResults.lockfileValidation.missing.length > 0 ||
       surveysResults.lockfileValidation.outOfSync.length > 0 ||
       surveysResults.lockfileValidation.extra.length > 0;
-
-    const hasWebAppIssues =
-      webAppResults.missingKeys.size > 0 ||
-      webAppResults.unusedKeys.size > 0 ||
-      webAppResults.incompleteTranslations.size > 0 ||
-      webAppResults.keysWithSpaces.size > 0 ||
-      hasWebAppLockfileIssues;
 
     const hasSurveysIssues =
       surveysResults.missingKeys.size > 0 ||
@@ -673,24 +645,24 @@ async function main(): Promise<void> {
       hasSurveysLockfileIssues;
 
     // Exit with error if validation failed for any package
-    if (hasWebAppIssues || hasSurveysIssues) {
+    if (hasSurveysIssues) {
       console.error("═══════════════════════════════════════════════════════════");
       console.error("❌ Translation validation failed!\n");
       console.error("   Please fix the issues above before committing.\n");
 
-      if (webAppResults.missingKeys.size > 0 || surveysResults.missingKeys.size > 0) {
+      if (surveysResults.missingKeys.size > 0) {
         console.error("   • Add missing keys to your translation files");
       }
-      if (webAppResults.unusedKeys.size > 0 || surveysResults.unusedKeys.size > 0) {
+      if (surveysResults.unusedKeys.size > 0) {
         console.error("   • Remove unused keys from translation files");
       }
-      if (webAppResults.keysWithSpaces.size > 0 || surveysResults.keysWithSpaces.size > 0) {
+      if (surveysResults.keysWithSpaces.size > 0) {
         console.error("   • Remove spaces from translation keys (use underscores or camelCase instead)");
       }
-      if (webAppResults.incompleteTranslations.size > 0 || surveysResults.incompleteTranslations.size > 0) {
+      if (surveysResults.incompleteTranslations.size > 0) {
         console.error("   • Complete missing translations in target language files");
       }
-      if (hasWebAppLockfileIssues || hasSurveysLockfileIssues) {
+      if (hasSurveysLockfileIssues) {
         console.error("   • Rebuild and update your lockfiles (run 'pnpm i18n')");
       }
       console.error();
