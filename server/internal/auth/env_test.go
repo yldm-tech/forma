@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -56,7 +59,7 @@ type env struct {
 	logs     *syncBuffer
 	svc      *Service
 	sessions *Sessions
-	factor   *SecondFactor
+	twoFactor *TwoFactor
 	engine   *gin.Engine
 
 	// breached holds the SHA-1 suffixes the stubbed range API reports; hibpStatus overrides its status.
@@ -68,6 +71,8 @@ type env struct {
 
 	mu    sync.Mutex
 	clock time.Time
+	// totp holds the second factor seeded for each user.
+	totp map[uuid.UUID]TOTPMaterial
 }
 
 // syncBuffer lets handlers log while the test reads.
@@ -102,6 +107,8 @@ func baseConfig() config.Config {
 		SMTPPort:                          "587",
 		PasswordResetTokenLifetimeMinutes: 30,
 		SessionMaxAge:                     86400,
+		EncryptionKey:                     bytes.Repeat([]byte{0x42}, 32),
+		EncryptionKeyVersion:              1,
 	}
 }
 
@@ -111,7 +118,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	for _, f := range configure {
 		f(&cfg)
 	}
-	e := &env{t: t, cfg: cfg, db: pgtest.GORM(t), rdb: valkeytest.Client(t), mail: &mailertest.Transport{}, logs: &syncBuffer{}, breached: map[string]bool{}, turnstileOK: true, clock: time.Now()}
+	e := &env{t: t, cfg: cfg, db: pgtest.GORM(t), rdb: valkeytest.Client(t), mail: &mailertest.Transport{}, logs: &syncBuffer{}, breached: map[string]bool{}, turnstileOK: true, clock: time.Now(), totp: map[uuid.UUID]TOTPMaterial{}}
 	log := slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	var transport mailer.Transport = e.mail
@@ -127,7 +134,11 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, ratelimit.New(cfg, e.rdb, log), m, audit.New(cfg, log), e.rdb, log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
-	e.factor = NewSecondFactor(cfg, e.svc)
+	cipher, err := secret.NewCipher(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.twoFactor = NewTwoFactor(cfg, e.svc, cipher)
 
 	hibp := httptest.NewServer(http.HandlerFunc(e.serveRange))
 	t.Cleanup(hibp.Close)
@@ -144,23 +155,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	r := gin.New()
 	r.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	group := r.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg))
-	NewHandler(cfg, e.svc, e.sessions).Register(group)
-	// Stand-ins for the two-factor module's routes, which drive SecondFactor the way it will.
-	group.GET("/test/two-factor/pending", func(c *gin.Context) {
-		id, err := e.factor.PendingUser(c)
-		if err != nil {
-			httpapi.Fail(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"userId": id})
-	})
-	group.POST("/test/two-factor/complete", func(c *gin.Context) {
-		if err := e.factor.Complete(c); err != nil {
-			httpapi.Fail(c, err)
-			return
-		}
-		c.Status(http.StatusNoContent)
-	})
+	NewHandler(cfg, e.svc, e.sessions, e.twoFactor).Register(group)
 	group.POST("/test/protected", e.sessions.Require(), func(c *gin.Context) {
 		a, _ := httpapi.ActorFrom(c.Request.Context())
 		c.JSON(http.StatusOK, gin.H{"userId": a.UserID, "sessionId": a.SessionID})
@@ -416,7 +411,7 @@ func (e *env) seedUser(email, password string, o userOpts) uuid.UUID {
 		e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'google', '', ?)`, id, "google-"+id.String())
 	}
 	if o.twoFactor {
-		e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, id)
+		e.enrolTOTP(id, true)
 	}
 	return id
 }
@@ -525,4 +520,60 @@ func field(m map[string]any, path ...string) any {
 		v = mm[p]
 	}
 	return v
+}
+
+// enrolTOTP writes a second factor for the user with a fresh key and ten backup codes, as setup (verified false) or enable (verified true) leaves it, and remembers it for totpCode.
+func (e *env) enrolTOTP(id uuid.UUID, verified bool) TOTPMaterial {
+	e.t.Helper()
+	codes, err := newBackupCodes()
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	key := make([]byte, totpKeySize)
+	if _, err := rand.Read(key); err != nil {
+		e.t.Fatal(err)
+	}
+	m := TOTPMaterial{Key: key, BackupCodes: codes}
+	sealedKey, sealedCodes, err := SealTOTP(e.twoFactor.cipher, id, m)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, ?, ?, ?)
+		ON CONFLICT (user_id) DO UPDATE SET secret_ciphertext = excluded.secret_ciphertext, backup_codes_ciphertext = excluded.backup_codes_ciphertext, verified = excluded.verified`,
+		id, sealedKey, sealedCodes, verified)
+	e.mu.Lock()
+	e.totp[id] = m
+	e.mu.Unlock()
+	return m
+}
+
+// totpCode is the user's authenticator code steps periods away from the env's clock.
+func (e *env) totpCode(id uuid.UUID, steps int) string {
+	e.t.Helper()
+	e.mu.Lock()
+	m, ok := e.totp[id]
+	e.mu.Unlock()
+	if !ok {
+		e.t.Fatalf("no second factor seeded for %s", id)
+	}
+	return totpCodeAt(e.t, m.Key, e.now().Add(time.Duration(steps)*totpPeriod*time.Second))
+}
+
+func totpCodeAt(t *testing.T, key []byte, at time.Time) string {
+	t.Helper()
+	code, err := totp.GenerateCodeCustom(base32NoPadding.EncodeToString(key), at, totp.ValidateOpts{Period: totpPeriod, Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return code
+}
+
+// signInPending runs the password step for a user with a second factor and leaves the browser holding the pending sign-in.
+func (b *browser) signInPending(email, password string) {
+	b.e.t.Helper()
+	r := b.post("/auth/sign-in", map[string]string{"email": email, "password": password})
+	expectStatus(b.e.t, r, http.StatusOK, "")
+	if r.json()["status"] != "two_factor_required" {
+		b.e.t.Fatalf("sign-in: %s", r.Body.String())
+	}
 }

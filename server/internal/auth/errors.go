@@ -96,3 +96,53 @@ func errEmailSendFailed() error {
 func errInvalidTwoFactorCookie() error {
 	return &apperr.Error{Status: http.StatusUnauthorized, Code: CodeInvalidTwoFactorCookie, Message: "Invalid two factor cookie"}
 }
+
+// Two-factor codes. The sign-in ones are Better Auth's two-factor plugin codes, lowercased; the settings ones name forma2's two-factor-auth service errors.
+const (
+	CodeThirdPartyLogin          = "third_party_login_enabled"
+	CodeTwoFactorAlreadyEnabled  = "two_factor_already_enabled"
+	CodeTwoFactorNotEnabled      = "two_factor_not_enabled"
+	CodeTwoFactorSetupIncomplete = "two_factor_setup_incomplete"
+	CodeTwoFactorCodeRequired    = "two_factor_code_required"
+	CodeInvalidCode              = "invalid_code"
+	CodeInvalidBackupCode        = "invalid_backup_code"
+	CodeTOTPNotEnabled           = "totp_not_enabled"
+	CodeBackupCodesNotEnabled    = "backup_codes_not_enabled"
+	CodeTooManyAttempts          = "too_many_attempts_request_new_code"
+	CodeAccountTemporarilyLocked = "account_temporarily_locked"
+)
+
+func errThirdPartyLogin() error {
+	return apperr.InvalidInput(CodeThirdPartyLogin, "Third party login is already enabled")
+}
+
+func errTwoFactorAlreadyEnabled() error {
+	return apperr.InvalidInput(CodeTwoFactorAlreadyEnabled, "Two factor authentication is already enabled")
+}
+
+func errTwoFactorNotEnabled() error {
+	return apperr.InvalidInput(CodeTwoFactorNotEnabled, "Two factor authentication is not enabled")
+}
+
+func errIncorrectPassword() error {
+	return apperr.InvalidInput(CodeInvalidPassword, "Incorrect password")
+}
+
+func errTOTPNotEnabled() error {
+	return apperr.InvalidInput(CodeTOTPNotEnabled, "TOTP not enabled")
+}
+
+func errBackupCodesNotEnabled() error {
+	return apperr.InvalidInput(CodeBackupCodesNotEnabled, "Backup codes aren't enabled")
+}
+
+func errTooManyTwoFactorAttempts() error {
+	return apperr.InvalidInput(CodeTooManyAttempts, "Too many attempts. Please request a new code.")
+}
+
+func errSecondFactorLocked(retryAfter int) error {
+	return &apperr.Error{
+		Status: http.StatusTooManyRequests, Code: CodeAccountTemporarilyLocked, RetryAfter: retryAfter,
+		Message: "Too many failed verification attempts. Your account is temporarily locked. Please try again later.",
+	}
+}

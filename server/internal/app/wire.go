@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/webui"
 )
@@ -30,14 +31,16 @@ var platformSet = wire.NewSet(
 	mailer.New,
 	audit.New,
 	httpapi.NewClientIPResolver,
+	secret.NewCipher,
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+// authSet is the credential module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
 	auth.NewService,
+	auth.NewTwoFactor,
 	auth.NewHandler,
 )
 
