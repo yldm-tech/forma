@@ -173,13 +173,14 @@ func (a *Authorizer) withinOrganization(ctx context.Context, resourceType string
 		}
 		return []uuid.UUID{}, nil
 	}
-	var kept []uuid.UUID
-	err := a.db.WithContext(ctx).Raw(`SELECT id FROM workspaces WHERE id = ANY(?::uuid[]) AND organization_id = ? ORDER BY id`, uuidArray(ids), organizationID).Scan(&kept).Error
+	var rows []string
+	err := a.db.WithContext(ctx).Raw(`SELECT id::text FROM workspaces WHERE id = ANY(?::uuid[]) AND organization_id = ? ORDER BY id`, uuidArray(ids), organizationID).Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("filter looked-up workspaces: %w", err)
 	}
-	if kept == nil {
-		kept = []uuid.UUID{}
+	kept := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		kept = append(kept, uuid.MustParse(r))
 	}
 	return kept, nil
 }
@@ -259,15 +260,16 @@ func resourceScope(ctx context.Context, db *gorm.DB, resource Resource) (*scope,
 
 // organizationOf returns the organization_id of one row of table, or nil when the row does not exist. table is always a constant chosen by the caller.
 func organizationOf(ctx context.Context, db *gorm.DB, table string, id uuid.UUID) (*uuid.UUID, error) {
-	var orgs []uuid.UUID
-	err := db.WithContext(ctx).Raw(`SELECT organization_id FROM `+table+` WHERE id = ?`, id).Scan(&orgs).Error
+	var orgs []string
+	err := db.WithContext(ctx).Raw(`SELECT organization_id::text FROM `+table+` WHERE id = ?`, id).Scan(&orgs).Error
 	if err != nil {
 		return nil, fmt.Errorf("resolve %s organization: %w", table, err)
 	}
 	if len(orgs) == 0 {
 		return nil, nil
 	}
-	return &orgs[0], nil
+	org := uuid.MustParse(orgs[0])
+	return &org, nil
 }
 
 // userActive is true only for an existing, active user.

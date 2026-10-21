@@ -81,3 +81,26 @@ func Config(t testing.TB, schema string, definitions ...string) config.AuthzConf
 	}
 	return config.AuthzConfig{Enabled: true, Endpoint: endpoint, Token: Token, Insecure: true, Consistency: "fully_consistent"}
 }
+
+// Empty starts a SpiceDB of the test's own with no schema, terminated when the test ends, for tests that need to observe the empty state.
+func Empty(t testing.TB) config.AuthzConfig {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("needs Docker; skipped with -short")
+	}
+	ctx := context.Background()
+	container, err := testcontainers.Run(ctx, Image,
+		testcontainers.WithCmd("serve", "--grpc-preshared-key="+Token, "--datastore-engine=memory", "--http-enabled=false", "--telemetry-endpoint="),
+		testcontainers.WithExposedPorts("50051/tcp"),
+		testcontainers.WithWaitStrategy(wait.ForLog("grpc server started serving").WithStartupTimeout(90*time.Second)),
+	)
+	testcontainers.CleanupContainer(t, container)
+	if err != nil {
+		t.Fatalf("spicedbtest: start spicedb: %v", err)
+	}
+	addr, err := container.PortEndpoint(ctx, "50051/tcp", "")
+	if err != nil {
+		t.Fatalf("spicedbtest: %v", err)
+	}
+	return config.AuthzConfig{Enabled: true, Endpoint: addr, Token: Token, Insecure: true, Consistency: "fully_consistent"}
+}
