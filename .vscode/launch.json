@@ -1,21 +1,21 @@
 {
   "configurations": [
     {
-      "name": "Launch localhost:3002",
-      "reAttach": true,
+      "name": "Go: forma serve",
+      "type": "go",
       "request": "launch",
-      "type": "firefox",
-      "url": "http://localhost:3002/",
-      "webRoot": "${workspaceFolder}"
+      "mode": "auto",
+      "program": "${workspaceFolder}/server/cmd/forma",
+      "args": ["serve"],
+      "envFile": "${workspaceFolder}/.env"
     },
     {
-      "name": "Attach",
-      "request": "attach",
-      "type": "firefox"
+      "name": "Web: Vite dev server (start `make dev-web` first)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/",
+      "webRoot": "${workspaceFolder}/web"
     }
   ],
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0"
 }

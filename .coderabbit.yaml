@@ -75,178 +75,67 @@ reviews:
     # future CodeRabbit matcher does not, these patterns match nothing and the generated
     # locale files come back into reviews as noise — visible and harmless, unlike an
     # allowlist. The fix then is to enumerate the generated locales explicitly.
-    - "!apps/web/locales/!(en-US).json"
     - "!packages/surveys/locales/!(en-US).json"
     - "!**/i18n.lock"
-    # Build output and generated artefacts. Note: openapi.yml and
-    # docs/api-*-reference/openapi*.{yml,json} are deliberately NOT excluded —
-    # oasdiff reviews them for breaking API changes.
-    - "!apps/web/vendor/**"
+    # Generated artefacts. docs/api-*-reference/openapi*.{yml,json} are deliberately NOT
+    # excluded — oasdiff reviews them for breaking API changes.
+    - "!server/internal/jsonschema/schemas/**"
+    - "!web/src/routeTree.gen.ts"
 
   path_instructions:
-    - path: "**/*.test.tsx"
-      instructions: |
-        AGENTS.md forbids React component unit tests in this repo. If this file is newly added, say
-        so and ask for the logic under test to move into a `.ts` module with a unit test. Do not ask
-        for a Playwright spec instead: deleting a `.test.tsx` creates no E2E obligation, and a
-        component is not an E2E subject. Do not raise this on edits to the handful of `.test.tsx`
-        files that already exist.
-
     - path: "**/*.tsx"
       instructions: |
-        - Never suggest adding unit tests for `.tsx` files — AGENTS.md forbids them, and their
-          absence is not a coverage gap to fill somewhere else. Ask for a Playwright spec only when
-          the diff changes a feature's happy path or a journey across several surfaces, and then ask
-          for it in that feature's existing spec — or, if the diff opens a feature area the suite does
-          not cover yet, for one happy-path spec named for that area. Never ask for one to cover
-          component detail (a
-          label, a breadcrumb, an ARIA attribute, a keystroke inside one widget, a field's
-          validation message) — that belongs in a `.ts` unit test or in manual QA.
-        - New client data flows go through an `/api/v3` route with TanStack Query, not a new Server
-          Action. Server data lives in the query cache only — flag it being mirrored into
-          `useState` or Jotai, and flag `router.refresh()` used as a data-refresh mechanism.
+        - Server data goes through TanStack Query (`queryOptions` factories, prefetched by route
+          loaders). Flag it being mirrored into `useState` or another store.
         - Component props must be `Readonly<>` (e.g. `({ children }: Readonly<Props>)`).
         - All user-facing strings must go through `t()` from `react-i18next` with lowercase
           dot-nested keys, never hardcoded text.
         - Dates and times must use the shared formatting helpers, never ad-hoc `date-fns`, `Intl`,
           or `toLocale*` calls, and never an implicit/`undefined` locale.
         - Don't ask for `useMemo`/`useCallback` unless there is a measured re-render problem.
-        - Do scrutinise effects and closures. `apps/web/eslint.config.mjs` turns
-          `react-hooks/set-state-in-effect`, `incompatible-library`, `error-boundaries`,
-          `immutability` and `preserve-manual-memoization` off, and leaves `exhaustive-deps` at
-          `warn` with no `--max-warnings 0`, so none of them can fail CI. Flag state set from an
-          effect without a guard, missing or lying dependency arrays, stale closures over props
-          or state, and effects that need cleanup and don't have it.
+        - Do scrutinise effects and closures. The root `vite.config.ts` keeps Oxlint's React Compiler
+          rules (`purity`, `set-state-in-effect`, `immutability`) and `exhaustive-deps` at `warn`, so
+          none of them can fail CI. Flag state set from an effect without a guard, missing or lying
+          dependency arrays, stale closures over props or state, and effects that need cleanup and
+          don't have it.
 
     - path: "**/*.test.ts"
       instructions: |
-        Judge tests by confidence, not coverage (AGENTS.md "Testing Guidelines"):
+        Judge tests by confidence, not coverage (AGENTS.md "Testing"):
         - Assert on inputs and outputs. Flag tests that lock implementation details, markup, or
           snapshots, and tests that cannot fail (no meaningful assertion, everything mocked).
-        - Do not request extra tests purely to raise coverage, and do not request tests for `.tsx`.
+        - Do not request extra tests purely to raise coverage.
         - Network and storage boundaries should be mocked via helpers from `@forma/*` and
           mocks placed in a `__mocks__` directory.
 
-    - path: "apps/web/playwright/**/*.spec.ts"
+    - path: "server/**/*.go"
       instructions: |
-        This suite is the critical path of every PR and every test is paid on every PR forever, so
-        cost is a review dimension here rather than a nit (AGENTS.md "Testing Guidelines"):
-        - A new spec file is a finding unless it opens a feature area the suite does not cover yet
-          (the spec filenames in `apps/web/playwright/` are the inventory — check before claiming an
-          area is uncovered); the default is assertions or a `test.step` added to that feature's
-          existing spec. A spec
-          that asserts component-level detail (a label, a breadcrumb, a sidebar's link list, an ARIA
-          attribute, a keystroke inside one widget, a field's validation message) is a finding
-          whatever file it lands in: ask for a `.ts` unit test or manual QA instead.
-        - Flag variant matrices. A second viewport, theme, locale, role or layout needs its own
-          stated reason; "the adjacent spec does it" is not one. A11y coverage for the rendered
-          survey extends `survey-accessibility.spec.ts`; elsewhere it belongs in that feature area's
-          own spec. Neither case is a per-ticket a11y spec.
-        - Flag state clicked into existence through the UI where Prisma or `/api/v3` could seed it
-          (`playwright/utils/accessibility.ts` is the pattern), and a per-test `users.create()` plus
-          login where a worker-scoped fixture would do.
-        - Flag timing hacks (`waitForTimeout`, arbitrary sleeps, `slowMo`) and dependencies on data
-          another spec created — these are the repo's main source of flake.
-        - Specs stay single-purpose per feature area: flag a spec that walks several unrelated
-          features, and a spec that exists for one detail of a covered one. `@slow` is metadata that
-          nothing reads, so a tag is not an answer to a cost finding.
+        Go server (AGENTS.md "Go conventions" and "API contracts").
+        - Multi-tenant product: every query is scoped by the caller's organization or workspace. An
+          unscoped `WHERE`, or a row fetched by id alone, is a cross-tenant data leak, not style.
+        - Authorization is checked once, in the service layer, through the SpiceDB-backed `authz`
+          package. A handler or repository that decides access itself is a finding.
+        - The client API (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, v3, MCP and webhook or
+          OAuth callback paths are frozen external contracts: flag any change to a path, status code,
+          field or default that is not mirrored in a contract test and the PR's breaking-change table.
+        - v3 handlers follow the hand-authored spec in `docs/api-v3-reference/src/**/*.yml` and return
+          RFC 9457 problems. Return 403, not 404, for a resource the caller may not see.
+        - Errors are wrapped with context and logged once, where handled. Never log secrets, tokens,
+          request bodies, or raw URL paths that can carry a token.
+        - Flag defensive error handling around internal calls; validation belongs at the boundary.
 
-    - path: "**/actions.ts"
+    - path: "server/migrations/*.sql"
       instructions: |
-        A **newly added** exported action is itself the finding: Server Actions are legacy here and
-        no new ones should be added. New backend work belongs in an `/api/v3` route consumed from
-        the client with TanStack Query. Raise that first, then apply the checks below.
-
-        Server actions are the repo's authorization boundary. For every existing exported action
-        that this PR touches, check that:
-        - It goes through the shared action client (`authenticatedActionClient` /
-          `checkAuthorizationUpdated`), and never trusts an id from the client as proof of access.
-        - Input is validated with a zod schema before use.
-        - Mutating actions apply `applyRateLimit` and are wrapped in `withAuditLogging`.
-        - It returns the `{ data }` / `{ error }` shape consistently and does not leak internal
-          error messages, stack traces, or other tenants' identifiers to the caller.
-        - Every query is scoped to the caller's organization/workspace.
-
-    - path: "apps/web/{lib/**,modules/**/lib/**}"
-      instructions: |
-        Data-access layer. Check that:
-        - Every query is scoped by organization/workspace — this is a multi-tenant product and an
-          unscoped `where` is a cross-tenant data leak, not a style issue.
-        - Soft deletion is respected (`deletedAt` / `isActive` filters) where the model has it.
-        - `skip`/`offset` is never passed to a `count()` call; only `where` is.
-        - Count and data queries run in parallel via `Promise.all`, not sequentially.
-        - Large datasets use cursor pagination rather than offset pagination.
-        - `createdAt` filters are combined with an indexed column (e.g. `surveyId` + `createdAt`).
-        - Caching uses `cache.withCache()` with a key from `createCacheKey.*`. Next.js
-          `unstable_cache()` is banned, and cache keys are never built by string concatenation.
-
-    - path: "packages/database/schema/*.prisma"
-      instructions: |
-        - Every tenant-owned model needs a workspace/organization scope column, and cross-model
-          foreign keys between tenant-owned models should be composite (including the scope column)
-          so the database — not the caller — enforces that both rows belong to the same tenant.
-        - Flag indexes whose leading column is already the leading column of another index or
-          unique constraint; a btree on `(a, b)` already serves lookups on `a`.
-        - Check `onDelete` / `onUpdate` behaviour on new relations.
-
-    - path: "packages/database/migration/**/migration.sql"
-      instructions: |
-        Migrations are append-only and run against a live multi-tenant Postgres. Check that:
-        - The migration is idempotent and convergent — re-running it, or running it against a
-          database created with `db:push`, must not fail.
-        - `CREATE INDEX` on an existing large table uses `CONCURRENTLY`; a plain `CREATE INDEX`
-          takes a write lock for the duration.
-        - Adding a `NOT NULL` column supplies a default or backfills first, and column/table drops
-          and renames are called out as breaking (they need the PR's breaking-change table).
-        - Long-running `UPDATE`/`DELETE` over a whole table is batched.
-
-    - path: "packages/database/migration/**/migration.ts"
-      instructions: |
-        Data migrations must be idempotent, batched (never load a whole table into memory), and
-        safe to resume after a partial failure. Check transaction boundaries and timeouts.
-
-    - path: "apps/web/app/api/v1/**"
-      instructions: |
-        API v1 is the legacy public contract used by self-hosted deployments and existing
-        integrations. Treat any change to a request or response shape, status code, or default as
-        breaking: it must be intentional, and the PR's "Breaking changes" table must document it.
-        Prefer adding to v3 over changing v1.
-
-    - path: "apps/web/{app/api/v2,modules/api/v2}/**"
-      instructions: |
-        Public API v2. Route handlers stay thin; logic lives in `apps/web/modules/api/v2/`. Any
-        change to a request or response shape must be mirrored in the endpoint's `lib/openapi.ts`,
-        or the published `openapi.yml` silently goes stale. Response-shape changes are breaking.
-
-    - path: "apps/web/app/api/v3/**"
-      instructions: |
-        Public API v3 — the surface new backend work targets, so hold it to the strictest bar.
-        - Handlers go through `withV3ApiWrapper` (`app/api/v3/lib/api-wrapper.ts`), which owns
-          auth, input parsing, rate limiting and audit logging. A hand-rolled handler that skips
-          it is a finding, not a style preference.
-        - Authorization is `requireV3WorkspaceAccess` (`app/api/v3/lib/auth.ts`). Every query is
-          scoped by the resolved workspace, never fetched by id alone.
-        - Return **403, not 404**, for a resource the caller may not see — a 404 leaks existence.
-        - Responses come from the RFC 9457 problem builders in `app/api/v3/lib/response.ts`. No
-          invented error envelopes, and no internal or database types leaking into a public shape.
-        - Any change to a request or response shape must be mirrored in the hand-authored spec
-          under `docs/api-v3-reference/src/**/*.yml`, which CI bundles. A handler change with no
-          spec change is a bug unless the shape is genuinely unchanged.
-        - A `/v3` route with no public OpenAPI entry is internal by definition and belongs under
-          `apps/web/app/api/(internal)/`. Shipping an internal route as public v3 is a finding.
-
-    - path: "apps/web/app/api/(internal)/**"
-      instructions: |
-        Internal routes, not a public contract — they carry no OpenAPI entry and no compatibility
-        promise. Check that they are unreachable without the expected internal authentication, and
-        flag anything here that looks like it should have been a public `/api/v3` route instead.
-
-    - path: "apps/web/modules/ee/**"
-      instructions: |
-        Enterprise Edition code under a separate licence (`apps/web/modules/ee/LICENSE`). Flag any
-        change that moves EE code into OSS paths or makes OSS code import from `modules/ee` without
-        going through the `license-check` gate, and any EE feature reachable without an
-        entitlement check.
+        Goose migrations, applied in order against a live multi-tenant PostgreSQL 18.
+        - A shipped migration is never edited; changes come as a new numbered file with `Up` and `Down`.
+        - Tenant-owned tables carry a workspace or organization column, and foreign keys between
+          tenant-owned tables include it, so the database enforces that both rows share a tenant.
+        - A table that carries authorization data needs an `authz_projection_outbox` trigger.
+        - `CREATE INDEX` on an existing large table uses `CONCURRENTLY` (outside a transaction); a
+          plain one takes a write lock for its duration. Flag indexes whose leading columns are
+          already served by another index or unique constraint.
+        - A new `NOT NULL` column has a default or a backfill first; drops and renames are breaking.
+        - Closed value sets are `text` with a `CHECK`, not PostgreSQL enums.
 
     - path: ".github/{workflows,actions}/**"
       instructions: |
@@ -261,18 +150,6 @@ reviews:
         Mintlify docs. Frontmatter needs `title`, `description`, and `icon`; the body must not start
         with an H1; headings are Camel Case with only the feature name capitalized. Enterprise-only
         features need the Enterprise note block. New pages must be added to `docs/docs.json` nav.
-
-    - path: "charts/forma/**"
-      instructions: |
-        Helm chart consumed by self-hosters. Flag changes that alter a `values.yaml` key name or
-        default, or that require manual action on upgrade, without a breaking-change entry. New
-        values need a default that keeps existing installs working unchanged.
-
-    - path: "apps/web/locales/en-US.json"
-      instructions: |
-        Source of truth for all translations — every other locale file is machine-generated by
-        Lingo.dev from this one. Check key naming (lowercase, dot-nested) and placeholder
-        consistency. Never suggest editing the other locale files by hand.
 
     - path: "packages/{surveys,js-core,survey-ui}/**"
       instructions: |
@@ -364,7 +241,7 @@ reviews:
           - Removes or renames an endpoint or route, changes a webhook payload, or changes the
             HTTP status code returned for an existing request/response case.
           - Changes a default value, or removes or renames an environment variable or config key —
-            including keys in `charts/forma/values.yaml` and `.env.example`. Adding one counts
+            including the variables in `.env.example` read by `server/internal/platform/config`. Adding one counts
             only when it is required, or has no default that keeps existing installs working.
           - Adds a database migration that needs manual action, drops or renames a column or
             table, or adds a NOT NULL column with no default and no backfill.
@@ -498,7 +375,7 @@ reviews:
     detekt:
       enabled: true
     eslint:
-      enabled: true
+      enabled: false
       e18e:
         enabled: true
     flake8:
@@ -539,7 +416,7 @@ reviews:
     trivy:
       enabled: true
     prismaLint:
-      enabled: true
+      enabled: false
     pylint:
       enabled: true
     oxc:

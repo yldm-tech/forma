@@ -13,7 +13,7 @@ We aim to conform to:
 ## Priorities
 
 1. **End-user surveys** (`packages/surveys`) — everything respondents see and interact with. This is our highest priority because survey takers don't choose Forma; the organisations running surveys choose for them.
-2. **Admin app** (`apps/web`) — survey creation, response analysis, and team management used by Forma customers.
+2. **Admin app** (`web/`, served by the Go server; forma2 until the rewrite cuts over) — survey creation, response analysis, and team management used by Forma customers.
 
 In both areas we focus on:
 
