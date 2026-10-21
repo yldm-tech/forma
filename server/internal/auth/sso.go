@@ -381,11 +381,20 @@ func (s *SSO) auditRecovery(ctx context.Context, action audit.Action, status aud
 	s.svc.logEvent(ctx, audit.Event{Action: action, TargetType: audit.TargetUser, TargetID: userID, ActorID: userID, Status: status, NewObject: details})
 }
 
-// provision creates a user on their first SSO sign-in (forma2's just-in-time provisioning). Public sign-up being closed does not stop it: on a self-hosted instance the identity provider decides who may sign in. On Forma Cloud a personal mail domain is refused, as at sign-up. With AUTH_SSO_DEFAULT_ORGANIZATION_ID set the user joins that organization; otherwise they start without one, as forma2's always-on multi-organization mode did.
+// provision creates a user on their first SSO sign-in (forma2's just-in-time provisioning). Public sign-up being closed does not stop it: on a self-hosted instance the identity provider decides who may sign in. On Forma Cloud a personal mail domain is refused, as at sign-up, unless the sign-in is headed for a valid invite to the address and SIGNUP_DOMAIN_CHECK_ON_INVITES is off. With AUTH_SSO_DEFAULT_ORGANIZATION_ID set the user joins that organization; otherwise they start without one, as forma2's always-on multi-organization mode did.
 func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, callbackURL, acceptLanguage string, meta clientMeta) (callbackResult, error) {
 	email := normalizeEmail(id.Email)
 	if s.cfg.IsFormaCloud && isBlockedEmailDomain(email) {
-		return callbackResult{redirect: s.pageWithQuery(signupPath, url.Values{"error": {CodeEmailDomainNotAllowed}})}, nil
+		invited := false
+		if !s.cfg.SignupDomainCheckOnInvites {
+			var err error
+			if invited, err = s.callbackInvited(ctx, callbackURL, email); err != nil {
+				return callbackResult{}, err
+			}
+		}
+		if !invited {
+			return callbackResult{redirect: s.pageWithQuery(signupPath, url.Values{"error": {CodeEmailDomainNotAllowed}})}, nil
+		}
 	}
 	name := normalizeUserName(id.Name)
 	if name == "" {
@@ -438,6 +447,19 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 	}
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
 	return callbackResult{redirect: callbackURL, session: &sess}, nil
+}
+
+// callbackInvited is forma2's validateSsoInviteToken as gateSsoProvisioning used it for the domain exemption: the callback URL (already validated, absolute) carries an invite link in its token parameter, as the invite page's sign-in does, and the link is live and issued to this address.
+func (s *SSO) callbackInvited(ctx context.Context, callbackURL, email string) (bool, error) {
+	u, err := url.Parse(callbackURL)
+	if err != nil {
+		return false, nil
+	}
+	token := u.Query().Get("token")
+	if token == "" {
+		return false, nil
+	}
+	return s.svc.invites.MatchForSignup(ctx, token, email)
 }
 
 // emailLocalSeparators are the characters of an address's local part that read as word breaks in a name derived from it.

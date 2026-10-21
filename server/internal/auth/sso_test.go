@@ -631,6 +631,45 @@ func TestSSOCloudDomainBlock(t *testing.T) {
 	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
 }
 
+// forma2's gateSsoProvisioning: an invitee headed for their invite (the invite page signs in with callbackUrl=/invite?token=...) may use a personal address on Forma Cloud, unless SIGNUP_DOMAIN_CHECK_ON_INVITES is set; the invite must be live and issued to the address.
+func TestSSOCloudDomainBlockExemptsInvitees(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		check       bool
+		inviteEmail string
+		inviteTTL   time.Duration
+		wantSignup  bool
+	}{
+		{"a valid invite to the address", false, "grace@gmail.com", time.Hour, true},
+		{"an invite to another address", false, "someone@gmail.com", time.Hour, false},
+		{"an expired invite", false, "grace@gmail.com", -time.Hour, false},
+		{"SIGNUP_DOMAIN_CHECK_ON_INVITES", true, "grace@gmail.com", time.Hour, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) { cfg.IsFormaCloud = true; cfg.SignupDomainCheckOnInvites = tc.check })
+			org, owner, _ := e.invitingOrganization()
+			token := e.seedInvite(org, owner, tc.inviteEmail, "member", tc.inviteTTL, tc.inviteTTL)
+			fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "Grace@Gmail.com") })
+			callback := "/invite?token=" + url.QueryEscape(token)
+			r := e.browser().ssoSignIn(fake, "google", callback)
+			if tc.wantSignup {
+				expectRedirect(t, r, webApp+callback)
+				if e.userByEmail("grace@gmail.com") == nil {
+					t.Fatal("the invitee was not created")
+				}
+				return
+			}
+			expectRedirect(t, r, webApp+"/auth/signup?error=email_domain_not_allowed")
+			if e.userByEmail("grace@gmail.com") != nil {
+				t.Fatal("the sign-up went through")
+			}
+		})
+	}
+}
+
 // forma2's default-organization.test.ts: the sign-up that creates AUTH_SSO_DEFAULT_ORGANIZATION_ID's organization owns it; later ones get the configured role, manager by default.
 func TestSSODefaultOrganization(t *testing.T) {
 	t.Parallel()
