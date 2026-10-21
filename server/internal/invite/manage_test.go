@@ -116,8 +116,20 @@ func TestResendInvite(t *testing.T) {
 	expect(t, e.do(o.owner, http.MethodPost, invitePath(o)+"/"+uuid.NewString()+"/resend", nil), http.StatusNotFound, "not_found")
 	expect(t, e.do(o.member, http.MethodPost, path, nil), http.StatusForbidden, "operation_not_allowed")
 
+	// A resend whose mail fails revokes nothing: the link already mailed and a copied share link keep working.
+	shared := e.do(o.owner, http.MethodPost, "/invites/"+id.String()+"/link", nil)
+	expect(t, shared, http.StatusOK, "")
 	e.mail.Err = errors.New("smtp is down")
 	expect(t, e.do(o.owner, http.MethodPost, path, nil), http.StatusBadRequest, CodeEmailSendFailed)
+	if e.svc.mustInspect(t, fresh).Status != StatusValid || e.svc.mustInspect(t, shared.json()["inviteToken"].(string)).Status != StatusValid {
+		t.Fatal("a failed resend revoked the links the invitee already had")
+	}
+	e.mail.Err = nil
+	expect(t, e.do(o.owner, http.MethodPost, path, nil), http.StatusOK, "")
+	if e.svc.mustInspect(t, fresh).Status != StatusNotFound || e.svc.mustInspect(t, shared.json()["inviteToken"].(string)).Status != StatusNotFound ||
+		e.svc.mustInspect(t, e.lastLink("grace@example.com")).Status != StatusValid {
+		t.Fatal("a successful resend did not replace every earlier link")
+	}
 
 	off := newEnv(t, func(c *config.Config) { c.InviteDisabled = true })
 	o = off.organization()

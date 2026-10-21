@@ -530,7 +530,7 @@ func (s *Service) Delete(ctx context.Context, userID, inviteID uuid.UUID) (err e
 	return nil
 }
 
-// Resend mails a fresh link and gives the invite another seven days. Every earlier link stops working, which forma2's signed links could not do. A mail failure fails the request, as in forma2, after the invite was refreshed; the share link still reaches the invitee.
+// Resend mails a fresh link and gives the invite another seven days. Once the mail is sent, every earlier link stops working, which forma2's signed links could not do. A mail failure fails the request, as in forma2, after the invite was refreshed, and revokes nothing: the links already mailed or shared keep working, as forma2's earlier links did.
 func (s *Service) Resend(ctx context.Context, userID, organizationID, inviteID uuid.UUID) (resent *Invite, err error) {
 	ev := audit.Event{Action: audit.ActionUpdated, TargetType: audit.TargetInvite, TargetID: inviteID.String(), OrganizationID: organizationID.String()}
 	defer func() { s.record(ctx, ev, err) }()
@@ -577,9 +577,6 @@ func (s *Service) Resend(ctx context.Context, userID, organizationID, inviteID u
 		if !found {
 			return apperr.NotFound("Invite", inviteID.String())
 		}
-		if err := tx.deleteTokens(ctx, inviteID, false, now); err != nil {
-			return err
-		}
 		token, err = s.issueLink(ctx, tx, inviteID, now)
 		if err != nil {
 			return err
@@ -598,6 +595,9 @@ func (s *Service) Resend(ctx context.Context, userID, organizationID, inviteID u
 	if err := s.sendInvite(ctx, inviter, resent.Email, name, token); err != nil {
 		s.log.ErrorContext(ctx, "Failed to resend invite email", "err", err, "inviteId", inviteID.String())
 		return nil, apperr.InvalidInput(CodeEmailSendFailed, "Failed to send email")
+	}
+	if err := s.repo.deleteTokensExcept(ctx, inviteID, secret.HashToken(token)); err != nil {
+		return nil, err
 	}
 	return resent, nil
 }

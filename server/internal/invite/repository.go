@@ -214,6 +214,14 @@ func (r *Repository) deleteTokens(ctx context.Context, inviteID uuid.UUID, expir
 	return nil
 }
 
+// deleteTokensExcept revokes every link to the invite but the one whose hash is given.
+func (r *Repository) deleteTokensExcept(ctx context.Context, inviteID uuid.UUID, keep []byte) error {
+	if err := r.db.WithContext(ctx).Exec(`DELETE FROM invite_tokens WHERE invite_id = ? AND token_hash <> ?`, inviteID, keep).Error; err != nil {
+		return fmt.Errorf("revoke earlier invite links: %w", err)
+	}
+	return nil
+}
+
 // setExpiry moves the invite's expiry; false when there is no such invite.
 func (r *Repository) setExpiry(ctx context.Context, inviteID uuid.UUID, expiresAt time.Time) (bool, error) {
 	res := r.db.WithContext(ctx).Exec(`UPDATE invites SET expires_at = ? WHERE id = ?`, expiresAt, inviteID)
