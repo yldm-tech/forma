@@ -11,6 +11,8 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -21,6 +23,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
@@ -33,12 +36,24 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth. Its sessions are the SessionAuth every other module's routes authenticate with.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
+	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
 	auth.NewService,
 	auth.NewHandler,
+)
+
+// tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
+var tenancySet = wire.NewSet(
+	jsonschema.New,
+	workspace.NewRepository,
+	workspace.NewService,
+	workspace.NewHandler,
+	org.NewRepository,
+	org.NewService,
+	org.NewHandler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
@@ -49,6 +64,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewAuthorizer,
 		platformSet,
 		authSet,
+		tenancySet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

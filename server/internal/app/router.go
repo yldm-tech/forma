@@ -9,6 +9,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -16,6 +17,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
 // Platform is the shared infrastructure every feature module is built from: configuration, logging, the client address resolver, rate limits, mail, audit events and authorization. Modules take the parts they need as constructor arguments; NewRouter takes the bundle.
@@ -35,11 +37,11 @@ type routeRegistrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler)
+	mountAppAPI(r, p, authHandler, orgHandler, workspaceHandler)
 	web.Register(r)
 	return r
 }
