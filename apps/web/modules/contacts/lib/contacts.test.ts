@@ -130,6 +130,7 @@ describe("Contacts Lib", () => {
           {
             attributes: {
               some: {
+                attributeKey: { workspaceId: mockWorkspaceId },
                 value: {
                   contains: searchTerm,
                   mode: "insensitive",
@@ -137,19 +138,51 @@ describe("Contacts Lib", () => {
               },
             },
           },
-          {
-            id: {
-              contains: searchTerm,
-              mode: "insensitive",
-            },
-          },
+          { id: searchTerm },
         ],
       });
+    });
+
+    test("scopes the attribute match to the workspace's own attribute keys", () => {
+      const result = buildContactWhereClause(mockWorkspaceId, "john");
+
+      const attributeBranch = (result.OR as Prisma.ContactWhereInput[])[0];
+      expect(attributeBranch.attributes).toMatchObject({
+        some: { attributeKey: { workspaceId: mockWorkspaceId } },
+      });
+    });
+
+    test("matches the contact id exactly rather than by substring", () => {
+      const result = buildContactWhereClause(mockWorkspaceId, mockContactId);
+
+      const idBranch = (result.OR as Prisma.ContactWhereInput[])[1];
+      expect(idBranch).toEqual({ id: mockContactId });
     });
 
     test("handles empty search string same as no search", () => {
       const result = buildContactWhereClause(mockWorkspaceId, "");
       expect(result).toEqual({ workspaceId: mockWorkspaceId });
+    });
+
+    test("handles a whitespace-only search same as no search", () => {
+      const result = buildContactWhereClause(mockWorkspaceId, "   ");
+      expect(result).toEqual({ workspaceId: mockWorkspaceId });
+    });
+
+    test("trims surrounding whitespace off the search pattern", () => {
+      const result = buildContactWhereClause(mockWorkspaceId, "  john  ");
+
+      expect(result.OR).toEqual([
+        {
+          attributes: {
+            some: {
+              attributeKey: { workspaceId: mockWorkspaceId },
+              value: { contains: "john", mode: "insensitive" },
+            },
+          },
+        },
+        { id: "john" },
+      ]);
     });
   });
 

@@ -3,6 +3,10 @@ import { logger } from "@forma/logger";
 import type { TUserLocale } from "@forma/types/user";
 import { getJobsQueueingConfig } from "@/lib/jobs/config";
 import { findMatchingLocale } from "@/lib/utils/locale";
+import {
+  recordDroppedResponsePipelineEvent,
+  toOutboxErrorMessage,
+} from "@/modules/response-pipeline/lib/outbox-repository";
 
 // The producer connection runs with `enableOfflineQueue: false` and `maxRetriesPerRequest: 1`
 // (packages/jobs/src/connection.ts), so a sub-second Valkey reconnect surfaces here immediately.
@@ -16,20 +20,44 @@ const delay = (ms: number) =>
   });
 
 /**
- * Deterministic queue id for one pipeline event, so the retry below cannot enqueue the same event twice.
+ * A queue id that is a function of the event and the exact response version it describes.
  *
- * BullMQ deduplicates on an explicit job id: `addStandardJob` returns the id of the job already holding it instead of queueing a second one. Without it, a Valkey blip that drops the reply *after* the Lua script ran leaves attempt 1's job in the queue and attempt 2 adds another under a fresh random id — one submission becoming two follow-up emails, two notification emails, a duplicate row in every connected Google Sheet / Airtable / Notion, and two POSTs to every webhook. Only the workflow-run step was idempotent on its own.
+ * BullMQ keys a job by its id and will not add an id it already holds, so every path that can enqueue this event twice — the retry loop below after a Valkey blip drops the reply *after* the Lua script ran, and the outbox drain replaying a row for it — becomes idempotent for free. Two genuinely different events never collide: an update to the response moves `updatedAt`, and the three trigger kinds carry different `event` values for the same version.
  *
- * `event` is part of the key because one finished submission sends `responseCreated` and `responseFinished` for the same row in the same request, and `updatedAt` because a later edit of that response is a new event rather than a replay of this one. Left readable rather than hashed so the queue shows which response a job belongs to; the separator is `-` because BullMQ rejects a custom job id containing `:`, and neither component can contain one (a cuid2 is alphanumeric, the event is an enum). `getTime()` rather than `toISOString()`: it yields `NaN` instead of throwing on a malformed date, and this runs outside the retry loop's try, where a throw would break `sendToPipeline`'s never-throw contract.
+ * The separator is `-` because BullMQ rejects a custom job id containing `:` (anything but its own three-part repeat-job form throws `Custom Id cannot contain :`), and neither component can contain one (a cuid2 is alphanumeric, the event is an enum). Bounded by `removeOnComplete` in `JOBS_DEFAULT_JOB_OPTIONS` — once the completed job is evicted the id is free again, so this dedupes a retry seconds apart, not a redelivery days later.
  *
- * Bounded by `removeOnComplete` in `JOBS_DEFAULT_JOB_OPTIONS` — once the completed job is evicted the id is free again, so this dedupes a retry seconds apart, not a redelivery days later.
- *
- * Both reads are optional-chained for the same reason `getTime()` is used: the type says `response` is always there, but this runs outside the retry loop's try, and a throw here would break the never-throw contract documented below. A missing row yields a degenerate id rather than a 500 on a request whose Response is already committed.
+ * `undefined` rather than a fabricated id when the version is unusable: a `Date.now()` fallback would be non-deterministic, which is the one property this exists to provide. The caller then enqueues exactly as it did before, which is correct, only not deduplicated.
  */
-const getEnqueueJobId = (job: TResponsePipelineJobData): string =>
-  `response-pipeline-${job.event}-${job.response?.id}-${new Date(job.response?.updatedAt).getTime()}`;
+const buildResponsePipelineJobId = ({ event, response }: TResponsePipelineJobData): string | undefined => {
+  const versionMs = response?.updatedAt instanceof Date ? response.updatedAt.getTime() : Number.NaN;
+  if (!response?.id || Number.isNaN(versionMs)) return undefined;
+  return `response-pipeline-${event}-${response.id}-${versionMs}`;
+};
 
 /**
+ * Persist an event the queue refused, without ever becoming a second way for this path to fail.
+ *
+ * The response row is already committed and the foreign key cascades, so the insert can legitimately
+ * lose a race with a deletion of that response. This is the one place a `catch` is not defensive
+ * noise: the whole point of `sendToPipeline` is that nothing it does reaches the caller.
+ */
+const persistDroppedEvent = async (
+  jobId: string,
+  job: TResponsePipelineJobData,
+  enqueueError: unknown
+): Promise<boolean> => {
+  try {
+    await recordDroppedResponsePipelineEvent(jobId, job, toOutboxErrorMessage(enqueueError));
+    return true;
+  } catch (error) {
+    logger.error(
+      { err: error, responseId: job.response?.id, workspaceId: job.workspaceId },
+      "Response pipeline outbox write failed"
+    );
+    return false;
+  }
+};
+
  * Hand a response pipeline event to the background queue.
  *
  * Never throws. Every caller reaches this *after* the Response row is committed, so a throw became a
@@ -39,9 +67,12 @@ const getEnqueueJobId = (job: TResponsePipelineJobData): string =>
  * while the pipeline still never ran for them. Losing the pipeline event is the smaller failure, and
  * unlike a duplicate row it is visible in the logs.
  *
- * The event is not yet recovered if all attempts fail. Making it durable needs an outbox row written
- * in the Response transaction and drained by a recurring job, the shape `AuthzedProjectionOutbox`
- * and `reconcileOrphanedWorkflowRuns` already use here.
+ * When every attempt fails the event is written to `ResponsePipelineOutbox` instead, and a recurring
+ * drain replays it once the queue is reachable again. That write happens here rather than in each
+ * caller's Response transaction on purpose: the queue being unreachable is precisely when PostgreSQL
+ * is not, and it keeps the recovery path in one file instead of at all twelve Response-creating
+ * boundaries. What it gives up in exchange is the window between the Response commit and this line —
+ * a crash inside it still loses the event.
  */
 export const sendToPipeline = async (job: TResponsePipelineJobData): Promise<void> => {
   const logContext = {
@@ -68,22 +99,24 @@ export const sendToPipeline = async (job: TResponsePipelineJobData): Promise<voi
     }
   }
 
+  const queuedJob: TResponsePipelineJobData = { ...job, locale };
   // Hoisted because it does not vary per attempt, not because recomputing would be wrong.
-  const jobId = getEnqueueJobId(job);
+  const jobId = buildResponsePipelineJobId(queuedJob);
 
   for (let attempt = 1; attempt <= ENQUEUE_ATTEMPTS; attempt++) {
     try {
       const producer = getBackgroundJobProducer();
-      await producer.enqueueResponsePipeline({ ...job, locale }, { jobId });
+      await producer.enqueueResponsePipeline(queuedJob, jobId ? { jobId } : undefined);
       return;
     } catch (error) {
       if (attempt === ENQUEUE_ATTEMPTS) {
-        // Alertable: the response exists but nothing downstream of it will run — no webhook, no
-        // follow-up email, no integration row, no workflow. The job id is logged because it is what a
-        // replay has to reuse to stay idempotent.
+        const recovered = jobId ? await persistDroppedEvent(jobId, queuedJob, error) : false;
+        // Alertable either way: `recovered` only means the event is queued for replay, so until the drain succeeds nothing downstream of the response has run — no webhook, no follow-up email, no integration row, no workflow. The job id is logged because it is what a replay has to reuse to stay idempotent.
         logger.error(
-          { ...logContext, err: error, attempts: attempt, jobId },
-          "Response pipeline event dropped after retries"
+          { ...logContext, attempts: attempt, err: error, recovered, jobId },
+          recovered
+            ? "Response pipeline event deferred to the outbox after retries"
+            : "Response pipeline event dropped after retries"
         );
         return;
       }

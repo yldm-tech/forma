@@ -27,3 +27,22 @@ export const ensureLiveRegion = (): HTMLElement => {
   document.body.appendChild(liveRegion);
   return liveRegion;
 };
+
+let pendingAnnouncement: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Announce a message in the shared status region.
+ *
+ * The clear-then-set cannot be collapsed into a single assignment: assistive tech announces a live
+ * region only when its text actually changes, so ranking an option back to the position it just left
+ * would otherwise be silent. The message is written on a later task so the clear lands as a mutation
+ * of its own, and a newer announcement supersedes one still waiting.
+ */
+export const announceToLiveRegion = (message: string): void => {
+  const liveRegion = ensureLiveRegion();
+  clearTimeout(pendingAnnouncement);
+  liveRegion.textContent = "";
+  pendingAnnouncement = setTimeout(() => {
+    liveRegion.textContent = message;
+  }, 0);
+};

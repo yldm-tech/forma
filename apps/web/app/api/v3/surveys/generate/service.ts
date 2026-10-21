@@ -19,7 +19,7 @@ import {
   ZGeneratedSurveyDraft,
   ZGeneratedSurveyDraftForAI,
 } from "./schemas";
-import { translateV3SurveyPayloadLanguages } from "./translate-payload";
+import { type TV3TranslationProgress, translateV3SurveyPayloadLanguages } from "./translate-payload";
 
 export type TV3SurveyGenerateValidation = {
   valid: boolean;
@@ -501,6 +501,11 @@ export async function finishV3SurveyGeneration(params: {
   organizationId: string;
   workspaceId: string;
   userId?: string | null;
+  /**
+   * Reported per language as translation starts. Only the streaming route supplies it: the blocking
+   * route has nowhere to put progress, and the phase is silent for tens of seconds per language.
+   */
+  onTranslationProgress?: (progress: TV3TranslationProgress) => void;
 }): Promise<TV3SurveyGenerateResult> {
   const result = buildV3SurveyCreatePayloadFromDraft(params.input, params.draft);
 
@@ -516,6 +521,7 @@ export async function finishV3SurveyGeneration(params: {
     organizationId: params.organizationId,
     workspaceId: params.workspaceId,
     userId: params.userId,
+    onLanguageStart: params.onTranslationProgress,
   });
 
   // The validation block mirrors the payload's languages, so it is rebuilt from the same list

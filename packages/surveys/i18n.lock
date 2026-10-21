@@ -1,14 +1,18 @@
 version: 1
 checksums:
   55dc377b5e931bfc64e4add83e35d9ea:
+    common/add_x_to_ranking: 943fcd7b9942d2c9061bc37056a825c6
     common/and: ce8b9bb44f031705708a70e068bb73c8
     common/apply: eb61ee65aa06a70b2bc908cf0e9f2104
     common/back: f541015a827e37cb3b1234e56bc2aa3c
     common/close_survey: 36e6aaa19051cb253aa155ad69a9edbc
     common/company_logo: 82d5c0d5994508210ee02d684819f4b8
+    common/delete_file_x: 3d90c953321b71f153350ad5b81327b0
     common/finish: ffa7a10f71182b48fefed7135bee24fa
     common/language_switch: fd72a9ada13f672f4fd5da863b22cc46
     common/language_switch_current: 7ba57c6c92816c81f14336dd8d4aac28
+    common/move_x_down: 989273901eeffd6ceaf5a99d7129d13d
+    common/move_x_up: 4c7ab600b5b2120836bc0fe9c7facf5d
     common/next: 89ddbcf710eba274963494f312bdc8a9
     common/no_results_found: 5518f2865757dc73900aa03ef8be6934
     common/open_in_new_tab: 6844e4922a7a40a7ee25c10ea109cdeb
@@ -21,6 +25,13 @@ checksums:
     common/protected_by_reCAPTCHA_and_the_Google: 32de026bff5d52e9edf5410d7d7b835f
     common/question: 0576462ce60d4263d7c482463fcc9547
     common/question_video: cc554b661fd62ac59db500307b3ba44e
+    common/ranking_added: 45cf2f7230343de8948c35326df2621b
+    common/ranking_moved: 9064bfa290a0325592402a2f28132dbf
+    common/ranking_options: af5550978b092bec24c08406b5b210e3
+    common/ranking_removed: e6dbebb97e19c2b57c441a403920f26c
+    common/rate_x_out_of_y: 633ba6356d67509400fbd9349ab48453
+    common/rate_x_out_of_y_stars: ed5b4e8906805ca7bbd472bdf2d225d5
+    common/remove_x_from_ranking: 5ee2e569cb7806f5f46e98decac4a82b
     common/required: 04d7fb6f37ffe0a6ca97d49e2a8b6eb5
     common/respondents_will_not_see_this_card: 18c3dd44d6ff6ca2310ad196b84f30d3
     common/response_saved_offline: 7c06127ffc49fe30c5c1d8ca792c7a0d

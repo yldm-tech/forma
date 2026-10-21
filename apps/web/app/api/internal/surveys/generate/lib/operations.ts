@@ -148,6 +148,10 @@ export async function streamV3SurveyGeneration({
           organizationId,
           workspaceId,
           userId,
+          // The only thing on the wire during translation. It keeps the client's ladder moving and,
+          // just as importantly, keeps the socket from idling out mid-phase.
+          onTranslationProgress: ({ languageCode, index, total }) =>
+            emit({ type: "translating", languageCode, index, total }),
         });
         emit({ type: "done", ...result });
 

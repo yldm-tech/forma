@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, test } from "vitest";
-import { ensureLiveRegion } from "./live-region";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { announceToLiveRegion, ensureLiveRegion } from "./live-region";
 
 const LIVE_REGION_ID = "forma-live-region";
 
@@ -29,5 +29,38 @@ describe("ensureLiveRegion", () => {
     expect(ensureLiveRegion()).toBe(existingRegion);
     expect(document.querySelectorAll(`#${LIVE_REGION_ID}`)).toHaveLength(1);
     expect(existingRegion.textContent).toBe("Existing announcement");
+  });
+});
+
+describe("announceToLiveRegion", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+  });
+
+  test("writes the message into the shared region", async () => {
+    announceToLiveRegion("Speed moved to position 1 of 3");
+
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    expect(document.getElementById(LIVE_REGION_ID)?.textContent).toBe("Speed moved to position 1 of 3");
+  });
+
+  test("clears the region first so a repeated message is announced again", async () => {
+    const liveRegion = ensureLiveRegion();
+    liveRegion.textContent = "Speed moved to position 1 of 3";
+
+    announceToLiveRegion("Speed moved to position 1 of 3");
+    expect(liveRegion.textContent).toBe("");
+
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    expect(liveRegion.textContent).toBe("Speed moved to position 1 of 3");
+  });
+
+  test("a newer announcement supersedes one still pending", async () => {
+    announceToLiveRegion("first");
+    announceToLiveRegion("second");
+
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    expect(document.getElementById(LIVE_REGION_ID)?.textContent).toBe("second");
   });
 });

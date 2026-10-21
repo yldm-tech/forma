@@ -32,6 +32,7 @@ const {
   recordAuthzedOutboxStatus,
   recordAuthzedProjection,
   recordAuthzedReconciliationAudit,
+  recordAuthzedReconciliationPass,
   recordAuthzedReconciliationRepair,
   recordAuthzedRequestFailure,
   recordAuthzedRequestRetry,
@@ -215,6 +216,92 @@ describe("direct-authority recovery metrics", () => {
   });
 });
 
+describe("recordAuthzedReconciliationPass", () => {
+  test("records the pass duration in seconds, by pass and outcome", () => {
+    recordAuthzedReconciliationPass({
+      durationMs: 92_500,
+      failed: 0,
+      failureCodes: [],
+      pass: "confirm",
+      status: "reconciled",
+    });
+
+    expect(histogram("forma_authzed_reconciliation_duration_seconds").record).toHaveBeenCalledWith(92.5, {
+      pass: "confirm",
+      status: "reconciled",
+    });
+    expect(counter("forma_authzed_reconciliation_failure_total").add).not.toHaveBeenCalled();
+  });
+
+  test("aggregates failures by code so a stranded page is separable from every other fault", () => {
+    recordAuthzedReconciliationPass({
+      durationMs: 1_000,
+      failed: 3,
+      failureCodes: [AUTHZED_ERROR_CODES.TIMEOUT, AUTHZED_ERROR_CODES.INTERNAL, AUTHZED_ERROR_CODES.TIMEOUT],
+      pass: "dry_run",
+      status: "failed",
+    });
+
+    expect(counter("forma_authzed_reconciliation_failure_total").add.mock.calls).toEqual([
+      [2, { code: AUTHZED_ERROR_CODES.TIMEOUT, pass: "dry_run" }],
+      [1, { code: AUTHZED_ERROR_CODES.INTERNAL, pass: "dry_run" }],
+    ]);
+  });
+
+  // A backfill result names at most 100 failures but counts them all. Dropping the difference would put
+  // this counter permanently below `forma_authzed_reconciliation_drift_total{kind="failure"}` on exactly
+  // the broken instance where the two are being compared.
+  test("books failures the run counted but did not name under one bounded code", () => {
+    recordAuthzedReconciliationPass({
+      durationMs: 1_000,
+      failed: 140,
+      failureCodes: Array.from({ length: 100 }, () => AUTHZED_ERROR_CODES.TIMEOUT),
+      pass: "apply",
+      status: "failed",
+    });
+
+    const recorded = counter("forma_authzed_reconciliation_failure_total").add.mock.calls;
+    expect(recorded).toEqual([
+      [100, { code: AUTHZED_ERROR_CODES.TIMEOUT, pass: "apply" }],
+      [40, { code: "unreported", pass: "apply" }],
+    ]);
+    expect(recorded.reduce((total, [count]) => total + (count as number), 0)).toBe(140);
+  });
+
+  test("clamps a negative duration rather than exporting it", () => {
+    // `Date.now()` is not monotonic: an NTP step backwards mid-sweep would otherwise put a negative
+    // observation into the histogram's sum, which no quantile can recover from.
+    recordAuthzedReconciliationPass({
+      durationMs: -5,
+      failed: 0,
+      failureCodes: [],
+      pass: "dry_run",
+      status: "reconciled",
+    });
+
+    expect(histogram("forma_authzed_reconciliation_duration_seconds").record).toHaveBeenCalledWith(
+      0,
+      expect.any(Object)
+    );
+  });
+
+  test("does not let an exporter failure turn a completed sweep into a failed one", () => {
+    histogram("forma_authzed_reconciliation_duration_seconds").record.mockImplementationOnce(() => {
+      throw new Error("exporter unavailable");
+    });
+
+    expect(() =>
+      recordAuthzedReconciliationPass({
+        durationMs: 1,
+        failed: 0,
+        failureCodes: [],
+        pass: "dry_run",
+        status: "reconciled",
+      })
+    ).not.toThrow();
+  });
+});
+
 describe("attribute cardinality", () => {
   test("never carries an identifier", () => {
     // These attributes leave the deployment when an OTLP endpoint is configured. An organization or
@@ -239,18 +326,28 @@ describe("attribute cardinality", () => {
       revocationsPastWarning: 0,
     });
     recordAuthzedReconciliationRepair({ failed: 1, repaired: 2 });
+    recordAuthzedReconciliationPass({
+      durationMs: 1,
+      failed: 1,
+      failureCodes: [AUTHZED_ERROR_CODES.TIMEOUT],
+      pass: "apply",
+      status: "failed",
+    });
     recordAuthzedRevocationDelivery(1);
 
     const recordedAttributes = [
       ...counter("forma_authzed_projection_total").add.mock.calls,
       ...counter("forma_authzed_request_failures_total").add.mock.calls,
       ...counter("forma_authzed_reconciliation_repair_total").add.mock.calls,
+      ...counter("forma_authzed_reconciliation_failure_total").add.mock.calls,
+      ...histogram("forma_authzed_reconciliation_duration_seconds").record.mock.calls,
       ...gauges.get("forma_authzed_projection_outbox_status")!.record.mock.calls,
     ].flatMap(([, attributes]) => Object.keys(attributes as object));
 
     expect([...new Set(recordedAttributes)].sort()).toEqual([
       "code",
       "operation",
+      "pass",
       "projection",
       "retryable",
       "state",

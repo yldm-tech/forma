@@ -122,25 +122,25 @@ const selectContact = {
 
 export const buildContactWhereClause = (workspaceId: string, search?: string): Prisma.ContactWhereInput => {
   const whereClause: Prisma.ContactWhereInput = { workspaceId };
+  // A search of only whitespace is not a search: untrimmed it still reaches the database as ILIKE '%   %', which matches nothing and reads the table to find that out.
+  const trimmedSearch = search?.trim();
 
-  if (search) {
+  if (trimmedSearch) {
     whereClause.OR = [
       {
         attributes: {
           some: {
+            // Constraining the attribute keys to this workspace cannot change the result set — the outer clause already pins the contact to this workspace, and a contact only carries keys belonging to it — but it changes the plan. ContactAttribute has no tenant column and is indexed on (attributeKeyId, value), so without a key constraint the ILIKE below is an unbounded predicate over every workspace's attribute rows; with one the candidate set is this workspace's attribute rows and the existing index becomes applicable.
+            attributeKey: { workspaceId },
             value: {
-              contains: search,
+              contains: trimmedSearch,
               mode: "insensitive",
             },
           },
         },
       },
-      {
-        id: {
-          contains: search,
-          mode: "insensitive",
-        },
-      },
+      // Exact match, not an infix one. The id is a cuid nobody searches by substring, while `contains` on it is un-indexable and forces a sequential scan of the workspace's contacts on every keystroke — including the searches where the attribute branch matches nothing, which are the expensive ones.
+      { id: trimmedSearch },
     ];
   }
 

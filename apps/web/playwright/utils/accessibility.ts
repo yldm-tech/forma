@@ -28,9 +28,11 @@ type TLegacyQuestions = Parameters<typeof transformQuestionsToBlocks>[0];
  * survey with `dir="rtl"` (see packages/surveys/src/lib/utils.ts `isRTLLanguage`).
  *
  * A THIRD fixture — the "answered states" survey — carries the cards whose
- * post-interaction DOM the kitchen-sink walker can never reach, plus the one
- * question type the kitchen sink cannot hold at all (ENG-1298). See
- * `buildAnsweredStatesQuestions` for what each card is there to expose.
+ * post-interaction DOM the kitchen-sink walker can never reach, plus the element
+ * types the kitchen sink leaves out — all of them but `csat` and `ces` (ENG-1298).
+ * See `buildAnsweredStatesQuestions` for what each card is there to expose, why
+ * those types are cheaper here than in the kitchen sink, and why those two are not
+ * worth a card at all.
  */
 
 type I18n = { default: string; [lang: string]: string };
@@ -163,9 +165,10 @@ const buildKitchenSinkQuestions = (baseURL: string) => [
  *
  * The kitchen-sink walker scans each card exactly once, BEFORE it answers it, and
  * skips the file input entirely — so a whole class of DOM has never reached axe:
- * the markup a card only renders once the respondent has interacted with it. Each
- * card below is here for one specific unscanned state, and the spec asserts it
- * actually reached that state before scanning (a no-op must not pass as clean).
+ * the markup a card only renders once the respondent has interacted with it. The
+ * first four cards are here for one specific unscanned state each, and the spec
+ * asserts it actually reached that state before scanning (a no-op must not pass as
+ * clean).
  *
  * | Card                        | State axe has never seen                                         |
  * | --------------------------- | ---------------------------------------------------------------- |
@@ -177,6 +180,29 @@ const buildKitchenSinkQuestions = (baseURL: string) => [
  * `fileUpload` is deliberately REQUIRED here: advancing past it is then only
  * possible if the mocked upload really registered a response, which is what makes
  * the "fully exercised" claim checkable rather than asserted.
+ *
+ * The cards AFTER those four are here for a different reason: they are the element
+ * types (and the one display branch) that no fixture in this suite rendered at all,
+ * so axe had never graded them in any variant. `cal` above already set the
+ * precedent — a type the kitchen sink cannot hold lives here instead.
+ *
+ * | Card                                  | Why it was unreachable                                     |
+ * | ------------------------------------- | ---------------------------------------------------------- |
+ * | `consent`                             | a Radix `role="checkbox"` button, not a native input        |
+ * | `nps`                                 | 11 sr-only radios in one `role="radiogroup"` fieldset       |
+ * | `multipleChoiceSingle` as `dropdown`  | Radix menu + `role="search"` box, portalled out of the card |
+ * | `address`                             | `FormField` with per-field show/required + autocomplete     |
+ * | `contactInfo`                         | the same `FormField`, with the implicit email rule on       |
+ *
+ * They are appended rather than given a survey of their own so they cost one extra
+ * card each on ONE existing walk, instead of another seed and another page load.
+ *
+ * That leaves `csat` and `ces` as the only two element types this suite never
+ * renders, and deliberately so: `element-conditional.tsx` maps both to the SAME
+ * `RatingElement` the kitchen sink's `rating` card already puts through every
+ * variant, so a card for either would re-scan markup axe has seen rather than reach
+ * anything new. Coverage is therefore 15 of 17 element types by design, not by
+ * omission.
  */
 const buildAnsweredStatesQuestions = (baseURL: string) => [
   {
@@ -217,6 +243,69 @@ const buildAnsweredStatesQuestions = (baseURL: string) => [
     required: false,
     calUserName: CAL_USER_NAME,
   },
+  {
+    id: createId(),
+    type: "consent",
+    headline: i18nValue(CONSENT_HEADLINE),
+    subheader: i18nValue("We only use it to follow up on this report."),
+    // Required so the walk cannot advance without really toggling the Radix checkbox button.
+    required: true,
+    label: i18nValue(CONSENT_CHECKBOX_LABEL),
+  },
+  {
+    id: createId(),
+    type: "nps",
+    headline: i18nValue(NPS_HEADLINE),
+    required: true,
+    lowerLabel: i18nValue("Not at all likely"),
+    upperLabel: i18nValue("Extremely likely"),
+    // Left at the default: the colour-coded band is an NPS option, not an element type, and this
+    // card exists to get the type scanned at all. Turning it on would scan a second rendering of
+    // the same card for no extra type.
+    isColorCodingEnabled: false,
+  },
+  {
+    id: createId(),
+    type: "multipleChoiceSingle",
+    headline: i18nValue(DROPDOWN_HEADLINE),
+    required: true,
+    // The branch an author reaches by flipping the editor's display-type switch. It shares no
+    // markup with the list variant the kitchen sink renders: a Radix menu button plus a portalled
+    // `role="menu"` of `role="menuitemradio"` rows.
+    displayType: "dropdown",
+    // Five choices on purpose — `SEARCH_THRESHOLD` is 3, so anything above it also renders the
+    // in-menu search box, which is the densest part of the widget.
+    choices: DROPDOWN_CHOICE_LABELS.map((label) => ({ id: createId(), label: i18nValue(label) })),
+  },
+  {
+    id: createId(),
+    type: "address",
+    headline: i18nValue(ADDRESS_HEADLINE),
+    required: true,
+    // Two fields hidden and one shown-but-optional, so the scan covers a mixed form rather than a
+    // uniform one: `FormField` derives each label's required marker from exactly this config.
+    addressLine1: { show: true, required: true, placeholder: i18nValue("Address line 1") },
+    addressLine2: { show: false, required: false, placeholder: i18nValue("Address line 2") },
+    city: { show: true, required: true, placeholder: i18nValue("City") },
+    state: { show: false, required: false, placeholder: i18nValue("State") },
+    zip: { show: true, required: true, placeholder: i18nValue("Postal code") },
+    country: { show: true, required: false, placeholder: i18nValue("Country") },
+  },
+  {
+    id: createId(),
+    type: "contactInfo",
+    headline: i18nValue(CONTACT_INFO_HEADLINE),
+    required: true,
+    firstName: { show: true, required: true, placeholder: i18nValue("First name") },
+    lastName: { show: true, required: false, placeholder: i18nValue("Last name") },
+    // Shown because `email` is what turns on the evaluator's implicit email rule, so the card is
+    // scanned with a real `type="email"` input and its autocomplete token.
+    email: { show: true, required: true, placeholder: i18nValue("Email") },
+    // Hidden: showing it arms the implicit PHONE rule, which the walker's generic text fill cannot
+    // satisfy, and a stalled walk would fail this test for a reason unrelated to accessibility.
+    phone: { show: false, required: false, placeholder: i18nValue("Phone") },
+    company: { show: false, required: false, placeholder: i18nValue("Company") },
+  },
 ];
 
 /**
@@ -245,6 +334,24 @@ export const DATE_HEADLINE = "Which day works best for you?";
 export const CTA_EXTERNAL_HEADLINE = "Read the setup guide";
 export const FILE_UPLOAD_HEADLINE = "Attach a screenshot of the problem";
 export const CAL_HEADLINE = "Book a call with our team";
+export const CONSENT_HEADLINE = "May we contact you about this?";
+export const NPS_HEADLINE = "How likely are you to recommend us?";
+export const DROPDOWN_HEADLINE = "Which plan are you evaluating?";
+export const ADDRESS_HEADLINE = "Where should we ship the swag?";
+export const CONTACT_INFO_HEADLINE = "How do we reach you?";
+
+/** Label of the consent card's checkbox — the accessible name of the Radix `role="checkbox"` button. */
+export const CONSENT_CHECKBOX_LABEL = "Yes, you may email me about this report";
+
+/**
+ * Choices of the dropdown-display single select. There are five because `SEARCH_THRESHOLD` (see
+ * packages/survey-ui dropdown-search.tsx) is 3 and the in-menu search box only renders ABOVE it —
+ * so the count is load-bearing, and the spec asserts both the row count and the search box.
+ */
+export const DROPDOWN_CHOICE_LABELS = ["Starter", "Growth", "Business", "Enterprise", "Still deciding"];
+
+/** The dropdown row the spec selects, and therefore the text the closed trigger must then show. */
+export const DROPDOWN_SELECTED_CHOICE_LABEL = DROPDOWN_CHOICE_LABELS[1];
 
 /**
  * Label of the CTA card's in-card external-link button. The transform renames the legacy
@@ -414,7 +521,11 @@ export interface SeededAccessibilitySurveys {
   surveyUrl: string;
   /** Published multi-language kitchen-sink survey link forced to Arabic, e.g. `/s/<id>?lang=ar-EG`. */
   rtlSurveyUrl: string;
-  /** Published answered-states survey link (date / external CTA / file upload / cal), e.g. `/s/<id>`. */
+  /**
+   * Published answered-states survey link, e.g. `/s/<id>`. Carries the post-interaction states
+   * (date / external CTA / file upload / cal) AND the element types no other fixture renders
+   * (consent / NPS / dropdown single select / address / contact info).
+   */
   answeredStatesSurveyUrl: string;
 }
 

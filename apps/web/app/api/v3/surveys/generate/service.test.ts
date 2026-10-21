@@ -885,6 +885,24 @@ describe("finishV3SurveyGeneration", () => {
     ]);
   });
 
+  test("hands the translation step its progress callback so a streaming caller can relay it", async () => {
+    vi.mocked(translateV3SurveyPayloadLanguages).mockImplementation(async ({ payload }) => payload);
+    const onTranslationProgress = vi.fn();
+
+    await finishV3SurveyGeneration({
+      input: { ...generateInput, languages: ["en-US", "de-DE"] },
+      draft,
+      organizationId: "org_1",
+      workspaceId,
+      userId: null,
+      onTranslationProgress,
+    });
+
+    expect(translateV3SurveyPayloadLanguages).toHaveBeenCalledWith(
+      expect.objectContaining({ onLanguageStart: onTranslationProgress })
+    );
+  });
+
   test("skips translation when the only language asked for is the generated one", async () => {
     const result = await finishV3SurveyGeneration({
       input: { ...generateInput, languages: ["en-US"] },

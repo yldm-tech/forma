@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { useResponseFilterUrlSync } from "@/app/(app)/workspaces/[workspaceId]/surveys/[surveyId]/(analysis)/components/use-response-filter-url-sync";
 import {
   ElementOption,
   ElementOptions,
@@ -85,6 +86,18 @@ const ResponseFilterProvider = ({ children }: { children: React.ReactNode }) => 
   const refreshAnalysisData = useCallback(async () => {
     await refreshHandlerRef.current?.();
   }, []);
+
+  const applyFilterFromUrl = useCallback(
+    (decoded: { selectedFilter: SelectedFilterValue; dateRange?: DateRange }) => {
+      setSelectedFilter(decoded.selectedFilter);
+      if (decoded.dateRange) {
+        setDateRange(decoded.dateRange);
+      }
+    },
+    []
+  );
+
+  useResponseFilterUrlSync({ selectedFilter, dateRange, applyFilterFromUrl });
 
   const registerAnalysisRefreshHandler = useCallback((handler: () => Promise<void>) => {
     refreshHandlerRef.current = handler;

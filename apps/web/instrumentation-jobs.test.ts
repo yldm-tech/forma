@@ -13,6 +13,7 @@ const mockRemoveWorkflowsUsageSnapshot = vi.fn();
 const mockUpsertWorkflowsUsageSnapshot = vi.fn();
 const mockUpsertAuthzedProjectionDelivery = vi.fn();
 const mockUpsertAuthzedReconciliationAudit = vi.fn();
+const mockUpsertRetentionSweep = vi.fn();
 const mockDebug = vi.fn();
 const mockError = vi.fn();
 const mockWarn = vi.fn();
@@ -53,6 +54,11 @@ vi.mock("@forma/jobs", () => ({
       scheduleId: "authzed-reconciliation-audit",
       scope: "global",
       upsert: mockUpsertAuthzedReconciliationAudit,
+    },
+    retentionSweep: {
+      name: "retention-sweep.process",
+      scheduleId: "daily-retention-sweep",
+      upsert: mockUpsertRetentionSweep,
     },
     surveyArchivePurge: {
       name: "survey-archive-purge.process",
@@ -260,6 +266,7 @@ describe("instrumentation-jobs", () => {
         "authzed-projection.deliver": expect.any(Function),
         "authzed-reconciliation.audit": expect.any(Function),
         "response-pipeline.process": expect.any(Function),
+        "retention-sweep.process": expect.any(Function),
         "survey-scheduling.reconcile": expect.any(Function),
         "survey-archive-purge.process": expect.any(Function),
         "workflow-run.process": expect.any(Function),

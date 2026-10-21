@@ -8,6 +8,7 @@ export const JOB_NAMES = {
   authzedReconciliationAudit: "authzed-reconciliation.audit",
   testLog: "system.test-log",
   responsePipeline: "response-pipeline.process",
+  retentionSweep: "retention-sweep.process",
   surveyScheduling: "survey-scheduling.reconcile",
   surveyArchivePurge: "survey-archive-purge.process",
   usageTelemetry: "usage-telemetry.process",

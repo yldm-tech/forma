@@ -31,6 +31,15 @@ export type TSurveyGenerationStreamEvent =
    */
   | { type: "start"; requestId: string }
   | { type: "partial"; seq: number; draft: TSurveyGenerationDraftSnapshot }
+  /**
+   * One per requested extra language, before its translation call starts. `index` is 1-based within
+   * `total`. Translation runs after the last generated token, one serial model call per language, so
+   * without this the body emits nothing for tens of seconds per language: the client's status ladder
+   * freezes on the last phase it saw, and to any proxy with an idle read timeout shorter than the
+   * phase the socket looks dead — which turns a generation that already succeeded, and was already
+   * billed, into the client's "stream ended without a result" total loss.
+   */
+  | { type: "translating"; languageCode: string; index: number; total: number }
   /** Mirrors the public endpoint's result shape, so the client reuses its existing create path. */
   | {
       type: "done";

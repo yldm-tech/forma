@@ -364,6 +364,7 @@ export function FileUploadElement({
         isUploading={isUploading}
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}
+        deleteFileLabel={(fileName) => t("common.delete_file_x", { fileName })}
         placeholderText={t("errors.file_input.placeholder_text")}
         uploadingText={t("errors.file_input.uploading")}
       />

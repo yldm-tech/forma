@@ -1,10 +1,9 @@
 import { useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { PictureSelect, type PictureSelectOption } from "@forma/survey-ui";
+import { PictureSelect, type PictureSelectOption, getImageAltFromUrl } from "@forma/survey-ui";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import type { TSurveyPictureSelectionElement } from "@forma/types/surveys/elements";
 import { getLocalizedValue } from "@/lib/i18n";
-import { getImageAltFromUrl } from "@/lib/storage";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 
 interface PictureSelectionProps {

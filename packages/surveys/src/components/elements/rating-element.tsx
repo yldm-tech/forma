@@ -68,6 +68,8 @@ export function RatingElement({
         colorCoding={element.isColorCodingEnabled}
         required={isRequired}
         requiredLabel={t("common.required")}
+        optionLabel={(number, total) => t("common.rate_x_out_of_y", { number, total })}
+        starOptionLabel={(number, total) => t("common.rate_x_out_of_y_stars", { number, total })}
         dir={dir}
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}

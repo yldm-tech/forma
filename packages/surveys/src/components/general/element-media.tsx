@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
-import { isSafeMediaUrl } from "@forma/survey-ui";
+import { isSafeMediaUrl, resolveImageAltText } from "@forma/survey-ui";
 import { ExpandIcon } from "@/components/icons/expand-icon";
 import { ImageDownIcon } from "@/components/icons/image-down-icon";
 import { cn } from "@/lib/utils";
@@ -32,11 +32,16 @@ const asSafeMediaUrl = (url: string | undefined): string | undefined =>
 interface ElementMediaProps {
   imgUrl?: string;
   videoUrl?: string;
+  /**
+   * The image's accessible description. Omitted, it is derived from the stored file name and falls
+   * back to `""` (decorative) — see `resolveImageAltText`. Pass `""` explicitly for an image that
+   * carries no information of its own.
+   */
   altText?: string;
   className?: string;
 }
 
-export function ElementMedia({ imgUrl, videoUrl, altText = "Image", className }: ElementMediaProps) {
+export function ElementMedia({ imgUrl, videoUrl, altText, className }: Readonly<ElementMediaProps>) {
   const { t } = useTranslation();
   // Every sink is validated, not just the href. `ZStorageUrl` now rejects unsafe schemes on write, but
   // this component renders survey JSON straight from the API, and rows written before that validation
@@ -45,6 +50,7 @@ export function ElementMedia({ imgUrl, videoUrl, altText = "Image", className }:
   const safeVideoUrl = asSafeMediaUrl(videoUrl ? getVideoUrlWithParams(videoUrl) : undefined);
   const safeImgUrl = asSafeMediaUrl(imgUrl);
   const safeHref = asSafeMediaUrl(imgUrl ?? convertToEmbedUrl(videoUrl ?? ""));
+  const resolvedAltText = resolveImageAltText(altText, safeImgUrl);
   const [isLoading, setIsLoading] = useState(true);
 
   return (
@@ -56,7 +62,7 @@ export function ElementMedia({ imgUrl, videoUrl, altText = "Image", className }:
         <img
           key={safeImgUrl}
           src={safeImgUrl}
-          alt={altText}
+          alt={resolvedAltText}
           className={cn("rounded-custom mx-auto max-h-[40dvh] object-contain", isLoading ? "opacity-0" : "")}
           onLoad={() => {
             setIsLoading(false);

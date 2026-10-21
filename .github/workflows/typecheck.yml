@@ -39,5 +39,24 @@ jobs:
       - name: Create .env
         run: pnpm dev:setup
 
+      # Restore only — warm-turbo-cache.yml is the producer, on push to main. This is the first consumer
+      # wired up on purpose: read the `cache hit`/`cache miss` lines in the turbo output below before
+      # adding the same step to lint.yml, test.yml, integration-tests.yml and api-v3-contract-tests.yml.
+      # A PR that touches only apps/web should report every build task in this graph as a hit.
+      #
+      # DATABASE_URL stays out of this job's environment, as it already is: `@forma/database#build` and
+      # `#generate` hash it (turbo.json), so setting it here would miss every entry the producer wrote.
+      #
+      # Branch-scoped, like every Actions cache: merge_group runs happen on throwaway
+      # `gh-readonly-queue/...` branches and will miss, the same caveat e2e.yml records for its
+      # Playwright browser cache.
+      - name: Restore the Turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Typecheck
         run: pnpm typecheck

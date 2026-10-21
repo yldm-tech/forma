@@ -396,6 +396,7 @@ describe("@forma/jobs queue helpers", () => {
   test.each([
     ["authzedProjectionDelivery", "authzed-projection.deliver:global:authzed-projection-delivery"],
     ["authzedReconciliationAudit", "authzed-reconciliation.audit:global:authzed-reconciliation-audit"],
+    ["retentionSweep", "retention-sweep.process:global:daily-retention-sweep"],
     ["surveyArchivePurge", "survey-archive-purge.process:global:daily-survey-archive-purge"],
     ["surveyScheduling", "survey-scheduling.reconcile:global:daily-survey-scheduling"],
     ["usageTelemetry", "usage-telemetry.process:global:daily-usage-telemetry"],

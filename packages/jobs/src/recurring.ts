@@ -68,6 +68,11 @@ export const recurringJobDescriptors = {
     name: JOB_NAMES.authzedReconciliationAudit,
     scheduleId: "authzed-reconciliation-audit",
   }),
+  retentionSweep: defineRecurringJob({
+    label: "retention sweep",
+    name: JOB_NAMES.retentionSweep,
+    scheduleId: "daily-retention-sweep",
+  }),
   surveyArchivePurge: defineRecurringJob({
     label: "survey archive purge",
     name: JOB_NAMES.surveyArchivePurge,

@@ -58,9 +58,10 @@ describe("translateV3SurveyPayloadLanguages", () => {
   });
 
   test("fills every translatable field and records the language", async () => {
-    vi.mocked(translateFields).mockImplementation(async ({ fields }) =>
-      Object.fromEntries(fields.map((field) => [field.path, `ja:${field.defaultText}`]))
-    );
+    vi.mocked(translateFields).mockImplementation(async ({ fields }) => ({
+      translations: Object.fromEntries(fields.map((field) => [field.path, `ja:${field.defaultText}`])),
+      failedPaths: [],
+    }));
 
     const result = await call(["ja-JP"]);
 
@@ -82,7 +83,10 @@ describe("translateV3SurveyPayloadLanguages", () => {
   });
 
   test("does not mutate the payload it was given", async () => {
-    vi.mocked(translateFields).mockResolvedValue({ "metadata.title": "translated" });
+    vi.mocked(translateFields).mockResolvedValue({
+      translations: { "metadata.title": "translated" },
+      failedPaths: [],
+    });
 
     await call(["ja-JP"]);
 
@@ -92,9 +96,10 @@ describe("translateV3SurveyPayloadLanguages", () => {
   test("keeps the languages that translated when one of them fails", async () => {
     vi.mocked(translateFields)
       .mockRejectedValueOnce(new Error("provider unavailable"))
-      .mockImplementationOnce(async ({ fields }) =>
-        Object.fromEntries(fields.map((field) => [field.path, `de:${field.defaultText}`]))
-      );
+      .mockImplementationOnce(async ({ fields }) => ({
+        translations: Object.fromEntries(fields.map((field) => [field.path, `de:${field.defaultText}`])),
+        failedPaths: [],
+      }));
 
     const result = await call(["ja-JP", "de-DE"]);
 
@@ -117,12 +122,72 @@ describe("translateV3SurveyPayloadLanguages", () => {
       expect(inFlight).toHaveLength(1);
       await Promise.resolve();
       inFlight.pop();
-      return Object.fromEntries(fields.map((field) => [field.path, field.defaultText]));
+      return {
+        translations: Object.fromEntries(fields.map((field) => [field.path, field.defaultText])),
+        failedPaths: [],
+      };
     });
 
     await call(["ja-JP", "de-DE", "fr-FR"]);
 
     expect(translateFields).toHaveBeenCalledTimes(3);
+  });
+
+  test("reports each language before its call, one-based and with the total", async () => {
+    vi.mocked(translateFields).mockImplementation(async ({ fields }) => ({
+      translations: Object.fromEntries(fields.map((field) => [field.path, field.defaultText])),
+      failedPaths: [],
+    }));
+
+    const progress: unknown[] = [];
+    await translateV3SurveyPayloadLanguages({
+      payload: basePayload,
+      sourceLanguage: "en-US",
+      targetLanguages: ["ja-JP", "de-DE"],
+      organizationId: "org_1",
+      workspaceId: "workspace1",
+      userId: "user_1",
+      onLanguageStart: (p) => progress.push(p),
+    });
+
+    expect(progress).toEqual([
+      { languageCode: "ja-JP", index: 1, total: 2 },
+      { languageCode: "de-DE", index: 2, total: 2 },
+    ]);
+  });
+
+  test("reports a language before its call even when that call fails", async () => {
+    vi.mocked(translateFields).mockRejectedValue(new Error("provider unavailable"));
+
+    const progress: string[] = [];
+    const result = await translateV3SurveyPayloadLanguages({
+      payload: basePayload,
+      sourceLanguage: "en-US",
+      targetLanguages: ["ja-JP"],
+      organizationId: "org_1",
+      workspaceId: "workspace1",
+      userId: "user_1",
+      onLanguageStart: ({ languageCode }) => progress.push(languageCode),
+    });
+
+    // The event is the only thing on the wire during this phase, so it cannot be conditional on the
+    // call succeeding — a client waiting through a failed language still needs the socket to move.
+    expect(progress).toEqual(["ja-JP"]);
+    expect(result.languages).toEqual([{ code: "en-US", default: true, enabled: true }]);
+  });
+
+  test("drops a language that came back only partially translated", async () => {
+    vi.mocked(translateFields).mockResolvedValue({
+      translations: { "metadata.title": "ja:Onboarding" },
+      failedPaths: ["blocks.0.elements.0.headline"],
+    });
+
+    const result = await call(["ja-JP"]);
+
+    // `prepareV3SurveyCreateInput` rejects a payload whose translatable fields are missing a
+    // configured language, so half a language is not a language this payload may claim.
+    expect(result.languages).toEqual([{ code: "en-US", default: true, enabled: true }]);
+    expect(result.metadata.title).toEqual({ "en-US": "Onboarding" });
   });
 });
 

@@ -140,6 +140,13 @@ interface RatingProps {
   required?: boolean;
   /** Custom label for the required indicator */
   requiredLabel?: string;
+  /**
+   * Accessible name for a single number or smiley option. The survey runtime supplies a translated
+   * one; the English default only covers consumers that render this component outside a survey.
+   */
+  optionLabel?: (value: number, range: number) => string;
+  /** Accessible name for a single star option. Defaults to the English "Rate n out of m stars". */
+  starOptionLabel?: (value: number, range: number) => string;
   /** Error message to display */
   errorMessage?: string;
   /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'auto' (auto-detect from content) */
@@ -166,6 +173,8 @@ function Rating({
   colorCoding = false,
   required = false,
   requiredLabel,
+  optionLabel = (value, total) => `Rate ${String(value)} out of ${String(total)}`,
+  starOptionLabel = (value, total) => `Rate ${String(value)} out of ${String(total)} stars`,
   errorMessage,
   dir = "auto",
   disabled = false,
@@ -272,7 +281,7 @@ function Rating({
           }}
           disabled={disabled}
           className="sr-only"
-          aria-label={`Rate ${String(number)} out of ${String(range)}`}
+          aria-label={optionLabel(number, range)}
           {...getRadioProps(String(number))}
         />
         <span className="text-sm">{number}</span>
@@ -314,7 +323,7 @@ function Rating({
             }}
             disabled={disabled}
             className="sr-only"
-            aria-label={`Rate ${String(number)} out of ${String(range)} stars`}
+            aria-label={starOptionLabel(number, range)}
             {...getRadioProps(String(number))}
           />
           <div className="pointer-events-none flex w-full items-center justify-center">
@@ -362,7 +371,7 @@ function Rating({
             }}
             disabled={disabled}
             className="sr-only"
-            aria-label={`Rate ${String(number)} out of ${String(range)}`}
+            aria-label={optionLabel(number, range)}
             {...getRadioProps(String(number))}
           />
           <div className="text-input-text pointer-events-none h-full w-full object-contain">

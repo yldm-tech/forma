@@ -61,7 +61,9 @@ export const translateSurveyFieldsAction = authenticatedActionClient
 
     await assertOrganizationAIConfigured(organizationId);
 
-    const translations = await translateFields({
+    // Partial by contract: `failedPaths` names the fields that did not come back, so the caller can
+    // keep what did and retry only the rest instead of losing a whole batch to one missing key.
+    const { translations, failedPaths } = await translateFields({
       organizationId,
       workspaceId: parsedInput.workspaceId,
       userId: ctx.user.id,
@@ -70,5 +72,5 @@ export const translateSurveyFieldsAction = authenticatedActionClient
       targetLanguage: parsedInput.targetLanguage,
     });
 
-    return { translations };
+    return { translations, failedPaths };
   });

@@ -1,13 +1,21 @@
 import "@testing-library/jest-dom/vitest";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { createCacheKey } from "@forma/cache";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { cache } from "@/lib/cache";
 import { validateInputs } from "@/lib/utils/validate";
 import { getWorkspaceById, getWorkspaceContextForLinkSurvey } from "./workspace";
 
 vi.mock("@/lib/utils/validate", () => ({
   validateInputs: vi.fn(),
+}));
+
+vi.mock("@/lib/cache", () => ({
+  cache: {
+    withCache: vi.fn(),
+  },
 }));
 
 vi.mock("@forma/database", () => ({
@@ -110,6 +118,55 @@ describe("getWorkspaceById", () => {
 describe("getWorkspaceContextForLinkSurvey", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Pass-through by default: the assertions below are about what is handed to the cache, not about
+    // Redis. The one test that cares about a hit overrides this.
+    vi.mocked(cache.withCache).mockImplementation((fn) => fn());
+  });
+
+  test("reads through a workspace-scoped cache key with a one-minute TTL", async () => {
+    const mockWorkspaceId = "clh1a2b3c4d5e6f7g8h9v";
+
+    vi.mocked(prisma.workspace.findUnique).mockResolvedValue({
+      id: mockWorkspaceId,
+      name: "Test Workspace",
+      styling: null,
+      logo: null,
+      linkSurveyBranding: true,
+      customHeadScripts: null,
+      organizationId: "clh1a2b3c4d5e6f7g8h9w",
+      organization: { id: "clh1a2b3c4d5e6f7g8h9w", whitelabel: null },
+    } as any);
+
+    await getWorkspaceContextForLinkSurvey(mockWorkspaceId);
+
+    expect(cache.withCache).toHaveBeenCalledWith(
+      expect.any(Function),
+      createCacheKey.workspace.config(mockWorkspaceId),
+      60 * 1000
+    );
+  });
+
+  test("serves a cache hit without touching the database", async () => {
+    const mockWorkspaceId = "clh1a2b3c4d5e6f7g8h9x";
+    const cached = {
+      workspace: {
+        id: mockWorkspaceId,
+        name: "Cached Workspace",
+        styling: null,
+        logo: null,
+        linkSurveyBranding: true,
+        customHeadScripts: null,
+      },
+      organizationId: "clh1a2b3c4d5e6f7g8h9y",
+      organizationWhitelabel: null,
+    };
+
+    vi.mocked(cache.withCache).mockResolvedValue(cached as any);
+
+    const result = await getWorkspaceContextForLinkSurvey(mockWorkspaceId);
+
+    expect(result).toEqual(cached);
+    expect(prisma.workspace.findUnique).not.toHaveBeenCalled();
   });
 
   test("should successfully fetch workspace context with all required data", async () => {
