@@ -275,7 +275,7 @@ func (b *browser) do(method, path string, body any) response {
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("Origin", webApp)
+	req.Header.Set("Origin", b.e.cfg.WebAppURL.Scheme+"://"+b.e.cfg.WebAppURL.Host)
 	req.Header.Set(httpapi.CSRFHeader, "XMLHttpRequest")
 	req.Header.Set("X-Forwarded-For", b.ip)
 	req.Header.Set("User-Agent", "forma-test")
@@ -370,6 +370,16 @@ func (e *env) exec(query string, args ...any) {
 	if err := e.db.Exec(query, args...).Error; err != nil {
 		e.t.Fatalf("%s: %v", query, err)
 	}
+}
+
+// insertID runs an INSERT ... RETURNING id.
+func (e *env) insertID(query string, args ...any) uuid.UUID {
+	e.t.Helper()
+	id, err := e.svc.repo.scanID(context.Background(), query, args...)
+	if err != nil {
+		e.t.Fatalf("%s: %v", query, err)
+	}
+	return id
 }
 
 func (e *env) count(query string, args ...any) int64 {
