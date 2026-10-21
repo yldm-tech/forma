@@ -30,7 +30,7 @@ func decodeEncryptionKey(s string) ([]byte, error) {
 	if units := utf16.Encode([]rune(s)); len(units) == 32 {
 		key := make([]byte, len(units))
 		for i, u := range units {
-			key[i] = byte(u)
+			key[i] = byte(u) //nolint:gosec // keeping the low byte is the point: it is what Node's Latin-1 encoding does
 		}
 		return key, nil
 	}

@@ -41,7 +41,9 @@ func TestCheckTOTPMatchesRFC6238(t *testing.T) {
 // forma2's totp.test.ts pins the settings window ([1, 0]: the previous step but no future one); Better Auth's sign-in accepted one step either side.
 func TestCheckTOTPWindows(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
-	at := func(steps int) string { return totpCodeAt(t, rfcKey, now.Add(time.Duration(steps)*totpPeriod*time.Second)) }
+	at := func(steps int) string {
+		return totpCodeAt(t, rfcKey, now.Add(time.Duration(steps)*totpPeriod*time.Second))
+	}
 	cases := []struct {
 		name   string
 		window totpWindow
@@ -107,18 +109,21 @@ func TestNewBackupCodes(t *testing.T) {
 
 func TestMatchBackupCode(t *testing.T) {
 	codes := []string{"0123456789", "AbCdE12345"}
-	cases := map[string]int{
-		"0123456789":  0,
-		"01234-56789": 0,
-		"AbCdE-12345": 1,
-		"abcde-12345": -1,
-		"0123456788":  -1,
-		"":            -1,
-		" 0123456789": -1,
+	cases := []struct {
+		in   string
+		want int
+	}{
+		{"0123456789", 0},
+		{"01234-56789", 0},
+		{"AbCdE-12345", 1},
+		{"abcde-12345", -1},
+		{"0123456788", -1},
+		{"", -1},
+		{"0123456789 ", -1},
 	}
-	for in, want := range cases {
-		if got := matchBackupCode(codes, in); got != want {
-			t.Errorf("matchBackupCode(%q) = %d, want %d", in, got, want)
+	for _, tc := range cases {
+		if got := matchBackupCode(codes, tc.in); got != tc.want {
+			t.Errorf("matchBackupCode(%q) = %d, want %d", tc.in, got, tc.want)
 		}
 	}
 }

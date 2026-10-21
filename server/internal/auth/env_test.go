@@ -51,16 +51,16 @@ const (
 
 // env is one isolated instance of the module: a fresh database and Valkey, a captured mailer and log, stubbed Have I Been Pwned and Turnstile services, a controllable clock, and the HTTP routes as the server mounts them.
 type env struct {
-	t        *testing.T
-	cfg      config.Config
-	db       *gorm.DB
-	rdb      *redis.Client
-	mail     *mailertest.Transport
-	logs     *syncBuffer
-	svc      *Service
-	sessions *Sessions
+	t         *testing.T
+	cfg       config.Config
+	db        *gorm.DB
+	rdb       *redis.Client
+	mail      *mailertest.Transport
+	logs      *syncBuffer
+	svc       *Service
+	sessions  *Sessions
 	twoFactor *TwoFactor
-	engine   *gin.Engine
+	engine    *gin.Engine
 
 	// breached holds the SHA-1 suffixes the stubbed range API reports; hibpStatus overrides its status.
 	breached   map[string]bool
@@ -523,7 +523,7 @@ func field(m map[string]any, path ...string) any {
 }
 
 // enrolTOTP writes a second factor for the user with a fresh key and ten backup codes, as setup (verified false) or enable (verified true) leaves it, and remembers it for totpCode.
-func (e *env) enrolTOTP(id uuid.UUID, verified bool) TOTPMaterial {
+func (e *env) enrolTOTP(id uuid.UUID, verified bool) {
 	e.t.Helper()
 	codes, err := newBackupCodes()
 	if err != nil {
@@ -544,7 +544,6 @@ func (e *env) enrolTOTP(id uuid.UUID, verified bool) TOTPMaterial {
 	e.mu.Lock()
 	e.totp[id] = m
 	e.mu.Unlock()
-	return m
 }
 
 // totpCode is the user's authenticator code steps periods away from the env's clock.
@@ -568,10 +567,10 @@ func totpCodeAt(t *testing.T, key []byte, at time.Time) string {
 	return code
 }
 
-// signInPending runs the password step for a user with a second factor and leaves the browser holding the pending sign-in.
-func (b *browser) signInPending(email, password string) {
+// signInPending runs the password step for ada@example.com, seeded with strongPassword and a second factor, and leaves the browser holding the pending sign-in.
+func (b *browser) signInPending() {
 	b.e.t.Helper()
-	r := b.post("/auth/sign-in", map[string]string{"email": email, "password": password})
+	r := b.post("/auth/sign-in", credentials("ada@example.com", strongPassword))
 	expectStatus(b.e.t, r, http.StatusOK, "")
 	if r.json()["status"] != "two_factor_required" {
 		b.e.t.Fatalf("sign-in: %s", r.Body.String())

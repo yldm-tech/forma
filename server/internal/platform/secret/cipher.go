@@ -21,8 +21,11 @@ type Cipher struct {
 
 // NewCipher builds the cipher from the configured current and retired keys.
 func NewCipher(cfg config.Config) (*Cipher, error) {
-	c := &Cipher{version: byte(cfg.EncryptionKeyVersion), keys: map[byte]cipher.AEAD{}}
+	c := &Cipher{keys: map[byte]cipher.AEAD{}}
 	add := func(version int, key []byte) error {
+		if version < 1 || version > config.MaxEncryptionKeyVersion {
+			return fmt.Errorf("encryption key version %d is out of range", version)
+		}
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return fmt.Errorf("encryption key version %d: %w", version, err)
@@ -31,12 +34,14 @@ func NewCipher(cfg config.Config) (*Cipher, error) {
 		if err != nil {
 			return fmt.Errorf("encryption key version %d: %w", version, err)
 		}
-		c.keys[byte(version)] = aead
+		c.keys[byte(version)] = aead //nolint:gosec // version was checked to fit in a byte above
 		return nil
 	}
 	if err := add(cfg.EncryptionKeyVersion, cfg.EncryptionKey); err != nil {
 		return nil, err
 	}
+	c.version = byte(cfg.EncryptionKeyVersion) //nolint:gosec // checked by add
+
 	for version, key := range cfg.EncryptionPreviousKeys {
 		if err := add(version, key); err != nil {
 			return nil, err
@@ -53,7 +58,7 @@ func (c *Cipher) Seal(plaintext, context []byte) ([]byte, error) {
 	if _, err := rand.Read(out[1:]); err != nil {
 		return nil, fmt.Errorf("generate nonce: %w", err)
 	}
-	return aead.Seal(out, out[1:], plaintext, context), nil
+	return aead.Seal(out, out[1:], plaintext, context), nil //nolint:gosec // the nonce is the random bytes just read into out[1:]
 }
 
 // Open decrypts a value Seal produced for the same context, under whichever configured key version it names.

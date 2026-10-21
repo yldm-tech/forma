@@ -53,7 +53,7 @@ func (h *Handler) setupTwoFactor(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "no-store")
-	c.JSON(http.StatusOK, twoFactorSetupResponse{Secret: res.Secret, KeyURI: res.KeyURI, DataURI: res.DataURI, BackupCodes: res.BackupCodes})
+	c.JSON(http.StatusOK, twoFactorSetupResponse(res))
 }
 
 type codeRequest struct {

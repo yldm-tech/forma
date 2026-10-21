@@ -51,7 +51,7 @@ func checkTOTP(key []byte, code string, now time.Time, w totpWindow) (bool, erro
 	current := now.Unix() / totpPeriod
 	matched := 0
 	for step := current - int64(w.past); step <= current+int64(w.future); step++ {
-		want, err := hotp.GenerateCodeCustom(encoded, uint64(step), hotp.ValidateOpts{Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1})
+		want, err := hotp.GenerateCodeCustom(encoded, uint64(step), hotp.ValidateOpts{Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1}) //nolint:gosec // steps count from the Unix epoch and the clock is never before it
 		if err != nil {
 			return false, fmt.Errorf("compute totp: %w", err)
 		}

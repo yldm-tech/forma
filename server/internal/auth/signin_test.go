@@ -272,11 +272,11 @@ func TestTwoFactorPendingExpiresAndRespectsDeactivation(t *testing.T) {
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	e.advance(10*time.Minute + time.Second)
 	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
 
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, id)
 	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusForbidden, CodeAccountInactive)
 	if e.count(`SELECT count(*) FROM sessions`) != 0 {
@@ -290,7 +290,7 @@ func TestPasswordResetCancelsPendingSecondFactor(t *testing.T) {
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	expectStatus(t, e.browser().post("/auth/password/forgot", map[string]string{"email": "ada@example.com"}), http.StatusOK, "")
 	token := e.lastToken("ada@example.com", subjectReset)
 	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": token, "password": "New-Password-77"}), http.StatusOK, "")

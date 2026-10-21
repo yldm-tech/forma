@@ -18,10 +18,10 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 )
 
-// setupTOTP runs setup for a signed-in browser and returns the response body.
-func setupTOTP(t *testing.T, b *browser, password string) map[string]any {
+// setupTOTP runs setup for a browser signed in with strongPassword and returns the response body.
+func setupTOTP(t *testing.T, b *browser) map[string]any {
 	t.Helper()
-	r := b.post("/auth/two-factor/setup", map[string]string{"password": password})
+	r := b.post("/auth/two-factor/setup", map[string]string{"password": strongPassword})
 	expectStatus(t, r, http.StatusOK, "")
 	return r.json()
 }
@@ -64,7 +64,7 @@ func TestTwoFactorEnrolment(t *testing.T) {
 	b := e.browser()
 	b.signIn("ada@example.com", strongPassword)
 
-	res := setupTOTP(t, b, strongPassword)
+	res := setupTOTP(t, b)
 	secret, _ := res["secret"].(string)
 	codes, _ := res["backupCodes"].([]any)
 	if len(secret) != 32 || len(codes) != 10 {
@@ -101,7 +101,7 @@ func TestTwoFactorEnrolment(t *testing.T) {
 	expectStatus(t, b.post("/test/protected", nil), http.StatusOK, "")
 
 	other := e.browser()
-	other.signInPending("ada@example.com", strongPassword)
+	other.signInPending()
 	expectStatus(t, verifyTOTP(other, e.codeFor(secret, 0)), http.StatusOK, "")
 
 	var changes []string
@@ -149,7 +149,7 @@ func TestTwoFactorSetupAndEnableRules(t *testing.T) {
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{}), http.StatusBadRequest, apperr.CodeValidation)
 
 	// The settings check accepts the previous step, never the next one (otplib's [1, 0]).
-	secret := setupTOTP(t, b, strongPassword)["secret"].(string)
+	secret := setupTOTP(t, b)["secret"].(string)
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, 1)}), http.StatusBadRequest, CodeInvalidCode)
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, -2)}), http.StatusBadRequest, CodeInvalidCode)
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, -1)}), http.StatusOK, "")
@@ -168,8 +168,8 @@ func TestTwoFactorSetupReplacesAnUnfinishedEnrolment(t *testing.T) {
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
 	b.signIn("ada@example.com", strongPassword)
-	first := setupTOTP(t, b, strongPassword)["secret"].(string)
-	second := setupTOTP(t, b, strongPassword)["secret"].(string)
+	first := setupTOTP(t, b)["secret"].(string)
+	second := setupTOTP(t, b)["secret"].(string)
 	if first == second || e.count(`SELECT count(*) FROM user_totp WHERE user_id = ?`, id) != 1 {
 		t.Fatal("a second setup did not replace the first")
 	}
@@ -231,7 +231,7 @@ func TestSignInWithBackupCode(t *testing.T) {
 	codes := e.totp[id].BackupCodes
 
 	b := e.browser()
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	r := verifyBackup(b, codes[0][:5]+"-"+codes[0][5:])
 	expectStatus(t, r, http.StatusOK, "")
 	if r.json()["status"] != "signed_in" || !b.has(sessionCookieName) || b.has(twoFactorCookieName) {
@@ -243,7 +243,7 @@ func TestSignInWithBackupCode(t *testing.T) {
 	}
 
 	again := e.browser()
-	again.signInPending("ada@example.com", strongPassword)
+	again.signInPending()
 	expectStatus(t, verifyBackup(again, codes[0]), http.StatusUnauthorized, CodeInvalidBackupCode)
 	expectStatus(t, verifyBackup(again, strings.ToUpper(codes[1])), http.StatusUnauthorized, CodeInvalidBackupCode)
 	expectStatus(t, verifyBackup(again, codes[1]), http.StatusOK, "")
@@ -268,7 +268,7 @@ func TestSignInTOTPWindow(t *testing.T) {
 		ok    bool
 	}{{-2, false}, {2, false}, {1, true}, {-1, true}} {
 		b := e.browser()
-		b.signInPending("ada@example.com", strongPassword)
+		b.signInPending()
 		r := verifyTOTP(b, e.totpCode(id, tc.steps))
 		if tc.ok {
 			expectStatus(t, r, http.StatusOK, "")
@@ -284,7 +284,7 @@ func TestPendingSignInAttemptBudget(t *testing.T) {
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	for i := 0; i < 3; i++ {
 		expectStatus(t, verifyTOTP(b, "000000"), http.StatusUnauthorized, CodeInvalidCode)
 	}
@@ -304,7 +304,7 @@ func TestPendingSignInAttemptBudget(t *testing.T) {
 		t.Fatal("a spent pending sign-in signed in")
 	}
 
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	expectStatus(t, verifyTOTP(b, e.totpCode(id, 0)), http.StatusOK, "")
 	if e.failedAttempts(id) != 0 {
 		t.Fatal("a successful second factor left the failure count")
@@ -318,7 +318,7 @@ func TestSecondFactorLockout(t *testing.T) {
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	fail := func(n int) *browser {
 		b := e.browser()
-		b.signInPending("ada@example.com", strongPassword)
+		b.signInPending()
 		for i := 0; i < n; i++ {
 			expectStatus(t, verifyTOTP(b, "000000"), http.StatusUnauthorized, CodeInvalidCode)
 		}
@@ -342,14 +342,14 @@ func TestSecondFactorLockout(t *testing.T) {
 	}
 	// The lock holds for a fresh pending sign-in and for backup codes, and a locked attempt is not charged.
 	fresh := e.browser()
-	fresh.signInPending("ada@example.com", strongPassword)
+	fresh.signInPending()
 	expectStatus(t, verifyBackup(fresh, e.totp[id].BackupCodes[0]), http.StatusTooManyRequests, CodeAccountTemporarilyLocked)
 	if e.failedAttempts(id) != 10 {
 		t.Fatalf("failed attempts %d while locked, want 10", e.failedAttempts(id))
 	}
 
 	e.advance(totpLockoutDuration + time.Second)
-	fresh.signInPending("ada@example.com", strongPassword)
+	fresh.signInPending()
 	expectStatus(t, verifyTOTP(fresh, e.totpCode(id, 0)), http.StatusOK, "")
 	if e.failedAttempts(id) != 0 || e.count(`SELECT count(*) FROM user_totp WHERE user_id = ? AND locked_until IS NOT NULL`, id) != 0 {
 		t.Fatal("an expired lock was not cleared")
@@ -362,7 +362,7 @@ func TestSignInSecondFactorNotEnabled(t *testing.T) {
 	e := newEnv(t)
 	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	b := e.browser()
-	b.signInPending("ada@example.com", strongPassword)
+	b.signInPending()
 	e.exec(`UPDATE user_totp SET verified = false WHERE user_id = ?`, id)
 	expectStatus(t, verifyTOTP(b, e.totpCode(id, 0)), http.StatusBadRequest, CodeTOTPNotEnabled)
 	expectStatus(t, verifyBackup(b, e.totp[id].BackupCodes[0]), http.StatusBadRequest, CodeBackupCodesNotEnabled)
@@ -380,7 +380,7 @@ func TestConcurrentBackupCodeUse(t *testing.T) {
 	code := e.totp[id].BackupCodes[0]
 	browsers := []*browser{e.browser(), e.browser(), e.browser()}
 	for _, b := range browsers {
-		b.signInPending("ada@example.com", strongPassword)
+		b.signInPending()
 	}
 	statuses := make([]int, len(browsers))
 	var wg sync.WaitGroup
@@ -415,7 +415,9 @@ func TestTwoFactorRateLimits(t *testing.T) {
 	e.inOneWindow(time.Minute, func(run int, ip string) error {
 		b := e.sessionFor(e.seedUser(fmt.Sprintf("u%d@example.com", run), strongPassword, userOpts{}))
 		b.ip = ip
-		send := func() response { return b.post("/auth/two-factor/setup", map[string]string{"password": "Wrong-Password-1"}) }
+		send := func() response {
+			return b.post("/auth/two-factor/setup", map[string]string{"password": "Wrong-Password-1"})
+		}
 		if err := repeat(5, send, http.StatusBadRequest, CodeInvalidPassword); err != nil {
 			return err
 		}
@@ -430,7 +432,7 @@ func TestTwoFactorSecretsStayOutOfLogs(t *testing.T) {
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	b := e.browser()
 	b.signIn("ada@example.com", strongPassword)
-	res := setupTOTP(t, b, strongPassword)
+	res := setupTOTP(t, b)
 	secret := res["secret"].(string)
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, 0)}), http.StatusOK, "")
 	codes := res["backupCodes"].([]any)
