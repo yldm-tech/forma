@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "channel": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "link",
+            "app",
+            "website"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "industry": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "eCommerce",
+            "saas",
+            "other"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "defaultSurveyLanguage": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/workspace.config.json"
+}

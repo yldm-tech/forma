@@ -1,0 +1,86 @@
+// Package org is the organization module: creating an organization (the setup flow and the organization switcher), reading, renaming and deleting it, listing the caller's organizations, and its memberships (listing members, changing a role, removing a member, leaving), with forma2's role rules and the invariant that an organization always keeps an active owner (apps/web/lib/organization, lib/membership, modules/organization, modules/role-management). It also answers the redirect questions the root page and the organization route asked.
+package org
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// Organization roles (memberships.role).
+const (
+	RoleOwner   = "owner"
+	RoleManager = "manager"
+	RoleMember  = "member"
+	RoleBilling = "billing"
+)
+
+// ItemsPerPage is forma2's ITEMS_PER_PAGE.
+const ItemsPerPage = 30
+
+// Organization is forma2's TOrganization as the SPA reads it.
+type Organization struct {
+	ID                    uuid.UUID       `json:"id"`
+	CreatedAt             time.Time       `json:"createdAt"`
+	UpdatedAt             time.Time       `json:"updatedAt"`
+	Name                  string          `json:"name"`
+	Billing               Billing         `json:"billing"`
+	IsAISmartToolsEnabled bool            `json:"isAISmartToolsEnabled"`
+	Whitelabel            json.RawMessage `json:"whitelabel"`
+	// DisplayTimeZone is an IANA zone; nil means UTC.
+	DisplayTimeZone *string `json:"displayTimeZone"`
+}
+
+// Billing is the organization's billing state, forma2's TOrganizationBilling.
+type Billing struct {
+	StripeCustomerID *string         `json:"stripeCustomerId"`
+	Limits           json.RawMessage `json:"limits"`
+	UsageCycleAnchor *time.Time      `json:"usageCycleAnchor"`
+	Stripe           json.RawMessage `json:"stripe,omitempty"`
+}
+
+// defaultLimits is forma2's getDefaultOrganizationBilling limits: one workspace and 250 responses a month on Forma Cloud, three and 1500 self-hosted, and no included workflow runs. They are recorded but, as in forma2, the workspace limit is not enforced.
+func defaultLimits(isFormaCloud bool) json.RawMessage {
+	limits := map[string]any{"workspaces": 3, "monthly": map[string]any{"responses": 1500, "workflowRuns": nil}}
+	if isFormaCloud {
+		limits = map[string]any{"workspaces": 1, "monthly": map[string]any{"responses": 250, "workflowRuns": nil}}
+	}
+	b, _ := json.Marshal(limits)
+	return b
+}
+
+// Membership is one user's place in one organization.
+type Membership struct {
+	OrganizationID uuid.UUID `json:"organizationId"`
+	UserID         uuid.UUID `json:"userId"`
+	Accepted       bool      `json:"accepted"`
+	Role           string    `json:"role"`
+}
+
+// auditID is how forma2's audit events named a membership.
+func (m Membership) auditID() string {
+	return m.UserID.String() + "-" + m.OrganizationID.String()
+}
+
+// Member is a membership with its user, forma2's TMember.
+type Member struct {
+	UserID   uuid.UUID `json:"userId"`
+	Name     string    `json:"name"`
+	Email    string    `json:"email"`
+	Accepted bool      `json:"accepted"`
+	Role     string    `json:"role"`
+	IsActive bool      `json:"isActive"`
+}
+
+// userManagementAllowed is forma2's getUserManagementAccess: whether a role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. It shapes the SPA's pages; the endpoints decide through organization.manage_access, which the authorizer maps the same way.
+func userManagementAllowed(role, minimumRole string) bool {
+	switch minimumRole {
+	case "owner":
+		return role == RoleOwner
+	case "manager":
+		return role == RoleOwner || role == RoleManager
+	default:
+		return false
+	}
+}
