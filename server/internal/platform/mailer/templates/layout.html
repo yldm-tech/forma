@@ -1,0 +1,52 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="{{.Locale}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:24px;background-color:#f8fafc;color:#1e293b;font-size:14px;text-align:center;font-family:'Jost','Helvetica Neue','Segoe UI','Helvetica',sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td align="center" style="text-align:center">
+<a href="https://forma.ylam.ai?utm_source=forma-app&amp;utm_medium=email&amp;utm_campaign=email_logo" target="_blank"><img alt="Logo" src="https://app.forma.ylam.ai/logo-transparent.png" width="240" style="display:block;margin:0 auto;width:240px;border:0"></a>
+</td>
+</tr>
+</table>
+<table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:576px;margin:32px auto;background-color:#ffffff;border-radius:6px">
+<tr>
+<td style="padding:16px;text-align:left">
+{{template "content" .}}
+<p style="font-size:14px;line-height:24px;margin:16px 0">{{.T "emails.email_footer_text_1"}}<br>{{.T "emails.email_footer_text_2"}}</p>
+</td>
+</tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px">
+<tr>
+<td align="center" style="text-align:center;font-size:14px">
+<a href="https://forma.ylam.ai/?utm_source=forma-app&amp;utm_medium=email&amp;utm_campaign=email_footer_text" target="_blank" rel="noopener noreferrer" style="margin:0;font-size:14px;font-weight:400;color:#64748b">{{.T "emails.email_template_text_1"}}</a>
+{{- with .Legal.ImprintAddress}}
+<p style="margin:0;font-size:14px;color:#64748b;opacity:0.5">{{.}}</p>
+{{- end}}
+{{- if or .Legal.ImprintURL .Legal.PrivacyURL}}
+<p style="margin:0;font-size:14px;color:#64748b;opacity:0.5">
+{{- if .Legal.ImprintURL}}<a href="{{.Legal.ImprintURL}}" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:#64748b">{{.T "emails.imprint"}}</a>{{end}}
+{{- if and .Legal.ImprintURL .Legal.PrivacyURL}} • {{end}}
+{{- if .Legal.PrivacyURL}}<a href="{{.Legal.PrivacyURL}}" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:#64748b">{{.T "emails.privacy_policy"}}</a>{{end -}}
+</p>
+{{- end}}
+</td>
+</tr>
+</table>
+</body>
+</html>
+{{end}}
+
+{{define "heading"}}<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;line-height:32px">{{.}}</h1>{{end}}
+
+{{define "text"}}<p style="font-size:14px;line-height:24px;margin:16px 0">{{.}}</p>{{end}}
+
+{{define "bold"}}<p style="font-size:14px;line-height:24px;margin:16px 0;font-weight:700">{{.}}</p>{{end}}
+
+{{define "button"}}<a href="{{.Href}}" target="_blank" style="display:inline-block;background-color:#000000;color:#ffffff;border-radius:6px;padding:12px 24px;font-size:14px;line-height:20px;text-decoration:none">{{.Label}}</a>{{end}}
+
+{{define "link"}}<a href="{{.}}" style="font-size:14px;color:#000000;word-break:break-all">{{.}}</a>{{end}}
