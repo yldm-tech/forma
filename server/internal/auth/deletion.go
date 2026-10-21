@@ -33,7 +33,7 @@ func (s *Service) deleteAccount(ctx context.Context, actor httpapi.Actor, passwo
 	if !ok {
 		return "", errInvalidPassword()
 	}
-	if err := s.repo.transaction(ctx, func(tx *Repository) error {
+	if err := s.repo.serializable(ctx, func(tx *Repository) error {
 		return s.removeAccount(ctx, tx, acc)
 	}); err != nil {
 		return "", err
@@ -73,7 +73,7 @@ func (s *Service) confirmAccountDeletion(ctx context.Context, actor httpapi.Acto
 		return "", err
 	}
 	var acc *account
-	err := s.repo.transaction(ctx, func(tx *Repository) error {
+	err := s.repo.serializable(ctx, func(tx *Repository) error {
 		v, err := tx.consumeUserVerification(ctx, purposeAccountDeletion, secret.HashToken(token), actor.UserID, s.now())
 		if err != nil {
 			return err
@@ -96,7 +96,7 @@ func (s *Service) confirmAccountDeletion(ctx context.Context, actor httpapi.Acto
 	return s.afterDeletionURL(), nil
 }
 
-// removeAccount deletes the user together with every organization they are the only owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed). SpiceDB relationships follow through the projection outbox triggers on the deleted rows.
+// removeAccount deletes the user together with every organization they are the only active owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed). It must run in a Serializable transaction (Repository.serializable): the organization module's owner guards are serializable, and only a serializable deletion conflicts with them, so a co-owner's concurrent demotion, removal or own deletion aborts one side instead of leaving the organization without an owner. SpiceDB relationships follow through the projection outbox triggers on the deleted rows.
 func (s *Service) removeAccount(ctx context.Context, tx *Repository, acc *account) error {
 	soleOwned, err := tx.soleOwnedOrganizations(ctx, acc.ID)
 	if err != nil {

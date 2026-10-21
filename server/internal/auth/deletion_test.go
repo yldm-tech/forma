@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -185,4 +188,79 @@ func TestDeleteAccountRateLimits(t *testing.T) {
 		}
 		return statusErr(b.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusTooManyRequests, "")
 	})
+}
+
+// A deactivated co-owner can never sign in again, so an organization whose only active owner deletes their account goes with it, as the organization module's owner guards count only active owners.
+func TestDeleteAccountWithOnlyADeactivatedCoOwner(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
+	inactive := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	active := e.seedUser("alan@example.com", strongPassword, userOpts{})
+	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, inactive)
+	abandoned := e.orgWith(map[uuid.UUID]string{id: "owner", inactive: "owner"})
+	kept := e.orgWith(map[uuid.UUID]string{id: "owner", inactive: "owner", active: "owner"})
+
+	b := e.browser()
+	b.signIn("ada@example.com", strongPassword)
+	expectStatus(t, b.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusOK, "")
+	if e.count(`SELECT count(*) FROM organizations WHERE id = ?`, abandoned) != 0 {
+		t.Error("an organization left with only a deactivated owner survived")
+	}
+	if e.count(`SELECT count(*) FROM organizations WHERE id = ?`, kept) != 1 {
+		t.Error("an organization with another active owner was deleted")
+	}
+}
+
+// The deletion's sole-owner check and a co-owner's concurrent change to the same organization's owners are both Serializable, so PostgreSQL aborts one of them: the organization never ends up without an active owner. The co-owner's transaction is held open across the deletion to force the interleaving.
+func TestDeleteAccountRacesTheOtherOwner(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		// change is what the co-owner does in their own Serializable transaction, after reading the owners as the organization module's guards do.
+		change func(tx *gorm.DB, coOwner uuid.UUID) error
+	}{
+		{"the co-owner demotes themself", func(tx *gorm.DB, coOwner uuid.UUID) error {
+			return tx.Exec(`UPDATE memberships SET role = 'manager' WHERE user_id = ?`, coOwner).Error
+		}},
+		{"the co-owner deletes their account", func(tx *gorm.DB, coOwner uuid.UUID) error {
+			repo := &Repository{db: tx}
+			soleOwned, err := repo.soleOwnedOrganizations(context.Background(), coOwner)
+			if err != nil {
+				return err
+			}
+			return repo.deleteAccount(context.Background(), coOwner, soleOwned)
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			e := newEnv(t)
+			id := e.seedUser("ada@example.com", strongPassword, userOpts{})
+			coOwner := e.seedUser("grace@example.com", strongPassword, userOpts{})
+			org := e.orgWith(map[uuid.UUID]string{id: "owner", coOwner: "owner"})
+			b := e.browser()
+			b.signIn("ada@example.com", strongPassword)
+
+			tx := e.db.Begin(&sql.TxOptions{Isolation: sql.LevelSerializable})
+			if tx.Error != nil {
+				t.Fatal(tx.Error)
+			}
+			var owners int64
+			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active`, org).Scan(&owners).Error; err != nil || owners != 2 {
+				t.Fatalf("%d owners, %v", owners, err)
+			}
+			if err := tc.change(tx, coOwner); err != nil {
+				t.Fatal(err)
+			}
+			deleted := b.post("/auth/account/delete", map[string]string{"password": strongPassword})
+			committed := tx.Commit().Error
+			t.Logf("deletion answered %d, the co-owner's commit returned %v", deleted.Code, committed)
+
+			if e.count(`SELECT count(*) FROM organizations WHERE id = ?`, org) == 1 &&
+				e.count(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active`, org) == 0 {
+				t.Fatalf("the organization was left without an active owner (deletion %d, co-owner commit %v)", deleted.Code, committed)
+			}
+		})
+	}
 }

@@ -3,10 +3,13 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -51,4 +54,24 @@ func Open(ctx context.Context, cfg config.Config, log *slog.Logger) (*gorm.DB, f
 		}
 	}
 	return db, cleanup, nil
+}
+
+// serializableAttempts is forma2's MAX_SERIALIZABLE_TRANSACTION_ATTEMPTS.
+const serializableAttempts = 3
+
+// Serializable runs fn in a Serializable transaction, retried on a serialization failure or deadlock up to three attempts. A guard that reads an invariant (an organization keeps an active owner) in the same transaction as the write it protects holds only against writers that are serializable too: PostgreSQL detects the conflict between two such transactions and aborts one of them, but not between a serializable transaction and one at a weaker isolation level, so every writer of the guarded rows must use this.
+func Serializable(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) error) error {
+	var err error
+	for attempt := 1; attempt <= serializableAttempts; attempt++ {
+		err = db.WithContext(ctx).Transaction(fn, &sql.TxOptions{Isolation: sql.LevelSerializable})
+		if !isTransactionConflict(err) {
+			return err
+		}
+	}
+	return err
+}
+
+func isTransactionConflict(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == "40001" || pgErr.Code == "40P01")
 }

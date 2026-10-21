@@ -3,14 +3,14 @@ package org
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
+
+	"github.com/yldm-tech/forma/server/internal/platform/database"
 )
 
 // Repository reads and writes organizations, their billing rows and memberships. Every query names the organization it is scoped to, or the user whose own memberships it reads.
@@ -28,26 +28,11 @@ func (r *Repository) transaction(ctx context.Context, fn func(tx *Repository) er
 	})
 }
 
-// serializableAttempts is forma2's MAX_SERIALIZABLE_TRANSACTION_ATTEMPTS.
-const serializableAttempts = 3
-
-// serializable runs fn in a Serializable transaction, retried on a serialization failure or deadlock up to three attempts. The owner guards read the owner count in the same transaction as the write they protect, so two owners removing or demoting each other concurrently cannot both pass: PostgreSQL aborts one of them.
+// serializable runs fn in a Serializable transaction with database.Serializable's retries. The owner guards read the owner count in the same transaction as the write they protect, so two owners removing or demoting each other concurrently cannot both pass: PostgreSQL aborts one of them.
 func (r *Repository) serializable(ctx context.Context, fn func(tx *Repository) error) error {
-	var err error
-	for attempt := 1; attempt <= serializableAttempts; attempt++ {
-		err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			return fn(&Repository{db: tx})
-		}, &sql.TxOptions{Isolation: sql.LevelSerializable})
-		if !isTransactionConflict(err) {
-			return err
-		}
-	}
-	return err
-}
-
-func isTransactionConflict(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && (pgErr.Code == "40001" || pgErr.Code == "40P01")
+	return database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
+		return fn(&Repository{db: tx})
+	})
 }
 
 const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone,
