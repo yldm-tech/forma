@@ -185,3 +185,5 @@ func (e *testEnv) countOutbox(where string, args ...any) int {
 	}
 	return n
 }
+
+func spicedbTestEmpty(t *testing.T) config.AuthzConfig { return spicedbtest.Empty(t) }
