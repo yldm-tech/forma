@@ -641,6 +641,7 @@
     "sso_recovery_factors_removed_email_password": "Your password was removed.",
     "sso_recovery_factors_removed_email_review_security": "Review security settings",
     "sso_recovery_factors_removed_email_sign_in_hint": "You can keep signing in with single sign-on. To use a password or two-factor authentication again, set them up in your security settings.",
+    "sso_recovery_factors_removed_email_single_sign_on": "Single sign-on connections added to the account before were removed.",
     "sso_recovery_factors_removed_email_subject": "Sign-in factors were removed from your Forma account",
     "sso_recovery_factors_removed_email_text": "You just signed in with single sign-on for the first time. Because your email address had never been verified, we removed the sign-in factors that were set on the account before:",
     "sso_recovery_factors_removed_email_two_factor": "Two-factor authentication was removed.",

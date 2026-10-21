@@ -503,7 +503,7 @@ func (s *SSO) resolveDefaultOrganization(ctx context.Context, orgID uuid.UUID, u
 	return existingRole, nil
 }
 
-// completeRecovery redeems an emailed recovery link: it proves the clicker reads the account's mailbox, so the identity is linked and the browser signed in. An account whose address was never proven first loses the password and two-factor authentication set on it, since whoever registered it is held out by nothing once the address is verified; every other session of the account ends, and the owner is told what was removed. Returns where the browser goes next.
+// completeRecovery redeems an emailed recovery link: it proves the clicker reads the account's mailbox, so the identity is linked and the browser signed in. An account whose address was never proven first loses the password, two-factor authentication and other single sign-on identities set on it, since whoever registered it is held out by nothing once the address is verified; every other session of the account ends, and the owner is told what was removed. Returns where the browser goes next.
 func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMeta) (string, issuedToken, error) {
 	if err := s.svc.limiter.ApplyIP(ctx, ratelimit.BASSORecovery); err != nil {
 		return "", issuedToken{}, err
@@ -569,7 +569,7 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 			return errAccountNotLinked()
 		}
 		if !acc.EmailVerified {
-			outcome, err := tx.reclaimUnprovenAccount(ctx, acc.ID, s.svc.now())
+			outcome, err := tx.reclaimUnprovenAccount(ctx, acc.ID, provider, payload.Subject, s.svc.now())
 			if err != nil {
 				return err
 			}
@@ -598,7 +598,8 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 	if reclaimed != nil {
 		completed = map[string]any{
 			"email": v.Email, "provider": provider, "callbackUrl": payload.CallbackURL,
-			"credentialPasswordsCleared": reclaimed.PasswordsCleared, "twoFactorRowsRemoved": reclaimed.TwoFactorsRemoved, "sessionsRevoked": sessionsRevoked,
+			"credentialPasswordsCleared": reclaimed.PasswordsCleared, "twoFactorRowsRemoved": reclaimed.TwoFactorsRemoved,
+			"externalIdentitiesRemoved": reclaimed.IdentitiesRemoved, "sessionsRevoked": sessionsRevoked,
 		}
 		s.notifyFactorsRemoved(ctx, acc, *reclaimed)
 	}
@@ -617,9 +618,10 @@ func (s *SSO) notifyFactorsRemoved(ctx context.Context, acc *account, removed re
 	content := mailer.SSORecoveryFactorsRemoved{
 		PasswordRemoved:      removed.PasswordsCleared > 0,
 		TwoFactorRemoved:     removed.TwoFactorsRemoved > 0,
+		SingleSignOnRemoved:  removed.IdentitiesRemoved > 0,
 		SecuritySettingsLink: s.svc.pageURL(securitySettingsPath),
 	}
-	if !content.PasswordRemoved && !content.TwoFactorRemoved {
+	if !content.PasswordRemoved && !content.TwoFactorRemoved && !content.SingleSignOnRemoved {
 		return
 	}
 	sent, err := s.svc.mailer.SendTemplate(ctx, acc.Email, acc.Locale, content)
@@ -628,6 +630,6 @@ func (s *SSO) notifyFactorsRemoved(ctx context.Context, acc *account, removed re
 		s.log.ErrorContext(ctx, "Failed to notify the user that SSO recovery removed their local sign-in factors", "err", err, "userId", acc.ID.String())
 	case !sent:
 		s.log.ErrorContext(ctx, "SSO recovery removed local sign-in factors but the notification email was not sent",
-			"userId", acc.ID.String(), "passwordRemoved", content.PasswordRemoved, "twoFactorRemoved", content.TwoFactorRemoved)
+			"userId", acc.ID.String(), "passwordRemoved", content.PasswordRemoved, "twoFactorRemoved", content.TwoFactorRemoved, "singleSignOnRemoved", content.SingleSignOnRemoved)
 	}
 }

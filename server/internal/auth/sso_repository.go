@@ -121,10 +121,11 @@ func (r *Repository) consumePayloadVerification(ctx context.Context, purpose str
 type reclaimOutcome struct {
 	PasswordsCleared  int64
 	TwoFactorsRemoved int64
+	IdentitiesRemoved int64
 }
 
-// reclaimUnprovenAccount marks the address verified and strips the local sign-in factors set while it was unproven: the credential identity's password (the row stays, so a reset can set a new one), two-factor authentication, and the email change links and pending second-factor sign-ins those factors authorized. Every write is idempotent, so concurrent recoveries converge.
-func (r *Repository) reclaimUnprovenAccount(ctx context.Context, userID uuid.UUID, now time.Time) (reclaimOutcome, error) {
+// reclaimUnprovenAccount marks the address verified and strips the sign-in factors set while it was unproven: the credential identity's password (the row stays, so a reset can set a new one), two-factor authentication, every external identity except the one being linked (provider, subject), and the email change links and pending second-factor sign-ins those factors authorized. An external identity linked while the address was unproven is one whose provider never vouched for the address, so whoever registered the account through it would otherwise keep signing in. Every write is idempotent, so concurrent recoveries converge.
+func (r *Repository) reclaimUnprovenAccount(ctx context.Context, userID uuid.UUID, provider, subject string, now time.Time) (reclaimOutcome, error) {
 	db := r.db.WithContext(ctx)
 	if err := r.markEmailVerified(ctx, userID, now); err != nil {
 		return reclaimOutcome{}, err
@@ -139,10 +140,16 @@ func (r *Repository) reclaimUnprovenAccount(ctx context.Context, userID uuid.UUI
 	if factors.Error != nil {
 		return reclaimOutcome{}, fmt.Errorf("remove two-factor authentication: %w", factors.Error)
 	}
+	identities := db.Exec(
+		`DELETE FROM user_identities WHERE user_id = ? AND provider <> 'credential' AND NOT (provider = ? AND issuer = '' AND subject = ?)`, userID, provider, subject,
+	)
+	if identities.Error != nil {
+		return reclaimOutcome{}, fmt.Errorf("remove external identities: %w", identities.Error)
+	}
 	if err := r.deleteVerifications(ctx, userID, purposeEmailChange, purposeTwoFactor); err != nil {
 		return reclaimOutcome{}, err
 	}
-	return reclaimOutcome{PasswordsCleared: passwords.RowsAffected, TwoFactorsRemoved: factors.RowsAffected}, nil
+	return reclaimOutcome{PasswordsCleared: passwords.RowsAffected, TwoFactorsRemoved: factors.RowsAffected, IdentitiesRemoved: identities.RowsAffected}, nil
 }
 
 func (r *Repository) organizationExists(ctx context.Context, id uuid.UUID) (bool, error) {

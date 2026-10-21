@@ -770,6 +770,8 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	expectStatus(t, squatter.post("/test/protected", nil), http.StatusOK, "")
 	e.insertID(`INSERT INTO verifications (purpose, user_id, email, token_hash, expires_at) VALUES ('email_change', ?, 'squatter@evil.example', '\x01', now() + interval '1 day') RETURNING id`, id)
 	e.exec(`INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, '\x02', now() + interval '1 day')`, id)
+	// The registrant also signed up through an identity provider that never vouched for the address; that identity must not outlive the recovery.
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'github', 'squatter-1')`, id)
 
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
 	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/auth/verification-requested?purpose=sso_recovery")
@@ -790,6 +792,12 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	if e.count(`SELECT count(*) FROM user_totp WHERE user_id = ?`, id) != 0 || e.count(`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = 'email_change'`, id) != 0 {
 		t.Fatal("two-factor authentication or an email change link survived")
 	}
+	if e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'github'`, id) != 0 {
+		t.Fatal("the registrant's own single sign-on identity survived")
+	}
+	if e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'google' AND subject = 'g-1'`, id) != 1 {
+		t.Fatal("the recovered identity was not linked")
+	}
 	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 1 {
 		t.Fatal("other sessions survived")
 	}
@@ -799,12 +807,14 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 
 	mails := e.sent("ada@example.com")
 	notice := mails[len(mails)-1]
-	if notice.Subject != "Sign-in factors were removed from your Forma account" || !strings.Contains(notice.HTML, "Your password was removed.") || !strings.Contains(notice.HTML, "Two-factor authentication was removed.") {
+	if notice.Subject != "Sign-in factors were removed from your Forma account" || !strings.Contains(notice.HTML, "Your password was removed.") || !strings.Contains(notice.HTML, "Two-factor authentication was removed.") ||
+		!strings.Contains(notice.HTML, "Single sign-on connections added to the account before were removed.") {
 		t.Fatalf("notice %q", notice.Subject)
 	}
 	completed := e.auditEvents(audit.ActionSSORecoveryCompleted)
 	if len(completed) != 1 || field(completed[0], "changes", "credentialPasswordsCleared") != float64(1) ||
-		field(completed[0], "changes", "twoFactorRowsRemoved") != float64(1) || field(completed[0], "changes", "sessionsRevoked") != float64(2) {
+		field(completed[0], "changes", "twoFactorRowsRemoved") != float64(1) || field(completed[0], "changes", "sessionsRevoked") != float64(2) ||
+		field(completed[0], "changes", "externalIdentitiesRemoved") != float64(1) {
 		t.Fatalf("completed %v", completed)
 	}
 

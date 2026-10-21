@@ -93,10 +93,11 @@ type InviteAccepted struct {
 func (InviteAccepted) template() string   { return "invite_accepted" }
 func (InviteAccepted) subjectKey() string { return "emails.invite_accepted_email_subject" }
 
-// SSORecoveryFactorsRemoved tells a user that linking single sign-on to their account removed the password and two-factor authentication set on it while its address was unproven, and where to set them up again.
+// SSORecoveryFactorsRemoved tells a user that linking single sign-on to their account removed the password, two-factor authentication and other single sign-on connections set on it while its address was unproven, and where to set them up again.
 type SSORecoveryFactorsRemoved struct {
 	PasswordRemoved      bool
 	TwoFactorRemoved     bool
+	SingleSignOnRemoved  bool
 	SecuritySettingsLink string
 }
 

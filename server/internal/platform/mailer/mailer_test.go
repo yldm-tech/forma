@@ -51,7 +51,7 @@ var everyTemplate = []mailer.Content{
 	mailer.Invite{InviteeName: "Grace", InviterName: "Ada", VerifyLink: "https://app.example.com/invite?token=i1"},
 	mailer.InviteAccepted{InviterName: "Ada", InviteeName: "Grace"},
 	mailer.DeleteAccountConfirmation{DeleteLink: "https://app.example.com/auth/delete-account?token=d1", LinkValidityInMinutes: 60},
-	mailer.SSORecoveryFactorsRemoved{PasswordRemoved: true, TwoFactorRemoved: true, SecuritySettingsLink: "https://app.example.com/account/settings/profile"},
+	mailer.SSORecoveryFactorsRemoved{PasswordRemoved: true, TwoFactorRemoved: true, SingleSignOnRemoved: true, SecuritySettingsLink: "https://app.example.com/account/settings/profile"},
 }
 
 var placeholder = regexp.MustCompile(`\{[A-Za-z]+\}`)
@@ -114,7 +114,7 @@ func TestRenderEnglishCopy(t *testing.T) {
 		{everyTemplate[7], "Sign-in factors were removed from your Forma account", []string{
 			"Sign-in factors removed from your account",
 			"You just signed in with single sign-on for the first time. Because your email address had never been verified, we removed the sign-in factors that were set on the account before:",
-			"Your password was removed.", "Two-factor authentication was removed.",
+			"Your password was removed.", "Two-factor authentication was removed.", "Single sign-on connections added to the account before were removed.",
 			"You can keep signing in with single sign-on. To use a password or two-factor authentication again, set them up in your security settings.",
 			"Review security settings", `href="https://app.example.com/account/settings/profile"`,
 			"If you did not just sign in with single sign-on, contact your administrator immediately.",

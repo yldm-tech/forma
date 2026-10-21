@@ -641,6 +641,7 @@
     "sso_recovery_factors_removed_email_password": "パスワードが削除されました。",
     "sso_recovery_factors_removed_email_review_security": "セキュリティ設定を確認する",
     "sso_recovery_factors_removed_email_sign_in_hint": "今後もシングルサインオンでサインインできます。パスワードや二要素認証を再度使用したい場合は、セキュリティ設定で設定してください。",
+    "sso_recovery_factors_removed_email_single_sign_on": "以前にアカウントへ追加されたシングルサインオン連携が削除されました。",
     "sso_recovery_factors_removed_email_subject": "Formaアカウントからサインイン要素が削除されました",
     "sso_recovery_factors_removed_email_text": "初めてシングルサインオンでサインインしました。メールアドレスが未確認だったため、以前アカウントに設定されていた以下のサインイン要素を削除しました:",
     "sso_recovery_factors_removed_email_two_factor": "二要素認証が削除されました。",
