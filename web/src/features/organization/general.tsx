@@ -6,7 +6,14 @@ import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { FormError } from "../../components/ui/form-error";
 import { IdBadge } from "../../components/ui/id-badge";
 import { Input } from "../../components/ui/input";
@@ -71,7 +78,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
   const [nameError, setNameError] = useState<string | null>(null);
   const update = useUpdateOrganization(organization.id);
   const queryClient = useQueryClient();
-  const zones = useMemo(ianaTimeZones, []);
+  const zones = useMemo(() => ianaTimeZones(), []);
   const changes = organizationSettingsChanges(initial, { name, displayTimeZone }, role);
 
   const submit = async (e: FormEvent) => {
@@ -131,7 +138,9 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
             value={displayTimeZone ?? UTC_DEFAULT}
             onChange={(e) => setDisplayTimeZone(e.target.value === UTC_DEFAULT ? null : e.target.value)}
             disabled={!canEditTimeZone}>
-            <option value={UTC_DEFAULT}>{t("workspace.settings.general.display_time_zone_utc_default")}</option>
+            <option value={UTC_DEFAULT}>
+              {t("workspace.settings.general.display_time_zone_utc_default")}
+            </option>
             {zones.map((zone) => (
               <option key={zone} value={zone}>
                 {zone}
@@ -191,7 +200,9 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
           <p id="ai-smart-tools-title" className="text-sm font-semibold text-slate-800">
             {t("workspace.settings.general.ai_smart_tools_enabled")}
           </p>
-          <p className="text-xs text-slate-600">{t("workspace.settings.general.ai_smart_tools_enabled_description")}</p>
+          <p className="text-xs text-slate-600">
+            {t("workspace.settings.general.ai_smart_tools_enabled_description")}
+          </p>
         </div>
       </div>
       {!canEdit && (
@@ -206,7 +217,13 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
 };
 
 /** forma2's DeleteOrganization: owners only, confirmed by typing the organization's exact name. */
-const DeleteOrganization = ({ organization, isOwner }: { organization: OrganizationDetail; isOwner: boolean }) => {
+const DeleteOrganization = ({
+  organization,
+  isOwner,
+}: {
+  organization: OrganizationDetail;
+  isOwner: boolean;
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -217,7 +234,9 @@ const DeleteOrganization = ({ organization, isOwner }: { organization: Organizat
   if (!isOwner) {
     return (
       <Alert variant="warning" role="status" className="mb-4">
-        <AlertDescription>{t("workspace.settings.general.only_org_owner_can_perform_action")}</AlertDescription>
+        <AlertDescription>
+          {t("workspace.settings.general.only_org_owner_can_perform_action")}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -261,7 +280,9 @@ const DeleteOrganization = ({ organization, isOwner }: { organization: Organizat
           </ul>
           <form onSubmit={(e) => e.preventDefault()}>
             <label htmlFor="deleteOrganizationConfirmation">
-              {t("workspace.settings.general.delete_organization_warning_3", { organizationName: organization.name })}
+              {t("workspace.settings.general.delete_organization_warning_3", {
+                organizationName: organization.name,
+              })}
             </label>
             <Input
               id="deleteOrganizationConfirmation"
@@ -297,7 +318,13 @@ const CreateOrganizationCard = () => {
   );
 };
 
-export const CreateOrganizationModal = ({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) => {
+export const CreateOrganizationModal = ({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -326,7 +353,9 @@ export const CreateOrganizationModal = ({ open, setOpen }: { open: boolean; setO
       <DialogHeader>
         <PlusCircleIcon />
         <DialogTitle>{t("workspace.settings.general.create_new_organization")}</DialogTitle>
-        <DialogDescription>{t("workspace.settings.general.create_new_organization_description")}</DialogDescription>
+        <DialogDescription>
+          {t("workspace.settings.general.create_new_organization_description")}
+        </DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
         <DialogBody>
@@ -334,7 +363,6 @@ export const CreateOrganizationModal = ({ open, setOpen }: { open: boolean; setO
             <Label htmlFor="new-organization-name">{t("workspace.settings.general.organization_name")}</Label>
             <Input
               id="new-organization-name"
-              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("workspace.settings.general.organization_name_placeholder")}

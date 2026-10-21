@@ -46,7 +46,10 @@ export const workspacesQuery = (organizationId: string, access: "read" | "write"
       api
         .get<{
           workspaces: Workspace[];
-        }>(`/api/app/organizations/${organizationId}/workspaces${access === "write" ? "?access=write" : ""}`, { signal })
+        }>(
+          `/api/app/organizations/${organizationId}/workspaces${access === "write" ? "?access=write" : ""}`,
+          { signal }
+        )
         .then((res) => res.workspaces),
   });
 
@@ -54,7 +57,9 @@ export const environmentQuery = (environmentId: string) =>
   queryOptions({
     queryKey: ["environments", environmentId],
     queryFn: ({ signal }) =>
-      api.get<{ workspaceId: string }>(`/api/app/environments/${encodeURIComponent(environmentId)}`, { signal }),
+      api.get<{ workspaceId: string }>(`/api/app/environments/${encodeURIComponent(environmentId)}`, {
+        signal,
+      }),
   });
 
 export const useCreateWorkspace = (organizationId: string) => {

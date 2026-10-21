@@ -47,7 +47,8 @@ export const MainNavigation = ({
         isCollapsed ? "w-sidebar-expanded" : "w-sidebar-collapsed"
       )}>
       <div>
-        <div className={cn("flex items-center px-3 pb-4", isCollapsed ? "justify-center" : "justify-between")}>
+        <div
+          className={cn("flex items-center px-3 pb-4", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
             <Link to={homeHref} className="flex items-center justify-center">
               <Wordmark className="text-2xl" />
@@ -57,7 +58,7 @@ export const MainNavigation = ({
             variant="ghost"
             size="icon"
             onClick={toggle}
-            aria-label={isCollapsed ? t("common.expand") : t("common.collapse")}
+            aria-label={isCollapsed ? t("common.expand_navigation") : t("common.collapse_navigation")}
             aria-expanded={!isCollapsed}
             className="rounded-xl bg-slate-50 p-1 text-slate-600 hover:bg-slate-100">
             {isCollapsed ? <PanelLeftOpenIcon strokeWidth={1.5} /> : <PanelLeftCloseIcon strokeWidth={1.5} />}

@@ -8,7 +8,8 @@ import { BILLING_ROLE_CODE } from "./queries/workspaces";
 export const guardPageError = (error: unknown, missing: "notFound" | "home" = "notFound"): never => {
   if (error instanceof ApiError) {
     const target = error.details?.redirect;
-    if (error.code === BILLING_ROLE_CODE && typeof target === "string") throw redirect({ href: target, replace: true });
+    if (error.code === BILLING_ROLE_CODE && typeof target === "string")
+      throw redirect({ href: target, replace: true });
     if (error.status === 403 || error.status === 404) {
       if (missing === "home") throw redirect({ href: "/", replace: true });
       throw notFound();

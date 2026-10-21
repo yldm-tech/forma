@@ -6,7 +6,12 @@ import { useTranslation } from "react-i18next";
 import { sortByName, workspaceHomePath } from "../../lib/navigation";
 import { workspacesQuery } from "../../lib/queries/workspaces";
 import { BreadcrumbItem } from "../ui/breadcrumb";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { DisabledReason } from "../ui/popover";
 import { CreateWorkspaceModal } from "./create-workspace-modal";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
@@ -51,7 +56,9 @@ export const WorkspaceBreadcrumb = ({
             {isMembershipPending || !isOwnerOrManager ? (
               <DisabledReason
                 reason={
-                  isMembershipPending ? t("common.loading") : t("common.you_are_not_authorized_to_perform_this_action")
+                  isMembershipPending
+                    ? t("common.loading")
+                    : t("common.you_are_not_authorized_to_perform_this_action")
                 }>
                 <button
                   type="button"
@@ -62,7 +69,9 @@ export const WorkspaceBreadcrumb = ({
                 </button>
               </DisabledReason>
             ) : (
-              <DropdownMenuCheckboxItem className="w-full justify-between" onSelect={() => setCreateOpen(true)}>
+              <DropdownMenuCheckboxItem
+                className="w-full justify-between"
+                onSelect={() => setCreateOpen(true)}>
                 <span>{t("common.add_new_workspace")}</span>
                 <PlusIcon className="ml-2 size-4" strokeWidth={1.5} />
               </DropdownMenuCheckboxItem>

@@ -19,7 +19,8 @@ export const validateTeamForm = (form: TeamForm): TeamFormErrors => {
   if (form.members.length === 0) errors.members = "Please add at least one member";
   else if (form.members.some((member) => !member.userId)) errors.members = "Please select a member";
   if (form.workspaces.length === 0) errors.workspaces = "Please add at least one workspace";
-  else if (form.workspaces.some((workspace) => !workspace.workspaceId)) errors.workspaces = "Please select a workspace";
+  else if (form.workspaces.some((workspace) => !workspace.workspaceId))
+    errors.workspaces = "Please select a workspace";
   return errors;
 };
 

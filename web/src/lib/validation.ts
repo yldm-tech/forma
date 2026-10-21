@@ -21,4 +21,5 @@ export const workspaceNameError = (name: string): string | null =>
 export const organizationNameError = (name: string): string | null =>
   name.trim() === "" ? "Organization name must be at least 1 character long" : null;
 
-export const teamNameError = (name: string): string | null => (name.trim() === "" ? "Team name is required" : null);
+export const teamNameError = (name: string): string | null =>
+  name.trim() === "" ? "Team name is required" : null;

@@ -48,7 +48,11 @@ export const DeleteDialog = ({
         <Button variant="secondary" onClick={() => setOpen(false)} disabled={isDeleting}>
           {t("common.cancel")}
         </Button>
-        <Button variant="destructive" onClick={onDelete} loading={isDeleting} disabled={disabled || isDeleting}>
+        <Button
+          variant="destructive"
+          onClick={onDelete}
+          loading={isDeleting}
+          disabled={disabled || isDeleting}>
           <TrashIcon />
           {buttonLabel ?? t("common.delete")}
         </Button>

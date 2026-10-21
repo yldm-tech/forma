@@ -1,8 +1,10 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
 
-export const H4 = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
-  <h4 className={cn("scroll-m-20 text-base tracking-tight text-slate-800", className)} {...props} />
+export const H4 = ({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
+  <h4 className={cn("scroll-m-20 text-base tracking-tight text-slate-800", className)} {...props}>
+    {children}
+  </h4>
 );
 
 export const Small = ({

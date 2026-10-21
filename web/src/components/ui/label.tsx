@@ -1,12 +1,14 @@
 import type { LabelHTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
 
-export const Label = ({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) => (
+export const Label = ({ className, htmlFor, children, ...props }: LabelHTMLAttributes<HTMLLabelElement>) => (
   <label
+    htmlFor={htmlFor}
     className={cn(
       "text-sm leading-none font-medium text-slate-800 peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
       className
     )}
-    {...props}
-  />
+    {...props}>
+    {children}
+  </label>
 );

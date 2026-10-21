@@ -25,7 +25,11 @@ export const NavigationLink = ({
   const padding = isCollapsed ? "ml-1 justify-center" : indent ? "pl-8" : "pl-5";
   if (disabledReason) {
     return (
-      <li className={cn("mb-1 rounded-l-md border-r-4 border-transparent py-2 text-sm text-slate-400", padding)}>
+      <li
+        className={cn(
+          "mb-1 rounded-l-md border-r-4 border-transparent py-2 text-sm text-slate-400",
+          padding
+        )}>
         <DisabledReason reason={disabledReason}>
           <button
             type="button"

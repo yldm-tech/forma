@@ -17,6 +17,7 @@ export const validateInviteForm = (form: InviteForm, teamAdminOnly: boolean): In
   if (name) errors.name = name;
   const email = emailError(form.email);
   if (email) errors.email = email;
-  if (teamAdminOnly && form.teamIds.length === 0) errors.teamIds = "Team admins must select at least one team";
+  if (teamAdminOnly && form.teamIds.length === 0)
+    errors.teamIds = "Team admins must select at least one team";
   return errors;
 };

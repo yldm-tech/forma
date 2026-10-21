@@ -3,7 +3,14 @@ import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { FormError } from "../../components/ui/form-error";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -66,7 +73,11 @@ export const InviteMemberModal = ({
     if (Object.keys(found).length > 0) return;
     const toastId = toast.loading(t("workspace.settings.general.inviting_member", { count: 1 }));
     try {
-      await create.mutateAsync({ ...invitee, name: invitee.name.trim(), email: invitee.email.trim().toLowerCase() });
+      await create.mutateAsync({
+        ...invitee,
+        name: invitee.name.trim(),
+        email: invitee.email.trim().toLowerCase(),
+      });
       toast.success(t("workspace.settings.general.member_invited_successfully"), { id: toastId });
       close();
     } catch (error) {
@@ -141,7 +152,9 @@ export const InviteMemberModal = ({
                 </p>
                 {form.role === "member" && (
                   <Alert variant="info" role="status">
-                    <AlertDescription>{t("workspace.settings.teams.member_role_info_message")}</AlertDescription>
+                    <AlertDescription>
+                      {t("workspace.settings.teams.member_role_info_message")}
+                    </AlertDescription>
                   </Alert>
                 )}
               </>
@@ -158,7 +171,9 @@ export const InviteMemberModal = ({
               onChange={(teamIds) => setForm({ ...form, teamIds })}
             />
             {teams.isSuccess && teamOptions.length === 0 && (
-              <Small className="font-normal text-amber-600">{t("workspace.settings.teams.create_first_team_message")}</Small>
+              <Small className="font-normal text-amber-600">
+                {t("workspace.settings.teams.create_first_team_message")}
+              </Small>
             )}
             <FormError>{errors.teamIds}</FormError>
           </div>

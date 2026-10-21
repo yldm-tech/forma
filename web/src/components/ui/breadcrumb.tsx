@@ -5,7 +5,10 @@ export const Breadcrumb = (props: HTMLAttributes<HTMLElement>) => <nav aria-labe
 
 export const BreadcrumbList = ({ className, ...props }: HTMLAttributes<HTMLOListElement>) => (
   <ol
-    className={cn("flex flex-wrap items-center gap-1.5 text-sm wrap-break-word text-slate-500 hover:text-slate-700", className)}
+    className={cn(
+      "flex flex-wrap items-center gap-1.5 text-sm wrap-break-word text-slate-500 hover:text-slate-700",
+      className
+    )}
     {...props}
   />
 );

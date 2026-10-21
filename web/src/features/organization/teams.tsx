@@ -5,7 +5,14 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { FormError } from "../../components/ui/form-error";
 import { IdBadge } from "../../components/ui/id-badge";
 import { Input } from "../../components/ui/input";
@@ -29,7 +36,13 @@ import {
 } from "../../lib/queries/teams";
 import { workspacesQuery } from "../../lib/queries/workspaces";
 import { accessFlags, canManageTeam, defaultTeamRole } from "../../lib/roles";
-import { type TeamForm, type TeamFormErrors, remainingOptions, toTeamUpdate, validateTeamForm } from "../../lib/team-form";
+import {
+  type TeamForm,
+  type TeamFormErrors,
+  remainingOptions,
+  toTeamUpdate,
+  validateTeamForm,
+} from "../../lib/team-form";
 import { toast } from "../../lib/toast";
 import { teamNameError } from "../../lib/validation";
 
@@ -63,7 +76,9 @@ export const TeamsCard = ({ organization }: { organization: OrganizationDetail }
           <LoadingBlock />
         </div>
       ) : rows.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-slate-500">{t("workspace.settings.teams.empty_teams_state")}</p>
+        <p className="px-4 py-6 text-center text-sm text-slate-500">
+          {t("workspace.settings.teams.empty_teams_state")}
+        </p>
       ) : (
         <Table aria-label={t("common.teams")}>
           <TableHeader>
@@ -86,7 +101,13 @@ export const TeamsCard = ({ organization }: { organization: OrganizationDetail }
                   <TableCell>{team.name}</TableCell>
                   <TableCell>{t("common.count_members", { count: team.memberCount })}</TableCell>
                   <TableCell>
-                    {isMember && <Badge type="success" size="tiny" text={t("workspace.settings.teams.you_are_a_member")} />}
+                    {isMember && (
+                      <Badge
+                        type="success"
+                        size="tiny"
+                        text={t("workspace.settings.teams.you_are_a_member")}
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end">
@@ -312,7 +333,9 @@ const TeamSettingsForm = ({
   return (
     <>
       <DialogHeader className="pb-4">
-        <DialogTitle>{t("workspace.settings.teams.team_name_settings_title", { teamName: team.name })}</DialogTitle>
+        <DialogTitle>
+          {t("workspace.settings.teams.team_name_settings_title", { teamName: team.name })}
+        </DialogTitle>
         <DialogDescription>{t("workspace.settings.teams.team_settings_description")}</DialogDescription>
       </DialogHeader>
       <form className="contents" onSubmit={submit} noValidate>
@@ -347,7 +370,7 @@ const TeamSettingsForm = ({
                 // oxlint-disable-next-line react/no-array-index-key -- rows are positional until a member is chosen
                 <div key={index} className="flex gap-2.5">
                   <Select
-                    aria-label={t("common.member")}
+                    aria-label={t("workspace.settings.teams.member")}
                     value={member.userId}
                     disabled={isExisting || !canEditMembers}
                     onChange={(e) => setMember(index, e.target.value)}>
@@ -367,7 +390,9 @@ const TeamSettingsForm = ({
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        members: form.members.map((m, i) => (i === index ? { ...m, role: e.target.value as TeamRole } : m)),
+                        members: form.members.map((m, i) =>
+                          i === index ? { ...m, role: e.target.value as TeamRole } : m
+                        ),
                       })
                     }>
                     <option value="admin">{t("workspace.settings.teams.team_admin")}</option>
@@ -382,7 +407,9 @@ const TeamSettingsForm = ({
                       aria-label={t("common.remove_from_team")}
                       title={t("common.remove_from_team")}
                       disabled={!isOwnerOrManager && (!isTeamAdminMember || member.userId === currentUserId)}
-                      onClick={() => setForm({ ...form, members: form.members.filter((_, i) => i !== index) })}>
+                      onClick={() =>
+                        setForm({ ...form, members: form.members.filter((_, i) => i !== index) })
+                      }>
                       <XIcon className="size-4" />
                     </Button>
                   )}
@@ -402,7 +429,9 @@ const TeamSettingsForm = ({
                     : undefined
               }
               disabled={!canEditMembers || chosenMembers.length === people.length || hasEmptyMember}
-              onClick={() => setForm({ ...form, members: [...form.members, { userId: "", role: "contributor" }] })}>
+              onClick={() =>
+                setForm({ ...form, members: [...form.members, { userId: "", role: "contributor" }] })
+              }>
               <PlusIcon className="size-4" />
               <span>{t("common.add_member")}</span>
             </Button>
@@ -414,7 +443,9 @@ const TeamSettingsForm = ({
             {form.workspaces.map((workspace, index) => {
               const isExisting = !!workspace.workspaceId && initialWorkspaceIds.has(workspace.workspaceId);
               const known = orgWorkspaces.some((w) => w.id === workspace.workspaceId);
-              const fallbackName = team.workspaces.find((w) => w.workspaceId === workspace.workspaceId)?.workspaceName;
+              const fallbackName = team.workspaces.find(
+                (w) => w.workspaceId === workspace.workspaceId
+              )?.workspaceName;
               return (
                 // oxlint-disable-next-line react/no-array-index-key -- rows are positional until a workspace is chosen
                 <div key={index} className="flex gap-2.5">
@@ -425,7 +456,9 @@ const TeamSettingsForm = ({
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        workspaces: form.workspaces.map((w, i) => (i === index ? { ...w, workspaceId: e.target.value } : w)),
+                        workspaces: form.workspaces.map((w, i) =>
+                          i === index ? { ...w, workspaceId: e.target.value } : w
+                        ),
                       })
                     }>
                     <option value="" disabled>
@@ -434,14 +467,16 @@ const TeamSettingsForm = ({
                     {!known && workspace.workspaceId && (
                       <option value={workspace.workspaceId}>{fallbackName ?? workspace.workspaceId}</option>
                     )}
-                    {remainingOptions(orgWorkspaces, chosenWorkspaces, workspace.workspaceId).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                    {remainingOptions(orgWorkspaces, chosenWorkspaces, workspace.workspaceId).map(
+                      (option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      )
+                    )}
                   </Select>
                   <Select
-                    aria-label={t("workspace.settings.teams.permission")}
+                    aria-label={t("workspace.api_keys.permissions")}
                     value={workspace.permission}
                     disabled={!isOwnerOrManager}
                     onChange={(e) =>
@@ -464,7 +499,9 @@ const TeamSettingsForm = ({
                       className="shrink-0"
                       aria-label={t("common.remove")}
                       disabled={!isOwnerOrManager}
-                      onClick={() => setForm({ ...form, workspaces: form.workspaces.filter((_, i) => i !== index) })}>
+                      onClick={() =>
+                        setForm({ ...form, workspaces: form.workspaces.filter((_, i) => i !== index) })
+                      }>
                       <Trash2Icon className="size-4" />
                     </Button>
                   )}
@@ -483,9 +520,14 @@ const TeamSettingsForm = ({
                     ? t("workspace.settings.teams.all_workspaces_added")
                     : undefined
               }
-              disabled={!isOwnerOrManager || chosenWorkspaces.length === orgWorkspaces.length || hasEmptyWorkspace}
+              disabled={
+                !isOwnerOrManager || chosenWorkspaces.length === orgWorkspaces.length || hasEmptyWorkspace
+              }
               onClick={() =>
-                setForm({ ...form, workspaces: [...form.workspaces, { workspaceId: "", permission: "read" }] })
+                setForm({
+                  ...form,
+                  workspaces: [...form.workspaces, { workspaceId: "", permission: "read" }],
+                })
               }>
               <PlusIcon className="size-4" />
               {t("common.add_workspace")}

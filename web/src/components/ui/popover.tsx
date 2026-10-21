@@ -16,7 +16,10 @@ export const PopoverContent = ({
     <PopoverPrimitive.Content
       align={align}
       sideOffset={sideOffset}
-      className={cn("z-50 w-72 rounded-md border border-slate-100 bg-white p-4 shadow-md outline-hidden", className)}
+      className={cn(
+        "z-50 w-72 rounded-md border border-slate-100 bg-white p-4 shadow-md outline-hidden",
+        className
+      )}
       {...props}
     />
   </PopoverPrimitive.Portal>

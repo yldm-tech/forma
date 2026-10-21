@@ -2,8 +2,10 @@
 export const loginHref = (path: string, origin: string = globalThis.location.origin): string =>
   `/auth/login?callbackUrl=${encodeURIComponent(origin + path)}`;
 
-export const organizationSettingsPath = (organizationId: string, slug: "general" | "teams" | "api-keys"): string =>
-  `/organizations/${organizationId}/settings/${slug}`;
+export const organizationSettingsPath = (
+  organizationId: string,
+  slug: "general" | "teams" | "api-keys"
+): string => `/organizations/${organizationId}/settings/${slug}`;
 
 export const workspaceHomePath = (workspaceId: string): string => `/workspaces/${workspaceId}/`;
 

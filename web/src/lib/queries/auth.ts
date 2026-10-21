@@ -130,7 +130,8 @@ export const useSetNotification = () => {
 
 export const useSetupTwoFactor = () =>
   useMutation({
-    mutationFn: (password: string) => api.post<TwoFactorSetup>("/api/app/auth/two-factor/setup", { password }),
+    mutationFn: (password: string) =>
+      api.post<TwoFactorSetup>("/api/app/auth/two-factor/setup", { password }),
   });
 
 export const useEnableTwoFactor = () => {

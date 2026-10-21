@@ -34,7 +34,8 @@ export const apiKeyKeys = {
 export const apiKeysQuery = (organizationId: string) =>
   queryOptions({
     queryKey: apiKeyKeys.list(organizationId),
-    queryFn: ({ signal }) => api.get<ApiKey[]>(`/api/app/organizations/${organizationId}/api-keys`, { signal }),
+    queryFn: ({ signal }) =>
+      api.get<ApiKey[]>(`/api/app/organizations/${organizationId}/api-keys`, { signal }),
   });
 
 export const useCreateApiKey = (organizationId: string) => {
@@ -58,7 +59,8 @@ export const useRelabelApiKey = (organizationId: string) => {
 export const useDeleteApiKey = (organizationId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete<undefined>(`/api/app/organizations/${organizationId}/api-keys/${id}`),
+    mutationFn: (id: string) =>
+      api.delete<undefined>(`/api/app/organizations/${organizationId}/api-keys/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: apiKeyKeys.list(organizationId) }),
   });
 };

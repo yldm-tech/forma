@@ -6,7 +6,12 @@ import { errorMessage } from "../../lib/errors";
 import { type Me, signOut } from "../../lib/queries/auth";
 import { toast } from "../../lib/toast";
 import { ProfileAvatar } from "../ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export const DOCUMENTATION_URL = "https://forma.yldm.ai/docs";
 
@@ -71,7 +76,9 @@ export const UserDropdown = ({
             {t("common.documentation")}
           </a>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void logOut()} icon={<LogOutIcon className="mr-2 size-4" strokeWidth={1.5} />}>
+        <DropdownMenuItem
+          onSelect={() => void logOut()}
+          icon={<LogOutIcon className="mr-2 size-4" strokeWidth={1.5} />}>
           {t("common.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -12,7 +12,12 @@ import { LoadingBlock, PageContentWrapper, PageHeader, SettingsCard } from "../.
 import { Select } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { type PermissionRow, canSubmitApiKey, effectiveAccess, hasDuplicateWorkspace } from "../../lib/api-key-form";
+import {
+  type PermissionRow,
+  canSubmitApiKey,
+  effectiveAccess,
+  hasDuplicateWorkspace,
+} from "../../lib/api-key-form";
 import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
 import {
@@ -98,13 +103,17 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
           {errorMessage(t, keys.error)}
         </p>
       ) : keys.data.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-slate-500">{t("workspace.api_keys.no_api_keys_yet")}</p>
+        <p className="px-4 py-6 text-center text-sm text-slate-500">
+          {t("workspace.api_keys.no_api_keys_yet")}
+        </p>
       ) : (
         <Table aria-label={t("common.api_keys")}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[25%]">{t("common.label")}</TableHead>
-              <TableHead className="hidden w-[45%] sm:table-cell">{t("workspace.api_keys.api_key")}</TableHead>
+              <TableHead className="hidden w-[45%] sm:table-cell">
+                {t("workspace.api_keys.api_key")}
+              </TableHead>
               <TableHead className="w-[20%]">{t("common.created_at")}</TableHead>
               <TableHead className="w-[10%]">
                 <span className="sr-only">{t("common.actions")}</span>
@@ -129,7 +138,11 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
                 <TableCell>{formatDate.format(new Date(key.createdAt))}</TableCell>
                 <TableCell>
                   <div className="flex justify-end">
-                    <Button size="icon" variant="ghost" aria-label={t("common.delete")} onClick={() => setDeleting(key)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t("common.delete")}
+                      onClick={() => setDeleting(key)}>
                       <TrashIcon />
                     </Button>
                   </div>
@@ -146,7 +159,13 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
         workspaces={workspaces.data ?? []}
         onCreated={(id, key) => setSecrets((current) => ({ ...current, [id]: key }))}
       />
-      {viewed && <ViewPermissionModal apiKey={viewed} organizationId={organizationId} onClose={() => setViewed(null)} />}
+      {viewed && (
+        <ViewPermissionModal
+          apiKey={viewed}
+          organizationId={organizationId}
+          onClose={() => setViewed(null)}
+        />
+      )}
       <DeleteDialog
         open={deleting !== null}
         setOpen={(open) => !open && setDeleting(null)}
@@ -215,7 +234,11 @@ const AddApiKeyModal = ({
       return;
     }
     try {
-      const created = await create.mutateAsync({ label, workspacePermissions: rows, organizationAccess: shown });
+      const created = await create.mutateAsync({
+        label,
+        workspacePermissions: rows,
+        organizationAccess: shown,
+      });
       onCreated(created.id, created.key);
       toast.success(t("workspace.api_keys.api_key_created"));
       close();
@@ -243,9 +266,13 @@ const AddApiKeyModal = ({
             />
           </div>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-800">{t("workspace.api_keys.workspace_access")}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t("workspace.api_keys.workspace_access")}
+            </legend>
             <p className="text-sm text-slate-500">{t("workspace.api_keys.workspace_access_description")}</p>
-            {rows.length === 0 && <p className="text-sm text-slate-500">{t("workspace.api_keys.workspace_access_empty")}</p>}
+            {rows.length === 0 && (
+              <p className="text-sm text-slate-500">{t("workspace.api_keys.workspace_access_empty")}</p>
+            )}
             {rows.map((row, index) => (
               // oxlint-disable-next-line react/no-array-index-key -- grant rows are positional
               <div key={index} className="flex items-center gap-2">
@@ -270,7 +297,9 @@ const AddApiKeyModal = ({
                     value={row.permission}
                     onChange={(e) =>
                       setRows(
-                        rows.map((r, i) => (i === index ? { ...r, permission: e.target.value as ApiKeyPermission } : r))
+                        rows.map((r, i) =>
+                          i === index ? { ...r, permission: e.target.value as ApiKeyPermission } : r
+                        )
                       )
                     }>
                     {PERMISSIONS.map((permission) => (
@@ -299,8 +328,12 @@ const AddApiKeyModal = ({
           </fieldset>
           <div className="border-t border-slate-200" />
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-800">{t("workspace.api_keys.organization_access")}</legend>
-            <p className="text-sm text-slate-500">{t("workspace.api_keys.organization_access_description")}</p>
+            <legend className="text-sm font-medium text-slate-800">
+              {t("workspace.api_keys.organization_access")}
+            </legend>
+            <p className="text-sm text-slate-500">
+              {t("workspace.api_keys.organization_access_description")}
+            </p>
             <OrganizationAccessSwitches
               access={shown}
               onChange={(next) => setAccess(next)}
@@ -337,30 +370,30 @@ const OrganizationAccessSwitches = ({
 }) => {
   const id = useId();
   return (
-  <div className="mt-2 flex items-center gap-6">
-    <div className="flex items-center gap-2">
-      <span id={`${id}-read`} className="text-sm font-medium text-slate-800">
-        Read
-      </span>
-      <Switch
-        aria-labelledby={`${id}-read`}
-        checked={access.accessControl.read}
-        disabled={disabled || readDisabled}
-        onCheckedChange={(read) => onChange?.({ accessControl: { ...access.accessControl, read } })}
-      />
+    <div className="mt-2 flex items-center gap-6">
+      <div className="flex items-center gap-2">
+        <span id={`${id}-read`} className="text-sm font-medium text-slate-800">
+          Read
+        </span>
+        <Switch
+          aria-labelledby={`${id}-read`}
+          checked={access.accessControl.read}
+          disabled={disabled || readDisabled}
+          onCheckedChange={(read) => onChange?.({ accessControl: { ...access.accessControl, read } })}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <span id={`${id}-write`} className="text-sm font-medium text-slate-800">
+          Write
+        </span>
+        <Switch
+          aria-labelledby={`${id}-write`}
+          checked={access.accessControl.write}
+          disabled={disabled}
+          onCheckedChange={(write) => onChange?.({ accessControl: { ...access.accessControl, write } })}
+        />
+      </div>
     </div>
-    <div className="flex items-center gap-2">
-      <span id={`${id}-write`} className="text-sm font-medium text-slate-800">
-        Write
-      </span>
-      <Switch
-        aria-labelledby={`${id}-write`}
-        checked={access.accessControl.write}
-        disabled={disabled}
-        onCheckedChange={(write) => onChange?.({ accessControl: { ...access.accessControl, write } })}
-      />
-    </div>
-  </div>
   );
 };
 
@@ -428,7 +461,9 @@ const ViewPermissionModal = ({
             )}
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-800">{t("workspace.api_keys.organization_access")}</p>
+            <p className="text-sm font-medium text-slate-800">
+              {t("workspace.api_keys.organization_access")}
+            </p>
             <OrganizationAccessSwitches access={effectiveAccess(apiKey.organizationAccess)} disabled />
           </div>
         </DialogBody>

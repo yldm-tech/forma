@@ -11,9 +11,21 @@ export const PageContentWrapper = ({
   className?: string;
   /** settings is the reading column every settings surface shares. */
   width?: "full" | "settings";
-}) => <div className={cn("min-h-full space-y-6 p-6", width === "settings" && "max-w-settings", className)}>{children}</div>;
+}) => (
+  <div className={cn("min-h-full space-y-6 p-6", width === "settings" && "max-w-settings", className)}>
+    {children}
+  </div>
+);
 
-export const PageHeader = ({ pageTitle, cta, children }: { pageTitle: ReactNode; cta?: ReactNode; children?: ReactNode }) => (
+export const PageHeader = ({
+  pageTitle,
+  cta,
+  children,
+}: {
+  pageTitle: ReactNode;
+  cta?: ReactNode;
+  children?: ReactNode;
+}) => (
   <div className="border-b border-slate-200">
     <div className="flex items-center justify-between gap-x-4 pb-4">
       <h1 className="text-3xl font-bold text-slate-800">{pageTitle}</h1>

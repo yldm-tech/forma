@@ -63,7 +63,7 @@ export const SettingsNavigation = ({
   ];
 
   return (
-    <aside className="z-40 flex w-sidebar-collapsed shrink-0 flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md">
+    <aside className="w-sidebar-collapsed z-40 flex shrink-0 flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md">
       <div className="flex flex-col overflow-hidden">
         <div className="mb-2 px-3">
           <Link

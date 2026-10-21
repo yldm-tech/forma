@@ -82,7 +82,6 @@ export const CreateWorkspaceModal = ({
               placeholder={t("common.workspace_name_placeholder")}
               isInvalid={!!nameError}
               aria-describedby={nameError ? "workspace-name-error" : undefined}
-              autoFocus
             />
             <FormError id="workspace-name-error">{nameError}</FormError>
           </div>

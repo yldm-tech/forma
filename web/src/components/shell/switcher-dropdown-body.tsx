@@ -45,9 +45,14 @@ export const SwitcherDropdownBody = ({
       {!isLoading && isError && (
         <div className="px-2 py-4">
           <p className="mb-2 text-sm text-red-600">
-            {type === "organization" ? t("common.failed_to_load_organizations") : t("common.failed_to_load_workspaces")}
+            {type === "organization"
+              ? t("common.failed_to_load_organizations")
+              : t("common.failed_to_load_workspaces")}
           </p>
-          <button type="button" onClick={onRetry} className="text-xs text-slate-600 underline hover:text-slate-800">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="text-xs text-slate-600 underline hover:text-slate-800">
             {t("common.try_again")}
           </button>
         </div>
@@ -56,7 +61,10 @@ export const SwitcherDropdownBody = ({
         <>
           <DropdownMenuGroup className="max-h-[300px] overflow-y-auto">
             {items.map((item) => (
-              <DropdownMenuCheckboxItem key={item.id} checked={item.id === selectedId} onSelect={() => onSelect(item.id)}>
+              <DropdownMenuCheckboxItem
+                key={item.id}
+                checked={item.id === selectedId}
+                onSelect={() => onSelect(item.id)}>
                 {item.name}
               </DropdownMenuCheckboxItem>
             ))}

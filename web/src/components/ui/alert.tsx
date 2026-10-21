@@ -43,8 +43,10 @@ export const Alert = ({
   </div>
 );
 
-export const AlertTitle = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
-  <h5 className={cn("col-start-1 row-start-1 font-medium tracking-tight", className)} {...props} />
+export const AlertTitle = ({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
+  <h5 className={cn("col-start-1 row-start-1 font-medium tracking-tight", className)} {...props}>
+    {children}
+  </h5>
 );
 
 export const AlertDescription = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (

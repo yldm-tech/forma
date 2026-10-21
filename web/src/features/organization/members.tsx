@@ -1,12 +1,27 @@
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { CheckIcon, ChevronDownIcon, CopyIcon, SendHorizonalIcon, ShareIcon, TrashIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  SendHorizonalIcon,
+  ShareIcon,
+  TrashIcon,
+  XIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +80,8 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
   const role = organization.membership.role;
 
   // forma2 offered user management to anyone USER_MANAGEMENT_MINIMUM_ROLE admits, and to team admins for their own teams.
-  const userManagementEnabled = !!access.data && (access.data.canManageUsers || access.data.adminTeamIds.length > 0);
+  const userManagementEnabled =
+    !!access.data && (access.data.canManageUsers || access.data.adminTeamIds.length > 0);
   const rows: MemberRow[] = [
     ...(members.data ?? []).map((member) => ({ kind: "member" as const, member })),
     ...(invites.data ?? []).map((invite) => ({ kind: "invite" as const, invite })),
@@ -81,9 +97,7 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
       <div className="px-4 pt-4">
         <OrganizationActions
           organization={organization}
-          canInvite={
-            !!access.data && !access.data.inviteDisabled && userManagementEnabled
-          }
+          canInvite={!!access.data && !access.data.inviteDisabled && userManagementEnabled}
           adminTeamIds={access.data?.adminTeamIds ?? []}
           billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
         />
@@ -101,7 +115,9 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
               <TableHead className="w-[25%]">{t("common.email")}</TableHead>
               <TableHead className="w-[17%]">{t("common.role")}</TableHead>
               <TableHead className="w-[17%]">{t("common.status")}</TableHead>
-              {userManagementEnabled && <TableHead className="w-[24%] text-right">{t("common.actions")}</TableHead>}
+              {userManagementEnabled && (
+                <TableHead className="w-[24%] text-right">{t("common.actions")}</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -191,7 +207,9 @@ const StatusBadge = ({ row }: { row: MemberRow }) => {
   const { t, i18n } = useTranslation();
   if (row.kind === "invite") {
     if (isInviteExpired(row.invite)) return <Badge type="gray" text={t("common.expired")} size="tiny" />;
-    const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(new Date(row.invite.expiresAt));
+    const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(
+      new Date(row.invite.expiresAt)
+    );
     const expires = t("workspace.settings.general.invite_expires_on", { date });
     return (
       <span title={expires}>
@@ -241,13 +259,19 @@ const RoleCell = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={disabled || pending}>
-        <Button className="flex items-center gap-1 p-2 text-xs" loading={pending} size="sm" variant="secondary">
+        <Button
+          className="flex items-center gap-1 p-2 text-xs"
+          loading={pending}
+          size="sm"
+          variant="secondary">
           <span className="ml-1 capitalize">{memberRole}</span>
           <ChevronDownIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuRadioGroup value={memberRole} onValueChange={(value) => void change(value as OrganizationRole)}>
+        <DropdownMenuRadioGroup
+          value={memberRole}
+          onValueChange={(value) => void change(value as OrganizationRole)}>
           {assignableRoles(currentUserRole, billingRoleAllowed).map((role) => (
             <DropdownMenuRadioItem key={role} value={role} className="capitalize">
               {role}
@@ -367,12 +391,19 @@ const ShareInviteModal = ({ url, onClose }: { url: string | null; onClose: () =>
         <CheckIcon />
         <DialogTitle>{t("workspace.settings.general.organization_invite_link_ready")}</DialogTitle>
         <DialogDescription>
-          {t("workspace.settings.general.share_this_link_to_let_your_organization_member_join_your_organization")}
+          {t(
+            "workspace.settings.general.share_this_link_to_let_your_organization_member_join_your_organization"
+          )}
         </DialogDescription>
       </DialogHeader>
       <DialogBody>
         <div className="flex items-center gap-2">
-          <Input readOnly id="inviteLinkText" value={url ?? ""} aria-label={t("workspace.settings.general.share_invite_link")} />
+          <Input
+            readOnly
+            id="inviteLinkText"
+            value={url ?? ""}
+            aria-label={t("workspace.settings.general.share_invite_link")}
+          />
           <Button
             variant="secondary"
             onClick={() => url && void copyText(url, t)}
@@ -449,10 +480,14 @@ const OrganizationActions = ({
       <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
         <DialogHeader>
           <DialogTitle>{t("workspace.settings.general.leave_organization_title")}</DialogTitle>
-          <DialogDescription>{t("workspace.settings.general.leave_organization_description")}</DialogDescription>
+          <DialogDescription>
+            {t("workspace.settings.general.leave_organization_description")}
+          </DialogDescription>
         </DialogHeader>
         {organizations.isSuccess && isOnlyOrganization && (
-          <p className="mt-2 text-sm text-red-700">{t("workspace.settings.general.cannot_leave_only_organization")}</p>
+          <p className="mt-2 text-sm text-red-700">
+            {t("workspace.settings.general.cannot_leave_only_organization")}
+          </p>
         )}
         <DialogFooter>
           <Button variant="secondary" onClick={() => setLeaveOpen(false)}>

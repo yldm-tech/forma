@@ -24,5 +24,8 @@ export const setOtpDigit = (
   if (!isDigits && (value[index + 1] ?? " ").trim() !== "") return null;
   const padded = value.padEnd(length, " ");
   const char = isDigits ? typed : " ";
-  return { value: padded.slice(0, index) + char + padded.slice(index + 1), advance: isDigits ? "next" : "stay" };
+  return {
+    value: padded.slice(0, index) + char + padded.slice(index + 1),
+    advance: isDigits ? "next" : "stay",
+  };
 };

@@ -13,7 +13,9 @@ import { rememberWorkspace } from "../../../lib/storage";
 
 export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId")({
   loader: async ({ context: { queryClient }, params }) => {
-    const workspace = await queryClient.ensureQueryData(workspaceQuery(params.workspaceId)).catch(guardPageError);
+    const workspace = await queryClient
+      .ensureQueryData(workspaceQuery(params.workspaceId))
+      .catch(guardPageError);
     await queryClient.ensureQueryData(organizationQuery(workspace.organizationId)).catch(guardPageError);
   },
   pendingComponent: RoutePending,

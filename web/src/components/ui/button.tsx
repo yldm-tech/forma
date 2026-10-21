@@ -11,7 +11,8 @@ export const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground enabled:hover:bg-primary/80",
         destructive: "bg-destructive text-destructive-foreground enabled:hover:bg-destructive/80",
-        outline: "border border-slate-300 bg-white enabled:hover:bg-accent enabled:hover:text-accent-foreground",
+        outline:
+          "border border-slate-300 bg-white enabled:hover:bg-accent enabled:hover:text-accent-foreground",
         secondary:
           "bg-secondary text-secondary-foreground enabled:hover:bg-secondary/30 border border-primary/5 hover:border-primary/20",
         ghost: "enabled:hover:bg-accent enabled:hover:text-accent-foreground text-primary",
@@ -28,7 +29,8 @@ export const buttonVariants = cva(
   }
 );
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
 }
@@ -38,7 +40,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size }), loading && "relative cursor-not-allowed opacity-50", className)}
+        className={cn(
+          buttonVariants({ variant, size }),
+          loading && "relative cursor-not-allowed opacity-50",
+          className
+        )}
         ref={ref}
         aria-busy={loading || undefined}
         {...props}

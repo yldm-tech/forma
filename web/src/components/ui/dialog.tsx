@@ -1,5 +1,14 @@
 import { X } from "lucide-react";
-import { type HTMLAttributes, type ReactNode, createContext, useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  type HTMLAttributes,
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
 
@@ -50,6 +59,17 @@ export const Dialog = ({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // A press on the backdrop lands on the <dialog> itself, never on its content; it closes the dialog like Escape does. Keyboard users have Escape and the close button.
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog || disableCloseOnOutsideClick) return;
+    const onBackdrop = (event: MouseEvent) => {
+      if (event.target === dialog) onOpenChange(false);
+    };
+    dialog.addEventListener("mousedown", onBackdrop);
+    return () => dialog.removeEventListener("mousedown", onBackdrop);
+  }, [disableCloseOnOutsideClick, onOpenChange]);
+
   return (
     <dialog
       ref={(node) => {
@@ -64,9 +84,6 @@ export const Dialog = ({
       }}
       onClose={() => {
         if (open) onOpenChange(false);
-      }}
-      onMouseDown={(e) => {
-        if (e.target === ref.current && !disableCloseOnOutsideClick) onOpenChange(false);
       }}
       className={cn(
         "m-auto max-h-[90dvh] w-full max-w-[calc(100vw-2rem)] overflow-visible rounded-lg border bg-white p-0 text-left text-slate-900 shadow-lg",
@@ -106,9 +123,16 @@ export const DialogHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElem
   />
 );
 
-export const DialogTitle = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => {
+export const DialogTitle = ({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) => {
   const ctx = useContext(DialogContext);
-  return <h2 id={ctx?.titleId} className={cn("text-sm leading-none font-medium text-primary", className)} {...props} />;
+  return (
+    <h2
+      id={ctx?.titleId}
+      className={cn("text-sm leading-none font-medium text-primary", className)}
+      {...props}>
+      {children}
+    </h2>
+  );
 };
 
 export const DialogDescription = ({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) => {
@@ -121,5 +145,8 @@ export const DialogBody = ({ className, ...props }: HTMLAttributes<HTMLElement>)
 );
 
 export const DialogFooter = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex shrink-0 flex-col-reverse gap-2 bg-white sm:flex-row sm:justify-end", className)} {...props} />
+  <div
+    className={cn("flex shrink-0 flex-col-reverse gap-2 bg-white sm:flex-row sm:justify-end", className)}
+    {...props}
+  />
 );

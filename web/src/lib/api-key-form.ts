@@ -10,7 +10,11 @@ export const hasDuplicateWorkspace = (rows: readonly PermissionRow[]): boolean =
   new Set(rows.map((row) => row.workspaceId)).size !== rows.length;
 
 /** forma2's isSubmitDisabled: a label that is not blank, and at least one workspace grant or organization access switch. */
-export const canSubmitApiKey = (label: string, rows: readonly PermissionRow[], access: OrganizationAccess): boolean =>
+export const canSubmitApiKey = (
+  label: string,
+  rows: readonly PermissionRow[],
+  access: OrganizationAccess
+): boolean =>
   label.trim() !== "" && (rows.length > 0 || access.accessControl.read || access.accessControl.write);
 
 /** Write implies read: the read switch shows on, and is sent on, whenever write is. */

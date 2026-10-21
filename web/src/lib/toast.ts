@@ -41,7 +41,8 @@ export const createToastStore = (schedule: (fn: () => void, ms: number) => unkno
     const id = options.id ?? `toast-${++nextId}`;
     const toast: Toast = { id, kind, message };
     const index = toasts.findIndex((existing) => existing.id === id);
-    toasts = index === -1 ? [...toasts, toast] : toasts.map((existing, i) => (i === index ? toast : existing));
+    toasts =
+      index === -1 ? [...toasts, toast] : toasts.map((existing, i) => (i === index ? toast : existing));
     emit();
     const duration = TOAST_DURATION_MS[kind];
     if (duration !== null) {

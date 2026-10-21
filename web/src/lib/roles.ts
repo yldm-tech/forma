@@ -75,8 +75,10 @@ export const canDeleteRow = (
 };
 
 /** forma2's isManageDisabled on the teams table: owners and managers manage any team, anyone else only a team they administer. */
-export const canManageTeam = (team: { userRole?: "admin" | "contributor" }, isOwnerOrManager: boolean): boolean =>
-  isOwnerOrManager || team.userRole === "admin";
+export const canManageTeam = (
+  team: { userRole?: "admin" | "contributor" },
+  isOwnerOrManager: boolean
+): boolean => isOwnerOrManager || team.userRole === "admin";
 
 /** The team role a member gets when added to a team: owners and managers administer every team they are in. */
 export const defaultTeamRole = (role: OrganizationRole | undefined): "admin" | "contributor" =>

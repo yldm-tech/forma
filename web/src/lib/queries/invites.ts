@@ -29,13 +29,15 @@ export interface Invitee {
 
 export const inviteKeys = {
   list: (organizationId: string) => [...organizationKeys.detail(organizationId), "invites"] as const,
-  access: (organizationId: string) => [...organizationKeys.detail(organizationId), "user-management"] as const,
+  access: (organizationId: string) =>
+    [...organizationKeys.detail(organizationId), "user-management"] as const,
 };
 
 export const invitesQuery = (organizationId: string) =>
   queryOptions({
     queryKey: inviteKeys.list(organizationId),
-    queryFn: ({ signal }) => api.get<Invite[]>(`/api/app/organizations/${organizationId}/invites`, { signal }),
+    queryFn: ({ signal }) =>
+      api.get<Invite[]>(`/api/app/organizations/${organizationId}/invites`, { signal }),
   });
 
 export const userManagementQuery = (organizationId: string) =>

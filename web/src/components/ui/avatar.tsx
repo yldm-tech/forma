@@ -3,7 +3,15 @@ import { cn } from "../../lib/cn";
 const COLORS = ["bg-teal-600", "bg-slate-700", "bg-cyan-700", "bg-emerald-700", "bg-sky-700"];
 
 /** The initials of a name on a colour picked from the user id, so a person keeps their colour everywhere. */
-export const ProfileAvatar = ({ userId, name, className }: { userId: string; name: string; className?: string }) => {
+export const ProfileAvatar = ({
+  userId,
+  name,
+  className,
+}: {
+  userId: string;
+  name: string;
+  className?: string;
+}) => {
   const initials = name
     .split(/\s+/)
     .filter(Boolean)

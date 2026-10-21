@@ -2,7 +2,12 @@ import { cn } from "../../lib/cn";
 
 /** forma2's product mark: a card with a filled field, a shorter one and a chosen option. */
 export const FormaLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    aria-hidden="true">
     <rect x="6" y="4" width="36" height="40" rx="10" fill="#038178" />
     <rect x="14" y="17" width="20" height="5" rx="2.5" fill="#00E6CA" />
     <rect x="14" y="27" width="12" height="5" rx="2.5" fill="#FFFFFF" />

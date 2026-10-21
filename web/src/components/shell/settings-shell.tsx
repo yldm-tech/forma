@@ -10,7 +10,13 @@ import { SettingsNavigation } from "./settings-navigation";
 import { TopControlBar } from "./top-control-bar";
 
 /** forma2's SettingsShell for the organization and account settings pages, which belong to no workspace: the settings sidebar, and a top bar with the organization switcher only. */
-export const SettingsShell = ({ organization, children }: { organization: OrganizationDetail; children: ReactNode }) => {
+export const SettingsShell = ({
+  organization,
+  children,
+}: {
+  organization: OrganizationDetail;
+  children: ReactNode;
+}) => {
   const { data: me } = useSuspenseQuery(meQuery);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const rememberedWorkspace = readStorage(WORKSPACE_ID_KEY);
@@ -25,7 +31,9 @@ export const SettingsShell = ({ organization, children }: { organization: Organi
           pathname={pathname}
         />
       }
-      topBar={<TopControlBar user={me} organization={organization} membershipRole={organization.membership.role} />}>
+      topBar={
+        <TopControlBar user={me} organization={organization} membershipRole={organization.membership.role} />
+      }>
       {children}
     </AppShell>
   );

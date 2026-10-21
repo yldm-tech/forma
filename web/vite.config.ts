@@ -31,5 +31,7 @@ export default defineConfig({
     clearMocks: false,
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
+    // i18next-icu default-imports intl-messageformat, whose Node entry is CommonJS: externalized, the import is the module object rather than the class and every ICU message comes back unformatted. Transforming both resolves the ESM build, as the browser bundle does.
+    server: { deps: { inline: ["i18next-icu", "intl-messageformat"] } },
   },
 });
