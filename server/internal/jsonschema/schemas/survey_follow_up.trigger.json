@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "type": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "properties": {
+      "$ref": "#/$defs/__schema1"
+    }
+  },
+  "required": [
+    "type",
+    "properties"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "enum": [
+        "response",
+        "endings"
+      ]
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "endingIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "cuid2",
+                "pattern": "^[0-9a-z]+$"
+              }
+            }
+          },
+          "required": [
+            "endingIds"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/survey_follow_up.trigger.json"
+}

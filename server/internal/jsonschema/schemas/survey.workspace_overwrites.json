@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "brandColor": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema0"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "highlightBorderColor": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema0"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "placement": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "bottomLeft",
+            "bottomRight",
+            "topLeft",
+            "topRight",
+            "center"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "clickOutsideClose": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "overlay": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "none",
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "pattern": "^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/survey.workspace_overwrites.json"
+}

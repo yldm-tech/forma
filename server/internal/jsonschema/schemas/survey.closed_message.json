@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "heading": {
+          "type": "string"
+        },
+        "subheading": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "null"
+    }
+  ],
+  "$id": "https://forma.ylam.ai/schemas/survey.closed_message.json"
+}

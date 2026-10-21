@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "$ref": "#/$defs/__schema0"
+      },
+      {
+        "$ref": "#/$defs/__schema1"
+      }
+    ]
+  },
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "cuid2",
+          "pattern": "^[0-9a-z]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "const": "number"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type"
+      ]
+    },
+    "__schema1": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "cuid2",
+          "pattern": "^[0-9a-z]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "const": "text"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type"
+      ]
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/survey.variables.json"
+}

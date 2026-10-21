@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "heading": {
+          "type": "string"
+        },
+        "subheading": {
+          "type": "string"
+        },
+        "isEncrypted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "isEncrypted"
+      ]
+    },
+    {
+      "type": "null"
+    }
+  ],
+  "$id": "https://forma.ylam.ai/schemas/survey.single_use.json"
+}
