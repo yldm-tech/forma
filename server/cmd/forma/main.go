@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/yldm-tech/forma/server/internal/app"
+	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
@@ -21,6 +22,7 @@ commands:
   serve    run the HTTP server (API, public survey pages and the admin UI)
   worker   run background jobs and periodic tasks
   migrate  apply pending database migrations (schema, then the job queue), then exit
+  authz    operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
 `
 
 func main() {
@@ -44,6 +46,12 @@ func run(args []string) int {
 		err = worker(ctx)
 	case "migrate":
 		err = migrate(ctx)
+	case "authz":
+		if len(args) == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
+			fmt.Print(authz.CLIUsage)
+			return 0
+		}
+		return authz.RunCLI(ctx, args[1:], os.Stdout, os.Stderr)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return 0

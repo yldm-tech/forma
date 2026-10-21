@@ -146,3 +146,82 @@ func TestLoadForMigrateNeedsOnlyTheDatabase(t *testing.T) {
 		t.Fatal("LoadForMigrate succeeded without DATABASE_URL")
 	}
 }
+
+func TestLoadAuthz(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Authz.Enabled || cfg.Authz.Insecure || cfg.Authz.Consistency != "fully_consistent" || cfg.UserManagementMinimumRole != "manager" {
+		t.Fatalf("defaults = %+v, role %q; want disabled, TLS, fully_consistent, manager", cfg.Authz, cfg.UserManagementMinimumRole)
+	}
+
+	t.Setenv("AUTHZED_ENABLED", "1")
+	t.Setenv("AUTHZED_ENDPOINT", "[::1]:50051")
+	t.Setenv("AUTHZED_TOKEN", "secret")
+	t.Setenv("AUTHZED_INSECURE", "1")
+	t.Setenv("AUTHZED_CONSISTENCY", "minimize_latency")
+	t.Setenv("USER_MANAGEMENT_MINIMUM_ROLE", "disabled")
+	if cfg, err = Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	want := AuthzConfig{Enabled: true, Endpoint: "[::1]:50051", Token: "secret", Insecure: true, Consistency: "minimize_latency"}
+	if cfg.Authz != want || cfg.UserManagementMinimumRole != "disabled" {
+		t.Fatalf("Authz = %+v, role %q; want %+v, disabled", cfg.Authz, cfg.UserManagementMinimumRole, want)
+	}
+}
+
+func TestLoadRejectsInvalidAuthz(t *testing.T) {
+	cases := map[string]map[string]string{
+		"enabled without endpoint":  {"AUTHZED_ENABLED": "1", "AUTHZED_TOKEN": "secret"},
+		"enabled without token":     {"AUTHZED_ENABLED": "1", "AUTHZED_ENDPOINT": "localhost:50051"},
+		"enabled spelled true":      {"AUTHZED_ENABLED": "true"},
+		"blank token":               {"AUTHZED_TOKEN": "   "},
+		"endpoint with scheme":      {"AUTHZED_ENDPOINT": "http://localhost:50051"},
+		"endpoint with path":        {"AUTHZED_ENDPOINT": "localhost:50051/v1"},
+		"endpoint with credentials": {"AUTHZED_ENDPOINT": "user@localhost:50051"},
+		"endpoint without port":     {"AUTHZED_ENDPOINT": "localhost"},
+		"endpoint port zero":        {"AUTHZED_ENDPOINT": "localhost:0"},
+		"endpoint port too high":    {"AUTHZED_ENDPOINT": "localhost:65536"},
+		"endpoint signed port":      {"AUTHZED_ENDPOINT": "localhost:+1"},
+		"unbracketed ipv6":          {"AUTHZED_ENDPOINT": "::1:50051"},
+		"bracketed hostname":        {"AUTHZED_ENDPOINT": "[localhost]:50051"},
+		"endpoint with space":       {"AUTHZED_ENDPOINT": "local host:50051"},
+		"unknown consistency":       {"AUTHZED_CONSISTENCY": "at_least_as_fresh"},
+		"unknown management role":   {"USER_MANAGEMENT_MINIMUM_ROLE": "member"},
+	}
+	for name, vars := range cases {
+		t.Run(name, func(t *testing.T) {
+			setRequired(t)
+			for k, v := range vars {
+				t.Setenv(k, v)
+			}
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load accepted %v", vars)
+			}
+		})
+	}
+}
+
+func TestLoadForAuthzNeedsTheDatabaseAndSpiceDB(t *testing.T) {
+	t.Setenv("WEBAPP_URL", "")
+	t.Setenv("REDIS_URL", "")
+	t.Setenv("DATABASE_URL", "postgres://forma:forma@localhost:5432/forma?sslmode=disable")
+	t.Setenv("AUTHZED_ENABLED", "1")
+	t.Setenv("AUTHZED_ENDPOINT", "localhost:50051")
+	t.Setenv("AUTHZED_TOKEN", "secret")
+
+	cfg, err := LoadForAuthz()
+	if err != nil {
+		t.Fatalf("LoadForAuthz: %v", err)
+	}
+	if !cfg.Authz.Enabled || cfg.Authz.Endpoint != "localhost:50051" || cfg.DatabaseMaxOpenConns < 1 {
+		t.Fatalf("cfg = %+v", cfg)
+	}
+
+	t.Setenv("AUTHZED_TOKEN", "")
+	if _, err := LoadForAuthz(); err == nil {
+		t.Fatal("LoadForAuthz accepted an enabled SpiceDB without a token")
+	}
+}

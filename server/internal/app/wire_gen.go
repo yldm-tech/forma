@@ -9,6 +9,7 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -25,7 +26,7 @@ import (
 
 // Injectors from wire.go:
 
-// InitializeServer builds `forma serve`. The returned cleanup closes the database pool and the Valkey client.
+// InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	clientIPResolver := httpapi.NewClientIPResolver(cfg, log)
 	client, cleanup, err := valkey.Open(ctx, cfg, log)
@@ -39,6 +40,18 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	emitter := audit.New(cfg, log)
+	db, cleanup2, err := database.Open(ctx, cfg, log)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	authzClient, cleanup3, err := authz.OpenSpiceDB(cfg, log)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	authorizer := authz.NewAuthorizer(cfg, db, authzClient)
 	platform := &Platform{
 		Config:   cfg,
 		Log:      log,
@@ -46,14 +59,11 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		Limiter:  limiter,
 		Mailer:   mailerMailer,
 		Audit:    emitter,
-	}
-	db, cleanup2, err := database.Open(ctx, cfg, log)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
+		Authz:    authorizer,
 	}
 	pinger, err := health.NewDatabasePinger(db)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -61,6 +71,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	handler := health.NewHandler(pinger, log)
 	webuiHandler, err := webui.New()
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -68,24 +79,42 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	engine := NewRouter(platform, handler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
+		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil
 }
 
-// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's connection pool.
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool and the SpiceDB connection.
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	pool, cleanup, err := jobs.OpenPool(ctx, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
-	registry := jobs.NewRegistry(log)
-	worker, err := jobs.NewWorker(cfg, pool, registry, log)
+	db, cleanup2, err := database.Open(ctx, cfg, log)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
+	client, cleanup3, err := authz.OpenSpiceDB(cfg, log)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	delivery := authz.NewDelivery(db, client, log)
+	authzAudit := authz.NewAudit(db, client, log)
+	registry := NewJobRegistry(log, delivery, authzAudit)
+	worker, err := jobs.NewWorker(cfg, pool, registry, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	return worker, func() {
+		cleanup3()
+		cleanup2()
 		cleanup()
 	}, nil
 }

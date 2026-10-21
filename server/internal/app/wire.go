@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -31,10 +32,12 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// InitializeServer builds `forma serve`. The returned cleanup closes the database pool and the Valkey client.
+// InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
 		database.Open,
+		authz.OpenSpiceDB,
+		authz.NewAuthorizer,
 		platformSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
@@ -45,11 +48,15 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	return nil, nil, nil
 }
 
-// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's connection pool.
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool and the SpiceDB connection.
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	wire.Build(
 		jobs.OpenPool,
-		jobs.NewRegistry,
+		database.Open,
+		authz.OpenSpiceDB,
+		authz.NewDelivery,
+		authz.NewAudit,
+		NewJobRegistry,
 		jobs.NewWorker,
 	)
 	return nil, nil, nil

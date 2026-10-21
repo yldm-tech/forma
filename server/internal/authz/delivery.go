@@ -1,0 +1,363 @@
+package authz
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"slices"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+// Delivery batches. The periodic job drains at most deliveryJobBatches per tick; the operator command defaults to DefaultDrainBatches.
+const (
+	deliveryJobBatches  = 10
+	DefaultDrainBatches = 100
+	// maxSplitDepth: 2^8 exceeds the claim batch, so a split always reaches single events first.
+	maxSplitDepth = 8
+)
+
+// perEventCodes are the failures one event can cause. Only they justify splitting a group to find the culprit, and only they, on a single event, count toward dead-lettering; every other code describes the instance.
+var perEventCodes = map[Code]bool{codeProjectionInvalidSource: true, CodeInvalidRequest: true}
+
+// deliveryGroup is one reconciler call per tick, and the attribution boundary: a failure is charged to the events in flight with it and nothing else.
+type deliveryGroup int
+
+const (
+	groupMembership deliveryGroup = iota
+	groupOrganization
+	groupUser
+	groupTeamWorkspace
+	groupAPIKey
+)
+
+var groupOf = map[string]deliveryGroup{
+	targetMembership:      groupMembership,
+	targetOrganization:    groupOrganization,
+	targetUser:            groupUser,
+	targetTeam:            groupTeamWorkspace,
+	targetTeamMembership:  groupTeamWorkspace,
+	targetWorkspace:       groupTeamWorkspace,
+	targetWorkspaceTeam:   groupTeamWorkspace,
+	targetAPIKey:          groupAPIKey,
+	targetAPIKeyWorkspace: groupAPIKey,
+}
+
+// Delivery projects claimed outbox events into SpiceDB.
+type Delivery struct {
+	db  *gorm.DB
+	log *slog.Logger
+	// run projects one group's events; it reads PostgreSQL's current state for every target the events name.
+	run func(ctx context.Context, group deliveryGroup, events []outboxEvent) error
+}
+
+// NewDelivery returns nil when AuthZed is disabled; the delivery job then does nothing, and the outbox waits.
+func NewDelivery(db *gorm.DB, client *Client, log *slog.Logger) *Delivery {
+	if client == nil {
+		return nil
+	}
+	p := newProjector(db, client, log)
+	return &Delivery{db: db, log: log, run: func(ctx context.Context, group deliveryGroup, events []outboxEvent) error {
+		return p.deliver(ctx, group, events)
+	}}
+}
+
+func (p *projector) deliver(ctx context.Context, group deliveryGroup, events []outboxEvent) error {
+	switch group {
+	case groupMembership:
+		targets := make([]membershipTarget, 0, len(events))
+		for _, e := range events {
+			targets = append(targets, membershipTarget{e.PrimaryID, e.SecondaryID})
+		}
+		return p.reconcileMembershipsChunked(ctx, targets)
+	case groupOrganization:
+		return p.deliverOrganizations(ctx, primaryIDs(events))
+	case groupUser:
+		return p.deliverUsers(ctx, primaryIDs(events))
+	case groupTeamWorkspace:
+		var t teamWorkspaceTargets
+		for _, e := range events {
+			switch e.TargetType {
+			case targetTeam:
+				t.TeamIDs = append(t.TeamIDs, e.PrimaryID)
+			case targetTeamMembership:
+				t.TeamMemberships = append(t.TeamMemberships, teamMembershipTarget{e.PrimaryID, e.SecondaryID})
+			case targetWorkspace:
+				t.WorkspaceIDs = append(t.WorkspaceIDs, e.PrimaryID)
+			case targetWorkspaceTeam:
+				t.WorkspaceTeams = append(t.WorkspaceTeams, workspaceTeamTarget{e.PrimaryID, e.SecondaryID})
+			}
+		}
+		return p.reconcileTeamWorkspaceChunked(ctx, t)
+	case groupAPIKey:
+		var t apiKeyTargets
+		for _, e := range events {
+			if e.TargetType == targetAPIKey {
+				t.APIKeyIDs = append(t.APIKeyIDs, e.PrimaryID)
+			} else {
+				t.Grants = append(t.Grants, apiKeyWorkspaceTarget{e.PrimaryID, e.SecondaryID})
+			}
+		}
+		return p.reconcileAPIKeysChunked(ctx, t)
+	}
+	return fmt.Errorf("unknown delivery group %d", group)
+}
+
+func primaryIDs(events []outboxEvent) []string {
+	ids := make([]string, 0, len(events))
+	for _, e := range events {
+		ids = append(ids, e.PrimaryID)
+	}
+	return uniqueIDs(ids)
+}
+
+// deliverOrganizations: organizations are only inserted and deleted, so a row that still exists needs nothing and one that is gone loses its relationships.
+func (p *projector) deliverOrganizations(ctx context.Context, ids []string) error {
+	var existing []string
+	if err := p.db.WithContext(ctx).Raw(`SELECT id::text FROM organizations WHERE id = ANY(?::uuid[])`, idArray(ids)).Scan(&existing).Error; err != nil {
+		return fmt.Errorf("read organizations: %w", err)
+	}
+	return p.forEachBounded(ctx, without(ids, existing), p.deleteOrganization)
+}
+
+// deliverUsers reads every named user once. A missing user is treated exactly as an inactive one: its relationships go everywhere; an active user has all its memberships and team roles reconciled.
+func (p *projector) deliverUsers(ctx context.Context, ids []string) error {
+	var active []string
+	if err := p.db.WithContext(ctx).Raw(`SELECT id::text FROM users WHERE id = ANY(?::uuid[]) AND is_active`, idArray(ids)).Scan(&active).Error; err != nil {
+		return fmt.Errorf("read users: %w", err)
+	}
+	if err := p.forEachBounded(ctx, without(ids, active), p.deleteUser); err != nil {
+		return err
+	}
+	if len(active) == 0 {
+		return nil
+	}
+	var memberships []membershipTarget
+	if err := p.db.WithContext(ctx).Raw(`SELECT organization_id::text AS organization_id, user_id::text AS user_id FROM memberships WHERE user_id = ANY(?::uuid[]) ORDER BY 1, 2`, idArray(active)).Scan(&memberships).Error; err != nil {
+		return fmt.Errorf("read user memberships: %w", err)
+	}
+	if err := p.reconcileMembershipsChunked(ctx, memberships); err != nil {
+		return err
+	}
+	var teamMemberships []teamMembershipTarget
+	if err := p.db.WithContext(ctx).Raw(`SELECT team_id::text AS team_id, user_id::text AS user_id FROM team_members WHERE user_id = ANY(?::uuid[]) ORDER BY 1, 2`, idArray(active)).Scan(&teamMemberships).Error; err != nil {
+		return fmt.Errorf("read user team memberships: %w", err)
+	}
+	return p.reconcileTeamWorkspaceChunked(ctx, teamWorkspaceTargets{TeamMemberships: teamMemberships})
+}
+
+func without(ids, remove []string) []string {
+	drop := map[string]bool{}
+	for _, id := range remove {
+		drop[id] = true
+	}
+	var out []string
+	for _, id := range ids {
+		if !drop[id] {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// forEachBounded runs per-subject deletes ten at a time, stopping at the first window with a failure.
+func (p *projector) forEachBounded(ctx context.Context, ids []string, run func(ctx context.Context, id string) error) error {
+	return inWindows(ids, func(id string) error { return run(ctx, id) })
+}
+
+// groupOutcome is how one attempt at a group ended.
+type groupOutcome struct {
+	failed    bool
+	code      Code
+	retryable bool
+}
+
+func (d *Delivery) runGroup(ctx context.Context, group deliveryGroup, events []outboxEvent) groupOutcome {
+	err := d.run(ctx, group, events)
+	if err == nil {
+		return groupOutcome{}
+	}
+	e, ok := AsError(err)
+	if !ok {
+		// The reconcilers report their own failures as *Error; anything else is one of the PostgreSQL reads around them, transient rather than any event's fault.
+		return groupOutcome{failed: true, code: codeProjectionDeliveryFailed, retryable: true}
+	}
+	// A source row that kept moving will settle: a retry, not a poison, and likeliest on exactly the hot rows the outbox carries.
+	return groupOutcome{failed: true, code: e.Code, retryable: e.Retryable || e.Code == codeProjectionUnstable}
+}
+
+type failure struct {
+	// attributable: the attempt covered this event alone and the code is one an event can cause.
+	attributable bool
+	code         Code
+	retryable    bool
+	ids          []uuid.UUID
+}
+
+type deliveryOutcome struct {
+	delivered []uuid.UUID
+	failures  []failure
+	// halt is set when delivery hit a transient fault: the rest of the tick is released untried rather than spending retry budget against an instance known to be unreachable.
+	halt Code
+}
+
+func eventIDs(events []outboxEvent) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(events))
+	for _, e := range events {
+		ids = append(ids, e.ID)
+	}
+	return ids
+}
+
+// deliverGroup delivers one group, halving it to isolate the culprit when the failure could be one event's, so a poison event is alone by the time it is charged a permanent failure.
+func (d *Delivery) deliverGroup(ctx context.Context, group deliveryGroup, events []outboxEvent, depth int) deliveryOutcome {
+	o := d.runGroup(ctx, group, events)
+	if !o.failed {
+		return deliveryOutcome{delivered: eventIDs(events)}
+	}
+	splittable := len(events) > 1 && !o.retryable && perEventCodes[o.code] && depth < maxSplitDepth
+	if !splittable {
+		out := deliveryOutcome{failures: []failure{{attributable: len(events) == 1 && perEventCodes[o.code], code: o.code, retryable: o.retryable, ids: eventIDs(events)}}}
+		if o.retryable {
+			out.halt = o.code
+		}
+		return out
+	}
+	middle := (len(events) + 1) / 2
+	left := d.deliverGroup(ctx, group, events[:middle], depth+1)
+	if left.halt != "" {
+		left.failures = append(left.failures, failure{code: left.halt, retryable: true, ids: eventIDs(events[middle:])})
+		return left
+	}
+	right := d.deliverGroup(ctx, group, events[middle:], depth+1)
+	return deliveryOutcome{
+		delivered: append(left.delivered, right.delivered...),
+		failures:  append(left.failures, right.failures...),
+		halt:      right.halt,
+	}
+}
+
+// deliverAll delivers the groups in order (memberships, organizations, users, teams and workspaces, API keys) and stops at the first transient fault.
+func (d *Delivery) deliverAll(ctx context.Context, events []outboxEvent) deliveryOutcome {
+	grouped := map[deliveryGroup][]outboxEvent{}
+	for _, e := range events {
+		g := groupOf[e.TargetType]
+		grouped[g] = append(grouped[g], e)
+	}
+	var out deliveryOutcome
+	order := []deliveryGroup{groupMembership, groupOrganization, groupUser, groupTeamWorkspace, groupAPIKey}
+	for i, g := range order {
+		if len(grouped[g]) == 0 {
+			continue
+		}
+		o := d.deliverGroup(ctx, g, grouped[g], 0)
+		out.delivered = append(out.delivered, o.delivered...)
+		out.failures = append(out.failures, o.failures...)
+		if o.halt != "" {
+			var untried []uuid.UUID
+			for _, rest := range order[i+1:] {
+				untried = append(untried, eventIDs(grouped[rest])...)
+			}
+			if len(untried) > 0 {
+				out.failures = append(out.failures, failure{code: o.halt, retryable: true, ids: untried})
+			}
+			out.halt = o.halt
+			return out
+		}
+	}
+	return out
+}
+
+// mergeFailures folds failures with the same verdict so each verdict is one release statement.
+func mergeFailures(failures []failure) []failure {
+	var merged []failure
+	for _, f := range failures {
+		i := slices.IndexFunc(merged, func(m failure) bool {
+			return m.code == f.code && m.attributable == f.attributable && m.retryable == f.retryable
+		})
+		if i < 0 {
+			merged = append(merged, failure{attributable: f.attributable, code: f.code, retryable: f.retryable, ids: slices.Clone(f.ids)})
+			continue
+		}
+		merged[i].ids = append(merged[i].ids, f.ids...)
+	}
+	return merged
+}
+
+// BatchResult counts one claimed batch.
+type BatchResult struct {
+	Claimed      int `json:"claimed"`
+	Delivered    int `json:"delivered"`
+	Failed       int `json:"failed"`
+	DeadLettered int `json:"deadLettered"`
+}
+
+// processBatch claims, delivers and releases one batch under owner.
+func (d *Delivery) processBatch(ctx context.Context, owner string) (BatchResult, error) {
+	events, err := claimOutbox(ctx, d.db, owner, outboxBatchSize)
+	if err != nil || len(events) == 0 {
+		return BatchResult{}, err
+	}
+	out := d.deliverAll(ctx, events)
+	if err := markDelivered(ctx, d.db, owner, out.delivered); err != nil {
+		return BatchResult{}, err
+	}
+	res := BatchResult{Claimed: len(events), Delivered: len(out.delivered)}
+	codes := map[Code]bool{}
+	for _, f := range mergeFailures(out.failures) {
+		res.Failed += len(f.ids)
+		codes[f.code] = true
+		n, err := markFailed(ctx, d.db, owner, f.ids, f.code, f.attributable, f.retryable)
+		if err != nil {
+			return BatchResult{}, err
+		}
+		res.DeadLettered += n
+	}
+	if res.Failed > 0 {
+		sorted := make([]string, 0, len(codes))
+		for c := range codes {
+			sorted = append(sorted, string(c))
+		}
+		slices.Sort(sorted)
+		// Counts and stable codes only, never an event, target or tenant identifier.
+		d.log.WarnContext(ctx, "AuthZed projection outbox delivery failed", "component", "authz", "count", res.Failed, "dead_lettered", res.DeadLettered, "error_codes", sorted, "operation", "projection_outbox_delivery", "status", "failed")
+	}
+	return res, nil
+}
+
+// DrainResult totals a drain and reports what is left.
+type DrainResult struct {
+	BatchResult
+	Remaining int64  `json:"remaining"`
+	Status    string `json:"status"`
+}
+
+// Drain processes up to maxBatches batches under one lease owner. It stops when a batch claims nothing or delivers nothing: delivered rows are complete and failed ones back off, so every productive batch shrinks the claimable set.
+func (d *Delivery) Drain(ctx context.Context, maxBatches int) (DrainResult, error) {
+	owner := uuid.NewString()
+	var total DrainResult
+	for range maxBatches {
+		r, err := d.processBatch(ctx, owner)
+		if err != nil {
+			return total, err
+		}
+		total.Claimed += r.Claimed
+		total.Delivered += r.Delivered
+		total.Failed += r.Failed
+		total.DeadLettered += r.DeadLettered
+		if r.Claimed == 0 || r.Delivered == 0 {
+			break
+		}
+	}
+	status, err := outboxStatus(ctx, d.db)
+	if err != nil {
+		return total, err
+	}
+	total.Remaining = status.Pending
+	total.Status = "partial"
+	if status.Pending == 0 {
+		total.Status = "drained"
+	}
+	return total, nil
+}
