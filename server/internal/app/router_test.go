@@ -12,10 +12,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/auth"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/server/internal/team"
 )
 
 // echoModule stands in for a feature module: it reports the client address it saw and fails on demand.
@@ -69,5 +72,34 @@ func TestAppAPIConventions(t *testing.T) {
 				t.Fatal("an internal error reached the client")
 			}
 		})
+	}
+}
+
+// Gin panics when two routes collide, so mounting every feature module on one engine proves their paths coexist, including a static segment beside a parameter (/invites/accept beside /invites/:inviteId).
+func TestFeatureRoutesCoexist(t *testing.T) {
+	webURL, _ := url.Parse("https://app.example.com")
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	cfg := config.Config{WebAppURL: webURL, SessionMaxAge: 86400}
+	p := &Platform{Config: cfg, Log: log, ClientIP: httpapi.NewClientIPResolver(cfg, log)}
+	sessions := auth.NewSessions(cfg, nil, log)
+
+	r := httpserver.NewEngine(log)
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions))
+
+	want := map[string]bool{
+		"POST /api/app/invites/accept":                                         true,
+		"POST /api/app/invites/inspect":                                        true,
+		"POST /api/app/invites/:inviteId/link":                                 true,
+		"POST /api/app/organizations/:organizationId/invites/bulk":             true,
+		"POST /api/app/organizations/:organizationId/invites/:inviteId/resend": true,
+		"GET /api/app/organizations/:organizationId/teams":                     true,
+		"PUT /api/app/teams/:teamId":                                           true,
+		"GET /api/app/workspaces/:workspaceId/teams":                           true,
+	}
+	for _, route := range r.Routes() {
+		delete(want, route.Method+" "+route.Path)
+	}
+	if len(want) != 0 {
+		t.Fatalf("routes not mounted: %v", want)
 	}
 }

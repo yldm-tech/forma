@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -168,18 +170,156 @@ func TestSignupEmailDomainBlock(t *testing.T) {
 	expectStatus(t, self.browser().post("/auth/signup", signupBody("ada@gmail.com")), http.StatusOK, "")
 }
 
-// An invite token cannot be verified until the organization module issues them, and an unverifiable invite is refused before anything is created; a blank one means no invite.
-func TestSignupInviteToken(t *testing.T) {
+// seedInvite stores an invite to email from creator, with one link, and returns the link's token.
+func (e *env) seedInvite(org, creator uuid.UUID, email, role string, inviteTTL, linkTTL time.Duration, teams ...uuid.UUID) string {
+	e.t.Helper()
+	inviteID := e.insertID(`INSERT INTO invites (organization_id, email, name, creator_id, expires_at, role) VALUES (?, ?, 'Grace', ?, ?, ?) RETURNING id`, org, email, creator, time.Now().Add(inviteTTL), role)
+	for _, team := range teams {
+		e.exec(`INSERT INTO invite_teams (invite_id, team_id) VALUES (?, ?)`, inviteID, team)
+	}
+	token, err := secret.NewToken()
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	e.exec(`INSERT INTO invite_tokens (invite_id, token_hash, expires_at) VALUES (?, ?, ?)`, inviteID, secret.HashToken(token), time.Now().Add(linkTTL))
+	return token
+}
+
+// invitingOrganization is a closed instance's existing organization with an owner who invites, and a team.
+func (e *env) invitingOrganization() (org, owner, team uuid.UUID) {
+	e.t.Helper()
+	owner = e.seedUser("owner@example.com", strongPassword, userOpts{name: "Olivia Owner", locale: "ja-JP"})
+	org = e.insertID(`INSERT INTO organizations (name) VALUES ('Acme') RETURNING id`)
+	e.exec(`INSERT INTO memberships (organization_id, user_id, role, accepted) VALUES (?, ?, 'owner', true)`, org, owner)
+	team = e.insertID(`INSERT INTO teams (organization_id, name) VALUES (?, 'Design') RETURNING id`, org)
+	return org, owner, team
+}
+
+// forma2's signup-invite.integration.test.ts, "new invitee accepted": a valid invite admits its holder on a closed instance, into the inviting organization with the invite's role and teams instead of one of their own, and the inviter hears about it.
+func TestSignupWithInvite(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
-	body := signupBody("ada@example.com")
-	body["inviteToken"] = "eyJhbGciOiJIUzI1NiJ9.e30.x"
-	expectStatus(t, e.browser().post("/auth/signup", body), http.StatusBadRequest, CodeInviteTokenInvalid)
-	if e.count(`SELECT count(*) FROM users`) != 0 {
-		t.Fatal("an invalid invite left a user behind")
+	org, _, team := e.invitingOrganization()
+	foreignTeam := e.insertID(`INSERT INTO teams (organization_id, name) VALUES (?, 'Elsewhere') RETURNING id`, e.insertID(`INSERT INTO organizations (name) VALUES ('Other') RETURNING id`))
+	token := e.seedInvite(org, e.insertID(`SELECT id FROM users WHERE email = 'owner@example.com'`), "grace@example.com", "manager", 7*24*time.Hour, 7*24*time.Hour, team, foreignTeam)
+	orgs := e.count(`SELECT count(*) FROM organizations`)
+
+	body := signupBody("Grace@Example.com")
+	body["name"] = "Grace Hopper"
+	body["inviteToken"] = "  " + token + " "
+	r := e.browser().post("/auth/signup", body)
+	expectStatus(t, r, http.StatusOK, "")
+	if r.Body.String() != `{"success":true}` || r.cookie(signupIntentCookieName) == nil {
+		t.Fatalf("sign-up answered %s", r.Body.String())
 	}
-	body["inviteToken"] = "   "
-	expectStatus(t, e.browser().post("/auth/signup", body), http.StatusOK, "")
+
+	acc, err := e.svc.repo.accountByEmail(t.Context(), "grace@example.com")
+	if err != nil || acc == nil {
+		t.Fatalf("account: %v, %v", acc, err)
+	}
+	var role string
+	var accepted bool
+	e.db.Raw(`SELECT role, accepted FROM memberships WHERE organization_id = ? AND user_id = ?`, org, acc.ID).Row().Scan(&role, &accepted)
+	if role != "manager" || !accepted || e.count(`SELECT count(*) FROM memberships WHERE user_id = ?`, acc.ID) != 1 {
+		t.Fatalf("membership %q accepted %v; want only the invited one", role, accepted)
+	}
+	if e.count(`SELECT count(*) FROM organizations`) != orgs {
+		t.Fatal("an invitee got an organization of their own")
+	}
+	// A manager joins the invite's teams as an admin; a team of another organization is never joined.
+	if e.count(`SELECT count(*) FROM team_members WHERE user_id = ? AND team_id = ? AND role = 'admin'`, acc.ID, team) != 1 || e.count(`SELECT count(*) FROM team_members WHERE user_id = ?`, acc.ID) != 1 {
+		t.Fatal("team memberships do not match the invite")
+	}
+	var settings string
+	e.db.Raw(`SELECT notification_settings::text FROM users WHERE id = ?`, acc.ID).Scan(&settings)
+	if settings != `{"alert": {}, "unsubscribedOrganizationIds": ["`+org.String()+`"]}` {
+		t.Fatalf("notification settings %s", settings)
+	}
+	if e.count(`SELECT count(*) FROM invites`)+e.count(`SELECT count(*) FROM invite_tokens`) != 0 {
+		t.Fatal("the invite outlived its acceptance")
+	}
+
+	accepted2 := e.sent("owner@example.com")
+	jaSubject, _, _ := e.svc.mailer.Render("ja-JP", mailer.InviteAccepted{})
+	if len(accepted2) != 1 || accepted2[0].Subject != jaSubject || !strings.Contains(accepted2[0].HTML, "Grace Hopper") {
+		t.Fatalf("want the accepted mail to the inviter in their language, got %+v", accepted2)
+	}
+	if len(e.sent("grace@example.com")) != 1 {
+		t.Fatal("the invitee was not sent the verification mail")
+	}
+	events := e.auditEvents(audit.ActionCreated)
+	if last := events[len(events)-1]; field(last, "organizationId") != org.String() {
+		t.Fatalf("created/user is attributed to %v, want the invited organization", field(last, "organizationId"))
+	}
+
+	// The link was single-use.
+	again := signupBody("grace2@example.com")
+	again["inviteToken"] = token
+	expectStatus(t, e.browser().post("/auth/signup", again), http.StatusBadRequest, CodeInviteTokenInvalid)
+}
+
+// forma2's signup-invite.integration.test.ts: an existing account is answered like a new one and left untouched, and the invite survives; a mismatched address, an expired invite or link, or anything that is not a link is refused before a user exists; a blank token means no invite.
+func TestSignupInviteRefusals(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	org, owner, _ := e.invitingOrganization()
+
+	existing := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	token := e.seedInvite(org, owner, "grace@example.com", "member", time.Hour, time.Hour)
+	body := signupBody("grace@example.com")
+	body["inviteToken"] = token
+	r := e.browser().post("/auth/signup", body)
+	expectStatus(t, r, http.StatusOK, "")
+	if r.Body.String() != `{"success":true}` || e.count(`SELECT count(*) FROM memberships WHERE user_id = ?`, existing) != 0 || e.count(`SELECT count(*) FROM invites`) != 1 {
+		t.Fatal("a sign-up for an existing account acted on it")
+	}
+
+	users := e.count(`SELECT count(*) FROM users`)
+	cases := map[string]string{
+		"a different address": e.seedInvite(org, owner, "someone@example.com", "owner", time.Hour, time.Hour),
+		"an expired invite":   e.seedInvite(org, owner, "late@example.com", "member", -time.Minute, time.Hour),
+		"an expired link":     e.seedInvite(org, owner, "stale@example.com", "member", time.Hour, -time.Minute),
+		"not a link at all":   "eyJhbGciOiJIUzI1NiJ9.e30.x",
+	}
+	for name, token := range cases {
+		t.Run(name, func(t *testing.T) {
+			address := "stale@example.com"
+			if name == "an expired invite" {
+				address = "late@example.com"
+			}
+			if name == "a different address" {
+				address = "ada@example.com"
+			}
+			body := signupBody(address)
+			body["inviteToken"] = token
+			expectStatus(t, e.browser().post("/auth/signup", body), http.StatusBadRequest, CodeInviteTokenInvalid)
+		})
+	}
+	if e.count(`SELECT count(*) FROM users`) != users {
+		t.Fatal("a refused invite left a user behind")
+	}
+
+	// A blank token is no invite, and a closed instance refuses it as an uninvited sign-up.
+	blank := signupBody("newcomer@example.com")
+	blank["inviteToken"] = "   "
+	expectStatus(t, e.browser().post("/auth/signup", blank), http.StatusBadRequest, CodeSignupDisabled)
+}
+
+// forma2's cloud domain rule: invitees may use a personal address unless SIGNUP_DOMAIN_CHECK_ON_INVITES=1.
+func TestSignupInviteDomainCheck(t *testing.T) {
+	t.Parallel()
+	for _, check := range []bool{false, true} {
+		e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true; c.SignupDomainCheckOnInvites = check })
+		org, owner, _ := e.invitingOrganization()
+		body := signupBody("grace@gmail.com")
+		body["inviteToken"] = e.seedInvite(org, owner, "grace@gmail.com", "member", time.Hour, time.Hour)
+		r := e.browser().post("/auth/signup", body)
+		if check {
+			expectStatus(t, r, http.StatusBadRequest, CodeEmailDomainNotAllowed)
+		} else {
+			expectStatus(t, r, http.StatusOK, "")
+		}
+	}
 }
 
 // forma2's better-auth-hibp.integration.test.ts: a breached password creates no user; an unreachable breach service lets the sign-up through.

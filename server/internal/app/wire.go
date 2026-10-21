@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -20,6 +21,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 )
 
@@ -33,12 +35,28 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth. Its sessions are the session middleware every other module's routes use.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
+	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
 	auth.NewService,
 	auth.NewHandler,
+)
+
+// teamSet is teams, their members and their workspace access.
+var teamSet = wire.NewSet(
+	team.NewRepository,
+	team.NewService,
+	team.NewHandler,
+)
+
+// inviteSet is invites and their acceptance; sign-up redeems invites through it.
+var inviteSet = wire.NewSet(
+	invite.NewRepository,
+	invite.NewService,
+	wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)),
+	invite.NewHandler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
@@ -49,6 +67,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewAuthorizer,
 		platformSet,
 		authSet,
+		teamSet,
+		inviteSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

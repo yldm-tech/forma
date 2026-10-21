@@ -24,6 +24,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -124,7 +126,10 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	}
 	e.sessions = NewSessions(cfg, e.db, log)
 	e.sessions.now = e.now
-	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, ratelimit.New(cfg, e.rdb, log), m, audit.New(cfg, log), e.rdb, log)
+	limiter, emitter := ratelimit.New(cfg, e.rdb, log), audit.New(cfg, log)
+	// Sign-up redeems invites through the real invite module; nothing on that path asks SpiceDB, so it runs without one.
+	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), limiter, m, emitter, log)
+	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
 	e.factor = NewSecondFactor(cfg, e.svc)

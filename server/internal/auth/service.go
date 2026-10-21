@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -41,11 +42,19 @@ const (
 // cloudAccountDeletionSurveyURL is where Forma Cloud sends a user after deleting their account.
 const cloudAccountDeletionSurveyURL = "https://app.forma.ylam.ai/s/clri52y3z8f221225wjdhsoo2"
 
+// InviteRedeemer is the invite module's part in sign-up: whether a token is a live invite for the address signing up, and granting it to the account the sign-up creates, inside the sign-up's transaction. The invite module implements it; this package does not import that module.
+type InviteRedeemer interface {
+	MatchForSignup(ctx context.Context, token, email string) (bool, error)
+	// RedeemForSignup returns ok false, having written nothing, when the invite is no longer usable. notify runs after the commit.
+	RedeemForSignup(ctx context.Context, tx *gorm.DB, token string, userID uuid.UUID, name, email string) (organizationID uuid.UUID, notify func(context.Context), ok bool, err error)
+}
+
 // Service holds the credential rules. Handlers turn its results into cookies and responses.
 type Service struct {
 	cfg       config.Config
 	repo      *Repository
 	sessions  *Sessions
+	invites   InviteRedeemer
 	limiter   *ratelimit.Limiter
 	mailer    *mailer.Mailer
 	audit     *audit.Emitter
@@ -56,12 +65,13 @@ type Service struct {
 	now       func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, sessions *Sessions, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, log *slog.Logger) *Service {
 	client := &http.Client{}
 	return &Service{
 		cfg:       cfg,
 		repo:      repo,
 		sessions:  sessions,
+		invites:   invites,
 		limiter:   limiter,
 		mailer:    mail,
 		audit:     emitter,

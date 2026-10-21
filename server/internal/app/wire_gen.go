@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -21,6 +22,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"log/slog"
 )
@@ -72,8 +74,14 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	handler := health.NewHandler(pinger, log)
 	repository := auth.NewRepository(db)
 	sessions := auth.NewSessions(cfg, db, log)
-	service := auth.NewService(cfg, repository, sessions, limiter, mailerMailer, emitter, client, log)
-	authHandler := auth.NewHandler(cfg, service, sessions)
+	inviteRepository := invite.NewRepository(db)
+	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
+	authHandler := auth.NewHandler(cfg, authService, sessions)
+	teamRepository := team.NewRepository(db)
+	teamService := team.NewService(teamRepository, authorizer, emitter, log)
+	teamHandler := team.NewHandler(teamService, sessions)
+	inviteHandler := invite.NewHandler(service, sessions)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -81,7 +89,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, teamHandler, inviteHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -129,5 +137,11 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, wire.Struct(new(Platform), "*"))
 
-// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewHandler)
+// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth. Its sessions are the session middleware every other module's routes use.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewHandler)
+
+// teamSet is teams, their members and their workspace access.
+var teamSet = wire.NewSet(team.NewRepository, team.NewService, team.NewHandler)
+
+// inviteSet is invites and their acceptance; sign-up redeems invites through it.
+var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)), invite.NewHandler)

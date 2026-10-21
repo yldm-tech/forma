@@ -9,12 +9,14 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 )
 
@@ -35,11 +37,11 @@ type routeRegistrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler)
+	mountAppAPI(r, p, authHandler, teamHandler, inviteHandler)
 	web.Register(r)
 	return r
 }
