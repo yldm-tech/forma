@@ -79,7 +79,9 @@ func TestAcceptInvite(t *testing.T) {
 	}
 	var role string
 	var accepted bool
-	e.db.Raw(`SELECT role, accepted FROM memberships WHERE organization_id = ? AND user_id = ?`, o.id, grace.id).Row().Scan(&role, &accepted)
+	if err := e.db.Raw(`SELECT role, accepted FROM memberships WHERE organization_id = ? AND user_id = ?`, o.id, grace.id).Row().Scan(&role, &accepted); err != nil {
+		t.Fatal(err)
+	}
 	if role != "member" || !accepted || e.count(`SELECT count(*) FROM team_members WHERE team_id = ? AND user_id = ? AND role = 'contributor'`, team, grace.id) != 1 {
 		t.Fatalf("membership %q accepted %v, or the team was not joined", role, accepted)
 	}

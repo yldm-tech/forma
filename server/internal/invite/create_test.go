@@ -223,7 +223,7 @@ func TestBulkInvite(t *testing.T) {
 		t.Fatalf("bulk audit %v", ev)
 	}
 
-	many := make([]any, MaxBulkInvitees+1)
+	many := make([]any, maxBulkInvitees+1)
 	for i := range many {
 		many[i] = body("p"+uuid.NewString()[:8]+"@example.com", "member")
 	}
@@ -264,7 +264,9 @@ func TestSetupInvite(t *testing.T) {
 	r := e.do(o.owner, http.MethodPost, path, map[string]any{"email": "Grace@example.com", "name": " Grace Hopper "})
 	expect(t, r, http.StatusCreated, "")
 	var role, name string
-	e.db.Raw(`SELECT role, name FROM invites WHERE id = ? AND email = 'grace@example.com'`, r.json()["id"]).Row().Scan(&role, &name)
+	if err := e.db.Raw(`SELECT role, name FROM invites WHERE id = ? AND email = 'grace@example.com'`, r.json()["id"]).Row().Scan(&role, &name); err != nil {
+		t.Fatal(err)
+	}
 	if role != "owner" || name != "Grace Hopper" || e.count(`SELECT count(*) FROM invite_teams`) != 0 || len(e.sent("grace@example.com")) != 1 {
 		t.Fatalf("setup invite role %q name %q", role, name)
 	}

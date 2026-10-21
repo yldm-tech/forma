@@ -142,7 +142,7 @@ type createRequest struct {
 	Email   string      `json:"email"`
 	Name    string      `json:"name"`
 	Role    string      `json:"role"`
-	TeamIDs []uuid.UUID `json:"teamIds" binding:"max=100"`
+	TeamIDs []uuid.UUID `json:"teamIds"`
 }
 
 func (h *Handler) create(c *gin.Context) {
@@ -157,6 +157,10 @@ func (h *Handler) create(c *gin.Context) {
 	var errs fieldErrors
 	in := Invitee{Email: errs.checkEmail("email", req.Email), Name: errs.checkName("name", req.Name, false), Role: req.Role, TeamIDs: req.TeamIDs}
 	errs.checkRole("role", req.Role)
+	// "An invite is limited to 100 teams": a team admin's invite is authorized per named team, so the count bounds the decisions one request can cause.
+	if len(req.TeamIDs) > maxTeams {
+		errs.add("teamIds", "max", strconv.Itoa(maxTeams))
+	}
 	if err := errs.err(); err != nil {
 		httpapi.Fail(c, err)
 		return

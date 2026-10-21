@@ -25,8 +25,8 @@ import (
 // forma2's limits: an invite and each of its links live seven days, one invite names at most 100 teams, a bulk invite at most 500 people, and the members page shows 30 invites a page.
 const (
 	inviteLifetime  = 7 * 24 * time.Hour
-	MaxTeams        = 100
-	MaxBulkInvitees = 500
+	maxTeams        = 100
+	maxBulkInvitees = 500
 	pageSize        = 30
 	// cloudInviteLimit is Forma Cloud's daily invite budget per organization; self-hosted instances use INVITE_RATE_LIMIT_PER_24_HOURS.
 	cloudInviteLimit = 500
@@ -301,7 +301,7 @@ func (s *Service) Create(ctx context.Context, inviterID, organizationID uuid.UUI
 	return id, nil
 }
 
-// requireInviter is forma2's assertInviterMayInvite. Owners and managers are decided once at the organization; a team admin needs team.manage on every team the invite names, asked once per distinct team, one at a time, stopping at the first refusal, so the number of decisions is bounded by MaxTeams.
+// requireInviter is forma2's assertInviterMayInvite. Owners and managers are decided once at the organization; a team admin needs team.manage on every team the invite names, asked once per distinct team, one at a time, stopping at the first refusal, so the number of decisions is bounded by maxTeams.
 //
 // Like forma2, the team-admin path does not consult USER_MANAGEMENT_MINIMUM_ROLE: it governs organization-wide user management, and a team admin can only add members to their own teams.
 func (s *Service) requireInviter(ctx context.Context, actor authz.Actor, organizationID uuid.UUID, ownerOrManager bool, teamIDs []uuid.UUID) error {
@@ -365,7 +365,7 @@ func (s *Service) Bulk(ctx context.Context, inviterID, organizationID uuid.UUID,
 	if len(invitees) == 0 {
 		return nil, validationError("No invitees provided")
 	}
-	if len(invitees) > MaxBulkInvitees {
+	if len(invitees) > maxBulkInvitees {
 		return nil, validationError("A bulk invite is limited to 500 members at a time")
 	}
 	role, err := s.repo.membershipRole(ctx, organizationID, inviterID)

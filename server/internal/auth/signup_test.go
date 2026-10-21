@@ -219,7 +219,9 @@ func TestSignupWithInvite(t *testing.T) {
 	}
 	var role string
 	var accepted bool
-	e.db.Raw(`SELECT role, accepted FROM memberships WHERE organization_id = ? AND user_id = ?`, org, acc.ID).Row().Scan(&role, &accepted)
+	if err := e.db.Raw(`SELECT role, accepted FROM memberships WHERE organization_id = ? AND user_id = ?`, org, acc.ID).Row().Scan(&role, &accepted); err != nil {
+		t.Fatal(err)
+	}
 	if role != "manager" || !accepted || e.count(`SELECT count(*) FROM memberships WHERE user_id = ?`, acc.ID) != 1 {
 		t.Fatalf("membership %q accepted %v; want only the invited one", role, accepted)
 	}
