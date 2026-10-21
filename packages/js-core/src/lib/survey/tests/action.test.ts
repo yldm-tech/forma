@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { trackAction, trackCodeAction, trackNoCodeAction } from "@/lib/survey/action";

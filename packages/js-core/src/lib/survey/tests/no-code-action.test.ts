@@ -1,4 +1,13 @@
-import { type Mock, type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  type Mock,
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { checkSetup } from "@/lib/common/status";
 import { TimeoutStack } from "@/lib/common/timeout-stack";

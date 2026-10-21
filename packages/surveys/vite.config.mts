@@ -2,9 +2,9 @@ import preact from "@preact/preset-vite";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { visualizer } from "rollup-plugin-visualizer";
-import { type Plugin, loadEnv } from "vite";
+import { type ConfigEnv, type Plugin, loadEnv, lazyPlugins } from "vite-plus";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 import { copyCompiledAssetsPlugin } from "../vite-plugins/copy-compiled-assets";
 
 // Stubs the @forma/survey-ui/styles?inline import during vitest runs so that
@@ -36,7 +36,7 @@ const stubSurveyUiStylesForVitest = (): Plugin => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const config = ({ mode }) => {
+const config = ({ mode }: ConfigEnv) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   // Shared configuration
@@ -75,7 +75,7 @@ const config = ({ mode }) => {
         },
         outDir: "dist",
       },
-      plugins: [
+      plugins: lazyPlugins(() => [
         ...sharedConfig.plugins,
         copyCompiledAssetsPlugin({
           filename: "surveys",
@@ -84,7 +84,7 @@ const config = ({ mode }) => {
           // so the app loads `surveys.umd.js` while embeds keep the `.cjs` name they hardcode.
           duplicateSuffixes: { ".umd.cjs": ".umd.js" },
         }),
-      ],
+      ]),
     });
   }
 
@@ -147,7 +147,7 @@ const config = ({ mode }) => {
       },
       outDir: "dist",
     },
-    plugins: [
+    plugins: lazyPlugins(() => [
       ...sharedConfig.plugins,
       stubSurveyUiStylesForVitest(),
       copyCompiledAssetsPlugin({
@@ -164,7 +164,7 @@ const config = ({ mode }) => {
           gzipSize: true,
           brotliSize: true,
         }),
-    ],
+    ]),
   });
 };
 

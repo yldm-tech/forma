@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Enforces the pnpm catalog in pnpm-workspace.yaml as the single source of truth for
 // the version of every dependency shared by two or more workspaces.
-// Runs as part of `pnpm lint` (root package.json), alongside `pnpm api:v3:lint`.
+// Runs as part of `pnpm check` (root package.json), alongside `pnpm api:v3:lint`.
 //
 // Two rules, both reported together so one run lists every violation:
 //

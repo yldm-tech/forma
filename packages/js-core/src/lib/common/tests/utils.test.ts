@@ -1,5 +1,5 @@
 // utils.test.ts
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { mockSurveyId } from "@/lib/common/tests/__mocks__/config.mock";
 import {
   checkUrlMatch,
@@ -901,7 +901,7 @@ describe("utils.ts", () => {
       const cssSelector = ".test";
       targetElement.className = "test";
 
-      targetElement.matches = vi.fn(() => true);
+      targetElement.matches = vi.fn(() => true) as unknown as Element["matches"];
 
       const action: TWorkspaceStateActionClass = {
         id: "clabc123abc",
@@ -926,7 +926,7 @@ describe("utils.ts", () => {
       const cssSelector = ".test";
       targetElement.className = "other";
 
-      targetElement.matches = vi.fn(() => false);
+      targetElement.matches = vi.fn(() => false) as unknown as Element["matches"];
       targetElement.closest = vi.fn(() => null); // no ancestor matches either
 
       const action: TWorkspaceStateActionClass = {
@@ -1121,7 +1121,7 @@ describe("utils.ts", () => {
       // kill click tracking for every action after this one.
       targetElement.matches = vi.fn(() => {
         throw new Error("SyntaxError");
-      });
+      }) as unknown as Element["matches"];
       targetElement.closest = vi.fn(() => {
         throw new Error("SyntaxError");
       });
@@ -1145,9 +1145,9 @@ describe("utils.ts", () => {
       const targetElement = document.createElement("div");
       targetElement.className = "test other";
 
-      targetElement.matches = vi.fn((selector) => {
+      targetElement.matches = vi.fn((selector: string) => {
         return selector === ".test" || selector === ".other" || selector === ".test .other";
-      });
+      }) as unknown as Element["matches"];
       targetElement.closest = vi.fn(() => null); // not needed but consistent with mock environment
 
       const action: TWorkspaceStateActionClass = {

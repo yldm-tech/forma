@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { getFormFieldAutocomplete, getOpenTextAutocomplete } from "./autocomplete";
 
 // The full set of HTML autofill tokens that may appear in this map. Anything outside it is a typo,

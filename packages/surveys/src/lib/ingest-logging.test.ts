@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { RESERVED_DECLARED_FIELD_NAMES } from "@forma/types/surveys/validation";
 import { logIngestResult } from "./ingest-logging";
 

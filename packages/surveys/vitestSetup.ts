@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 // mock react-i18next useTranslation on components
 vi.mock("react-i18next", async () => {

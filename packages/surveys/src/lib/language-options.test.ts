@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { type TSurveyLanguage } from "@forma/types/surveys/types";
 import { canonicalizeLanguageCode, getVisibleSurveyLanguages, isSameLanguageCode } from "./language-options";
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {
   getAutoProgressElement,

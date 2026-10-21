@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { setAttributes } from "@/lib/user/attribute";
 import { UpdateQueue } from "@/lib/user/update-queue";
 

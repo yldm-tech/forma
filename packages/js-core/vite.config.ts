@@ -1,8 +1,8 @@
-/// <reference types="vitest" />
+/// <reference types="vite-plus/test" />
 import { resolve } from "path";
 import dts from "vite-plugin-dts";
-import { defineConfig } from "vitest/config";
-import type { ViteUserConfig } from "vitest/config";
+import { defineConfig, lazyPlugins } from "vite-plus";
+import type { ViteUserConfig } from "vite-plus";
 import { copyCompiledAssetsPlugin } from "../vite-plugins/copy-compiled-assets";
 import { rewriteNodeNextDtsSpecifiers } from "../vite-plugins/node-next-dts";
 
@@ -26,7 +26,7 @@ export default defineConfig({
       fileName: "index",
     },
   },
-  plugins: [
+  plugins: lazyPlugins(() => [
     dts({
       rollupTypes: false,
       insertTypesEntry: true,
@@ -39,8 +39,13 @@ export default defineConfig({
       distDir: resolve(__dirname, "dist"),
       skipDirectoryCheck: true, // Skip checking for subdirectories that might not exist
     }) as VitestPluginOption,
-  ],
+  ]),
   test: {
+    // Vitest v4 compatibility: preserve mock call history.
+    // Remove after tests no longer rely on calls from setup or earlier tests.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
+    clearMocks: false,
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     coverage: {

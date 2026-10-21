@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
     "emitDeclarationOnly": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
@@ -10,7 +9,9 @@
       "@/*": ["./src/*"],
       "@forma/survey-ui": ["../survey-ui"]
     },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "rootDir": "..",
+    "types": ["node"]
   },
   "extends": "@forma/config-typescript/js-library.json",
   "include": ["src", "../types/surveys.d.ts"]

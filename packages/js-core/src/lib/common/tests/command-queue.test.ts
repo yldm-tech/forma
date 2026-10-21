@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { CommandQueue, CommandType } from "@/lib/common/command-queue";
 import { checkSetup } from "@/lib/common/status";
 import { UpdateQueue } from "@/lib/user/update-queue";

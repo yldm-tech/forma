@@ -30,18 +30,15 @@
     }
   },
   "scripts": {
-    "dev": "concurrently -n \"ESM,UMD\" \"vite build --watch --mode dev\" \"BUILD_UMD=true vite build --watch --mode dev\"",
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build && cross-env NODE_OPTIONS=--max-old-space-size=8192 BUILD_UMD=true vite build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
-    "build:analyze": "cross-env NODE_OPTIONS=--max-old-space-size=8192 ANALYZE=true vite build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
-    "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --mode dev && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
-    "go": "concurrently -n \"ESM,UMD\" \"vite build --watch --mode dev\" \"BUILD_UMD=true vite build --watch --mode dev\"",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "preview": "vite preview",
-    "clean": "rimraf .turbo node_modules dist",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "dev": "concurrently -n \"ESM,UMD\" \"vp build --watch --mode dev\" \"BUILD_UMD=true vp build --watch --mode dev\"",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 BUILD_UMD=true vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
+    "build:analyze": "cross-env NODE_OPTIONS=--max-old-space-size=8192 ANALYZE=true vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
+    "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vp build --mode dev && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
+    "go": "concurrently -n \"ESM,UMD\" \"vp build --watch --mode dev\" \"BUILD_UMD=true vp build --watch --mode dev\"",
+    "preview": "vp preview",
+    "clean": "rimraf node_modules dist",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
     "i18n:generate": "dotenv -e ../../.env -- npx lingo.dev@latest run && dotenv -e ../../.env -- npx lingo.dev@latest lockfile --force"
   },
   "dependencies": {
@@ -55,7 +52,6 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@forma/config-eslint": "workspace:*",
     "@forma/config-typescript": "workspace:*",
     "@forma/i18n-utils": "workspace:*",
     "@forma/types": "workspace:*",
@@ -76,7 +72,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

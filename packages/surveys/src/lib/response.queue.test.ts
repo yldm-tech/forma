@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { err, ok } from "@forma/types/error-handlers";
 import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
 import { TResponseUpdate } from "@forma/types/responses";

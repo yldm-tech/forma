@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import {
   DEFAULT_SURVEY_LANGUAGE_CODE,
   SURVEY_RUNTIME_LANGUAGE_CODES,

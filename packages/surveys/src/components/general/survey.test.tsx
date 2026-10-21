@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { Survey } from "./survey";

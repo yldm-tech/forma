@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { ZResponseInput, ZResponseMeta, ZResponseUpdate, pickAutoCapturedResponseMeta } from "./responses";
 
 /** Everything the renderer snapshots at display time, in one object (ENG-1841). */

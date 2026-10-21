@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { ZEmbeddedData } from "./embedded-data";
 import { type TDesiredEmbeddedField, toDesiredEmbeddedFields } from "./embedded-data-mapping";
 import { coerceToEmbeddedDataType } from "./embedded-data-resolver";

@@ -12,12 +12,10 @@
   },
   "sideEffects": false,
   "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
-    "clean": "rimraf node_modules .turbo"
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
+    "test:watch": "vp test",
+    "clean": "rimraf node_modules"
   },
   "dependencies": {
     "zod": "catalog:",
@@ -28,6 +26,7 @@
     "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

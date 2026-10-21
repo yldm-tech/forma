@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { TI18nString } from "@forma/types/i18n";
 import { getLocalizedValue } from "./i18n";
 

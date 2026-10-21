@@ -1,5 +1,5 @@
 import { readdirSync } from "node:fs";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { SURVEY_RUNTIME_LANGUAGE_CODES } from "@forma/i18n-utils/survey-runtime-languages";
 import i18n, { resolveFallbackBundles } from "./i18n.config";
 

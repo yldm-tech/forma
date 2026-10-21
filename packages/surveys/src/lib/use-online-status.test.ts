@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act, renderHook } from "@testing-library/preact";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { useOnlineStatus } from "./use-online-status";
 
 describe("useOnlineStatus", () => {

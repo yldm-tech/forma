@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { type ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { useFocusTrap } from "./use-focus-trap";
 
 const FocusTrapFixture = ({

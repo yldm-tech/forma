@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
     "isolatedModules": true,
     "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
     },
     "resolveJsonModule": true,
-    "strict": true
+    "strict": true,
+    "types": ["node"]
   },
   "extends": "@forma/config-typescript/js-library.json",
   "include": ["src", "vitest.setup.ts", "package.json"]

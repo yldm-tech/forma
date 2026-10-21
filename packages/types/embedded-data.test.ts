@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { ZEmbeddedData, ZSurveyEmbeddedData, isLocalEmbeddedData } from "./embedded-data";
 import { RESERVED_FIELD_NAMES } from "./reserved-field-names";
 import { RESERVED_DECLARED_FIELD_NAMES } from "./surveys/validation";

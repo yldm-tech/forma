@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type * as CommandQueueModule from "@/lib/common/command-queue";
 import { CommandType } from "@/lib/common/command-queue";
 import { checkPageUrl } from "@/lib/survey/no-code-action";

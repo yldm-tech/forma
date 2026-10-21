@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "composite": true,
     "outDir": "./dist",
     "paths": {
@@ -9,6 +8,6 @@
     "rootDir": "./"
   },
   "exclude": ["dist", "build", "node_modules"],
-  "extends": "@forma/config-typescript/node16.json",
+  "extends": "@forma/config-typescript/js-library.json",
   "include": ["."]
 }

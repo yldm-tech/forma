@@ -1,5 +1,5 @@
 // api.test.ts
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { ApiClient, makeRequest } from "@/lib/common/api";
 import type { TWorkspaceState } from "@/types/config";
 

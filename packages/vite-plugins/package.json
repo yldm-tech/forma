@@ -11,18 +11,16 @@
   },
   "sideEffects": false,
   "scripts": {
-    "clean": "rimraf .turbo node_modules dist",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "clean": "rimraf node_modules dist",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage"
   },
   "devDependencies": {
-    "@forma/config-eslint": "workspace:*",
     "@forma/config-typescript": "workspace:*",
+    "@types/node": "catalog:",
     "postcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite-plus": "catalog:"
   }
 }

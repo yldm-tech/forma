@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { deriveLegacyEmbeddedData } from "@forma/types/embedded-data-resolver";
 import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { type TResponseData, type TResponseVariables } from "@forma/types/responses";

@@ -1,4 +1,4 @@
-import { type MockInstance, beforeEach, describe, expect, test, vi } from "vitest";
+import { type MockInstance, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { emitFormaEvent, onFormaEvent, resetFormaEventSubscribers } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
