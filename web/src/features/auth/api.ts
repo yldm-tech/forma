@@ -101,3 +101,11 @@ export const authApi = {
   inspectInvite: (token: string) => api.post<InviteInspection>("/api/app/invites/inspect", { token }),
   acceptInvite: (token: string) => api.post<{ organizationId: string }>("/api/app/invites/accept", { token }),
 };
+
+/** What an invite link is for the visitor; keyed by the signed-in user, whose address decides email_mismatch. A 4xx (a malformed token) is the server's final answer. */
+export const inviteInspectionQuery = (token: string, userId: string | null) =>
+  queryOptions({
+    queryKey: ["invites", "inspect", token, userId] as const,
+    queryFn: () => authApi.inspectInvite(token),
+    staleTime: Infinity,
+  });

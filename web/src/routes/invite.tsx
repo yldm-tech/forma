@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type InviteStatus, authApi, sessionQuery } from "../features/auth/api";
+import { type InviteStatus, authApi, inviteInspectionQuery, sessionQuery } from "../features/auth/api";
 import { type Acceptance, acceptanceFailure, invitePageState } from "../features/auth/invite";
 import { inviteUrl } from "../features/auth/callback-url";
 import { ButtonLink, ContentLayout } from "../features/auth/components/ui";
@@ -22,11 +22,8 @@ function InvitePage() {
   const queryClient = useQueryClient();
   const session = useQuery(sessionQuery);
   const inspection = useQuery({
-    queryKey: ["invites", "inspect", token, session.data?.id ?? null],
-    queryFn: () => authApi.inspectInvite(token),
+    ...inviteInspectionQuery(token, session.data?.id ?? null),
     enabled: token !== "" && session.isSuccess,
-    retry: false,
-    staleTime: Infinity,
   });
   const [acceptance, setAcceptance] = useState<Acceptance>("idle");
   const accepting = useRef(false);
@@ -60,7 +57,7 @@ function InvitePage() {
   switch (state) {
     case undefined:
     case "accepting":
-      return <ContentLayout headline={t("common.loading")} description="" />;
+      return <ContentLayout headline={t("common.loading")} />;
     case "not_found":
       return (
         <ContentLayout
