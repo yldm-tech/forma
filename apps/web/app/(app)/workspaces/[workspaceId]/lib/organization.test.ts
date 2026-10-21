@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
-import { DatabaseError, ResourceNotFoundError } from "@forma/types/errors";
+import { DatabaseError, ResourceNotFoundError, ValidationError } from "@forma/types/errors";
 import { lookupAuthorizedOrganizationIds } from "@/lib/authorization/resource-list";
 import { getOrganizationsByUserId } from "./organization";
 
@@ -77,12 +77,15 @@ describe("Organization", () => {
       await expect(getOrganizationsByUserId("user1")).rejects.toThrow(unknownError);
     });
 
-    test("should validate inputs correctly", async () => {
-      await expect(getOrganizationsByUserId("")).rejects.toThrow();
-    });
+    // The empty-string case this used to assert proves nothing: `ZString` is a bare `z.string()`, so
+    // "" passes validation and the rejection came from the unrelated not-found branch. A non-string
+    // is what the schema actually refuses, and the negative assertions are what pin the rejection to
+    // the validation guard rather than to anything downstream of it.
+    test("rejects a userId the schema refuses, before reaching the authorization lookup", async () => {
+      await expect(getOrganizationsByUserId(123 as unknown as string)).rejects.toThrow(ValidationError);
 
-    test("should validate userId input with invalid type", async () => {
-      await expect(getOrganizationsByUserId(123 as any)).rejects.toThrow();
+      expect(lookupAuthorizedOrganizationIds).not.toHaveBeenCalled();
+      expect(prisma.organization.findMany).not.toHaveBeenCalled();
     });
   });
 });

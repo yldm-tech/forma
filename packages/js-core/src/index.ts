@@ -44,11 +44,10 @@ const setup = async (setupConfig: TConfigInput): Promise<void> => {
   // wait for setup to complete
   await queue.wait();
 
-  // Schedule checkPageUrl to run in the next event loop iteration.
-  // This ensures that any user actions (like setUserId) called synchronously after setup()
-  // will be queued BEFORE the page view actions are processed.
+  // Schedule checkPageUrl to run in the next event loop iteration. This ensures that any user actions (like setUserId) called synchronously after setup() will be queued BEFORE the page view actions are processed.
+  // Through the queue, exactly like `registerRouteChange`, rather than called directly: the default setup check is what stops a failed setup (revoked workspaceId, forbidden fetch) from reaching `Config.get()` on a null config and throwing an uncaught rejection into the host page. An SDK that could not set itself up degrades to a console warning; it does not crash the page it is embedded in.
   setTimeout(() => {
-    void checkPageUrl();
+    void queue.add(checkPageUrl, CommandType.GeneralAction);
   }, 0);
 };
 

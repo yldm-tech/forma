@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { logger } from "@forma/logger";
 import { TIntegrationNotionInput } from "@forma/types/integration/notion";
 import { responses } from "@/lib/api/response";
@@ -17,6 +18,13 @@ import {
 import { capturePostHogEvent } from "@/lib/posthog";
 import { getOrganizationIdFromWorkspaceId } from "@/lib/utils/helper";
 import { canUserWriteWorkspaceIntegrations } from "@/lib/workspace/auth";
+
+// The settings page gates on `config.key.bot_id` and the delivery path on `config.key.access_token`;
+// everything else Notion returns is carried through untouched.
+const ZNotionTokenResponse = z.object({
+  access_token: z.string().min(1),
+  bot_id: z.string().min(1),
+});
 
 export const GET = withV1ApiWrapper({
   handler: async ({ req, authentication }) => {
@@ -114,9 +122,36 @@ export const GET = withV1ApiWrapper({
         }),
       });
 
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        logger.error({ status: response.status, workspaceId, body }, "Notion OAuth token exchange failed");
+        redirectUrl.searchParams.set("error", "oauth_error");
+        return {
+          response: Response.redirect(redirectUrl),
+        };
+      }
+
       // No encryption here: `createOrUpdateIntegration` encrypts every credential field on the way
       // into Postgres, for every provider (lib/integration/credential-encryption.ts).
-      const tokenData = await response.json();
+      const tokenData = await response.json().catch(() => null);
+
+      // `createOrUpdateIntegration` upserts, so anything written here replaces a working connection.
+      // The status check above covers a rejected exchange; this covers a 2xx that is not a credential.
+      // Only the two fields the app actually reads are required — a full
+      // `ZIntegrationNotionCredential.parse` would reject token responses Notion legitimately varies
+      // (an omitted `duplicated_template_id`, a bot `owner` with no `user`), and rejecting a valid
+      // token is the same outage as storing an invalid one.
+      const parsedToken = ZNotionTokenResponse.safeParse(tokenData);
+      if (!parsedToken.success) {
+        logger.error(
+          { workspaceId, error: parsedToken.error },
+          "Notion OAuth token response carried no usable credential"
+        );
+        redirectUrl.searchParams.set("error", "oauth_error");
+        return {
+          response: Response.redirect(redirectUrl),
+        };
+      }
 
       const notionIntegration: TIntegrationNotionInput = {
         type: "notion" as const,

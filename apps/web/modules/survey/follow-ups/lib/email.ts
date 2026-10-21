@@ -27,7 +27,7 @@ export const sendFollowUpEmail = async ({
   response: TResponse;
   logoUrl?: string;
   locale?: TUserLocale;
-}): Promise<void> => {
+}): Promise<boolean> => {
   const {
     action: {
       properties: { subject, body },
@@ -45,7 +45,9 @@ export const sendFollowUpEmail = async ({
     locale,
   });
 
-  await sendEmail({
+  // Returned rather than discarded: sendEmail does not throw when SMTP is unconfigured, it returns false. A
+  // caller that ignores that reports a follow-up as sent when nothing left the box.
+  return await sendEmail({
     to,
     replyTo: replyTo.join(", "),
     subject,

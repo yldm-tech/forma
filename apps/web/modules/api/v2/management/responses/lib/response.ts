@@ -3,14 +3,9 @@ import { prisma } from "@forma/database";
 import { Prisma, Response } from "@forma/database/prisma";
 import { TContactAttributes } from "@forma/types/contact-attribute";
 import { Result, err, ok } from "@forma/types/error-handlers";
-import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { calculateTtcTotal, normalizeResponseLanguage } from "@/lib/response/utils";
 import { getContactByUserId } from "@/modules/api/v2/management/responses/lib/contact";
-import {
-  getMonthlyOrganizationResponseCount,
-  getOrganizationBilling,
-  getOrganizationIdFromWorkspaceId,
-} from "@/modules/api/v2/management/responses/lib/organization";
+import { getOrganizationIdFromWorkspaceId } from "@/modules/api/v2/management/responses/lib/organization";
 import { getResponsesQuery } from "@/modules/api/v2/management/responses/lib/utils";
 import { TGetResponsesFilter, TResponseInput } from "@/modules/api/v2/management/responses/types/responses";
 import { ApiErrorResponseV2 } from "@/modules/api/v2/types/api-error";
@@ -139,14 +134,10 @@ export const createResponse = async (
       endingId,
     };
 
+    // Resolves the workspace to its organization purely as an existence check on the workspace the response is being filed under; nothing downstream reads the id.
     const organizationIdResult = await getOrganizationIdFromWorkspaceId(workspaceId);
     if (!organizationIdResult.ok) {
       return err(organizationIdResult.error as ApiErrorResponseV2);
-    }
-
-    const billing = await getOrganizationBilling(organizationIdResult.data);
-    if (!billing.ok) {
-      return err(billing.error as ApiErrorResponseV2);
     }
 
     const prismaClient = tx ?? prisma;
@@ -154,15 +145,6 @@ export const createResponse = async (
     const response = await prismaClient.response.create({
       data: prismaData,
     });
-
-    if (IS_FORMA_CLOUD) {
-      const responsesCountResult = await getMonthlyOrganizationResponseCount(organizationIdResult.data);
-      if (!responsesCountResult.ok) {
-        return err(responsesCountResult.error as ApiErrorResponseV2);
-      }
-
-      // Limit check completed
-    }
 
     return ok(response);
   } catch (error) {

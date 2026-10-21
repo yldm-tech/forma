@@ -382,8 +382,9 @@ const getUserEmailForLegacyVerification = async (
   return { userId: decryptedId, userEmail: foundUser.email };
 };
 
+// Matches the "1d" lifetime of the recovery magic-link token this intent travels inside (see `sendVerificationEmail`), and the "valid for 24 hours" the mail itself promises. The two halves expiring apart is what locked recovering users out: the magic link still minted a session, the intent no longer verified, and the completion route logged them straight back out. The intent is not the security boundary — `completeSsoRecovery` additionally requires a signed-in session whose user id equals `intent.userId`, which only the magic link can produce.
 const DEFAULT_SSO_RELINK_INTENT_OPTIONS: SignOptions = {
-  expiresIn: "15m",
+  expiresIn: "1d",
 };
 
 export const createSsoRelinkIntent = (

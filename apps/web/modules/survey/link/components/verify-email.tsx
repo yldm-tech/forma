@@ -78,7 +78,6 @@ export const VerifyEmail = ({
     const data = {
       surveyId: localSurvey.id,
       email: email,
-      surveyName: localSurvey.name,
       suId: singleUseId ?? "",
       suToken: singleUseToken,
       locale,

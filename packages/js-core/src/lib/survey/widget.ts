@@ -18,12 +18,7 @@ import { type TTrackProperties } from "@/types/survey";
 
 let isSurveyRunning = false;
 
-// The surveys currently on screen, so each "forma_survey_closed" can name its own. A set
-// rather than a single id because a second survey can render over a live one: a fired TimeoutStack
-// entry is never pruned, so a later `checkPageUrl` releases `isSurveyRunning` while the first
-// survey is still up, and the renderer appends a second container instead of replacing the first.
-// Ids are added when the widget actually renders — after the delay, after every skip check — so a
-// survey that was never shown never reports a close.
+// The surveys currently on screen, so each "forma_survey_closed" can name its own. A set rather than a single id because a second survey can still render over a live one — `setIsSurveyRunning(false)` is reachable from several places (the renderer's own close, `tearDown`) and nothing serialises them against a survey already mounted. Ids are added when the widget actually renders — after the delay, after every skip check — so a survey that was never shown never reports a close.
 const openSurveyIds = new Set<string>();
 
 export const setIsSurveyRunning = (value: boolean): void => {
@@ -165,10 +160,22 @@ export const renderWidget = async (
   };
 
   if (isSpamProtectionEnabled && recaptchaSiteKey) {
-    await loadRecaptchaScript(recaptchaSiteKey);
+    // Same shape as the surveys-library load above: a rejection here (blocked by an extension, a CSP without google.com, a firewalled network) must release `isSurveyRunning`, or the flag stays true for the rest of the page session and every later trigger is skipped with "A survey is already running". Bailing out rather than rendering unprotected keeps spam protection meaningful.
+    try {
+      await loadRecaptchaScript(recaptchaSiteKey);
+    } catch (error) {
+      logger.error(`Failed to load reCAPTCHA script: ${String(error)}`);
+      setIsSurveyRunning(false);
+      return;
+    }
   }
 
   const timeoutId = setTimeout(() => {
+    // The delay has elapsed, so this entry no longer describes anything cancellable. Pruning it here is what keeps the TimeoutStack invariant both readers assume — `checkPageUrl` and `checkTimeOnPage` treat a matching entry as "this survey is still pending" and answer it with `remove()` + `setIsSurveyRunning(false)`, which under a rendered survey releases the guard and lets a re-trigger unmount the respondent's half-filled answers.
+    if (action) {
+      timeoutStack.remove(timeoutId as unknown as number);
+    }
+
     openSurveyIds.add(survey.id);
 
     // Render-gated, paired with "forma_survey_closed" off the same set so a host counting opens

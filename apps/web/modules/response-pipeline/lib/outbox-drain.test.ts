@@ -72,7 +72,7 @@ const entry = (id: string, payload: unknown): TResponsePipelineOutboxEntry => ({
   createdAt: new Date("2026-09-22T10:00:00.000Z"),
   event: "responseFinished",
   id,
-  jobId: `response-pipeline:responseFinished:${id}:1758535200000`,
+  jobId: `response-pipeline-responseFinished-${id}-1758535200000`,
   payload: payload as Prisma.JsonValue,
   responseId: id,
   surveyId: SURVEY_ID,

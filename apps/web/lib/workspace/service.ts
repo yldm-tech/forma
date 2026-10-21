@@ -55,6 +55,8 @@ export const getUserWorkspaces = reactCache(
           organizationId,
         },
         select: selectWorkspace,
+        // Callers treat index 0 as "the" workspace (the onboarding landing redirect) and paginate with take/skip, both of which need a total order. Tie-break on id because createdAt is not unique.
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: page ? ITEMS_PER_PAGE : undefined,
         skip: page ? ITEMS_PER_PAGE * (page - 1) : undefined,
       });
@@ -79,6 +81,7 @@ export const getWorkspaces = reactCache(
           organizationId,
         },
         select: selectWorkspace,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: page ? ITEMS_PER_PAGE : undefined,
         skip: page ? ITEMS_PER_PAGE * (page - 1) : undefined,
       });

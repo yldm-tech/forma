@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
 import { Prisma } from "@forma/database/prisma";
 import { PrismaErrorType } from "@forma/database/types/error";
-import { DatabaseError, UnknownError } from "@forma/types/errors";
+import { DatabaseError, UnknownError, ValidationError } from "@forma/types/errors";
 import { reconcileOrganizationMembership } from "@/lib/authzed/organization-membership";
 import { reconcileTeamWorkspaceRelationships } from "@/lib/authzed/team-workspace";
 import {
@@ -191,6 +191,53 @@ describe("deleteMembership", () => {
   test("throws original error on unknown error", async () => {
     vi.mocked(prisma.teamUser.findMany).mockRejectedValue({});
     await expect(deleteMembership(userId, organizationId)).rejects.toThrowError();
+  });
+  test("refuses to delete the last remaining owner", async () => {
+    vi.mocked(prisma.membership.count).mockResolvedValue(1);
+
+    await expect(deleteMembership(userId, organizationId, true)).rejects.toThrow(ValidationError);
+
+    expect(prisma.membership.delete).not.toHaveBeenCalled();
+    expect(prisma.teamUser.deleteMany).not.toHaveBeenCalled();
+    expect(reconcileOrganizationMembership).not.toHaveBeenCalled();
+  });
+  test("deletes an owner while another owner remains", async () => {
+    vi.mocked(prisma.membership.count).mockResolvedValue(2);
+    vi.mocked(prisma.teamUser.findMany).mockResolvedValue([mockTeamMembership]);
+
+    await expect(deleteMembership(userId, organizationId, true)).resolves.toEqual([mockTeamMembership]);
+
+    expect(prisma.membership.delete).toHaveBeenCalled();
+  });
+  test("skips the owner-count read when the membership is not an owner's", async () => {
+    vi.mocked(prisma.teamUser.findMany).mockResolvedValue([mockTeamMembership]);
+
+    await deleteMembership(userId, organizationId);
+
+    expect(prisma.membership.count).not.toHaveBeenCalled();
+  });
+  test("reads the owner count through the transaction client, not outside it", async () => {
+    // The whole point of the guard: read and delete must share one Serializable snapshot, otherwise
+    // two concurrent removals of two different owners both pass and the organization loses every owner.
+    const tx = {
+      membership: { count: vi.fn().mockResolvedValue(2), delete: vi.fn() },
+      teamUser: { findMany: vi.fn().mockResolvedValue([mockTeamMembership]), deleteMany: vi.fn() },
+    };
+    vi.mocked(prisma.$transaction).mockImplementation(async (transaction) => {
+      if (typeof transaction !== "function") {
+        throw new Error("Expected an interactive transaction");
+      }
+
+      return transaction(tx as never);
+    });
+
+    await deleteMembership(userId, organizationId, true);
+
+    expect(tx.membership.count).toHaveBeenCalledWith({
+      where: { organizationId, role: "owner", user: { isActive: true } },
+    });
+    expect(prisma.membership.count).not.toHaveBeenCalled();
+    expect(tx.membership.delete).toHaveBeenCalled();
   });
 });
 

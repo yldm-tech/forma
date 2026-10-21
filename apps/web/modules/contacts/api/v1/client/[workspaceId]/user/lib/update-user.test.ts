@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prisma } from "@forma/database";
+import type { Prisma } from "@forma/database/prisma";
 import { updateAttributes } from "@/modules/contacts/lib/attributes";
 import { getPersonSegmentIds } from "./segments";
 import { updateUser } from "./update-user";
@@ -21,6 +22,8 @@ vi.mock("@/modules/contacts/lib/attributes", async (importOriginal) => {
 
 vi.mock("@forma/database", () => ({
   prisma: {
+    $transaction: vi.fn(),
+    $executeRaw: vi.fn(),
     contact: {
       findFirst: vi.fn(),
       create: vi.fn(),
@@ -58,6 +61,13 @@ describe("updateUser", () => {
     vi.mocked(getPersonSegmentIds).mockResolvedValue(["segment1"]);
     // Default: workspace has no configured languages, so a non-canonical value is treated as junk.
     vi.mocked(prisma.language.findMany).mockResolvedValue([]);
+    // The create path runs inside an interactive transaction; run its callback against the same
+    // mocked client so `tx.contact.*` and `tx.$executeRaw` are the mocks the tests assert on.
+    vi.mocked(prisma.$transaction).mockImplementation((callback: unknown) =>
+      (callback as (client: Prisma.TransactionClient) => Promise<unknown>)(
+        prisma as unknown as Prisma.TransactionClient
+      )
+    );
   });
 
   afterEach(() => {
@@ -115,6 +125,48 @@ describe("updateUser", () => {
       })
     );
     expect(result.messages).toBeUndefined();
+  });
+
+  test("reuses the contact a concurrent identify created instead of creating a second one", async () => {
+    // Two identifies for one brand-new userId race. This one loses: its first read finds nothing, but
+    // by the time it holds the advisory lock the winner has committed, so the re-read inside the lock
+    // returns that contact. Creating here would leave the workspace with two permanent contacts for
+    // one person, which every later findFirst would then pick between arbitrarily.
+    vi.mocked(prisma.contact.findFirst)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(mockContactData as never);
+    vi.mocked(prisma.contact.create).mockResolvedValue(mockContactData as never);
+
+    const result = await updateUser(mockWorkspaceId, mockUserId, "desktop");
+
+    expect(prisma.contact.create).not.toHaveBeenCalled();
+    expect(result.state.data?.contactId).toBe(mockContactId);
+  });
+
+  test("takes a transaction-scoped advisory lock on the workspace/userId pair before creating", async () => {
+    vi.mocked(prisma.contact.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.contact.create).mockResolvedValue(mockContactData as never);
+
+    await updateUser(mockWorkspaceId, mockUserId, "desktop");
+
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    const [sqlFragments, ...values] = vi.mocked(prisma.$executeRaw).mock.calls[0] as [
+      TemplateStringsArray,
+      ...unknown[],
+    ];
+    expect(sqlFragments.join("?")).toContain("pg_advisory_xact_lock");
+    // The lock key must name both the workspace and the userId: keying on either alone would
+    // serialize every first-time identify in the workspace, or collide across workspaces.
+    expect(values).toEqual([`contact:${mockWorkspaceId}:${mockUserId}`]);
+  });
+
+  test("serves a known contact without opening a transaction", async () => {
+    vi.mocked(prisma.contact.findFirst).mockResolvedValue(mockContactData as never);
+
+    await updateUser(mockWorkspaceId, mockUserId, "desktop");
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.contact.findFirst).toHaveBeenCalledTimes(1);
   });
 
   test("should update existing contact attributes and canonicalize the language", async () => {

@@ -239,10 +239,11 @@ export const enqueueResponsePipelineJob = async (
   options?: { jobId: string }
 ): Promise<Job> => {
   try {
-    // An optional deterministic jobId, the same seam `enqueueWorkflowRunJob` uses. The caller derives it
-    // from the event and the response (id + updatedAt), which makes both the caller's own retry loop and
-    // any later replay of a lost event idempotent at the queue: BullMQ rejects a second job holding the
-    // id, so a recovery path can re-enqueue blindly instead of reconciling against a delivered marker.
+    // An optional deterministic jobId, the same seam `enqueueWorkflowRunJob` uses. `sendToPipeline`
+    // (apps/web/lib/pipelines.ts) derives it from the event and the response (id + updatedAt), which makes
+    // both its own retry loop and any later replay of a lost event idempotent at the queue: BullMQ's add
+    // script returns the job already holding the id rather than queueing a second one, so a recovery path
+    // can re-enqueue blindly instead of reconciling against a delivered marker.
     // Bounded by `removeOnComplete` in JOBS_DEFAULT_JOB_OPTIONS — once the completed job is evicted the
     // id is free again, so this dedupes a replay, not a redelivery days later.
     return await enqueueBackgroundJob(JOB_NAMES.responsePipeline, data, {
