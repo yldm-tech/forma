@@ -24,6 +24,7 @@ type Actor struct {
 	ID   uuid.UUID
 }
 
+// User and APIKey name an actor.
 func User(id uuid.UUID) Actor   { return Actor{Type: ActorUser, ID: id} }
 func APIKey(id uuid.UUID) Actor { return Actor{Type: ActorAPIKey, ID: id} }
 
@@ -45,14 +46,13 @@ type Resource struct {
 	ID   uuid.UUID
 }
 
-func Organization(id uuid.UUID) Resource { return Resource{Type: ResourceOrganization, ID: id} }
-func Workspace(id uuid.UUID) Resource    { return Resource{Type: ResourceWorkspace, ID: id} }
-func Team(id uuid.UUID) Resource         { return Resource{Type: ResourceTeam, ID: id} }
-func APIKeyResource(id uuid.UUID) Resource {
-	return Resource{Type: ResourceAPIKey, ID: id}
-}
-func Survey(id uuid.UUID) Resource   { return Resource{Type: ResourceSurvey, ID: id} }
-func Response(id uuid.UUID) Resource { return Resource{Type: ResourceResponse, ID: id} }
+// Organization, Workspace, Team, APIKeyResource, Survey and Response name a resource.
+func Organization(id uuid.UUID) Resource   { return Resource{Type: ResourceOrganization, ID: id} }
+func Workspace(id uuid.UUID) Resource      { return Resource{Type: ResourceWorkspace, ID: id} }
+func Team(id uuid.UUID) Resource           { return Resource{Type: ResourceTeam, ID: id} }
+func APIKeyResource(id uuid.UUID) Resource { return Resource{Type: ResourceAPIKey, ID: id} }
+func Survey(id uuid.UUID) Resource         { return Resource{Type: ResourceSurvey, ID: id} }
+func Response(id uuid.UUID) Resource       { return Resource{Type: ResourceResponse, ID: id} }
 
 // Action is "<resource>.<permission>", forma2's TAuthorizationAction.
 type Action string
