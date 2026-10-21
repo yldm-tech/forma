@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -23,6 +24,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -61,6 +63,21 @@ var tenancySet = wire.NewSet(
 	org.NewHandler,
 )
 
+// teamSet is teams, their members and their workspace access.
+var teamSet = wire.NewSet(
+	team.NewRepository,
+	team.NewService,
+	team.NewHandler,
+)
+
+// inviteSet is invites and their acceptance; sign-up redeems invites through it.
+var inviteSet = wire.NewSet(
+	invite.NewRepository,
+	invite.NewService,
+	wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)),
+	invite.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -70,6 +87,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		platformSet,
 		authSet,
 		tenancySet,
+		teamSet,
+		inviteSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

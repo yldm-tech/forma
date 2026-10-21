@@ -60,6 +60,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.EmailAuthDisabled || cfg.EmailVerificationDisabled || cfg.PasswordResetDisabled || cfg.PasswordHIBPCheckDisabled {
 		t.Error("an auth kill switch defaults to on")
 	}
+	if cfg.InviteDisabled || cfg.InviteRateLimitPer24Hours != 50 || cfg.SignupDomainCheckOnInvites {
+		t.Errorf("invites disabled %v, limit %d, domain check on invites %v; want enabled, 50, false", cfg.InviteDisabled, cfg.InviteRateLimitPer24Hours, cfg.SignupDomainCheckOnInvites)
+	}
 	if cfg.SignupEnabled() || cfg.TurnstileConfigured() || cfg.SecureCookies() {
 		t.Errorf("SignupEnabled %v, TurnstileConfigured %v, SecureCookies %v; want all false on a plain http self-hosted instance", cfg.SignupEnabled(), cfg.TurnstileConfigured(), cfg.SecureCookies())
 	}
@@ -121,6 +124,9 @@ func TestLoadFlags(t *testing.T) {
 	t.Setenv("SMTP_AUTHENTICATED", "0")
 	t.Setenv("SMTP_HOST", "smtp.example.com")
 	t.Setenv("SMTP_PORT", "465")
+	t.Setenv("INVITE_DISABLED", "1")
+	t.Setenv("INVITE_RATE_LIMIT_PER_24_HOURS", "7")
+	t.Setenv("SIGNUP_DOMAIN_CHECK_ON_INVITES", "1")
 
 	cfg, err := Load()
 	if err != nil {
@@ -128,6 +134,9 @@ func TestLoadFlags(t *testing.T) {
 	}
 	if !cfg.RateLimitingDisabled || cfg.SMTPAuthenticated || !cfg.SMTPConfigured() {
 		t.Fatalf("cfg = %+v, want rate limiting disabled, SMTP unauthenticated and configured", cfg)
+	}
+	if !cfg.InviteDisabled || cfg.InviteRateLimitPer24Hours != 7 || !cfg.SignupDomainCheckOnInvites {
+		t.Fatalf("invites disabled %v, limit %d, domain check on invites %v; want true, 7, true", cfg.InviteDisabled, cfg.InviteRateLimitPer24Hours, cfg.SignupDomainCheckOnInvites)
 	}
 }
 
@@ -166,6 +175,9 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"default org role":     {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
 		"relative auth url":    {"BETTER_AUTH_URL", "/api/auth"},
 		"nextauth url scheme":  {"NEXTAUTH_URL", "ftp://auth.example.com"},
+		"zero invite limit":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "0"},
+		"invite limit text":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
+		"invite flag spelled":  {"INVITE_DISABLED", "yes"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {

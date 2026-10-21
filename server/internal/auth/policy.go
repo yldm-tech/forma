@@ -5,20 +5,16 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode/utf16"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/userinput"
 )
 
 // Input rules from forma2's packages/types/user.ts (ZUserName, ZUserEmail, ZUserPassword, ZUserLocale). Lengths are counted in UTF-16 code units, as zod counts them.
 const (
 	passwordMinLength = 8
 	passwordMaxLength = 128
-	emailMaxLength    = 255
 )
-
-// nameFormat is ZUserName's allow-list: letters, combining marks, space, and ' , . & ( ) digits -. JavaScript's \d without the u flag is ASCII only.
-var nameFormat = regexp.MustCompile(`^[\p{L}\p{M} ',.&()0-9-]+$`)
 
 // nameDisallowed is every run of characters ZUserName does not allow.
 var nameDisallowed = regexp.MustCompile(`[^\p{L}\p{M} ',.&()0-9-]+`)
@@ -27,9 +23,6 @@ var nameDisallowed = regexp.MustCompile(`[^\p{L}\p{M} ',.&()0-9-]+`)
 func normalizeUserName(name string) string {
 	return strings.Join(strings.Fields(nameDisallowed.ReplaceAllString(name, " ")), " ")
 }
-
-// emailFormat is zod 4's email pattern without its two lookaheads, which RE2 lacks; validEmail checks those separately.
-var emailFormat = regexp.MustCompile(`^[A-Za-z0-9_'+\-.]*[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$`)
 
 // userLocales is ZUserLocale.
 var userLocales = []string{
@@ -51,24 +44,16 @@ func (f fieldErrors) err() error {
 	return apperr.Validation(f)
 }
 
-func utf16Len(s string) int {
-	return len(utf16.Encode([]rune(s)))
-}
-
 // checkName validates a display name and returns it trimmed, as ZUserName's trim transform does.
 func checkName(errs *fieldErrors, field, name string) string {
 	name = strings.TrimSpace(name)
 	switch {
 	case name == "":
 		errs.add(field, "min", "1")
-	case !nameFormat.MatchString(name):
+	case !userinput.ValidNameFormat(name):
 		errs.add(field, "name_format", "")
 	}
 	return name
-}
-
-func validEmail(email string) bool {
-	return !strings.HasPrefix(email, ".") && !strings.Contains(email, "..") && emailFormat.MatchString(email)
 }
 
 // checkEmail validates the request's "email" field as ZUserEmail does. The address is not trimmed: zod rejects surrounding whitespace rather than removing it.
@@ -76,16 +61,16 @@ func checkEmail(errs *fieldErrors, email string) {
 	switch {
 	case email == "":
 		errs.add("email", "required", "")
-	case utf16Len(email) > emailMaxLength:
-		errs.add("email", "max", strconv.Itoa(emailMaxLength))
-	case !validEmail(email):
+	case userinput.UTF16Len(email) > userinput.EmailMaxLength:
+		errs.add("email", "max", strconv.Itoa(userinput.EmailMaxLength))
+	case !userinput.ValidEmailFormat(email):
 		errs.add("email", "email", "")
 	}
 }
 
 // checkPassword applies ZUserPassword: 8 to 128 characters with at least one uppercase letter and one digit. Its pattern, /^(?=.*[A-Z])(?=.*\d).*$/, has no multiline flag, and "." stops at line terminators, so a password containing one never matches.
 func checkPassword(errs *fieldErrors, field, password string) {
-	n := utf16Len(password)
+	n := userinput.UTF16Len(password)
 	switch {
 	case n < passwordMinLength:
 		errs.add(field, "min", strconv.Itoa(passwordMinLength))

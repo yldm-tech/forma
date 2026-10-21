@@ -38,7 +38,7 @@ var (
 	ActionLicenseRecheck    = Rule{Namespace: "action:license-recheck", Window: time.Minute, Limit: 5}
 	// ActionUnsplash is per user; it keeps one account from exhausting the instance-wide Unsplash quota.
 	ActionUnsplash = Rule{Namespace: "action:unsplash", Window: time.Minute, Limit: 30}
-	// ActionInviteMember is per organization and weighted by the number of recipients. The organization module overrides Limit from INVITE_RATE_LIMIT_PER_24_HOURS (500 on Forma Cloud).
+	// ActionInviteMember is per organization and weighted by the number of recipients. The invite module overrides Limit from INVITE_RATE_LIMIT_PER_24_HOURS (500 on Forma Cloud).
 	ActionInviteMember = Rule{Namespace: "action:invite-member", Window: 24 * time.Hour, Limit: 50}
 	// ActionGenerateExampleResponses is per user: it closes the multi-click race and bounds LLM spend.
 	ActionGenerateExampleResponses = Rule{Namespace: "action:generate-example-responses", Window: time.Minute, Limit: 1}

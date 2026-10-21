@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -24,6 +25,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
@@ -76,7 +78,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	handler := health.NewHandler(pinger, log)
 	repository := auth.NewRepository(db)
 	sessions := auth.NewSessions(cfg, db, log)
-	service := auth.NewService(cfg, repository, sessions, limiter, mailerMailer, emitter, client, log)
+	inviteRepository := invite.NewRepository(db)
+	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
 	cipher, err := secret.NewCipher(cfg)
 	if err != nil {
 		cleanup3()
@@ -84,9 +88,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	twoFactor := auth.NewTwoFactor(cfg, service, cipher)
-	authHandler := auth.NewHandler(cfg, service, sessions, twoFactor)
-	sso := auth.NewSSO(cfg, service, log)
+	twoFactor := auth.NewTwoFactor(cfg, authService, cipher)
+	authHandler := auth.NewHandler(cfg, authService, sessions, twoFactor)
+	sso := auth.NewSSO(cfg, authService, log)
 	ssoHandler := auth.NewSSOHandler(cfg, sso)
 	orgRepository := org.NewRepository(db)
 	workspaceRepository := workspace.NewRepository(db, log)
@@ -101,6 +105,10 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, log)
 	orgHandler := org.NewHandler(orgService, sessions)
 	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
+	teamRepository := team.NewRepository(db)
+	teamService := team.NewService(teamRepository, authorizer, emitter, log)
+	teamHandler := team.NewHandler(teamService, sessions)
+	inviteHandler := invite.NewHandler(service, sessions)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -108,7 +116,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -161,3 +169,9 @@ var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(ht
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(jsonschema.New, workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
+
+// teamSet is teams, their members and their workspace access.
+var teamSet = wire.NewSet(team.NewRepository, team.NewService, team.NewHandler)
+
+// inviteSet is invites and their acceptance; sign-up redeems invites through it.
+var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)), invite.NewHandler)
