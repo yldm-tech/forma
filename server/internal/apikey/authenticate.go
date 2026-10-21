@@ -21,7 +21,7 @@ import (
 const usageWriteInterval = 30 * time.Second
 
 // HeaderAPIKey carries an API key in any format. It takes precedence over Authorization.
-const HeaderAPIKey = "X-Api-Key"
+const HeaderAPIKey = "X-Api-Key" //nolint:gosec // a header name, not a credential
 
 // Principal is an authenticated API key, forma2's TAuthenticationApiKey.
 type Principal struct {
