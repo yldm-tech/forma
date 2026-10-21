@@ -19,8 +19,8 @@ func TestEverySchemaCompiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	if got := len(v.Names()); got != 20 {
-		t.Fatalf("compiled %d schemas %v, want the 20 the export writes", got, v.Names())
+	if got := len(v.Names()); got != 21 {
+		t.Fatalf("compiled %d schemas %v, want the 21 the export writes", got, v.Names())
 	}
 }
 

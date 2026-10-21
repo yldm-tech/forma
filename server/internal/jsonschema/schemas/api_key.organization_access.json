@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "accessControl": {
+      "type": "object",
+      "properties": {
+        "read": {
+          "type": "boolean"
+        },
+        "write": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "read",
+        "write"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "accessControl"
+  ],
+  "$id": "https://forma.ylam.ai/schemas/api_key.organization_access.json"
+}

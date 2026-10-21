@@ -1,5 +1,6 @@
 // The JSON documents the Go server stores, each paired with the zod schema that defines it. Shared by the JSON Schema export and its parity test.
 import { z } from "zod";
+import { ZOrganizationAccess } from "./api-key";
 import { ZSurveyQuotaLogic } from "./quota";
 import { ZResponseData, ZResponseMeta, ZResponseTtc, ZResponseVariables } from "./responses";
 import { ZSegmentFilters } from "./segment";
@@ -48,4 +49,5 @@ export const JSON_SCHEMA_REGISTRY: Record<string, z.ZodType | JsonSchemaEntry> =
   "response.variables": ZResponseVariables,
   "response.ttc": ZResponseTtc,
   "response.meta": ZResponseMeta,
+  "api_key.organization_access": ZOrganizationAccess,
 };
