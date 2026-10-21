@@ -256,7 +256,7 @@ describe("workspace lib", () => {
       expect(uniqueKeys.sort()).toEqual(["email", "userId"].sort());
     });
 
-    test("creates workspace without teams and does not auto-link any FRD", async () => {
+    test("creates workspace without teams", async () => {
       const createdWorkspace = { ...baseWorkspace, id: "p3" };
       vi.mocked(prisma.workspace.create).mockResolvedValueOnce(createdWorkspace as any);
 
@@ -264,13 +264,6 @@ describe("workspace lib", () => {
 
       expect(result).toEqual(createdWorkspace);
       expect(prisma.workspaceTeam.createMany).not.toHaveBeenCalled();
-    });
-
-    test("does not upsert a Default Feedback Directory under any flow", async () => {
-      const createdWorkspace = { ...baseWorkspace, id: "p4" };
-      vi.mocked(prisma.workspace.create).mockResolvedValueOnce(createdWorkspace as any);
-
-      await createWorkspace("org1", { name: "Second Workspace" });
     });
 
     test("throws ValidationError if name is missing", async () => {

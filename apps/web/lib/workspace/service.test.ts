@@ -168,6 +168,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: undefined,
       skip: undefined,
     });
@@ -217,6 +218,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: undefined,
       skip: undefined,
     });
@@ -258,6 +260,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: undefined,
       skip: undefined,
     });
@@ -318,6 +321,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: ITEMS_PER_PAGE,
       skip: ITEMS_PER_PAGE * (page - 1),
     });
@@ -386,6 +390,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: undefined,
       skip: undefined,
     });
@@ -431,6 +436,7 @@ describe("Workspace Service", () => {
         organizationId,
       },
       select: expect.any(Object),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       take: ITEMS_PER_PAGE,
       skip: ITEMS_PER_PAGE * (page - 1),
     });

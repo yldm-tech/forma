@@ -1,12 +1,5 @@
-import { describe, expect, test, vi } from "vitest";
-import { responses } from "@/lib/api/response";
+import { describe, expect, test } from "vitest";
 import { extractAuthToken } from "./utils";
-
-vi.mock("@/lib/api/response", () => ({
-  responses: {
-    unauthorizedResponse: vi.fn().mockReturnValue(new Error("Unauthorized")),
-  },
-}));
 
 describe("extractAuthToken", () => {
   test("extracts token from Authorization header with Bearer prefix", () => {
@@ -49,39 +42,41 @@ describe("extractAuthToken", () => {
     expect(token).toBe("headerToken");
   });
 
-  test("throws unauthorized error when no token is found", () => {
+  test("returns null when no token is found", () => {
     const mockRequest = new Request("https://example.com");
 
-    expect(() => extractAuthToken(mockRequest)).toThrow("Unauthorized");
-    expect(responses.unauthorizedResponse).toHaveBeenCalled();
+    expect(extractAuthToken(mockRequest)).toBeNull();
   });
 
-  test("throws unauthorized error when Authorization header is empty", () => {
+  test("returns null when Authorization header is empty", () => {
     const mockRequest = new Request("https://example.com", {
       headers: {
         authorization: "",
       },
     });
 
-    expect(() => extractAuthToken(mockRequest)).toThrow("Unauthorized");
-    expect(responses.unauthorizedResponse).toHaveBeenCalled();
+    expect(extractAuthToken(mockRequest)).toBeNull();
   });
 
-  test("throws unauthorized error when query parameter is empty", () => {
+  test("returns null when query parameter is empty", () => {
     const mockRequest = new Request("https://example.com?access_token=");
 
-    expect(() => extractAuthToken(mockRequest)).toThrow("Unauthorized");
-    expect(responses.unauthorizedResponse).toHaveBeenCalled();
+    expect(extractAuthToken(mockRequest)).toBeNull();
   });
 
-  test("handles Authorization header with only prefix", () => {
+  test("returns null when Authorization header carries only a prefix", () => {
     const mockRequest = new Request("https://example.com", {
       headers: {
         authorization: "Bearer ",
       },
     });
 
-    expect(() => extractAuthToken(mockRequest)).toThrow("Unauthorized");
-    expect(responses.unauthorizedResponse).toHaveBeenCalled();
+    expect(extractAuthToken(mockRequest)).toBeNull();
+  });
+
+  test("never throws a Response, which Next.js would surface as a 500 instead of a 401", () => {
+    const mockRequest = new Request("https://example.com");
+
+    expect(() => extractAuthToken(mockRequest)).not.toThrow();
   });
 });

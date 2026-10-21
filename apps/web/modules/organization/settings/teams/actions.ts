@@ -23,7 +23,6 @@ import { getBulkInvitePermission, getIsMultiOrgEnabled } from "@/modules/license
 import {
   deleteMembership,
   getMembershipsByUserId,
-  getOrganizationOwnerCount,
 } from "@/modules/organization/settings/teams/lib/membership";
 import { assertCanManageOrganizationUsers } from "@/modules/organization/settings/teams/lib/user-management-access";
 import { ZInvitees } from "@/modules/organization/settings/teams/types/invites";
@@ -144,18 +143,11 @@ export const deleteMembershipAction = authenticatedActionClient.inputSchema(ZDel
       throw new OperationNotAllowedError("You cannot delete the owner of the organization");
     }
 
-    if (isOwner) {
-      const ownerCount = await getOrganizationOwnerCount(parsedInput.organizationId);
-
-      if (ownerCount <= 1) {
-        throw new ValidationError("You cannot delete the last owner of the organization");
-      }
-    }
-
     ctx.auditLoggingCtx.organizationId = parsedInput.organizationId;
     ctx.auditLoggingCtx.membershipId = `${parsedInput.userId}-${parsedInput.organizationId}`;
     ctx.auditLoggingCtx.oldObject = membership;
-    return await deleteMembership(parsedInput.userId, parsedInput.organizationId);
+    // The last-owner check lives inside deleteMembership's transaction: read-then-delete in two statements lets two concurrent removals of two different owners both see "more than one owner" and both commit.
+    return await deleteMembership(parsedInput.userId, parsedInput.organizationId, isOwner);
   })
 );
 

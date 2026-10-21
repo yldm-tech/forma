@@ -464,7 +464,11 @@ export const sendEmailCustomizationPreviewEmail = async (
   });
 };
 
-export const sendLinkSurveyToVerifiedEmail = async (data: TLinkSurveyEmailData): Promise<boolean> => {
+// `surveyName` sits outside TLinkSurveyEmailData on purpose: that type is the unauthenticated client payload,
+// and the name printed in the mail has to come from the survey row the caller cannot write.
+export const sendLinkSurveyToVerifiedEmail = async (
+  data: TLinkSurveyEmailData & { surveyName: string }
+): Promise<boolean> => {
   const surveyId = data.surveyId;
   const email = data.email;
   const surveyName = data.surveyName;

@@ -2,6 +2,7 @@ import { type Mock, type MockInstance, afterEach, beforeEach, describe, expect, 
 import { Config } from "@/lib/common/config";
 import { onFormaEvent, resetFormaEventSubscribers } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
+import { loadRecaptchaScript } from "@/lib/common/recaptcha";
 import type * as CommonUtils from "@/lib/common/utils";
 import { filterSurveys, getLanguageCode, shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
@@ -29,12 +30,29 @@ vi.mock("@/lib/common/logger", () => ({
   },
 }));
 
+// Stateful stand-in for TimeoutStack: the question these tests ask is what is left on the stack after
+// a delay fires, which a mock that only records calls cannot answer.
+const timeoutStackEntries: { event: string; timeoutId: number }[] = [];
+const mockTimeoutStack = {
+  add: vi.fn((event: string, timeoutId: number) => {
+    timeoutStackEntries.push({ event, timeoutId });
+  }),
+  remove: vi.fn((timeoutId: number) => {
+    const index = timeoutStackEntries.findIndex((entry) => entry.timeoutId === timeoutId);
+    if (index !== -1) timeoutStackEntries.splice(index, 1);
+  }),
+  getTimeouts: vi.fn(() => timeoutStackEntries),
+};
+
 vi.mock("@/lib/common/timeout-stack", () => ({
   TimeoutStack: {
-    getInstance: vi.fn(() => ({
-      add: vi.fn(),
-    })),
+    getInstance: vi.fn(() => mockTimeoutStack),
   },
+}));
+
+vi.mock("@/lib/common/recaptcha", () => ({
+  loadRecaptchaScript: vi.fn().mockResolvedValue(undefined),
+  executeRecaptcha: vi.fn().mockResolvedValue("token"),
 }));
 
 vi.mock("@/lib/common/utils", async (importOriginal) => {
@@ -88,6 +106,7 @@ describe("widget-file", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    timeoutStackEntries.length = 0;
     document.body.innerHTML = "";
     delete window.formaSurveys;
 
@@ -1275,6 +1294,91 @@ describe("widget-file", () => {
 
       expect(mockUpdateQueue.updateUserId).not.toHaveBeenCalled();
       expect(mockUpdateQueue.processUpdates).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("delay timeout and reCAPTCHA bookkeeping", () => {
+    const buildConfigMock = (recaptchaSiteKey?: string): { get: Mock; update: Mock } => ({
+      get: vi.fn().mockReturnValue({
+        appUrl: "https://fake.app",
+        workspaceId: "env_123",
+        workspace: {
+          data: {
+            recaptchaSiteKey,
+            settings: {
+              clickOutsideClose: true,
+              overlay: "none",
+              placement: "bottomRight",
+              inAppSurveyBranding: true,
+            },
+          },
+        },
+        user: {
+          data: {
+            userId: "user_abc",
+            contactId: "contact_abc",
+            displays: [],
+            responses: [],
+            lastDisplayAt: null,
+            language: "en",
+          },
+        },
+      }),
+      update: vi.fn(),
+    });
+
+    test("removes the scheduled timeout from the stack once the delay has fired", async () => {
+      getInstanceConfigMock.mockReturnValue(buildConfigMock() as unknown as Config);
+      (filterSurveys as Mock).mockReturnValue([]);
+      widget.setIsSurveyRunning(false);
+      window.formaSurveys = createMockFormaSurveys();
+
+      vi.useFakeTimers();
+
+      await widget.renderWidget(mockSurvey, "visited-pricing");
+
+      // Still pending: a route change away from the matching URL is entitled to cancel it.
+      expect(mockTimeoutStack.getTimeouts()).toHaveLength(1);
+
+      vi.advanceTimersByTime(mockSurvey.delay * 1000);
+
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalled();
+      // Rendered, so no longer cancellable. A stale entry here is what makes a later checkPageUrl
+      // release isSurveyRunning under a live survey.
+      expect(mockTimeoutStack.getTimeouts()).toEqual([]);
+
+      vi.useRealTimers();
+    });
+
+    test("releases isSurveyRunning when the reCAPTCHA script fails to load", async () => {
+      getInstanceConfigMock.mockReturnValue(buildConfigMock("site_key_123") as unknown as Config);
+      (filterSurveys as Mock).mockReturnValue([]);
+      widget.setIsSurveyRunning(false);
+      window.formaSurveys = createMockFormaSurveys();
+
+      vi.mocked(loadRecaptchaScript).mockRejectedValueOnce(new Error("Error loading reCAPTCHA script"));
+
+      vi.useFakeTimers();
+
+      // Resolves rather than rejecting: an unhandled rejection here left isSurveyRunning true.
+      await expect(
+        widget.renderWidget({
+          ...mockSurvey,
+          delay: 0,
+          recaptcha: { enabled: true, threshold: 0.5 },
+        })
+      ).resolves.toBeUndefined();
+
+      vi.advanceTimersByTime(0);
+      expect(getFormaSurveys().renderSurvey).not.toHaveBeenCalled();
+
+      // The guard is honest again, so the next trigger is not skipped for the rest of the session.
+      await widget.renderWidget({ ...mockSurvey, delay: 0 });
+      vi.advanceTimersByTime(0);
+
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
     });
   });
 });

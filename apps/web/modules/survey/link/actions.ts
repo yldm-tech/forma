@@ -35,6 +35,9 @@ export const sendLinkSurveyEmailAction = actionClient
     await sendLinkSurveyToVerifiedEmail({
       ...parsedInput,
       surveyLanguageCode,
+      // The name is read off the row loaded above rather than taken from the payload. The caller is
+      // unauthenticated, and this string is printed verbatim in a mail sent from the operator's domain.
+      surveyName: survey.name,
       logoUrl: organizationLogoUrl || "",
     });
     return { success: true };

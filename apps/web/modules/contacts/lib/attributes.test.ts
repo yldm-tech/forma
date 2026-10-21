@@ -31,7 +31,7 @@ vi.mock("@forma/database", () => ({
   prisma: {
     $transaction: vi.fn(),
     contactAttribute: { upsert: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
-    contactAttributeKey: { create: vi.fn() },
+    contactAttributeKey: { create: vi.fn(), createMany: vi.fn(), findMany: vi.fn() },
   },
 }));
 
@@ -86,6 +86,8 @@ describe("updateAttributes", () => {
     vi.mocked(hasUserIdAttribute).mockResolvedValue(false);
     vi.mocked(prisma.contactAttribute.deleteMany).mockResolvedValue({ count: 0 });
     vi.mocked(prisma.$transaction).mockResolvedValue(undefined);
+    vi.mocked(prisma.contactAttributeKey.createMany).mockResolvedValue({ count: 0 });
+    vi.mocked(prisma.contactAttributeKey.findMany).mockResolvedValue([]);
   });
 
   test("updates existing attributes", async () => {
@@ -242,7 +244,7 @@ describe("updateAttributes", () => {
           "Reserved attribute key(s): user_id. These keys are reserved for the v5.1 safe-identifier default attribute migration and cannot be created as custom attributes.",
       },
     });
-    expect(prisma.contactAttributeKey.create).not.toHaveBeenCalled();
+    expect(prisma.contactAttributeKey.createMany).not.toHaveBeenCalled();
   });
 
   test("returns success with only email attribute", async () => {
@@ -530,15 +532,52 @@ describe("updateAttributes", () => {
     test("creates new attribute keys in key order regardless of payload key order", async () => {
       vi.mocked(getContactAttributeKeys).mockResolvedValue([]);
       vi.mocked(getContactAttributes).mockResolvedValue({});
-      vi.mocked(prisma.contactAttributeKey.create).mockResolvedValue(undefined as never);
 
       const result = await updateAttributes(contactId, userId, workspaceId, { zeta: "1", alpha: "2" });
 
       expect(result.success).toBe(true);
-      const createdKeys = vi
-        .mocked(prisma.contactAttributeKey.create)
-        .mock.calls.map(([args]) => args.data.key);
+      const [createManyArgs] = vi.mocked(prisma.contactAttributeKey.createMany).mock.calls[0];
+      const createdKeys = (
+        Array.isArray(createManyArgs?.data) ? createManyArgs.data : [createManyArgs?.data]
+      ).map((entry) => entry?.key);
       expect(createdKeys).toEqual(["alpha", "zeta"]);
+    });
+
+    test("skips duplicates instead of failing when a concurrent identify created the same new key", async () => {
+      // `getContactAttributeKeys` is a per-request cache, so a concurrent identify introducing the
+      // same brand-new key is invisible here: both requests see it as new. A plain `create` made the
+      // loser violate @@unique([key, workspaceId]) with P2002, which the deadlock retry does not
+      // cover, so the whole request 500ed and the widget got no person state.
+      vi.mocked(getContactAttributeKeys).mockResolvedValue([]);
+      vi.mocked(getContactAttributes).mockResolvedValue({});
+
+      const result = await updateAttributes(contactId, userId, workspaceId, { plan: "pro" });
+
+      expect(result.success).toBe(true);
+      expect(prisma.contactAttributeKey.create).not.toHaveBeenCalled();
+      const [createManyArgs] = vi.mocked(prisma.contactAttributeKey.createMany).mock.calls[0];
+      expect(createManyArgs?.skipDuplicates).toBe(true);
+    });
+
+    test("writes the attribute row against the key the winning identify created", async () => {
+      // The loser's createMany inserted nothing, so the contact's value only lands if the key ids are
+      // read back afterwards rather than taken from what this request inserted.
+      vi.mocked(getContactAttributeKeys).mockResolvedValue([]);
+      vi.mocked(getContactAttributes).mockResolvedValue({});
+      vi.mocked(prisma.contactAttributeKey.createMany).mockResolvedValue({ count: 0 });
+      vi.mocked(prisma.contactAttributeKey.findMany).mockResolvedValue([
+        { id: "key-plan", key: "plan" },
+      ] as never);
+
+      const result = await updateAttributes(contactId, userId, workspaceId, { plan: "pro" });
+
+      expect(result.success).toBe(true);
+      expect(prisma.contactAttribute.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { contactId_attributeKeyId: { contactId, attributeKeyId: "key-plan" } },
+          create: expect.objectContaining({ contactId, attributeKeyId: "key-plan", value: "pro" }),
+        })
+      );
     });
   });
 });

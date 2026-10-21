@@ -9,6 +9,9 @@ export const GET = async (req: Request) => {
   }
   const { oauthController } = jacksonInstance;
   const token = extractAuthToken(req);
+  if (!token) {
+    return responses.unauthorizedResponse();
+  }
 
   const user = await oauthController.userInfo(token);
 

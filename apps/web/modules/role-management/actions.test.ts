@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { OperationNotAllowedError, ValidationError } from "@forma/types/errors";
-import { updateMembershipAction } from "./actions";
+import { updateInviteAction, updateMembershipAction } from "./actions";
 
 const mocks = vi.hoisted(() => ({
   applyRateLimit: vi.fn(),
@@ -8,9 +8,12 @@ const mocks = vi.hoisted(() => ({
   can: vi.fn(),
   checkAuthorizationUpdated: vi.fn(),
   getAccessControlPermission: vi.fn(),
+  getInviteRole: vi.fn(),
   getMembershipByUserIdOrganizationId: vi.fn(),
   getOrganization: vi.fn(),
+  getOrganizationIdFromInviteId: vi.fn(),
   getOrganizationOwnerCount: vi.fn(),
+  updateInvite: vi.fn(),
   updateMembership: vi.fn(),
 }));
 
@@ -59,7 +62,7 @@ vi.mock("@/lib/utils/action-client/action-client-middleware", () => ({
 }));
 
 vi.mock("@/lib/utils/helper", () => ({
-  getOrganizationIdFromInviteId: vi.fn(),
+  getOrganizationIdFromInviteId: mocks.getOrganizationIdFromInviteId,
 }));
 
 vi.mock("@/modules/audit-logs/lib/handler", () => ({
@@ -71,15 +74,12 @@ vi.mock("@/modules/license-check/lib/utils", () => ({
 }));
 
 vi.mock("@/modules/role-management/lib/invite", () => ({
-  updateInvite: vi.fn(),
+  getInviteRole: mocks.getInviteRole,
+  updateInvite: mocks.updateInvite,
 }));
 
 vi.mock("@/modules/role-management/lib/membership", () => ({
   updateMembership: mocks.updateMembership,
-}));
-
-vi.mock("@/modules/organization/settings/teams/lib/invite", () => ({
-  getInvite: vi.fn(),
 }));
 
 vi.mock("@/modules/organization/settings/teams/lib/membership", () => ({
@@ -156,5 +156,61 @@ describe("updateMembershipAction", () => {
 
     await expect(callUpdateMembership("member")).rejects.toThrow(OperationNotAllowedError);
     expect(mocks.updateMembership).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateInviteAction", () => {
+  const inviteId = "2f3a1c4e-8d5b-4f7a-9c1e-6b0d2a8f4e31";
+
+  let auditLoggingCtx: Record<string, unknown>;
+
+  const callUpdateInvite = (role: string) => {
+    auditLoggingCtx = {};
+    return updateInviteAction({
+      ctx: { user: { id: currentUserId, locale: "en-US" }, auditLoggingCtx },
+      parsedInput: { inviteId, data: { role } },
+    } as unknown as Parameters<typeof updateInviteAction>[0]);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mocks.applyRateLimit.mockResolvedValue(undefined);
+    mocks.assertCan.mockResolvedValue(undefined);
+    mocks.can.mockResolvedValue(true);
+    mocks.getAccessControlPermission.mockResolvedValue(true);
+    mocks.getOrganization.mockResolvedValue({ id: organizationId });
+    mocks.getOrganizationIdFromInviteId.mockResolvedValue(organizationId);
+    mocks.getMembershipByUserIdOrganizationId.mockImplementation(async (userId: string) =>
+      membership(userId, "owner")
+    );
+    mocks.getInviteRole.mockResolvedValue("member");
+    mocks.updateInvite.mockResolvedValue(true);
+  });
+
+  // The snapshots used to come from `getInvite`, which selects only `email` and the creator's name and is `reactCache`d — so both sides of the update were the same object without a role in it, the diff came out empty, and an escalation to owner left no trace in the audit trail.
+  test("records the role on both sides of the change so the diff is not empty", async () => {
+    await expect(callUpdateInvite("owner")).resolves.toBe(true);
+
+    expect(mocks.getInviteRole).toHaveBeenCalledWith(inviteId);
+    expect(auditLoggingCtx.oldObject).toEqual({ role: "member" });
+    expect(auditLoggingCtx.newObject).toEqual({ role: "owner" });
+  });
+
+  // The pre-update read has to happen before the write, or it reports the role the invite was just given.
+  test("reads the previous role before the invite is updated", async () => {
+    const order: string[] = [];
+    mocks.getInviteRole.mockImplementation(async () => {
+      order.push("read");
+      return "member";
+    });
+    mocks.updateInvite.mockImplementation(async () => {
+      order.push("write");
+      return true;
+    });
+
+    await callUpdateInvite("manager");
+
+    expect(order).toEqual(["read", "write"]);
   });
 });

@@ -1369,6 +1369,20 @@ export const ensureStripeCustomerForOrganization = async (
     return { customerId: null };
   }
 
+  // An organization that already has a Stripe customer keeps it. "ensure" means exactly that: nothing
+  // here may repoint a billing row at a second customer. The idempotency key below only covers the
+  // first 24h, after which a retry (retryStripeSetupAction reaches this whatever the UI shows) would
+  // create a fresh customer, while the paid subscription stays on the original one and keeps charging
+  // the card with no row pointing at it.
+  const existingBilling = await prisma.organizationBilling.findUnique({
+    where: { organizationId },
+    select: { stripeCustomerId: true },
+  });
+
+  if (existingBilling?.stripeCustomerId) {
+    return { customerId: existingBilling.stripeCustomerId };
+  }
+
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
     select: { id: true, name: true },
@@ -1406,9 +1420,12 @@ export const ensureStripeCustomerForOrganization = async (
       usageCycleAnchor: defaultBilling.usageCycleAnchor,
       stripe: { plan: "hobby", lastSyncedAt: new Date().toISOString() },
     },
+    // Only the customer id, never the snapshot: overwriting `stripe` here would drop subscriptionId,
+    // hasPaymentMethod, interval, pendingChange and trialEnd, and stamping a fresh lastSyncedAt would
+    // make the wiped snapshot look current to isSnapshotStale for BILLING_SYNC_STALE_MS. The caller's
+    // syncOrganizationBillingFromStripe writes the snapshot from Stripe right after this.
     update: {
       stripeCustomerId: customer.id,
-      stripe: { plan: "hobby", lastSyncedAt: new Date().toISOString() },
     },
   });
 

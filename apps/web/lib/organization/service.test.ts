@@ -223,6 +223,8 @@ describe("Organization Service", () => {
           id: { in: ["org1"] },
         },
         select: expect.any(Object),
+        // Callers index into this list as if it were ordered, so the query has to be.
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       });
     });
 

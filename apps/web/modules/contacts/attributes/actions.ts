@@ -62,6 +62,7 @@ export const createContactAttributeKeyAction = authenticatedActionClient
         dataType: parsedInput.dataType,
       });
 
+      ctx.auditLoggingCtx.contactAttributeKeyId = contactAttributeKey.id;
       ctx.auditLoggingCtx.newObject = contactAttributeKey;
 
       capturePostHogEvent(
@@ -105,6 +106,7 @@ export const updateContactAttributeKeyAction = authenticatedActionClient
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
+      ctx.auditLoggingCtx.contactAttributeKeyId = parsedInput.id;
       ctx.auditLoggingCtx.oldObject = existingKey;
 
       const updatedKey = await updateContactAttributeKey(parsedInput.id, {
@@ -142,6 +144,7 @@ export const deleteContactAttributeKeyAction = authenticatedActionClient
       await applyRateLimit(rateLimitConfigs.actions.stateMutation, workspaceId);
 
       ctx.auditLoggingCtx.organizationId = organizationId;
+      ctx.auditLoggingCtx.contactAttributeKeyId = parsedInput.id;
       ctx.auditLoggingCtx.oldObject = existingKey;
 
       const deletedKey = await deleteContactAttributeKey(parsedInput.id);

@@ -3,11 +3,13 @@
 import { z } from "zod";
 import { logger } from "@forma/logger";
 import { OperationNotAllowedError } from "@forma/types/errors";
+import { TUserNotificationSettings } from "@forma/types/user";
 import { IS_FORMA_CLOUD } from "@/lib/constants";
 import { getHasNoOrganizations } from "@/lib/instance/service";
 import { createMembership } from "@/lib/membership/service";
 import { createOrganization } from "@/lib/organization/service";
 import { capturePostHogEvent, getEmailDomain, groupIdentifyPostHog } from "@/lib/posthog";
+import { updateUser } from "@/lib/user/service";
 import { authenticatedActionClient } from "@/lib/utils/action-client";
 import { DEFAULT_WORKSPACE_NAME } from "@/lib/workspace/constants";
 import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
@@ -82,6 +84,21 @@ export const createOrganizationAction = authenticatedActionClient
         },
         { organizationId: newOrganization.id, workspaceId: newWorkspace.id }
       );
+
+      // Every other organization-creation path (org switcher, sign-up, SSO provisioning) opts the creator out of per-response alerts for the organization they just made. Without this the first-run admin is the only one who gets an email per survey response.
+      const updatedNotificationSettings: TUserNotificationSettings = {
+        ...ctx.user.notificationSettings,
+        alert: {
+          ...ctx.user.notificationSettings?.alert,
+        },
+        unsubscribedOrganizationIds: Array.from(
+          new Set([...(ctx.user.notificationSettings?.unsubscribedOrganizationIds ?? []), newOrganization.id])
+        ),
+      };
+
+      await updateUser(ctx.user.id, {
+        notificationSettings: updatedNotificationSettings,
+      });
 
       return newOrganization;
     })

@@ -21,10 +21,9 @@ import { withAuditLogging } from "@/modules/audit-logs/lib/handler";
 import { applyRateLimit } from "@/modules/core/rate-limit/helpers";
 import { rateLimitConfigs } from "@/modules/core/rate-limit/rate-limit-configs";
 import { getAccessControlPermission } from "@/modules/license-check/lib/utils";
-import { getInvite } from "@/modules/organization/settings/teams/lib/invite";
 import { getOrganizationOwnerCount } from "@/modules/organization/settings/teams/lib/membership";
 import { assertCanManageOrganizationUsers } from "@/modules/organization/settings/teams/lib/user-management-access";
-import { updateInvite } from "@/modules/role-management/lib/invite";
+import { getInviteRole, updateInvite } from "@/modules/role-management/lib/invite";
 import { updateMembership } from "@/modules/role-management/lib/membership";
 import { ZInviteUpdateInput } from "@/modules/role-management/types/invites";
 
@@ -76,11 +75,12 @@ export const updateInviteAction = authenticatedActionClient.inputSchema(ZUpdateI
 
     ctx.auditLoggingCtx.organizationId = organizationId;
     ctx.auditLoggingCtx.inviteId = parsedInput.inviteId;
-    ctx.auditLoggingCtx.oldObject = { ...(await getInvite(parsedInput.inviteId)) };
+    // `role` is the only field this action can change, so it is the only one the audit entry needs — and the only one the snapshots must actually contain, or the diff comes out empty and a privilege escalation leaves no trace.
+    ctx.auditLoggingCtx.oldObject = { role: await getInviteRole(parsedInput.inviteId) };
 
     const result = await updateInvite(parsedInput.inviteId, parsedInput.data);
 
-    ctx.auditLoggingCtx.newObject = { ...(await getInvite(parsedInput.inviteId)) };
+    ctx.auditLoggingCtx.newObject = { role: parsedInput.data.role };
     return result;
   })
 );
