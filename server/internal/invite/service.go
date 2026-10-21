@@ -44,6 +44,7 @@ const (
 	CodeInviteNotFound    = "invite_not_found"
 	CodeInviteExpired     = "invite_expired"
 	CodeEmailMismatch     = "email_does_not_match"
+	CodeEmailSendFailed   = "email_send_failed"
 	// failureUnknown is a bulk invitee that failed for any other reason.
 	failureUnknown = "unknown"
 )
@@ -529,7 +530,7 @@ func (s *Service) Delete(ctx context.Context, userID, inviteID uuid.UUID) (err e
 	return nil
 }
 
-// Resend mails a fresh link and gives the invite another seven days. Every earlier link stops working, which forma2's signed links could not do. A mail failure fails the request, as in forma2.
+// Resend mails a fresh link and gives the invite another seven days. Every earlier link stops working, which forma2's signed links could not do. A mail failure fails the request, as in forma2, after the invite was refreshed; the share link still reaches the invitee.
 func (s *Service) Resend(ctx context.Context, userID, organizationID, inviteID uuid.UUID) (resent *Invite, err error) {
 	ev := audit.Event{Action: audit.ActionUpdated, TargetType: audit.TargetInvite, TargetID: inviteID.String(), OrganizationID: organizationID.String()}
 	defer func() { s.record(ctx, ev, err) }()
@@ -595,7 +596,8 @@ func (s *Service) Resend(ctx context.Context, userID, organizationID, inviteID u
 		name = *resent.Name
 	}
 	if err := s.sendInvite(ctx, inviter, resent.Email, name, token); err != nil {
-		return nil, err
+		s.log.ErrorContext(ctx, "Failed to resend invite email", "err", err, "inviteId", inviteID.String())
+		return nil, apperr.InvalidInput(CodeEmailSendFailed, "Failed to send email")
 	}
 	return resent, nil
 }
