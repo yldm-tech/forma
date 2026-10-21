@@ -1,4 +1,4 @@
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { type QueryClient, hashKey, queryOptions } from "@tanstack/react-query";
 import { ApiError, api } from "../../lib/api";
 
 // The /api/app/auth and invite endpoints the signed-out screens call (server/internal/auth/handler.go, sso_handler.go, twofactor_handler.go and server/internal/invite/handler.go).
@@ -72,9 +72,9 @@ export const authOptionsQuery = queryOptions({
   queryFn: ({ signal }) => api.get<AuthOptions>("/api/app/auth/options", { signal }),
 });
 
-/** Drops the cached session after anything that signs the browser in or out, so the next guard asks the server again. */
+/** Drops everything cached for the previous session after anything that signs the browser in or out, so the next guard asks the server again and no screen shows another user's data: the shell's own copy of GET /api/app/auth/me and every organization and workspace query go too. Only the instance's sign-in options outlive it. */
 export const resetSession = (queryClient: QueryClient) =>
-  queryClient.removeQueries({ queryKey: authKeys.session });
+  queryClient.removeQueries({ predicate: (query) => query.queryHash !== hashKey(authKeys.options) });
 
 export const authApi = {
   signIn: (email: string, password: string) =>
