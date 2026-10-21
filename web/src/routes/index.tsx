@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { getJSON } from "../lib/api";
+import { api } from "../lib/api";
 
 interface Readiness {
   status: "ok" | "error";
@@ -9,7 +9,7 @@ interface Readiness {
 
 const readinessQuery = queryOptions({
   queryKey: ["health", "ready"],
-  queryFn: ({ signal }) => getJSON<Readiness>("/health/ready", signal),
+  queryFn: ({ signal }) => api.get<Readiness>("/health/ready", { signal }),
   retry: false,
 });
 

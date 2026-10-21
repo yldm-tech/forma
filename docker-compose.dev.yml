@@ -1,4 +1,4 @@
-# Local dependencies for `make dev`. Services are added here as the modules that need them land (Valkey with sessions in P1, SpiceDB with authorization in P1).
+# Local dependencies for `make dev-server` and `make dev-worker`. Services are added here as the modules that need them land (SpiceDB with authorization in P1).
 services:
   postgres:
     image: postgres:18
@@ -16,6 +16,17 @@ services:
       timeout: 3s
       retries: 30
       start_period: 10s
+
+  # Rate-limit counters. Same version the Go tests run (server/internal/platform/valkey/valkeytest).
+  valkey:
+    image: valkey/valkey:8.1
+    ports:
+      - ${VALKEY_PORT:-6379}:6379
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
 volumes:
   postgres:

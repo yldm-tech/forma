@@ -1,15 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { I18nextProvider } from "react-i18next";
 import "./index.css";
+import { initI18n, matchLocale } from "./lib/i18n";
+import { createQueryClient } from "./lib/query-client";
 import { routeTree } from "./routeTree.gen";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 30_000, retry: 1 },
-  },
-});
+const queryClient = createQueryClient();
 
 const router = createRouter({
   routeTree,
@@ -29,10 +28,18 @@ declare module "@tanstack/react-router" {
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("#root element missing from index.html");
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>
-);
+// The catalogue loads before the first render so no screen ever shows raw keys. The browser's languages pick it until the signed-in user's saved locale is known (see changeLocale).
+const bootstrap = async () => {
+  const i18n = await initI18n(matchLocale(navigator.languages));
+  createRoot(rootElement).render(
+    <StrictMode>
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </I18nextProvider>
+    </StrictMode>
+  );
+};
+
+void bootstrap();
