@@ -47,14 +47,13 @@ const (
 	callbackInvalidCode        = "invalid_code"
 	callbackNoUserInfo         = "unable_to_get_user_info"
 	callbackEmailNotFound      = "email_not_found"
-	callbackAccountNotLinked   = "account_not_linked"
 	callbackCreateFailed       = "unable_to_create_user"
 	callbackProviderNotFound   = "oauth_provider_not_found"
 	callbackTooManyRequests    = "too_many_requests"
 	callbackOAuthProviderError = "oauth_provider_error"
 )
 
-// CodeAccountNotLinked is the error of a recovery link that can no longer link its identity, forma2's OAuthAccountNotLinked.
+// CodeAccountNotLinked is forma2's OAuthAccountNotLinked: an identity that could not be linked to the account with its address, reported by the callback when recovery cannot start and by a recovery link that can no longer link.
 const CodeAccountNotLinked = "account_not_linked"
 
 func errProviderNotFound() error {
@@ -339,7 +338,7 @@ func (s *SSO) startRecovery(ctx context.Context, acc *account, provider string, 
 	fail := func(reason string, err error) callbackResult {
 		s.log.ErrorContext(ctx, "Failed to start SSO recovery", "err", err, "userId", acc.ID.String(), "provider", provider)
 		s.auditRecovery(ctx, audit.ActionSSORecoveryFailed, audit.StatusFailure, acc.ID.String(), withReason(details, reason))
-		return s.failure(callbackAccountNotLinked)
+		return s.failure(CodeAccountNotLinked)
 	}
 	if err := s.svc.limiter.ApplyIP(ctx, ratelimit.BASSORecovery); err != nil {
 		return s.failure(callbackTooManyRequests)

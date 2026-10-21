@@ -1,4 +1,4 @@
-// Package auth is the credential identity module: sign-up, email verification, sign-in and sign-out, browser sessions, password reset and change, email change and account deletion, with forma2's rules (apps/web/modules/auth, modules/account, and the Better Auth configuration they ran on).
+// Package auth is the identity module: sign-up, email verification, sign-in and sign-out, browser sessions, password reset and change, email change and account deletion, and single sign-on through Google, GitHub, Azure AD and OpenID Connect, with forma2's rules (apps/web/modules/auth, modules/account, modules/sso, and the Better Auth configuration they ran on).
 package auth
 
 import (
