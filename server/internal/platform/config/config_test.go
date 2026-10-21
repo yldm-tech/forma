@@ -53,6 +53,46 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.SMTPConfigured() {
 		t.Error("SMTPConfigured() = true without SMTP_HOST and SMTP_PORT")
 	}
+	if cfg.PasswordResetTokenLifetimeMinutes != 30 || cfg.SessionMaxAge != 86400 {
+		t.Errorf("reset lifetime %d min, session max age %d s; want 30 and 86400", cfg.PasswordResetTokenLifetimeMinutes, cfg.SessionMaxAge)
+	}
+	if cfg.EmailAuthDisabled || cfg.EmailVerificationDisabled || cfg.PasswordResetDisabled || cfg.PasswordHIBPCheckDisabled {
+		t.Error("an auth kill switch defaults to on")
+	}
+	if cfg.SignupEnabled() || cfg.TurnstileConfigured() || cfg.SecureCookies() {
+		t.Errorf("SignupEnabled %v, TurnstileConfigured %v, SecureCookies %v; want all false on a plain http self-hosted instance", cfg.SignupEnabled(), cfg.TurnstileConfigured(), cfg.SecureCookies())
+	}
+}
+
+func TestDerivedAuthSettings(t *testing.T) {
+	cases := []struct {
+		name      string
+		env       map[string]string
+		signup    bool
+		turnstile bool
+		secure    bool
+	}{
+		{"forma cloud", map[string]string{"IS_FORMA_CLOUD": "1"}, true, false, false},
+		{"e2e testing", map[string]string{"E2E_TESTING": "1"}, true, false, false},
+		{"turnstile needs both keys", map[string]string{"TURNSTILE_SITE_KEY": "site"}, false, false, false},
+		{"turnstile", map[string]string{"TURNSTILE_SITE_KEY": "site", "TURNSTILE_SECRET_KEY": "secret"}, false, true, false},
+		{"https web app", map[string]string{"WEBAPP_URL": "https://app.example.com"}, false, false, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			setRequired(t)
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			cfg, err := Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.SignupEnabled() != tc.signup || cfg.TurnstileConfigured() != tc.turnstile || cfg.SecureCookies() != tc.secure {
+				t.Fatalf("SignupEnabled %v, TurnstileConfigured %v, SecureCookies %v; want %v, %v, %v", cfg.SignupEnabled(), cfg.TurnstileConfigured(), cfg.SecureCookies(), tc.signup, tc.turnstile, tc.secure)
+			}
+		})
+	}
 }
 
 // An empty TRUSTED_PROXY_HOP_COUNT is what docker-compose and Helm render for an unset value; forma2 read it as unset (1) rather than as the "trust nothing" 0.
@@ -117,6 +157,10 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"mail from not email":  {"MAIL_FROM", "noreply"},
 		"relative privacy url": {"PRIVACY_URL", "/privacy"},
 		"negative concurrency": {"WORKER_CONCURRENCY", "-1"},
+		"reset lifetime short": {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "4"},
+		"reset lifetime long":  {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "121"},
+		"zero session max age": {"SESSION_MAX_AGE", "0"},
+		"session max age text": {"SESSION_MAX_AGE", "1d"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -65,6 +65,15 @@ type PasswordChanged struct{}
 func (PasswordChanged) template() string   { return "password_changed" }
 func (PasswordChanged) subjectKey() string { return "emails.password_reset_notify_email_subject" }
 
+// DeleteAccountConfirmation carries the link that confirms deleting an account that has no password to confirm with.
+type DeleteAccountConfirmation struct {
+	DeleteLink            string
+	LinkValidityInMinutes int
+}
+
+func (DeleteAccountConfirmation) template() string   { return "delete_account" }
+func (DeleteAccountConfirmation) subjectKey() string { return "emails.delete_account_email_subject" }
+
 // Invite asks InviteeName to join InviterName's organization.
 type Invite struct {
 	InviteeName string

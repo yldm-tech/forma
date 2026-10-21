@@ -47,6 +47,21 @@ var (
 	// ActionStateMutation is per organization or workspace: the shared guard for authenticated settings writes.
 	ActionStateMutation = Rule{Namespace: "action:state-mutation", Window: time.Minute, Limit: 120}
 
+	// Better Auth's per-path limits (apps/web/modules/auth/lib/auth.ts, rateLimit.customRules), all per client IP. They guarded the endpoints the browser called directly; the flows forma2 ran through server actions were limited by the rules above instead.
+	//
+	// BASignIn guards the password check of a sign-in.
+	BASignIn = Rule{Namespace: "ba:sign-in-email", Window: time.Minute, Limit: 5}
+	// BAVerifyEmail is deliberately generous: mail scanners prefetch links and corporate NAT puts many users behind one address, and the token itself is the authorization.
+	BAVerifyEmail = Rule{Namespace: "ba:verify-email", Window: time.Minute, Limit: 30}
+	// BATwoFactor guards second-factor attempts.
+	BATwoFactor = Rule{Namespace: "ba:two-factor", Window: time.Minute, Limit: 5}
+	// BADeleteUser bounds password guesses from a stolen session against account deletion.
+	BADeleteUser = Rule{Namespace: "ba:delete-user", Window: time.Hour, Limit: 5}
+	// BADeleteUserCallback guards redeeming an emailed account deletion link.
+	BADeleteUserCallback = Rule{Namespace: "ba:delete-user-callback", Window: time.Minute, Limit: 5}
+	// BAChangePassword guards the current-password check of a password change. Better Auth left /change-password on its global flood guard only; this applies the sign-in limit to the same password check.
+	BAChangePassword = Rule{Namespace: "ba:change-password", Window: time.Minute, Limit: 5}
+
 	StorageUpload             = Rule{Namespace: "storage:upload", Window: time.Minute, Limit: 5}
 	StorageUploadPerWorkspace = Rule{Namespace: "storage:upload:workspace", Window: time.Minute, Limit: 100}
 	StorageDelete             = Rule{Namespace: "storage:delete", Window: time.Minute, Limit: 5}

@@ -50,6 +50,7 @@ var everyTemplate = []mailer.Content{
 	mailer.PasswordChanged{},
 	mailer.Invite{InviteeName: "Grace", InviterName: "Ada", VerifyLink: "https://app.example.com/invite?token=i1"},
 	mailer.InviteAccepted{InviterName: "Ada", InviteeName: "Grace"},
+	mailer.DeleteAccountConfirmation{DeleteLink: "https://app.example.com/auth/delete-account?token=d1", LinkValidityInMinutes: 60},
 }
 
 var placeholder = regexp.MustCompile(`\{[A-Za-z]+\}`)
@@ -103,6 +104,12 @@ func TestRenderEnglishCopy(t *testing.T) {
 			"Hey Grace", "Your colleague Ada invited you to join them at Forma.", "Join organization", `href="https://app.example.com/invite?token=i1"`,
 		}},
 		{everyTemplate[5], "You have got a new organization member!", []string{"Hey Ada", "Just letting you know that Grace accepted your invitation."}},
+		{everyTemplate[6], "Confirm your Forma account deletion", []string{
+			"Confirm your account deletion", "You have requested to delete your Forma account. To confirm, please click the button below:",
+			"This will permanently delete your account and all associated data. This action cannot be undone.",
+			"Confirm account deletion", `href="https://app.example.com/auth/delete-account?token=d1"`, "The link is valid for 60 minutes.",
+			"If you did not request this, please ignore this email and your account will remain active.",
+		}},
 	}
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%T", tc.content), func(t *testing.T) {

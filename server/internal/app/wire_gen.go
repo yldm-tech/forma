@@ -9,6 +9,7 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -69,6 +70,10 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	handler := health.NewHandler(pinger, log)
+	repository := auth.NewRepository(db)
+	sessions := auth.NewSessions(cfg, db, log)
+	service := auth.NewService(cfg, repository, sessions, limiter, mailerMailer, emitter, client, log)
+	authHandler := auth.NewHandler(cfg, service, sessions)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -76,7 +81,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -104,7 +109,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	delivery := authz.NewDelivery(db, client, log)
 	authzAudit := authz.NewAudit(db, client, log)
-	registry := NewJobRegistry(log, delivery, authzAudit)
+	registry := NewJobRegistry(pool, log, delivery, authzAudit)
 	worker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup3()
@@ -123,3 +128,6 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, wire.Struct(new(Platform), "*"))
+
+// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewHandler)

@@ -68,6 +68,26 @@ type Config struct {
 	// UserManagementMinimumRole is the lowest organization role whose users may manage members and invites (owner, manager or disabled), forma2's USER_MANAGEMENT_MINIMUM_ROLE.
 	UserManagementMinimumRole string `env:"USER_MANAGEMENT_MINIMUM_ROLE" envDefault:"manager"`
 
+	// IsFormaCloud marks the hosted service: public sign-up is open and personal email domains are refused at sign-up.
+	IsFormaCloud bool `env:"IS_FORMA_CLOUD" envDefault:"0"`
+	// E2ETesting opens public sign-up for end-to-end test runs, as on Forma Cloud.
+	E2ETesting bool `env:"E2E_TESTING" envDefault:"0"`
+	// EmailAuthDisabled switches email and password sign-up and sign-in off, for SSO-only instances.
+	EmailAuthDisabled bool `env:"EMAIL_AUTH_DISABLED" envDefault:"0"`
+	// EmailVerificationDisabled lets unverified users sign in and applies email changes without confirmation. The verification mail is still sent at sign-up.
+	EmailVerificationDisabled bool `env:"EMAIL_VERIFICATION_DISABLED" envDefault:"0"`
+	// PasswordResetDisabled refuses every password reset request and redemption.
+	PasswordResetDisabled bool `env:"PASSWORD_RESET_DISABLED" envDefault:"0"`
+	// PasswordResetTokenLifetimeMinutes is how long a reset link stays valid, 5 to 120 minutes.
+	PasswordResetTokenLifetimeMinutes int `env:"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES" envDefault:"30"`
+	// PasswordHIBPCheckDisabled skips the Have I Been Pwned lookup when a password is set, for deployments that allow no egress.
+	PasswordHIBPCheckDisabled bool `env:"PASSWORD_HIBP_CHECK_DISABLED" envDefault:"0"`
+	// SessionMaxAge is a session's lifetime in seconds.
+	SessionMaxAge int `env:"SESSION_MAX_AGE" envDefault:"86400"`
+	// Cloudflare Turnstile protects sign-up only when both keys are set.
+	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
+	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -104,6 +124,21 @@ func (c Config) SMTPConfigured() bool {
 	return c.SMTPHost != "" && c.SMTPPort != ""
 }
 
+// SignupEnabled is forma2's SIGNUP_ENABLED: public sign-up is open on Forma Cloud and in end-to-end test runs. A self-hosted instance only admits its first user and invitees.
+func (c Config) SignupEnabled() bool {
+	return c.IsFormaCloud || c.E2ETesting
+}
+
+// TurnstileConfigured reports whether sign-up requires a Turnstile challenge.
+func (c Config) TurnstileConfigured() bool {
+	return c.TurnstileSiteKey != "" && c.TurnstileSecretKey != ""
+}
+
+// SecureCookies reports whether cookies get the Secure attribute and the __Secure- name prefix, which browsers only accept over HTTPS.
+func (c Config) SecureCookies() bool {
+	return c.WebAppURL != nil && c.WebAppURL.Scheme == "https"
+}
+
 // Load reads the environment. It fails on the first missing or malformed variable so a misconfigured pod never starts.
 func Load() (Config, error) {
 	cfg, err := env.ParseAsWithOptions[Config](parseOptions)
@@ -136,6 +171,12 @@ func (c Config) validate() error {
 	case "owner", "manager", "disabled":
 	default:
 		return fmt.Errorf("USER_MANAGEMENT_MINIMUM_ROLE must be owner, manager or disabled, got %q", c.UserManagementMinimumRole)
+	}
+	if c.PasswordResetTokenLifetimeMinutes < 5 || c.PasswordResetTokenLifetimeMinutes > 120 {
+		return fmt.Errorf("PASSWORD_RESET_TOKEN_LIFETIME_MINUTES must be between 5 and 120, got %d", c.PasswordResetTokenLifetimeMinutes)
+	}
+	if c.SessionMaxAge < 1 {
+		return fmt.Errorf("SESSION_MAX_AGE must be a positive number of seconds, got %d", c.SessionMaxAge)
 	}
 	if c.SMTPPort != "" {
 		if port, err := strconv.Atoi(c.SMTPPort); err != nil || port < 1 || port > 65535 {
