@@ -44,14 +44,14 @@ func (f fieldErrors) err() error {
 	return apperr.Validation(f)
 }
 
-// checkName validates a display name and returns it trimmed, as ZUserName's trim transform does.
-func checkName(errs *fieldErrors, field, name string) string {
+// checkName validates the request's "name" field as ZUserName does and returns it trimmed, as ZUserName's trim transform does.
+func checkName(errs *fieldErrors, name string) string {
 	name = strings.TrimSpace(name)
 	switch {
 	case name == "":
-		errs.add(field, "min", "1")
+		errs.add("name", "min", "1")
 	case !userinput.ValidNameFormat(name):
-		errs.add(field, "name_format", "")
+		errs.add("name", "name_format", "")
 	}
 	return name
 }

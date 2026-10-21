@@ -45,7 +45,7 @@ func TestCheckName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
 			var errs fieldErrors
-			got := checkName(&errs, "name", tc.in)
+			got := checkName(&errs, tc.in)
 			if got != tc.want || rulesOf(t, errs.err())["name"] != tc.rule {
 				t.Fatalf("checkName(%q) = %q, rules %v; want %q, rule %q", tc.in, got, rulesOf(t, errs.err()), tc.want, tc.rule)
 			}
