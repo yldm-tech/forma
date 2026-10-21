@@ -34,6 +34,13 @@ type Config struct {
 	// RedisURL points at Valkey, which holds the rate-limit counters. forma2 required it outside its test environment, and so does every forma process.
 	RedisURL string `env:"REDIS_URL,required,notEmpty"`
 
+	// EncryptionKey seals secrets stored at rest (two-factor secrets and backup codes). It has forma2's ENCRYPTION_KEY format, so an instance keeps the value it already has: 64 hex characters, or exactly 32 characters taken as Latin-1 bytes.
+	EncryptionKey EncryptionKey `env:"ENCRYPTION_KEY,required,notEmpty"`
+	// EncryptionKeyVersion is written in front of every value EncryptionKey seals, so the key can be rotated: give the new key a new version and move the old one to EncryptionPreviousKeys.
+	EncryptionKeyVersion int `env:"ENCRYPTION_KEY_VERSION" envDefault:"1"`
+	// EncryptionPreviousKeys are retired keys by version ("<version>:<key>,..."), still accepted to open what they sealed. A 32-character key that contains a comma must be given in hex.
+	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
+
 	// RateLimitingDisabled turns every rate limit into a no-op that allows the request.
 	RateLimitingDisabled bool `env:"RATE_LIMITING_DISABLED" envDefault:"0"`
 	// TrustedProxyHopCount is how many reverse proxies in front of the server append to X-Forwarded-For; the client address is the entry that many places from the right. 0 means no proxy: the address is the TCP peer. Setting it higher than the real chain lets a caller choose their own address by prepending entries.
@@ -166,6 +173,12 @@ func (c Config) validate() error {
 	}
 	if err := c.Authz.validate(); err != nil {
 		return err
+	}
+	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {
+		return fmt.Errorf("ENCRYPTION_KEY_VERSION must be between 1 and %d, got %d", MaxEncryptionKeyVersion, c.EncryptionKeyVersion)
+	}
+	if _, ok := c.EncryptionPreviousKeys[c.EncryptionKeyVersion]; ok {
+		return fmt.Errorf("ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", c.EncryptionKeyVersion)
 	}
 	switch c.UserManagementMinimumRole {
 	case "owner", "manager", "disabled":

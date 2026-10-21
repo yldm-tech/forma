@@ -1,4 +1,4 @@
-// Package secret holds the primitives for credentials the server issues or checks: opaque tokens stored only as hashes, and bcrypt for passwords.
+// Package secret holds the primitives for credentials the server issues or checks: opaque tokens stored only as hashes, bcrypt for passwords, AES-GCM for secrets kept at rest, and the decryptors for the values forma2 encrypted.
 package secret
 
 import (
