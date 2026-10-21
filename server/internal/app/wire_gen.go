@@ -8,36 +8,89 @@ package app
 
 import (
 	"context"
+	"github.com/google/wire"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"log/slog"
 )
 
 // Injectors from wire.go:
 
-// InitializeServer builds `forma serve`. The returned cleanup closes the database pool.
+// InitializeServer builds `forma serve`. The returned cleanup closes the database pool and the Valkey client.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
-	db, cleanup, err := database.Open(ctx, cfg, log)
+	clientIPResolver := httpapi.NewClientIPResolver(cfg, log)
+	client, cleanup, err := valkey.Open(ctx, cfg, log)
 	if err != nil {
+		return nil, nil, err
+	}
+	limiter := ratelimit.New(cfg, client, log)
+	mailerMailer, err := mailer.New(cfg, log)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	emitter := audit.New(cfg, log)
+	platform := &Platform{
+		Config:   cfg,
+		Log:      log,
+		ClientIP: clientIPResolver,
+		Limiter:  limiter,
+		Mailer:   mailerMailer,
+		Audit:    emitter,
+	}
+	db, cleanup2, err := database.Open(ctx, cfg, log)
+	if err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	pinger, err := health.NewDatabasePinger(db)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	handler := health.NewHandler(pinger, log)
 	webuiHandler, err := webui.New()
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(log, handler, webuiHandler)
+	engine := NewRouter(platform, handler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }
+
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's connection pool.
+func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
+	pool, cleanup, err := jobs.OpenPool(ctx, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	registry := jobs.NewRegistry(log)
+	worker, err := jobs.NewWorker(cfg, pool, registry, log)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return worker, func() {
+		cleanup()
+	}, nil
+}
+
+// wire.go:
+
+// platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
+var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, wire.Struct(new(Platform), "*"))

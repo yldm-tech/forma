@@ -15,7 +15,8 @@ func TestNewTokenIsUniqueAndURLSafe(t *testing.T) {
 		t.Fatalf("tokens %q %q: want two distinct 43-char tokens", a, b)
 	}
 	for _, c := range a {
-		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_') {
+		urlSafe := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_'
+		if !urlSafe {
 			t.Fatalf("token %q contains %q, not URL-safe", a, c)
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/logger"
 )
 
@@ -18,7 +19,8 @@ const usage = `usage: forma <command>
 
 commands:
   serve    run the HTTP server (API, public survey pages and the admin UI)
-  migrate  apply pending database migrations, then exit
+  worker   run background jobs and periodic tasks
+  migrate  apply pending database migrations (schema, then the job queue), then exit
 `
 
 func main() {
@@ -38,6 +40,8 @@ func run(args []string) int {
 	switch args[0] {
 	case "serve":
 		err = serve(ctx)
+	case "worker":
+		err = worker(ctx)
 	case "migrate":
 		err = migrate(ctx)
 	case "-h", "--help", "help":
@@ -59,7 +63,11 @@ func migrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return database.MigrateUp(ctx, cfg.DatabaseURL, logger.New(cfg, os.Stdout))
+	log := logger.New(cfg, os.Stdout)
+	if err := database.MigrateUp(ctx, cfg.DatabaseURL, log); err != nil {
+		return err
+	}
+	return jobs.Migrate(ctx, cfg.DatabaseURL, log)
 }
 
 func serve(ctx context.Context) error {
@@ -76,4 +84,20 @@ func serve(ctx context.Context) error {
 	defer cleanup()
 
 	return srv.Run(ctx)
+}
+
+func worker(ctx context.Context) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	log := logger.New(cfg, os.Stdout)
+
+	w, cleanup, err := app.InitializeWorker(ctx, cfg, log)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	return w.Run(ctx)
 }

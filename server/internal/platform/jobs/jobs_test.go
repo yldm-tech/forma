@@ -53,12 +53,12 @@ func startWorker(t *testing.T, cfg config.Config, pool *pgxpool.Pool, reg *jobs.
 	return cancel, done
 }
 
-func jobState(t *testing.T, pool *pgxpool.Pool, id int64) (state string, attempt int) {
+func jobState(t *testing.T, pool *pgxpool.Pool, id int64) (state string) {
 	t.Helper()
-	if err := pool.QueryRow(context.Background(), "SELECT state, attempt FROM river_job WHERE id = $1", id).Scan(&state, &attempt); err != nil {
+	if err := pool.QueryRow(context.Background(), "SELECT state FROM river_job WHERE id = $1", id).Scan(&state); err != nil {
 		t.Fatalf("read job %d: %v", id, err)
 	}
-	return state, attempt
+	return state
 }
 
 func waitFor(t *testing.T, what string, cond func() bool) {
@@ -108,7 +108,7 @@ func TestWorkerRunsTheTestLogJob(t *testing.T) {
 
 	id := insert(t, pool, jobs.TestLogArgs{Message: "hello from the test", Context: map[string]any{"k": "v"}})
 	waitFor(t, "the job to complete", func() bool {
-		state, _ := jobState(t, pool, id)
+		state := jobState(t, pool, id)
 		return state == "completed"
 	})
 }
@@ -192,7 +192,7 @@ func TestShutdownLetsRunningJobsFinish(t *testing.T) {
 
 	id := insert(t, pool, recordArgs{Note: "slow"})
 	waitFor(t, "the job to start", func() bool {
-		state, _ := jobState(t, pool, id)
+		state := jobState(t, pool, id)
 		return state == "running"
 	})
 	stop()
@@ -204,7 +204,7 @@ func TestShutdownLetsRunningJobsFinish(t *testing.T) {
 	case <-time.After(20 * time.Second):
 		t.Fatal("Run did not return after cancellation")
 	}
-	if state, _ := jobState(t, pool, id); state != "completed" {
+	if state := jobState(t, pool, id); state != "completed" {
 		t.Fatalf("job state after shutdown = %q, want completed", state)
 	}
 }

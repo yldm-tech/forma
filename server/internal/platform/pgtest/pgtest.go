@@ -68,7 +68,7 @@ func exec(dsn, statement string) error {
 		return err
 	}
 	defer func() { _ = db.Close() }()
-	_, err = db.Exec(statement)
+	_, err = db.ExecContext(context.Background(), statement)
 	return err
 }
 
