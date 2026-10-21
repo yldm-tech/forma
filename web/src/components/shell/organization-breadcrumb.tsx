@@ -1,0 +1,65 @@
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { Building2Icon, ChevronDownIcon, ChevronRightIcon, SettingsIcon } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { organizationSettingsPath, organizationSwitchPath, sortByName } from "../../lib/navigation";
+import { organizationsQuery } from "../../lib/queries/organizations";
+import { BreadcrumbItem } from "../ui/breadcrumb";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { SwitcherDropdownBody } from "./switcher-dropdown-body";
+
+/** forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens, and a link to its settings. */
+export const OrganizationBreadcrumb = ({
+  organizationId,
+  organizationName,
+  isLastCrumb,
+}: {
+  organizationId: string;
+  organizationName: string;
+  isLastCrumb: boolean;
+}) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const organizations = useQuery({ ...organizationsQuery, enabled: open });
+
+  return (
+    <BreadcrumbItem isActive={open}>
+      <DropdownMenu onOpenChange={setOpen}>
+        <DropdownMenuTrigger className="flex cursor-pointer items-center gap-1 outline-hidden">
+          <Building2Icon className="size-3" strokeWidth={1.5} />
+          <span>{organizationName}</span>
+          {open || isLastCrumb ? (
+            <ChevronDownIcon className="size-3" strokeWidth={1.5} />
+          ) : (
+            <ChevronRightIcon className="size-3" strokeWidth={1.5} />
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="mt-2">
+          <SwitcherDropdownBody
+            type="organization"
+            isLoading={organizations.isLoading}
+            isError={organizations.isError}
+            onRetry={() => void organizations.refetch()}
+            items={sortByName(organizations.data ?? [])}
+            selectedId={organizationId}
+            onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}
+          />
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            onSelect={() => void navigate({ href: organizationSettingsPath(organizationId, "general") })}>
+            <SettingsIcon className="mr-2 size-4" />
+            {t("common.settings")}
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </BreadcrumbItem>
+  );
+};

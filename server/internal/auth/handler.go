@@ -32,6 +32,9 @@ func (h *Handler) Register(r gin.IRouter) {
 	g := r.Group("/auth")
 	g.GET("/options", h.options)
 	g.GET("/me", h.sessions.Require(), h.me)
+	g.PATCH("/me", h.sessions.Require(), h.updateProfile)
+	g.GET("/me/notifications", h.sessions.Require(), h.notifications)
+	g.PATCH("/me/notifications", h.sessions.Require(), h.setNotification)
 	g.POST("/signup", h.signup)
 	g.POST("/sign-in", h.signIn)
 	g.POST("/sign-out", h.sessions.Optional(), h.signOut)
@@ -124,12 +127,7 @@ type meResponse struct {
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
 }
 
-func (h *Handler) me(c *gin.Context) {
-	acc, err := h.svc.currentAccount(c.Request.Context(), actor(c))
-	if err != nil {
-		httpapi.Fail(c, err)
-		return
-	}
+func newMeResponse(acc *account) meResponse {
 	res := meResponse{
 		ID: acc.ID, Name: acc.Name, Email: acc.Email, EmailVerified: acc.EmailVerified, Locale: acc.Locale,
 		IdentityProvider: acc.identityProvider(), TwoFactorEnabled: acc.TwoFactorEnabled, CreatedAt: acc.CreatedAt,
@@ -137,7 +135,83 @@ func (h *Handler) me(c *gin.Context) {
 	if acc.LastLoginAt.Valid {
 		res.LastLoginAt = &acc.LastLoginAt.Time
 	}
-	c.JSON(http.StatusOK, res)
+	return res
+}
+
+func (h *Handler) me(c *gin.Context) {
+	acc, err := h.svc.currentAccount(c.Request.Context(), actor(c))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, newMeResponse(acc))
+}
+
+// profileRequest is the name and language part of forma2's ZUserPersonalInfoUpdateInput; an absent field is left unchanged.
+type profileRequest struct {
+	Name   *string `json:"name"`
+	Locale *string `json:"locale"`
+}
+
+func (r *profileRequest) validate() error {
+	var errs fieldErrors
+	if r.Name != nil {
+		name := checkName(&errs, *r.Name)
+		r.Name = &name
+	}
+	if r.Locale != nil {
+		if *r.Locale == "" {
+			errs.add("locale", "required", "")
+		}
+		checkLocale(&errs, "locale", *r.Locale)
+	}
+	return errs.err()
+}
+
+func (h *Handler) updateProfile(c *gin.Context) {
+	req := &profileRequest{}
+	if !bind(c, req) {
+		return
+	}
+	acc, err := h.svc.updateProfile(c.Request.Context(), actor(c), profileChange(*req))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, newMeResponse(acc))
+}
+
+type notificationsResponse struct {
+	Organizations []NotificationOrganization `json:"organizations"`
+}
+
+func (h *Handler) notifications(c *gin.Context) {
+	orgs, err := h.svc.notifications(c.Request.Context(), actor(c))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, notificationsResponse{Organizations: orgs})
+}
+
+// notificationRequest switches one setting: type "alert" with a survey id, or "unsubscribedOrganizationIds" with an organization id, where enabled means the organization's new surveys alert the user.
+type notificationRequest struct {
+	Type    string    `json:"type" binding:"required,oneof=alert unsubscribedOrganizationIds"`
+	ID      uuid.UUID `json:"id" binding:"required"`
+	Enabled *bool     `json:"enabled" binding:"required"`
+}
+
+func (h *Handler) setNotification(c *gin.Context) {
+	var req notificationRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	if err := h.svc.setNotification(c.Request.Context(), actor(c), req.Type, req.ID, *req.Enabled); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 type signupRequest struct {
@@ -155,7 +229,7 @@ type signupRequest struct {
 
 func (r *signupRequest) validate() error {
 	var errs fieldErrors
-	r.Name = checkName(&errs, "name", r.Name)
+	r.Name = checkName(&errs, r.Name)
 	checkEmail(&errs, r.Email)
 	checkPassword(&errs, "password", r.Password)
 	checkLocale(&errs, "userLocale", r.UserLocale)

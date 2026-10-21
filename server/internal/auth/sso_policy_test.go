@@ -107,7 +107,7 @@ func TestNormalizeUserName(t *testing.T) {
 		}
 		if got != "" {
 			var errs fieldErrors
-			checkName(&errs, "name", got)
+			checkName(&errs, got)
 			if errs.err() != nil {
 				t.Errorf("normalizeUserName(%q) = %q, which ZUserName rejects", in, got)
 			}

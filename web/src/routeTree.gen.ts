@@ -10,215 +10,247 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthRouteRouteImport } from './routes/auth/route'
-import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
-import { Route as InviteRouteImport } from './routes/invite'
-import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
-import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as AuthSignupRouteImport } from './routes/auth/signup'
-import { Route as AuthSignupWithoutVerificationSuccessRouteImport } from './routes/auth/signup-without-verification-success'
-import { Route as AuthSsoRecoveryRouteImport } from './routes/auth/sso-recovery'
-import { Route as AuthVerificationRequestedRouteImport } from './routes/auth/verification-requested'
-import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
-import { Route as AuthForgotPasswordIndexRouteImport } from './routes/auth/forgot-password/index'
-import { Route as AuthForgotPasswordEmailSentRouteImport } from './routes/auth/forgot-password/email-sent'
-import { Route as AuthForgotPasswordResetIndexRouteImport } from './routes/auth/forgot-password/reset/index'
-import { Route as AuthForgotPasswordResetSuccessRouteImport } from './routes/auth/forgot-password/reset/success'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account/settings'
+import { Route as AuthenticatedEnvironmentsEnvironmentIdRouteImport } from './routes/_authenticated/environments/$environmentId'
+import { Route as AuthenticatedWorkspacesWorkspaceIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId'
+import { Route as AuthenticatedAccountSettingsIndexRouteImport } from './routes/_authenticated/account/settings/index'
+import { Route as AuthenticatedAccountSettingsNotificationsRouteImport } from './routes/_authenticated/account/settings/notifications'
+import { Route as AuthenticatedAccountSettingsProfileRouteImport } from './routes/_authenticated/account/settings/profile'
+import { Route as AuthenticatedOrganizationsOrganizationIdIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/index'
+import { Route as AuthenticatedOrganizationsOrganizationIdLandingRouteImport } from './routes/_authenticated/organizations/$organizationId/landing'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings'
+import { Route as AuthenticatedSetupOrganizationCreateRouteImport } from './routes/_authenticated/setup/organization/create'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/index'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/index'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/api-keys'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
+import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport } from './routes/_authenticated/setup/organization/$organizationId/invite'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRouteRoute = AuthRouteRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmailChangeWithoutVerificationSuccessRoute =
-  EmailChangeWithoutVerificationSuccessRouteImport.update({
-    id: '/email-change-without-verification-success',
-    path: '/email-change-without-verification-success',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAccountSettingsRoute =
+  AuthenticatedAccountSettingsRouteImport.update({
+    id: '/account/settings',
+    path: '/account/settings',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
-const InviteRoute = InviteRouteImport.update({
-  id: '/invite',
-  path: '/invite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
-  id: '/verify-email-change',
-  path: '/verify-email-change',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthSignupWithoutVerificationSuccessRoute =
-  AuthSignupWithoutVerificationSuccessRouteImport.update({
-    id: '/signup-without-verification-success',
-    path: '/signup-without-verification-success',
-    getParentRoute: () => AuthRouteRoute,
+const AuthenticatedEnvironmentsEnvironmentIdRoute =
+  AuthenticatedEnvironmentsEnvironmentIdRouteImport.update({
+    id: '/environments/$environmentId',
+    path: '/environments/$environmentId',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthSsoRecoveryRoute = AuthSsoRecoveryRouteImport.update({
-  id: '/sso-recovery',
-  path: '/sso-recovery',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthVerificationRequestedRoute =
-  AuthVerificationRequestedRouteImport.update({
-    id: '/verification-requested',
-    path: '/verification-requested',
-    getParentRoute: () => AuthRouteRoute,
+const AuthenticatedWorkspacesWorkspaceIdRoute =
+  AuthenticatedWorkspacesWorkspaceIdRouteImport.update({
+    id: '/workspaces/$workspaceId',
+    path: '/workspaces/$workspaceId',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthForgotPasswordIndexRoute = AuthForgotPasswordIndexRouteImport.update({
-  id: '/forgot-password/',
-  path: '/forgot-password/',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthForgotPasswordEmailSentRoute =
-  AuthForgotPasswordEmailSentRouteImport.update({
-    id: '/forgot-password/email-sent',
-    path: '/forgot-password/email-sent',
-    getParentRoute: () => AuthRouteRoute,
+const AuthenticatedAccountSettingsIndexRoute =
+  AuthenticatedAccountSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAccountSettingsRoute,
   } as any)
-const AuthForgotPasswordResetIndexRoute =
-  AuthForgotPasswordResetIndexRouteImport.update({
-    id: '/forgot-password/reset/',
-    path: '/forgot-password/reset/',
-    getParentRoute: () => AuthRouteRoute,
+const AuthenticatedAccountSettingsNotificationsRoute =
+  AuthenticatedAccountSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAccountSettingsRoute,
   } as any)
-const AuthForgotPasswordResetSuccessRoute =
-  AuthForgotPasswordResetSuccessRouteImport.update({
-    id: '/forgot-password/reset/success',
-    path: '/forgot-password/reset/success',
-    getParentRoute: () => AuthRouteRoute,
+const AuthenticatedAccountSettingsProfileRoute =
+  AuthenticatedAccountSettingsProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedAccountSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdIndexRoute =
+  AuthenticatedOrganizationsOrganizationIdIndexRouteImport.update({
+    id: '/organizations/$organizationId/',
+    path: '/organizations/$organizationId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdLandingRoute =
+  AuthenticatedOrganizationsOrganizationIdLandingRouteImport.update({
+    id: '/organizations/$organizationId/landing',
+    path: '/organizations/$organizationId/landing',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsRouteImport.update({
+    id: '/organizations/$organizationId/settings',
+    path: '/organizations/$organizationId/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSetupOrganizationCreateRoute =
+  AuthenticatedSetupOrganizationCreateRouteImport.update({
+    id: '/setup/organization/create',
+    path: '/setup/organization/create',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport.update({
+    id: '/teams',
+    path: '/teams',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedSetupOrganizationOrganizationIdInviteRoute =
+  AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport.update({
+    id: '/setup/organization/$organizationId/invite',
+    path: '/setup/organization/$organizationId/invite',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
-  '/invite': typeof InviteRoute
-  '/verify-email-change': typeof VerifyEmailChangeRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/signup': typeof AuthSignupRoute
-  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
-  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
-  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
-  '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
-  '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
-  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
-  '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
+  '/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
+  '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
+  '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
+  '/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
+  '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
+  '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/account/settings/': typeof AuthenticatedAccountSettingsIndexRoute
+  '/organizations/$organizationId/': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
+  '/workspaces/$workspaceId/': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
+  '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
+  '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
-  '/invite': typeof InviteRoute
-  '/verify-email-change': typeof VerifyEmailChangeRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/signup': typeof AuthSignupRoute
-  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
-  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
-  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
-  '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
-  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
-  '/auth/forgot-password/reset': typeof AuthForgotPasswordResetIndexRoute
+  '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
+  '/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
+  '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
+  '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/account/settings': typeof AuthenticatedAccountSettingsIndexRoute
+  '/organizations/$organizationId': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
+  '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
+  '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
+  '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
-  '/invite': typeof InviteRoute
-  '/verify-email-change': typeof VerifyEmailChangeRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/auth/signup': typeof AuthSignupRoute
-  '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
-  '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
-  '/auth/verification-requested': typeof AuthVerificationRequestedRoute
-  '/auth/verify-email': typeof AuthVerifyEmailRoute
-  '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
-  '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
-  '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
-  '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
+  '/_authenticated/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
+  '/_authenticated/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
+  '/_authenticated/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
+  '/_authenticated/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
+  '/_authenticated/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  '/_authenticated/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/_authenticated/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/_authenticated/account/settings/': typeof AuthenticatedAccountSettingsIndexRoute
+  '/_authenticated/organizations/$organizationId/': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
+  '/_authenticated/workspaces/$workspaceId/': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  '/_authenticated/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/_authenticated/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
+  '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
+  '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/auth'
-    | '/email-change-without-verification-success'
-    | '/invite'
-    | '/verify-email-change'
-    | '/auth/login'
-    | '/auth/signup'
-    | '/auth/signup-without-verification-success'
-    | '/auth/sso-recovery'
-    | '/auth/verification-requested'
-    | '/auth/verify-email'
-    | '/auth/forgot-password/email-sent'
-    | '/auth/forgot-password/'
-    | '/auth/forgot-password/reset/success'
-    | '/auth/forgot-password/reset/'
+    | '/account/settings'
+    | '/environments/$environmentId'
+    | '/workspaces/$workspaceId'
+    | '/account/settings/notifications'
+    | '/account/settings/profile'
+    | '/organizations/$organizationId/landing'
+    | '/organizations/$organizationId/settings'
+    | '/setup/organization/create'
+    | '/account/settings/'
+    | '/organizations/$organizationId/'
+    | '/workspaces/$workspaceId/'
+    | '/organizations/$organizationId/settings/api-keys'
+    | '/organizations/$organizationId/settings/general'
+    | '/organizations/$organizationId/settings/teams'
+    | '/setup/organization/$organizationId/invite'
+    | '/organizations/$organizationId/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
-    | '/email-change-without-verification-success'
-    | '/invite'
-    | '/verify-email-change'
-    | '/auth/login'
-    | '/auth/signup'
-    | '/auth/signup-without-verification-success'
-    | '/auth/sso-recovery'
-    | '/auth/verification-requested'
-    | '/auth/verify-email'
-    | '/auth/forgot-password/email-sent'
-    | '/auth/forgot-password'
-    | '/auth/forgot-password/reset/success'
-    | '/auth/forgot-password/reset'
+    | '/environments/$environmentId'
+    | '/account/settings/notifications'
+    | '/account/settings/profile'
+    | '/organizations/$organizationId/landing'
+    | '/setup/organization/create'
+    | '/account/settings'
+    | '/organizations/$organizationId'
+    | '/workspaces/$workspaceId'
+    | '/organizations/$organizationId/settings/api-keys'
+    | '/organizations/$organizationId/settings/general'
+    | '/organizations/$organizationId/settings/teams'
+    | '/setup/organization/$organizationId/invite'
+    | '/organizations/$organizationId/settings'
   id:
     | '__root__'
     | '/'
-    | '/auth'
-    | '/email-change-without-verification-success'
-    | '/invite'
-    | '/verify-email-change'
-    | '/auth/login'
-    | '/auth/signup'
-    | '/auth/signup-without-verification-success'
-    | '/auth/sso-recovery'
-    | '/auth/verification-requested'
-    | '/auth/verify-email'
-    | '/auth/forgot-password/email-sent'
-    | '/auth/forgot-password/'
-    | '/auth/forgot-password/reset/success'
-    | '/auth/forgot-password/reset/'
+    | '/_authenticated'
+    | '/_authenticated/account/settings'
+    | '/_authenticated/environments/$environmentId'
+    | '/_authenticated/workspaces/$workspaceId'
+    | '/_authenticated/account/settings/notifications'
+    | '/_authenticated/account/settings/profile'
+    | '/_authenticated/organizations/$organizationId/landing'
+    | '/_authenticated/organizations/$organizationId/settings'
+    | '/_authenticated/setup/organization/create'
+    | '/_authenticated/account/settings/'
+    | '/_authenticated/organizations/$organizationId/'
+    | '/_authenticated/workspaces/$workspaceId/'
+    | '/_authenticated/organizations/$organizationId/settings/api-keys'
+    | '/_authenticated/organizations/$organizationId/settings/general'
+    | '/_authenticated/organizations/$organizationId/settings/teams'
+    | '/_authenticated/setup/organization/$organizationId/invite'
+    | '/_authenticated/organizations/$organizationId/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthRouteRoute: typeof AuthRouteRouteWithChildren
-  EmailChangeWithoutVerificationSuccessRoute: typeof EmailChangeWithoutVerificationSuccessRoute
-  InviteRoute: typeof InviteRoute
-  VerifyEmailChangeRoute: typeof VerifyEmailChangeRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -230,145 +262,225 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/email-change-without-verification-success': {
-      id: '/email-change-without-verification-success'
-      path: '/email-change-without-verification-success'
-      fullPath: '/email-change-without-verification-success'
-      preLoaderRoute: typeof EmailChangeWithoutVerificationSuccessRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/account/settings': {
+      id: '/_authenticated/account/settings'
+      path: '/account/settings'
+      fullPath: '/account/settings'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/invite': {
-      id: '/invite'
-      path: '/invite'
-      fullPath: '/invite'
-      preLoaderRoute: typeof InviteRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/environments/$environmentId': {
+      id: '/_authenticated/environments/$environmentId'
+      path: '/environments/$environmentId'
+      fullPath: '/environments/$environmentId'
+      preLoaderRoute: typeof AuthenticatedEnvironmentsEnvironmentIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/verify-email-change': {
-      id: '/verify-email-change'
-      path: '/verify-email-change'
-      fullPath: '/verify-email-change'
-      preLoaderRoute: typeof VerifyEmailChangeRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/workspaces/$workspaceId': {
+      id: '/_authenticated/workspaces/$workspaceId'
+      path: '/workspaces/$workspaceId'
+      fullPath: '/workspaces/$workspaceId'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/account/settings/': {
+      id: '/_authenticated/account/settings/'
+      path: '/'
+      fullPath: '/account/settings/'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedAccountSettingsRoute
     }
-    '/auth/signup': {
-      id: '/auth/signup'
-      path: '/signup'
-      fullPath: '/auth/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/account/settings/notifications': {
+      id: '/_authenticated/account/settings/notifications'
+      path: '/notifications'
+      fullPath: '/account/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAccountSettingsRoute
     }
-    '/auth/signup-without-verification-success': {
-      id: '/auth/signup-without-verification-success'
-      path: '/signup-without-verification-success'
-      fullPath: '/auth/signup-without-verification-success'
-      preLoaderRoute: typeof AuthSignupWithoutVerificationSuccessRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/account/settings/profile': {
+      id: '/_authenticated/account/settings/profile'
+      path: '/profile'
+      fullPath: '/account/settings/profile'
+      preLoaderRoute: typeof AuthenticatedAccountSettingsProfileRouteImport
+      parentRoute: typeof AuthenticatedAccountSettingsRoute
     }
-    '/auth/sso-recovery': {
-      id: '/auth/sso-recovery'
-      path: '/sso-recovery'
-      fullPath: '/auth/sso-recovery'
-      preLoaderRoute: typeof AuthSsoRecoveryRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/organizations/$organizationId/': {
+      id: '/_authenticated/organizations/$organizationId/'
+      path: '/organizations/$organizationId'
+      fullPath: '/organizations/$organizationId/'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/auth/verification-requested': {
-      id: '/auth/verification-requested'
-      path: '/verification-requested'
-      fullPath: '/auth/verification-requested'
-      preLoaderRoute: typeof AuthVerificationRequestedRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/organizations/$organizationId/landing': {
+      id: '/_authenticated/organizations/$organizationId/landing'
+      path: '/organizations/$organizationId/landing'
+      fullPath: '/organizations/$organizationId/landing'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdLandingRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/auth/verify-email': {
-      id: '/auth/verify-email'
-      path: '/verify-email'
-      fullPath: '/auth/verify-email'
-      preLoaderRoute: typeof AuthVerifyEmailRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/organizations/$organizationId/settings': {
+      id: '/_authenticated/organizations/$organizationId/settings'
+      path: '/organizations/$organizationId/settings'
+      fullPath: '/organizations/$organizationId/settings'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/auth/forgot-password/': {
-      id: '/auth/forgot-password/'
-      path: '/forgot-password'
-      fullPath: '/auth/forgot-password/'
-      preLoaderRoute: typeof AuthForgotPasswordIndexRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/setup/organization/create': {
+      id: '/_authenticated/setup/organization/create'
+      path: '/setup/organization/create'
+      fullPath: '/setup/organization/create'
+      preLoaderRoute: typeof AuthenticatedSetupOrganizationCreateRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/auth/forgot-password/email-sent': {
-      id: '/auth/forgot-password/email-sent'
-      path: '/forgot-password/email-sent'
-      fullPath: '/auth/forgot-password/email-sent'
-      preLoaderRoute: typeof AuthForgotPasswordEmailSentRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/workspaces/$workspaceId/': {
+      id: '/_authenticated/workspaces/$workspaceId/'
+      path: '/'
+      fullPath: '/workspaces/$workspaceId/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
-    '/auth/forgot-password/reset/': {
-      id: '/auth/forgot-password/reset/'
-      path: '/forgot-password/reset'
-      fullPath: '/auth/forgot-password/reset/'
-      preLoaderRoute: typeof AuthForgotPasswordResetIndexRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/organizations/$organizationId/settings/': {
+      id: '/_authenticated/organizations/$organizationId/settings/'
+      path: '/'
+      fullPath: '/organizations/$organizationId/settings/'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
     }
-    '/auth/forgot-password/reset/success': {
-      id: '/auth/forgot-password/reset/success'
-      path: '/forgot-password/reset/success'
-      fullPath: '/auth/forgot-password/reset/success'
-      preLoaderRoute: typeof AuthForgotPasswordResetSuccessRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/_authenticated/organizations/$organizationId/settings/api-keys': {
+      id: '/_authenticated/organizations/$organizationId/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/organizations/$organizationId/settings/api-keys'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
+    }
+    '/_authenticated/organizations/$organizationId/settings/general': {
+      id: '/_authenticated/organizations/$organizationId/settings/general'
+      path: '/general'
+      fullPath: '/organizations/$organizationId/settings/general'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
+    }
+    '/_authenticated/organizations/$organizationId/settings/teams': {
+      id: '/_authenticated/organizations/$organizationId/settings/teams'
+      path: '/teams'
+      fullPath: '/organizations/$organizationId/settings/teams'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
+    }
+    '/_authenticated/setup/organization/$organizationId/invite': {
+      id: '/_authenticated/setup/organization/$organizationId/invite'
+      path: '/setup/organization/$organizationId/invite'
+      fullPath: '/setup/organization/$organizationId/invite'
+      preLoaderRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface AuthRouteRouteChildren {
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthSignupRoute: typeof AuthSignupRoute
-  AuthSignupWithoutVerificationSuccessRoute: typeof AuthSignupWithoutVerificationSuccessRoute
-  AuthSsoRecoveryRoute: typeof AuthSsoRecoveryRoute
-  AuthVerificationRequestedRoute: typeof AuthVerificationRequestedRoute
-  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
-  AuthForgotPasswordEmailSentRoute: typeof AuthForgotPasswordEmailSentRoute
-  AuthForgotPasswordIndexRoute: typeof AuthForgotPasswordIndexRoute
-  AuthForgotPasswordResetSuccessRoute: typeof AuthForgotPasswordResetSuccessRoute
-  AuthForgotPasswordResetIndexRoute: typeof AuthForgotPasswordResetIndexRoute
+interface AuthenticatedAccountSettingsRouteChildren {
+  AuthenticatedAccountSettingsNotificationsRoute: typeof AuthenticatedAccountSettingsNotificationsRoute
+  AuthenticatedAccountSettingsProfileRoute: typeof AuthenticatedAccountSettingsProfileRoute
+  AuthenticatedAccountSettingsIndexRoute: typeof AuthenticatedAccountSettingsIndexRoute
 }
 
-const AuthRouteRouteChildren: AuthRouteRouteChildren = {
-  AuthLoginRoute: AuthLoginRoute,
-  AuthSignupRoute: AuthSignupRoute,
-  AuthSignupWithoutVerificationSuccessRoute:
-    AuthSignupWithoutVerificationSuccessRoute,
-  AuthSsoRecoveryRoute: AuthSsoRecoveryRoute,
-  AuthVerificationRequestedRoute: AuthVerificationRequestedRoute,
-  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
-  AuthForgotPasswordEmailSentRoute: AuthForgotPasswordEmailSentRoute,
-  AuthForgotPasswordIndexRoute: AuthForgotPasswordIndexRoute,
-  AuthForgotPasswordResetSuccessRoute: AuthForgotPasswordResetSuccessRoute,
-  AuthForgotPasswordResetIndexRoute: AuthForgotPasswordResetIndexRoute,
+const AuthenticatedAccountSettingsRouteChildren: AuthenticatedAccountSettingsRouteChildren =
+  {
+    AuthenticatedAccountSettingsNotificationsRoute:
+      AuthenticatedAccountSettingsNotificationsRoute,
+    AuthenticatedAccountSettingsProfileRoute:
+      AuthenticatedAccountSettingsProfileRoute,
+    AuthenticatedAccountSettingsIndexRoute:
+      AuthenticatedAccountSettingsIndexRoute,
+  }
+
+const AuthenticatedAccountSettingsRouteWithChildren =
+  AuthenticatedAccountSettingsRoute._addFileChildren(
+    AuthenticatedAccountSettingsRouteChildren,
+  )
+
+interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
+  AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
 }
 
-const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
-  AuthRouteRouteChildren,
+const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWorkspaceIdRouteChildren =
+  {
+    AuthenticatedWorkspacesWorkspaceIdIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdIndexRoute,
+  }
+
+const AuthenticatedWorkspacesWorkspaceIdRouteWithChildren =
+  AuthenticatedWorkspacesWorkspaceIdRoute._addFileChildren(
+    AuthenticatedWorkspacesWorkspaceIdRouteChildren,
+  )
+
+interface AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren {
+  AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+}
+
+const AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren: AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren =
+  {
+    AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute,
+    AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute,
+    AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute,
+    AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute,
+  }
+
+const AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren =
+  AuthenticatedOrganizationsOrganizationIdSettingsRoute._addFileChildren(
+    AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRouteWithChildren
+  AuthenticatedEnvironmentsEnvironmentIdRoute: typeof AuthenticatedEnvironmentsEnvironmentIdRoute
+  AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
+  AuthenticatedOrganizationsOrganizationIdLandingRoute: typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  AuthenticatedSetupOrganizationCreateRoute: typeof AuthenticatedSetupOrganizationCreateRoute
+  AuthenticatedOrganizationsOrganizationIdIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
+  AuthenticatedSetupOrganizationOrganizationIdInviteRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccountSettingsRoute:
+    AuthenticatedAccountSettingsRouteWithChildren,
+  AuthenticatedEnvironmentsEnvironmentIdRoute:
+    AuthenticatedEnvironmentsEnvironmentIdRoute,
+  AuthenticatedWorkspacesWorkspaceIdRoute:
+    AuthenticatedWorkspacesWorkspaceIdRouteWithChildren,
+  AuthenticatedOrganizationsOrganizationIdLandingRoute:
+    AuthenticatedOrganizationsOrganizationIdLandingRoute,
+  AuthenticatedOrganizationsOrganizationIdSettingsRoute:
+    AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren,
+  AuthenticatedSetupOrganizationCreateRoute:
+    AuthenticatedSetupOrganizationCreateRoute,
+  AuthenticatedOrganizationsOrganizationIdIndexRoute:
+    AuthenticatedOrganizationsOrganizationIdIndexRoute,
+  AuthenticatedSetupOrganizationOrganizationIdInviteRoute:
+    AuthenticatedSetupOrganizationOrganizationIdInviteRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthRouteRoute: AuthRouteRouteWithChildren,
-  EmailChangeWithoutVerificationSuccessRoute:
-    EmailChangeWithoutVerificationSuccessRoute,
-  InviteRoute: InviteRoute,
-  VerifyEmailChangeRoute: VerifyEmailChangeRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
