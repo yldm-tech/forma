@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "pagePath": {
+      "type": "string"
+    },
+    "pageReferrer": {
+      "type": "string"
+    },
+    "utmSource": {
+      "type": "string"
+    },
+    "utmMedium": {
+      "type": "string"
+    },
+    "utmCampaign": {
+      "type": "string"
+    },
+    "utmTerm": {
+      "type": "string"
+    },
+    "utmContent": {
+      "type": "string"
+    },
+    "screenWidth": {
+      "type": "number"
+    },
+    "screenHeight": {
+      "type": "number"
+    },
+    "viewportWidth": {
+      "type": "number"
+    },
+    "viewportHeight": {
+      "type": "number"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "locale": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "userAgent": {
+      "type": "object",
+      "properties": {
+        "browser": {
+          "type": "string"
+        },
+        "os": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        }
+      }
+    },
+    "country": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "ipAddress": {
+      "type": "string"
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/response.meta.json"
+}

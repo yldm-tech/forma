@@ -1,0 +1,119 @@
+[
+  {
+    "name": "welcome card with only the required flag",
+    "schema": "survey.welcome_card",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "enabled": false }
+  },
+  {
+    "name": "welcome card without the enabled flag",
+    "schema": "survey.welcome_card",
+    "zod": false,
+    "jsonSchema": false,
+    "document": {}
+  },
+  {
+    "name": "welcome card with a non-boolean flag",
+    "schema": "survey.welcome_card",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "enabled": "yes" }
+  },
+  {
+    "name": "no blocks",
+    "schema": "survey.blocks",
+    "zod": true,
+    "jsonSchema": true,
+    "document": []
+  },
+  {
+    "name": "one block with an open-text question",
+    "schema": "survey.blocks",
+    "zod": true,
+    "jsonSchema": true,
+    "document": [
+      {
+        "id": "tz4a98xxat96iws9zmbrgj3a",
+        "name": "Block 1",
+        "elements": [
+          { "id": "feedback", "type": "openText", "headline": { "default": "What could we do better?" }, "required": true }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "a block without elements",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [] }]
+  },
+  {
+    "name": "an element of an unknown type",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [
+      {
+        "id": "tz4a98xxat96iws9zmbrgj3a",
+        "name": "Block 1",
+        "elements": [{ "id": "q1", "type": "telepathy", "headline": { "default": "?" }, "required": true }]
+      }
+    ]
+  },
+  {
+    "name": "a block id that is not a cuid2",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [
+      {
+        "id": "Block One",
+        "name": "Block 1",
+        "elements": [{ "id": "q1", "type": "openText", "headline": { "default": "?" }, "required": true }]
+      }
+    ]
+  },
+  {
+    "name": "a headline without a default translation (a zod refinement JSON Schema cannot express)",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": true,
+    "document": [
+      {
+        "id": "tz4a98xxat96iws9zmbrgj3a",
+        "name": "Block 1",
+        "elements": [{ "id": "q1", "type": "openText", "headline": { "en": "?" }, "required": true }]
+      }
+    ]
+  },
+  {
+    "name": "response answers of every allowed shape",
+    "schema": "response.data",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "q1": "yes", "q2": 9, "q3": ["a", "b"], "q4": { "city": "Tokyo" } }
+  },
+  {
+    "name": "a nested object answer",
+    "schema": "response.data",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "q1": { "city": { "name": "Tokyo" } } }
+  },
+  {
+    "name": "an empty segment",
+    "schema": "segment.filters",
+    "zod": true,
+    "jsonSchema": true,
+    "document": []
+  },
+  {
+    "name": "segment filters that are not a list",
+    "schema": "segment.filters",
+    "zod": false,
+    "jsonSchema": false,
+    "document": "everyone"
+  }
+]

@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/__schema0",
+  "$defs": {
+    "__schema0": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "__schema1": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "connector": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "and",
+                "or"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/__schema3"
+                },
+                {
+                  "$ref": "#/$defs/__schema9"
+                },
+                {
+                  "$ref": "#/$defs/__schema10"
+                },
+                {
+                  "$ref": "#/$defs/__schema11"
+                },
+                {
+                  "$ref": "#/$defs/__schema12"
+                }
+              ]
+            },
+            {
+              "$ref": "#/$defs/__schema0"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "connector",
+        "resource"
+      ],
+      "additionalProperties": false
+    },
+    "__schema2": {
+      "type": "string",
+      "format": "cuid2",
+      "pattern": "^[0-9a-z]+$"
+    },
+    "__schema3": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "root": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "attribute"
+            },
+            "contactAttributeKey": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "contactAttributeKey"
+          ],
+          "additionalProperties": false
+        },
+        "value": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "qualifier": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "string",
+              "enum": [
+                "lessThan",
+                "lessEqual",
+                "greaterThan",
+                "greaterEqual",
+                "equals",
+                "notEquals",
+                "isSet",
+                "isNotSet",
+                "contains",
+                "doesNotContain",
+                "startsWith",
+                "endsWith",
+                "isOlderThan",
+                "isNewerThan",
+                "isBefore",
+                "isAfter",
+                "isBetween",
+                "isSameDay"
+              ]
+            }
+          },
+          "required": [
+            "operator"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "root",
+        "value",
+        "qualifier"
+      ],
+      "additionalProperties": false
+    },
+    "__schema4": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "days",
+                "weeks",
+                "months",
+                "years"
+              ]
+            }
+          },
+          "required": [
+            "amount",
+            "unit"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "$ref": "#/$defs/__schema5"
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "object",
+      "properties": {
+        "surveyScope": {
+          "$ref": "#/$defs/__schema6"
+        },
+        "surveyIds": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "within": {
+          "$ref": "#/$defs/__schema8"
+        }
+      },
+      "required": [
+        "surveyScope",
+        "surveyIds",
+        "within"
+      ],
+      "additionalProperties": false
+    },
+    "__schema6": {
+      "type": "string",
+      "enum": [
+        "any",
+        "specific"
+      ]
+    },
+    "__schema7": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema2"
+      }
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "days",
+            "weeks",
+            "months"
+          ]
+        }
+      },
+      "required": [
+        "amount",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "__schema9": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "root": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "person"
+            },
+            "personIdentifier": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "personIdentifier"
+          ],
+          "additionalProperties": false
+        },
+        "value": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "qualifier": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "string",
+              "enum": [
+                "equals",
+                "notEquals",
+                "isSet",
+                "isNotSet",
+                "contains",
+                "doesNotContain",
+                "startsWith",
+                "endsWith"
+              ]
+            }
+          },
+          "required": [
+            "operator"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "root",
+        "value",
+        "qualifier"
+      ],
+      "additionalProperties": false
+    },
+    "__schema10": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "root": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "segment"
+            },
+            "segmentId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "segmentId"
+          ],
+          "additionalProperties": false
+        },
+        "value": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "qualifier": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "string",
+              "enum": [
+                "userIsIn",
+                "userIsNotIn"
+              ]
+            }
+          },
+          "required": [
+            "operator"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "root",
+        "value",
+        "qualifier"
+      ],
+      "additionalProperties": false
+    },
+    "__schema11": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "root": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "device"
+            },
+            "deviceType": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "deviceType"
+          ],
+          "additionalProperties": false
+        },
+        "value": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "qualifier": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "string",
+              "enum": [
+                "equals",
+                "notEquals"
+              ]
+            }
+          },
+          "required": [
+            "operator"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "root",
+        "value",
+        "qualifier"
+      ],
+      "additionalProperties": false
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "root": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "surveyInteraction"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        "value": {
+          "$ref": "#/$defs/__schema5"
+        },
+        "qualifier": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "string",
+              "enum": [
+                "haveCompleted",
+                "haveNotCompleted",
+                "haveSeen",
+                "haveNotSeen",
+                "haveStartedRespondingTo"
+              ]
+            }
+          },
+          "required": [
+            "operator"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "root",
+        "value",
+        "qualifier"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/segment.filters.json"
+}

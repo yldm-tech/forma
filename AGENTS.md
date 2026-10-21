@@ -52,6 +52,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - PostgreSQL 18 or newer: primary keys default to `uuidv7()`. Closed value sets are `text` with a `CHECK`, not PostgreSQL enums.
 - Rows migrated from forma2 get `uuidv5(<forma legacy namespace>, <old id>)` as their id, so an old id that arrives from outside (a survey link, an SDK snippet) is resolved by computing the same function.
 - Every table that carries authorization data has a trigger that enqueues an `authz_projection_outbox` row in the same transaction; a new table of that kind needs one too.
+- JSON columns are validated in Go against JSON Schemas exported from the zod definitions in `packages/types` (`json-schema-registry.ts` lists them; `pnpm --filter @forma/types export-json-schema` regenerates `server/internal/jsonschema/schemas/`, and CI fails when they are stale). The export keeps structure only: zod refinements such as unique ids or a translation's required `default` key are lost and must be ported as Go code in the service that owns the document. `server/internal/jsonschema/testdata/parity.json` records cases on both sides of that line and is asserted by both a Vitest and a Go test.
 - `server/internal/platform/database/migrate_test.go` runs the migrations against a real PostgreSQL in Docker (testcontainers) and checks the constraints and triggers; `go test -short` skips it.
 
 ## API contracts

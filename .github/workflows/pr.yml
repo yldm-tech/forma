@@ -83,10 +83,11 @@ jobs:
       - name: Verify the TanStack Router route tree is committed
         run: git diff --exit-code -- web/src/routeTree.gen.ts
 
-      - name: Catalog and OpenAPI checks
+      - name: Catalog, OpenAPI and exported JSON Schema checks
         run: |
           vp run catalog:check
           vp run api:v3:lint
+          vp run --filter @forma/types export-json-schema -- --check
 
       - name: Format, lint and type-check
         run: vp check

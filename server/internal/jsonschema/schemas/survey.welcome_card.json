@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "headline": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "subheader": {
+      "$ref": "#/$defs/__schema5"
+    },
+    "fileUrl": {
+      "$ref": "#/$defs/__schema6"
+    },
+    "buttonLabel": {
+      "$ref": "#/$defs/__schema8"
+    },
+    "timeToFinish": {
+      "$ref": "#/$defs/__schema9"
+    },
+    "showResponseCount": {
+      "$ref": "#/$defs/__schema10"
+    },
+    "videoUrl": {
+      "$ref": "#/$defs/__schema11"
+    }
+  },
+  "required": [
+    "enabled"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "boolean"
+    },
+    "__schema1": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "__schema2": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/__schema3"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/__schema4"
+      }
+    },
+    "__schema3": {
+      "type": "string"
+    },
+    "__schema4": {
+      "type": "string"
+    },
+    "__schema5": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "__schema6": {
+      "$ref": "#/$defs/__schema7"
+    },
+    "__schema7": {
+      "type": "string"
+    },
+    "__schema8": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "__schema9": {
+      "default": true,
+      "type": "boolean"
+    },
+    "__schema10": {
+      "type": "boolean"
+    },
+    "__schema11": {
+      "$ref": "#/$defs/__schema7"
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/survey.welcome_card.json"
+}

@@ -15,7 +15,8 @@
     "test": "vp test run",
     "test:coverage": "vp test run --coverage",
     "test:watch": "vp test",
-    "clean": "rimraf node_modules"
+    "clean": "rimraf node_modules",
+    "export-json-schema": "tsx scripts/export-json-schema.mts"
   },
   "dependencies": {
     "zod": "catalog:",
@@ -25,8 +26,9 @@
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }

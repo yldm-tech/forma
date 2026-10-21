@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "multipleOf": 0.1
+        }
+      },
+      "required": [
+        "enabled",
+        "threshold"
+      ]
+    },
+    {
+      "type": "null"
+    }
+  ],
+  "$id": "https://forma.ylam.ai/schemas/survey.recaptcha.json"
+}

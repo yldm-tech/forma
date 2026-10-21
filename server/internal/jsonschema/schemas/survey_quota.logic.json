@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "connector": {
+      "type": "string",
+      "enum": [
+        "and",
+        "or"
+      ]
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/__schema0"
+          },
+          {
+            "$ref": "#/$defs/__schema2"
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "connector",
+    "conditions"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "cuid2",
+          "pattern": "^[0-9a-z]+$"
+        },
+        "leftOperand": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equals",
+            "doesNotEqual",
+            "contains",
+            "doesNotContain",
+            "startsWith",
+            "doesNotStartWith",
+            "endsWith",
+            "doesNotEndWith",
+            "isSubmitted",
+            "isSkipped",
+            "isGreaterThan",
+            "isLessThan",
+            "isGreaterThanOrEqual",
+            "isLessThanOrEqual",
+            "equalsOneOf",
+            "includesAllOf",
+            "includesOneOf",
+            "doesNotIncludeOneOf",
+            "doesNotIncludeAllOf",
+            "isClicked",
+            "isNotClicked",
+            "isAccepted",
+            "isBefore",
+            "isAfter",
+            "isBooked",
+            "isPartiallySubmitted",
+            "isCompletelySubmitted",
+            "isSet",
+            "isNotSet",
+            "isEmpty",
+            "isNotEmpty",
+            "isAnyOf"
+          ]
+        },
+        "rightOperand": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "static"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ]
+            },
+            {
+              "$ref": "#/$defs/__schema1"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "leftOperand",
+        "operator"
+      ]
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "element"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "meta": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "variable"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "format": "cuid2",
+              "pattern": "^[0-9a-z]+$"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "hiddenField"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "reserved"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "connector": {}
+      }
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/survey_quota.logic.json"
+}
