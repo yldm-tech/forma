@@ -71,6 +71,6 @@ func (f *SecondFactor) Complete(c *gin.Context) error {
 	}
 	f.cookies.setSession(c, sess)
 	f.cookies.clear(c, f.cookies.twoFactor)
-	f.svc.finalizeSignIn(ctx, userID)
+	f.svc.finalizeSignIn(ctx, userID, signInMethodPassword)
 	return nil
 }

@@ -69,7 +69,7 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 	if err != nil {
 		return signInResult{}, err
 	}
-	s.finalizeSignIn(ctx, acc.ID)
+	s.finalizeSignIn(ctx, acc.ID, signInMethodPassword)
 	return signInResult{session: &sess}, nil
 }
 

@@ -124,7 +124,7 @@ func (s *Service) verifyEmail(ctx context.Context, token, intentToken string, ac
 		})
 		return verifyEmailResult{}, nil
 	}
-	s.finalizeSignIn(ctx, userID)
+	s.finalizeSignIn(ctx, userID, signInMethodPassword)
 	return verifyEmailResult{SignedIn: true, session: sess}, nil
 }
 

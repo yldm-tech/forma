@@ -33,12 +33,14 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
+// authSet is the identity module: sessions, sign-up, sign-in and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
 	auth.NewService,
 	auth.NewHandler,
+	auth.NewSSO,
+	auth.NewSSOHandler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
