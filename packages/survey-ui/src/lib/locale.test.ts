@@ -1,5 +1,5 @@
 import { ar, de, enUS, es, fr, hi, it, ja, nl, pt, ptBR, ro, ru, uz, zhCN, zhTW } from "date-fns/locale";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { getDateFnsLocale } from "./locale";
 
 describe("getDateFnsLocale", () => {

@@ -3,7 +3,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import type * as React from "react";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { useRovingRadioGroup } from "./use-roving-radio-group";
 
 const VALUES = ["a", "b", "c"];

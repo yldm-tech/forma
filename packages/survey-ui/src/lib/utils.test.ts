@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { cn } from "./utils";
 
 vi.mock("isomorphic-dompurify", () => ({

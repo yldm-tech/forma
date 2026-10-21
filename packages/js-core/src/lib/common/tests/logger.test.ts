@@ -1,5 +1,5 @@
 // logger.test.ts
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Logger } from "@/lib/common/logger";
 
 describe("Logger", () => {

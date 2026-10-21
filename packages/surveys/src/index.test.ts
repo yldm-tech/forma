@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "preact";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { type SurveyContainerProps } from "@forma/types/forma-surveys";
 import { renderSurvey } from "./index";
 

@@ -33,8 +33,6 @@ yarn-error.log*
 **/.env.development.local
 **/.env.test.local
 **/.env.production.local
-!packages/database/.env
-!apps/web/.env
 
 # build tools
 .turbo
@@ -51,7 +49,4 @@ yarn-error.log*
 
 # project specific
 packages/lib/uploads
-apps/web/public/js
-packages/database/generated
-packages/database/migrations
 branch.json

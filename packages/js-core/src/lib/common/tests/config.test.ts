@@ -1,5 +1,5 @@
 // config.test.ts
-import { type Mock, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { type Mock, afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
 import type { TConfig, TConfigUpdateInput } from "@/types/config";

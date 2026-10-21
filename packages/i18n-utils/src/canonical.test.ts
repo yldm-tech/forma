@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { CANONICAL_LANGUAGE_CODES, LANGUAGE_CANONICAL_MAP, normalizeLanguageCode } from "./canonical.ts";
 
 describe("normalizeLanguageCode", () => {

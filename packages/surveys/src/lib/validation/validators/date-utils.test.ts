@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import {

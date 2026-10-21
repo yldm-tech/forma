@@ -1,4 +1,4 @@
-import { type Mock, type MockInstance, beforeEach, describe, expect, test, vi } from "vitest";
+import { type Mock, type MockInstance, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { mockAttributes, mockUserId1, mockUserId2 } from "@/lib/user/tests/__mocks__/update-queue.mock";

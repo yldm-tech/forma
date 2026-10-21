@@ -1,13 +1,10 @@
 {
   "recommendations": [
-    "ban.spellright", // Spell check for docs
-    "bradlc.vscode-tailwindcss", // hinting / autocompletion for tailwind
-    "DavidAnson.vscode-markdownlint", // markdown linting
-    "dbaeumer.vscode-eslint", // eslint plugin
-    "esbenp.prettier-vscode", // prettier plugin
-    "Prisma.prisma", // syntax|format|completion for prisma
-    "yzhang.markdown-all-in-one", // nicer markdown support
-    "vitest.explorer", // run tests directly from the code window
-    "sonarsource.sonarlint-vscode" // sonarqube linter for vscode
+    "VoidZero.vite-plus-extension-pack",
+    "golang.go",
+    "bradlc.vscode-tailwindcss",
+    "DavidAnson.vscode-markdownlint",
+    "yzhang.markdown-all-in-one",
+    "ban.spellright"
   ]
 }

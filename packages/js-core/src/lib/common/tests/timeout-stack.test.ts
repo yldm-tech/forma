@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
 
 // Using vitest, we don't need to manually declare globals

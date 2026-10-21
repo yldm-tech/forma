@@ -1,11 +1,11 @@
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 import { copyCompiledAssetsPlugin } from "./index";
 
 /**
- * The plugin writes into `apps/web/public/js` relative to the Vite root it is given, so each case
+ * The plugin writes into `web/public/js` relative to the Vite root it is given, so each case
  * builds a throwaway tree shaped like the monorepo and points the root at `<tmp>/packages/surveys`.
  */
 const trees: string[] = [];
@@ -15,7 +15,7 @@ const makeTree = async (distFiles: readonly string[]) => {
   trees.push(base);
   const root = path.join(base, "packages", "surveys");
   const dist = path.join(root, "dist");
-  const out = path.join(base, "apps", "web", "public", "js");
+  const out = path.join(base, "web", "public", "js");
   await mkdir(dist, { recursive: true });
   await Promise.all(distFiles.map((file) => writeFile(path.join(dist, file), `// ${file}`, "utf8")));
   return { root, dist, out };

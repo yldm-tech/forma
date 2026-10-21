@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { RESERVED_FIELD_NAMES } from "../reserved-field-names";
 import { RESERVED_DECLARED_FIELD_NAMES } from "./validation";
 

@@ -1,4 +1,4 @@
-import { type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { type MockInstance, afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { addUserStateExpiryCheckListener, clearUserStateExpiryCheckListener } from "@/lib/user/state";
 

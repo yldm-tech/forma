@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { RESERVED_FIELD_NAMES } from "../reserved-field-names";
 import {
   LINK_SURVEY_SYSTEM_PARAMS,

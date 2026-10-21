@@ -1,5 +1,5 @@
 // event-listeners.test.ts
-import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
+import { type Mock, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import {
   addCleanupEventListeners,
   addEventListeners,

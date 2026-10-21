@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { EmbeddedDataStore, buildDisplayHiddenFields } from "@/lib/survey/embedded-data";
 
 // The guards log through Logger; mocked so refused inputs don't spray the test output.

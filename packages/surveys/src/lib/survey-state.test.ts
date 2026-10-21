@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { TResponseUpdate } from "@forma/types/responses";
 import { SurveyState } from "./survey-state";
 

@@ -1,3 +1,0 @@
-{{- if and .Values.redis.enabled (ne (.Values.redis.architecture | toString) "standalone") -}}
-{{- fail "redis.architecture currently supports only standalone with the bundled Valkey deployment. Use redis.externalRedisUrl and redis.enabled=false for external HA Redis/Valkey." -}}
-{{- end -}}

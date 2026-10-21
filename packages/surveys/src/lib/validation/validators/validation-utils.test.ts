@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { z } from "zod";
 // Used for parity check in tests only
 import { validateEmail, validatePhone, validateUrl } from "./validation-utils";

@@ -34,8 +34,6 @@ yarn-error.log*
 **/.env.development.local
 **/.env.test.local
 **/.env.production.local
-!packages/database/.env
-!apps/web/.env
 
 # local cloud credentials — the Hub's google-gemini (Vertex) enrichment providers need a GCP
 # service-account JSON on disk (HUB_GOOGLE_APPLICATION_CREDENTIALS). It belongs outside the repo,
@@ -61,9 +59,6 @@ secrets/
 # project specific
 .local/
 packages/lib/uploads
-apps/web/public/js
-packages/database/generated
-packages/database/.prisma-migrations
 branch.json
 .vercel
 
@@ -94,3 +89,14 @@ authzed/*.perf.jsonl
 docs/api-v3-reference/contract-tests/fixtures.json
 .schemathesis/
 __pycache__/
+
+# Go server: the SPA build is copied in at build time; only the placeholder is tracked
+server/internal/webui/dist/*
+!server/internal/webui/dist/.gitkeep
+/bin/
+
+# SDK bundles copied in by packages/vite-plugins at build time
+web/public/js
+
+# Vitest attachments and cache
+**/.vitest/

@@ -55,20 +55,17 @@
     }
   },
   "scripts": {
-    "dev": "vite build --watch --mode dev",
-    "build": "vite build && node scripts/assert-scoped-css.mjs",
-    "build:dev": "vite build --mode dev && node scripts/assert-scoped-css.mjs",
-    "go": "vite build --watch --mode dev",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "preview": "vite preview",
+    "dev": "vp build --watch --mode dev",
+    "build": "vp build && node scripts/assert-scoped-css.mjs",
+    "build:dev": "vp build --mode dev && node scripts/assert-scoped-css.mjs",
+    "go": "vp build --watch --mode dev",
+    "preview": "vp preview",
     "prepack": "node scripts/assert-pnpm-publish.mjs",
     "prepublishOnly": "node scripts/assert-pnpm-publish.mjs",
-    "clean": "rimraf .turbo node_modules dist coverage",
+    "clean": "rimraf node_modules dist coverage",
     "ui:add": "npx shadcn@latest add",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -91,7 +88,6 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@forma/config-eslint": "workspace:*",
     "@forma/config-typescript": "workspace:*",
     "@storybook/react": "catalog:",
     "@storybook/react-vite": "catalog:",
@@ -112,6 +108,7 @@
     "vite": "catalog:",
     "vite-plugin-dts": "catalog:",
     "vite-tsconfig-paths": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import type { TEmbeddedDataType } from "./embedded-data";
 import {
   MAX_INGESTED_VALUE_BYTES,

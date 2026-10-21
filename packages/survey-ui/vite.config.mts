@@ -1,5 +1,5 @@
-/// <reference types="vitest" />
-import { defineConfig } from "vite";
+/// <reference types="vite-plus/test" />
+import { defineConfig, lazyPlugins } from "vite-plus";
 import dts from "vite-plugin-dts";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { rewriteNodeNextDtsSpecifiers } from "../vite-plugins/node-next-dts";
@@ -51,15 +51,20 @@ export default defineConfig({
       },
     },
   },
-  plugins: [
+  plugins: lazyPlugins(() => [
     tsconfigPaths(),
     dts({
       include: ["src"],
       exclude: ["**/*.stories.tsx", "**/*.test.ts", "**/story-helpers.tsx"],
       beforeWriteFile: rewriteNodeNextDtsSpecifiers,
     }),
-  ],
+  ]),
   test: {
+    // Vitest v4 compatibility: preserve mock call history.
+    // Remove after tests no longer rely on calls from setup or earlier tests.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
+    clearMocks: false,
     environment: "node",
     globals: true,
     include: ["src/**/*.test.ts"],

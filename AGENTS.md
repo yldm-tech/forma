@@ -1,429 +1,92 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Status: rewrite in progress
 
-Forma runs as a pnpm/turbo monorepo. `apps/web` is the Next.js product surface, with feature modules under `app/` and `modules/`, assets in `public/` and `images/`, and Playwright specs in `apps/web/playwright/`. `apps/storybook` renders reusable UI pieces for review. Shared logic lives in `packages/*`: `database` (Prisma schemas/migrations), `surveys`, `js-core`, `types`, plus linting and TypeScript presets (`config-*`). Deployment collateral is kept in `docs/`, `docker/`, and `charts/` (`charts/forma` is the Helm chart). Unit tests sit next to their source as `*.test.ts` or inside `__tests__`.
+Forma is being rewritten from a Next.js monolith (the `yldm-tech/forma2` repository, whose history this repository continues) into a Go server plus a TanStack single-page app. The rewrite moves module by module; until a module lands here, its behaviour is defined by forma2's `main`. When porting a module, read the forma2 implementation and its tests first: the tests are the behaviour checklist, and every one that still applies becomes a Go or Vitest test here.
 
-## Build, Test & Development Commands
+Phases, in order: P0 foundation (this skeleton, the new schema, recorded contract tests), P1 identity and tenancy, P2 survey definition, P3 response collection, P4 everything after a response, P5 external APIs and operations, P6 data migration and cutover. Every phase lands as a series of PRs scoped to one module each.
 
-- `pnpm install` — install workspace dependencies pinned by `pnpm-lock.yaml`.
-- `pnpm db:up` / `pnpm db:down` — start/stop the Docker services backing the app. `db:up` also writes `authzed/schema.zed` into SpiceDB via `scripts/apply-authzed-schema.sh`, because docker compose only runs SpiceDB's datastore migration: it creates the tables and leaves it with no schema. Until the schema is written every permission check fails with `FAILED_PRECONDITION`, which the app surfaces as "Error loading resources" — a symptom that points nowhere near its cause. Do not gate that write on the gRPC health probe alone; it reports healthy as soon as the server accepts connections, which can precede a freshly migrated datastore accepting a schema write, so the script retries the write itself. The write is idempotent, so re-running `db:up` on a provisioned stack is a no-op.
-- `pnpm dev` — run all app and worker dev servers in parallel via Turborepo.
-- `pnpm go` — the one-command cold start: `db:up`, then `turbo run go`, which boots the Next dev server and puts every consumed package (`surveys`, `survey-ui`, `js-core`, `cache`, `storage`, `i18n-utils`) into `vite build --watch`. Prefer it over `pnpm dev` when touching package sources, because it is what keeps their `dist/` in step with `src/` — see "Stale package builds" below for what happens when it is not.
-- `pnpm build` — generate production builds for every package and app.
-- `pnpm lint` — apply the shared ESLint rules across the workspace. Also runs four repo-level gates that ESLint cannot express: `api:v3:lint` (OpenAPI bundle), `catalog:check`, `tenant:check`, `tests:run-check`.
-- `pnpm typecheck` — TypeScript across the workspace. Not part of `pnpm lint`; CI runs it as its own job (`typecheck.yml`), so run it separately before pushing.
-- `pnpm format` / `pnpm format:check` — apply or verify Prettier across the workspace; `format:check` is what CI runs, so run `pnpm format` before pushing if you committed with `--no-verify`.
-- `pnpm test` / `pnpm test:coverage` — execute Vitest suites with optional coverage.
-- `pnpm test:e2e` — launch the Playwright browser regression suite.
-- `pnpm db:migrate:dev` — apply Prisma migrations against the dev database.
-- `pnpm db:seed` / `pnpm db:seed:clear` — populate or wipe the dev dataset.
-- `pnpm authzed:validate` — assert `authzed/schema.zed` against `authzed/schema-validation.yaml`, offline. Required green for any schema change, and a PR gate.
-- `pnpm api:v3:bundle` / `pnpm api:v3:check` — rebuild or verify the committed `/api/v3` OpenAPI bundle.
-- `pnpm i18n` — regenerate non-English locales from `en-US.json` and validate keys.
+## Project Structure
 
-### Running one test
+| Path                                                          | What it is                                                                                                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/`                                                     | Go module `github.com/yldm-tech/forma/server`: gin, wire, GORM. One binary, `forma`, whose subcommands are the processes (`serve` today).   |
+| `server/internal/platform/`                                   | Cross-cutting infrastructure: config, logger, database, HTTP server and middleware.                                                         |
+| `server/internal/<feature>/`                                  | One package per feature, layered `handler` → `service` → `repository`. Authorization is checked once, in the service layer.                 |
+| `server/internal/app/`                                        | Composition root. `wire.go` declares the graph, `wire_gen.go` is generated and committed.                                                   |
+| `server/internal/webui/`                                      | Serves the SPA build embedded with `go:embed`, plus the SDK bundles under `/js/*`.                                                          |
+| `web/`                                                        | The admin SPA: Vite, React 19, TanStack Router (file-based, `src/routes/`), TanStack Query, Tailwind 4.                                     |
+| `packages/surveys`                                            | Preact survey runtime, shipped as `/js/surveys.umd.cjs` and rendered on customer sites and the public survey pages. Carried over unchanged. |
+| `packages/js-core`                                            | The customer-site SDK, shipped as `/js/forma.umd.cjs`. Carried over unchanged.                                                              |
+| `packages/survey-ui`, `packages/types`, `packages/i18n-utils` | Shared UI, zod types and i18n helpers used by the packages above.                                                                           |
+| `apps/storybook`                                              | Storybook for `packages/survey-ui`.                                                                                                         |
+| `authzed/`                                                    | SpiceDB schema (`schema.zed`) and its assertion suite.                                                                                      |
+| `docs/`                                                       | Product and API documentation (Mintlify). `docs/api-v3-reference` is the source of the v3 OpenAPI contract.                                 |
 
-`pnpm test` runs the whole graph. To iterate on a single file, filter to its workspace and pass the
-path — and read "Stale package builds after a branch switch" first, because this is exactly the route
-that bypasses turbo's rebuild:
+## Commands
 
-```shell
-pnpm --filter @forma/web test lib/hash-string.test.ts   # one file
-pnpm --filter @forma/web test -t "<test name>"           # one test by name
-pnpm --filter @forma/surveys test src/lib/logic.test.ts  # any other workspace
-```
+Everything runs from the repository root. The TypeScript side uses [Vite+](https://viteplus.dev/) (`vp`): Vite (Rolldown) for dev and build, Vitest for tests, Oxlint and Oxfmt for lint and format, tsgolint for type checks, and `vp run` as the workspace task runner. There is no ESLint, Prettier or Turborepo. `pnpm` is the version pinned in `package.json` (`packageManager`) and Node.js the one in `.node-version`; Go comes from `server/go.mod`.
 
-`apps/web` splits its Vitest run into three projects (`apps/web/vite.config.mts`), so the environment a
-spec gets is decided by its filename, and `--project=<name>` narrows the run:
+- `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`).
+- `cp .env.example .env`, then `make dev-server` — run the Go server on `:3000`.
+- `make dev-web` — run the Vite dev server on `:5173`; it proxies `/api` and `/health` to the Go server.
+- `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.
+- `make generate` — regenerate `server/internal/app/wire_gen.go` after changing a provider.
+- `make check` — what CI runs: golangci-lint, `go test -race`, `vp check` (Oxfmt, Oxlint, type-check), the Vitest suites, the catalog and OpenAPI checks, and the SpiceDB schema assertions.
+- `pnpm exec vp check --fix` — format and apply lint autofixes. A pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs this on staged files.
+- `pnpm exec vp run --filter @forma/surveys test -- src/lib/logic.test.ts` — one TypeScript test file; `cd server && go test ./internal/health -run TestReady` — one Go test.
 
-| Project      | Files                  | Environment | Why                                                                                              |
-| ------------ | ---------------------- | ----------- | ------------------------------------------------------------------------------------------------ |
-| `unit`       | `*.test.ts`            | node        | the default                                                                                      |
-| `components` | `*.test.tsx`           | jsdom       | assigned automatically — no `@vitest-environment` pragma                                         |
-| `rsc`        | `*.rsc.test.ts`        | node        | resolves React under the `react-server` condition, so `cache()` is real rather than a no-op      |
+## Go conventions
 
-A spec that needs the `page` authorization surface, or anything else that only exists in the RSC build,
-must be named `*.rsc.test.ts` — under `unit`, React's `cache()` is a no-op and the setup file mocks it
-to identity, so the behaviour cannot be exercised at all.
+- Use mature libraries for protocols, parsing and serialization; write only business logic by hand. A new module dependency needs agreement before it is added.
+- Keep the simplest shape that works: a function before an interface, an interface only where there are two implementations or a test seam.
+- Validate at system boundaries (HTTP handlers, queue consumers, config). Do not wrap internal calls in defensive error handling.
+- Errors are wrapped with context (`fmt.Errorf("open database: %w", err)`) and logged once, where they are handled.
+- Every process reads configuration once, at startup, through `internal/platform/config`. A missing or malformed variable fails the start.
+- Logs are structured (`log/slog`). Never log secrets, tokens, raw request bodies, or raw URL paths that can carry a token.
+- `golangci-lint` (config in `server/.golangci.yml`) and `gofmt`/`goimports` are enforced in CI.
 
-Integration specs (`*.integration.test.ts`) are excluded from the unit config and need a real Postgres
-and Redis: `pnpm db:up`, then `pnpm --filter @forma/web test:integration`.
+## API contracts
 
-Turbo runs a task only in packages that define the matching script and **silently skips** the rest.
-Every `packages/*` workspace therefore exposes the standard `lint` / `typecheck` / `test` /
-`test:coverage` scripts (plus `build` where there is a compile step). Deliberate exceptions:
-`config-*` packages hold only config files (no scripts beyond `clean`); `types` has no runtime logic
-to test; `email`, `types`, and `vite-plugins` are consumed from source, so they have no `build`;
-`apps/storybook` has no unit tests by policy (its components are exercised by the feature journeys in
-`apps/web/playwright`). Keep new packages on this matrix or document the exception here.
+- Paths and payloads that something outside this repository calls are frozen: the client API used by `packages/js-core` and `packages/surveys` (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, the v3 management API, MCP, OAuth and webhook callback URLs, and `/health`, `/health/ready`. Reproduce forma2's behaviour byte for byte and prove it with a contract test.
+- `/api/v3` is the forward API and is specified first in `docs/api-v3-reference`; the Go server and the SPA's client are generated from that spec. Endpoints only the admin UI needs live under `/api/app/*`.
+
+## TypeScript workspace
 
 ### Shared dependency versions (pnpm catalog)
 
-Every dependency used by **two or more** workspaces is pinned once in the `catalog:` block of
-`pnpm-workspace.yaml`, and each `package.json` references it as `"catalog:"` instead of a version:
+Every dependency used by two or more workspaces is pinned once in the `catalog:` block of `pnpm-workspace.yaml`, and each `package.json` references it as `"catalog:"`. Bumping a shared dependency means editing the catalog entry, never a `package.json`. `pnpm check` runs `scripts/check-catalog.mjs`, which fails on a literal version for a catalogued name and on an uncatalogued dependency shared by two workspaces. A peer dependency range is exempt.
 
-```json
-"devDependencies": { "typescript": "catalog:", "vitest": "catalog:" }
-```
+### SDK bundles and stale builds
 
-So bumping a shared dependency means editing the catalog entry — never a `package.json`. That is the
-whole point: `nodeLinker: hoisted` hides a version split until it breaks, so `apps/web` was typing a
-redis 5 client with redis 4's `RedisClientType` and one package was building on a different Vite major
-than the other fourteen. Deps with a single consumer deliberately stay in their own `package.json`.
+`packages/surveys` and `packages/js-core` are consumed through their builds. Building them copies the UMD bundles into `web/public/js/`, Vite copies that into the SPA build, and the Go binary embeds and serves it at `/js/*` with the cache and CORS headers forma2 sent. `web` declares both packages as dev dependencies, so `vp run -r build` (`pnpm build`, `make build`) builds them first.
 
-`pnpm lint` runs `scripts/check-catalog.mjs`, which fails if a workspace declares a literal version for
-a catalogued name, or if a dependency is declared by 2+ workspaces without being catalogued. A peer
-dependency *range* is exempt — it is a compatibility declaration for consumers, not an install pin, so
-it may legitimately be looser than the catalog (`packages/survey-ui` declares react `^19.0.0` while
-pinning 19.2.6 to build against). Adding a new package needs no wiring: the check resolves the
-workspace globs from `pnpm-workspace.yaml` itself.
+Running `vp test` directly inside a package bypasses that graph, and so does `vp check`: its type-aware rules resolve sibling packages through their `dist/` declarations. After a branch switch, `dist/` can be older than `src/`, and the symptoms (a missing export, `instanceof` on `undefined`, failures in files you never touched) look like real regressions. Rebuild with `pnpm build` before believing them.
 
-### Survey Packages Build & Cache
+### Tailwind and package CSS
 
-The `@forma/surveys` package is pre-compiled (Vite → UMD + ESM) and the built bundle is copied to `apps/web/public/js/`. The Next.js app imports from `dist/`, **not** the source files. This means:
+Tailwind v4 detects sources from the consuming app's own root and never descends into `node_modules`, where every `@forma/*` package is linked. Packages therefore ship their own CSS: `@forma/survey-ui` exports `./styles`, `@forma/surveys` inlines its styles into the bundle. Only two JS Tailwind configs remain (`packages/survey-ui/tailwind.config.ts`, `packages/surveys/tailwind.config.cjs`), both reached through an explicit `@config` from the package's stylesheet.
 
-- After any change to `packages/surveys` or its dependencies (`packages/survey-ui`, `packages/types`, etc.), you **must rebuild** for changes to take effect in the running app.
-- Turborepo caches build outputs aggressively. Always use `--force` to bypass the cache when iterating on survey packages:
-  ```
-  rm -rf packages/surveys/dist apps/web/public/js/surveys.* node_modules/.cache/turbo
-  pnpm build --filter=@forma/surveys... --force
-  ```
-- The browser also caches the UMD bundle (`surveys.umd.cjs`) served from `public/js/`. After rebuilding, do a **hard refresh** (Cmd+Shift+R / Ctrl+Shift+R) or disable the browser cache via DevTools to pick up the new bundle.
-- If changes still don't appear, restart the Next.js dev server (`pnpm dev`).
+### Frontend conventions
 
-### Stale package builds after a branch switch
+- Routes are files under `web/src/routes/`; `web/src/routeTree.gen.ts` is generated by the router plugin during `vite build`/`vite dev` and committed. CI fails if it is stale.
+- Server state goes through TanStack Query with `queryOptions` factories; route loaders prefetch through the same options. Do not keep a second copy of server data in component state.
+- Avoid `any` (`typescript/no-explicit-any` is an error), keep components focused, and meet basic accessibility.
+- Lint and format rules live only in the root `vite.config.ts`; package configs carry build, test and dev settings. Per-path exceptions go in `lint.overrides` with a comment saying why.
 
-The same trap applies to **every** workspace package consumed through its built output rather than its
-source — `@forma/ai`, `@forma/database` and `@forma/i18n-utils` resolve via `dist/` in
-their `exports` map, so `apps/web` imports the build, not `src/`. `git switch`, a rebase, or a pull changes `src/` but leaves
-`dist/` exactly as it was, and nothing warns you.
+## Testing
 
-**This only bites when you bypass Turborepo.** Running `vitest` or `tsc` directly inside `apps/web`,
-`pnpm --filter @forma/web test`, or an IDE test runner all skip the task graph — which is how you
-usually meet it, iterating on one test file. The root `pnpm test` and `pnpm typecheck` are safe:
-`@forma/web#test` and `@forma/web#typecheck` in `turbo.json` each declare `dependsOn` on
-`@forma/ai#build`, `@forma/database#build` and five more, so turbo rebuilds them before the
-suite runs. That is also why the unit-test workflow (`test.yml`) stays green with no build step of its
-own — do **not** read "green on CI, red locally" as evidence of a stale `dist/`; both run the same
-graph.
-
-The failure looks nothing like a stale build. A symbol added on the branch you just checked out is
-absent from `dist/`, so depending on what is missing the import either resolves to `undefined` or fails
-outright at module resolution — and both read like real regressions:
-
-- `TypeError: Right-hand side of 'instanceof' is not an object` (the class is in `src/`, not `dist/`)
-- a missing named export, or `Failed to resolve entry for package "@forma/…"` when `dist/` is
-  absent altogether
-- `tsc` or Vitest failures in files you never touched
-
-This has cost real time: four failing tests read as a broken `main` from an unrelated PR, when the only
-problem was a `dist/` built days earlier. To confirm the diagnosis, check whether a symbol you expect
-the package to *export* is in the built output — present in `src/`, absent from `dist/`, is the
-signature. (Pick one the entry really re-exports; an internal helper is legitimately absent from
-`dist/index.js` and would read as a false positive.)
-
-```shell
-grep -rc "MyNewExport" packages/<pkg>/src packages/<pkg>/dist/index.js
-```
-
-Recursive on purpose: `packages/ai/src` has nested directories (`providers/`), and a non-recursive
-`src/*.ts` glob reports a symbol defined in one of them as missing from *both* sides.
-
-The fix is to rebuild the dependency graph:
-
-```shell
-pnpm build --filter=@forma/web^...
-```
-
-(Dependencies only — `^...` excludes the Next app itself. This is the same command
-`.github/workflows/integration-tests.yml` runs before its suites, for exactly this reason.)
-
-### Tailwind & Workspace Package CSS
-
-Tailwind v4 detects sources starting from the consuming app's own root (`apps/web` for the Next.js
-PostCSS build, the Vite root for `apps/storybook`) and **never descends into `node_modules`** — which
-is exactly where every `@forma/*` workspace package is linked. A utility used only inside a
-workspace package therefore never reaches the consuming app's stylesheet. Consumed workspace packages
-ship their own CSS rather than relying on the app to scan them:
-
-- `@forma/surveys` — prebuilt bundle served from `apps/web/public/js/` (see the section above).
-- `@forma/survey-ui` — exports `./styles` (`dist/survey-ui.css`), scoped to `#fbjs`.
-- `@forma/email` — ships no stylesheet at all; `@react-email/tailwind` compiles and inlines the
-  classes into the email HTML at render time.
-
-If you ever consume a workspace package as raw source **for its styling**, the app has to be told
-about that package's files explicitly — detection stops at the app's own root, so nothing else will
-pick them up. `apps/storybook` is the worked example: it consumes `packages/survey-ui` as raw source
-(its `stories` glob loads `packages/survey-ui/src/**` directly, and Vite aliases the package specifier
-to that same source), and it works because `apps/storybook/src/index.css` imports **survey-ui's own
-stylesheet**, which carries the `@config` and `@source` covering `packages/survey-ui/src/**` — those
-resolve relative to survey-ui's file, so the package declares its own coverage and the app just pulls
-it in. Prefer that: let the package own its globs. Only write an `@source` in the app entry when the
-files are the app's own (as `index.css` does for `.storybook/**` and `src/**`).
-
-Tailwind is configured CSS-first everywhere. Only two JS/TS Tailwind configs remain
-(`packages/survey-ui/tailwind.config.ts` and `packages/surveys/tailwind.config.cjs`) and both are
-reached through an explicit `@config` bridge from the package's own stylesheet. Do not add a
-`tailwind.config.js` that nothing `@config`s — Tailwind v4 will not load it, and it will silently rot.
-
-## Coding Style & Naming Conventions
-
-TypeScript, React, and Prisma are the primary languages. Use the shared ESLint presets (`@forma/config-eslint`) and Prettier preset (110-char width, semicolons, double quotes, sorted import groups). Two-space indentation is standard; prefer `PascalCase` for React components and folders under `modules/`, `camelCase` for functions/variables, and `SCREAMING_SNAKE_CASE` only for constants. When adding mocks, place them inside `__mocks__` so import ordering stays stable.
-Import order is set by `@trivago/prettier-plugin-sort-imports` and verified in CI by `pnpm format:check`, so it is not a matter of taste: `__mocks__` imports come first (they carry `vi.mock` calls), then `server-only`, then third-party packages, then `@forma/*`, `~/*`, `@/*`, and relative imports. Do not ask for or apply a different order in review — it will fail the check.
-We are using SonarQube to identify code smells and security hotspots.
-Always mark React component props as `Readonly<>` (e.g., `({ children }: Readonly<MyProps>)`).
-
-## System architecture
-
-One Next.js process is the whole server: `apps/web` serves the product UI, every API surface, and — through
-`instrumentation.ts` / `instrumentation-jobs.ts` — the background worker, in-process. There is no separate
-worker deployment. It talks to PostgreSQL (source of truth), Valkey/Redis (cache and job queue), SpiceDB
-(authorization), and S3-compatible storage; `docker-compose.dev.yml` stands all of those up locally,
-plus MailHog for mail and — behind the opt-in `qwen` profile — a vLLM container for local AI. The Helm
-chart is a single deployment (`charts/forma/templates/deployment.yaml`), which is the same shape.
-
-**Authorization is the concept that spans the most files, and it is two layers on purpose.**
-`apps/web/lib/authorization` is the engine-independent contract — actors, namespaced actions
-(`workspace.read`, `survey.response_export`), opaque resource ids — and holds no AuthZed types. Product
-code calls only `can()` / `assertCan()` from there. `apps/web/lib/authzed` is the SpiceDB implementation
-behind it, and SpiceDB is the **sole** evaluator: there is no legacy fallback and no role-name gate. An
-unhealthy client is an operational error, not a denial. New authorization-sensitive code adds a `can` call;
-it never re-derives access from `Membership.role`. `apps/web/lib/authorization/README.md` carries the full
-role/grant mapping and the reasoning behind the non-obvious ones — read it before changing a gate.
-
-PostgreSQL stays the source of truth for membership and grants; SpiceDB holds a *projection* of them.
-Source-table triggers insert `AuthzedProjectionOutbox` rows in the same transaction as the mutation, and
-`lib/authzed/outbox-processor.ts` leases and drains them into SpiceDB, with retry, dead-lettering, and
-`pnpm authzed:backfill` as the recovery path (`authzed/RUNBOOK.md`). So a permission change is eventually
-consistent by design, and a check that reads stale is a delivery problem rather than a logic bug. The
-schema itself lives in `authzed/schema.zed`, is deployed only by the explicit `pnpm authzed:schema apply`
-— never at startup, migration, or Helm reconcile — and its semantics are pinned by
-`authzed/schema-validation.yaml`.
-
-Authorization decisions are also *surface*-scoped: `page` (server-rendered routes) is held in a React
-`cache()` slot so it spans a whole render pass, while every other surface uses `AsyncLocalStorage`. That is
-why an RSC-only spec has to be `*.rsc.test.ts`.
-
-**Several API surfaces; only one takes new work.** `/api/v1` and `/api/v2` are the legacy management and
-client APIs, `/api/client/[workspaceId]` serves the embedded survey runtime, and `/api/mcp` exposes the MCP
-server — all closed to new endpoints. New backend work goes in `/api/v3` only, where `app/api/v3/lib` supplies the shared wrapper, auth,
-cursor pagination and response shape, and each resource folder keeps its own `authorization.ts`,
-`schemas.ts` and `serializers.ts`. Documenting a v3 operation in the OpenAPI bundle is what enrolls it in
-the Schemathesis contract tests.
-
-**Background work** is BullMQ on Valkey, wrapped by `@forma/jobs`: `queue.ts` holds the typed enqueue
-helpers, `processors/` the handlers (response pipeline, workflow runs), and `runtime.ts` the worker the web
-process starts. Recurring schedules are upserted at boot from `apps/web/lib/jobs/recurring-registrations`
-— upsert only, never remove-first; `instrumentation-jobs.ts` documents why at length.
-
-**The survey runtime is shipped as a built bundle, not imported as source.** `@forma/survey-ui` holds the
-question components (CSS scoped to `#fbjs`), `@forma/surveys` composes them into the renderer, and
-`@forma/js-core` is the embed SDK. The Vite builds of the last two copy their output into
-`apps/web/public/js/` (`surveys.*` and `forma.*`) via `packages/vite-plugins/copy-compiled-assets`, and the
-browser loads it from there. That copy step is the reason a source change is invisible until you rebuild —
-see "Survey Packages Build & Cache" above.
-
-## Architecture & Patterns
-
-- Next.js app router lives in `apps/web/app` with route groups like `(app)` and `(auth)`. Services live in `apps/web/lib`, feature modules in `apps/web/modules`. The dependency runs one way — `app` and `modules` depend on `lib`, never the reverse — and ESLint enforces the `lib` half: production code under `lib/` may not import from `@/app/*`. Specs under `lib/` are exempt, since reaching for a fixture beside the route it was written for is not production code depending upward. Anything under `app/` that is not a route is a library in the wrong place; put it in `lib/` (or, if only one route uses it, in that route's own `lib/`) rather than importing upward to reach it.
-- `modules/` is not yet covered by that rule: 35 of its files still import from `app/`. Four of those are type-only, and a client importing the request type of the `/api/v3` route it calls is the contract working as intended rather than a violation. The rest are genuine, and the shape of each has to be decided one at a time — a route component that several modules need belongs in `modules/`, as `SettingsCard`, `LoadingCard` and `workspace-context` now do; a module reaching into a route's `lib/` usually wants the dependency inverted. Do not add new ones.
-- Server actions are legacy — do not add new ones. New backend work belongs in an `/api/v3` route consumed from the client with TanStack Query, with server data living in the query cache rather than mirrored into `useState` or Jotai. The existing server actions wrap service calls and return `{ data }` or `{ error }` consistently; keep that contract when changing them.
-- Context providers should guard against missing provider usage and use cleanup patterns that snapshot refs inside `useEffect` to avoid React hooks warnings
-
-## Caching
-
-- Use React `cache()` for request-level dedupe and `cache.withCache()` or explicit Redis for expensive data.
-- Do not use Next.js `unstable_cache()`.
-- Always use `createCacheKey.*` utilities for cache keys.
-
-## Features are not gated
-
-There is no enterprise edition here. An install with no `ENTERPRISE_LICENSE_KEY` — which is every install — has every feature enabled, in every environment. Do not add a new per-feature gate, and do not reintroduce one when touching code that used to carry it.
-
-Two branches implement that, one per entitlement source, and each is guarded by a test that goes red if the branch is narrowed again:
-
-- `license-check/lib/license.ts` — the no-key branch returns `UNGATED_FEATURES` with an active licence. `license-unlock.test.ts` holds it, including that the result does not vary with `NODE_ENV`.
-- `entitlements/lib/cloud-provider.ts` — an organization whose Stripe subscription resolves no features gets the full entitlement set and no limits, which is what keeps `IS_FORMA_CLOUD=1` from turning the product off. `cloud-entitlement-unlock.test.ts` holds it.
-
-The cloud branch sits inside the "nothing to read" case on purpose: attach a real subscription and the ordinary path still runs, so the sync, cache and trial logic stays reachable rather than rotting. There is no `modules/ee/` directory any more — what lived there is ordinary application code under `modules/`.
-
-## Environment Variables
-
-- In `apps/web`, application code must not read `process.env` directly. Server code reads `env` from `apps/web/lib/env.ts` (or the constants derived from it in `lib/constants.ts`); client components read `lib/env-client.ts`, which holds the one sanctioned client-side read. `next.config.mjs` imports `lib/env.ts`, so an invalid value fails the build or start instead of the first request that needs it.
-- Adding a variable means adding it to both the `server` schema and the `runtimeEnv` map in `lib/env.ts`. If `next.config.mjs` reads it too, add it to `build.env` in `turbo.json` (enforced by `lib/turbo-build-env.test.ts`).
-- An ESLint rule enforces this. Bootstrap, config, script and test files are exempt — the list lives in `apps/web/eslint.config.mjs`. `NEXT_RUNTIME` and `NEXT_PHASE` are allowed anywhere: Next.js injects them, so there is nothing to validate.
-- Packages under `packages/*` cannot import the web app's env module and still read `process.env` directly; the rule does not apply there.
-
-## i18n (Internationalization)
-
-- All user-facing text must use the `t()` function from `react-i18next`.
-- Key naming: use lowercase with dots for nesting (e.g., `common.welcome`).
-- Translations are in `apps/web/locales/`. `en-US.json` is the source of truth. The app ships English, Japanese and Chinese (Simplified and Traditional) — `AVAILABLE_LOCALES` in `lib/constants.ts`, the `targets` in `i18n.json`, and the files in `locales/` are the same list, and adding a language means adding it to all three. `ZUserLocale` is deliberately wider: it also types survey runtime languages, date-fns locale maps and email locales, so it is a superset of what the language picker offers rather than a mirror of it.
-- **Only ever add or edit strings in `en-US.json`.** Never hand-write, translate, or edit the other (non-English) locale files yourself — those are machine-generated from en-US by Lingo.dev.
-- After adding or changing an en-US string, run `pnpm i18n` to generate the translations for every other locale and validate keys. Lingo.dev also auto-translates from en-US on commit.
-
-## Date and Time Rendering
-
-- All user-facing dates and times must use shared formatting helpers instead of ad hoc `date-fns`, `Intl`, or `toLocale*` calls in components.
-- Locale for display must come from the app language source of truth (`user.locale`, `getLocale()`, or `i18n.resolvedLanguage`), not browser defaults or implicit `undefined` locale behavior.
-- Locale and time zone are different concerns: locale controls formatting, time zone controls the represented clock/calendar moment.
-- Never infer a time zone from locale. If a product-level time zone source of truth exists, use it explicitly; otherwise preserve the existing semantic meaning of the stored value and avoid introducing browser-dependent conversions.
-- Machine-facing values for storage, APIs, exports, integrations, and logs must remain stable and non-localized (`ISO 8601` / UTC where applicable).
-
-## Database & Prisma Performance
-
-- Multi-tenancy: All data must be scoped by Organization or Environment. `pnpm lint` enforces this through `scripts/check-tenant-scoping.mjs`: a read or bulk write against a model carrying a tenant column fails the build unless the enclosing function constrains that column, takes tenant ids, or scopes through an id that is itself tenant-scoped. The models come from the Prisma schema, so adding one enrolls it. A query that is legitimately global — telemetry, the API-key lookup authentication is built on, a background sweep — carries `// tenant-scope-exempt: <reason>` on the line above, which puts each exception in a diff a reviewer can challenge. The check cannot see whether the caller was entitled to an id it was handed; that guarantee still lives at the call site.
-- Soft Deletion: Check for `isActive` or `deletedAt` fields; use proper filtering.
-- Never use `skip`/`offset` with `prisma.response.count()`; only use `where`.
-- Separate count and data queries and run in parallel (`Promise.all`).
-- Prefer cursor pagination for large datasets.
-- When filtering by `createdAt`, include indexed fields (e.g., `surveyId` + `createdAt`).
-
-## Testing Guidelines
-
-Principles:
-
-- Confidence over coverage. Test behavior and outcomes; avoid brittle implementation-detail tests.
-- Prove a behavior at the cheapest level that can fail on it. An E2E test is not a stronger unit test; it
-  has a different subject — the journey, not the logic.
-- **An E2E test is paid on every PR, by everyone, forever.** Upstream the Playwright job is the critical
-  path of the PR gate (as of Aug 2026: a ~13 min job, of which ~6 min is the Playwright step itself — the
-  rest is install, build and boot — over ~110 tests and ~30 browser-minutes), and its wall clock can never
-  drop below its slowest single test. Weigh that before adding one — sometimes the right answer is no test
-  at this level.
-- **On this fork the Playwright job is not wired into `pr.yml` at all.** `e2e.yml` requires an
-  `ENTERPRISE_LICENSE_KEY` secret this organisation does not have, so the call fails during validation
-  before any step runs. The workflow is kept and still dispatchable. Until the secret exists, treat every
-  `e2e` row in a Coverage table as a claim nothing verified, and say so under `Open gaps`.
-
-Which level, concretely:
-
-| The change                                                                      | The level                                     |
-| ------------------------------------------------------------------------------- | --------------------------------------------- |
-| A new feature area, or a journey across several surfaces                        | One happy-path E2E + unit tests for its logic |
-| Business logic, invariants, validation, derivation, permissions — anything pure | Unit test on the `.ts`                        |
-| A route's authorization, response shape, or query scoping                       | Unit or integration test on that route        |
-| A UI detail inside a feature that already has a happy-path spec                 | Neither — verify manually, say so in the PR   |
-
-A journey across several surfaces means something like survey list → editor → public survey → response,
-where the behavior only exists once browser, survey bundle, and server are wired together.
-
-A committed test only counts if something runs it. `turbo run test` invokes `test` in workspaces, so a spec outside every workspace never executes while still reading as coverage — `scripts/setup-dev-env.test.ts` sat that way until `scripts/` was made a workspace. `pnpm lint` now fails on that through `scripts/check-tests-run.mjs`; put a new test inside a workspace that runs tests, or make its directory one.
-
-The spec filenames in `apps/web/playwright/` are the inventory of covered areas — check there before
-concluding an area has no spec.
-
-The PR's Coverage table names each row's level with one of five words, and the first three are claims a
-reviewer can check: `unit (red on main)` fails against the old code, so it proves the bug existed;
-`unit (mutation)` only fails if you break the fix, because the code under test is new; `unit (guard)`
-passes either way, protecting against a future regression; `e2e` and `manual` say where the check ran. Every
-`unit` and `e2e` row names the test or spec it rests on, in the row or in a `Rerun:` line that names
-it — a bare `pnpm test` names nothing. A `unit (red on main)` row is rerunnable from the
-`Rerun:` command, or names its own where that differs; a `unit (mutation)` row names the mutated
-`file:line` a reviewer edits to turn it red.
-
-This raises a floor as well as lowering a ceiling. Every feature area ships a happy-path E2E, and an area
-with none is a gap rather than a saving (Dashboards and Workflows are the current examples — ENG-2314). A
-bug fix inside a feature that already has one almost never needs a second spec — the level still follows
-the table above: journey behavior extends that spec, logic goes to a unit test, UI detail to manual QA.
-
-Do:
-
-- E2E tests (Playwright): one spec per **feature area**, not per ticket and not per component. Default to
-  adding assertions or a `test.step` to that area's existing spec in `apps/web/playwright`; a new
-  `*.spec.ts` is for a feature area that has none, and it takes the area's name (`billing.spec.ts`).
-  Follow the suite's own patterns — seed state through Prisma or `/api/v3` instead of clicking it into
-  existence (`playwright/utils/accessibility.ts`), one journey per test with `test.step` phases
-  (`settings-tags.spec.ts`), assertions at feature level (`survey-overview.spec.ts`) — and run the suite
-  before opening a PR.
-- Unit tests: cover stable, high-value logic in `.ts` files, such as validators, transformers,
-  evaluators, calculations, and edge cases. Keep assertions on inputs and outputs, colocate specs with
-  the code they exercise (`utility.test.ts`), and mock network and storage boundaries through helpers
-  from `@forma/*`.
-- API v3 contract tests (Schemathesis): every documented `/api/v3` operation is driven against a real
-  instance on each PR and must match the committed OpenAPI bundle — status codes, content type and
-  response schema. Nothing to register per endpoint; documenting an operation is what enrolls it. To
-  exercise a new one against real data rather than its documented 403, add the resource in
-  `packages/database/src/scripts/seed-contract-fixtures.ts`. Harness and local run:
-  `docs/api-v3-reference/contract-tests/README.md`.
-- Manual QA, especially for releases: verify on staging and file bugs. If a bug is critical, backport and
-  re-test. For UI detail below the journey level, manual verification plus a screenshot in the PR is the
-  expected answer, not a new spec.
-- Run `pnpm test` before opening a PR and `pnpm test:coverage` when touching critical flows.
-- Merging, narrowing, or deleting an E2E spec is legitimate work — record it in the PR's Coverage table
-  like any other change.
-
-Do not:
-
-- Do not write component or UI unit tests for `.tsx` files. **This is not an instruction to write an E2E
-  test instead**: the absence of a component unit test creates no coverage obligation. If a component holds
-  logic worth proving, lift that logic into a `.ts` module and unit-test it there; the rendering is
-  exercised incidentally by the feature journeys that already cross it.
-- Do not E2E a component. A language selector, a breadcrumb, a sidebar's link list, an ARIA attribute on
-  one widget, a keystroke inside one editor, a field's validation message, a search box filtering a list —
-  none of these justify a browser, a login, and a seeded tenant.
-- Do not build a variant matrix. Cover the one case that carries the risk; a second viewport, theme,
-  locale, role, or layout needs its own stated reason, and "the adjacent spec does it" is not one.
-  Accessibility work on the rendered survey extends the existing axe gate
-  (`survey-accessibility.spec.ts`); elsewhere it becomes an assertion in that feature area's own spec.
-  Either way, not a per-ticket a11y spec.
-- Do not add coverage-driven or low-signal tests.
-- Do not write tests that lock implementation details, markup, snapshots, or create churn — an assertion on
-  an exact list of nav labels is churn, not coverage.
-- Do not create mega or flaky E2E tests; avoid timing hacks (`waitForTimeout`, `slowMo`) and unstable
-  dependencies. `@slow` is triage metadata only: nothing in `playwright.config.ts` or CI reads it, so
-  tagging a spec does not make its cost go away.
-
-## Documentation (apps/docs)
-
-- Add frontmatter with `title`, `description`, and `icon` at the top of the MDX file.
-- Do not start with an H1; use Camel Case headings (only capitalize the feature name).
-- Use Mintlify components for steps and callouts.
-- If Enterprise-only, add the Enterprise note block described in docs.
-
-## Storybook
-
-- Stories live in `stories.tsx` in the component folder and import from `"./index"`.
-- Use `@storybook/react-vite` and organize argTypes into `Behavior`, `Appearance`, `Content`.
-- Include Default, Disabled (if supported), WithIcon (if supported), all variants, and edge cases.
+- Test behaviour and outcomes at the cheapest level that can fail on them.
+- Go: table-driven tests next to the code; integration tests that need Postgres, Valkey or SpiceDB start real ones with testcontainers.
+- TypeScript: Vitest next to the code.
+- A ported module is done when forma2's tests for it are reproduced here and pass.
 
 ## GitHub Actions
 
 - Always set minimal `permissions` for `GITHUB_TOKEN`.
 - On `ubuntu-latest`, add `step-security/harden-runner` as the first step.
-
-## Quality Checklist
-
-- Keep code DRY and small; remove dead code and unused imports.
-- Follow React hooks rules, keep effects focused, and avoid unnecessary `useMemo`/`useCallback`.
-- Prefer type inference, avoid `any`, and use shared types from `@forma/types`. This is enforced:
-  `@typescript-eslint/no-explicit-any` is an error in `packages/*` and a warning in `apps/web`, where the
-  typescript-eslint baseline is being ratcheted to error rule by rule (ENG-2264). Never add new `any`s —
-  a warning today becomes an error once its rule's backlog is cleared.
-- Keep components focused, avoid deep nesting, and ensure basic accessibility.
+- Pin every third-party action to a full commit SHA with the version in a trailing comment.
 
 ## Commit & Pull Request Guidelines
 
-Commits follow a lightweight Conventional Commit format (`fix:`, `chore:`, `feat:`) and usually append the PR number, e.g. `fix: update OpenAPI schema (#6617)`. Keep commits scoped and lint-clean. Pull requests should outline the problem, summarize the solution, and link to issues or product specs. Attach screenshots or gifs for UI-facing work, and record any migrations or env changes under `Migrations & env`, breaking or not. Don't restate what CI already reports (lint, typecheck, unit tests, build, Sonar) — the description carries what those checks cannot show.
-
-Every PR must use `.github/pull_request_template.md` and follow its inline guidance — the template is the source of truth for PR structure. The ticket line at the top is the only place a magic word (`Fixes`, `Ref`, `Closes`) may sit next to a ticket id: Linear and GitHub scan the whole body, so the same pair written in prose — inside backticks too — links and closes that ticket as well. When you need to name the convention in prose, write it without a resolvable id. All QA for a change happens on its own PR before review: the creator shows that every behaviour the diff changes is covered, and lists what is not under `Open gaps`; the reviewer challenges that list and asks for the missing coverage. There is no separate release QA pass per PR — release review only looks for problems arising from the interplay of several changes. Fill every section from the actual diff on PR open, and re-update it in the same turn on every change (new commits, scope or review fixes) so it never drifts — treat a stale section as a bug.
-
-**A PR description is read, not filed.** Keep the whole thing under 350 words outside `<details>` folds — one screen — with lists of at most three bullets of at most twenty words and a Coverage table of at most six rows. Open `## What & why` with a `**Was:**` / `**Now:**` pair: one plain sentence for how it behaved before, one for what happens now. User-visible effect first, mechanism second, written for a colleague who has not read the ticket. Under `## Where to look`, link the one to three places that carry the risk so a reviewer can spot-check the code without reading all of it. Detail that does not fit goes into a fold rather than being dropped — the evidence stays in the PR, out of the reviewer's way. Four things never belong at any length: blame archaeology, a defence of a choice nobody questioned or of what you deliberately did not do, commentary on how strong your own tests are, and anything the `Rerun:` line already carries.
-
-The agent note names the exact model id the vendor serves — `claude-opus-5`, `gpt-5.1-codex` — not the harness it runs in; Claude Code, Codex CLI and Cursor are harnesses, so name one in parentheses only when it adds something (`claude-opus-5 (Claude Code 2.1.237)`). The reasoning level is whatever knob that vendor exposes, in its own units: an effort level (`max`, `high`), a thinking budget (`32k tokens`), or `n/a`. Read both out of the tool, never from memory — Claude Code reports them in `/status` or as the session's `model` and `effort_level`, Codex CLI in `/model` or its startup line. A value you cannot look up is `unknown`, never a guess and never the harness name standing in for the model.
-
-The checkbox under `## Breaking changes` is a decision you own, not a formality: judge the diff against the template's list of breaking changes and tick it (`- [x]`) when one applies, leave it unticked when none does. The template also lists what is **not** breaking — purely additive changes, and anything internal to this repo that no external consumer reaches — and an uncertain call is an unticked box with a line of reasoning, never a defensive tick. It is the only input to the `breaking-change` label, which feeds the release notes and the self-hoster migration guide, so a wrong answer either invents a migration entry or hides one. Re-check it whenever the diff grows. `pr-label-sync.yml` reads nothing but the tick, so the prose below the checkbox cannot change the label — but it is not free-form either: the CodeRabbit `Breaking changes match the diff` check compares the tick against the diff and expects a ticked box to document each breaking change, so explain your answer there in whatever shape fits (table or prose).
-
-## Next.js Documentation
-
-Do not rely on training data for Next.js behavior in this repo. For any Next.js-related work (routing, layouts, server/client components, caching, next.config, etc.), use the `nextjs-docs` skill, which indexes the version-pinned local docs in `.next-docs/`.
-
-<!-- robots:start (managed by .agents/install.sh - do not edit inside this block) -->
-## Agent setup (robots)
-
-Shared agent skills and subagents are installed under `.claude/`, and design context under `.agents/` (symlinked from the robots clone; `git -C <clone> pull` refreshes every install). This complements the conventions above; it does not replace them.
-
-- If `.agents/forma-context/DESIGN.md` exists, read it before building or reviewing UI for this repo: it indexes the per-surface design guides (tokens, components, motion, the quality bar).
-- Skills and subagents live in `.claude/`. Treat the design context above as part of these instructions.
-<!-- robots:end -->
+Commits follow Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`). Keep each PR to one module, use `.github/pull_request_template.md`, and record migrations or environment changes in it. Do not restate what CI already reports.

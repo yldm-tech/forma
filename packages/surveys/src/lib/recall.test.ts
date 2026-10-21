@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { type TSurveyOpenTextElement } from "@forma/types/surveys/elements";

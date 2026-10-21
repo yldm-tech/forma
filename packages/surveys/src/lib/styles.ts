@@ -3,9 +3,9 @@ import surveyUiCss from "@forma/survey-ui/styles?inline";
 import { type TSurveyStyling } from "@forma/types/surveys/types";
 import { type TWorkspaceStyling } from "@forma/types/workspace";
 import { ensureReadable, isLight, mixColor } from "@/lib/color";
+import editorCss from "@/styles/editor-frontend.css?inline";
 import global from "@/styles/global.css?inline";
 import preflight from "@/styles/preflight.css?inline";
-import editorCss from "../../../../apps/web/modules/ui/components/editor/styles-editor-frontend.css?inline";
 
 // Store the nonce globally for style elements
 let styleNonce: string | undefined;

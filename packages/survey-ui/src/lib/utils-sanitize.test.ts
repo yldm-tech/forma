@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 // Kept out of `utils.test.ts`, which mocks isomorphic-dompurify away — these cases need
 // the real sanitizer to prove what survives it.
 import { sanitizeSurveyHtml, stripInlineStyles } from "./utils";

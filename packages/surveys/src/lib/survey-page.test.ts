@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
 import { getSurveyDisplayName, getSurveyPagePosition, hasSurveyInstructions } from "./survey-page";

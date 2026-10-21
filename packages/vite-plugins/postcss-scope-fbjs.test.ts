@@ -1,5 +1,5 @@
 import postcss from "postcss";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import scopeFbjs from "./postcss-scope-fbjs.cjs";
 
 // Regression guard for ENG-1333 / forma/js#46.
