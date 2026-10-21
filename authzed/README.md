@@ -98,9 +98,7 @@ the stored relationships.
 
 ## Guiding principle: mirror the current system
 
-The engine-independent application contract in
-`apps/web/lib/authorization` is the source of truth for Forma actor,
-action, and resource types. This SpiceDB schema is a downstream implementation
+The engine-independent application contract (in forma2, `apps/web/lib/authorization`; in the Go server, the `authz` package that replaces it) is the source of truth for Forma actor, action, and resource types. This SpiceDB schema is a downstream implementation
 of that contract; application types must never be generated from SDK or schema
 types.
 
@@ -368,8 +366,7 @@ Resource permissions preserve the operation-specific gates that exist today:
 | Update, tag, or delete a response through the web application    | `response.write`                            | workspace `readWrite`                                   |
 | Delete a response through legacy management APIs                 | `response.manage`                           | workspace `manage`                                      |
 
-Behavioral sources of truth in the application (referenced from the schema's
-doc comments):
+Behavioral sources of truth (referenced from the schema's doc comments). They are paths in forma2, the implementation the Go server ports module by module; read them with `git show 3db326f:<path>` in this repository's history:
 
 - `apps/web/lib/authorization` — the engine-independent current-model
   authorization contract and role/grant mapping.

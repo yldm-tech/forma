@@ -9,12 +9,6 @@
 # testing
 **/coverage
 
-# next.js
-**/.next/
-**/out/
-**/build
-**/next-env.d.ts
-
 # node
 **/dist/
 
@@ -35,54 +29,31 @@ yarn-error.log*
 **/.env.test.local
 **/.env.production.local
 
-# local cloud credentials — the Hub's google-gemini (Vertex) enrichment providers need a GCP
-# service-account JSON on disk (HUB_GOOGLE_APPLICATION_CREDENTIALS). It belongs outside the repo,
-# but these patterns keep the obvious in-repo spots from being committable if someone drops one here.
+# cloud credentials belong outside the repo; these keep the obvious in-repo spots from being committable
 **/gcp*.json
 **/service-account*.json
 **/*-credentials.json
 secrets/
 
 # build tools
-.turbo
 **/*vite.config.*.timestamp-*
 
 # environment specific
 .direnv
 
-# Playwright
-**/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-
 # project specific
 .local/
-packages/lib/uploads
-branch.json
-.vercel
 
 # IntelliJ IDEA
 /.idea/
 /*.iml
-packages/ios/FormaSDK/FormaSDK.xcodeproj/project.xcworkspace/xcuserdata
-.cursorrules
+# Lingo.dev translation cache, and the bundle report `build:analyze` writes in packages/surveys
 i18n.cache
 stats.html
 
-# authzed:perf sample logs — multi-MB JSONL written next to the tracked authzed/ assets
-authzed/perf-samples.jsonl
-authzed/*.perf.jsonl
-# next-agents-md
-.next-docs/
-
-# robots (installed agent assets - machine-local, do not commit)
-# .claude is machine-local except committed symlinks into .agents/skills
-.claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/nextjs-docs
-.agents/forma-context
+# machine-local agent settings
+.claude/
+.agents/
 
 # v3 API contract tests: generated fixture id map, Schemathesis' local replay cache, and the
 # bytecode cache Python leaves next to hooks.py

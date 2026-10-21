@@ -24,9 +24,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-/* eslint-disable-next-line turbo/no-undeclared-env-vars -- injected by the package manager at
-   publish time, not build config: it is never a turbo task input, so declaring it in turbo.json
-   would only make every task hash against the client's UA string. */
+// Set by the package manager that runs the publish.
 const userAgent = process.env.npm_config_user_agent ?? "";
 const isPnpm = userAgent.startsWith("pnpm/");
 
