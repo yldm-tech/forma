@@ -199,13 +199,13 @@ func RunCLI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 	cmd, ok := parseCLI(args)
 	if !ok {
-		fmt.Fprint(stderr, CLIUsage)
+		_, _ = fmt.Fprint(stderr, CLIUsage)
 		write(cliFailure{Code: CodeInvalidRequest, Status: StatusFailed})
 		return 1
 	}
 	cfg, err := config.LoadForAuthz()
 	if err != nil {
-		fmt.Fprintf(stderr, "forma authz: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "forma authz: %v\n", err)
 		return 1
 	}
 	log := logger.New(cfg, stderr)
@@ -235,7 +235,7 @@ func RunCLI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 	db, closeDB, err := database.Open(ctx, cfg, log)
 	if err != nil {
-		fmt.Fprintf(stderr, "forma authz: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "forma authz: %v\n", err)
 		return 1
 	}
 	defer closeDB()

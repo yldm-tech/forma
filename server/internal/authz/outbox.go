@@ -33,6 +33,8 @@ const (
 )
 
 // Outbox target types, the values the triggers write.
+//
+//nolint:gosec // target type names, not credentials
 const (
 	targetOrganization    = "organization"
 	targetMembership      = "membership"

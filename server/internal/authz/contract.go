@@ -195,6 +195,8 @@ var workspaceTeamRelations = map[string]string{"manage": "manager_team", "read":
 var workspaceAPIKeyRelations = map[string]string{"manage": "manager", "read": "reader", "write": "writer"}
 
 // Organization-level API key access: organization#<relation>@api_key, independent flags rather than a ladder.
+//
+//nolint:gosec // relation names, not credentials
 const (
 	relationAPIKeyReader = "api_key_reader"
 	relationAPIKeyWriter = "api_key_writer"

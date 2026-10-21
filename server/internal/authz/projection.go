@@ -305,8 +305,6 @@ type apiKeyTargets struct {
 	Grants []apiKeyWorkspaceTarget
 }
 
-func (t apiKeyTargets) empty() bool { return len(t.APIKeyIDs) == 0 && len(t.Grants) == 0 }
-
 type apiKeyRow struct {
 	ID                 string
 	OrganizationID     string
