@@ -8,9 +8,11 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -39,6 +41,14 @@ var authSet = wire.NewSet(
 	auth.NewSessions,
 	auth.NewService,
 	auth.NewHandler,
+	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
+)
+
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+var apikeySet = wire.NewSet(
+	apikey.NewRepository,
+	apikey.NewService,
+	apikey.NewHandler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
@@ -49,6 +59,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewAuthorizer,
 		platformSet,
 		authSet,
+		jsonschema.New,
+		apikeySet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

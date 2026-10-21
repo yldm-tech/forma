@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
@@ -35,11 +36,11 @@ type routeRegistrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, apikeyHandler *apikey.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler)
+	mountAppAPI(r, p, authHandler, apikeyHandler)
 	web.Register(r)
 	return r
 }

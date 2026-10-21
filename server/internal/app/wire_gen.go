@@ -9,9 +9,11 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -74,6 +76,16 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	sessions := auth.NewSessions(cfg, db, log)
 	service := auth.NewService(cfg, repository, sessions, limiter, mailerMailer, emitter, client, log)
 	authHandler := auth.NewHandler(cfg, service, sessions)
+	apikeyRepository := apikey.NewRepository(db)
+	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
+	validator, err := jsonschema.New()
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -81,7 +93,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, apikeyHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -130,4 +142,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, wire.Struct(new(Platform), "*"))
 
 // authSet is the credential module: sessions, sign-up, sign-in and the account flows under /api/app/auth.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewHandler)
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, auth.NewService, auth.NewHandler, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)))
+
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)
