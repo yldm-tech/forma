@@ -141,6 +141,17 @@ func TestIsBlockedEmailDomain(t *testing.T) {
 		{"  ada@outlook.com  ", true},
 		{"ada@proton.me", true},
 		{"ada@privaterelay.appleid.com", true},
+		{"test@mailinator.com", true},
+		{"test@guerrillamail.com", true},
+		{"test@yopmail.com", true},
+		{"test@10minutemail.com", true},
+		{"test@sharklasers.com", true},
+		{"test@33mail.com", true},
+		{"Test@Mailinator.COM.", true},
+		{"alice@acme-corp.com", false},
+		{"bob@forma.ylam.ai", false},
+		{"carol@stripe.com", false},
+		{"dave@my-company.co.uk", false},
 		{"a@b@gmail.com", true},
 		{"ada@sub.gmail.com", false},
 		{"ada@example.com", false},
@@ -153,6 +164,24 @@ func TestIsBlockedEmailDomain(t *testing.T) {
 	for _, tc := range cases {
 		if got := isBlockedEmailDomain(tc.in); got != tc.want {
 			t.Errorf("isBlockedEmailDomain(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
+// The vendored list is disposable-email-domains 1.0.62's index.json, whole: one lowercase domain per line, sorted, no duplicates.
+func TestDisposableEmailDomainList(t *testing.T) {
+	var domains []string
+	for _, line := range strings.Split(strings.TrimSpace(disposableEmailDomainList), "\n") {
+		if !strings.HasPrefix(line, "#") {
+			domains = append(domains, line)
+		}
+	}
+	if len(domains) != 121570 || len(disposableEmailDomains()) != len(domains) {
+		t.Fatalf("%d lines, %d distinct domains, want 121570", len(domains), len(disposableEmailDomains()))
+	}
+	for i, d := range domains {
+		if d != strings.ToLower(strings.TrimSpace(d)) || d == "" || (i > 0 && domains[i-1] >= d) {
+			t.Fatalf("line %d %q is not a lowercase domain in sorted order", i, d)
 		}
 	}
 }

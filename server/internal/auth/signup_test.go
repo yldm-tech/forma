@@ -158,11 +158,12 @@ func TestSignupOpenOnFormaCloudAndForE2E(t *testing.T) {
 	}
 }
 
-// Forma Cloud refuses personal mail domains; a self-hosted instance never does.
+// Forma Cloud refuses personal and disposable mail domains; a self-hosted instance never does.
 func TestSignupEmailDomainBlock(t *testing.T) {
 	t.Parallel()
 	cloud := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	expectStatus(t, cloud.browser().post("/auth/signup", signupBody("ada@Gmail.com")), http.StatusBadRequest, CodeEmailDomainNotAllowed)
+	expectStatus(t, cloud.browser().post("/auth/signup", signupBody("alice@mailinator.com")), http.StatusBadRequest, CodeEmailDomainNotAllowed)
 	if cloud.count(`SELECT count(*) FROM users`) != 0 {
 		t.Fatal("a blocked domain created a user")
 	}

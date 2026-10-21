@@ -1,6 +1,10 @@
 package auth
 
-import "strings"
+import (
+	_ "embed"
+	"strings"
+	"sync"
+)
 
 // personalEmailDomains is forma2's curated list of personal and free mail providers (apps/web/modules/auth/lib/personal-email-domains.ts). Forma Cloud refuses them at sign-up so that every organization is tied to a company domain.
 var personalEmailDomains = map[string]bool{
@@ -27,7 +31,21 @@ var personalEmailDomains = map[string]bool{
 	"gmaill.com": true, "gmail.cz": true,
 }
 
-// isBlockedEmailDomain reports whether an address belongs to a personal mail provider. Malformed input (no "@", an empty local part or domain) is not blocked, and trailing dots are ignored so "gmail.com." cannot slip past.
+//go:embed disposable_email_domains.txt
+var disposableEmailDomainList string
+
+// disposableEmailDomains is the vendored disposable-email-domains list (about 121,000 throwaway-mail domains), which forma2 blocked together with personalEmailDomains. The set is built on first use, so processes that never check a sign-up do not pay for it.
+var disposableEmailDomains = sync.OnceValue(func() map[string]bool {
+	set := make(map[string]bool, 125_000)
+	for _, line := range strings.Split(disposableEmailDomainList, "\n") {
+		if line = strings.ToLower(strings.TrimSpace(line)); line != "" && !strings.HasPrefix(line, "#") {
+			set[line] = true
+		}
+	}
+	return set
+})
+
+// isBlockedEmailDomain reports whether an address belongs to a personal or disposable mail provider. Malformed input (no "@", an empty local part or domain) is not blocked, and trailing dots are ignored so "gmail.com." cannot slip past.
 func isBlockedEmailDomain(email string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	at := strings.LastIndexByte(normalized, '@')
@@ -35,5 +53,5 @@ func isBlockedEmailDomain(email string) bool {
 		return false
 	}
 	domain := strings.TrimRight(normalized[at+1:], ".")
-	return personalEmailDomains[domain]
+	return personalEmailDomains[domain] || disposableEmailDomains()[domain]
 }
