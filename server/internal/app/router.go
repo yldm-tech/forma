@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -16,7 +17,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/webui"
 )
 
-// Platform is the shared infrastructure every feature module is built from: configuration, logging, the client address resolver, rate limits, mail and audit events. Modules take the parts they need as constructor arguments; NewRouter takes the bundle.
+// Platform is the shared infrastructure every feature module is built from: configuration, logging, the client address resolver, rate limits, mail, audit events and authorization. Modules take the parts they need as constructor arguments; NewRouter takes the bundle.
 type Platform struct {
 	Config   config.Config
 	Log      *slog.Logger
@@ -24,6 +25,7 @@ type Platform struct {
 	Limiter  *ratelimit.Limiter
 	Mailer   *mailer.Mailer
 	Audit    *audit.Emitter
+	Authz    *authz.Authorizer
 }
 
 // routeRegistrar is a feature module's HTTP handler.
@@ -41,9 +43,9 @@ func NewRouter(p *Platform, healthHandler *health.Handler, web *webui.Handler) *
 	return r
 }
 
-// mountAppAPI mounts /api/app, the session-authenticated API only the admin SPA calls. Every route under it answers errors with the JSON envelope, and every mutation must pass the CSRF check. Feature modules' handlers are passed here as they land.
+// mountAppAPI mounts /api/app, the session-authenticated API only the admin SPA calls. Every route under it answers errors with the JSON envelope, every mutation must pass the CSRF check, and each request evaluates a repeated authorization question once. Feature modules' handlers are passed here as they land.
 func mountAppAPI(r *gin.Engine, p *Platform, handlers ...routeRegistrar) {
-	group := r.Group("/api/app", httpapi.ErrorHandler(p.Log), httpapi.CSRF(p.Config))
+	group := r.Group("/api/app", httpapi.ErrorHandler(p.Log), httpapi.CSRF(p.Config), authz.DecisionMemo())
 	for _, h := range handlers {
 		h.Register(group)
 	}

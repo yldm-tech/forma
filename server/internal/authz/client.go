@@ -62,8 +62,12 @@ type RelationshipUpdate struct {
 	Relationship Relationship
 }
 
-func touch(r Relationship) RelationshipUpdate  { return RelationshipUpdate{Op: OpTouch, Relationship: r} }
-func remove(r Relationship) RelationshipUpdate { return RelationshipUpdate{Op: OpDelete, Relationship: r} }
+func touch(r Relationship) RelationshipUpdate {
+	return RelationshipUpdate{Op: OpTouch, Relationship: r}
+}
+func remove(r Relationship) RelationshipUpdate {
+	return RelationshipUpdate{Op: OpDelete, Relationship: r}
+}
 
 // SubjectFilter narrows a filter to one subject; Relation is optional.
 type SubjectFilter struct {

@@ -43,7 +43,9 @@ func (p *projector) project(ctx context.Context, operation, name string, run fun
 	return nil
 }
 
-func errUnstable() *Error { return newError(codeProjectionUnstable, "reconcile", false, maxReconciliationPasses) }
+func errUnstable() *Error {
+	return newError(codeProjectionUnstable, "reconcile", false, maxReconciliationPasses)
+}
 
 // reconcileLoop reads, writes and verifies until a write was made from a snapshot that still holds.
 func reconcileLoop[S any](read func() (S, error), write func(S) error, equal func(a, b S) bool) error {

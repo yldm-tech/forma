@@ -230,11 +230,6 @@ type OutboxStatus struct {
 	OldestPendingAgeSeconds *float64 `json:"oldestPendingAgeSeconds"`
 }
 
-// Healthy reports an outbox with nothing dead-lettered and no revocation past the warning age.
-func (s OutboxStatus) Healthy() bool {
-	return s.DeadLettered == 0 && s.OverdueRevocations == 0 && s.RevocationsPastCritical == 0 && s.RevocationsPastWarning == 0
-}
-
 // outboxStatus aggregates the undelivered rows only, so the five-second delivery job never scans the retained history.
 func outboxStatus(ctx context.Context, db *gorm.DB) (OutboxStatus, error) {
 	var s OutboxStatus

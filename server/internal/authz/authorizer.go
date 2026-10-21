@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -322,4 +323,12 @@ func (m *decisionMemo) do(key string, evaluate func() (bool, error)) (bool, erro
 	}
 	close(e.done)
 	return e.allowed, e.err
+}
+
+// DecisionMemo gives every request its own decision memo.
+func DecisionMemo() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request = c.Request.WithContext(WithDecisionMemo(c.Request.Context()))
+		c.Next()
+	}
 }
