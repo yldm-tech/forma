@@ -15,7 +15,7 @@ import (
 func (s *Service) resendVerification(ctx context.Context, email, intentToken string) (*issuedToken, error) {
 	renewed, err := s.resend(ctx, email, intentToken)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionVerificationEmailSent, "", err)
+		s.logFailure(ctx, audit.ActionVerificationEmailSent, "")
 	}
 	return renewed, err
 }

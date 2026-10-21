@@ -27,7 +27,7 @@ type signupInput struct {
 func (s *Service) signup(ctx context.Context, in signupInput) (issuedToken, error) {
 	intent, err := s.createAccount(ctx, in)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionCreated, "", err)
+		s.logFailure(ctx, audit.ActionCreated, "")
 	}
 	return intent, err
 }

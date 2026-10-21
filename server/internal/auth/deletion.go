@@ -19,12 +19,9 @@ func (s *Service) deleteAccount(ctx context.Context, actor httpapi.Actor, passwo
 	if err := s.limiter.ApplyIP(ctx, ratelimit.BADeleteUser); err != nil {
 		return "", err
 	}
-	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	acc, err := s.currentAccount(ctx, actor)
 	if err != nil {
 		return "", err
-	}
-	if acc == nil {
-		return "", apperr.NotAuthenticated("Not authenticated")
 	}
 	if !acc.hasPassword() {
 		return "", errPasswordNotSet()
@@ -50,12 +47,9 @@ func (s *Service) requestAccountDeletion(ctx context.Context, actor httpapi.Acto
 	if err := s.limiter.Apply(ctx, ratelimit.ActionAccountDeletion, actor.UserID.String()); err != nil {
 		return err
 	}
-	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	acc, err := s.currentAccount(ctx, actor)
 	if err != nil {
 		return err
-	}
-	if acc == nil {
-		return apperr.NotAuthenticated("Not authenticated")
 	}
 	if acc.emailIdentity() {
 		return apperr.Forbidden("Password confirmation is required to delete this account.")

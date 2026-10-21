@@ -18,18 +18,15 @@ import (
 func (s *Service) requestEmailChange(ctx context.Context, actor httpapi.Actor, email, password string) error {
 	err := s.changeEmail(ctx, actor, email, password)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionUpdated, actor.UserID.String(), err)
+		s.logFailure(ctx, audit.ActionUpdated, actor.UserID.String())
 	}
 	return err
 }
 
 func (s *Service) changeEmail(ctx context.Context, actor httpapi.Actor, email, password string) error {
-	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	acc, err := s.currentAccount(ctx, actor)
 	if err != nil {
 		return err
-	}
-	if acc == nil {
-		return apperr.NotAuthenticated("Not authenticated")
 	}
 	newEmail := normalizeEmail(strings.TrimSpace(email))
 	if newEmail == normalizeEmail(acc.Email) {
@@ -76,7 +73,7 @@ func (s *Service) changeEmail(ctx context.Context, actor httpapi.Actor, email, p
 func (s *Service) confirmEmailChange(ctx context.Context, token string) (string, error) {
 	email, err := s.redeemEmailChange(ctx, token)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionUpdated, "", err)
+		s.logFailure(ctx, audit.ActionUpdated, "")
 	}
 	return email, err
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Failed sign-ins are audited, but a brute-force run must not flood the audit stream. forma2's shouldLogAuthFailure (apps/web/modules/auth/lib/utils.ts) keeps a log of attempts per identity in five-minute buckets: the first three failures are recorded, then every tenth, or one after a quiet minute.
+// Failed sign-ins are audited, but a brute-force run must not flood the audit stream. forma2's shouldLogAuthFailure (apps/web/modules/auth/lib/utils.ts) keeps a log of attempts per identity in five-minute buckets: the first few failures are recorded, then every tenth, or one after a quiet minute.
 const (
 	failureBucket         = 5 * time.Minute
 	failureFreeAttempts   = 3

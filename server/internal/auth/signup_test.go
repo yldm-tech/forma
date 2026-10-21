@@ -134,7 +134,7 @@ func TestSignupOnAClosedInstance(t *testing.T) {
 		t.Fatal("a closed instance created a user")
 	}
 	failures := e.auditEvents(audit.ActionCreated)
-	if last := failures[len(failures)-1]; field(last, "status") != "failure" || field(last, "eventId") == nil {
+	if last := failures[len(failures)-1]; field(last, "status") != "failure" || field(last, "target", "id") != "unknown" {
 		t.Fatalf("refused sign-up audited as %v", last)
 	}
 }

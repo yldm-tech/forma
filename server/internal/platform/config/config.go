@@ -63,8 +63,6 @@ type Config struct {
 	IsFormaCloud bool `env:"IS_FORMA_CLOUD" envDefault:"0"`
 	// E2ETesting opens public sign-up for end-to-end test runs, as on Forma Cloud.
 	E2ETesting bool `env:"E2E_TESTING" envDefault:"0"`
-	// SignupDomainCheckOnInvites extends the Forma Cloud email domain block to invited sign-ups, which are exempt by default.
-	SignupDomainCheckOnInvites bool `env:"SIGNUP_DOMAIN_CHECK_ON_INVITES" envDefault:"0"`
 	// EmailAuthDisabled switches email and password sign-up and sign-in off, for SSO-only instances.
 	EmailAuthDisabled bool `env:"EMAIL_AUTH_DISABLED" envDefault:"0"`
 	// EmailVerificationDisabled lets unverified users sign in and applies email changes without confirmation. The verification mail is still sent at sign-up.

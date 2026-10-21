@@ -73,6 +73,18 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 	return signInResult{session: &sess}, nil
 }
 
+// currentAccount is the signed-in user.
+func (s *Service) currentAccount(ctx context.Context, actor httpapi.Actor) (*account, error) {
+	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if acc == nil {
+		return nil, apperr.NotAuthenticated("Not authenticated")
+	}
+	return acc, nil
+}
+
 // signInRejections are the outcomes forma2 audited as failed authentication attempts; a rate-limited request never reached its audit hook.
 var signInRejections = map[string]bool{
 	CodeInvalidEmailOrPassword: true,

@@ -27,9 +27,14 @@ func (e *env) sessionFor(id uuid.UUID) *browser {
 	return b
 }
 
+// changeEmail requests an email change; an empty password is left out of the request.
 func changeEmail(b *browser, email, password string) response {
 	b.e.t.Helper()
-	return b.post("/auth/email/change", map[string]string{"email": email, "password": password})
+	body := map[string]string{"email": email}
+	if password != "" {
+		body["password"] = password
+	}
+	return b.post("/auth/email/change", body)
 }
 
 func (e *env) emailOf(id uuid.UUID) (string, bool) {
@@ -113,8 +118,12 @@ func TestEmailChangeRules(t *testing.T) {
 		t.Fatal("mail was sent for a taken address")
 	}
 
+	// A confirmation password, when sent, must meet the password policy, as in forma2's ZUserPersonalInfoUpdateInput.
+	r = changeEmail(sess, "new@example.com", "weak")
+	expectStatus(t, r, http.StatusBadRequest, apperr.CodeValidation)
+
 	sso := e.sessionFor(e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true}))
-	r = changeEmail(sso, "elsewhere@example.com", "anything")
+	r = changeEmail(sso, "elsewhere@example.com", "Anything-1")
 	expectStatus(t, r, http.StatusForbidden, apperr.CodeOperationNotAllowed)
 	if r.json()["message"] != "Email update is not allowed for non-credential users." {
 		t.Fatalf("message %v", r.json()["message"])

@@ -143,11 +143,9 @@ func (s *Service) logEvent(ctx context.Context, e audit.Event) {
 	s.audit.Log(ctx, audit.FromRequest(ctx, e))
 }
 
-// logFailure records that an audited operation failed, with an event id to correlate it with the error log.
-func (s *Service) logFailure(ctx context.Context, action audit.Action, targetID string, err error) {
-	eventID := uuid.NewString()
-	s.log.InfoContext(ctx, "Audited operation failed", "action", string(action), "eventId", eventID, "err", err)
-	s.logEvent(ctx, audit.Event{Action: action, TargetType: audit.TargetUser, TargetID: targetID, Status: audit.StatusFailure, EventID: eventID})
+// logFailure records that an audited operation failed, as forma2's withAuditLogging did for every error its handler threw, a rate-limit refusal included. The error itself is reported where the request is answered.
+func (s *Service) logFailure(ctx context.Context, action audit.Action, targetID string) {
+	s.logEvent(ctx, audit.Event{Action: action, TargetType: audit.TargetUser, TargetID: targetID, Status: audit.StatusFailure})
 }
 
 // signInMethodPassword is the authMethod forma2 recorded for every credential sign-in completion.

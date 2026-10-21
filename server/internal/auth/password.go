@@ -17,7 +17,7 @@ import (
 // forgotPassword mails a reset link when the address belongs to an account that can reset its password, and answers the same whether or not it does. The audit trail records a reset only when a link was actually sent.
 func (s *Service) forgotPassword(ctx context.Context, email string) error {
 	if err := s.requestReset(ctx, email); err != nil {
-		s.logFailure(ctx, audit.ActionPasswordReset, "", err)
+		s.logFailure(ctx, audit.ActionPasswordReset, "")
 		return err
 	}
 	return nil
@@ -144,12 +144,9 @@ func (s *Service) changePassword(ctx context.Context, actor httpapi.Actor, curre
 	if err := s.limiter.ApplyIP(ctx, ratelimit.BAChangePassword); err != nil {
 		return err
 	}
-	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	acc, err := s.currentAccount(ctx, actor)
 	if err != nil {
 		return err
-	}
-	if acc == nil {
-		return apperr.NotAuthenticated("Not authenticated")
 	}
 	if !acc.hasPassword() {
 		return errPasswordNotSet()
@@ -185,7 +182,7 @@ func (s *Service) changePassword(ctx context.Context, actor httpapi.Actor, curre
 func (s *Service) requestResetLink(ctx context.Context, actor httpapi.Actor) error {
 	err := s.sendOwnResetLink(ctx, actor)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionPasswordReset, actor.UserID.String(), err)
+		s.logFailure(ctx, audit.ActionPasswordReset, actor.UserID.String())
 		return err
 	}
 	s.logEvent(ctx, audit.Event{Action: audit.ActionPasswordReset, TargetType: audit.TargetUser, TargetID: actor.UserID.String(), Status: audit.StatusSuccess})
@@ -196,12 +193,9 @@ func (s *Service) sendOwnResetLink(ctx context.Context, actor httpapi.Actor) err
 	if s.cfg.PasswordResetDisabled {
 		return errPasswordResetDisabled()
 	}
-	acc, err := s.repo.accountByID(ctx, actor.UserID)
+	acc, err := s.currentAccount(ctx, actor)
 	if err != nil {
 		return err
-	}
-	if acc == nil {
-		return apperr.NotAuthenticated("Not authenticated")
 	}
 	if !acc.emailIdentity() {
 		return apperr.OperationNotAllowed("Password reset is not allowed for this user.")

@@ -112,13 +112,9 @@ type meResponse struct {
 }
 
 func (h *Handler) me(c *gin.Context) {
-	acc, err := h.svc.repo.accountByID(c.Request.Context(), actor(c).UserID)
+	acc, err := h.svc.currentAccount(c.Request.Context(), actor(c))
 	if err != nil {
 		httpapi.Fail(c, err)
-		return
-	}
-	if acc == nil {
-		httpapi.Fail(c, apperr.NotAuthenticated("Not authenticated"))
 		return
 	}
 	res := meResponse{
@@ -379,13 +375,17 @@ func (h *Handler) requestResetLink(c *gin.Context) {
 }
 
 type emailChangeRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email string `json:"email"`
+	// Password is optional in the schema, but when present it must satisfy the password policy (forma2's ZUserPersonalInfoUpdateInput).
+	Password *string `json:"password"`
 }
 
 func (r *emailChangeRequest) validate() error {
 	var errs fieldErrors
 	checkEmail(&errs, r.Email)
+	if r.Password != nil {
+		checkPassword(&errs, "password", *r.Password)
+	}
 	return errs.err()
 }
 
@@ -395,7 +395,11 @@ func (h *Handler) requestEmailChange(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
-	if err := h.svc.requestEmailChange(c.Request.Context(), actor(c), req.Email, req.Password); err != nil {
+	password := ""
+	if req.Password != nil {
+		password = *req.Password
+	}
+	if err := h.svc.requestEmailChange(c.Request.Context(), actor(c), req.Email, password); err != nil {
 		httpapi.Fail(c, err)
 		return
 	}
