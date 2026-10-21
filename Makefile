@@ -6,11 +6,12 @@ WEB_DIST := web/dist
 EMBED_DIR := $(SERVER)/internal/webui/dist
 BIN := bin/forma
 
-.PHONY: help deps-up deps-down dev-server dev-web build web embed server generate lint test check clean
+.PHONY: help deps-up deps-down migrate dev-server dev-web build web embed server generate lint test check clean
 
 help:
 	@echo "deps-up      start local dependencies (docker compose)"
 	@echo "deps-down    stop local dependencies"
+	@echo "migrate      apply pending database migrations (reads .env)"
 	@echo "dev-server   run the Go server against .env"
 	@echo "dev-web      run the Vite dev server (proxies the API to the Go server)"
 	@echo "build        build the SPA, embed it, and compile bin/forma"
@@ -24,6 +25,9 @@ deps-up:
 
 deps-down:
 	docker compose -f docker-compose.dev.yml down
+
+migrate:
+	set -a && . ./.env && set +a && cd $(SERVER) && go run ./cmd/forma migrate
 
 dev-server:
 	set -a && . ./.env && set +a && cd $(SERVER) && go run ./cmd/forma serve

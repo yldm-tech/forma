@@ -62,3 +62,21 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadForMigrateNeedsOnlyTheDatabase(t *testing.T) {
+	t.Setenv("WEBAPP_URL", "")
+	t.Setenv("DATABASE_URL", "postgres://forma:forma@localhost:5432/forma?sslmode=disable")
+
+	cfg, err := LoadForMigrate()
+	if err != nil {
+		t.Fatalf("LoadForMigrate: %v", err)
+	}
+	if cfg.DatabaseURL == "" || cfg.LogFormat != "json" {
+		t.Fatalf("cfg = %+v, want the database URL and default log format", cfg)
+	}
+
+	t.Setenv("DATABASE_URL", "")
+	if _, err := LoadForMigrate(); err == nil {
+		t.Fatal("LoadForMigrate succeeded without DATABASE_URL")
+	}
+}
