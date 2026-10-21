@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/org"
@@ -88,7 +89,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	sso := auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log))
 
 	r := httpserver.NewEngine(log)
-	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions))
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil))
 	sso.RegisterCallbacks(r)
 
 	want := map[string]bool{
@@ -103,6 +104,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"GET /api/app/workspaces/:workspaceId":                                 true,
 		"GET /api/app/organizations/:organizationId/workspaces":                true,
 		"GET /api/app/organizations/:organizationId/members":                   true,
+		"PATCH /api/app/organizations/:organizationId/api-keys/:apiKeyId":      true,
 		"POST /api/app/auth/sso/sign-in":                                       true,
 		"GET /api/auth/callback/:provider":                                     true,
 	}

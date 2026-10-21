@@ -1,0 +1,221 @@
+package apikey
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+// Repository reads and writes api_keys and api_key_workspaces. Every admin query is scoped by organization as well as by id, so tenant isolation never rests on the authorization check alone. The authz triggers enqueue the SpiceDB projection of every insert and delete in the same transaction.
+type Repository struct {
+	db *gorm.DB
+}
+
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
+}
+
+// workspacesOf returns the names of those of ids that are workspaces of organizationID.
+func (r *Repository) workspacesOf(ctx context.Context, organizationID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	var found []struct {
+		ID   uuid.UUID
+		Name string
+	}
+	err := r.db.WithContext(ctx).Raw(`SELECT id, name FROM workspaces WHERE organization_id = ? AND id IN ?`, organizationID, ids).Scan(&found).Error
+	if err != nil {
+		return nil, fmt.Errorf("load organization workspaces: %w", err)
+	}
+	names := make(map[uuid.UUID]string, len(found))
+	for _, w := range found {
+		names[w.ID] = w.Name
+	}
+	return names, nil
+}
+
+// newKeyRow is what create stores.
+type newKeyRow struct {
+	OrganizationID     uuid.UUID
+	CreatedBy          uuid.UUID
+	Label              string
+	HashedKey          string
+	LookupHash         string
+	OrganizationAccess []byte
+	Grants             []grantInput
+}
+
+type grantInput struct {
+	WorkspaceID uuid.UUID
+	Permission  string
+}
+
+// create inserts a key and its workspace grants in one transaction and returns its id and creation time.
+func (r *Repository) create(ctx context.Context, row newKeyRow) (uuid.UUID, time.Time, error) {
+	var created struct {
+		ID        uuid.UUID
+		CreatedAt time.Time
+	}
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Raw(
+			`INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash, organization_access) VALUES (?, ?, ?, ?, ?, ?::jsonb) RETURNING id, created_at`,
+			row.OrganizationID, row.CreatedBy, row.Label, row.HashedKey, row.LookupHash, string(row.OrganizationAccess),
+		).Scan(&created).Error
+		if err != nil {
+			return fmt.Errorf("insert api key: %w", err)
+		}
+		for _, g := range row.Grants {
+			if err := tx.Exec(`INSERT INTO api_key_workspaces (api_key_id, workspace_id, permission) VALUES (?, ?, ?)`, created.ID, g.WorkspaceID, g.Permission).Error; err != nil {
+				return fmt.Errorf("insert api key workspace: %w", err)
+			}
+		}
+		return nil
+	})
+	return created.ID, created.CreatedAt, err
+}
+
+type keyRow struct {
+	ID                 uuid.UUID
+	Label              string
+	CreatedAt          time.Time
+	OrganizationAccess []byte
+}
+
+type grantRow struct {
+	APIKeyID      uuid.UUID
+	WorkspaceID   uuid.UUID
+	WorkspaceName string
+	Permission    string
+}
+
+// list returns the organization's keys, oldest first. forma2 returned them unordered.
+func (r *Repository) list(ctx context.Context, organizationID uuid.UUID) ([]View, error) {
+	return views(ctx, r.db, organizationID, nil)
+}
+
+// byID returns one key of the organization, or nil when the organization has no such key.
+func (r *Repository) byID(ctx context.Context, organizationID, id uuid.UUID) (*View, error) {
+	return oneView(ctx, r.db, organizationID, id)
+}
+
+func oneView(ctx context.Context, db *gorm.DB, organizationID, id uuid.UUID) (*View, error) {
+	found, err := views(ctx, db, organizationID, &id)
+	if err != nil || len(found) == 0 {
+		return nil, err
+	}
+	return &found[0], nil
+}
+
+func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.UUID) ([]View, error) {
+	query := db.WithContext(ctx).Table("api_keys").Select("id, label, created_at, organization_access").Where("organization_id = ?", organizationID)
+	if id != nil {
+		query = query.Where("id = ?", *id)
+	}
+	var keys []keyRow
+	if err := query.Order("created_at, id").Scan(&keys).Error; err != nil {
+		return nil, fmt.Errorf("list api keys: %w", err)
+	}
+	out := make([]View, len(keys))
+	if len(keys) == 0 {
+		return out, nil
+	}
+	index := make(map[uuid.UUID]int, len(keys))
+	ids := make([]uuid.UUID, len(keys))
+	for i, k := range keys {
+		out[i] = View{ID: k.ID, Label: k.Label, CreatedAt: k.CreatedAt, OrganizationAccess: storedAccess(k.OrganizationAccess), WorkspacePermissions: []WorkspaceGrant{}}
+		index[k.ID] = i
+		ids[i] = k.ID
+	}
+	var grants []grantRow
+	err := db.WithContext(ctx).Raw(
+		`SELECT g.api_key_id, g.workspace_id, w.name AS workspace_name, g.permission FROM api_key_workspaces g JOIN workspaces w ON w.id = g.workspace_id WHERE g.api_key_id IN ? ORDER BY w.name, g.workspace_id`, ids,
+	).Scan(&grants).Error
+	if err != nil {
+		return nil, fmt.Errorf("list api key workspaces: %w", err)
+	}
+	for _, g := range grants {
+		v := &out[index[g.APIKeyID]]
+		v.WorkspacePermissions = append(v.WorkspacePermissions, WorkspaceGrant{WorkspaceID: g.WorkspaceID, WorkspaceName: g.WorkspaceName, Permission: g.Permission})
+	}
+	return out, nil
+}
+
+// updateLabel relabels one key of the organization; a key of another organization is left alone.
+func (r *Repository) updateLabel(ctx context.Context, organizationID, id uuid.UUID, label string) error {
+	if err := r.db.WithContext(ctx).Exec(`UPDATE api_keys SET label = ? WHERE id = ? AND organization_id = ?`, label, id, organizationID).Error; err != nil {
+		return fmt.Errorf("update api key label: %w", err)
+	}
+	return nil
+}
+
+// delete removes one key of the organization, its grants with it, and returns what it was; nil when the organization has no such key.
+func (r *Repository) delete(ctx context.Context, organizationID, id uuid.UUID) (*View, error) {
+	var deleted *View
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		v, err := oneView(ctx, tx, organizationID, id)
+		if err != nil || v == nil {
+			return err
+		}
+		res := tx.Exec(`DELETE FROM api_keys WHERE id = ? AND organization_id = ?`, id, organizationID)
+		if res.Error != nil {
+			return fmt.Errorf("delete api key: %w", res.Error)
+		}
+		if res.RowsAffected > 0 {
+			deleted = v
+		}
+		return nil
+	})
+	return deleted, err
+}
+
+// storedKey is what authentication reads of a key.
+type storedKey struct {
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	HashedKey          string
+	OrganizationAccess []byte
+	LastUsedAt         sql.NullTime
+}
+
+// byLookupHash finds the key whose lookup_hash is hash, or nil.
+func (r *Repository) byLookupHash(ctx context.Context, hash string) (*storedKey, error) {
+	var rows []storedKey
+	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("look up api key: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return &rows[0], nil
+}
+
+// authGrant is a key's grant with the workspace's organization, so authentication can drop grants outside the key's organization.
+type authGrant struct {
+	WorkspaceID    uuid.UUID
+	WorkspaceName  string
+	OrganizationID uuid.UUID
+	Permission     string
+}
+
+func (r *Repository) grantsOf(ctx context.Context, keyID uuid.UUID) ([]authGrant, error) {
+	var grants []authGrant
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT g.workspace_id, w.name AS workspace_name, w.organization_id, g.permission FROM api_key_workspaces g JOIN workspaces w ON w.id = g.workspace_id WHERE g.api_key_id = ? ORDER BY w.name, g.workspace_id`, keyID,
+	).Scan(&grants).Error
+	if err != nil {
+		return nil, fmt.Errorf("load api key workspaces: %w", err)
+	}
+	return grants, nil
+}
+
+// touch records a use at now unless one was recorded after staleBefore. The condition is repeated in SQL so concurrent requests write once.
+func (r *Repository) touch(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) error {
+	err := r.db.WithContext(ctx).Exec(`UPDATE api_keys SET last_used_at = ? WHERE id = ? AND (last_used_at IS NULL OR last_used_at <= ?)`, now, id, staleBefore).Error
+	if err != nil {
+		return fmt.Errorf("update api key usage: %w", err)
+	}
+	return nil
+}

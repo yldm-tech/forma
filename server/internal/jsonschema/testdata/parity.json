@@ -164,5 +164,47 @@
     "zod": false,
     "jsonSchema": false,
     "document": { "channel": "email" }
+  },
+  {
+    "name": "organization access with both flags",
+    "schema": "api_key.organization_access",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "accessControl": { "read": true, "write": false } }
+  },
+  {
+    "name": "organization access with an unknown top-level key, which zod strips",
+    "schema": "api_key.organization_access",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "accessControl": { "read": false, "write": false }, "billing": { "read": true } }
+  },
+  {
+    "name": "organization access without accessControl",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": {}
+  },
+  {
+    "name": "organization access missing the write flag",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": true } }
+  },
+  {
+    "name": "organization access with an extra flag, which the strict inner object rejects",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": true, "write": true, "manage": true } }
+  },
+  {
+    "name": "organization access with a non-boolean flag",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": "true", "write": false } }
   }
 ]

@@ -9,6 +9,7 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
@@ -109,6 +110,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	teamService := team.NewService(teamRepository, authorizer, emitter, log)
 	teamHandler := team.NewHandler(teamService, sessions)
 	inviteHandler := invite.NewHandler(service, sessions)
+	apikeyRepository := apikey.NewRepository(db)
+	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
+	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -116,7 +120,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -168,10 +172,13 @@ var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New,
 var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
-var tenancySet = wire.NewSet(jsonschema.New, workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
+var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
 
 // teamSet is teams, their members and their workspace access.
 var teamSet = wire.NewSet(team.NewRepository, team.NewService, team.NewHandler)
 
 // inviteSet is invites and their acceptance; sign-up redeems invites through it.
 var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)), invite.NewHandler)
+
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)
