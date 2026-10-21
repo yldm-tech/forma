@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -33,7 +34,7 @@ func NewEngine(log *slog.Logger) *gin.Engine {
 		panic(fmt.Sprintf("disable trusted proxies: %v", err))
 	}
 	r.HandleMethodNotAllowed = true
-	r.Use(requestID(), accessLog(log), recovery(log))
+	r.Use(requestID(), securityHeaders(), accessLog(log), recovery(log))
 	return r
 }
 
@@ -92,6 +93,27 @@ func requestID() gin.HandlerFunc {
 		}
 		c.Set(requestIDHeader, id)
 		c.Header(requestIDHeader, id)
+		c.Next()
+	}
+}
+
+// contentSecurityPolicy is forma2's production policy (apps/web/next.config.mjs), without the frame-ancestors directive, which depends on the path.
+const contentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+
+// securityHeaders sets the headers forma2 sent on every response. Only the public survey pages (/s/..., /c/...) may be framed by any site, since customers embed them; everything else, the admin SPA first, may be framed only by itself, so another site cannot overlay it to steer a click (clickjacking). The referrer policy keeps a token-bearing URL such as /invite?token= from leaving the origin in a Referer header.
+func securityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		if p := c.Request.URL.Path; strings.HasPrefix(p, "/s/") || strings.HasPrefix(p, "/c/") {
+			h.Set("Content-Security-Policy", contentSecurityPolicy+"; frame-ancestors *")
+		} else {
+			h.Set("X-Frame-Options", "SAMEORIGIN")
+			h.Set("Content-Security-Policy", contentSecurityPolicy+"; frame-ancestors 'self'")
+		}
 		c.Next()
 	}
 }
