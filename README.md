@@ -12,14 +12,9 @@ Forma is a survey and experience-management platform. Collect feedback with in-a
 email surveys, read the results in each survey's own summary and response views, and act on them with
 Workflows.
 
-Two things are worth knowing before you compare against any upstream documentation:
+**This repository is mid-rewrite.** Forma is moving from a Next.js monolith ([`yldm-tech/forma2`](https://github.com/yldm-tech/forma2), whose history continues here) to a Go server and a TanStack single-page app. Modules land one at a time; until a module is here, forma2 is the running product and the reference for its behaviour. The feature list below describes the product, not what this branch already serves.
 
-- **Unify Feedback and Dashboards are not part of this build.** They were built on Forma Hub, an external
-  service, and on a Cube.js semantic layer over its records. Both are gone, along with the charts and
-  dashboards that had no data source without them. Survey response analysis is unaffected.
-- **The database history is a single init migration.** The earlier migration history was squashed, so a
-  database created from this repository cannot be upgraded from one that ran the old migrations.
-- **Every feature is on.** There is no enterprise edition, licence key or per-feature entitlement here.
+The tags `v1.0.0` to `v3.1.0` belong to a different, earlier project that used this repository name; they are unrelated to Forma.
 
 ## Features
 
@@ -33,40 +28,28 @@ Two things are worth knowing before you compare against any upstream documentati
 
 ## Built on
 
-[TypeScript](https://www.typescriptlang.org/) · [Next.js](https://nextjs.org/) ·
-[React](https://reactjs.org/) · [Tailwind CSS](https://tailwindcss.com/) · [Prisma](https://prisma.io/) ·
-[Better Auth](https://www.better-auth.com/) · [SpiceDB](https://authzed.com/spicedb) ·
-[Zod](https://zod.dev/) · [Vitest](https://vitest.dev/)
+[Go](https://go.dev/) · [Gin](https://gin-gonic.com/) · [GORM](https://gorm.io/) · [PostgreSQL](https://www.postgresql.org/) · [SpiceDB](https://authzed.com/spicedb) · [React](https://react.dev/) · [TanStack Router and Query](https://tanstack.com/) · [Tailwind CSS](https://tailwindcss.com/) · [Vite+](https://viteplus.dev/) · [Preact](https://preactjs.com/) (survey runtime)
 
 ## Development
 
-You need [Node.js](https://nodejs.org/en) (see `.nvmrc`), [pnpm](https://pnpm.io/) and
-[Docker](https://www.docker.com/) — Docker runs PostgreSQL, Valkey, MailHog and SpiceDB for local work.
+You need [Go](https://go.dev/) (see `server/go.mod`), [Node.js](https://nodejs.org/en) (see `.node-version`), [pnpm](https://pnpm.io/) and [Docker](https://www.docker.com/).
 
 ```bash
 pnpm install
-pnpm db:up      # start the backing services, write .env from .env.example, load the SpiceDB schema
-pnpm dev        # run every app and worker
+cp .env.example .env
+make deps-up      # PostgreSQL in Docker
+make dev-server   # Go server on :3000
+make dev-web      # Vite dev server on :5173, proxying the API to :3000
 ```
 
-Useful commands:
+| Command      | What it does                                                   |
+| ------------ | -------------------------------------------------------------- |
+| `make build` | Build the SPA and SDK bundles, embed them, compile `bin/forma` |
+| `make test`  | `go test -race` and the Vitest suites                          |
+| `make lint`  | golangci-lint and `vp check` (Oxfmt, Oxlint, type-check)       |
+| `make check` | Everything CI runs                                             |
 
-| Command                     | What it does                                |
-| --------------------------- | ------------------------------------------- |
-| `pnpm build`                | Production build for every package and app  |
-| `pnpm test`                 | Vitest suites across the workspace          |
-| `pnpm typecheck`            | TypeScript across the workspace             |
-| `pnpm lint` / `pnpm format` | ESLint and Prettier                         |
-| `pnpm test:e2e`             | Playwright browser suite                    |
-| `pnpm db:migrate:dev`       | Apply Prisma migrations to the dev database |
-
-`AGENTS.md` is the working reference for this repository: project layout, testing policy, caching rules,
-i18n, and the conventions CI enforces. Read it before your first change.
-
-## Self-hosting
-
-Forma is AGPLv3 and can be self-hosted with Docker or the Helm chart in `charts/forma`. See `docs/` for
-the setup guides, and `docker/docker-compose.yml` for the production Compose stack.
+`AGENTS.md` is the working reference for this repository: layout, conventions, the API contracts that must not change, and testing policy. Read it before your first change.
 
 ## Security
 

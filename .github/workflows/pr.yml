@@ -1,12 +1,7 @@
 name: PR Update
 
-# Update permissions to include all necessary ones
 permissions:
   contents: read
-  pull-requests: read
-  actions: read
-  checks: write
-  id-token: write
 
 on:
   pull_request:
@@ -18,93 +13,122 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run Unit Tests
-    uses: ./.github/workflows/test.yml
-    secrets: inherit
+  server:
+    name: Go server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
 
-  lint:
-    name: Run Linters
-    uses: ./.github/workflows/lint.yml
-    secrets: inherit
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-  typecheck:
-    name: Run Typecheck
-    uses: ./.github/workflows/typecheck.yml
+      - name: Setup Go (version from go.mod)
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
 
-  # NOTE: there is deliberately no standalone "build the web app" job here. It used to run
-  # `pnpm build --filter=@forma/web...` in parallel with the E2E job, which builds the very
-  # same app, and cached the output into a key nothing downstream ever read. The compile
-  # signal is covered by docker-build-validation.yml, which builds the app in production
-  # config, and by typecheck.
+      - name: Verify wire_gen.go is up to date
+        run: |
+          go tool wire ./internal/app
+          git diff --exit-code -- internal/app/wire_gen.go
 
-  helm-chart-validation:
-    name: Validate Helm Chart
-    uses: ./.github/workflows/helm-chart-validation.yml
+      - name: Lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+          working-directory: server
 
-  coderabbit-config-validation:
-    name: Validate CodeRabbit Config
-    uses: ./.github/workflows/coderabbit-config-validation.yml
+      - name: Test
+        run: go test -race ./...
 
-  # e2e.yml is deliberately not wired in here. It declares ENTERPRISE_LICENSE_KEY as a required
-  # secret, so without one the call fails during validation — in about two seconds, before a single
-  # step runs — and `required` below treats that as a failed gate on every PR. This organisation has
-  # no enterprise licence yet. The workflow itself is kept, and still has its workflow_dispatch
-  # trigger, so adding the secret and restoring the job below is all it takes to put the gate back.
-  # Until then the browser-level journeys are unverified by CI.
+      - name: Build
+        run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/forma
+
+  workspace:
+    name: TypeScript workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Installs Vite+ (version from the pnpm catalog), Node.js from .node-version and pnpm from packageManager, then runs `vp install` against the frozen lockfile.
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          node-version-file: ".node-version"
+          cache: true
+
+      # Built first: type-aware checks resolve sibling packages through their dist/ declarations.
+      - name: Build
+        run: vp run -r build
+
+      - name: Verify the TanStack Router route tree is committed
+        run: git diff --exit-code -- web/src/routeTree.gen.ts
+
+      - name: Catalog and OpenAPI checks
+        run: |
+          vp run catalog:check
+          vp run api:v3:lint
+
+      - name: Format, lint and type-check
+        run: vp check
+
+      - name: Test
+        run: vp run -r test
 
   validate-authzed-schema:
     name: Validate AuthZed Schema
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      - name: Checkout Repository
+
+      - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - name: Validate schema assertions
         run: bash authzed/validate.sh
 
-  # No `paths:` filter, deliberately: `required` below fails on a skipped job, and a required check
-  # that never reports would keep every PR out of the merge queue.
-  api-v3-contract-tests:
-    name: Run API v3 Contract Tests
-    uses: ./.github/workflows/api-v3-contract-tests.yml
-    # Named rather than `inherit`: this job builds and runs PR-head code, and the licence is the only
-    # secret it declares. Inheriting would hand it every other repository and organisation secret too.
-    secrets:
-      ENTERPRISE_LICENSE_KEY: ${{ secrets.ENTERPRISE_LICENSE_KEY }}
+  coderabbit-config-validation:
+    name: Validate CodeRabbit Config
+    uses: ./.github/workflows/coderabbit-config-validation.yml
 
   required:
     name: PR Check Summary
-    needs:
-      [
-        lint,
-        typecheck,
-        test,
-        helm-chart-validation,
-        coderabbit-config-validation,
-        validate-authzed-schema,
-        api-v3-contract-tests,
-      ]
+    needs: [server, workspace, validate-authzed-schema, coderabbit-config-validation]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
-      checks: write
-      statuses: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      - name: fail if conditional jobs failed
+
+      # A skipped or cancelled dependency counts as a failure, so a job that never ran cannot pass the gate.
+      - name: Fail if any required job did not succeed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'skipped') || contains(needs.*.result, 'cancelled')
         run: exit 1
