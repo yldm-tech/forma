@@ -65,6 +65,17 @@ var mimeTypes = map[string]string{
 	"tar":  "application/x-tar",
 }
 
+// ServedContentType is the type a stored file is answered with. A public file keeps the type it was stored with. A private file, which holds what a respondent uploaded and is read on the admin app's origin, is answered with its extension's type, or application/octet-stream when uploads do not allow its extension, because files signed before Service.SignUpload fixed the stored type (forma2's included) carry whatever type the respondent sent.
+func ServedContentType(fileName, stored string, access AccessType) string {
+	if access == AccessPublic {
+		return stored
+	}
+	if t, ok := mimeTypes[Extension(fileName)]; ok {
+		return t
+	}
+	return "application/octet-stream"
+}
+
 // IsAllowedExtension reports whether extension (lowercase, without the dot) may be uploaded.
 func IsAllowedExtension(extension string) bool {
 	_, ok := mimeTypes[extension]
@@ -95,7 +106,7 @@ func ValidateUploadInput(fileName, fileType string, allowedExtensions []string) 
 	if !IsAllowedExtension(extension) {
 		return &UploadIssue{Field: "fileName", Message: "File extension is not allowed for security reasons"}
 	}
-	// "image/jpeg; charset=binary" is checked as "image/jpeg"; the type stored with the file stays as sent.
+	// "image/jpeg; charset=binary" is checked as "image/jpeg"; the file is stored with the extension's type whatever was sent (Service.SignUpload).
 	normalized, _, _ := strings.Cut(strings.ToLower(fileType), ";")
 	if normalized != mimeTypes[extension] {
 		return &UploadIssue{Field: "fileType", Message: "File type doesn't match the file extension"}

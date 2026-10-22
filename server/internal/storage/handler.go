@@ -122,7 +122,7 @@ func hasExtension(name string) bool {
 	return i >= 0 && i < len(name)-1
 }
 
-// download is forma2's GET: the file streamed with the type it was uploaded with. A private file needs workspace.read; a public one needs nothing. There is no rate limit, as in forma2: survey pages load their images from here.
+// download is forma2's GET: the file streamed with the type it was uploaded with, a private file with its extension's (ServedContentType). A private file needs workspace.read; a public one needs nothing. There is no rate limit, as in forma2: survey pages load their images from here.
 func (h *Handler) download(c *gin.Context) {
 	ctx := c.Request.Context()
 	req, details := parseFileRequest(c)
@@ -153,7 +153,7 @@ func (h *Handler) download(c *gin.Context) {
 	}
 	defer func() { _ = obj.Body.Close() }()
 	header := c.Writer.Header()
-	header.Set("Content-Type", obj.ContentType)
+	header.Set("Content-Type", ServedContentType(req.fileName, obj.ContentType, req.access))
 	if obj.ContentLength > 0 {
 		header.Set("Content-Length", strconv.FormatInt(obj.ContentLength, 10))
 	}

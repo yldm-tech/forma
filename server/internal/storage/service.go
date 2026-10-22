@@ -40,10 +40,13 @@ type Upload struct {
 	FileURL         string          `json:"fileUrl"`
 }
 
-// SignUpload is forma2's getSignedUrlForUpload. The file name is sanitized and made unique with a --fid--<uuid> suffix before its extension; segments are the directories between the access type and the file (a respondent's upload goes under surveys/<survey id>/elements/<element id>). A name with nothing left after sanitizing, or a segment that is not letters, digits, hyphens and underscores, is invalid_input. fileType is stored with the file as sent.
-func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID, fileType string, access AccessType, maxSize int64, segments ...string) (*Upload, error) {
+// SignUpload is forma2's getSignedUrlForUpload. The file name is sanitized and made unique with a --fid--<uuid> suffix before its extension; segments are the directories between the access type and the file (a respondent's upload goes under surveys/<survey id>/elements/<element id>). A name with nothing left after sanitizing, without an allowed extension, or a segment that is not letters, digits, hyphens and underscores, is invalid_input.
+//
+// The file is stored with its extension's own content type, never the type the caller sent: forma2 signed the caller's string, so a respondent could store "text/plain;,text/html" on a .txt file, which passes the type check (it reads only what comes before the first semicolon) while browsers, which take the last type of a comma-separated list, render it as HTML on the admin app's origin.
+func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, access AccessType, maxSize int64, segments ...string) (*Upload, error) {
 	safeName := SanitizeFileName(fileName)
-	if safeName == "" {
+	contentType, ok := mimeTypes[Extension(safeName)]
+	if safeName == "" || !ok {
 		return nil, fail(CodeInvalidInput)
 	}
 	for _, segment := range segments {
@@ -58,7 +61,7 @@ func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID, fileTyp
 	storedName := base + "--fid--" + s.newID().String() + "." + extension
 
 	filePath := strings.Join(append([]string{workspaceID, string(access)}, segments...), "/")
-	post, err := s.bucket.SignUpload(ctx, storedName, fileType, filePath, maxSize)
+	post, err := s.bucket.SignUpload(ctx, storedName, contentType, filePath, maxSize)
 	if err != nil {
 		return nil, err
 	}

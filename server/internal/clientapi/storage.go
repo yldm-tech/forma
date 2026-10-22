@@ -128,7 +128,7 @@ func (h *Handler) storageUpload(c *gin.Context) {
 		return
 	}
 
-	upload, err := h.files.SignUpload(ctx, fileName, ws.ID.String(), fileType, storage.AccessPrivate, storage.RespondentUploadMaxSize(element.MaxSizeInMB), "surveys", sv.ID.String(), "elements", elementID)
+	upload, err := h.files.SignUpload(ctx, fileName, ws.ID.String(), storage.AccessPrivate, storage.RespondentUploadMaxSize(element.MaxSizeInMB), "surveys", sv.ID.String(), "elements", elementID)
 	if err != nil {
 		h.storageError(c, err, fileName)
 		return

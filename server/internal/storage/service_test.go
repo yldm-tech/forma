@@ -41,7 +41,7 @@ func TestServiceSignUpload(t *testing.T) {
 		{"encoded in the URL only", "invoice 100%.pdf", AccessPrivate, nil, "ws-123/private/invoice 100%--fid--" + fixedID.String() + ".pdf", "/storage/ws-123/private/invoice%20100%25--fid--" + fixedID.String() + ".pdf"},
 	}
 	for _, tc := range cases {
-		up, err := s.SignUpload(ctx, tc.fileName, "ws-123", "application/pdf", tc.access, 10<<20, tc.segments...)
+		up, err := s.SignUpload(ctx, tc.fileName, "ws-123", tc.access, 10<<20, tc.segments...)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
@@ -54,15 +54,18 @@ func TestServiceSignUpload(t *testing.T) {
 		if up.SignedURL == "" {
 			t.Errorf("%s: no signed URL", tc.name)
 		}
+		if got, want := fieldValue(up.PresignedFields, "Content-Type"), mimeTypes[Extension(tc.fileName)]; got != want {
+			t.Errorf("%s: Content-Type %q, want %q", tc.name, got, want)
+		}
 	}
 
 	for _, segment := range []string{"", ".", "..", "bad segment", "bad/segment", `bad\segment`, "bad?segment", "bad#segment"} {
-		if _, err := s.SignUpload(ctx, "test-doc.pdf", "ws-123", "application/pdf", AccessPrivate, 10<<20, "surveys", segment); CodeOf(err) != CodeInvalidInput {
+		if _, err := s.SignUpload(ctx, "test-doc.pdf", "ws-123", AccessPrivate, 10<<20, "surveys", segment); CodeOf(err) != CodeInvalidInput {
 			t.Errorf("segment %q: %v, want invalid_input", segment, err)
 		}
 	}
-	for _, name := range []string{"", "----.png", "#?*.png", "   "} {
-		if _, err := s.SignUpload(ctx, name, "ws-123", "image/png", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeInvalidInput {
+	for _, name := range []string{"", "----.png", "#?*.png", "   ", "no-extension", "page.html", "trailing-dot."} {
+		if _, err := s.SignUpload(ctx, name, "ws-123", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeInvalidInput {
 			t.Errorf("name %q: %v, want invalid_input", name, err)
 		}
 	}
@@ -74,7 +77,7 @@ func TestServiceSignUploadUnconfigured(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := NewService(b)
-	if _, err := s.SignUpload(t.Context(), "a.png", "ws", "image/png", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeS3Client {
+	if _, err := s.SignUpload(t.Context(), "a.png", "ws", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeS3Client {
 		t.Fatalf("SignUpload = %v, want s3_client_error", err)
 	}
 	// Nothing can be stored without a bucket, so there is nothing to clean up.
@@ -117,7 +120,7 @@ func TestServiceOpen(t *testing.T) {
 	read := reader(t)
 
 	// An upload's URL leads back to the key it was stored under, a literal % included.
-	up, err := s.SignUpload(ctx, "invoice 100%.pdf", "ws-123", "application/pdf", AccessPrivate, 10<<20)
+	up, err := s.SignUpload(ctx, "invoice 100%.pdf", "ws-123", AccessPrivate, 10<<20)
 	if err != nil {
 		t.Fatal(err)
 	}

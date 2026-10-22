@@ -336,6 +336,19 @@ func TestDownloadPrivateFile(t *testing.T) {
 	if rec := e.do(http.MethodGet, path, as{sessionDownHeader: "1"}); rec.Code != http.StatusInternalServerError || rec.Body.Len() != 0 {
 		t.Fatalf("session store down: %d %q", rec.Code, rec.Body.String())
 	}
+
+	// A private file is answered with its extension's type, whatever type it was stored with: browsers take the last type of a list, so "text/plain;,text/html" would run a respondent's script on the admin origin.
+	for stored, want := range map[string]string{
+		"crafted--fid--1.txt": "text/plain",
+		"photo--fid--2.JPG":   "image/jpeg",
+		"page--fid--3.html":   "application/octet-stream",
+	} {
+		e.put(ws.String()+"/private/"+stored, "text/plain;,text/html", "<script>alert(1)</script>")
+		rec := e.do(http.MethodGet, "/storage/"+ws.String()+"/private/"+stored, asUser(owner))
+		if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != want {
+			t.Errorf("%s: %d %q, want %q", stored, rec.Code, rec.Header().Get("Content-Type"), want)
+		}
+	}
 }
 
 func TestDownloadErrors(t *testing.T) {

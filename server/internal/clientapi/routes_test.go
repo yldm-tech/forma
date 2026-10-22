@@ -3,6 +3,7 @@ package clientapi
 import (
 	"encoding/base64"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -99,6 +100,15 @@ func TestStorageUpload(t *testing.T) {
 	d = upload("any", "photo.png", "image/png").data(t)
 	if got := sizeRange(t, decodePolicy(t, d["presignedFields"].(map[string]any))); got[2] != float64(1<<30) {
 		t.Fatalf("size range without an advertised size %v", got)
+	}
+	// The file is stored with its extension's type, not the type sent: "text/plain;,text/html" passes the type check, which reads what comes before the first semicolon, and browsers would render it as HTML.
+	d = upload("any", "note.txt", "text/plain;,text/html").data(t)
+	fields := d["presignedFields"].(map[string]any)
+	if fields["Content-Type"] != "text/plain" || !slices.ContainsFunc(decodePolicy(t, fields)["conditions"].([]any), func(c any) bool {
+		l, ok := c.([]any)
+		return ok && len(l) == 3 && l[0] == "eq" && l[1] == "$Content-Type" && l[2] == "text/plain"
+	}) {
+		t.Fatalf("crafted type signed as %v, policy %v", fields["Content-Type"], decodePolicy(t, fields))
 	}
 	upload("small", "photo.png", "image/png").expectError(t, 400, "bad_request", "File extension is not allowed for this element")
 	upload("q1", "report.pdf", "application/pdf").expectError(t, 400, "bad_request", "Element does not allow file uploads")
