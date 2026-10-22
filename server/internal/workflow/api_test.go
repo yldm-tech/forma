@@ -443,3 +443,36 @@ func TestAuthoringContext(t *testing.T) {
 		t.Fatalf("a member without access got %d", rec.Code)
 	}
 }
+
+// The workflow and run lists are scoped by their workspaceId query parameter: another tenant, signed in or with an API key of its own organization, is refused both, and nothing of the victim's workflows or runs is in the answer.
+func TestListsAreTenantScoped(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	wf := e.enabled(f, "Victim workflow", definition(f.survey, "q1"))
+	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(t.Context(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+
+	outsider := e.user("outsider@example.com")
+	otherOrg := e.insert(`INSERT INTO organizations (name) VALUES ('Other') RETURNING id`)
+	e.member(otherOrg, outsider, "owner")
+	otherWs := e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Theirs') RETURNING id`, otherOrg)
+	key := e.apiKey(otherOrg, otherWs, "manage")
+	for _, path := range []string{"/api/v3/workflows?workspaceId=" + f.ws.String(), "/api/v3/workflows/runs?workspaceId=" + f.ws.String()} {
+		for who, rec := range map[string]*httptest.ResponseRecorder{
+			"session": e.v3(outsider, http.MethodGet, path, nil),
+			"api key": e.request(http.MethodGet, path, nil, map[string]string{"x-api-key": key}),
+		} {
+			body := rec.Body.String()
+			e.problem(rec, http.StatusForbidden, "forbidden", "")
+			if strings.Contains(body, wf.String()) || strings.Contains(body, run.String()) || strings.Contains(body, r.ID.String()) || strings.Contains(body, "Victim workflow") {
+				t.Errorf("%s on %s leaks: %s", who, path, body)
+			}
+		}
+	}
+	// The owner's own lists answer, so the refusals above are the scoping, not the routes.
+	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows?workspaceId="+f.ws.String(), nil), http.StatusOK, nil)
+	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows/runs?workspaceId="+f.ws.String(), nil), http.StatusOK, nil)
+}
