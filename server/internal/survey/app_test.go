@@ -1,6 +1,8 @@
 package survey
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +17,8 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
 func appPath(id any, rest string) string { return fmt.Sprintf("/api/app/surveys/%v%s", id, rest) }
@@ -294,6 +298,20 @@ func TestSlugSingleUseAndQuotas(t *testing.T) {
 	if len(links.Links) != 2 || links.Links[0].SuToken != "" || links.Links[0].SuID == links.Links[1].SuID {
 		t.Fatalf("encrypted links %+v", links)
 	}
+	// An encrypted id opens under the survey it was made for, to a new id, and under no other survey.
+	for _, link := range links.Links {
+		sealed, err := base64.RawURLEncoding.DecodeString(link.SuID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		opened, err := e.svc.cipher.Open(sealed, singleUseContext(uuid.MustParse(id)))
+		if err != nil || !surveydoc.IsCUID2(string(opened)) {
+			t.Fatalf("open %q: %q %v", link.SuID, opened, err)
+		}
+		if _, err := e.svc.cipher.Open(sealed, singleUseContext(uuid.New())); err == nil {
+			t.Fatal("an encrypted id opened under another survey")
+		}
+	}
 	links.Links = nil
 	e.ok(e.do(owner, http.MethodPost, appPath(id, "/single-use-links"), map[string]any{"isEncrypted": false, "singleUseId": " custom "}), http.StatusOK, &links)
 	if links.Links[0].SuID != "custom" {
@@ -455,4 +473,95 @@ func TestSurveyAuditEvents(t *testing.T) {
 	e.expectAudit(audit.ActionRestored, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
 	e.ok(e.v3Key(key, http.MethodDelete, surveysPath("/"+id), nil), http.StatusNoContent, nil)
 	e.expectAudit(audit.ActionDeleted, audit.StatusSuccess, audit.ActorAPI, "", audit.TargetSurvey, id)
+}
+
+// An editor save may only link the languages, segment and segment surveys of the survey's own workspace, within forma2's segment bounds.
+func TestEditorSaveTenantGuards(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	trigger := e.actionClass(ws, "open")
+	id := e.createLink(owner, ws)
+	sv := e.editorSurvey(owner, id)
+	sv["type"] = "app"
+	sv["triggers"] = []any{map[string]any{"actionClass": map[string]any{"id": trigger.String()}}}
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusOK, nil)
+
+	other, _ := e.organization(e.user())
+	foreignWS := e.workspace(other)
+	foreignLanguage := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, 'fr-FR') RETURNING id`, foreignWS)
+	foreignSegment := e.insert(`INSERT INTO segments (workspace_id, title) VALUES (?, 'Theirs') RETURNING id`, foreignWS)
+	foreignSurvey := e.insert(`INSERT INTO surveys (workspace_id, name) VALUES (?, 'Theirs') RETURNING id`, foreignWS)
+
+	withForeignLanguage := func() map[string]any {
+		sv := e.editorSurvey(owner, id)
+		sv["languages"] = append(sv["languages"].([]any), map[string]any{"language": map[string]any{"id": foreignLanguage}, "default": false, "enabled": false})
+		return sv
+	}
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), withForeignLanguage()), http.StatusNotFound, apperr.CodeNotFound, "")
+	if rec := e.do(owner, http.MethodPut, appPath(id, ""), withForeignLanguage()); rec.Code == http.StatusOK {
+		t.Fatal("a full save linked another workspace's language")
+	}
+	if e.count(`SELECT count(*) FROM survey_languages WHERE language_id = ?`, foreignLanguage) != 0 {
+		t.Fatal("another workspace's language was linked")
+	}
+
+	withSegment := func(mutate func(seg map[string]any)) map[string]any {
+		sv := e.editorSurvey(owner, id)
+		seg := sv["segment"].(map[string]any)
+		mutate(seg)
+		return sv
+	}
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), withSegment(func(seg map[string]any) { seg["id"] = foreignSegment })), http.StatusNotFound, apperr.CodeNotFound, "")
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), withSegment(func(seg map[string]any) { seg["surveys"] = []any{foreignSurvey} })), http.StatusBadRequest, apperr.CodeBadRequest, "Survey and segment are not in the same workspace")
+	tooMany := make([]any, segmentSurveyIDsLimit+1)
+	for i := range tooMany {
+		tooMany[i] = uuid.NewString()
+	}
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), withSegment(func(seg map[string]any) { seg["surveys"] = tooMany })), http.StatusBadRequest, apperr.CodeBadRequest, fmt.Sprintf("Invalid segment surveys: at most %d valid survey ids are allowed", segmentSurveyIDsLimit))
+	deep := []any{}
+	for range maxSegmentFilterDepth + 1 {
+		deep = []any{map[string]any{"id": uuid.NewString(), "connector": nil, "resource": deep}}
+	}
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), withSegment(func(seg map[string]any) { seg["filters"] = deep })), http.StatusBadRequest, apperr.CodeBadRequest, fmt.Sprintf("Segment filters are nested too deeply: at most %d levels are supported", maxSegmentFilterDepth))
+	if e.count(`SELECT count(*) FROM segments WHERE workspace_id = ? AND title = 'Theirs'`, foreignWS) != 1 || e.count(`SELECT count(*) FROM surveys WHERE id = ? AND segment_id IS NOT NULL`, foreignSurvey) != 0 {
+		t.Fatal("another workspace's segment or survey changed")
+	}
+}
+
+// A known answer of forma2's generateSurveySingleUseSignature, computed with its code (createHmac("sha256", ENCRYPTION_KEY).update(payload).digest("hex")) for the hex key of 32 bytes of 7: the plain links P3 verifies must carry exactly this token.
+func TestSingleUseSignatureMatchesForma2(t *testing.T) {
+	got := SingleUseSignature(bytes.Repeat([]byte{7}, 32), uuid.MustParse("01a16211-77de-7d59-ada1-7e2ea6ddb527"), "su-1")
+	if got != "c38448563887c9d696d03df027af932d52e591114eb6b936d4ac92dd11069a1d" {
+		t.Fatalf("signature %s", got)
+	}
+}
+
+// forma2 asserted workspace.write on both ends of a copy and for a template survey, and read for the template list.
+func TestTemplateAndCopyAuthorization(t *testing.T) {
+	e := newEnv(t)
+	owner, reader, outsider := e.user(), e.user(), e.user()
+	org, ws := e.organization(owner)
+	target := e.workspace(org)
+	e.member(org, reader, "member")
+	e.grant(org, ws, reader, "read")
+	e.grant(org, target, reader, "readWrite")
+	id := e.createLink(owner, ws)
+
+	e.ok(e.do(reader, http.MethodGet, "/api/app/workspaces/"+ws.String()+"/survey-templates", nil), http.StatusOK, nil)
+	e.fails(e.do(outsider, http.MethodGet, "/api/app/workspaces/"+ws.String()+"/survey-templates", nil), http.StatusForbidden, apperr.CodeForbidden, "")
+
+	template := map[string]any{"workspaceId": ws, "templateId": "nps", "source": "xm", "surveyType": "link", "defaultLanguage": "en-US"}
+	e.problem(e.v3(reader, http.MethodPost, surveysPath("/templates"), template), http.StatusForbidden, v3api.ForbiddenMessage)
+	e.problem(e.v3(outsider, http.MethodPost, surveysPath("/templates"), template), http.StatusForbidden, v3api.ForbiddenMessage)
+	template["workspaceId"] = target
+	e.ok(e.v3(reader, http.MethodPost, surveysPath("/templates"), template), http.StatusCreated, nil)
+
+	// Reading the source is not enough to copy it, even into a workspace the caller may write.
+	before := e.count(`SELECT count(*) FROM surveys WHERE workspace_id = ?`, target)
+	e.fails(e.do(reader, http.MethodPost, appPath(id, "/copy"), map[string]any{"targetWorkspaceId": target}), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.fails(e.do(outsider, http.MethodPost, appPath(id, "/copy"), map[string]any{"targetWorkspaceId": target}), http.StatusForbidden, apperr.CodeForbidden, "")
+	if e.count(`SELECT count(*) FROM surveys WHERE workspace_id = ?`, target) != before {
+		t.Fatal("a refused copy was made")
+	}
 }
