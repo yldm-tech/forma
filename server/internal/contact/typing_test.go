@@ -199,10 +199,13 @@ func TestJSNumberSemantics(t *testing.T) {
 			t.Errorf("String(%v) = %q, want %q", in, got, want)
 		}
 	}
-	numbers := map[string]float64{" 12 ": 12, "0x1A": 26, ".5": 0.5, "5.": 5, "1e3": 1000, "+5": 5, "\u00a012": 12}
-	for in, want := range numbers {
-		if got, ok := jsNumber(in); !ok || got != want {
-			t.Errorf("Number(%q) = %v %v, want %v", in, got, ok, want)
+	numbers := []struct {
+		in   string
+		want float64
+	}{{" 12 ", 12}, {"0x1A", 26}, {".5", 0.5}, {"5.", 5}, {"1e3", 1000}, {"+5", 5}, {"\u00a012", 12}}
+	for _, n := range numbers {
+		if got, ok := jsNumber(n.in); !ok || got != n.want {
+			t.Errorf("Number(%q) = %v %v, want %v", n.in, got, ok, n.want)
 		}
 	}
 	for _, in := range []string{"1_0", "-0x1", "abc", "NaN", "1e"} {

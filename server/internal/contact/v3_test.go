@@ -43,7 +43,7 @@ func TestV3ListContactAttributeKeys(t *testing.T) {
 	e := newEnv(t)
 	owner, reader, outsider := e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	_, other := e.organization(outsider)
 	plan := e.key(ws, "plan", TypeNumber)
 	e.exec(`UPDATE contact_attribute_keys SET description = 'Billing plan' WHERE id = ?`, plan)

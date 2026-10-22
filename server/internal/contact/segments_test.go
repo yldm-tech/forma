@@ -29,7 +29,7 @@ func TestCreateSegment(t *testing.T) {
 	e := newEnv(t)
 	owner, reader := e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	survey := e.survey(ws, "inProgress")
 
 	var seg Segment
@@ -125,11 +125,14 @@ func TestDeleteSegment(t *testing.T) {
 	seg := e.segmentRow(ws, "Linked", false, `[]`)
 	e.exec(`UPDATE surveys SET segment_id = ? WHERE id = ?`, seg, e.survey(ws, "draft"))
 	free := e.segmentRow(ws, "Free", false, `[]`)
+	unlinkedPrivate := e.segmentRow(ws, uuid.NewString(), true, `[]`)
 
 	e.fails(e.do(owner, http.MethodDelete, segmentPath(seg, ""), nil), http.StatusForbidden, "operation_not_allowed", "Cannot delete a segment that is associated with a survey")
-	e.ok(e.do(owner, http.MethodDelete, segmentPath(free, ""), nil), http.StatusOK, nil)
-	if e.count(`SELECT count(*) FROM segments WHERE id = ?`, free) != 0 {
-		t.Fatal("not deleted")
+	for _, id := range []uuid.UUID{free, unlinkedPrivate} {
+		e.ok(e.do(owner, http.MethodDelete, segmentPath(id, ""), nil), http.StatusOK, nil)
+		if e.count(`SELECT count(*) FROM segments WHERE id = ?`, id) != 0 {
+			t.Fatal("not deleted")
+		}
 	}
 }
 

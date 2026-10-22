@@ -12,54 +12,62 @@ import (
 
 // A segment's filters are forma2's TBaseFilters (packages/types/segment.ts): a list of nodes, each a filter or a nested group, joined by "and"/"or" connectors.
 
-// Bounds on a filter tree, checked on the raw document before anything walks it recursively.
+// Bounds on a filter tree, checked on the raw document before anything walks it recursively (forma2's MAX_SEGMENT_FILTERS_PER_TREE, MAX_SEGMENT_FILTER_DEPTH and MAX_SEGMENT_SURVEY_INTERACTION_IDS_PER_TREE).
 const (
-	MaxFiltersPerTree                 = 1000
-	MaxFilterDepth                    = 50
-	MaxSurveyInteractionIDsPerTree    = 1000
-	MaxSegmentSurveys                 = 500
-	surveyWorkspaceLookupBatchSize    = 200
-	surveyInteractionScopeSpecific    = "specific"
-	invalidFiltersMessage             = "Invalid filters"
-	invalidFiltersAppliedMessage      = "Invalid filters applied"
-	filterValueTypeMessage            = "Value must be a string for string operators, a number for arithmetic operators, and an object for relative date operators"
-	filterValueMessage                = "Invalid value for filters: please check your filter values"
-	selectSurveyMessage               = "Select at least one survey"
-	atLeastOneFilterMessage           = "At least one filter is required"
-	codeInvalidFilters                = "invalid_filters"
-	filtersSchema                     = "segment.filters"
-	filterRootAttribute               = "attribute"
-	filterRootPerson                  = "person"
-	filterRootSegment                 = "segment"
-	filterRootDevice                  = "device"
-	filterRootSurveyInteraction       = "surveyInteraction"
-	connectorAnd                      = "and"
-	connectorOr                       = "or"
-	personIdentifierUserID            = "userId"
-	operatorIsSet                     = "isSet"
-	operatorIsNotSet                  = "isNotSet"
-	operatorUserIsIn                  = "userIsIn"
-	operatorUserIsNotIn               = "userIsNotIn"
-	operatorIsOlderThan               = "isOlderThan"
-	operatorIsNewerThan               = "isNewerThan"
-	operatorIsBefore                  = "isBefore"
-	operatorIsAfter                   = "isAfter"
-	operatorIsBetween                 = "isBetween"
-	operatorIsSameDay                 = "isSameDay"
-	operatorEquals                    = "equals"
-	operatorNotEquals                 = "notEquals"
-	surveyInteractionUnitDays         = "days"
-	surveyInteractionUnitWeeks        = "weeks"
-	surveyInteractionUnitMonths       = "months"
-	surveyInteractionUnitYears        = "years"
-	surveyInteractionWindowUnitsCount = 3
+	MaxFiltersPerTree              = 1000
+	MaxFilterDepth                 = 50
+	MaxSurveyInteractionIDsPerTree = 1000
+)
+
+// surveyWorkspaceLookupBatchSize is forma2's SURVEY_WORKSPACE_LOOKUP_BATCH_SIZE: survey ids are checked against a workspace this many at a time.
+const surveyWorkspaceLookupBatchSize = 200
+
+// The messages of forma2's filter validation, which its actions reported as InvalidInputError.
+const (
+	codeInvalidFilters           = "invalid_filters"
+	filtersSchema                = "segment.filters"
+	invalidFiltersMessage        = "Invalid filters"
+	invalidFiltersAppliedMessage = "Invalid filters applied"
+	filterValueTypeMessage       = "Value must be a string for string operators, a number for arithmetic operators, and an object for relative date operators"
+	filterValueMessage           = "Invalid value for filters: please check your filter values"
+	selectSurveyMessage          = "Select at least one survey"
+	atLeastOneFilterMessage      = "At least one filter is required"
+)
+
+// Filter roots, connectors and the operators the evaluation treats specially.
+const (
+	filterRootAttribute            = "attribute"
+	filterRootPerson               = "person"
+	filterRootSegment              = "segment"
+	filterRootDevice               = "device"
+	filterRootSurveyInteraction    = "surveyInteraction"
+	connectorAnd                   = "and"
+	connectorOr                    = "or"
+	personIdentifierUserID         = "userId"
+	surveyInteractionScopeSpecific = "specific"
+	operatorIsSet                  = "isSet"
+	operatorIsNotSet               = "isNotSet"
+	operatorUserIsIn               = "userIsIn"
+	operatorUserIsNotIn            = "userIsNotIn"
+	operatorIsOlderThan            = "isOlderThan"
+	operatorIsNewerThan            = "isNewerThan"
+	operatorIsBefore               = "isBefore"
+	operatorIsAfter                = "isAfter"
+	operatorIsBetween              = "isBetween"
+	operatorIsSameDay              = "isSameDay"
+	operatorEquals                 = "equals"
+	operatorNotEquals              = "notEquals"
+	unitDays                       = "days"
+	unitWeeks                      = "weeks"
+	unitMonths                     = "months"
+	unitYears                      = "years"
 )
 
 var (
 	arithmeticOperators = []string{"lessThan", "lessEqual", "greaterThan", "greaterEqual"}
 	stringOperators     = []string{"contains", "doesNotContain", "startsWith", "endsWith"}
 	dateOperators       = []string{operatorIsOlderThan, operatorIsNewerThan, operatorIsBefore, operatorIsAfter, operatorIsBetween, operatorIsSameDay, operatorIsSet, operatorIsNotSet}
-	timeUnits           = []string{surveyInteractionUnitDays, surveyInteractionUnitWeeks, surveyInteractionUnitMonths, surveyInteractionUnitYears}
+	timeUnits           = []string{unitDays, unitWeeks, unitMonths, unitYears}
 )
 
 // Filters is a filter tree.

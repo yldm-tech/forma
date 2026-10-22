@@ -20,7 +20,7 @@ func TestListContacts(t *testing.T) {
 	e := newEnv(t)
 	owner, reader, outsider := e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	_, other := e.organization(outsider)
 	e.contact(other, map[string]string{"email": "alice@other.example"})
 
@@ -77,19 +77,19 @@ func TestContactDetail(t *testing.T) {
 	_, other := e.organization(outsider)
 	signup := time.Date(2024, 6, 15, 10, 30, 0, 0, time.UTC)
 	c := e.contact(ws, map[string]string{"email": "a@example.com", "plan": "pro"})
-	e.setDate(ws, c, "signup", signup)
+	e.setDate(ws, c, "renewal", signup)
 	foreign := e.contact(other, map[string]string{"email": "b@example.com"})
 
 	var d Detail
 	e.ok(e.do(owner, http.MethodGet, wsPath(ws, "/contacts/"+c.String()), nil), http.StatusOK, &d)
-	if d.Contact.ID != c || d.Contact.Attributes["signup"] != "2024-06-15T10:30:00.000Z" || len(d.Attributes) != 3 {
+	if d.Contact.ID != c || d.Contact.Attributes["renewal"] != "2024-06-15T10:30:00.000Z" || len(d.Attributes) != 3 {
 		t.Fatalf("detail %+v", d)
 	}
 	byKey := map[string]AttributeDetail{}
 	for _, a := range d.Attributes {
 		byKey[a.Key] = a
 	}
-	if byKey["email"].Type != KeyTypeDefault || byKey["signup"].DataType != TypeDate || byKey["plan"].Type != KeyTypeCustom || *byKey["plan"].Name != "Plan" {
+	if byKey["email"].Type != KeyTypeDefault || byKey["renewal"].DataType != TypeDate || byKey["plan"].Type != KeyTypeCustom || *byKey["plan"].Name != "Plan" {
 		t.Fatalf("attribute details %+v", d.Attributes)
 	}
 	// A contact of another workspace, reached through a workspace the caller may read, does not exist.
@@ -102,7 +102,7 @@ func TestDeleteContact(t *testing.T) {
 	e := newEnv(t)
 	owner, reader := e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	c := e.contact(ws, map[string]string{"email": "a@example.com"})
 
 	e.fails(e.do(reader, http.MethodDelete, contactPath(c, ""), nil), http.StatusForbidden, "forbidden", "")

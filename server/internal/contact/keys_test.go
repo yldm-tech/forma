@@ -46,7 +46,7 @@ func TestKeyAccess(t *testing.T) {
 	e := newEnv(t)
 	owner, reader, outsider := e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	_, other := e.organization(outsider)
 
 	var keys []Key

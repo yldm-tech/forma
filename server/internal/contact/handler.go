@@ -208,26 +208,26 @@ func (h *Handler) updateAttributes(c *gin.Context) {
 
 // decodeAttributes reads forma2's ZContactAttributesInput, an object of strings, numbers and booleans, keeping the order the keys were sent in. Booleans become "true" and "false", as forma2 coerced them.
 func decodeAttributes(raw json.RawMessage) ([]AttributeInput, error) {
-	invalid := func(key, rule string) error {
-		return apperr.Validation([]apperr.FieldError{{Field: "attributes" + key, Rule: rule}})
+	invalid := func(key string) error {
+		return apperr.Validation([]apperr.FieldError{{Field: "attributes" + key, Rule: "type"}})
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
-		return nil, invalid("", "type")
+		return nil, invalid("")
 	}
 	var out []AttributeInput
 	seen := map[string]int{}
 	for dec.More() {
 		tok, err := dec.Token()
 		if err != nil {
-			return nil, invalid("", "type")
+			return nil, invalid("")
 		}
 		key, _ := tok.(string)
 		var v Value
 		tok, err = dec.Token()
 		if err != nil {
-			return nil, invalid("."+key, "type")
+			return nil, invalid("." + key)
 		}
 		switch t := tok.(type) {
 		case string:
@@ -237,11 +237,11 @@ func decodeAttributes(raw json.RawMessage) ([]AttributeInput, error) {
 		case json.Number:
 			f, err := t.Float64()
 			if err != nil {
-				return nil, invalid("."+key, "type")
+				return nil, invalid("." + key)
 			}
 			v = Value{Number: f, IsNumber: true}
 		default:
-			return nil, invalid("."+key, "type")
+			return nil, invalid("." + key)
 		}
 		// A repeated key keeps its first position and its last value, as a JavaScript object does.
 		if i, ok := seen[key]; ok {

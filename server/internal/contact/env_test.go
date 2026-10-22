@@ -6,9 +6,9 @@ import (
 	"io"
 	"log/slog"
 	"mime/multipart"
-	"net/textproto"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"net/url"
 	"os"
 	"sync"
@@ -182,13 +182,13 @@ func (e *env) member(org, user uuid.UUID, role string) {
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, ?, true)`, user, org, role)
 }
 
-// grant makes user a member of org with permission on ws through a team.
-func (e *env) grant(org, ws, user uuid.UUID, permission string) {
+// grant makes user a member of org who may read ws through a team.
+func (e *env) grant(org, ws, user uuid.UUID) {
 	e.t.Helper()
 	e.member(org, user, "member")
 	team := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, ?) RETURNING id`, org, "Team "+uuid.NewString())
 	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'contributor')`, team, user)
-	e.exec(`INSERT INTO workspace_teams (workspace_id, team_id, permission) VALUES (?, ?, ?)`, ws, team, permission)
+	e.exec(`INSERT INTO workspace_teams (workspace_id, team_id, permission) VALUES (?, ?, 'read')`, ws, team)
 }
 
 func (e *env) key(ws uuid.UUID, key, dataType string) uuid.UUID {

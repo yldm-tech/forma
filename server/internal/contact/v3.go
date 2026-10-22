@@ -33,7 +33,7 @@ type V3Key struct {
 }
 
 type v3KeyList struct {
-	Data []V3Key         `json:"data"`
+	Data []V3Key        `json:"data"`
 	Meta apiv3.ListMeta `json:"meta"`
 }
 

@@ -151,7 +151,7 @@ func TestImportValidation(t *testing.T) {
 	e := newEnv(t)
 	owner, reader := e.user(), e.user()
 	org, ws := e.organization(owner)
-	e.grant(org, ws, reader, "read")
+	e.grant(org, ws, reader)
 	e.key(ws, "years", TypeNumber)
 
 	e.fails(e.upload(owner, ws, "plan\npro\n", DuplicateSkip, nil), http.StatusBadRequest, CodeInvalidCSVRecords, "Missing email field for one or more records")

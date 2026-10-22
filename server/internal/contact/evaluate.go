@@ -288,14 +288,14 @@ func (b *builder) dateAttribute(key, op string, v filterValue) (condition, error
 func subtractTimeUnit(t time.Time, amount float64, unit string) time.Time {
 	t = t.UTC()
 	switch unit {
-	case surveyInteractionUnitDays:
+	case unitDays:
 		return t.AddDate(0, 0, int(math.Trunc(float64(t.Day())-amount))-t.Day())
-	case surveyInteractionUnitWeeks:
+	case unitWeeks:
 		return t.AddDate(0, 0, int(math.Trunc(float64(t.Day())-amount*7))-t.Day())
-	case surveyInteractionUnitMonths:
+	case unitMonths:
 		m := int(t.Month()) - 1
 		return t.AddDate(0, int(math.Trunc(float64(m)-amount))-m, 0)
-	case surveyInteractionUnitYears:
+	case unitYears:
 		return t.AddDate(int(math.Trunc(float64(t.Year())-amount))-t.Year(), 0, 0)
 	}
 	return t
@@ -525,7 +525,6 @@ type Evaluator struct {
 func NewEvaluator(db *gorm.DB, log *slog.Logger) *Evaluator {
 	return &Evaluator{db: db, log: log, now: time.Now}
 }
-
 
 // SegmentIDsForContact is forma2's getPersonSegmentIds: the workspace's segments the contact is in. A segment without filters always matches; one made only of survey-interaction filters is answered from interactions; every other one is a query. A segment whose condition cannot be built is logged and skipped, so one bad segment does not hide the rest.
 func (e *Evaluator) SegmentIDsForContact(ctx context.Context, workspaceID, contactID uuid.UUID, device string, interactions Interactions) ([]uuid.UUID, error) {
