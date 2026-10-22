@@ -1,7 +1,9 @@
 package contact
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -181,4 +183,56 @@ func TestImportValidation(t *testing.T) {
 
 	big := "email\n" + strings.Repeat("a", MaxImportBytes) + "@example.com\n"
 	e.fails(e.upload(owner, ws, big, DuplicateSkip, nil), http.StatusRequestEntityTooLarge, "upload_contacts_error_file_too_large", "")
+}
+
+// Every column becomes a key: a file with more than MaxImportColumns is refused before anything is written.
+func TestImportCapsColumns(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	before := e.count(`SELECT count(*) FROM contact_attribute_keys WHERE workspace_id = ?`, ws)
+	header, row := []string{"email"}, []string{"a@example.com"}
+	for i := range MaxImportColumns {
+		header, row = append(header, fmt.Sprintf("col_%d", i)), append(row, "x")
+	}
+	csv := strings.Join(header, ",") + "\n" + strings.Join(row, ",") + "\n"
+	e.fails(e.upload(owner, ws, csv, DuplicateSkip, nil), http.StatusBadRequest, CodeInvalidCSV, "Maximum 1000 columns allowed at a time.")
+	if after := e.count(`SELECT count(*) FROM contact_attribute_keys WHERE workspace_id = ?`, ws); after != before {
+		t.Fatalf("keys %d -> %d", before, after)
+	}
+}
+
+// One statement carries at most 65535 parameters: key and attribute writes past that are split, not refused by PostgreSQL.
+func TestAttributeWritesStayWithinTheParameterLimit(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	ctx := context.Background()
+	keys := make([]newKey, maxBindParameters/4+10)
+	for i := range keys {
+		keys[i] = newKey{key: fmt.Sprintf("k%05d", i), dataType: TypeString}
+	}
+	if err := e.repo.createKeys(ctx, ws, keys); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.count(`SELECT count(*) FROM contact_attribute_keys WHERE workspace_id = ? AND key LIKE 'k%'`, ws); n != len(keys) {
+		t.Fatalf("created %d keys", n)
+	}
+	stored, err := e.repo.keys(ctx, ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := e.contact(ws, map[string]string{"email": "a@example.com"})
+	values := make([]keyedColumns, 0, maxBindParameters/5+10)
+	for _, k := range stored {
+		if strings.HasPrefix(k.Key, "k") && len(values) < cap(values) {
+			values = append(values, keyedColumns{keyID: k.ID, columns: prepareCSVColumns("v", TypeString)})
+		}
+	}
+	if err := e.repo.upsertAttributes(ctx, contact, values); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.count(`SELECT count(*) FROM contact_attributes WHERE contact_id = ?`, contact); n != len(values)+1 {
+		t.Fatalf("wrote %d attributes", n)
+	}
 }

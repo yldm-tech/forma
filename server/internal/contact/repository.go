@@ -145,18 +145,23 @@ func (r *Repository) createKeys(ctx context.Context, workspaceID uuid.UUID, keys
 	}
 	sorted := append([]newKey(nil), keys...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].key < sorted[j].key })
-	values := make([]string, len(sorted))
-	args := make([]any, 0, len(sorted)*4)
-	for i, k := range sorted {
-		values[i] = "(?, ?, ?, 'custom', ?)"
-		args = append(args, workspaceID, k.key, TitleCase(k.key), k.dataType)
-	}
-	err := r.db.WithContext(ctx).Exec(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, data_type) VALUES `+strings.Join(values, ", ")+` ON CONFLICT (workspace_id, key) DO NOTHING`, args...).Error
-	if err != nil {
-		return fmt.Errorf("create contact attribute keys: %w", err)
+	for batch := range slices.Chunk(sorted, maxBindParameters/4) {
+		values := make([]string, len(batch))
+		args := make([]any, 0, len(batch)*4)
+		for i, k := range batch {
+			values[i] = "(?, ?, ?, 'custom', ?)"
+			args = append(args, workspaceID, k.key, TitleCase(k.key), k.dataType)
+		}
+		err := r.db.WithContext(ctx).Exec(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, data_type) VALUES `+strings.Join(values, ", ")+` ON CONFLICT (workspace_id, key) DO NOTHING`, args...).Error
+		if err != nil {
+			return fmt.Errorf("create contact attribute keys: %w", err)
+		}
 	}
 	return nil
 }
+
+// maxBindParameters is the most parameters one statement may carry in PostgreSQL's extended protocol; a multi-row insert is split into statements that stay within it.
+const maxBindParameters = 65535
 
 // ---- contacts ----
 
@@ -314,16 +319,18 @@ func (r *Repository) upsertAttributes(ctx context.Context, contactID uuid.UUID, 
 	}
 	sorted := append([]keyedColumns(nil), values...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].keyID.String() < sorted[j].keyID.String() })
-	rows := make([]string, len(sorted))
-	args := make([]any, 0, len(sorted)*5)
-	for i, v := range sorted {
-		rows[i] = "(?, ?, ?, ?, ?)"
-		args = append(args, contactID, v.keyID, v.columns.Text, v.columns.Number, v.columns.Date)
-	}
-	err := r.db.WithContext(ctx).Exec(`INSERT INTO contact_attributes (contact_id, attribute_key_id, value_text, value_number, value_date) VALUES `+strings.Join(rows, ", ")+`
-		ON CONFLICT (contact_id, attribute_key_id) DO UPDATE SET value_text = EXCLUDED.value_text, value_number = EXCLUDED.value_number, value_date = EXCLUDED.value_date, updated_at = now()`, args...).Error
-	if err != nil {
-		return fmt.Errorf("write contact attributes: %w", err)
+	for batch := range slices.Chunk(sorted, maxBindParameters/5) {
+		rows := make([]string, len(batch))
+		args := make([]any, 0, len(batch)*5)
+		for i, v := range batch {
+			rows[i] = "(?, ?, ?, ?, ?)"
+			args = append(args, contactID, v.keyID, v.columns.Text, v.columns.Number, v.columns.Date)
+		}
+		err := r.db.WithContext(ctx).Exec(`INSERT INTO contact_attributes (contact_id, attribute_key_id, value_text, value_number, value_date) VALUES `+strings.Join(rows, ", ")+`
+			ON CONFLICT (contact_id, attribute_key_id) DO UPDATE SET value_text = EXCLUDED.value_text, value_number = EXCLUDED.value_number, value_date = EXCLUDED.value_date, updated_at = now()`, args...).Error
+		if err != nil {
+			return fmt.Errorf("write contact attributes: %w", err)
+		}
 	}
 	return nil
 }

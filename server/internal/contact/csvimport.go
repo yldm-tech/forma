@@ -18,9 +18,12 @@ import (
 )
 
 // CSV import limits and choices (apps/web/modules/contacts/components/upload-contacts-button.tsx, types/contact.ts, lib/contacts.ts).
+//
+// MaxImportColumns is not forma2's: every column of a file becomes an attribute key, and the file size alone let one import create tens of thousands of them.
 const (
 	MaxImportBytes   = 800 * 1024
 	MaxImportRecords = 10000
+	MaxImportColumns = 1000
 	importChunkSize  = 50
 )
 
@@ -85,6 +88,9 @@ func parseCSV(r io.Reader) (*csvTable, error) {
 	}
 	if err != nil {
 		return nil, apperr.InvalidInput(CodeInvalidCSV, "Invalid CSV: "+err.Error())
+	}
+	if len(header) > MaxImportColumns {
+		return nil, apperr.InvalidInput(CodeInvalidCSV, fmt.Sprintf("Maximum %d columns allowed at a time.", MaxImportColumns))
 	}
 	t := &csvTable{headers: make([]string, len(header))}
 	for i, h := range header {
@@ -223,7 +229,7 @@ func validateRecords(m *mappedTable) error {
 
 // Import is forma2's createContactsFromCSVAction. The file is parsed and mapped, then forma2's createContactsFromCSV runs: values for existing number and date keys must parse or nothing is imported; a new column becomes a key typed from its first value, or a string key when its values disagree; a row whose email no contact has creates a contact, and one whose email a contact has is skipped, merged into it (update) or replaces its values (overwrite). In a merge or overwrite, a userId another contact holds is replaced by the contact's own.
 //
-// As in forma2, the import does not apply MaxAttributeKeys to the keys it creates, and does not check a new contact's userId against other contacts.
+// As in forma2, the import does not apply MaxAttributeKeys to the keys it creates, and does not check a new contact's userId against other contacts; a file is limited to MaxImportColumns columns instead.
 func (s *Service) Import(ctx context.Context, userID, workspaceID uuid.UUID, in ImportInput) (res *ImportResult, err error) {
 	ev := audit.Event{Action: audit.ActionCreatedFromCSV, TargetType: audit.TargetContact}
 	defer func() { s.record(ctx, ev, err) }()
@@ -361,23 +367,23 @@ func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *m
 		}
 		created = append(created, newKey{key: col, dataType: types[lower]})
 	}
-	if len(created) > 0 {
-		if err := s.repo.createKeys(ctx, workspaceID, created); err != nil {
-			return nil, err
-		}
-		keys, err = s.repo.keys(ctx, workspaceID)
-		if err != nil {
-			return nil, err
-		}
-		for _, k := range keys {
-			actual[strings.ToLower(k.Key)] = k
-		}
-	}
-
 	var ids []uuid.UUID
 	for start := 0; start < len(m.records); start += importChunkSize {
 		chunk := m.records[start:min(start+importChunkSize, len(m.records))]
 		err := s.repo.transaction(ctx, func(tx *Repository) error {
+			// The new keys are created with the first chunk, so a first chunk that fails leaves none of them behind.
+			if start == 0 && len(created) > 0 {
+				if err := tx.createKeys(ctx, workspaceID, created); err != nil {
+					return err
+				}
+				keys, err := tx.keys(ctx, workspaceID)
+				if err != nil {
+					return err
+				}
+				for _, k := range keys {
+					actual[strings.ToLower(k.Key)] = k
+				}
+			}
 			for _, record := range chunk {
 				id, err := importRecord(ctx, tx, workspaceID, m.keys, record, actual, byEmail, userIDOwners, action)
 				if err != nil {
