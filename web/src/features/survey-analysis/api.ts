@@ -8,10 +8,12 @@ import type {
   TSurveyContactAttributes,
   TSurveyMetaFieldFilter,
 } from "@forma/types/responses";
-import type { TSurveySummary } from "@forma/types/surveys/types";
+import type { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
 import type { TTag } from "@forma/types/tags";
 import { api, downloadFile } from "../../lib/api";
+import type { Tag } from "../../lib/queries/tags";
 import { type Stamped, stamped } from "../../lib/wire";
+import { type SurveyWire, parseSurvey } from "../survey-editor/api";
 
 // The analysis views' reads and writes against the Go server: the summary, filter options and displays (server/internal/analysis/handler.go), the responses (server/internal/response/handler.go), tags and the survey's share settings. Timestamps arrive as ISO strings and are revived into Dates here, once, since the views are ported from forma2's components, which read Dates.
 
@@ -77,6 +79,15 @@ export const parseResponse = (raw: ResponseWire): TResponseWithQuotas => ({
   data: raw.data ?? {},
 });
 
+/** A workspace tag from the tags list as the response views type it. */
+export const toResponseTag = (tag: Tag): TTag => ({
+  id: tag.id,
+  name: tag.name,
+  workspaceId: tag.workspaceId,
+  createdAt: new Date(tag.createdAt),
+  updatedAt: new Date(tag.updatedAt),
+});
+
 const parseDisplay = (raw: DisplayWire): TDisplayWithContact => ({
   ...raw,
   createdAt: new Date(raw.createdAt),
@@ -106,6 +117,7 @@ const surveyPath = (surveyId: string) => `/api/app/surveys/${surveyId}`;
 
 export const analysisKeys = {
   all: (surveyId: string) => ["surveys", surveyId, "analysis"] as const,
+  survey: (surveyId: string) => [...analysisKeys.all(surveyId), "survey"] as const,
   summary: (surveyId: string, criteria: TResponseFilterCriteria) =>
     [...analysisKeys.all(surveyId), "summary", criteria] as const,
   filterData: (surveyId: string) => [...analysisKeys.all(surveyId), "filter-data"] as const,
@@ -115,6 +127,14 @@ export const analysisKeys = {
   responseCount: (surveyId: string, criteria: TResponseFilterCriteria) =>
     [...analysisKeys.all(surveyId), "response-count", criteria] as const,
 };
+
+/** The survey the analysis views show. A cache of its own rather than the editor's, which is the editor's save baseline and must only move when the editor saves. */
+export const analysisSurveyQuery = (surveyId: string) =>
+  queryOptions({
+    queryKey: analysisKeys.survey(surveyId),
+    queryFn: ({ signal }): Promise<TSurvey> =>
+      api.get<SurveyWire>(surveyPath(surveyId), { signal }).then(parseSurvey),
+  });
 
 export const surveySummaryQuery = (surveyId: string, criteria: TResponseFilterCriteria) =>
   queryOptions({

@@ -121,3 +121,7 @@ export const satisfactionColor = (percentage: number): string => {
   if (percentage >= 55) return "bg-orange-500";
   return "bg-rose-500";
 };
+
+/** An average as the score cards print it, to two decimals. An element with no numeric answer has no average: forma2 printed JavaScript's NaN, which the server sends as null. */
+export const formatAverage = (average: number | null): string =>
+  average === null || Number.isNaN(average) ? "NaN" : average.toFixed(2);

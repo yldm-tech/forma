@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isSubmissionTimeMoreThan5Minutes, isValidValue, splitRecallHighlights } from "./response-card";
+import {
+  canDeleteResponse,
+  getSkippedElementGroups,
+  isSubmissionTimeMoreThan5Minutes,
+  isValidValue,
+  splitRecallHighlights,
+} from "./response-card";
 
 describe("isValidValue", () => {
   test("returns false for an empty string", () => {
@@ -97,5 +103,42 @@ describe("splitRecallHighlights", () => {
 
     expect(parts).toEqual([pathological]);
     expect(elapsedMs).toBeLessThan(500);
+  });
+});
+
+describe("canDeleteResponse", () => {
+  test("a finished response can always be deleted", () => {
+    expect(canDeleteResponse({ finished: true, updatedAt: new Date() })).toBe(true);
+  });
+
+  test("an unfinished response only after five idle minutes", () => {
+    expect(canDeleteResponse({ finished: false, updatedAt: new Date() })).toBe(false);
+    expect(canDeleteResponse({ finished: false, updatedAt: new Date(Date.now() - 6 * 60 * 1000) })).toBe(
+      true
+    );
+  });
+});
+
+describe("getSkippedElementGroups", () => {
+  const elements = [{ id: "q1" }, { id: "q2" }, { id: "q3" }, { id: "q4" }, { id: "q5" }];
+
+  test("a finished response groups every unanswered run in survey order", () => {
+    expect(getSkippedElementGroups(elements, { finished: true, data: { q1: "a", q4: "b" } })).toEqual([
+      ["q2", "q3"],
+      ["q5"],
+    ]);
+  });
+
+  test("a blank answer counts as skipped", () => {
+    expect(
+      getSkippedElementGroups(elements, { finished: true, data: { q1: " ", q2: [], q3: {}, q4: 0, q5: "x" } })
+    ).toEqual([["q1", "q2", "q3"]]);
+  });
+
+  test("an unfinished response puts the run where it stopped first", () => {
+    expect(getSkippedElementGroups(elements, { finished: false, data: { q1: "a", q3: "b" } })).toEqual([
+      ["q4", "q5"],
+      ["q2"],
+    ]);
   });
 });

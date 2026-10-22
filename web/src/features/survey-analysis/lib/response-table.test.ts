@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { RESERVED_FIELD_CATALOG } from "@forma/types/embedded-data-resolver";
-import { TResponse } from "@forma/types/responses";
+import type { TResponse, TResponseWithQuotas } from "@forma/types/responses";
+import type { TSurvey } from "@forma/types/surveys/types";
 import {
   RESERVED_COLUMN_ENTRIES,
   getAddressFieldLabel,
@@ -9,6 +10,7 @@ import {
   getReservedColumnLabel,
   getReservedColumnValues,
   isReservedColumnVisibleByDefault,
+  mapResponsesToTableData,
   reservedColumnId,
 } from "./response-table";
 
@@ -282,5 +284,96 @@ describe("utils", () => {
       expect(values).not.toHaveProperty(reservedColumnId("timezone"));
       expect(values).not.toHaveProperty(reservedColumnId("ipAddress"));
     });
+  });
+});
+
+describe("mapResponsesToTableData", () => {
+  const survey = {
+    id: "s1",
+    blocks: [
+      {
+        id: "b1",
+        name: "Block 1",
+        elements: [
+          {
+            id: "q1",
+            type: "openText",
+            headline: { default: "Q1" },
+            required: false,
+            inputType: "text",
+            charLimit: { enabled: false },
+          },
+          {
+            id: "q2",
+            type: "matrix",
+            headline: { default: "Q2" },
+            required: false,
+            rows: [{ id: "r1", label: { default: "Speed" } }],
+            columns: [{ id: "c1", label: { default: "Good" } }],
+          },
+          { id: "q3", type: "address", headline: { default: "Q3" }, required: false },
+          { id: "q4", type: "contactInfo", headline: { default: "Q4" }, required: false },
+        ],
+      },
+    ],
+    hiddenFields: { enabled: true, fieldIds: [] },
+    variables: [],
+  } as unknown as TSurvey;
+
+  const response = {
+    id: "r1",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    surveyId: "s1",
+    contact: { id: "c1", userId: "u1" },
+    contactAttributes: { email: "a@b.c" },
+    finished: true,
+    data: {
+      q1: "hello",
+      q2: { Speed: "Good" },
+      q3: ["Main St 1", "", "Berlin", "", "10115", "DE"],
+      q4: ["Ada", "Lovelace", "ada@example.com"],
+      verifiedEmail: "ada@example.com",
+    },
+    variables: {},
+    ttc: {},
+    tags: [],
+    meta: {},
+    singleUseId: "su1",
+    language: null,
+    quotas: [{ id: "qa", name: "Quota A" }],
+  } as unknown as TResponseWithQuotas;
+
+  test("spreads matrix rows, address and contact fields into their own cells", () => {
+    const t = ((key: string) => key) as unknown as TFunction;
+    const [row] = mapResponsesToTableData([response], survey, t);
+    expect(row?.responseData).toMatchObject({
+      q1: "hello",
+      Speed: "Good",
+      addressLine1: "Main St 1",
+      addressLine2: "",
+      city: "Berlin",
+      zip: "10115",
+      country: "DE",
+      firstName: "Ada",
+      lastName: "Lovelace",
+      email: "ada@example.com",
+    });
+    expect(row?.responseData).not.toHaveProperty("phone");
+  });
+
+  test("carries the row's status, identity, verified email and quota names", () => {
+    const t = ((key: string) => key) as unknown as TFunction;
+    const [row] = mapResponsesToTableData([response], survey, t);
+    expect(row).toMatchObject({
+      status: "workspace.surveys.responses.completed",
+      responseId: "r1",
+      singleUseId: "su1",
+      verifiedEmail: "ada@example.com",
+      person: { id: "c1", userId: "u1" },
+      quotas: ["Quota A"],
+    });
+    const [unfinished] = mapResponsesToTableData([{ ...response, finished: false }], survey, t);
+    expect(unfinished?.status).toBe("workspace.surveys.responses.not_completed");
   });
 });

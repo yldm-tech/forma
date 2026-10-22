@@ -2,7 +2,9 @@ import { describe, expect, test } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { type DateRange, OptionsType, type SelectedFilterValue } from "./filter-types";
 import {
+  decodeResponseFilter,
   decodeResponseFilterParam,
+  encodeResponseFilter,
   encodeResponseFilterParam,
   isDefaultResponseFilterState,
 } from "./response-filter-url";
@@ -132,5 +134,20 @@ describe("decodeResponseFilterParam", () => {
 
     expect(decoded?.selectedFilter.filter).toHaveLength(1);
     expect(decoded?.selectedFilter.filter[0]?.elementType.id).toBe("deleted-element-id");
+  });
+});
+
+describe("encodeResponseFilter / decodeResponseFilter", () => {
+  test("the object form round-trips like the param, for the router to write as JSON", () => {
+    const encoded = encodeResponseFilter(choiceFilter, januaryRange);
+    expect(encoded).not.toBeNull();
+    expect(JSON.stringify(encoded)).toBe(encodeResponseFilterParam(choiceFilter, januaryRange));
+    expect(decodeResponseFilter(encoded)).toEqual({ selectedFilter: choiceFilter, dateRange: januaryRange });
+  });
+
+  test("the default state has no object form, and a non-filter value decodes to nothing", () => {
+    expect(encodeResponseFilter(defaultFilter, defaultDateRange)).toBeNull();
+    expect(decodeResponseFilter("not a filter")).toBeNull();
+    expect(decodeResponseFilter({ s: "unknown" })).toBeNull();
   });
 });

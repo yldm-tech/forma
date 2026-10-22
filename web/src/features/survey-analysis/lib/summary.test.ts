@@ -7,6 +7,7 @@ import {
   constructToastMessage,
   convertFloatTo2Decimal,
   convertFloatToNDecimal,
+  formatAverage,
   formatTimeToComplete,
   getElementDenominator,
   getSampleTruncation,
@@ -332,5 +333,17 @@ describe("satisfactionColor", () => {
     expect(satisfactionColor(80)).toBe("bg-orange-500");
     expect(satisfactionColor(55)).toBe("bg-orange-500");
     expect(satisfactionColor(54.99)).toBe("bg-rose-500");
+  });
+});
+
+describe("formatAverage", () => {
+  test("prints two decimals", () => {
+    expect(formatAverage(3.456)).toBe("3.46");
+    expect(formatAverage(4)).toBe("4.00");
+  });
+
+  test("an average of no answers prints as forma2 printed NaN", () => {
+    expect(formatAverage(null)).toBe("NaN");
+    expect(formatAverage(Number.NaN)).toBe("NaN");
   });
 });

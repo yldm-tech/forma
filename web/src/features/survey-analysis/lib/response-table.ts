@@ -3,9 +3,18 @@ import {
   RESERVED_FIELD_CATALOG,
   type TDisplayableReservedField,
   type TReservedFieldDisplay,
+  getComputedEmbeddedFields,
+  getIngestedStorageKeys,
   listDisplayableReservedFields,
 } from "@forma/types/embedded-data-resolver";
-import { TResponse } from "@forma/types/responses";
+import type {
+  TResponse,
+  TResponseDataValue,
+  TResponseTableData,
+  TResponseWithQuotas,
+} from "@forma/types/responses";
+import type { TSurvey } from "@forma/types/surveys/types";
+import { getElementsFromBlocks } from "../../survey-editor/lib/client-utils";
 import { RESERVED_FIELD_ICONS, getReservedFieldLabel } from "./reserved-fields";
 
 export const getAddressFieldLabel = (field: string, t: TFunction) => {
@@ -95,4 +104,83 @@ export const getReservedColumnValues = (response: TResponse): Record<string, str
   ];
 
   return Object.fromEntries(fields.map(({ entry, value }) => [reservedColumnId(entry.name), value]));
+};
+
+const ADDRESS_FIELDS = ["addressLine1", "addressLine2", "city", "state", "zip", "country"];
+const CONTACT_INFO_FIELDS = ["firstName", "lastName", "email", "phone", "company"];
+
+/** An address or contact-info answer, a list of strings, as its fields by name. */
+const formatArrayToRecord = (
+  responseValue: TResponseDataValue | undefined,
+  keys: string[]
+): Record<string, string> => {
+  if (!Array.isArray(responseValue)) return {};
+  const result: Record<string, string> = {};
+  responseValue.forEach((value, index) => {
+    const key = keys[index];
+    if (key !== undefined) result[key] = value || "";
+  });
+  return result;
+};
+
+/** forma2's extractResponseData: the cells a response fills, by the key each column reads; a matrix answer is spread by row label, an address or contact-info answer by field. */
+export const extractResponseData = (
+  response: TResponse,
+  survey: TSurvey
+): Record<string, TResponseDataValue | undefined> => {
+  const responseData: Record<string, TResponseDataValue | undefined> = {};
+  for (const element of getElementsFromBlocks(survey.blocks)) {
+    const responseValue = response.data[element.id];
+    switch (element.type) {
+      case "matrix":
+        if (typeof responseValue === "object" && responseValue !== null && !Array.isArray(responseValue)) {
+          Object.assign(responseData, responseValue);
+        }
+        break;
+      case "address":
+        Object.assign(responseData, formatArrayToRecord(responseValue, ADDRESS_FIELDS));
+        break;
+      case "contactInfo":
+        Object.assign(responseData, formatArrayToRecord(responseValue, CONTACT_INFO_FIELDS));
+        break;
+      default:
+        responseData[element.id] = responseValue;
+    }
+  }
+  for (const fieldId of getIngestedStorageKeys(survey)) {
+    responseData[fieldId] = response.data[fieldId];
+  }
+  return responseData;
+};
+
+/** forma2's mapResponsesToTableData: one table row per response. */
+export const mapResponsesToTableData = (
+  responses: TResponseWithQuotas[],
+  survey: TSurvey,
+  t: TFunction
+): TResponseTableData[] => {
+  const computedFields = getComputedEmbeddedFields(survey);
+  return responses.map((response) => ({
+    responseData: extractResponseData(response, survey) as TResponseTableData["responseData"],
+    createdAt: response.createdAt,
+    status: response.finished
+      ? t("workspace.surveys.responses.completed")
+      : t("workspace.surveys.responses.not_completed"),
+    responseId: response.id,
+    singleUseId: response.singleUseId,
+    tags: response.tags,
+    // The raw slot, uncoerced: a response predating a field has no key and the cell stays empty.
+    variables: computedFields.reduce<Record<string, string | number>>((acc, { link }) => {
+      const value = response.variables[link.storageKey];
+      if (value !== undefined) acc[link.storageKey] = value;
+      return acc;
+    }, {}),
+    verifiedEmail: typeof response.data.verifiedEmail === "string" ? response.data.verifiedEmail : "",
+    language: response.language,
+    person: response.contact,
+    contactAttributes: response.contactAttributes,
+    meta: response.meta,
+    reservedValues: getReservedColumnValues(response),
+    quotas: response.quotas?.map((quota) => quota.name),
+  }));
 };

@@ -64,14 +64,17 @@ const toEncodedEntry = ({ elementType, filterType }: FilterValue) => ({
   ...(filterType.filterComboBoxValue === undefined ? {} : { c: filterType.filterComboBoxValue }),
 });
 
+/** The value `?filter=` carries, before it is written as JSON. */
+export type TEncodedResponseFilter = z.infer<typeof ZEncodedResponseFilter>;
+
 /**
- * Serialises the filter into the value of `?filter=`, or `null` when the state is the default one — absence of the param is the clean state, which is what replaced the old `?referer=true` reset signal.
+ * The filter as the object `?filter=` carries, or `null` when the state is the default one: absence of the param is the clean state. The router writes it as the JSON forma2 wrote, so links stay interchangeable.
  */
-export const encodeResponseFilterParam = (
+export const encodeResponseFilter = (
   selectedFilter: SelectedFilterValue,
   dateRange: DateRange
-): string | null => {
-  const encoded: z.infer<typeof ZEncodedResponseFilter> = {};
+): TEncodedResponseFilter | null => {
+  const encoded: TEncodedResponseFilter = {};
 
   if (selectedFilter.responseStatus === "complete" || selectedFilter.responseStatus === "partial") {
     encoded.s = selectedFilter.responseStatus;
@@ -93,7 +96,16 @@ export const encodeResponseFilterParam = (
     return null;
   }
 
-  return JSON.stringify(encoded);
+  return encoded;
+};
+
+/** Serialises the filter into the value of `?filter=`, or `null` in the default state. */
+export const encodeResponseFilterParam = (
+  selectedFilter: SelectedFilterValue,
+  dateRange: DateRange
+): string | null => {
+  const encoded = encodeResponseFilter(selectedFilter, dateRange);
+  return encoded === null ? null : JSON.stringify(encoded);
 };
 
 const parseIsoDate = (value: string): Date | null => {
@@ -102,7 +114,7 @@ const parseIsoDate = (value: string): Date | null => {
 };
 
 /**
- * Reads `?filter=` back. Returns `null` for anything that is not a filter this build understands — a truncated paste, a link from a future shape of this param, or hand-edited nonsense — so the view falls back to unfiltered rather than rendering a broken filter bar.
+ * Reads `?filter=` back from its raw text. Returns `null` for anything that is not a filter this build understands — a truncated paste, a link from a future shape of this param, or hand-edited nonsense — so the view falls back to unfiltered rather than rendering a broken filter bar.
  */
 export const decodeResponseFilterParam = (raw: string): TDecodedResponseFilter | null => {
   let parsed: unknown;
@@ -111,7 +123,11 @@ export const decodeResponseFilterParam = (raw: string): TDecodedResponseFilter |
   } catch {
     return null;
   }
+  return decodeResponseFilter(parsed);
+};
 
+/** Reads the filter back from the value the router parsed `?filter=` into; `null` for anything that is not a filter this build understands. */
+export const decodeResponseFilter = (parsed: unknown): TDecodedResponseFilter | null => {
   const result = ZEncodedResponseFilter.safeParse(parsed);
   if (!result.success) {
     return null;

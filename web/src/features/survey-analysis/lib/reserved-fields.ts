@@ -33,7 +33,7 @@ import { getElementsFromBlocks } from "../../survey-editor/lib/client-utils";
  *
  * `formatFieldNameToTitleCase` — the same helper the recall and logic pickers use — stays as the `default` arm, deliberately, as a **last resort rather than the rule**: ENG-1858's next batch of catalog entries still surfaces on both surfaces with no edit here, reading in English until someone adds its key. So a catalog addition is still free, just not yet localized; that is the trade the ticket's "adding a catalog entry surfaces it in both places with no further change" criterion buys, and it is the reason this is not a lookup keyed off a required per-entry field.
  *
- * A switch of literal `t("…")` calls rather than a name → key lookup map on purpose: `pnpm i18n` scans for literal `t()` arguments to find unused keys, and a map would make every `workspace.surveys.responses.*` key below read as dead and get deleted from thirty locale files.
+ * A switch of literal `t("…")` calls rather than a name → key lookup map on purpose: the translation-key check (src/lib/i18n-keys.test.ts) finds keys only in literal `t()` arguments, and a map would hide every `workspace.surveys.responses.*` key below from it.
  */
 export const getReservedFieldLabel = (name: string, t: TFunction): string => {
   switch (name) {

@@ -64,3 +64,46 @@ export const splitRecallHighlights = (text: string): string[] => {
   parts.push(text.slice(copiedTo));
   return parts;
 };
+
+/** forma2's delete rule: a finished response can always be deleted, an unfinished one only once it has been idle for more than five minutes, so a respondent still answering does not lose it. */
+export const canDeleteResponse = (response: { finished: boolean; updatedAt: Date }): boolean =>
+  response.finished || isSubmissionTimeMoreThan5Minutes(response.updatedAt);
+
+/**
+ * forma2's skipped-question grouping of the response card: runs of consecutive elements without an answer. A finished response groups every unanswered run in order; an unfinished one walks back from the last element, so the trailing run (where the respondent stopped) comes first and the runs before it follow, each in survey order.
+ */
+export const getSkippedElementGroups = (
+  elements: { id: string }[],
+  response: { finished: boolean; data: Record<string, TResponseDataValue | undefined> }
+): string[][] => {
+  const result: string[][] = [];
+  const temp: string[] = [];
+  const flush = (shouldReverse = false) => {
+    if (temp.length === 0) return;
+    if (shouldReverse) temp.reverse();
+    result.push([...temp]);
+    temp.length = 0;
+  };
+
+  if (response.finished) {
+    for (const element of elements) {
+      const value = response.data[element.id];
+      if (value !== undefined && isValidValue(value)) flush();
+      else temp.push(element.id);
+    }
+    flush();
+    return result;
+  }
+
+  for (let index = elements.length - 1; index >= 0; index--) {
+    const element = elements[index];
+    if (!element) continue;
+    const value = response.data[element.id];
+    const hasNoData = !value;
+    const shouldSkip = hasNoData && (result.length === 0 || value === undefined || !isValidValue(value));
+    if (shouldSkip) temp.push(element.id);
+    else flush(true);
+  }
+  flush();
+  return result;
+};
