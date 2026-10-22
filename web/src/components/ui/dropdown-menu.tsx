@@ -1,5 +1,5 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, Circle } from "lucide-react";
+import { Check, ChevronRight, Circle } from "lucide-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { usePortalContainer } from "./dialog";
@@ -8,6 +8,7 @@ export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 
 export const DropdownMenuContent = ({
   className,
@@ -97,4 +98,35 @@ export const DropdownMenuSeparator = ({
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>) => (
   <DropdownMenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-slate-100", className)} {...props} />
+);
+
+export const DropdownMenuSubTrigger = ({
+  className,
+  children,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger>) => (
+  <DropdownMenuPrimitive.SubTrigger
+    className={cn(
+      "flex cursor-pointer items-center justify-between gap-x-2 rounded-lg px-2 py-1.5 text-sm font-medium outline-hidden select-none focus:bg-slate-100 data-[state=open]:bg-slate-100",
+      className
+    )}
+    {...props}>
+    {children}
+    <ChevronRight className="size-4" />
+  </DropdownMenuPrimitive.SubTrigger>
+);
+
+export const DropdownMenuSubContent = ({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>) => (
+  <DropdownMenuPrimitive.Portal container={usePortalContainer()}>
+    <DropdownMenuPrimitive.SubContent
+      className={cn(
+        "z-50 min-w-32 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 font-medium text-slate-700 shadow-xs",
+        className
+      )}
+      {...props}
+    />
+  </DropdownMenuPrimitive.Portal>
 );

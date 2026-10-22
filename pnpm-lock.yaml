@@ -574,6 +574,9 @@ importers:
 
   web:
     dependencies:
+      '@forma/i18n-utils':
+        specifier: workspace:*
+        version: link:../packages/i18n-utils
       '@forma/types':
         specifier: workspace:*
         version: link:../packages/types
@@ -598,6 +601,9 @@ importers:
       clsx:
         specifier: 'catalog:'
         version: 2.1.1
+      date-fns:
+        specifier: 'catalog:'
+        version: 4.4.0
       i18next:
         specifier: 'catalog:'
         version: 25.8.20(typescript@5.9.3)
