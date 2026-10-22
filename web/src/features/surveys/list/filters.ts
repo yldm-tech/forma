@@ -56,12 +56,6 @@ export const parseStoredSurveyFilters = (
   }
 };
 
-export const isDefaultFilters = (filters: SurveyFilters): boolean =>
-  filters.name === initialFilters.name &&
-  filters.sortBy === initialFilters.sortBy &&
-  filters.status.length === 0 &&
-  filters.type.length === 0;
-
 /** Whether the toolbar offers "Clear filters": a status, a type or a name is set; the sort order alone does not count. */
 export const hasActiveFilters = (filters: SurveyFilters): boolean =>
   filters.status.length > 0 || filters.type.length > 0 || filters.name !== "";

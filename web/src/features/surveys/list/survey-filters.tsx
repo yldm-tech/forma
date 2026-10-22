@@ -18,6 +18,7 @@ import {
   type SurveyStatusFilter,
   type SurveyTypeFilter,
   type WorkspaceChannel,
+  hasActiveFilters,
   initialFilters,
 } from "./filters";
 
@@ -110,7 +111,8 @@ export const SurveyFilters = ({
     { label: t("workspace.surveys.alphabetical"), value: "name" },
     { label: t("workspace.surveys.relevance"), value: "relevance" },
   ];
-  const showClear = filters.status.length > 0 || filters.type.length > 0 || name !== "";
+  // The typed name counts before it reaches the list, as forma2's toolbar showed the button.
+  const showClear = hasActiveFilters({ ...filters, name });
 
   return (
     <div className="flex flex-wrap justify-between gap-2">
