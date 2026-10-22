@@ -16,14 +16,22 @@ const sources = import.meta.glob<string>(
 
 const KEY = /\bt\(\s*"([a-z][\w-]*(?:\.[\w-]+)+)"/g;
 
-const lookup = (catalogue: unknown, key: string): unknown =>
-  key
-    .split(".")
-    .reduce<unknown>(
-      (node, part) =>
-        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
-      catalogue
-    );
+// Resolves a key the way i18next does: segment by segment, and, like i18next's deepFind, also through a catalogue key that itself contains dots (forma2 wrote "display_criteria.everyone" beside "display_criteria").
+const lookup = (catalogue: unknown, key: string): unknown => {
+  const resolve = (node: unknown, parts: string[]): unknown => {
+    if (parts.length === 0) return node;
+    if (!node || typeof node !== "object") return undefined;
+    const record = node as Record<string, unknown>;
+    for (let end = 1; end <= parts.length; end++) {
+      const segment = parts.slice(0, end).join(".");
+      if (!Object.hasOwn(record, segment)) continue;
+      const found = resolve(record[segment], parts.slice(end));
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  return resolve(catalogue, key.split("."));
+};
 
 test("every translation key used by the SPA exists in all four catalogues", () => {
   const keys = new Set<string>();

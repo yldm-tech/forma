@@ -26,6 +26,15 @@ test("isLocale", () => {
 });
 
 describe("initI18n", () => {
+  test("resolves a catalogue key that itself contains a dot, as forma2's in-app display criteria are written", async () => {
+    const i18n = await initI18n("en-US");
+    expect(i18n.t("workspace.surveys.summary.in_app.display_criteria")).toBe("Display criteria");
+    expect(i18n.t("workspace.surveys.summary.in_app.display_criteria.everyone")).toBe("Everyone");
+    expect(i18n.t("workspace.surveys.summary.in_app.display_criteria.randomizer", { percentage: 30 })).toBe(
+      "30% Randomizer"
+    );
+  });
+
   test("translates namespaced keys with ICU interpolation", async () => {
     const i18n = await initI18n("en-US");
     expect(i18n.t("common.loading")).toBe("Loading");

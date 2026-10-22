@@ -126,6 +126,57 @@ const request = async <T>(
   return (await response.json()) as T;
 };
 
+/** The file name a Content-Disposition header gives, or null without one. Reads the RFC 5987 filename* form first, then the quoted or bare filename. */
+export const contentDispositionFilename = (header: string | null): string | null => {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [rawKey, ...rest] = part.split("=");
+    const key = rawKey?.trim().toLowerCase();
+    const value = rest.join("=").trim();
+    if (key === "filename*") {
+      const encoded = value.replace(/^UTF-8''/i, "");
+      try {
+        return decodeURIComponent(encoded);
+      } catch {
+        return encoded;
+      }
+    }
+  }
+  for (const part of header.split(";")) {
+    const [rawKey, ...rest] = part.split("=");
+    if (rawKey?.trim().toLowerCase() !== "filename") continue;
+    const value = rest.join("=").trim();
+    return value.startsWith('"') && value.endsWith('"') && value.length >= 2 ? value.slice(1, -1) : value;
+  }
+  return null;
+};
+
+/** A file the server answers a POST with, and the name its Content-Disposition gives it. */
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string | null;
+}
+
+/** POSTs a JSON body to an endpoint that answers a file rather than JSON; a failure still throws ApiError from the error envelope. */
+export const downloadFile = async (
+  path: string,
+  body: unknown,
+  options: RequestOptions = {}
+): Promise<DownloadedFile> => {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: new Headers({ "Content-Type": "application/json", [CSRF_HEADER]: "XMLHttpRequest" }),
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    signal: options.signal,
+  });
+  if (!response.ok) throw await readError(response);
+  return {
+    blob: await response.blob(),
+    filename: contentDispositionFilename(response.headers.get("content-disposition")),
+  };
+};
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) => request<T>("GET", path, undefined, options),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
