@@ -416,3 +416,35 @@ func TestAirtableTablesRoute(t *testing.T) {
 		t.Errorf("tables: %d %s", rec.Code, rec.Body)
 	}
 }
+
+// The callback checks workspace.write again on the workspace the state names: a member demoted to read, or removed, after starting the flow cannot finish it, and the workspace's credentials stay as they were.
+func TestCallbackRechecksWriteAccess(t *testing.T) {
+	for name, revoke := range map[string]string{
+		"demoted to read": `UPDATE workspace_teams SET permission = 'read' WHERE team_id IN (SELECT team_id FROM team_members WHERE user_id = ?)`,
+		"removed":         `DELETE FROM memberships WHERE user_id = ?`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t)
+			o := e.owner()
+			member := oauthCaller{user: e.user(), session: uuid.New(), org: o.org, ws: o.ws}
+			e.grant(o.org, o.ws, member.user, "readWrite")
+			e.fake.reply("POST /google/token", http.StatusOK, `{"access_token":"ya29.attacker","refresh_token":"1//attacker","expires_in":3599,"token_type":"Bearer"}`)
+			e.fake.reply("GET /googleapis/oauth2/v2/userinfo", http.StatusOK, `{"email":"attacker@example.com"}`)
+			id := e.connect(o.ws, TypeGoogleSheets, GoogleKey{AccessToken: "old"}, "old@example.com", nil)
+
+			state := e.authorize("/api/google-sheet", member).Query().Get("state")
+			e.exec(revoke, member.user)
+			rec := e.callback("/api/google-sheet/callback", member, url.Values{"state": {state}, "code": {"auth-code"}})
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("callback = %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
+			}
+			if len(e.fake.to(http.MethodPost, "/google/token")) != 0 {
+				t.Error("the code was exchanged")
+			}
+			stored, _ := e.repo.ByID(context.Background(), id)
+			if k, _ := key[GoogleKey](stored); k.AccessToken != "old" || stored.Credentials.Email != "old@example.com" {
+				t.Errorf("the credentials changed: %+v %q", k, stored.Credentials.Email)
+			}
+		})
+	}
+}
