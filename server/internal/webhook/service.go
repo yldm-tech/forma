@@ -58,17 +58,18 @@ func NewService(repo *Repository, authorizer *authz.Authorizer, limiter *ratelim
 	return &Service{repo: repo, authz: authorizer, limiter: limiter, audit: emitter, guard: guard, log: log, now: time.Now}
 }
 
-// Input is a webhook as the settings page writes it, forma2's ZWebhookInput. An empty SurveyIDs scopes the webhook to every survey.
+// Input is a webhook as the settings page writes it, forma2's ZWebhookInput. AllSurveys, which forma2 did not have, states the scope; without it (the v1 API, a page loaded before it existed) an empty SurveyIDs scopes the webhook to every survey, as in forma2.
 type Input struct {
-	Name      *string  `json:"name"`
-	URL       string   `json:"url"`
-	Source    string   `json:"source"`
-	Triggers  []string `json:"triggers"`
-	SurveyIDs []string `json:"surveyIds"`
+	Name       *string  `json:"name"`
+	URL        string   `json:"url"`
+	Source     string   `json:"source"`
+	Triggers   []string `json:"triggers"`
+	SurveyIDs  []string `json:"surveyIds"`
+	AllSurveys *bool    `json:"allSurveys"`
 }
 
-// fields validates the input: forma2's zod rules (a URL, at least one known trigger, a known source) and, since webhook_surveys has foreign keys, surveys of the webhook's own workspace.
-func (s *Service) fields(ctx context.Context, workspaceID uuid.UUID, in Input) (fields, error) {
+// fields validates the input: forma2's zod rules (a URL, at least one known trigger, a known source), a scope that is either every survey or at least one, and surveys of the webhook's own workspace. kept are the surveys the webhook already lists, which stay valid after their survey is deleted.
+func (s *Service) fields(ctx context.Context, workspaceID uuid.UUID, in Input, kept []uuid.UUID) (fields, error) {
 	f := fields{Name: in.Name, URL: in.URL, Source: in.Source}
 	if f.Source == "" {
 		f.Source = SourceUser
@@ -91,11 +92,18 @@ func (s *Service) fields(ctx context.Context, workspaceID uuid.UUID, in Input) (
 	if err != nil {
 		return f, err
 	}
+	f.AllSurveys = len(ids) == 0
+	if in.AllSurveys != nil {
+		if *in.AllSurveys != (len(ids) == 0) {
+			return f, apperr.BadRequest("A webhook is scoped to every survey or to at least one listed survey")
+		}
+		f.AllSurveys = *in.AllSurveys
+	}
 	foreign, err := s.repo.foreignSurveys(ctx, workspaceID, ids)
 	if err != nil {
 		return f, err
 	}
-	if len(foreign) > 0 {
+	if slices.ContainsFunc(foreign, func(id uuid.UUID) bool { return !slices.Contains(kept, id) }) {
 		return f, apperr.InvalidInput(CodeForeignSurveys, "Every survey of a webhook must belong to its workspace")
 	}
 	f.SurveyIDs = ids
@@ -128,7 +136,7 @@ func (s *Service) List(ctx context.Context, userID, workspaceID uuid.UUID) ([]Vi
 	}
 	out := make([]View, len(found))
 	for i, w := range found {
-		out[i] = w.view()
+		out[i] = w.appView()
 	}
 	return out, nil
 }
@@ -153,7 +161,7 @@ func (s *Service) Create(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		if err := s.limiter.Apply(ctx, ratelimit.ActionStateMutation, workspaceID.String()); err != nil {
 			return nil, err
 		}
-		f, err := s.fields(ctx, workspaceID, in.Input)
+		f, err := s.fields(ctx, workspaceID, in.Input, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +200,7 @@ func (s *Service) Create(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		return nil, err
 	}
 	v := created.viewWithSecret()
+	v.AllSurveys = &created.AllSurveys
 	return &v, nil
 }
 
@@ -222,7 +231,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in Input) (*
 			return err
 		}
 		in.Source = before.Source
-		f, err := s.fields(ctx, before.WorkspaceID, in)
+		f, err := s.fields(ctx, before.WorkspaceID, in, before.SurveyIDs)
 		if err != nil {
 			return err
 		}
@@ -239,7 +248,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in Input) (*
 	if err != nil {
 		return nil, err
 	}
-	v := after.view()
+	v := after.appView()
 	return &v, nil
 }
 

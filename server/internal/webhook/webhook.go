@@ -32,7 +32,7 @@ var Sources = []string{SourceUser, SourceZapier, SourceMake, SourceN8N, SourceAc
 // Triggers are the response pipeline events a webhook may subscribe to, forma2's PipelineTriggers in its zod order.
 var Triggers = []string{"responseFinished", "responseCreated", "responseUpdated"}
 
-// Webhook is a stored webhook. SurveyIDs empty means every survey of the workspace, current and future (the all_surveys column).
+// Webhook is a stored webhook. AllSurveys (the all_surveys column) scopes it to every survey of the workspace, current and future, and SurveyIDs is then empty; otherwise it fires only for SurveyIDs, which keeps the ids of surveys deleted since, as forma2's surveyIds did.
 type Webhook struct {
 	ID          uuid.UUID
 	Name        *string
@@ -43,10 +43,11 @@ type Webhook struct {
 	WorkspaceID uuid.UUID
 	Triggers    []string
 	SurveyIDs   []uuid.UUID
+	AllSurveys  bool
 	Secret      *string
 }
 
-// View is a webhook as forma2's APIs serialized the Prisma row, in its field order, with JavaScript's toISOString timestamps. Secret is present only where forma2 returned it: the response to a create. EnvironmentID is the v1 API's legacy alias of the workspace.
+// View is a webhook as forma2's APIs serialized the Prisma row, in its field order, with JavaScript's toISOString timestamps. Secret is present only where forma2 returned it: the response to a create. EnvironmentID is the v1 API's legacy alias of the workspace. AllSurveys is the settings page's explicit scope, which the v1 API never had: there an empty surveyIds is every survey.
 type View struct {
 	ID            uuid.UUID   `json:"id"`
 	Name          *string     `json:"name"`
@@ -57,6 +58,7 @@ type View struct {
 	WorkspaceID   uuid.UUID   `json:"workspaceId"`
 	Triggers      []string    `json:"triggers"`
 	SurveyIDs     []uuid.UUID `json:"surveyIds"`
+	AllSurveys    *bool       `json:"allSurveys,omitempty"`
 	Secret        *string     `json:"secret,omitempty"`
 	EnvironmentID *string     `json:"environmentId,omitempty"`
 }
@@ -67,6 +69,13 @@ func (w *Webhook) view() View {
 		ID: w.ID, Name: w.Name, CreatedAt: jsvalue.ISOString(w.CreatedAt), UpdatedAt: jsvalue.ISOString(w.UpdatedAt),
 		URL: w.URL, Source: w.Source, WorkspaceID: w.WorkspaceID, Triggers: w.Triggers, SurveyIDs: w.SurveyIDs,
 	}
+}
+
+// appView is w as the settings page reads it: without its secret, with its explicit scope.
+func (w *Webhook) appView() View {
+	v := w.view()
+	v.AllSurveys = &w.AllSurveys
+	return v
 }
 
 // viewWithSecret is w with its secret, the create response.

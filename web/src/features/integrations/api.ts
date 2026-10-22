@@ -242,8 +242,10 @@ export interface Webhook {
   source: WebhookSource;
   workspaceId: string;
   triggers: WebhookTrigger[];
-  /** Empty for a webhook on every current and future survey. */
+  /** The surveys the webhook sends for, deleted ones included; empty when allSurveys is set. */
   surveyIds: string[];
+  /** The webhook sends for every current and future survey. When unset it sends only for surveyIds, even once they are all deleted. */
+  allSurveys: boolean;
   secret?: string;
 }
 
@@ -253,6 +255,7 @@ export interface WebhookInput {
   source: WebhookSource;
   triggers: WebhookTrigger[];
   surveyIds: string[];
+  allSurveys: boolean;
 }
 
 export interface WebhooksList {

@@ -20,8 +20,8 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// selectWebhook reads webhooks with their triggers and listed surveys; a webhook scoped to every survey lists none.
-const selectWebhook = `SELECT w.id, w.name, w.created_at, w.updated_at, w.url, w.source, w.workspace_id, w.secret,
+// selectWebhook reads webhooks with their triggers, their scope and listed surveys; a webhook scoped to every survey lists none.
+const selectWebhook = `SELECT w.id, w.name, w.created_at, w.updated_at, w.url, w.source, w.workspace_id, w.secret, w.all_surveys,
 	to_jsonb(w.triggers) AS triggers,
 	CASE WHEN w.all_surveys THEN '[]'::jsonb ELSE COALESCE((SELECT jsonb_agg(ws.survey_id ORDER BY ws.survey_id) FROM webhook_surveys ws WHERE ws.webhook_id = w.id), '[]'::jsonb) END AS survey_ids
 	FROM webhooks w`
@@ -35,6 +35,7 @@ type row struct {
 	Source      string
 	WorkspaceID uuid.UUID
 	Secret      *string
+	AllSurveys  bool
 	Triggers    []byte
 	SurveyIDs   []byte
 }
@@ -46,7 +47,7 @@ func (r *Repository) find(ctx context.Context, query string, args ...any) ([]*We
 	}
 	out := make([]*Webhook, len(rows))
 	for i, x := range rows {
-		w := &Webhook{ID: x.ID, Name: x.Name, CreatedAt: x.CreatedAt, UpdatedAt: x.UpdatedAt, URL: x.URL, Source: x.Source, WorkspaceID: x.WorkspaceID, Secret: x.Secret}
+		w := &Webhook{ID: x.ID, Name: x.Name, CreatedAt: x.CreatedAt, UpdatedAt: x.UpdatedAt, URL: x.URL, Source: x.Source, WorkspaceID: x.WorkspaceID, Secret: x.Secret, AllSurveys: x.AllSurveys}
 		if err := json.Unmarshal(x.Triggers, &w.Triggers); err != nil {
 			return nil, fmt.Errorf("decode webhook %s triggers: %w", x.ID, err)
 		}
@@ -109,13 +110,14 @@ func (r *Repository) foreignSurveys(ctx context.Context, workspaceID uuid.UUID, 
 	return foreign, nil
 }
 
-// fields are the writable columns of a webhook.
+// fields are the writable columns of a webhook. AllSurveys is set exactly when SurveyIDs is empty.
 type fields struct {
-	Name      *string
-	URL       string
-	Source    string
-	Triggers  []string
-	SurveyIDs []uuid.UUID
+	Name       *string
+	URL        string
+	Source     string
+	Triggers   []string
+	SurveyIDs  []uuid.UUID
+	AllSurveys bool
 }
 
 // create inserts a webhook and the surveys it is scoped to, in one transaction.
@@ -123,7 +125,7 @@ func (r *Repository) create(ctx context.Context, workspaceID uuid.UUID, f fields
 	var id uuid.UUID
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Raw(`INSERT INTO webhooks (workspace_id, name, url, source, triggers, secret, all_surveys) VALUES (?, ?, ?, ?, ?::text[], ?, ?) RETURNING id`,
-			workspaceID, f.Name, f.URL, f.Source, textArray(f.Triggers), secret, len(f.SurveyIDs) == 0).Row().Scan(&id); err != nil {
+			workspaceID, f.Name, f.URL, f.Source, textArray(f.Triggers), secret, f.AllSurveys).Row().Scan(&id); err != nil {
 			return fmt.Errorf("insert webhook: %w", err)
 		}
 		return setSurveys(tx, id, f.SurveyIDs)
@@ -135,7 +137,7 @@ func (r *Repository) create(ctx context.Context, workspaceID uuid.UUID, f fields
 func (r *Repository) update(ctx context.Context, id uuid.UUID, f fields) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(`UPDATE webhooks SET name = ?, url = ?, triggers = ?::text[], all_surveys = ?, updated_at = now() WHERE id = ?`,
-			f.Name, f.URL, textArray(f.Triggers), len(f.SurveyIDs) == 0, id).Error; err != nil {
+			f.Name, f.URL, textArray(f.Triggers), f.AllSurveys, id).Error; err != nil {
 			return fmt.Errorf("update webhook: %w", err)
 		}
 		if err := tx.Exec(`DELETE FROM webhook_surveys WHERE webhook_id = ?`, id).Error; err != nil {

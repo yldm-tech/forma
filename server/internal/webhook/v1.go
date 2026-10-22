@@ -341,7 +341,7 @@ func (h *V1Handler) create(c *gin.Context) {
 
 // createV1 is the v1 API's createWebhook: the URL's SSRF check and a new secret. Unlike the settings page it does not refuse Discord, as forma2's did not.
 func (s *Service) createV1(ctx context.Context, workspaceID uuid.UUID, in Input) (*Webhook, error) {
-	f, err := s.fields(ctx, workspaceID, in)
+	f, err := s.fields(ctx, workspaceID, in, nil)
 	if err != nil {
 		return nil, err
 	}

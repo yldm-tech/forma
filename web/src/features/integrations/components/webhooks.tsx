@@ -357,6 +357,7 @@ export const AddWebhookModal = ({
         source: "user",
         triggers,
         surveyIds: allSurveys ? [] : surveyIds,
+        allSurveys,
         webhookSecret: tested.secret,
       });
       setCreated(webhook);
@@ -669,7 +670,7 @@ const WebhookSettings = ({
   const [url, setUrl] = useState(webhook.url);
   const [triggers, setTriggers] = useState<WebhookTrigger[]>(webhook.triggers);
   const [surveyIds, setSurveyIds] = useState<string[]>(webhook.surveyIds);
-  const [allSurveys, setAllSurveys] = useState(webhook.surveyIds.length === 0);
+  const [allSurveys, setAllSurveys] = useState(webhook.allSurveys);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const isThirdParty = webhook.source !== "user";
   const allowChanges = !isThirdParty && !isReadOnly;
@@ -688,7 +689,14 @@ const WebhookSettings = ({
     try {
       await update.mutateAsync({
         webhookId: webhook.id,
-        input: { name, url, source: webhook.source, triggers, surveyIds: allSurveys ? [] : surveyIds },
+        input: {
+          name,
+          url,
+          source: webhook.source,
+          triggers,
+          surveyIds: allSurveys ? [] : surveyIds,
+          allSurveys,
+        },
       });
       toast.success(t("workspace.integrations.webhooks.webhook_updated_successfully"));
     } catch (error) {

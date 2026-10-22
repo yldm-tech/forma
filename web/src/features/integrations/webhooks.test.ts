@@ -61,13 +61,15 @@ test("triggers are listed in the order they happen", () => {
   );
 });
 
-test("a webhook on no survey in particular sends for every survey; a gone survey drops out", () => {
+test("a webhook on every survey lists them all; a gone survey drops out and never widens the scope", () => {
   const surveys = [
     { id: "s1", name: "NPS" },
     { id: "s2", name: "CSAT" },
   ];
-  expect(webhookSurveyNames({ surveyIds: [] }, surveys)).toEqual(["NPS", "CSAT"]);
-  expect(webhookSurveyNames({ surveyIds: ["s2", "gone"] }, surveys)).toEqual(["CSAT"]);
+  expect(webhookSurveyNames({ surveyIds: [], allSurveys: true }, surveys)).toEqual(["NPS", "CSAT"]);
+  expect(webhookSurveyNames({ surveyIds: ["s2", "gone"], allSurveys: false }, surveys)).toEqual(["CSAT"]);
+  expect(webhookSurveyNames({ surveyIds: ["gone"], allSurveys: false }, surveys)).toEqual([]);
+  expect(webhookSurveyNames({ surveyIds: [], allSurveys: false }, surveys)).toEqual([]);
 });
 
 test("the integrations page counts webhooks by source", () => {

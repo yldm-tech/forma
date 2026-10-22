@@ -150,6 +150,7 @@ const webhook = (overrides: Partial<Webhook> = {}): Webhook => ({
   workspaceId: WS,
   triggers: ["responseFinished"],
   surveyIds: [],
+  allSurveys: true,
   ...overrides,
 });
 
@@ -606,6 +607,7 @@ describe("webhooks", () => {
       source: "user",
       triggers: ["responseFinished"],
       surveyIds: [],
+      allSurveys: true,
       webhookSecret: "whsec_c2VjcmV0",
     });
   });
@@ -662,7 +664,7 @@ describe("webhooks", () => {
   });
 
   test("editing tests the endpoint with the stored secret, which the browser never sees", async () => {
-    const existing = webhook({ surveyIds: [survey.id] });
+    const existing = webhook({ surveyIds: [survey.id], allSurveys: false });
     const calls = stubServer({
       [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
       "GET /api/v3/surveys": surveysList,
@@ -688,6 +690,36 @@ describe("webhooks", () => {
       source: "user",
       triggers: ["responseFinished"],
       surveyIds: [survey.id],
+      allSurveys: false,
+    });
+  });
+
+  test("a webhook whose surveys were all deleted is saved with its own scope, never widened to every survey", async () => {
+    const existing = webhook({ surveyIds: ["0192f7a8-1c3e-7b2a-9d4f-00000000dead"], allSurveys: false });
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true } }),
+      [`PATCH /api/app/webhooks/${existing.id}`]: (body) => ({ body: webhook(body as Partial<Webhook>) }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.queryByText("Feedback")).toBeNull();
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    expect(
+      dialog
+        .getByRole("checkbox", { name: t("workspace.integrations.webhooks.all_current_and_new_surveys") })
+        .getAttribute("aria-checked")
+    ).toBe("false");
+    fireEvent.change(dialog.getByLabelText(t("common.name")), { target: { value: "Orders v2" } });
+    fireEvent.click(dialog.getByRole("button", { name: t("common.save_changes") }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
+    expect(calls.find((call) => call.method === "PATCH")?.body).toMatchObject({
+      surveyIds: [existing.surveyIds[0]],
+      allSurveys: false,
     });
   });
 

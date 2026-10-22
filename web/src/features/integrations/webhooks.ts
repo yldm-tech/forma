@@ -63,12 +63,12 @@ export const triggersText = (t: TFunction, triggers: readonly WebhookTrigger[]):
     .map((trigger) => triggerLabel(t, trigger))
     .join(", ");
 
-/** The names of the surveys a webhook sends for: every survey when it names none, otherwise the ones still listed (a survey that is gone drops out). */
+/** The names of the surveys a webhook sends for: every survey when it is scoped to all of them, otherwise the ones it lists that still exist (a survey that is gone drops out). */
 export const webhookSurveyNames = (
-  webhook: Pick<Webhook, "surveyIds">,
+  webhook: Pick<Webhook, "surveyIds" | "allSurveys">,
   surveys: readonly { id: string; name: string }[]
 ): string[] => {
-  if (webhook.surveyIds.length === 0) return surveys.map((survey) => survey.name);
+  if (webhook.allSurveys) return surveys.map((survey) => survey.name);
   return webhook.surveyIds.flatMap((id) => {
     const survey = surveys.find((s) => s.id === id);
     return survey ? [survey.name] : [];

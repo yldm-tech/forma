@@ -221,3 +221,58 @@ func TestAppTestEndpoint(t *testing.T) {
 		t.Errorf("ftp = %d", res.Code)
 	}
 }
+
+// A webhook scoped to surveys that were all deleted still names them, as forma2's surveyIds did, and never reads back as, or is saved as, a webhook of every survey.
+func TestScopeOutlivesDeletedSurveys(t *testing.T) {
+	e := newEnv(t, false)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	gone, other := e.survey(ws), e.survey(ws)
+	key, _ := e.apiKey(org, ws, "manage")
+	res := e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks", asUser(owner), map[string]any{
+		"name": "Scoped", "url": "https://93.184.216.34/hook", "triggers": []string{"responseFinished"}, "surveyIds": []string{gone.String()}, "allSurveys": false,
+	})
+	if res.Code != http.StatusCreated {
+		t.Fatalf("create = %d %s", res.Code, res.Body)
+	}
+	created := decode[View](t, res)
+	if created.AllSurveys == nil || *created.AllSurveys {
+		t.Fatalf("created = %+v", created)
+	}
+	e.exec(`DELETE FROM surveys WHERE id = ?`, gone)
+
+	listed := decode[ListResponse](t, e.do(http.MethodGet, "/api/app/workspaces/"+ws.String()+"/webhooks", asUser(owner), nil)).Webhooks
+	if len(listed) != 1 || listed[0].AllSurveys == nil || *listed[0].AllSurveys || len(listed[0].SurveyIDs) != 1 || listed[0].SurveyIDs[0] != gone {
+		t.Fatalf("the settings page reads the webhook as %+v", listed)
+	}
+	res = e.do(http.MethodGet, "/api/v1/webhooks/"+created.ID.String(), asKey(key), nil)
+	if !strings.Contains(res.Body.String(), `"surveyIds":["`+gone.String()+`"]`) || strings.Contains(res.Body.String(), "allSurveys") {
+		t.Fatalf("the v1 API reads the webhook as %s", res.Body)
+	}
+
+	// The settings page saves a rename with the scope it was given.
+	res = e.do(http.MethodPatch, "/api/app/webhooks/"+created.ID.String(), asUser(owner), map[string]any{
+		"name": "Renamed", "url": "https://93.184.216.34/hook", "triggers": []string{"responseFinished"}, "surveyIds": []string{gone.String()}, "allSurveys": false,
+	})
+	if res.Code != http.StatusOK {
+		t.Fatalf("rename = %d %s", res.Code, res.Body)
+	}
+	if renamed := decode[View](t, res); *renamed.AllSurveys || len(renamed.SurveyIDs) != 1 {
+		t.Fatalf("renamed = %+v", renamed)
+	}
+	matching, err := e.svc.repo.Matching(t.Context(), ws, "responseFinished", other)
+	if err != nil || len(matching) != 0 {
+		t.Fatalf("a response to another survey fires %d webhooks (%v)", len(matching), err)
+	}
+
+	for name, body := range map[string]map[string]any{
+		"no surveys":      {"surveyIds": []string{}, "allSurveys": false},
+		"contradictory":   {"surveyIds": []string{other.String()}, "allSurveys": true},
+		"another removed": {"surveyIds": []string{uuid.NewString()}, "allSurveys": false},
+	} {
+		body["url"], body["triggers"] = "https://93.184.216.34/hook", []string{"responseFinished"}
+		if res := e.do(http.MethodPatch, "/api/app/webhooks/"+created.ID.String(), asUser(owner), body); res.Code != http.StatusBadRequest {
+			t.Errorf("%s: %d %s", name, res.Code, res.Body)
+		}
+	}
+}
