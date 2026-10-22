@@ -2,6 +2,7 @@ package clientapi
 
 import (
 	"encoding/json"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/survey"
 )
 
 func (e *env) post(t *testing.T, path string, body any) result {
@@ -96,6 +98,58 @@ func TestCreateResponseGates(t *testing.T) {
 	url := webAppURL + "/s/" + verified.String() + "?verify=" + e.emailToken(t, other2, "real@example.com")
 	e.post(t, respond(ws, "v1"), map[string]any{"surveyId": verified.String(), "finished": true, "data": map[string]any{}, "meta": map[string]any{"url": url}}).
 		expectError(t, 403, "forbidden", "Survey requires email verification")
+}
+
+// The v1 create, the path the SDK takes for identified users, runs its own order of gates: the survey's status, the single-use link (whose 400s name the workspace environmentId, as v1 did) and the answers each refuse on their own.
+func TestCreateResponseV1Gates(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	for _, status := range []string{"completed", "paused", "draft"} {
+		sv := e.survey(ws, "status", status)
+		details := e.post(t, respond(ws, "v1"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{}}).expectError(t, 403, "forbidden", "Survey is not accepting submissions")
+		if details["surveyId"] != sv.String() {
+			t.Fatalf("%s: details %v", status, details)
+		}
+	}
+
+	single := e.survey(ws, "single_use", `{"enabled":true,"isEncrypted":false}`)
+	link := func(suID, suToken string) map[string]any {
+		return map[string]any{"url": webAppURL + "/s/" + single.String() + "?suId=" + suID + "&suToken=" + suToken}
+	}
+	valid := survey.SingleUseSignature(string(e.cfg.EncryptionKeyText), single.String(), "su-1")
+	for name, c := range map[string]struct {
+		body    map[string]any
+		message string
+	}{
+		"no single-use id":  {map[string]any{"meta": link("su-1", valid)}, "Missing single use id"},
+		"no link":           {map[string]any{"singleUseId": "su-1"}, "Missing or invalid URL in response metadata"},
+		"forged signature":  {map[string]any{"singleUseId": "su-1", "meta": link("su-1", "forged")}, "Invalid single use id"},
+		"another link's id": {map[string]any{"singleUseId": "su-2", "meta": link("su-1", valid)}, "Invalid single use id"},
+	} {
+		body := map[string]any{"surveyId": single.String(), "finished": true, "data": map[string]any{}}
+		maps.Copy(body, c.body)
+		details := e.post(t, respond(ws, "v1"), body).expectError(t, 400, "bad_request", c.message)
+		if details["surveyId"] != single.String() || details["environmentId"] != ws.String() || details["workspaceId"] != nil {
+			t.Fatalf("%s: details %v", name, details)
+		}
+	}
+	body := map[string]any{"surveyId": single.String(), "finished": true, "data": map[string]any{}, "singleUseId": "su-1", "meta": link("su-1", valid)}
+	r := e.post(t, respond(ws, "v1"), body)
+	if r.Status != 200 {
+		t.Fatalf("single-use link: %d %s", r.Status, r.Body)
+	}
+	e.post(t, respond(ws, "v1"), body).expectError(t, 409, "conflict", "Response already submitted for this single-use link")
+
+	required := e.survey(ws, "blocks", `[{"id":"b1","name":"Main","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"Q1"},"required":true,"inputType":"text"},
+		{"id":"q2","type":"openText","headline":{"default":"Q2"},"required":false,"inputType":"email"}]}]`)
+	details := e.post(t, respond(ws, "v1"), map[string]any{"surveyId": required.String(), "finished": true, "data": map[string]any{"q1": "", "q2": "not an address"}}).expectError(t, 400, "bad_request", "Validation failed")
+	if details["response.data.q1"] == nil || details["response.data.q2"] == nil {
+		t.Fatalf("details %v", details)
+	}
+	if n := e.count(`SELECT count(*) FROM responses WHERE survey_id = ?`, required); n != 0 {
+		t.Fatalf("%d responses written", n)
+	}
 }
 
 // forma2's verifyResponseRecaptcha on both versions, and verifyRecaptchaToken's fail-closed rules.
@@ -193,6 +247,35 @@ func TestCreateResponseFileUploads(t *testing.T) {
 	}
 	e.post(t, respond(ws, "v1"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{"files": "not a list"}}).
 		expectError(t, 400, "bad_request", "Invalid file upload response")
+}
+
+// An update is held to the same upload rule as a create, so a PUT cannot attach a file stored for another workspace, survey or element.
+func TestUpdateResponseFileUploads(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", uploadBlocks)
+	id := e.insert(`INSERT INTO responses (survey_id, data) VALUES (?, '{"q1":"first"}'::jsonb) RETURNING id`, sv)
+	scoped := "/storage/" + ws.String() + "/private/surveys/" + sv.String() + "/elements/files/report--fid--" + uuid.NewString() + ".pdf"
+	for _, version := range []string{"v1", "v2"} {
+		for _, url := range []string{
+			strings.Replace(scoped, ws.String(), uuid.NewString(), 1),
+			strings.Replace(scoped, sv.String(), uuid.NewString(), 1),
+			strings.Replace(scoped, "/files/", "/q1/", 1),
+			"/storage/" + ws.String() + "/private/report.pdf",
+			"https://evil.example" + scoped,
+		} {
+			e.clock.nextWindow()
+			e.do("PUT", "/api/"+version+"/client/"+ws.String()+"/responses/"+id.String(), map[string]any{"data": map[string]any{"files": []string{url}}}).
+				expectError(t, 400, "bad_request", "Invalid file upload response")
+		}
+	}
+	if d := e.responseData(t, id); d["files"] != nil {
+		t.Fatalf("data %v", d)
+	}
+	e.clock.nextWindow()
+	if r := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id.String(), map[string]any{"data": map[string]any{"files": []string{scoped}}}); r.Status != 200 {
+		t.Fatalf("scoped upload: %d %s", r.Status, r.Body)
+	}
 }
 
 // v2 refuses an "Other" text over 250 characters; v1 never checked it.
