@@ -11,8 +11,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
+import { Toaster } from "./toaster";
 
-// forma2's Dialog, on the native <dialog> element: showModal() gives the focus trap, the inert background, Escape and the top layer. Popups opened inside a dialog must render inside it, since everything outside a modal dialog is inert; PortalContainer tells them where.
+// forma2's Dialog, on the native <dialog> element: showModal() gives the focus trap, the inert background, Escape and the top layer. Popups opened inside a dialog must render inside it, since everything outside a modal dialog is inert; PortalContainer tells them where, and the dialog draws the toasts itself while it is open.
 
 const DialogContext = createContext<{ titleId: string; descriptionId: string } | null>(null);
 
@@ -105,6 +106,7 @@ export const Dialog = ({
                 </button>
               )}
             </div>
+            <Toaster />
           </PortalContainer.Provider>
         </DialogContext.Provider>
       )}

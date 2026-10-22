@@ -70,3 +70,35 @@ export const createToastStore = (schedule: (fn: () => void, ms: number) => unkno
 };
 
 export const toast = createToastStore();
+
+/**
+ * The places a Toaster is mounted, newest last: the page's own, and one inside each open modal dialog. Only the newest shows the toasts. A modal <dialog> puts itself in the top layer and makes the rest of the page inert, so a toast drawn outside it would sit under the backdrop, could not be dismissed and would not be announced; drawn inside the topmost dialog it is above the backdrop and live.
+ */
+export const createToasterHosts = () => {
+  let hosts: string[] = [];
+  const listeners = new Set<Listener>();
+  const emit = () => {
+    for (const listener of listeners) listener();
+  };
+  return {
+    /** Adds a host on top and returns the function that removes it. */
+    register: (id: string) => {
+      hosts = [...hosts.filter((host) => host !== id), id];
+      emit();
+      return () => {
+        hosts = hosts.filter((host) => host !== id);
+        emit();
+      };
+    },
+    /** The host that shows the toasts, or null when none is mounted. */
+    getSnapshot: (): string | null => hosts.at(-1) ?? null,
+    subscribe: (listener: Listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+};
+
+export const toasterHosts = createToasterHosts();

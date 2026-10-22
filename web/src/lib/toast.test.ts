@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { createToastStore } from "./toast";
+import { createToastStore, createToasterHosts } from "./toast";
 
 const manualTimers = () => {
   const pending: { fn: () => void; ms: number }[] = [];
@@ -44,4 +44,19 @@ test("subscribers hear every change", () => {
   unsubscribe();
   store.success("after");
   expect(calls).toBe(2);
+});
+
+test("only the newest toaster host shows the toasts, and closing it hands them back", () => {
+  const hosts = createToasterHosts();
+  const page = hosts.register("page");
+  expect(hosts.getSnapshot()).toBe("page");
+  const dialog = hosts.register("dialog");
+  const nested = hosts.register("nested");
+  expect(hosts.getSnapshot()).toBe("nested");
+  nested();
+  expect(hosts.getSnapshot()).toBe("dialog");
+  dialog();
+  expect(hosts.getSnapshot()).toBe("page");
+  page();
+  expect(hosts.getSnapshot()).toBeNull();
 });
