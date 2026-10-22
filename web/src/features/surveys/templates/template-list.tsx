@@ -144,8 +144,8 @@ export const TemplateList = ({
   defaultLanguage: string;
   search: string;
 }) => {
-  const { t } = useTranslation();
-  const catalog = useQuery(surveyTemplatesQuery(workspaceId));
+  const { t, i18n } = useTranslation();
+  const catalog = useQuery(surveyTemplatesQuery(workspaceId, i18n.language));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<TemplateFilter>(noTemplateFilter);
   const { create, isPending } = useCreateSurveyFromTemplate();

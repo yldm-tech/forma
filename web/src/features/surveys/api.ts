@@ -122,9 +122,10 @@ export interface SurveyTemplate {
   preset: { blocks?: { logic?: unknown[] }[] };
 }
 
-export const surveyTemplatesQuery = (workspaceId: string) =>
+/** The catalog renders in the user's dashboard language, so the language the dashboard shows is part of the key: changing it fetches the catalog in the new one. */
+export const surveyTemplatesQuery = (workspaceId: string, language: string) =>
   queryOptions({
-    queryKey: ["workspaces", workspaceId, "survey-templates"],
+    queryKey: ["workspaces", workspaceId, "survey-templates", language],
     queryFn: ({ signal }) =>
       api.get<{ templates: SurveyTemplate[]; xmTemplateIds: string[] }>(
         `/api/app/workspaces/${workspaceId}/survey-templates`,
