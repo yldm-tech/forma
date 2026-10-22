@@ -39,7 +39,7 @@ func (s *Service) readableSurvey(ctx context.Context, userID, surveyID uuid.UUID
 	if err := s.authz.Require(ctx, authz.User(userID), authz.SurveyResponseRead, authz.Survey(surveyID)); err != nil {
 		return nil, err
 	}
-	sv, err := loadSurvey(ctx, s.db, surveyID)
+	sv, err := LoadSurvey(ctx, s.db, surveyID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,14 +55,9 @@ func (s *Service) List(ctx context.Context, userID, surveyID uuid.UUID, in ListI
 	if err != nil {
 		return nil, err
 	}
-	w, err := where(sv, in.Filter)
+	filter, err := Where(sv, in.Filter)
 	if err != nil {
 		return nil, err
-	}
-	w.sql = append([]string{"r.survey_id = ?"}, w.sql...)
-	w.args = append([]any{surveyID}, w.args...)
-	if in.Cursor != nil {
-		w.add(q("(r.created_at < ", arg{in.Cursor.CreatedAt}, " OR (r.created_at = ", arg{in.Cursor.CreatedAt}, " AND r.id < ", arg{in.Cursor.ID}, "))"))
 	}
 	limit := DefaultPageSize
 	if in.Limit != nil {
@@ -75,12 +70,36 @@ func (s *Service) List(ctx context.Context, userID, surveyID uuid.UUID, in ListI
 	if limit < 0 || offset < 0 {
 		return nil, apperr.Validation([]apperr.FieldError{{Field: "limit", Rule: "min", Param: "0"}})
 	}
+	return Page(ctx, s.db, surveyID, filter, in.Cursor, limit, offset)
+}
+
+// Clause is a filter compiled to a SQL condition on the responses row aliased `r`, with its arguments in placeholder order.
+type Clause struct {
+	SQL  string
+	Args []any
+}
+
+// Where is forma2's buildWhereClause for one survey as a SQL condition; a malformed condition is a validation error.
+func Where(sv *Survey, f *Criteria) (Clause, error) {
+	w, err := where(sv, f)
+	if err != nil {
+		return Clause{}, err
+	}
+	return Clause{SQL: w.and(), Args: w.args}, nil
+}
+
+// Page reads the survey's responses matching filter in the list order (newest first, then by id descending), strictly after cursor when there is one, each with its tags and the quotas it is screened into. It authorizes nothing: callers have checked that the survey's responses may be read.
+func Page(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, filter Clause, cursor *Cursor, limit, offset int) ([]WithQuotas, error) {
+	w := &clause{sql: []string{"r.survey_id = ?", filter.SQL}, args: append([]any{surveyID}, filter.Args...)}
+	if cursor != nil {
+		w.add(q("(r.created_at < ", arg{cursor.CreatedAt}, " OR (r.created_at = ", arg{cursor.CreatedAt}, " AND r.id < ", arg{cursor.ID}, "))"))
+	}
 	var rows []responseRow
 	args := append(slices.Clone(w.args), limit, offset)
-	if err := s.db.WithContext(ctx).Raw(responseSelect+"WHERE "+w.and()+" ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?", args...).Scan(&rows).Error; err != nil {
+	if err := db.WithContext(ctx).Raw(responseSelect+"WHERE "+w.and()+" ORDER BY r.created_at DESC, r.id DESC LIMIT ? OFFSET ?", args...).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list responses: %w", err)
 	}
-	return withQuotas(ctx, s.db, rows)
+	return withQuotas(ctx, db, rows)
 }
 
 // Count is forma2's getResponseCountAction: how many of the survey's responses match the filter.
@@ -256,19 +275,19 @@ func (s *Service) Delete(ctx context.Context, userID, responseID uuid.UUID, decr
 
 // enqueueFileCleanup is forma2's findAndDeleteUploadedFilesInResponse: the storage URLs held under the survey's file upload elements, which are always arrays of strings, go to a DeleteFilesArgs job.
 func (s *Service) enqueueFileCleanup(ctx context.Context, tx *jobs.Tx, r *Response) error {
-	sv, err := loadSurvey(ctx, tx.DB, r.SurveyID)
+	sv, err := LoadSurvey(ctx, tx.DB, r.SurveyID)
 	if err != nil || sv == nil {
 		return err
 	}
-	urls, err := fileURLs(r.Data, sv.fileUploadElementIDs())
+	urls, err := FileURLs(r.Data, sv.FileUploadElementIDs())
 	if err != nil || len(urls) == 0 {
 		return err
 	}
 	return tx.Enqueue(ctx, DeleteFilesArgs{WorkspaceID: sv.WorkspaceID, FileURLs: urls}, nil)
 }
 
-// fileURLs is forma2's collectResponseFileUrls: the strings of every array answer under a file upload element. Anything else under such a key is skipped rather than cast, so malformed data cannot produce a delete target.
-func fileURLs(data json.RawMessage, fileUploadIDs map[string]bool) ([]string, error) {
+// FileURLs is forma2's collectResponseFileUrls: the strings of every array answer under a file upload element. Anything else under such a key is skipped rather than cast, so malformed data cannot produce a delete target.
+func FileURLs(data json.RawMessage, fileUploadIDs map[string]bool) ([]string, error) {
 	if len(fileUploadIDs) == 0 {
 		return nil, nil
 	}

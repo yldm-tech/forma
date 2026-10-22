@@ -81,6 +81,8 @@ func TestListAndCountFilterTheSurveysResponses(t *testing.T) {
 		{"data equals", `{"data":{"q1":{"op":"equals","value":"b"}}}`, []uuid.UUID{r2}},
 		{"data notEquals counts the absent answer", `{"data":{"q2":{"op":"notEquals","value":"One"}}}`, []uuid.UUID{r3, r2}},
 		{"data submitted", `{"data":{"f1":{"op":"submitted"}}}`, []uuid.UUID{r3}},
+		{"data includesAll", `{"data":{"f1":{"op":"includesAll","value":["https://files/1"]}}}`, []uuid.UUID{r3}},
+		{"data includesOne an element of a list answer", `{"data":{"f1":{"op":"includesOne","value":["https://files/1","nope"]}}}`, []uuid.UUID{r3}},
 		{"data skipped", `{"data":{"q2":{"op":"skipped"}}}`, []uuid.UUID{r3}},
 		{"includesOne Other is any answer no label covers", `{"data":{"q2":{"op":"includesOne","value":["Other"]}}}`, []uuid.UUID{r2}},
 		{"includesOne a label", `{"data":{"q2":{"op":"includesOne","value":["One"]}}}`, []uuid.UUID{r1}},

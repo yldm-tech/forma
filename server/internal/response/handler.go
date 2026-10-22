@@ -44,9 +44,9 @@ func param(c *gin.Context, name string) (uuid.UUID, bool) {
 	return id, true
 }
 
-// listRequest is forma2's ZGetResponsesAction without the survey id.
+// listRequest is forma2's ZGetResponsesAction without the survey id. forma2 took any limit; a page here is at most 500 responses (the response table asks for 25 at a time).
 type listRequest struct {
-	Limit          *int      `json:"limit" binding:"omitempty,min=0"`
+	Limit          *int      `json:"limit" binding:"omitempty,min=0,max=500"`
 	Offset         *int      `json:"offset" binding:"omitempty,min=0"`
 	FilterCriteria *Criteria `json:"filterCriteria"`
 	Cursor         *Cursor   `json:"cursor"`

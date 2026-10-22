@@ -60,8 +60,8 @@ func (sv *Survey) ElementIDs() []string {
 	return ids
 }
 
-// fileUploadElementIDs are the ids of the survey's file upload elements, forma2's getSurveyFileUploadElementIds.
-func (sv *Survey) fileUploadElementIDs() map[string]bool {
+// FileUploadElementIDs are the ids of the survey's file upload elements, forma2's getSurveyFileUploadElementIds.
+func (sv *Survey) FileUploadElementIDs() map[string]bool {
 	out := map[string]bool{}
 	for _, e := range sv.Elements() {
 		if e.Type == surveydoc.ElementFileUpload {
@@ -71,8 +71,8 @@ func (sv *Survey) fileUploadElementIDs() map[string]bool {
 	return out
 }
 
-// loadSurvey reads a survey with its default language and Embedded Data fields; nil when it does not exist.
-func loadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error) {
+// LoadSurvey reads a survey with its default language and Embedded Data fields; nil when it does not exist.
+func LoadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error) {
 	var rows []struct {
 		ID                          uuid.UUID
 		WorkspaceID                 uuid.UUID
@@ -130,7 +130,7 @@ func (s *Service) Survey(ctx context.Context, rawID string) (*Survey, error) {
 	if err != nil {
 		return nil, err
 	}
-	sv, err := loadSurvey(ctx, s.db, id)
+	sv, err := LoadSurvey(ctx, s.db, id)
 	if err != nil {
 		return nil, err
 	}

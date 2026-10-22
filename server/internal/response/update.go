@@ -28,7 +28,7 @@ func (s *Service) ResponseForUpdate(ctx context.Context, workspaceID uuid.UUID, 
 	if existing == nil {
 		return nil, nil, NotFound("Response", &rawID)
 	}
-	sv, err := loadSurvey(ctx, s.db, existing.SurveyID)
+	sv, err := LoadSurvey(ctx, s.db, existing.SurveyID)
 	if err != nil {
 		return nil, nil, err
 	}
