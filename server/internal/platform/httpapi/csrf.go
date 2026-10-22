@@ -19,25 +19,34 @@ const CodeCSRF = "csrf_rejected"
 
 // CSRF guards cookie-authenticated mutations. Safe methods pass; every other method needs an Origin equal to WEBAPP_URL's or PUBLIC_URL's origin and the CSRFHeader. forma2 relied on the Origin check alone (Next server actions, Better Auth trustedOrigins); the header requirement is added defense in depth.
 func CSRF(cfg config.Config) gin.HandlerFunc {
+	check := CSRFCheck(cfg)
+	return func(c *gin.Context) {
+		if e := check(c.Request); e != nil {
+			Abort(c, e)
+			return
+		}
+		c.Next()
+	}
+}
+
+// CSRFCheck is the rule CSRF applies, for a surface that renders its own error format (the v3 API checks it on session-authenticated mutations only): nil when the request may proceed.
+func CSRFCheck(cfg config.Config) func(r *http.Request) *apperr.Error {
 	allowed := map[string]bool{origin(cfg.WebAppURL): true}
 	if cfg.PublicURL != nil {
 		allowed[origin(cfg.PublicURL)] = true
 	}
-	return func(c *gin.Context) {
-		switch c.Request.Method {
+	return func(r *http.Request) *apperr.Error {
+		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
-			c.Next()
-			return
+			return nil
 		}
-		if o := c.GetHeader("Origin"); o == "" || !allowed[strings.ToLower(o)] {
-			Abort(c, &apperr.Error{Status: http.StatusForbidden, Code: CodeCSRF, Message: "Cross-origin request rejected"})
-			return
+		if o := r.Header.Get("Origin"); o == "" || !allowed[strings.ToLower(o)] {
+			return &apperr.Error{Status: http.StatusForbidden, Code: CodeCSRF, Message: "Cross-origin request rejected"}
 		}
-		if c.GetHeader(CSRFHeader) == "" {
-			Abort(c, &apperr.Error{Status: http.StatusForbidden, Code: CodeCSRF, Message: "Missing " + CSRFHeader + " header"})
-			return
+		if r.Header.Get(CSRFHeader) == "" {
+			return &apperr.Error{Status: http.StatusForbidden, Code: CodeCSRF, Message: "Missing " + CSRFHeader + " header"}
 		}
-		c.Next()
+		return nil
 	}
 }
 
