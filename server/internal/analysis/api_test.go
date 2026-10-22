@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
+	"gorm.io/gorm"
 )
 
 // The analysis views over a real database: forma2's getSurveySummaryAction, getSurveyFilterDataAction, getDisplaysWithContactAction, getResponsesDownloadUrlAction and resetSurveyAction, each authorized on the survey.
@@ -145,7 +147,7 @@ func TestSummaryCountsResponsesDisplaysAndQuotas(t *testing.T) {
 func TestFilterDataOffersTheValuesOfTheNewestResponses(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()
-	_, ws := e.organization(owner, nil)
+	org, ws := e.organization(owner, nil)
 	sv := e.survey(ws, surveyOpts{blocks: summaryBlocks, captureIP: true})
 	e.field(ws, sv, "utm", "utm", "ingested", "string")
 	e.field(ws, sv, "plan", "plan", "computed", "string")
@@ -183,12 +185,36 @@ func TestFilterDataOffersTheValuesOfTheNewestResponses(t *testing.T) {
 	if n := len(got.VariableValues["plan"]); n != 50 || got.VariableValues["score"] != nil {
 		t.Errorf("variable values %v", got.VariableValues)
 	}
+
+	// The workspace's tags and the values its respondents left are for readers of the workspace; anyone else, and anyone asking about a survey that does not exist, is not authorized.
+	expectReadableOnlyByTheWorkspace(t, e, org, ws, "/api/app/surveys/%s/filter-data", sv)
+}
+
+// expectReadableOnlyByTheWorkspace checks a survey's read endpoint, its path a format of the survey id: a reader of the workspace gets it, a user of another organization and a request for an unknown survey get 403 "Not authorized".
+func expectReadableOnlyByTheWorkspace(t *testing.T, e *env, org, ws uuid.UUID, path string, sv uuid.UUID) {
+	t.Helper()
+	reader, stranger := e.user(), e.user()
+	e.grant(org, ws, reader, "read")
+	e.organization(stranger, nil)
+	if rec := e.request(reader, http.MethodGet, fmt.Sprintf(path, sv), nil); rec.Code != http.StatusOK {
+		t.Errorf("reader: %d %s", rec.Code, rec.Body)
+	}
+	for _, c := range []struct {
+		name   string
+		user   uuid.UUID
+		survey uuid.UUID
+	}{{"stranger", stranger, sv}, {"unknown survey", e.user(), uuid.New()}, {"reader, unknown survey", reader, uuid.New()}} {
+		rec := e.request(c.user, http.MethodGet, fmt.Sprintf(path, c.survey), nil)
+		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "Not authorized") {
+			t.Errorf("%s: %d %s", c.name, rec.Code, rec.Body)
+		}
+	}
 }
 
 func TestDisplaysListsTheContactsWhoSawTheSurvey(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()
-	_, ws := e.organization(owner, nil)
+	org, ws := e.organization(owner, nil)
 	sv := e.survey(ws, surveyOpts{blocks: summaryBlocks})
 	ada := e.contact(ws, "userId", "u-1", "email", "ada@example.com", "plan", "pro")
 	bob := e.contact(ws, "userId", "u-2")
@@ -213,6 +239,9 @@ func TestDisplaysListsTheContactsWhoSawTheSurvey(t *testing.T) {
 			t.Errorf("%s: %d %s", q, rec.Code, rec.Body)
 		}
 	}
+
+	// The contacts' emails and user ids are for readers of the workspace only.
+	expectReadableOnlyByTheWorkspace(t, e, org, ws, "/api/app/surveys/%s/displays?limit=15&offset=0", sv)
 }
 
 const exportBlocks = `[{"id":"b1","name":"B1","elements":[
@@ -417,5 +446,54 @@ func TestResetDeletesResponsesAndDisplaysAndQueuesTheirFiles(t *testing.T) {
 	rec := e.request(owner, http.MethodPost, "/api/app/surveys/"+archived.String()+"/reset", nil)
 	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "Cannot reset an archived survey.") || !strings.Contains(rec.Body.String(), "operation_not_allowed") {
 		t.Errorf("archived reset: %d %s", rec.Code, rec.Body)
+	}
+}
+
+// A reset reads the responses' files in pages of 500 in (created_at, id) order, as forma2 did, so a large survey's data is never in memory at once; responses sharing a creation time across a page boundary are neither skipped nor read twice.
+func TestResetReadsResponseFilesInPages(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{blocks: exportBlocks})
+	const n = 2*responseFileScanPage + 201
+	e.exec(`INSERT INTO responses (survey_id, created_at, updated_at, data, ttc, meta, variables)
+		SELECT ?, ?::timestamptz + (g / 7) * interval '1 second', ?::timestamptz, jsonb_build_object('f', jsonb_build_array('/storage/' || ? || '/private/surveys/s/elements/f/' || g || '.pdf')), '{}', '{}', '{}'
+		FROM generate_series(1, ?) AS g`, sv, t0, t0, ws.String(), n)
+
+	var scans atomic.Int32
+	if err := e.db.Callback().Row().After("gorm:row").Register("test:count_response_scans", func(db *gorm.DB) {
+		if sql := db.Statement.SQL.String(); strings.Contains(sql, "FROM responses") && strings.Contains(sql, "FOR UPDATE") {
+			scans.Add(1)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var got ResetResult
+	decode(t, e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/reset", nil), &got)
+	if got.DeletedResponsesCount != n {
+		t.Fatalf("reset %+v", got)
+	}
+	if s := scans.Load(); s != 3 {
+		t.Errorf("%d scans of the responses, want 3 pages", s)
+	}
+	var lists []string
+	if err := e.db.Raw(`SELECT args->>'fileUrls' FROM river_job WHERE kind = 'response.delete-files' ORDER BY id`).Scan(&lists).Error; err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, l := range lists {
+		var urls []string
+		if err := json.Unmarshal([]byte(l), &urls); err != nil {
+			t.Fatal(err)
+		}
+		for _, u := range urls {
+			if seen[u] {
+				t.Fatalf("%s queued twice", u)
+			}
+			seen[u] = true
+		}
+	}
+	if len(seen) != n || len(lists) != (n+storageDeleteChunk-1)/storageDeleteChunk {
+		t.Errorf("%d files in %d jobs, want %d", len(seen), len(lists), n)
 	}
 }

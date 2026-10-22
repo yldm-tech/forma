@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
@@ -75,6 +76,42 @@ type ResetResult struct {
 // storageDeleteChunk is forma2's STORAGE_DELETE_CHUNK_SIZE: how many uploaded files one cleanup job deletes.
 const storageDeleteChunk = 100
 
+// responseFileScanPage is forma2's RESPONSE_FILE_SCAN_PAGE_SIZE: how many responses a reset reads at once, so resetting a large survey never holds every response's data in memory. Only the URLs accumulate, and storageDeleteChunk bounds them on the way out.
+const responseFileScanPage = 500
+
+// responseFileURLs is forma2's collectSurveyResponseFileUrls: the storage URLs the survey's file upload answers point at, read in pages of responseFileScanPage in (created_at, id) order, which the (survey_id, created_at) index serves and id makes total. Each page locks its rows, so a respondent cannot change an answer between the scan and the delete.
+func responseFileURLs(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, fileUploads map[string]bool) ([]string, error) {
+	if len(fileUploads) == 0 {
+		return nil, nil
+	}
+	var urls []string
+	// The scan starts before every row; each page starts after the last row of the one before.
+	query := db.WithContext(ctx).Raw(`SELECT id, created_at, data FROM responses WHERE survey_id = ? ORDER BY created_at, id LIMIT ? FOR UPDATE`, surveyID, responseFileScanPage)
+	for {
+		var page []struct {
+			ID        uuid.UUID
+			CreatedAt time.Time
+			Data      []byte
+		}
+		if err := query.Scan(&page).Error; err != nil {
+			return nil, fmt.Errorf("read response files: %w", err)
+		}
+		for _, r := range page {
+			found, err := response.FileURLs(r.Data, fileUploads)
+			if err != nil {
+				return nil, err
+			}
+			urls = append(urls, found...)
+		}
+		// A short page is the last one.
+		if len(page) < responseFileScanPage {
+			return urls, nil
+		}
+		last := page[len(page)-1]
+		query = db.WithContext(ctx).Raw(`SELECT id, created_at, data FROM responses WHERE survey_id = ? AND (created_at, id) > (?, ?) ORDER BY created_at, id LIMIT ? FOR UPDATE`, surveyID, last.CreatedAt, last.ID, responseFileScanPage)
+	}
+}
+
 // Reset is forma2's resetSurveyAction: every response and display of the survey goes in one transaction, which also enqueues the deletion of the files the survey's file upload answers point at, a hundred per job. An archived survey keeps its history.
 func (s *Service) Reset(ctx context.Context, userID, surveyID uuid.UUID) (result *ResetResult, err error) {
 	var organizationID *uuid.UUID
@@ -107,19 +144,9 @@ func (s *Service) Reset(ctx context.Context, userID, surveyID uuid.UUID) (result
 	fileUploads := sv.FileUploadElementIDs()
 	result = &ResetResult{Success: true}
 	err = s.jobs.Transaction(ctx, s.db, func(tx *jobs.Tx) error {
-		var urls []string
-		if len(fileUploads) > 0 {
-			var data [][]byte
-			if err := tx.WithContext(ctx).Raw(`SELECT data FROM responses WHERE survey_id = ? ORDER BY created_at, id FOR UPDATE`, surveyID).Scan(&data).Error; err != nil {
-				return fmt.Errorf("read response files: %w", err)
-			}
-			for _, d := range data {
-				found, err := response.FileURLs(d, fileUploads)
-				if err != nil {
-					return err
-				}
-				urls = append(urls, found...)
-			}
+		urls, err := responseFileURLs(ctx, tx.DB, surveyID, fileUploads)
+		if err != nil {
+			return err
 		}
 		deleted := tx.WithContext(ctx).Exec(`DELETE FROM responses WHERE survey_id = ?`, surveyID)
 		if deleted.Error != nil {
