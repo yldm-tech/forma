@@ -132,6 +132,9 @@ type Config struct {
 	// AI is the instance's AI provider, forma2's AI_* variables.
 	AI AIConfig
 
+	// Integrations are the OAuth apps of Google Sheets, Airtable, Notion and Slack.
+	Integrations IntegrationsConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -195,6 +198,33 @@ type SSOConfig struct {
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
 }
+
+// IntegrationsConfig is forma2's OAuth app credentials of the third-party integrations, under its variable names. An integration can be connected exactly when its variables are set.
+type IntegrationsConfig struct {
+	// GoogleSheetsRedirectURL is used verbatim as the OAuth redirect URI; it is <WEBAPP_URL>/api/google-sheet/callback unless the app was registered under another origin.
+	GoogleSheetsClientID     string `env:"GOOGLE_SHEETS_CLIENT_ID"`
+	GoogleSheetsClientSecret string `env:"GOOGLE_SHEETS_CLIENT_SECRET"`
+	GoogleSheetsRedirectURL  string `env:"GOOGLE_SHEETS_REDIRECT_URL"`
+	// AirtableClientID is a public OAuth client: Airtable is authorized with PKCE and no secret.
+	AirtableClientID   string `env:"AIRTABLE_CLIENT_ID"`
+	NotionClientID     string `env:"NOTION_OAUTH_CLIENT_ID"`
+	NotionClientSecret string `env:"NOTION_OAUTH_CLIENT_SECRET"`
+	SlackClientID      string `env:"SLACK_CLIENT_ID"`
+	SlackClientSecret  string `env:"SLACK_CLIENT_SECRET"`
+}
+
+// GoogleSheetsEnabled, AirtableEnabled, NotionEnabled and SlackEnabled are what forma2's integration pages checked before offering to connect.
+func (c IntegrationsConfig) GoogleSheetsEnabled() bool {
+	return c.GoogleSheetsClientID != "" && c.GoogleSheetsClientSecret != "" && c.GoogleSheetsRedirectURL != ""
+}
+
+func (c IntegrationsConfig) AirtableEnabled() bool { return c.AirtableClientID != "" }
+
+func (c IntegrationsConfig) NotionEnabled() bool {
+	return c.NotionClientID != "" && c.NotionClientSecret != ""
+}
+
+func (c IntegrationsConfig) SlackEnabled() bool { return c.SlackClientID != "" && c.SlackClientSecret != "" }
 
 // GoogleEnabled, GitHubEnabled, AzureADEnabled and OIDCEnabled are forma2's *_OAUTH_ENABLED: a provider needs its client id and secret (and the generic one its issuer).
 func (s SSOConfig) GoogleEnabled() bool { return s.GoogleClientID != "" && s.GoogleClientSecret != "" }

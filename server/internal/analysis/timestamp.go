@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// formatTimestamp is forma2's getFormattedDateTimeString: Intl.DateTimeFormat("en-CA") with a 24-hour clock and the short zone name, the comma removed ("2026-01-01 20:00:00 UTC", "2026-01-02 04:00:00 GMT+8"), in the organization's display time zone. A zone that does not load is UTC, as forma2 fell back on a RangeError.
-func formatTimestamp(t time.Time, zone string) string {
+// FormatTimestamp is forma2's getFormattedDateTimeString: Intl.DateTimeFormat("en-CA") with a 24-hour clock and the short zone name, the comma removed ("2026-01-01 20:00:00 UTC", "2026-01-02 04:00:00 GMT+8"), in the organization's display time zone. A zone that does not load is UTC, as forma2 fell back on a RangeError.
+func FormatTimestamp(t time.Time, zone string) string {
 	loc, err := time.LoadLocation(zone)
 	if err != nil || zone == "" || zone == "Local" {
 		zone, loc = "UTC", time.UTC
