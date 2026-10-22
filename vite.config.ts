@@ -87,6 +87,11 @@ export default defineConfig({
         rules: { "jsx-a11y/no-autofocus": "off" },
       },
       {
+        // The link survey page hands the respondent runtime its autoFocus option, as forma2 did: the survey is the whole page, and the option is off whenever the page is framed by another site.
+        files: ["web/src/survey-page/components/survey-client-wrapper.tsx"],
+        rules: { "jsx-a11y/no-autofocus": "off" },
+      },
+      {
         // These tests were never linted.
         files: ["packages/survey-ui/src/**/*.test.ts"],
         rules: { "typescript/no-explicit-any": "off" },
