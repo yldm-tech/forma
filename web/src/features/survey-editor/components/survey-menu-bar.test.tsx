@@ -16,13 +16,14 @@ import type { TSurvey, TSurveyEditorTabs } from "@forma/types/surveys/types";
 import type { TWorkspace } from "@forma/types/workspace";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
+import { analysisKeys } from "../../survey-analysis/api";
 import { surveyEditorKeys } from "../api";
 import { SurveyMenuBar } from "./survey-menu-bar";
 
 const WORKSPACE_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
 const SURVEY_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0e";
 const EDITOR_PATH = `/workspaces/${WORKSPACE_ID}/surveys/${SURVEY_ID}/edit`;
-const LIST_PATH = `/workspaces/${WORKSPACE_ID}/surveys`;
+const SUMMARY_PATH = `/workspaces/${WORKSPACE_ID}/surveys/${SURVEY_ID}/summary`;
 const LOADED_AT = new Date("2026-10-01T00:00:00.000Z");
 const SAVED_AT = "2026-10-02T09:30:00.123Z";
 
@@ -128,7 +129,7 @@ const stubSaveEndpoint = (failWith?: number): SaveRequest[] => {
   return saves;
 };
 
-/** The menu bar inside a router that has the editor and the survey list it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. */
+/** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. */
 const renderMenuBar = (persisted: TSurvey) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(surveyEditorKeys.survey(persisted.id), persisted);
@@ -167,8 +168,8 @@ const renderMenuBar = (persisted: TSurvey) => {
     }),
     createRoute({
       getParentRoute: () => rootRoute,
-      path: "/workspaces/$workspaceId/surveys",
-      component: () => <h1>Survey list</h1>,
+      path: "/workspaces/$workspaceId/surveys/$surveyId/summary",
+      component: () => <h1>Survey summary</h1>,
     }),
   ]);
   const router = createRouter({
@@ -187,14 +188,18 @@ const renderMenuBar = (persisted: TSurvey) => {
 };
 
 describe("SurveyMenuBar", () => {
-  test("Publish saves the survey as in progress, caches it for the editor and leaves for the survey list", async () => {
+  test("Publish saves the survey as in progress, caches it for the editor, drops its cached analysis and leaves for its summary, which announces the publish", async () => {
     const saves = stubSaveEndpoint();
     const { queryClient, router } = renderMenuBar(survey());
+    const staleAnalysisKey = analysisKeys.displays(SURVEY_ID);
+    queryClient.setQueryData(staleAnalysisKey, []);
 
     fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
 
-    expect(await screen.findByRole("heading", { name: "Survey list" })).toBeTruthy();
-    expect(router.state.location.pathname).toBe(LIST_PATH);
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(SUMMARY_PATH);
+    expect(router.state.location.search).toEqual({ success: true });
+    expect(queryClient.getQueryData(staleAnalysisKey)).toBeUndefined();
     expect(saves).toHaveLength(1);
     expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}`);
     expect(saves[0]?.body.status).toBe("inProgress");
@@ -214,18 +219,18 @@ describe("SurveyMenuBar", () => {
       expect(screen.getByRole("button", { name: "Publish" })).toHaveProperty("disabled", false)
     );
     expect(router.state.location.pathname).toBe(EDITOR_PATH);
-    expect(screen.queryByRole("heading", { name: "Survey list" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Survey summary" })).toBeNull();
   });
 
-  test("Save & Close saves a live survey in full and leaves for the survey list even with no history behind the editor", async () => {
+  test("Save & Close saves a live survey in full and returns to its summary even with no history behind the editor", async () => {
     const saves = stubSaveEndpoint();
     const { queryClient, router } = renderMenuBar(survey({ status: "inProgress" }));
 
     fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
     fireEvent.click(screen.getByRole("button", { name: "Save & Close" }));
 
-    expect(await screen.findByRole("heading", { name: "Survey list" })).toBeTruthy();
-    expect(router.state.location.pathname).toBe(LIST_PATH);
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(SUMMARY_PATH);
     expect(saves).toHaveLength(1);
     expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}`);
     expect(saves[0]?.body).toMatchObject({ name: "Feedback 2026", status: "inProgress" });
