@@ -112,23 +112,59 @@ type SaveResponse struct {
 	ID uuid.UUID `json:"id"`
 }
 
-// linksInput is the body of a save: every link of the integration, as the modals keep them.
-type linksInput[T any] struct {
-	Data []T `json:"data" binding:"required,dive"`
+// The bodies of a save, one per integration type: every link of the integration, as the modals keep them. They are named types so validation errors name the field as "data[0].channelId".
+type (
+	sheetLinksInput struct {
+		Data []SheetLink `json:"data" binding:"required,dive"`
+	}
+	airtableLinksInput struct {
+		Data []AirtableLink `json:"data" binding:"required,dive"`
+	}
+	notionLinksInput struct {
+		Data []NotionLink `json:"data" binding:"required,dive"`
+	}
+	slackLinksInput struct {
+		Data []SlackLink `json:"data" binding:"required,dive"`
+	}
+)
+
+// linksConfig is the config to store for links, and the surveys they name.
+func linksConfig[T linkOf](links []T) (json.RawMessage, []string, error) {
+	surveys := make([]string, len(links))
+	for i, l := range links {
+		surveys[i] = l.base().SurveyID
+	}
+	config, err := encodeLinks(links)
+	return config, surveys, err
 }
 
-// bindLinks reads and validates the links of one integration type and returns the config to store and the surveys they name.
-func bindLinks[T linkOf](c *gin.Context) (json.RawMessage, []string, error) {
-	var in linksInput[T]
+// bindLinks reads the body of a save for the integration type.
+func bindLinks(c *gin.Context, typ string) (json.RawMessage, []string, error) {
+	switch typ {
+	case TypeGoogleSheets:
+		var in sheetLinksInput
+		if err := httpapi.BindJSON(c, &in); err != nil {
+			return nil, nil, err
+		}
+		return linksConfig(in.Data)
+	case TypeAirtable:
+		var in airtableLinksInput
+		if err := httpapi.BindJSON(c, &in); err != nil {
+			return nil, nil, err
+		}
+		return linksConfig(in.Data)
+	case TypeNotion:
+		var in notionLinksInput
+		if err := httpapi.BindJSON(c, &in); err != nil {
+			return nil, nil, err
+		}
+		return linksConfig(in.Data)
+	}
+	var in slackLinksInput
 	if err := httpapi.BindJSON(c, &in); err != nil {
 		return nil, nil, err
 	}
-	surveys := make([]string, len(in.Data))
-	for i, l := range in.Data {
-		surveys[i] = l.base().SurveyID
-	}
-	config, err := encodeLinks(in.Data)
-	return config, surveys, err
+	return linksConfig(in.Data)
 }
 
 func (h *Handler) save(c *gin.Context) {
@@ -140,19 +176,7 @@ func (h *Handler) save(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var config json.RawMessage
-	var surveys []string
-	var err error
-	switch typ {
-	case TypeGoogleSheets:
-		config, surveys, err = bindLinks[SheetLink](c)
-	case TypeAirtable:
-		config, surveys, err = bindLinks[AirtableLink](c)
-	case TypeNotion:
-		config, surveys, err = bindLinks[NotionLink](c)
-	case TypeSlack:
-		config, surveys, err = bindLinks[SlackLink](c)
-	}
+	config, surveys, err := bindLinks(c, typ)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
