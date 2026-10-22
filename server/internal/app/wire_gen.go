@@ -13,6 +13,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
@@ -176,7 +177,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	linksurveyHandler := linksurvey.NewHandler(cfg, linksurveyService, limiter, webuiHandler, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, storageHandler, linksurveyHandler, webuiHandler)
+	recaptcha := clientapi.NewRecaptcha(cfg, log)
+	clientapiHandler := clientapi.NewHandler(cfg, db, client, limiter, workspaceRepository, responseService, contactService, storageService, recaptcha, log)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, storageHandler, linksurveyHandler, clientapiHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -260,3 +263,6 @@ var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(ne
 
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
 var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService, linksurvey.NewHandler)
+
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier.
+var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
