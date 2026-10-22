@@ -1,4 +1,4 @@
-# Local dependencies for `make dev`. Services are added here as the modules that need them land (Valkey with sessions in P1, SpiceDB with authorization in P1).
+# Local dependencies for `make dev-server` and `make dev-worker`. Services are added here as the modules that need them land.
 services:
   postgres:
     image: postgres:18
@@ -15,6 +15,63 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+      start_period: 10s
+
+  # Rate-limit counters. Same version the Go tests run (server/internal/platform/valkey/valkeytest).
+  valkey:
+    image: valkey/valkey:8.1
+    ports:
+      - ${VALKEY_PORT:-6379}:6379
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # SpiceDB keeps its relationships in a database of its own on the same PostgreSQL; this creates it on first start.
+  spicedb-db:
+    image: postgres:18
+    restart: "no"
+    environment:
+      - PGPASSWORD=forma
+    entrypoint:
+      - sh
+      - -c
+      - psql -h postgres -U forma -d forma -tAc "SELECT 1 FROM pg_database WHERE datname = 'spicedb'" | grep -q 1 || psql -h postgres -U forma -d forma -c "CREATE DATABASE spicedb"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  spicedb-migrate:
+    image: authzed/spicedb:v1.52.0
+    restart: "no"
+    command: datastore migrate head
+    environment:
+      - SPICEDB_DATASTORE_ENGINE=postgres
+      - SPICEDB_DATASTORE_CONN_URI=postgresql://forma:forma@postgres:5432/spicedb?sslmode=disable
+    depends_on:
+      spicedb-db:
+        condition: service_completed_successfully
+
+  # Authorization. Same version the Go tests run (server/internal/authz/spicedbtest). It starts without a schema: `make authz-schema` (part of `make deps-up`) writes authzed/schema.zed.
+  spicedb:
+    image: authzed/spicedb:v1.52.0
+    command: serve
+    environment:
+      - SPICEDB_DATASTORE_ENGINE=postgres
+      - SPICEDB_DATASTORE_CONN_URI=postgresql://forma:forma@postgres:5432/spicedb?sslmode=disable
+      - SPICEDB_GRPC_PRESHARED_KEY=${AUTHZED_TOKEN:-forma-dev-token}
+      - SPICEDB_TELEMETRY_ENDPOINT=
+    ports:
+      - 127.0.0.1:${SPICEDB_GRPC_PORT:-50051}:50051
+    depends_on:
+      spicedb-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=localhost:50051"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
       start_period: 10s
 
 volumes:

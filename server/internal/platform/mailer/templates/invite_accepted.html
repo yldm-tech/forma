@@ -1,0 +1,4 @@
+{{define "content"}}
+{{template "heading" (.T "emails.invite_accepted_email_heading" "inviterName" .Content.InviterName)}}
+{{template "text" (.T "emails.invite_accepted_email_text" "inviteeName" .Content.InviteeName)}}
+{{end}}

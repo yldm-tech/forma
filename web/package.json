@@ -12,10 +12,22 @@
     "clean": "rimraf node_modules dist"
   },
   "dependencies": {
+    "@forma/types": "workspace:*",
+    "@radix-ui/react-dropdown-menu": "catalog:",
+    "@radix-ui/react-popover": "catalog:",
+    "@radix-ui/react-slot": "catalog:",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-router": "1.170.41",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "i18next": "catalog:",
+    "i18next-icu": "catalog:",
+    "lucide-react": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "react-i18next": "catalog:",
+    "tailwind-merge": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",

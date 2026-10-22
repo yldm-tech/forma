@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string"
+    },
+    "bgColor": {
+      "type": "string"
+    }
+  },
+  "$id": "https://forma.ylam.ai/schemas/workspace.logo.json"
+}

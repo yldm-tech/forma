@@ -8,27 +8,28 @@ Phases, in order: P0 foundation (this skeleton, the new schema, recorded contrac
 
 ## Project Structure
 
-| Path                                                          | What it is                                                                                                                                  |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `server/`                                                     | Go module `github.com/yldm-tech/forma/server`: gin, wire, GORM. One binary, `forma`, whose subcommands are the processes (`serve` today).   |
-| `server/internal/platform/`                                   | Cross-cutting infrastructure: config, logger, database, HTTP server and middleware.                                                         |
-| `server/internal/<feature>/`                                  | One package per feature, layered `handler` → `service` → `repository`. Authorization is checked once, in the service layer.                 |
-| `server/internal/app/`                                        | Composition root. `wire.go` declares the graph, `wire_gen.go` is generated and committed.                                                   |
-| `server/internal/webui/`                                      | Serves the SPA build embedded with `go:embed`, plus the SDK bundles under `/js/*`.                                                          |
-| `web/`                                                        | The admin SPA: Vite, React 19, TanStack Router (file-based, `src/routes/`), TanStack Query, Tailwind 4.                                     |
-| `packages/surveys`                                            | Preact survey runtime, shipped as `/js/surveys.umd.cjs` and rendered on customer sites and the public survey pages. Carried over unchanged. |
-| `packages/js-core`                                            | The customer-site SDK, shipped as `/js/forma.umd.cjs`. Carried over unchanged.                                                              |
-| `packages/survey-ui`, `packages/types`, `packages/i18n-utils` | Shared UI, zod types and i18n helpers used by the packages above.                                                                           |
-| `apps/storybook`                                              | Storybook for `packages/survey-ui`.                                                                                                         |
-| `authzed/`                                                    | SpiceDB schema (`schema.zed`) and its assertion suite.                                                                                      |
-| `docs/`                                                       | Product and API documentation (Mintlify). `docs/api-v3-reference` is the source of the v3 OpenAPI contract.                                 |
+| Path                                                          | What it is                                                                                                                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server/`                                                     | Go module `github.com/yldm-tech/forma/server`: gin, wire, GORM. One binary, `forma`, whose subcommands are the processes (`serve`, `worker`, `migrate`).                                         |
+| `server/internal/platform/`                                   | Cross-cutting infrastructure: config, logger, database, HTTP server, the `/api/app` conventions (`httpapi`, `apperr`), Valkey, rate limits, mail, audit events and the River job queue (`jobs`). |
+| `server/internal/<feature>/`                                  | One package per feature, layered `handler` → `service` → `repository`. Authorization is checked once, in the service layer.                                                                      |
+| `server/internal/app/`                                        | Composition root. `wire.go` declares the graph, `wire_gen.go` is generated and committed.                                                                                                        |
+| `server/internal/webui/`                                      | Serves the SPA build embedded with `go:embed`, plus the SDK bundles under `/js/*`.                                                                                                               |
+| `web/`                                                        | The admin SPA: Vite, React 19, TanStack Router (file-based, `src/routes/`), TanStack Query, Tailwind 4.                                                                                          |
+| `packages/surveys`                                            | Preact survey runtime, shipped as `/js/surveys.umd.cjs` and rendered on customer sites and the public survey pages. Carried over unchanged.                                                      |
+| `packages/js-core`                                            | The customer-site SDK, shipped as `/js/forma.umd.cjs`. Carried over unchanged.                                                                                                                   |
+| `packages/survey-ui`, `packages/types`, `packages/i18n-utils` | Shared UI, zod types and i18n helpers used by the packages above.                                                                                                                                |
+| `apps/storybook`                                              | Storybook for `packages/survey-ui`.                                                                                                                                                              |
+| `authzed/`                                                    | SpiceDB schema (`schema.zed`) and its assertion suite; `server/internal/authz/schema.zed` is an embedded copy a test keeps identical.                                                            |
+| `docs/`                                                       | Product and API documentation (Mintlify). `docs/api-v3-reference` is the source of the v3 OpenAPI contract.                                                                                      |
 
 ## Commands
 
 Everything runs from the repository root. The TypeScript side uses [Vite+](https://viteplus.dev/) (`vp`): Vite (Rolldown) for dev and build, Vitest for tests, Oxlint and Oxfmt for lint and format, tsgolint for type checks, and `vp run` as the workspace task runner. There is no ESLint, Prettier or Turborepo. `pnpm` is the version pinned in `package.json` (`packageManager`) and Node.js the one in `.node-version`; Go comes from `server/go.mod`.
 
-- `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`).
-- `cp .env.example .env`, `make migrate`, then `make dev-server` — apply the schema and run the Go server on `:3000`.
+- `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`); `deps-up` also runs `make authz-schema`, which writes `authzed/schema.zed` into the local SpiceDB.
+- `forma authz schema check|apply`, `forma authz backfill [--apply] ...`, `forma authz outbox status|drain|replay` — operate the SpiceDB projection (`forma authz help`). Each prints one JSON line; exit 0 clean, 2 drift, 1 failed.
+- `cp .env.example .env`, `make migrate`, then `make dev-server` — apply the schema (goose, then River's job queue tables) and run the Go server on `:3000`. `make dev-worker` runs `forma worker`, the background job process.
 - `make dev-web` — run the Vite dev server on `:5173`; it proxies `/api` and `/health` to the Go server.
 - `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.
 - `make generate` — regenerate `server/internal/app/wire_gen.go` after changing a provider.
@@ -42,23 +43,28 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - Keep the simplest shape that works: a function before an interface, an interface only where there are two implementations or a test seam.
 - Validate at system boundaries (HTTP handlers, queue consumers, config). Do not wrap internal calls in defensive error handling.
 - Errors are wrapped with context (`fmt.Errorf("open database: %w", err)`) and logged once, where they are handled.
-- Every process reads configuration once, at startup, through `internal/platform/config`. A missing or malformed variable fails the start.
+- Every process reads configuration once, at startup, through `internal/platform/config`. A missing or malformed variable fails the start. Boolean variables are forma2's `1`/`0` switches; any other value fails the start.
+- Services return expected failures as `*apperr.Error` (forma2's error classes: status, stable code, message); anything else is an unexpected error that reaches the client as a generic 500. Handlers pass errors to `httpapi.Fail`, bind input with `httpapi.BindJSON` (validated through `binding` struct tags), and read the caller from `httpapi.ActorFrom` and `httpapi.ClientIP`.
+- Authorization goes through `authz.Authorizer` (`Platform.Authz`): a service calls `Require(ctx, actor, action, resource)` (403 "Not authorized" on denial) or `Can`, with actions from forma2's vocabulary (`authz.WorkspaceWrite`, `authz.OrganizationManageAccess`, ...). PostgreSQL decides existence and tenancy first, then SpiceDB decides; an `*authz.Error` (SpiceDB unreachable, a revocation older than 60 s still undelivered) is never a denial and reaches the client as a 500. Services never write SpiceDB: the projection follows the `authz_projection_outbox` rows the triggers enqueue, delivered every five seconds by `forma worker`.
+- Rate limits use `ratelimit.Limiter` with the rules in `ratelimit/rules.go` (forma2's namespaces and limits); they fail open when Valkey is unreachable. Audit events go through `audit.Emitter` with forma2's action and target names. Mail goes through `mailer.Mailer.SendTemplate`; a new email is a new `Content` type plus a template in `mailer/templates/`.
+- Background work is a River job: register the worker (and any periodic schedule) in the `jobs.Registry` built for `forma worker` in `internal/app`, and enqueue with `InsertTx` inside the transaction of the change that causes it.
 - Logs are structured (`log/slog`). Never log secrets, tokens, raw request bodies, or raw URL paths that can carry a token.
 - `golangci-lint` (config in `server/.golangci.yml`) and `gofmt`/`goimports` are enforced in CI.
 
 ## Database
 
 - The schema is defined only by the goose SQL files in `server/migrations/`, applied by `forma migrate` (it needs `DATABASE_URL` alone). GORM never runs `AutoMigrate`. A schema change is a new numbered file with both `Up` and `Down`; never edit one that has shipped.
+- River's tables (`river_job`, `river_queue`, ...) are versioned by River itself; `forma migrate` applies them after the goose files and they never appear in `server/migrations/`.
 - PostgreSQL 18 or newer: primary keys default to `uuidv7()`. Closed value sets are `text` with a `CHECK`, not PostgreSQL enums.
 - Rows migrated from forma2 get `uuidv5(<forma legacy namespace>, <old id>)` as their id, so an old id that arrives from outside (a survey link, an SDK snippet) is resolved by computing the same function.
-- Every table that carries authorization data has a trigger that enqueues an `authz_projection_outbox` row in the same transaction; a new table of that kind needs one too.
+- Every table that carries authorization data has a trigger that enqueues an `authz_projection_outbox` row in the same transaction; a new table of that kind needs one too, plus its projector and reconciliation in `server/internal/authz`.
 - JSON columns are validated in Go against JSON Schemas exported from the zod definitions in `packages/types` (`json-schema-registry.ts` lists them; `pnpm --filter @forma/types export-json-schema` regenerates `server/internal/jsonschema/schemas/`, and CI fails when they are stale). The export keeps structure only: zod refinements such as unique ids or a translation's required `default` key are lost and must be ported as Go code in the service that owns the document. `server/internal/jsonschema/testdata/parity.json` records cases on both sides of that line and is asserted by both a Vitest and a Go test.
 - `server/internal/platform/database/migrate_test.go` runs the migrations against a real PostgreSQL in Docker (testcontainers) and checks the constraints and triggers; `go test -short` skips it.
 
 ## API contracts
 
 - Paths and payloads that something outside this repository calls are frozen: the client API used by `packages/js-core` and `packages/surveys` (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, the v3 management API, MCP, OAuth and webhook callback URLs, and `/health`, `/health/ready`. Reproduce forma2's behaviour byte for byte and prove it with a contract test.
-- `/api/v3` is the forward API and is specified first in `docs/api-v3-reference`; the Go server and the SPA's client are generated from that spec. Endpoints only the admin UI needs live under `/api/app/*`.
+- `/api/v3` is the forward API and is specified first in `docs/api-v3-reference`; the Go server and the SPA's client are generated from that spec. Endpoints only the admin UI needs live under `/api/app/*`: session-authenticated, errors as `{code, message, details}`, and every mutation must come from `WEBAPP_URL` or `PUBLIC_URL` (`Origin`) with an `X-Requested-With` header, which `web/src/lib/api.ts` always sends.
 
 ## TypeScript workspace
 
@@ -79,14 +85,15 @@ Tailwind v4 detects sources from the consuming app's own root and never descends
 ### Frontend conventions
 
 - Routes are files under `web/src/routes/`; `web/src/routeTree.gen.ts` is generated by the router plugin during `vite build`/`vite dev` and committed. CI fails if it is stale.
-- Server state goes through TanStack Query with `queryOptions` factories; route loaders prefetch through the same options. Do not keep a second copy of server data in component state.
+- Server state goes through TanStack Query with `queryOptions` factories; route loaders prefetch through the same options. Do not keep a second copy of server data in component state. Calls go through `api` in `web/src/lib/api.ts`, which throws `ApiError`.
+- User-facing text goes through i18next (`useTranslation`, `t("<namespace>.<key>")`). The catalogues are `web/locales/*.json`, carried over from forma2 with their keys; the `emails` namespace is rendered by the Go mailer, which embeds a copy in `server/internal/platform/mailer/locales/` (after editing it, run `go test ./internal/platform/mailer -run TestCatalogueMatchesWebLocales -update` in `server/`).
 - Avoid `any` (`typescript/no-explicit-any` is an error), keep components focused, and meet basic accessibility.
 - Lint and format rules live only in the root `vite.config.ts`; package configs carry build, test and dev settings. Per-path exceptions go in `lint.overrides` with a comment saying why.
 
 ## Testing
 
 - Test behaviour and outcomes at the cheapest level that can fail on them.
-- Go: table-driven tests next to the code; integration tests that need Postgres, Valkey or SpiceDB start real ones with testcontainers.
+- Go: table-driven tests next to the code; integration tests that need Postgres, Valkey or SpiceDB start real ones with testcontainers. `platform/pgtest` gives each test a fresh migrated database, `platform/valkey/valkeytest` a fresh Valkey database, and `mailer/mailertest.Transport` captures sent mail.
 - TypeScript: Vitest next to the code.
 - A ported module is done when forma2's tests for it are reproduced here and pass.
 

@@ -8,36 +8,177 @@ package app
 
 import (
 	"context"
+	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/apikey"
+	"github.com/yldm-tech/forma/server/internal/auth"
+	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/invite"
+	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
 )
 
 // Injectors from wire.go:
 
-// InitializeServer builds `forma serve`. The returned cleanup closes the database pool.
+// InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
-	db, cleanup, err := database.Open(ctx, cfg, log)
+	clientIPResolver := httpapi.NewClientIPResolver(cfg, log)
+	client, cleanup, err := valkey.Open(ctx, cfg, log)
 	if err != nil {
 		return nil, nil, err
 	}
+	limiter := ratelimit.New(cfg, client, log)
+	mailerMailer, err := mailer.New(cfg, log)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	emitter := audit.New(cfg, log)
+	db, cleanup2, err := database.Open(ctx, cfg, log)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	authzClient, cleanup3, err := authz.OpenSpiceDB(cfg, log)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	authorizer := authz.NewAuthorizer(cfg, db, authzClient)
+	platform := &Platform{
+		Config:   cfg,
+		Log:      log,
+		ClientIP: clientIPResolver,
+		Limiter:  limiter,
+		Mailer:   mailerMailer,
+		Audit:    emitter,
+		Authz:    authorizer,
+	}
 	pinger, err := health.NewDatabasePinger(db)
 	if err != nil {
+		cleanup3()
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	handler := health.NewHandler(pinger, log)
+	repository := auth.NewRepository(db)
+	sessions := auth.NewSessions(cfg, db, log)
+	inviteRepository := invite.NewRepository(db)
+	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
+	cipher, err := secret.NewCipher(cfg)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	twoFactor := auth.NewTwoFactor(cfg, authService, cipher)
+	authHandler := auth.NewHandler(cfg, authService, sessions, twoFactor)
+	sso := auth.NewSSO(cfg, authService, log)
+	ssoHandler := auth.NewSSOHandler(cfg, sso)
+	orgRepository := org.NewRepository(db)
+	workspaceRepository := workspace.NewRepository(db, log)
+	validator, err := jsonschema.New()
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, log)
+	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, log)
+	orgHandler := org.NewHandler(orgService, sessions)
+	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
+	teamRepository := team.NewRepository(db)
+	teamService := team.NewService(teamRepository, authorizer, emitter, log)
+	teamHandler := team.NewHandler(teamService, sessions)
+	inviteHandler := invite.NewHandler(service, sessions)
+	apikeyRepository := apikey.NewRepository(db)
+	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
+	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
 	webuiHandler, err := webui.New()
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, webuiHandler)
+	server := httpserver.New(cfg, engine, log)
+	return server, func() {
+		cleanup3()
+		cleanup2()
+		cleanup()
+	}, nil
+}
+
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool and the SpiceDB connection.
+func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
+	pool, cleanup, err := jobs.OpenPool(ctx, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	db, cleanup2, err := database.Open(ctx, cfg, log)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(log, handler, webuiHandler)
-	server := httpserver.New(cfg, engine, log)
-	return server, func() {
+	client, cleanup3, err := authz.OpenSpiceDB(cfg, log)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	delivery := authz.NewDelivery(db, client, log)
+	authzAudit := authz.NewAudit(db, client, log)
+	registry := NewJobRegistry(pool, log, delivery, authzAudit)
+	worker, err := jobs.NewWorker(cfg, pool, registry, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	return worker, func() {
+		cleanup3()
+		cleanup2()
 		cleanup()
 	}, nil
 }
+
+// wire.go:
+
+// platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
+var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
+
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks. Its sessions are the SessionAuth every other module's routes authenticate with.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)
+
+// tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
+var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
+
+// teamSet is teams, their members and their workspace access.
+var teamSet = wire.NewSet(team.NewRepository, team.NewService, team.NewHandler)
+
+// inviteSet is invites and their acceptance; sign-up redeems invites through it.
+var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)), invite.NewHandler)
+
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)

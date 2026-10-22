@@ -126,10 +126,15 @@ func TestSchemaConstraints(t *testing.T) {
 		wantViolation(t, db, "23505", `INSERT INTO users (name, email) VALUES ('Ada 2', 'ADA@example.com')`)
 	})
 
-	t.Run("a credential identity needs a password hash and only it may have one", func(t *testing.T) {
-		wantViolation(t, db, "23514", `INSERT INTO user_identities (user_id, provider, subject) VALUES ($1, 'credential', 'ada@example.com')`, userID)
+	t.Run("only a credential identity may have a password hash, and it may outlive its password", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES ($1, 'google', '123', 'x')`, userID)
 		mustExec(t, db, `INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES ($1, 'credential', 'ada@example.com', '$2a$12$hash')`, userID)
+		mustExec(t, db, `UPDATE user_identities SET password_hash = NULL WHERE user_id = $1 AND provider = 'credential'`, userID)
+	})
+
+	t.Run("an authorization request in flight is a verification", func(t *testing.T) {
+		mustExec(t, db, `INSERT INTO verifications (purpose, email, token_hash, expires_at) VALUES ('oauth_state', '', '\x01', now())`)
+		wantViolation(t, db, "23514", `INSERT INTO verifications (purpose, email, token_hash, expires_at) VALUES ('oauth_other', '', '\x02', now())`)
 	})
 
 	t.Run("a contact attribute holds exactly one typed value", func(t *testing.T) {
@@ -179,6 +184,17 @@ func TestSchemaConstraints(t *testing.T) {
 
 	t.Run("an integration error has both a time and a message or neither", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
+	})
+
+	t.Run("an organization holds one invite per address regardless of case, and its links go with it", func(t *testing.T) {
+		inviteID := mustScanID(t, db, `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'grace@example.com', $2, now() + interval '7 days') RETURNING id`, orgID, userID)
+		wantViolation(t, db, "23505", `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'Grace@Example.com', $2, now() + interval '7 days')`, orgID, userID)
+		mustExec(t, db, `INSERT INTO invite_tokens (token_hash, invite_id, expires_at) VALUES ('\x01', $1, now() + interval '7 days')`, inviteID)
+		mustExec(t, db, `DELETE FROM invites WHERE id = $1`, inviteID)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM invite_tokens`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("invite tokens left after the invite was deleted: %d, %v", left, err)
+		}
 	})
 }
 

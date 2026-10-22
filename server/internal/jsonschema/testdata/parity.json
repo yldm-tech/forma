@@ -115,5 +115,96 @@
     "zod": false,
     "jsonSchema": false,
     "document": "everyone"
+  },
+  {
+    "name": "workspace styling with the required overwrite flag",
+    "schema": "workspace.styling",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "allowStyleOverwrite": true, "brandColor": { "light": "#64748b" } }
+  },
+  {
+    "name": "workspace styling without the overwrite flag",
+    "schema": "workspace.styling",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "brandColor": { "light": "#64748b" } }
+  },
+  {
+    "name": "workspace styling with a malformed color",
+    "schema": "workspace.styling",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "allowStyleOverwrite": true, "brandColor": { "light": "slate" } }
+  },
+  {
+    "name": "workspace logo with a storage path",
+    "schema": "workspace.logo",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "url": "/storage/abc/public/logo.png", "bgColor": "#ffffff" }
+  },
+  {
+    "name": "workspace logo with a javascript URL, refused by ZStorageUrl only",
+    "schema": "workspace.logo",
+    "zod": false,
+    "jsonSchema": true,
+    "document": { "url": "javascript:alert(1)" }
+  },
+  {
+    "name": "workspace config patch",
+    "schema": "workspace.config",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "channel": "link", "defaultSurveyLanguage": "de-DE" }
+  },
+  {
+    "name": "workspace config with an unknown channel",
+    "schema": "workspace.config",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "channel": "email" }
+  },
+  {
+    "name": "organization access with both flags",
+    "schema": "api_key.organization_access",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "accessControl": { "read": true, "write": false } }
+  },
+  {
+    "name": "organization access with an unknown top-level key, which zod strips",
+    "schema": "api_key.organization_access",
+    "zod": true,
+    "jsonSchema": true,
+    "document": { "accessControl": { "read": false, "write": false }, "billing": { "read": true } }
+  },
+  {
+    "name": "organization access without accessControl",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": {}
+  },
+  {
+    "name": "organization access missing the write flag",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": true } }
+  },
+  {
+    "name": "organization access with an extra flag, which the strict inner object rejects",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": true, "write": true, "manage": true } }
+  },
+  {
+    "name": "organization access with a non-boolean flag",
+    "schema": "api_key.organization_access",
+    "zod": false,
+    "jsonSchema": false,
+    "document": { "accessControl": { "read": "true", "write": false } }
   }
 ]

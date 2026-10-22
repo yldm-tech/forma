@@ -1,5 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import { NotFound, RouteError } from "../components/shell/route-states";
+import { Toaster } from "../components/ui/toaster";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -8,20 +10,14 @@ export interface RouterContext {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   notFoundComponent: NotFound,
+  errorComponent: RouteError,
 });
 
 function RootLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Outlet />
+      <Toaster />
     </div>
-  );
-}
-
-function NotFound() {
-  return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold">Page not found</h1>
-    </main>
   );
 }

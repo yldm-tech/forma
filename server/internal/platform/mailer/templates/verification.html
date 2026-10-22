@@ -1,0 +1,9 @@
+{{define "content"}}
+{{template "heading" (.T "emails.verification_email_heading")}}
+{{template "text" (.T "emails.verification_email_text")}}
+{{template "button" (button .Content.VerifyLink (.T "emails.verification_email_verify_email"))}}
+{{template "text" (.T "emails.verification_email_click_on_this_link")}}
+{{template "link" .Content.VerifyLink}}
+{{template "bold" (.T "emails.verification_email_link_valid_for_24_hours")}}
+<p style="font-size:14px;line-height:24px;margin:16px 0">{{.T "emails.verification_email_if_expired_request_new_token"}}<a href="{{.Content.VerificationRequestLink}}" style="font-size:14px;color:#000000;text-decoration:underline">{{.T "emails.verification_email_request_new_verification"}}</a></p>
+{{end}}
