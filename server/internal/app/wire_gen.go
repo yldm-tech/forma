@@ -46,6 +46,7 @@ import (
 	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
 )
@@ -200,7 +201,10 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	notificationHandler := notification.NewHandler()
 	attachmentExporter := analysis.NewAttachmentExporter(db, storageService, workspaceRepository, log)
 	attachmentsHandler := analysis.NewAttachmentsHandler(analysisService, attachmentExporter, middleware, auditor, limiter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, webuiHandler)
+	workflowRepository := workflow.NewRepository(db)
+	workflowService := workflow.NewService(workflowRepository, db, authorizer, log)
+	workflowHandler := workflow.NewHandler(cfg, workflowService, guard, sessions, emitter, log)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -258,9 +262,20 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	limiter := ratelimit.New(cfg, redisClient, log)
 	sender := followup.NewSender(cfg, db, mailerMailer, limiter, log)
 	notifier := notification.NewNotifier(cfg, db, mailerMailer, log)
-	handoffs := _wireHandoffsValue
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, log)
+	handoffs := newPipelineHandoffs(workflowEnqueuer)
 	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker)
+	runner := workflow.NewRunner(cfg, db, mailerMailer, log)
+	reconciler := workflow.NewReconciler(db, enqueuer, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()
@@ -276,10 +291,6 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 	}, nil
 }
-
-var (
-	_wireHandoffsValue = pipeline.Handoffs{}
-)
 
 // wire.go:
 
@@ -331,5 +342,8 @@ var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
 var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs, empty until those modules land.
-var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, wire.Value(pipeline.Handoffs{}), pipeline.NewWorker)
+// workflowSet is workflows: the /api/v3/workflows management API and the builder's authoring context under /api/app.
+var workflowSet = wire.NewSet(workflow.NewRepository, workflow.NewService, workflow.NewHandler)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations plug in through pipeline.Handoffs when they land.
+var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, jobs.NewEnqueuer, workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, newPipelineHandoffs, pipeline.NewWorker)

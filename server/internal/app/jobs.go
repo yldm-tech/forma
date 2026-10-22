@@ -14,16 +14,23 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
 // NewJobRegistry is every job kind and schedule `forma worker` runs: the platform's own, then each feature module's.
-func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker) *jobs.Registry {
+func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler) *jobs.Registry {
 	reg := jobs.NewRegistry(log)
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
 	survey.RegisterJobs(reg, cfg, db, emitter, log)
 	pipeline.RegisterJobs(reg, responsePipeline)
+	workflow.RegisterJobs(reg, workflowRunner, workflowReconciler)
 	storage.RegisterJobs(reg, files, workspaces, log)
 	return reg
+}
+
+// newPipelineHandoffs is the consumers the response pipeline hands a finished response to after its webhooks: the workflow runs.
+func newPipelineHandoffs(workflows *workflow.Enqueuer) pipeline.Handoffs {
+	return pipeline.Handoffs{Workflows: workflows}
 }

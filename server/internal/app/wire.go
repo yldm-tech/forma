@@ -45,6 +45,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -187,7 +188,14 @@ var webhookSet = wire.NewSet(
 	webhook.NewV1Handler,
 )
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs, empty until those modules land.
+// workflowSet is workflows: the /api/v3/workflows management API and the builder's authoring context under /api/app.
+var workflowSet = wire.NewSet(
+	workflow.NewRepository,
+	workflow.NewService,
+	workflow.NewHandler,
+)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations plug in through pipeline.Handoffs when they land.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
 	ratelimit.New,
@@ -197,7 +205,11 @@ var pipelineSet = wire.NewSet(
 	webhook.NewDeliverer,
 	followup.NewSender,
 	notification.NewNotifier,
-	wire.Value(pipeline.Handoffs{}),
+	jobs.NewEnqueuer,
+	workflow.NewEnqueuer,
+	workflow.NewRunner,
+	workflow.NewReconciler,
+	newPipelineHandoffs,
 	pipeline.NewWorker,
 )
 
@@ -224,6 +236,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,
+		workflowSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
