@@ -161,3 +161,10 @@ export const useRequestAccountDeletion = () =>
   useMutation({
     mutationFn: () => api.post<{ emailSent: boolean }>("/api/app/auth/account/delete/request"),
   });
+
+/** Redeems the deletion link mailed by useRequestAccountDeletion, from the same user's session. */
+export const useConfirmAccountDeletion = () =>
+  useMutation({
+    mutationFn: (token: string) =>
+      api.post<{ redirectUrl: string }>("/api/app/auth/account/delete/confirm", { token }),
+  });

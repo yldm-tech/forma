@@ -15,12 +15,14 @@ import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
+import { Route as AuthDeleteAccountRouteImport } from './routes/auth/delete-account'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as AuthSignupWithoutVerificationSuccessRouteImport } from './routes/auth/signup-without-verification-success'
 import { Route as AuthSsoRecoveryRouteImport } from './routes/auth/sso-recovery'
 import { Route as AuthVerificationRequestedRouteImport } from './routes/auth/verification-requested'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
+import { Route as SetupIntroRouteImport } from './routes/setup/intro'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account/settings'
 import { Route as AuthenticatedEnvironmentsEnvironmentIdRouteImport } from './routes/_authenticated/environments/$environmentId'
 import { Route as AuthenticatedWorkspacesWorkspaceIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId'
@@ -72,6 +74,11 @@ const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
   path: '/verify-email-change',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthDeleteAccountRoute = AuthDeleteAccountRouteImport.update({
+  id: '/delete-account',
+  path: '/delete-account',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -103,6 +110,11 @@ const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
   getParentRoute: () => AuthRouteRoute,
+} as any)
+const SetupIntroRoute = SetupIntroRouteImport.update({
+  id: '/setup/intro',
+  path: '/setup/intro',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAccountSettingsRoute =
   AuthenticatedAccountSettingsRouteImport.update({
@@ -230,12 +242,14 @@ export interface FileRoutesByFullPath {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
   '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/setup/intro': typeof SetupIntroRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -263,12 +277,14 @@ export interface FileRoutesByTo {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
   '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/setup/intro': typeof SetupIntroRoute
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
@@ -295,12 +311,14 @@ export interface FileRoutesById {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/signup-without-verification-success': typeof AuthSignupWithoutVerificationSuccessRoute
   '/auth/sso-recovery': typeof AuthSsoRecoveryRoute
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/setup/intro': typeof SetupIntroRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/_authenticated/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/_authenticated/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -330,12 +348,14 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
     | '/auth/signup-without-verification-success'
     | '/auth/sso-recovery'
     | '/auth/verification-requested'
     | '/auth/verify-email'
+    | '/setup/intro'
     | '/account/settings'
     | '/environments/$environmentId'
     | '/workspaces/$workspaceId'
@@ -363,12 +383,14 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
     | '/auth/signup-without-verification-success'
     | '/auth/sso-recovery'
     | '/auth/verification-requested'
     | '/auth/verify-email'
+    | '/setup/intro'
     | '/environments/$environmentId'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password'
@@ -394,12 +416,14 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
     | '/auth/signup-without-verification-success'
     | '/auth/sso-recovery'
     | '/auth/verification-requested'
     | '/auth/verify-email'
+    | '/setup/intro'
     | '/_authenticated/account/settings'
     | '/_authenticated/environments/$environmentId'
     | '/_authenticated/workspaces/$workspaceId'
@@ -429,6 +453,7 @@ export interface RootRouteChildren {
   EmailChangeWithoutVerificationSuccessRoute: typeof EmailChangeWithoutVerificationSuccessRoute
   InviteRoute: typeof InviteRoute
   VerifyEmailChangeRoute: typeof VerifyEmailChangeRoute
+  SetupIntroRoute: typeof SetupIntroRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -475,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/delete-account': {
+      id: '/auth/delete-account'
+      path: '/delete-account'
+      fullPath: '/auth/delete-account'
+      preLoaderRoute: typeof AuthDeleteAccountRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/login'
@@ -516,6 +548,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/verify-email'
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
       parentRoute: typeof AuthRouteRoute
+    }
+    '/setup/intro': {
+      id: '/setup/intro'
+      path: '/setup/intro'
+      fullPath: '/setup/intro'
+      preLoaderRoute: typeof SetupIntroRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/account/settings': {
       id: '/_authenticated/account/settings'
@@ -661,6 +700,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteRouteChildren {
+  AuthDeleteAccountRoute: typeof AuthDeleteAccountRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
   AuthSignupWithoutVerificationSuccessRoute: typeof AuthSignupWithoutVerificationSuccessRoute
@@ -674,6 +714,7 @@ interface AuthRouteRouteChildren {
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthDeleteAccountRoute: AuthDeleteAccountRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
   AuthSignupWithoutVerificationSuccessRoute:
@@ -793,6 +834,7 @@ const rootRouteChildren: RootRouteChildren = {
     EmailChangeWithoutVerificationSuccessRoute,
   InviteRoute: InviteRoute,
   VerifyEmailChangeRoute: VerifyEmailChangeRoute,
+  SetupIntroRoute: SetupIntroRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
