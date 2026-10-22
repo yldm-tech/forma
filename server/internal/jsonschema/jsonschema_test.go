@@ -3,6 +3,7 @@ package jsonschema
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -58,5 +59,30 @@ func TestValidateRejectsUnknownSchemasAndBrokenJSON(t *testing.T) {
 	}
 	if err := v.Validate("survey.blocks", []byte(`[{`)); err == nil {
 		t.Error("malformed JSON was accepted")
+	}
+}
+
+func TestViolationsLocateTheFailureInsideTheSelectedAlternative(t *testing.T) {
+	v, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Violations("survey.blocks", []byte(`[{"id": "abc", "name": "B", "elements": [{"id": "q1", "type": "rating", "headline": {"default": "?"}, "required": true, "scale": "number", "range": 8}]}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || strings.Join(got[0].Location, ".") != "0.elements.0.range" {
+		t.Fatalf("violations %+v, want one at the rating's range", got)
+	}
+	got, _ = v.Violations("survey.blocks", []byte(`[{"id": "abc", "name": "B", "elements": [{"id": "q1", "type": "telepathy", "headline": {"default": "?"}, "required": true}]}]`))
+	if len(got) != 1 || got[0].Message != "Invalid input" || strings.Join(got[0].Location, ".") != "0.elements.0" {
+		t.Fatalf("violations %+v, want one Invalid input at the element", got)
+	}
+	got, _ = v.Violations("survey.recaptcha", []byte(`{"enabled": true, "threshold": 2}`))
+	if len(got) != 1 || strings.Join(got[0].Location, ".") != "threshold" {
+		t.Fatalf("violations %+v, want one at the threshold of the nullable object", got)
+	}
+	if got, err := v.Violations("survey.recaptcha", []byte(`null`)); err != nil || got != nil {
+		t.Fatalf("a conforming document: %v, %v", got, err)
 	}
 }

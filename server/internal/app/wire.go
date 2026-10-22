@@ -24,7 +24,10 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
@@ -85,6 +88,17 @@ var apikeySet = wire.NewSet(
 	apikey.NewHandler,
 )
 
+// surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
+var surveySet = wire.NewSet(
+	surveydoc.NewValidator,
+	survey.LoadCatalog,
+	survey.NewRepository,
+	survey.NewService,
+	apikey.NewAuthenticator,
+	v3api.NewGuard,
+	survey.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -98,6 +112,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		teamSet,
 		inviteSet,
 		apikeySet,
+		surveySet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -115,6 +130,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.OpenSpiceDB,
 		authz.NewDelivery,
 		authz.NewAudit,
+		audit.New,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

@@ -25,7 +25,10 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
@@ -113,6 +116,19 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	apikeyRepository := apikey.NewRepository(db)
 	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
 	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
+	surveyRepository := survey.NewRepository(db)
+	surveydocValidator := surveydoc.NewValidator(validator)
+	catalog, err := survey.LoadCatalog()
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, log)
+	authenticator := apikey.NewAuthenticator(db, log)
+	guard := v3api.NewGuard(sessions, authenticator, limiter, log)
+	surveyHandler := survey.NewHandler(surveyService, sessions, guard, log)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -120,7 +136,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, webuiHandler)
+	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -148,7 +164,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	delivery := authz.NewDelivery(db, client, log)
 	authzAudit := authz.NewAudit(db, client, log)
-	registry := NewJobRegistry(pool, log, delivery, authzAudit)
+	emitter := audit.New(cfg, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter)
 	worker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup3()
@@ -182,3 +199,6 @@ var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(n
 
 // apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
 var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)
+
+// surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
+var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, apikey.NewAuthenticator, v3api.NewGuard, survey.NewHandler)

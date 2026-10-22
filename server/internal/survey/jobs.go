@@ -1,0 +1,137 @@
+package survey
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/riverqueue/river"
+	"gorm.io/gorm"
+
+	"github.com/yldm-tech/forma/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+)
+
+// Archive retention, forma2's ARCHIVED_SURVEY_RETENTION_DAYS and purge batching.
+const (
+	archiveRetention     = 30 * 24 * time.Hour
+	purgeBatchSize       = 100
+	purgeMaxBatches      = 10000
+	purgeHour, purgeMins = 1, 30
+)
+
+// dailyAt is a River schedule that fires once a day at a local time of the scheduling zone, forma2's "<minute> <hour> * * *" cron in SURVEY_SCHEDULING_TIME_ZONE.
+type dailyAt struct {
+	schedule     Schedule
+	hour, minute int
+}
+
+func (d dailyAt) Next(current time.Time) time.Time {
+	return d.schedule.next(current, d.hour, d.minute)
+}
+
+// SchedulingArgs is forma2's survey-scheduling.reconcile job.
+type SchedulingArgs struct{}
+
+func (SchedulingArgs) Kind() string { return "survey-scheduling.reconcile" }
+
+type schedulingWorker struct {
+	river.WorkerDefaults[SchedulingArgs]
+	scheduler *Scheduler
+}
+
+func (w *schedulingWorker) Work(ctx context.Context, _ *river.Job[SchedulingArgs]) error {
+	_, _, err := w.scheduler.Reconcile(ctx, time.Now(), nil)
+	return err
+}
+
+// ArchivePurgeArgs is forma2's survey-archive-purge.process job.
+type ArchivePurgeArgs struct{}
+
+func (ArchivePurgeArgs) Kind() string { return "survey-archive-purge.process" }
+
+// Purger deletes surveys archived longer than the retention, forma2's processSurveyArchivePurgeJob.
+type Purger struct {
+	repo  *Repository
+	audit *audit.Emitter
+	log   *slog.Logger
+}
+
+func NewPurger(repo *Repository, emitter *audit.Emitter, log *slog.Logger) *Purger {
+	return &Purger{repo: repo, audit: emitter, log: log}
+}
+
+type purgeCandidate struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+// PurgeResult counts what one purge run did.
+type PurgeResult struct {
+	Deleted, Skipped, Failed int
+}
+
+// Purge deletes, oldest archive first and in batches, every survey archived before now minus the retention. Each delete re-checks the archive stamp under a row lock, so a survey restored in the meantime is skipped; a survey that fails is counted and not retried in the same run.
+func (p *Purger) Purge(ctx context.Context, now time.Time) (PurgeResult, error) {
+	cutoff := now.Add(-archiveRetention)
+	var result PurgeResult
+	failed := []uuid.UUID{}
+	for batch := 0; batch < purgeMaxBatches; batch++ {
+		var candidates []purgeCandidate
+		err := p.repo.db.WithContext(ctx).Raw(`SELECT s.id, w.organization_id FROM surveys s JOIN workspaces w ON w.id = s.workspace_id
+			WHERE s.archived_at IS NOT NULL AND s.archived_at < ? AND NOT (s.id = ANY(?::uuid[])) ORDER BY s.archived_at ASC, s.id ASC LIMIT ?`,
+			cutoff, uuidArray(failed), purgeBatchSize).Scan(&candidates).Error
+		if err != nil {
+			return result, fmt.Errorf("load archived surveys: %w", err)
+		}
+		for _, c := range candidates {
+			deleted, err := p.repo.deleteSurvey(ctx, c.ID, &cutoff)
+			switch {
+			case err != nil:
+				result.Failed++
+				failed = append(failed, c.ID)
+				p.log.ErrorContext(ctx, "Archived survey purge failed", "surveyId", c.ID.String(), "err", err)
+			case deleted == nil:
+				result.Skipped++
+			default:
+				result.Deleted++
+				p.audit.Log(ctx, audit.Event{
+					Action: audit.ActionDeleted, TargetType: audit.TargetSurvey, TargetID: c.ID.String(), OrganizationID: c.OrganizationID.String(),
+					ActorType: audit.ActorSystem, ActorID: "system", Status: audit.StatusSuccess, OldObject: deleted,
+				})
+			}
+		}
+		if len(candidates) < purgeBatchSize {
+			break
+		}
+	}
+	p.log.InfoContext(ctx, "Archived survey purge completed", "deleted", result.Deleted, "skipped", result.Skipped, "failed", result.Failed)
+	return result, nil
+}
+
+type purgeWorker struct {
+	river.WorkerDefaults[ArchivePurgeArgs]
+	purger *Purger
+}
+
+func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[ArchivePurgeArgs]) error {
+	_, err := w.purger.Purge(ctx, time.Now())
+	return err
+}
+
+// RegisterJobs adds the survey module's background work to `forma worker`: the daily publish and close run at the configured local time, and the daily archive purge at 01:30, both in the scheduling time zone.
+func RegisterJobs(reg *jobs.Registry, cfg config.Config, db *gorm.DB, emitter *audit.Emitter, log *slog.Logger) {
+	repo := NewRepository(db)
+	schedule := NewSchedule(cfg)
+	jobs.Add(reg, &schedulingWorker{scheduler: NewScheduler(repo, emitter, log)})
+	jobs.Add(reg, &purgeWorker{purger: NewPurger(repo, emitter, log)})
+	reg.AddPeriodic(river.NewPeriodicJob(dailyAt{schedule, cfg.SurveySchedulingLocalHour, cfg.SurveySchedulingLocalMinute}, func() (river.JobArgs, *river.InsertOpts) {
+		return SchedulingArgs{}, nil
+	}, nil))
+	reg.AddPeriodic(river.NewPeriodicJob(dailyAt{schedule, purgeHour, purgeMins}, func() (river.JobArgs, *river.InsertOpts) {
+		return ArchivePurgeArgs{}, nil
+	}, nil))
+}
