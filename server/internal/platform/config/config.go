@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 	"unicode"
 
 	"github.com/caarlos0/env/v11"
@@ -71,6 +72,11 @@ type Config struct {
 	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did.
 	WorkerConcurrency int `env:"WORKER_CONCURRENCY" envDefault:"0"`
 
+	// SurveySchedulingTimeZone, SurveySchedulingLocalHour and SurveySchedulingLocalMinute are when, each day, scheduled surveys are published and closed: a publish or close date is snapped to that local time of its calendar day in the zone, forma2's SURVEY_SCHEDULING_* settings.
+	SurveySchedulingTimeZone    string `env:"SURVEY_SCHEDULING_TIME_ZONE" envDefault:"Europe/Berlin"`
+	SurveySchedulingLocalHour   int    `env:"SURVEY_SCHEDULING_LOCAL_HOUR" envDefault:"0"`
+	SurveySchedulingLocalMinute int    `env:"SURVEY_SCHEDULING_LOCAL_MINUTE" envDefault:"0"`
+
 	// Authz is the SpiceDB connection every authorization decision goes through.
 	Authz AuthzConfig
 	// UserManagementMinimumRole is the lowest organization role whose users may manage members and invites (owner, manager or disabled), forma2's USER_MANAGEMENT_MINIMUM_ROLE.
@@ -98,6 +104,9 @@ type Config struct {
 	PasswordHIBPCheckDisabled bool `env:"PASSWORD_HIBP_CHECK_DISABLED" envDefault:"0"`
 	// SessionMaxAge is a session's lifetime in seconds.
 	SessionMaxAge int `env:"SESSION_MAX_AGE" envDefault:"86400"`
+	// RecaptchaSiteKey and RecaptchaSecretKey configure Google reCAPTCHA for survey spam protection; a survey may enable it only when both are set, forma2's IS_RECAPTCHA_CONFIGURED.
+	RecaptchaSiteKey   string `env:"RECAPTCHA_SITE_KEY"`
+	RecaptchaSecretKey string `env:"RECAPTCHA_SECRET_KEY"`
 	// Cloudflare Turnstile protects sign-up only when both keys are set.
 	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
 	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
@@ -209,6 +218,11 @@ func (c Config) SignupEnabled() bool {
 	return c.IsFormaCloud || c.E2ETesting
 }
 
+// RecaptchaConfigured reports whether surveys may turn on reCAPTCHA spam protection.
+func (c Config) RecaptchaConfigured() bool {
+	return c.RecaptchaSiteKey != "" && c.RecaptchaSecretKey != ""
+}
+
 // TurnstileConfigured reports whether sign-up requires a Turnstile challenge.
 func (c Config) TurnstileConfigured() bool {
 	return c.TurnstileSiteKey != "" && c.TurnstileSecretKey != ""
@@ -243,6 +257,15 @@ func (c Config) validate() error {
 	}
 	if c.WorkerConcurrency < 0 {
 		return fmt.Errorf("WORKER_CONCURRENCY must not be negative, got %d", c.WorkerConcurrency)
+	}
+	if _, err := time.LoadLocation(c.SurveySchedulingTimeZone); err != nil || c.SurveySchedulingTimeZone == "" || c.SurveySchedulingTimeZone == "Local" {
+		return fmt.Errorf("SURVEY_SCHEDULING_TIME_ZONE must be an IANA time zone, got %q", c.SurveySchedulingTimeZone)
+	}
+	if c.SurveySchedulingLocalHour < 0 || c.SurveySchedulingLocalHour > 23 {
+		return fmt.Errorf("SURVEY_SCHEDULING_LOCAL_HOUR must be between 0 and 23, got %d", c.SurveySchedulingLocalHour)
+	}
+	if c.SurveySchedulingLocalMinute < 0 || c.SurveySchedulingLocalMinute > 59 {
+		return fmt.Errorf("SURVEY_SCHEDULING_LOCAL_MINUTE must be between 0 and 59, got %d", c.SurveySchedulingLocalMinute)
 	}
 	if err := c.Authz.validate(); err != nil {
 		return err

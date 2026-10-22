@@ -177,3 +177,8 @@ func (v *Validator) Check(d Document, languages []Language, followUps []FollowUp
 	out = append(out, Refine(s)...)
 	return out, s, nil
 }
+
+// SchemaIssues checks a document against one exported schema by name, reporting violations under prefix.
+func (v *Validator) SchemaIssues(schema string, raw json.RawMessage, prefix ...any) ([]Issue, error) {
+	return v.schemaIssues(schema, raw, prefix...)
+}
