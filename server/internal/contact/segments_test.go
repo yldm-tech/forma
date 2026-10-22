@@ -15,8 +15,8 @@ func segmentPath(id uuid.UUID, rest string) string {
 	return "/api/app/segments/" + id.String() + rest
 }
 
-func surveyPath(id uuid.UUID, rest string) string {
-	return "/api/app/surveys/" + id.String() + rest
+func resetSegmentPath(surveyID uuid.UUID) string {
+	return "/api/app/surveys/" + surveyID.String() + "/segment/reset"
 }
 
 var planIsPro = tree(node(nil, attributeLeaf("plan", "equals", "pro")))
@@ -163,22 +163,22 @@ func TestResetSurveySegment(t *testing.T) {
 	survey := e.survey(ws, "draft")
 
 	var seg Segment
-	e.ok(e.do(owner, http.MethodPost, surveyPath(survey, "/segment/reset"), nil), http.StatusOK, &seg)
+	e.ok(e.do(owner, http.MethodPost, resetSegmentPath(survey), nil), http.StatusOK, &seg)
 	if seg.Title != survey.String() || !seg.IsPrivate || string(seg.Filters) != "[]" || len(seg.Surveys) != 1 {
 		t.Fatalf("created private segment %+v", seg)
 	}
 	private := seg.ID
 	raw, _ := json.Marshal(planIsPro)
 	e.exec(`UPDATE segments SET filters = ? WHERE id = ?`, string(raw), private)
-	e.ok(e.do(owner, http.MethodPost, surveyPath(survey, "/segment/reset"), nil), http.StatusOK, &seg)
+	e.ok(e.do(owner, http.MethodPost, resetSegmentPath(survey), nil), http.StatusOK, &seg)
 	if seg.ID != private || string(seg.Filters) != "[]" {
 		t.Fatalf("reset %+v", seg)
 	}
 
 	outsider := e.user()
 	e.organization(outsider)
-	e.fails(e.do(outsider, http.MethodPost, surveyPath(survey, "/segment/reset"), nil), http.StatusForbidden, "forbidden", "")
-	e.fails(e.do(owner, http.MethodPost, surveyPath(uuid.New(), "/segment/reset"), nil), http.StatusNotFound, "not_found", "")
+	e.fails(e.do(outsider, http.MethodPost, resetSegmentPath(survey), nil), http.StatusForbidden, "forbidden", "")
+	e.fails(e.do(owner, http.MethodPost, resetSegmentPath(uuid.New()), nil), http.StatusNotFound, "not_found", "")
 }
 
 func TestSurveyFilterRefs(t *testing.T) {
