@@ -3,6 +3,7 @@ package survey
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,5 +170,23 @@ func TestArchivePurge(t *testing.T) {
 	deleted, err := e.repo.deleteSurvey(context.Background(), uuid.MustParse(recent), &cutoff)
 	if err != nil || deleted != nil {
 		t.Fatalf("a survey archived after the cutoff was deleted: %v %v", deleted, err)
+	}
+}
+
+// The purge is bounded by its batches, not by River's one-minute default job timeout, which a slow cascade delete would hit on every attempt; a run stopped from outside stops without counting the surveys it did not reach as failed.
+func TestArchivePurgeIsNotCutShort(t *testing.T) {
+	if got := (&purgeWorker{}).Timeout(nil); got != -1 {
+		t.Fatalf("purge timeout %v, want none", got)
+	}
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	old := e.createLink(owner, ws)
+	e.exec(`UPDATE surveys SET archived_at = now() - interval '31 days' WHERE id = ?`, old)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	result, err := NewPurger(e.repo, e.svc.audit, e.svc.log).Purge(ctx, time.Now())
+	if err == nil || result.Failed != 0 || strings.Contains(e.logs.String(), "Archived survey purge failed") {
+		t.Fatalf("Purge = %+v, %v", result, err)
 	}
 }

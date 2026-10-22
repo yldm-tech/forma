@@ -88,6 +88,10 @@ func (p *Purger) Purge(ctx context.Context, now time.Time) (PurgeResult, error) 
 			return result, fmt.Errorf("load archived surveys: %w", err)
 		}
 		for _, c := range candidates {
+			// A run stopped from outside (the worker shutting down) ends here rather than failing every remaining survey.
+			if err := ctx.Err(); err != nil {
+				return result, err
+			}
 			deleted, err := p.repo.deleteSurvey(ctx, c.ID, &cutoff)
 			switch {
 			case err != nil:
@@ -116,6 +120,9 @@ type purgeWorker struct {
 	river.WorkerDefaults[ArchivePurgeArgs]
 	purger *Purger
 }
+
+// Timeout lifts River's per-job limit (a minute unless the client sets one): one survey with many responses can take longer than that to delete, and a run cut short starts again at that same survey, so the purge would never get past it. A run is bounded by purgeMaxBatches instead.
+func (w *purgeWorker) Timeout(*river.Job[ArchivePurgeArgs]) time.Duration { return -1 }
 
 func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[ArchivePurgeArgs]) error {
 	_, err := w.purger.Purge(ctx, time.Now())
