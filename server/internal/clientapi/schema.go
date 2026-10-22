@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"math"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -234,7 +233,7 @@ func (is *issues) responseData(path string, v any, raw json.RawMessage, p presen
 }
 
 // variables is ZResponseVariables: strings and numbers.
-func (is *issues) variables(path string, v any, raw json.RawMessage) (map[string]any, bool) {
+func (is *issues) variables(path string, v any, raw json.RawMessage) map[string]any {
 	members, ok := is.record(path, v, raw, optional, func(path string, v any) {
 		if _, isString := v.(string); isString {
 			return
@@ -244,28 +243,28 @@ func (is *issues) variables(path string, v any, raw json.RawMessage) (map[string
 		}
 	})
 	if !ok {
-		return nil, false
+		return nil
 	}
 	out := make(map[string]any, len(members))
 	for _, m := range members {
 		out[m.Key] = v.(map[string]any)[m.Key]
 	}
-	return out, true
+	return out
 }
 
 // ttc is ZResponseTtcInput: numbers, clamped later by the response module.
-func (is *issues) ttc(path string, v any, raw json.RawMessage) (map[string]float64, bool) {
+func (is *issues) ttc(path string, v any, raw json.RawMessage) map[string]float64 {
 	members, ok := is.record(path, v, raw, optional, func(path string, v any) {
 		is.number(path, v, required)
 	})
 	if !ok {
-		return nil, false
+		return nil
 	}
 	out := make(map[string]float64, len(members))
 	for _, m := range members {
 		out[m.Key], _ = finite(v.(map[string]any)[m.Key])
 	}
-	return out, true
+	return out
 }
 
 // coerceDate is z.coerce.date(): whatever `new Date(value)` makes of the value must be a valid date.
@@ -345,11 +344,6 @@ func (is *issues) meta(path string, v any) map[string]any {
 func isAbsent(v any) bool {
 	_, ok := v.(absent)
 	return ok
-}
-
-// tooBig is zod 4's default message for a string over its maximum length.
-func tooBig(max int) string {
-	return "Too big: expected string to have <=" + strconv.Itoa(max) + " characters"
 }
 
 // jsTrim is String.prototype.trim, which z.string().trim() applies before its checks.

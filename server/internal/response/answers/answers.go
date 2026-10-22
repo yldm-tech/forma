@@ -273,7 +273,7 @@ func (c checker) multiSelectOther(e *element, value any) (Error, bool) {
 	if sentinel == -1 {
 		return Error{}, false
 	}
-	var text any = jsvalue.Undefined
+	text := jsvalue.Undefined
 	if sentinel+1 < len(arr) {
 		text = arr[sentinel+1]
 	}

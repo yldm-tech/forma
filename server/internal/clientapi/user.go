@@ -56,7 +56,7 @@ func (h *Handler) identify(c *gin.Context) {
 	}
 	var attrs []jsvalue.Member
 	if a, ok := obj["attributes"]; ok && a != nil {
-		switch a.(type) {
+		switch list := a.(type) {
 		case map[string]any:
 			members, err := jsvalue.DecodeObject(rawMember(text, "attributes"))
 			if err != nil {
@@ -66,7 +66,7 @@ func (h *Handler) identify(c *gin.Context) {
 			attrs = members
 		case []any:
 			// An array is an object too: its indexes are its keys.
-			for i, v := range a.([]any) {
+			for i, v := range list {
 				attrs = append(attrs, jsvalue.Member{Key: fmt.Sprint(i), Value: v})
 			}
 		}

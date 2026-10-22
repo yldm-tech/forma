@@ -56,8 +56,8 @@ func parseResponseInput(body any, text string, v2 bool) (*responseInput, *issues
 	out.EndingID = is.optString("endingId", in.get("endingId"), nullish)
 	out.Language = is.optString("language", in.get("language"), optional)
 	out.Data, _ = is.responseData("data", in.get("data"), rawMember(text, "data"), required)
-	out.Variables, _ = is.variables("variables", in.get("variables"), rawMember(text, "variables"))
-	out.TTC, _ = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
+	out.Variables = is.variables("variables", in.get("variables"), rawMember(text, "variables"))
+	out.TTC = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
 	out.Meta = is.meta("meta", in.get("meta"))
 	if v2 {
 		if raw, ok := is.id("contactId", in.get("contactId"), nullish); ok {
@@ -339,8 +339,8 @@ func (h *Handler) updateResponse(c *gin.Context) {
 	update.EndingIDSet = !isAbsent(endingID)
 	update.EndingID = is.optString("endingId", endingID, nullish)
 	data, hasData := is.responseData("data", in.get("data"), rawMember(text, "data"), optional)
-	update.Variables, _ = is.variables("variables", in.get("variables"), rawMember(text, "variables"))
-	update.TTC, _ = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
+	update.Variables = is.variables("variables", in.get("variables"), rawMember(text, "variables"))
+	update.TTC = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
 	update.Language = is.optString("language", in.get("language"), optional)
 	pinAuthToken := is.optString("pinAuthToken", in.get("pinAuthToken"), nullish)
 	if is.failed() {
