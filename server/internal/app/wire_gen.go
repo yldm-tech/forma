@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
@@ -197,10 +198,14 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	webhookService := webhook.NewService(webhookRepository, authorizer, limiter, emitter, ssrfGuard, log)
 	webhookHandler := webhook.NewHandler(webhookService, sessions)
 	v1Handler := webhook.NewV1Handler(cfg, webhookService, authenticator, workspaceRepository, log)
+	integrationRepository := integration.NewRepository(db, cipher, log)
+	integrationService := integration.NewService(cfg, integrationRepository, authorizer, limiter, emitter, client, log)
+	integrationHandler := integration.NewHandler(integrationService, sessions)
+	oAuthHandler := integration.NewOAuthHandler(integrationService, sessions, limiter, log)
 	notificationHandler := notification.NewHandler()
 	attachmentExporter := analysis.NewAttachmentExporter(db, storageService, workspaceRepository, log)
 	attachmentsHandler := analysis.NewAttachmentsHandler(analysisService, attachmentExporter, middleware, auditor, limiter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -258,7 +263,17 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	limiter := ratelimit.New(cfg, redisClient, log)
 	sender := followup.NewSender(cfg, db, mailerMailer, limiter, log)
 	notifier := notification.NewNotifier(cfg, db, mailerMailer, log)
-	handoffs := _wireHandoffsValue
+	cipher, err := secret.NewCipher(cfg)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	integrationRepository := integration.NewRepository(db, cipher, log)
+	integrationDeliverer := integration.NewDeliverer(cfg, integrationRepository, redisClient, log)
+	handoffs := NewHandoffs(integrationDeliverer)
 	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
 	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
@@ -276,10 +291,6 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 	}, nil
 }
-
-var (
-	_wireHandoffsValue = pipeline.Handoffs{}
-)
 
 // wire.go:
 
@@ -331,5 +342,8 @@ var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
 var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs, empty until those modules land.
-var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, wire.Value(pipeline.Handoffs{}), pipeline.NewWorker)
+// integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
+var integrationSet = wire.NewSet(integration.NewRepository, integration.NewService, integration.NewHandler, integration.NewOAuthHandler)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
+var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, NewHandoffs, pipeline.NewWorker)

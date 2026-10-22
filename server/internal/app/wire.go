@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
@@ -187,17 +188,28 @@ var webhookSet = wire.NewSet(
 	webhook.NewV1Handler,
 )
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs, empty until those modules land.
+// integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
+var integrationSet = wire.NewSet(
+	integration.NewRepository,
+	integration.NewService,
+	integration.NewHandler,
+	integration.NewOAuthHandler,
+)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
 	ratelimit.New,
 	mailer.New,
 	ssrf.New,
+	secret.NewCipher,
 	webhook.NewRepository,
 	webhook.NewDeliverer,
 	followup.NewSender,
 	notification.NewNotifier,
-	wire.Value(pipeline.Handoffs{}),
+	integration.NewRepository,
+	integration.NewDeliverer,
+	NewHandoffs,
 	pipeline.NewWorker,
 )
 
@@ -224,6 +236,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,
+		integrationSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
