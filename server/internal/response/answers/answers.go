@@ -15,15 +15,15 @@ import (
 
 // Element types the checks treat specially.
 const (
-	typeOpenText            = "openText"
-	typeMultipleChoiceMulti = "multipleChoiceMulti"
+	typeOpenText             = "openText"
+	typeMultipleChoiceMulti  = "multipleChoiceMulti"
 	typeMultipleChoiceSingle = "multipleChoiceSingle"
-	typeCTA                 = "cta"
-	typeRanking             = "ranking"
-	typeMatrix              = "matrix"
-	typeAddress             = "address"
-	typeContactInfo         = "contactInfo"
-	typeFileUpload          = "fileUpload"
+	typeCTA                  = "cta"
+	typeRanking              = "ranking"
+	typeMatrix               = "matrix"
+	typeAddress              = "address"
+	typeContactInfo          = "contactInfo"
+	typeFileUpload           = "fileUpload"
 )
 
 // otherChoiceID is the id of a choice element's "Other" option.
