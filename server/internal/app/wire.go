@@ -28,6 +28,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
@@ -127,6 +128,13 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
+// responseSet is response collection: the steps the client API drives, the response views' routes under /api/app, and the job enqueuer its writes share their transaction with.
+var responseSet = wire.NewSet(
+	jobs.NewEnqueuer,
+	response.NewService,
+	response.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -144,6 +152,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		contactSet,
 		v3Set,
 		surveyConfigSet,
+		responseSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

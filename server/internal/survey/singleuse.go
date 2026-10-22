@@ -7,12 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
@@ -83,4 +85,38 @@ func (s *Service) SingleUseLinks(ctx context.Context, caller Caller, surveyID uu
 		links = append(links, SingleUseLink{SuID: id, SuToken: SingleUseSignature(s.cfg.EncryptionKey, surveyID, id)})
 	}
 	return links, nil
+}
+
+// cuid2Shape is zod's cuid2 check, what forma2's isCuid required of a decrypted single-use id.
+var cuid2Shape = regexp.MustCompile(`^[0-9a-z]+$`)
+
+// CanonicalSingleUseID is forma2's validateSurveySingleUseLinkParams: the single-use id a link's suId and suToken stand for, or false when they do not open. suId is trimmed. On an encrypted link it opens as SingleUseLinks sealed it (base64url, bound to the survey) or as forma2 encrypted it (symmetricEncrypt under ENCRYPTION_KEY), and must hold an id of cuid2's shape; on a plain link suToken must be its signature, compared in constant time.
+func CanonicalSingleUseID(cipher *secret.Cipher, key []byte, surveyID uuid.UUID, isEncrypted bool, suID, suToken string) (string, bool) {
+	suID = strings.TrimSpace(suID)
+	if suID == "" {
+		return "", false
+	}
+	if !isEncrypted {
+		if suToken == "" || !hmac.Equal([]byte(SingleUseSignature(key, surveyID, suID)), []byte(suToken)) {
+			return "", false
+		}
+		return suID, true
+	}
+	id := ""
+	if sealed, err := base64.RawURLEncoding.DecodeString(suID); err == nil {
+		if plain, err := cipher.Open(sealed, singleUseContext(surveyID)); err == nil {
+			id = string(plain)
+		}
+	}
+	if id == "" {
+		plain, err := secret.DecryptForma2(suID, key, false)
+		if err != nil {
+			return "", false
+		}
+		id = plain
+	}
+	if len(id) < 2 || len(id) > 32 || !cuid2Shape.MatchString(id) {
+		return "", false
+	}
+	return id, true
 }
