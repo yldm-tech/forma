@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -72,6 +73,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		Audit:    emitter,
 		Authz:    authorizer,
 	}
+	sessions := auth.NewSessions(cfg, db, log)
+	authenticator := apikey.NewAuthenticator(db, log)
 	pinger, err := health.NewDatabasePinger(db)
 	if err != nil {
 		cleanup3()
@@ -81,7 +84,6 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	handler := health.NewHandler(pinger, log)
 	repository := auth.NewRepository(db)
-	sessions := auth.NewSessions(cfg, db, log)
 	inviteRepository := invite.NewRepository(db)
 	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
 	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
@@ -126,9 +128,12 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, log)
-	authenticator := apikey.NewAuthenticator(db, log)
 	guard := v3api.NewGuard(sessions, authenticator, limiter, log)
 	surveyHandler := survey.NewHandler(surveyService, sessions, guard, log)
+	contactRepository := contact.NewRepository(db)
+	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)
+	contactHandler := contact.NewHandler(contactService, sessions)
+	v3Handler := contact.NewV3Handler(contactService)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -136,7 +141,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -197,8 +202,11 @@ var teamSet = wire.NewSet(team.NewRepository, team.NewService, team.NewHandler)
 // inviteSet is invites and their acceptance; sign-up redeems invites through it.
 var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(new(auth.InviteRedeemer), new(*invite.Service)), invite.NewHandler)
 
-// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
-var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys, and the API key authentication of /api/v3.
+var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler, apikey.NewAuthenticator)
+
+// contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
+var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
 
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
-var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, apikey.NewAuthenticator, v3api.NewGuard, survey.NewHandler)
+var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)

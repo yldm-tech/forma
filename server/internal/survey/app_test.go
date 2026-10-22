@@ -153,7 +153,13 @@ func TestEditorSaveSchedulesAndAppSegment(t *testing.T) {
 	other, _ := e.organization(e.user())
 	foreignWS := e.workspace(other)
 	foreign := e.insert(`INSERT INTO segments (workspace_id, title) VALUES (?, 'Theirs') RETURNING id`, foreignWS)
-	e.fails(e.do(owner, http.MethodPut, appPath(id, "/segment"), map[string]any{"segmentId": foreign}), http.StatusNotFound, apperr.CodeNotFound, "")
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/segment"), map[string]any{"segmentId": foreign}), http.StatusBadRequest, CodeWorkspaceMismatch, "Segment and survey are not in the same workspace")
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/segment"), map[string]any{"segmentId": uuid.NewString()}), http.StatusNotFound, apperr.CodeNotFound, "")
+	another := e.insert(`INSERT INTO segments (workspace_id, title, is_private) VALUES (?, 'Others', false) RETURNING id`, ws)
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/segment"), map[string]any{"segmentId": another}), http.StatusOK, &saved)
+	if saved.Segment == nil || saved.Segment.ID != another || e.count(`SELECT count(*) FROM segments WHERE id = ?`, public) != 1 {
+		t.Fatal("switching away from a shared segment deleted it")
+	}
 
 	sv = e.editorSurvey(owner, id)
 	sv["type"] = "link"

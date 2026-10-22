@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZId } from "./common";
+import { ZId, ZUuid } from "./common";
 
 // The segment filter has operators, these are all the types of operators that can be used
 export const BASE_OPERATORS = [
@@ -144,7 +144,8 @@ const ZSegmentSurveyInteractionFilterValueBase = z.object({
   // Bounded to cap the payload from an untrusted client (no unbounded array). 100 surveys is far
   // beyond any realistic single-filter selection. Ownership is still enforced at write time by
   // assertSurveyInteractionSurveyIds (checks the ids exist in the workspace).
-  surveyIds: z.array(ZId).max(100),
+  // Survey ids are uuids in the Go server; cuid2 ids remain valid for trees saved by forma2.
+  surveyIds: z.array(z.union([ZId, ZUuid])).max(100),
   within: z.object({
     amount: z.number().int().min(1).max(999),
     unit: ZSurveyInteractionTimeUnit,

@@ -358,21 +358,30 @@ func (s *Service) SetSlug(ctx context.Context, caller Caller, id uuid.UUID, slug
 	return s.repo.byID(ctx, id)
 }
 
-// AttachSegment is forma2's loadNewSegmentInSurvey: the survey moves to another of its workspace's segments, and a private segment it leaves behind is deleted.
-func (s *Service) AttachSegment(ctx context.Context, caller Caller, id, segmentID uuid.UUID) (*Survey, error) {
+// CodeWorkspaceMismatch is the failure of targeting a segment of another workspace.
+const CodeWorkspaceMismatch = "workspace_mismatch"
+
+// AttachSegment is forma2's loadNewSegmentAction over loadNewSegmentInSurvey: the survey moves to another segment of its workspace, a private segment it leaves behind is deleted, and the change is audited as an update of the survey.
+func (s *Service) AttachSegment(ctx context.Context, caller Caller, id, segmentID uuid.UUID) (out *Survey, err error) {
 	sv, err := s.authorized(ctx, caller, id, authz.SurveyWrite)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.stateMutation(ctx, sv.WorkspaceID); err != nil {
-		return nil, err
-	}
-	seg, err := s.repo.segmentInWorkspace(ctx, segmentID, sv.WorkspaceID)
+	defer func() {
+		s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, id.String(), s.organizationOf(ctx, sv.WorkspaceID), err, sv, out)
+	}()
+	seg, err := s.repo.segment(ctx, segmentID)
 	if err != nil {
 		return nil, err
 	}
 	if seg == nil {
 		return nil, apperr.NotFound("Segment", segmentID.String())
+	}
+	if seg.WorkspaceID != sv.WorkspaceID {
+		return nil, apperr.InvalidInput(CodeWorkspaceMismatch, "Segment and survey are not in the same workspace")
+	}
+	if err := s.stateMutation(ctx, sv.WorkspaceID); err != nil {
+		return nil, err
 	}
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
 		if err := tx.setSurveySegment(ctx, id, &segmentID); err != nil {
