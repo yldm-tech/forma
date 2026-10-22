@@ -166,7 +166,7 @@ func TestCursors(t *testing.T) {
 		t.Fatalf("run cursor %+v %v", c, err)
 	}
 	for _, token := range []string{"%%%", encode(`{"version":1,"value":"` + at.Format(time.RFC3339) + `"}`), encode(`{"version":1,"value":"soon","id":"` + r.ID.String() + `"}`), encode(`{"version":9,"value":"` + at.Format(time.RFC3339) + `","id":"` + r.ID.String() + `"}`)} {
-		problem(decodeRunCursor(token))
+		_ = problem(decodeRunCursor(token))
 	}
 }
 
