@@ -1,0 +1,37 @@
+{
+  "case": "v1-og-image",
+  "description": "Open Graph image for a survey page; body is an 800x400 PNG.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/client/og",
+    "query": {
+      "brandColor": "#1e40af",
+      "name": "Link Feedback Survey"
+    },
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "accept": "image/*"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control",
+      "access-control-allow-methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+      "access-control-allow-origin": "*",
+      "cache-control": "public, s-maxage=600, max-age=1800, stale-while-revalidate=600, stale-if-error=600",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "image/png",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "png",
+    "body": {
+      "width": 800,
+      "height": 400
+    }
+  }
+}

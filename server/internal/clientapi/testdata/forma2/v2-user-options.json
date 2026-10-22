@@ -1,0 +1,34 @@
+{
+  "case": "v2-user-options",
+  "description": "CORS preflight for the user endpoint.",
+  "request": {
+    "method": "OPTIONS",
+    "path": "/api/v2/client/<id:workspace>/user",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "content-type"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control",
+      "access-control-allow-methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+      "access-control-allow-origin": "*",
+      "cache-control": "public, s-maxage=3600, max-age=3600",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {}
+    }
+  }
+}
