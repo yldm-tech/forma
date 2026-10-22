@@ -68,7 +68,7 @@ func (s *Service) CreateDisplay(ctx context.Context, in DisplayInput) (*Display,
 	}
 
 	d := Display{ContactID: contactID, SurveyID: surveyID}
-	if err := s.db.WithContext(ctx).Raw(`INSERT INTO displays (survey_id, contact_id) VALUES (?, ?) RETURNING id`, surveyID, contactID).Scan(&d.ID).Error; err != nil {
+	if err := s.db.WithContext(ctx).Raw(`INSERT INTO displays (survey_id, contact_id) VALUES (?, ?) RETURNING id`, surveyID, contactID).Row().Scan(&d.ID); err != nil {
 		return nil, fmt.Errorf("create display: %w", err)
 	}
 	return &d, nil
@@ -85,7 +85,7 @@ func createContactWithUserID(ctx context.Context, db *gorm.DB, workspaceID uuid.
 		if len(keys) == 0 {
 			return fmt.Errorf("workspace %s has no userId attribute key", workspaceID)
 		}
-		if err := tx.Raw(`INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, workspaceID).Scan(&id).Error; err != nil {
+		if err := tx.Raw(`INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, workspaceID).Row().Scan(&id); err != nil {
 			return fmt.Errorf("create contact: %w", err)
 		}
 		if err := tx.Exec(`INSERT INTO contact_attributes (contact_id, attribute_key_id, value_text) VALUES (?, ?, ?)`, id, keys[0], userID).Error; err != nil {
