@@ -1,4 +1,6 @@
 import type { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
+import { isSafeIdentifier } from "@forma/types/safe-identifier";
+import type { TFunction } from "i18next";
 
 // forma2's contact attribute key rules shared by the attributes page, the CSV import and the contact editor (modules/contacts/lib/attribute-key-policy.ts, lib/utils/helper.ts).
 
@@ -36,3 +38,26 @@ export const isStringMatch = (query: string, value: string): boolean => {
 
 /** The label a key is shown with: its name, else the key itself. */
 export const attributeKeyLabel = (key: Pick<AttributeKey, "key" | "name">): string => key.name ?? key.key;
+
+/** forma2's search on the attributes page: the key, the name or the description contains the text, ignoring case. */
+export const filterAttributeKeys = (keys: AttributeKey[], search: string): AttributeKey[] => {
+  if (!search) return keys;
+  const query = search.toLowerCase();
+  return keys.filter(
+    (key) =>
+      key.key.toLowerCase().includes(query) ||
+      key.name?.toLowerCase().includes(query) ||
+      key.description?.toLowerCase().includes(query)
+  );
+};
+
+/** The create form's error for a new key, or "": required, a safe identifier, and not reserved. */
+export const newAttributeKeyError = (key: string, t: TFunction): string => {
+  if (!key) return t("workspace.contacts.attribute_key_required");
+  if (!isSafeIdentifier(key)) return t("workspace.contacts.attribute_key_safe_identifier_required");
+  if (isReservedAttributeKey(key))
+    return t("workspace.contacts.attribute_key_reserved_future_default", {
+      reservedKeys: RESERVED_ATTRIBUTE_KEYS_TEXT,
+    });
+  return "";
+};

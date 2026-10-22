@@ -36,6 +36,7 @@ import { Route as AuthenticatedOrganizationsOrganizationIdLandingRouteImport } f
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings'
 import { Route as AuthenticatedSetupOrganizationCreateRouteImport } from './routes/_authenticated/setup/organization/create'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport } from './routes/_authenticated/workspaces/$workspaceId/attributes'
 import { Route as AuthenticatedWorkspacesWorkspaceIdTagsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/tags'
 import { Route as AuthenticatedWorkspacesWorkspaceIdUserActionsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/user-actions'
 import { Route as AuthForgotPasswordResetIndexRouteImport } from './routes/auth/forgot-password/reset/index'
@@ -208,6 +209,12 @@ const AuthenticatedWorkspacesWorkspaceIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdAttributesRoute =
+  AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport.update({
+    id: '/attributes',
+    path: '/attributes',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdTagsRoute =
   AuthenticatedWorkspacesWorkspaceIdTagsRouteImport.update({
     id: '/tags',
@@ -373,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -420,6 +428,7 @@ export interface FileRoutesByTo {
   '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -472,6 +481,7 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/_authenticated/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
   '/_authenticated/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
+  '/_authenticated/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/_authenticated/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/_authenticated/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/landing'
     | '/organizations/$organizationId/settings'
     | '/setup/organization/create'
+    | '/workspaces/$workspaceId/attributes'
     | '/workspaces/$workspaceId/tags'
     | '/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/account/settings/profile'
     | '/organizations/$organizationId/landing'
     | '/setup/organization/create'
+    | '/workspaces/$workspaceId/attributes'
     | '/workspaces/$workspaceId/tags'
     | '/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -622,6 +634,7 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/landing'
     | '/_authenticated/organizations/$organizationId/settings'
     | '/_authenticated/setup/organization/create'
+    | '/_authenticated/workspaces/$workspaceId/attributes'
     | '/_authenticated/workspaces/$workspaceId/tags'
     | '/_authenticated/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -850,6 +863,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRouteImport
       parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
+    '/_authenticated/workspaces/$workspaceId/attributes': {
+      id: '/_authenticated/workspaces/$workspaceId/attributes'
+      path: '/attributes'
+      fullPath: '/workspaces/$workspaceId/attributes'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
     '/_authenticated/workspaces/$workspaceId/tags': {
       id: '/_authenticated/workspaces/$workspaceId/tags'
       path: '/tags'
@@ -1062,6 +1082,7 @@ const AuthenticatedAccountSettingsRouteWithChildren =
   )
 
 interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
+  AuthenticatedWorkspacesWorkspaceIdAttributesRoute: typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   AuthenticatedWorkspacesWorkspaceIdTagsRoute: typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   AuthenticatedWorkspacesWorkspaceIdUserActionsRoute: typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
@@ -1082,6 +1103,8 @@ interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
 
 const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWorkspaceIdRouteChildren =
   {
+    AuthenticatedWorkspacesWorkspaceIdAttributesRoute:
+      AuthenticatedWorkspacesWorkspaceIdAttributesRoute,
     AuthenticatedWorkspacesWorkspaceIdTagsRoute:
       AuthenticatedWorkspacesWorkspaceIdTagsRoute,
     AuthenticatedWorkspacesWorkspaceIdUserActionsRoute:
