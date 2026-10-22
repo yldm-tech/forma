@@ -60,9 +60,15 @@ func newProviders(cfg config.Config) *providers {
 func trimSlash(s string) string { return strings.TrimRight(s, "/") }
 
 // Redirect URIs of the providers whose path forma2 fixed under WEBAPP_URL; Google's is GOOGLE_SHEETS_REDIRECT_URL itself.
-func (p *providers) airtableRedirectURI() string { return p.webApp + "/api/v1/integrations/airtable/callback" }
-func (p *providers) notionRedirectURI() string   { return p.webApp + "/api/v1/integrations/notion/callback" }
-func (p *providers) slackRedirectURI() string    { return p.webApp + "/api/v1/integrations/slack/callback" }
+func (p *providers) airtableRedirectURI() string {
+	return p.webApp + "/api/v1/integrations/airtable/callback"
+}
+func (p *providers) notionRedirectURI() string {
+	return p.webApp + "/api/v1/integrations/notion/callback"
+}
+func (p *providers) slackRedirectURI() string {
+	return p.webApp + "/api/v1/integrations/slack/callback"
+}
 
 // apiResponse is a provider's answer: its status line and body.
 type apiResponse struct {

@@ -29,12 +29,12 @@ var defaultAirtableRefreshTiming = airtableRefreshTiming{lockTTL: 30 * time.Seco
 
 // tokens keeps the Google Sheets and Airtable access tokens fresh, persisting every refresh before the token is used. Notion and Slack tokens do not expire.
 type tokens struct {
-	repo     *Repository
-	rdb      *redis.Client
-	p        *providers
-	log      *slog.Logger
-	now      func() time.Time
-	refresh  airtableRefreshTiming
+	repo    *Repository
+	rdb     *redis.Client
+	p       *providers
+	log     *slog.Logger
+	now     func() time.Time
+	refresh airtableRefreshTiming
 }
 
 // google is forma2's googleSheet authorize: the stored access token while it is more than five minutes from expiry and Google's tokeninfo accepts it, otherwise a refreshed one, stored with the integration's email. Without a refresh token, or when Google refuses it, the error is errInvalidGrant: only reconnecting helps.

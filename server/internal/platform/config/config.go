@@ -224,7 +224,9 @@ func (c IntegrationsConfig) NotionEnabled() bool {
 	return c.NotionClientID != "" && c.NotionClientSecret != ""
 }
 
-func (c IntegrationsConfig) SlackEnabled() bool { return c.SlackClientID != "" && c.SlackClientSecret != "" }
+func (c IntegrationsConfig) SlackEnabled() bool {
+	return c.SlackClientID != "" && c.SlackClientSecret != ""
+}
 
 // GoogleEnabled, GitHubEnabled, AzureADEnabled and OIDCEnabled are forma2's *_OAUTH_ENABLED: a provider needs its client id and secret (and the generic one its issuer).
 func (s SSOConfig) GoogleEnabled() bool { return s.GoogleClientID != "" && s.GoogleClientSecret != "" }
