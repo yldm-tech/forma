@@ -124,7 +124,7 @@ func (in *Integration) view() View {
 
 // Overview is the integrations pages' data: the workspace's integrations, and which integrations this instance can connect (forma2 disabled a page's Connect button otherwise).
 type Overview struct {
-	Integrations []View         `json:"integrations"`
+	Integrations []View          `json:"integrations"`
 	Enabled      map[string]bool `json:"enabled"`
 }
 

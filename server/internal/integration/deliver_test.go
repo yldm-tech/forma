@@ -24,7 +24,9 @@ func base(sv uuid.UUID) LinkBase {
 	return LinkBase{CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), SurveyID: sv.String(), SurveyName: "Test Survey"}
 }
 
-func elements(ids ...string) Elements { return Elements{ElementIDs: ids, Elements: "Selected questions"} }
+func elements(ids ...string) Elements {
+	return Elements{ElementIDs: ids, Elements: "Selected questions"}
+}
 
 // everything is a link base with every extra column switched on but contact attributes.
 func everything(sv uuid.UUID) LinkBase {
