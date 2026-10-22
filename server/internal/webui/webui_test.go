@@ -84,7 +84,7 @@ func TestServeSDKBundles(t *testing.T) {
 				t.Fatalf("code = %d, want 200", rec.Code)
 			}
 			want := map[string]string{
-				"Content-Type":                "application/javascript; charset=utf-8",
+				"Content-Type":                "application/javascript; charset=UTF-8",
 				"Cache-Control":               "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
 				"Access-Control-Allow-Origin": "*",
 				"Vary":                        "Accept-Encoding",

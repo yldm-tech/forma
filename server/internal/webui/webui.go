@@ -85,9 +85,9 @@ func (h *Handler) serve(c *gin.Context) {
 				c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
 				c.Header("Access-Control-Allow-Origin", "*")
 				c.Header("Vary", "Accept-Encoding")
-				// Go has no MIME type for .cjs and would sniff text/plain, which browsers refuse to execute.
+				// Go has no MIME type for .cjs and would sniff text/plain, which browsers refuse to execute. The charset is spelled as forma2 sent it.
 				if ext := path.Ext(name); ext == ".js" || ext == ".cjs" {
-					c.Header("Content-Type", "application/javascript; charset=utf-8")
+					c.Header("Content-Type", "application/javascript; charset=UTF-8")
 				}
 			default:
 				c.Header("Cache-Control", "no-cache")
