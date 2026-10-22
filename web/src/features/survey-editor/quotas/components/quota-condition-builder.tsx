@@ -1,0 +1,77 @@
+import { useCallback, useMemo } from "react";
+import { FieldErrors } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { TSurveyQuotaInput, TSurveyQuotaLogic } from "@forma/types/quota";
+import { TSurvey } from "@forma/types/surveys/types";
+import {
+  TQuotaConditionGroup,
+  createSharedConditionsFactory,
+  genericConditionsToQuota,
+  quotaConditionsToGeneric,
+} from "../../lib/shared-conditions-factory";
+import { ConditionsEditor } from "../../../../components/ui/conditions-editor/index";
+import type {
+  TConditionsEditorCallbacks,
+  TConditionsEditorConfig,
+} from "../../../../components/ui/conditions-editor/types";
+
+interface QuotaConditionBuilderProps {
+  survey: TSurvey;
+  conditions: TSurveyQuotaLogic;
+  onChange: (conditions: TSurveyQuotaLogic) => void;
+  quotaErrors?: FieldErrors<TSurveyQuotaInput>;
+  isSubmitted?: boolean;
+}
+
+export const QuotaConditionBuilder = ({
+  survey,
+  conditions,
+  onChange,
+  quotaErrors,
+  isSubmitted,
+}: QuotaConditionBuilderProps) => {
+  const { t } = useTranslation();
+
+  // Convert quota conditions to generic format
+  const genericConditions = useMemo(() => quotaConditionsToGeneric(conditions), [conditions]);
+
+  // Handle changes from the generic editor
+  const handleGenericChange = useCallback(
+    (newGenericConditions: TQuotaConditionGroup) => {
+      const newQuotaConditions = genericConditionsToQuota(newGenericConditions);
+      onChange(newQuotaConditions);
+    },
+    [onChange]
+  );
+
+  // Create both config and callbacks in a single useMemo using the shared factory
+  const { config, callbacks } = useMemo(
+    () =>
+      createSharedConditionsFactory(
+        {
+          survey,
+          t,
+          getDefaultOperator: () => "equals",
+        },
+        {
+          onConditionsChange: (updater) => {
+            const newConditions = updater(genericConditions);
+            handleGenericChange(newConditions);
+          },
+        }
+      ),
+    [survey, t, genericConditions, handleGenericChange]
+  );
+
+  return (
+    <div className="max-h-[150px] space-y-4 overflow-y-auto">
+      <ConditionsEditor
+        conditions={genericConditions}
+        config={config as TConditionsEditorConfig}
+        callbacks={callbacks as TConditionsEditorCallbacks}
+        quotaErrors={quotaErrors}
+        isSubmitted={isSubmitted}
+      />
+    </div>
+  );
+};

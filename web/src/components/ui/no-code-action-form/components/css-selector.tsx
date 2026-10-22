@@ -1,0 +1,49 @@
+import { UseFormReturn } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { TActionClassInput } from "@forma/types/action-classes";
+import { AdvancedOptionToggle } from "../../advanced-option-toggle";
+import { FormControl, FormField, FormItem } from "../../form";
+import { Input } from "../../input";
+
+interface CssSelectorProps {
+  form: UseFormReturn<TActionClassInput>;
+  disabled: boolean;
+}
+
+export const CssSelector = ({ form, disabled }: CssSelectorProps) => {
+  const { control } = form;
+  const { t } = useTranslation();
+  return (
+    <FormField
+      control={control}
+      name="noCodeConfig.elementSelector.cssSelector"
+      render={({ field, fieldState: { error } }) => (
+        <FormItem>
+          <FormControl>
+            <AdvancedOptionToggle
+              disabled={disabled}
+              htmlId="CssSelector"
+              isChecked={field.value !== undefined}
+              onToggle={(checked) => {
+                field.onChange(checked ? "" : undefined);
+              }}
+              title={t("workspace.actions.css_selector")}
+              description={t("workspace.actions.if_a_user_clicks_a_button_with_a_specific_css_class_or_id")}
+              childBorder={true}>
+              <div className="w-full rounded-lg border border-slate-100 p-4">
+                <Input
+                  type="text"
+                  className="bg-white"
+                  disabled={disabled}
+                  placeholder={t("workspace.actions.add_css_class_or_id")}
+                  {...field}
+                  isInvalid={!!error}
+                />
+              </div>
+            </AdvancedOptionToggle>
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  );
+};

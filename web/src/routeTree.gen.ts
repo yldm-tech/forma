@@ -43,6 +43,7 @@ import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteIm
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
 import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport } from './routes/_authenticated/setup/organization/$organizationId/invite'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRouteImport } from './routes/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -235,6 +236,12 @@ const AuthenticatedSetupOrganizationOrganizationIdInviteRoute =
     path: '/setup/organization/$organizationId/invite',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute =
+  AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRouteImport.update({
+    id: '/workspaces/$workspaceId_/surveys/$surveyId/edit',
+    path: '/workspaces/$workspaceId/surveys/$surveyId/edit',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -302,6 +310,7 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -339,6 +348,7 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/organizations/$organizationId/settings/'
+    | '/workspaces/$workspaceId/surveys/$surveyId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/organizations/$organizationId/settings'
+    | '/workspaces/$workspaceId/surveys/$surveyId/edit'
   id:
     | '__root__'
     | '/'
@@ -444,6 +456,7 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
     | '/_authenticated/organizations/$organizationId/settings/'
+    | '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -696,6 +709,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit': {
+      id: '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
+      path: '/workspaces/$workspaceId/surveys/$surveyId/edit'
+      fullPath: '/workspaces/$workspaceId/surveys/$surveyId/edit'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -801,6 +821,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSetupOrganizationCreateRoute: typeof AuthenticatedSetupOrganizationCreateRoute
   AuthenticatedOrganizationsOrganizationIdIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
   AuthenticatedSetupOrganizationOrganizationIdInviteRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -820,6 +841,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedOrganizationsOrganizationIdIndexRoute,
   AuthenticatedSetupOrganizationOrganizationIdInviteRoute:
     AuthenticatedSetupOrganizationOrganizationIdInviteRoute,
+  AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute:
+    AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

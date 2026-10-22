@@ -1,5 +1,5 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, Circle } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Circle } from "lucide-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { usePortalContainer } from "./dialog";
@@ -8,6 +8,45 @@ export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+
+export const DropdownMenuSubTrigger = ({
+  className,
+  inset,
+  chevronSide = "right",
+  children,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
+  inset?: boolean;
+  chevronSide?: "left" | "right";
+}) => (
+  <DropdownMenuPrimitive.SubTrigger
+    className={cn(
+      "flex cursor-default items-center rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 outline-hidden select-none hover:text-slate-700 focus:bg-slate-100 data-[state=open]:bg-slate-100",
+      inset && "pl-8",
+      className
+    )}
+    {...props}>
+    {chevronSide === "left" && <ChevronLeft className="mr-2 size-4" />}
+    {children}
+    {chevronSide === "right" && <ChevronRight className="ml-auto size-4" />}
+  </DropdownMenuPrimitive.SubTrigger>
+);
+
+export const DropdownMenuSubContent = ({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>) => (
+  <DropdownMenuPrimitive.Portal container={usePortalContainer()}>
+    <DropdownMenuPrimitive.SubContent
+      className={cn(
+        "z-50 max-h-[min(20rem,var(--radix-dropdown-menu-content-available-height))] min-w-32 overflow-x-hidden overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 font-medium text-slate-600 shadow-xs hover:text-slate-700",
+        className
+      )}
+      {...props}
+    />
+  </DropdownMenuPrimitive.Portal>
+);
 
 export const DropdownMenuContent = ({
   className,
@@ -97,4 +136,15 @@ export const DropdownMenuSeparator = ({
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>) => (
   <DropdownMenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-slate-100", className)} {...props} />
+);
+
+export const DropdownMenuLabel = ({
+  className,
+  inset,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & { inset?: boolean }) => (
+  <DropdownMenuPrimitive.Label
+    className={cn("px-2 py-1.5 text-sm font-semibold text-slate-900", inset && "pl-8", className)}
+    {...props}
+  />
 );

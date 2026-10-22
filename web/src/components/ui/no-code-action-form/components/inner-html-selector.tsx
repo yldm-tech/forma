@@ -1,0 +1,53 @@
+import { UseFormReturn } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { TActionClassInput } from "@forma/types/action-classes";
+import { AdvancedOptionToggle } from "../../advanced-option-toggle";
+import { FormControl, FormField, FormItem } from "../../form";
+import { Input } from "../../input";
+
+interface InnerHtmlSelectorProps {
+  form: UseFormReturn<TActionClassInput>;
+  disabled: boolean;
+}
+
+export const InnerHtmlSelector = ({ form, disabled }: InnerHtmlSelectorProps) => {
+  const { control } = form;
+  const { t } = useTranslation();
+  return (
+    <FormField
+      control={control}
+      name="noCodeConfig.elementSelector.innerHtml"
+      render={({ field, fieldState: { error } }) => (
+        <FormItem>
+          <FormControl>
+            <AdvancedOptionToggle
+              disabled={disabled}
+              htmlId="InnerText"
+              isChecked={field.value !== undefined}
+              onToggle={(checked) => {
+                field.onChange(checked ? "" : undefined);
+              }}
+              title={t("workspace.actions.inner_text")}
+              description={t("workspace.actions.if_a_user_clicks_a_button_with_a_specific_text")}
+              childBorder={true}>
+              <div className="w-full rounded-lg border border-slate-100 p-4">
+                <div className="grid grid-cols-3 gap-x-8">
+                  <div className="col-span-3 flex items-end">
+                    <Input
+                      type="text"
+                      disabled={disabled}
+                      className="bg-white"
+                      placeholder={t("workspace.actions.eg_install_app")}
+                      {...field}
+                      isInvalid={!!error}
+                    />
+                  </div>
+                </div>
+              </div>
+            </AdvancedOptionToggle>
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  );
+};

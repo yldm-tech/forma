@@ -76,6 +76,17 @@ export default defineConfig({
         },
       },
       {
+        // forma2's survey editor moves focus to the field the author has just created or opened (a new choice, an added card, a popover's search box), in answer to their own action and never on page load, which is what the rule guards against.
+        files: [
+          "web/src/features/survey-editor/**",
+          "web/src/features/segments/**",
+          "web/src/components/ui/date-picker/**",
+          "web/src/components/ui/editor/**",
+          "web/src/components/ui/input-combo-box.tsx",
+        ],
+        rules: { "jsx-a11y/no-autofocus": "off" },
+      },
+      {
         // These tests were never linted.
         files: ["packages/survey-ui/src/**/*.test.ts"],
         rules: { "typescript/no-explicit-any": "off" },

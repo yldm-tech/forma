@@ -1,4 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { TLanguage, TWorkspace } from "@forma/types/workspace";
 import { api } from "../api";
 import type { OrganizationRole } from "../roles";
 import { organizationKeys } from "./organizations";
@@ -19,7 +20,18 @@ export interface WorkspaceAccess {
   isReadOnly: boolean;
 }
 
-export interface WorkspaceDetail extends Workspace {
+/** A workspace language as the server sends it. */
+export type WorkspaceLanguage = Omit<TLanguage, "createdAt" | "updatedAt"> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** The workspace with its settings (forma2's TWorkspace, timestamps as sent) and the caller's access to it. */
+export interface WorkspaceDetail
+  extends
+    Workspace,
+    Omit<TWorkspace, "id" | "name" | "organizationId" | "createdAt" | "updatedAt" | "languages"> {
+  languages: WorkspaceLanguage[];
   access: WorkspaceAccess;
 }
 
