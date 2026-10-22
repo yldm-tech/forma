@@ -8,6 +8,7 @@ import {
   SettingsIcon,
   TagIcon,
   UserIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -57,6 +58,12 @@ export const MainNavigation = ({
         pathname.startsWith(`${base}/contacts`) ||
         pathname.startsWith(`${base}/segments`) ||
         pathname.startsWith(`${base}/attributes`),
+    },
+    {
+      href: `${base}/workflows`,
+      label: t("common.workflows"),
+      icon: WorkflowIcon,
+      isActive: pathname.startsWith(`${base}/workflows`),
     },
     {
       href: `${base}/user-actions`,

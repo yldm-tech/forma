@@ -1,0 +1,16 @@
+/* Cursor and hit-testing overrides on top of @xyflow/react/dist/style.css, scoped through the .workflow-canvas class on the React Flow root. The selectors repeat xyflow's own classes to win on specificity whatever the stylesheet order. */
+
+/* Pointer mode: a node is first a click target (a click opens its config), so it shows the default arrow rather than xyflow's grab cursor, and grabbing only mid-drag. */
+.workflow-canvas .react-flow__node.selectable,
+.workflow-canvas .react-flow__node.draggable {
+  cursor: default;
+}
+
+.workflow-canvas .react-flow__node.draggable.dragging {
+  cursor: grabbing;
+}
+
+/* Pan mode: nodes are inert, so pointer events fall through to the pane and panning works even when the drag starts on a node. */
+.workflow-canvas.pan-mode .react-flow__node {
+  pointer-events: none;
+}
