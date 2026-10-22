@@ -339,3 +339,61 @@ func TestConnectThroughAppAPI(t *testing.T) {
 		t.Errorf("another workspace: %d", rec.Code)
 	}
 }
+
+// The provider lookups call the provider with the workspace's own tokens, so each is authorized on that workspace before anything is sent: another tenant is refused every one of them, and a read-only member the ones that serve the link modals, which need workspace.write.
+func TestLookupsAreTenantScoped(t *testing.T) {
+	e := newEnv(t)
+	o := e.owner()
+	e.survey(o.ws)
+	e.airtableFake()
+	e.connect(o.ws, TypeGoogleSheets, freshGoogleKey(e.now), "g@example.com", nil)
+	e.connect(o.ws, TypeAirtable, freshAirtableKey(e.now), "a@example.com", nil)
+	e.connect(o.ws, TypeNotion, map[string]any{"access_token": "ntn", "bot_id": "bot"}, "", nil)
+	e.connect(o.ws, TypeSlack, map[string]any{"access_token": "xoxb"}, "", nil)
+	outsider := e.owner()
+	reader := oauthCaller{user: e.user(), session: uuid.New(), org: o.org, ws: o.ws}
+	e.grant(o.org, o.ws, reader.user, "read")
+	providerCalls := func() int { return len(e.fake.to(http.MethodGet, "")) + len(e.fake.to(http.MethodPost, "")) }
+
+	prefix := "/api/app/workspaces/" + o.ws.String() + "/integrations"
+	routes := []struct {
+		path      string
+		readerMay bool
+	}{
+		{"/surveys", true},
+		{"/googleSheets/validate", false},
+		{"/googleSheets/spreadsheets/sheet1", false},
+		{"/airtable/bases", false},
+		{"/airtable/bases/app1/tables", true},
+		{"/notion/databases", false},
+		{"/slack/channels", false},
+	}
+	for _, r := range routes {
+		if rec := e.do(http.MethodGet, prefix+r.path, asUser(outsider.user), nil); rec.Code != http.StatusForbidden {
+			t.Errorf("an outsider on %s: %d %s", r.path, rec.Code, rec.Body)
+		}
+		if r.readerMay {
+			continue
+		}
+		if rec := e.do(http.MethodGet, prefix+r.path, asUser(reader.user), nil); rec.Code != http.StatusForbidden {
+			t.Errorf("a read-only member on %s: %d %s", r.path, rec.Code, rec.Body)
+		}
+	}
+	victim := oauthCaller{user: outsider.user, session: outsider.session, ws: o.ws}
+	if rec := e.do(http.MethodGet, "/api/v1/integrations/airtable/tables?baseId=app1", victim.headers(), nil); rec.Code != http.StatusUnauthorized {
+		t.Errorf("an outsider on the v1 Airtable tables: %d %s", rec.Code, rec.Body)
+	}
+	if n := providerCalls(); n != 0 {
+		t.Fatalf("refused lookups reached the provider %d times", n)
+	}
+
+	if rec := e.do(http.MethodGet, prefix+"/surveys", asUser(reader.user), nil); rec.Code != http.StatusOK {
+		t.Errorf("a read-only member's surveys: %d %s", rec.Code, rec.Body)
+	}
+	if rec := e.do(http.MethodGet, prefix+"/airtable/bases/app1/tables", asUser(reader.user), nil); rec.Code != http.StatusOK {
+		t.Errorf("a read-only member's Airtable tables: %d %s", rec.Code, rec.Body)
+	}
+	if rec := e.do(http.MethodGet, "/api/v1/integrations/airtable/tables?baseId=app1", reader.headers(), nil); rec.Code != http.StatusOK {
+		t.Errorf("a read-only member's v1 Airtable tables: %d %s", rec.Code, rec.Body)
+	}
+}
