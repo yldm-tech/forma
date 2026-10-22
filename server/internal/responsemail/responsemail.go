@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -249,6 +250,17 @@ func (a *Answers) HiddenValues(sv *Survey) []mailer.HiddenValue {
 		}
 	}
 	return out
+}
+
+// PublicBase is the origin relative storage URLs in emails resolve against, forma2's getPublicDomain: PUBLIC_URL, else WEBAPP_URL.
+func PublicBase(cfg config.Config) string {
+	if cfg.PublicURL != nil {
+		return strings.TrimRight(cfg.PublicURL.String(), "/")
+	}
+	if cfg.WebAppURL != nil {
+		return strings.TrimRight(cfg.WebAppURL.String(), "/")
+	}
+	return ""
 }
 
 // ResolveStorageURL is forma2's resolveStorageUrl as the email senders called it: a relative /storage URL made absolute against the public domain (the app's when there is none), anything else unchanged.

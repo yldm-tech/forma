@@ -118,17 +118,6 @@ func (s *Sender) organization(ctx context.Context, workspaceID uuid.UUID) (*orga
 	return &rows[0], nil
 }
 
-// PublicBase is the origin relative storage URLs in emails resolve against, forma2's getPublicDomain.
-func PublicBase(cfg config.Config) string {
-	if cfg.PublicURL != nil {
-		return strings.TrimRight(cfg.PublicURL.String(), "/")
-	}
-	if cfg.WebAppURL != nil {
-		return strings.TrimRight(cfg.WebAppURL.String(), "/")
-	}
-	return ""
-}
-
 // Send is forma2's sendFollowUpsForResponse. The response is read again as it is stored now, with its survey and organization; one unit of the organization's follow-up limit (50 an hour) is spent per response, and over the limit none of the response's follow-ups is sent. Every follow-up whose trigger the response meets runs concurrently; an `endings` trigger needs the response to have ended on one of its endings. locale is the respondent's, for the email's chrome and recalled dates.
 func (s *Sender) Send(ctx context.Context, responseID uuid.UUID, locale string) ([]Result, error) {
 	r, err := response.Load(ctx, s.db, responseID)
@@ -211,7 +200,7 @@ func (s *Sender) evaluate(ctx context.Context, f followUp, sv *responsemail.Surv
 	content, err := a.FollowUpContent(sv, responsemail.EmailOptions{
 		Subject: p.Subject, Body: p.Body, AttachResponseData: p.AttachResponseData,
 		IncludeVariables: p.IncludeVariables != nil && *p.IncludeVariables, IncludeHiddenFields: p.IncludeHiddenFields != nil && *p.IncludeHiddenFields,
-		LogoURL: logo, Locale: locale, PublicBase: PublicBase(s.cfg),
+		LogoURL: logo, Locale: locale, PublicBase: responsemail.PublicBase(s.cfg),
 	})
 	if err != nil {
 		return fail(err.Error())

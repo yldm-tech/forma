@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/responsemail"
@@ -78,7 +77,7 @@ func (n *Notifier) Content(rf ResponseFinished) (mailer.ResponseFinished, error)
 	if err != nil {
 		return mailer.ResponseFinished{}, err
 	}
-	public := followup.PublicBase(n.cfg)
+	public := responsemail.PublicBase(n.cfg)
 	app := strings.TrimRight(n.cfg.WebAppURL.String(), "/")
 	base := app + "/workspaces/" + rf.WorkspaceID.String()
 	c := mailer.ResponseFinished{

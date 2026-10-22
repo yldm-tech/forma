@@ -72,7 +72,11 @@ func TestAppCreateFlow(t *testing.T) {
 	if res.Code != http.StatusOK || strings.Contains(res.Body.String(), "secret") || strings.Contains(res.Body.String(), "whsec_") {
 		t.Fatalf("list = %d %s", res.Code, res.Body)
 	}
-	list := decode[[]View](t, res)
+	page := decode[ListResponse](t, res)
+	list := page.Webhooks
+	if !page.AllowInternalURLs {
+		t.Error("the page must know internal URLs are allowed")
+	}
 	if len(list) != 2 || list[0].ID != all.ID || list[1].ID != created.ID {
 		t.Fatalf("list is not newest first: %+v", list)
 	}

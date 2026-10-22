@@ -29,6 +29,12 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/webhooks/:webhookId", h.delete)
 }
 
+// ListResponse is the webhooks page's data: the workspace's webhooks, and whether DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS lets the URL field accept http and internal hosts, which forma2's page passed to its client-side URL check.
+type ListResponse struct {
+	Webhooks          []View `json:"webhooks"`
+	AllowInternalURLs bool   `json:"allowInternalUrls"`
+}
+
 func userID(c *gin.Context) uuid.UUID {
 	a, _ := httpapi.ActorFrom(c.Request.Context())
 	return a.UserID
@@ -45,7 +51,7 @@ func (h *Handler) list(c *gin.Context) {
 		httpapi.Fail(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, out)
+	c.JSON(http.StatusOK, ListResponse{Webhooks: out, AllowInternalURLs: h.svc.guard.AllowsInternal()})
 }
 
 func (h *Handler) create(c *gin.Context) {
