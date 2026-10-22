@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -20,12 +21,10 @@ type v1Data[T any] struct {
 	Data T `json:"data"`
 }
 
-func expectV1Error(t *testing.T, name string, res interface {
-	Result() *http.Response
-}, rec v1Error, status int, code, message string) {
+func expectV1Error(t *testing.T, name string, res *httptest.ResponseRecorder, rec v1Error, status int, code, message string) {
 	t.Helper()
-	if res.Result().StatusCode != status || rec.Code != code || rec.Message != message {
-		t.Errorf("%s: %d %+v, want %d %s %q", name, res.Result().StatusCode, rec, status, code, message)
+	if res.Code != status || rec.Code != code || rec.Message != message {
+		t.Errorf("%s: %d %+v, want %d %s %q", name, res.Code, rec, status, code, message)
 	}
 }
 

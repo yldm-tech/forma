@@ -44,7 +44,7 @@ func TestWebhookMatching(t *testing.T) {
 	e.webhook(f.ws, wrongTrigger.URL, "", "{responseUpdated}")
 	e.webhook(otherWS, wrongWorkspace.URL, "", "{responseCreated}")
 
-	r := e.respond(f, false, `{"q1":"a"}`, nil)
+	r := e.respond(f, false, `{"q1":"a"}`)
 	if err := e.work(job(response.EventResponseCreated, f, r, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestWebhookMatching(t *testing.T) {
 
 	// responseUpdated without a subscriber does nothing at all.
 	g := e.fixture()
-	if err := e.work(job(response.EventResponseUpdated, g, e.respond(g, false, `{}`, nil), 1)); err != nil {
+	if err := e.work(job(response.EventResponseUpdated, g, e.respond(g, false, `{}`), 1)); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(e.logs.String(), "no webhooks subscribed to responseUpdated") {
@@ -82,7 +82,7 @@ func TestWebhookPayload(t *testing.T) {
 	secret := webhook.GenerateSecret()
 	hook := e.webhook(f.ws, rec.URL+"/hook", secret, "{responseFinished}")
 	tag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'vip') RETURNING id`, f.ws)
-	r := e.respond(f, true, `{"q1":"<b>a</b>","q2":["/storage/ws1/private/a%20b.pdf","/storage/ws1/public/c.png","https://elsewhere.example/x.pdf"],"nested":{"f":["/storage/ws1/public/d.png"]}}`, nil)
+	r := e.respond(f, true, `{"q1":"<b>a</b>","q2":["/storage/ws1/private/a%20b.pdf","/storage/ws1/public/c.png","https://elsewhere.example/x.pdf"],"nested":{"f":["/storage/ws1/public/d.png"]}}`)
 	e.exec(`INSERT INTO response_tags (response_id, tag_id) VALUES (?, ?)`, r.ID, tag)
 	r2, _ := response.Load(context.Background(), e.db, r.ID)
 	j := job(response.EventResponseFinished, f, *r2, 1)
@@ -144,7 +144,7 @@ func TestWebhookFailureRetriesTheJob(t *testing.T) {
 	e.webhook(f.ws, ok.URL, "", "{responseFinished}")
 	e.webhook(f.ws, failing.URL, "", "{responseFinished}")
 	failing.failNext(10)
-	r := e.respond(f, true, `{"q1":"a"}`, nil)
+	r := e.respond(f, true, `{"q1":"a"}`)
 
 	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err == nil {
 		t.Fatal("a failed webhook must fail a non-final attempt")
@@ -173,7 +173,7 @@ func TestWebhookFailureRetriesTheJob(t *testing.T) {
 func TestUnrecoverableJobs(t *testing.T) {
 	e := newEnv(t, Handoffs{})
 	f := e.fixture()
-	r := e.respond(f, true, `{}`, nil)
+	r := e.respond(f, true, `{}`)
 	j := job(response.EventResponseFinished, f, r, 1)
 	j.Args.SurveyID = uuid.New()
 	if err := e.work(j); !isCancel(err) {
@@ -213,8 +213,8 @@ func TestNotificationEmails(t *testing.T) {
 	e.exec(`UPDATE users SET locale = 'ja-JP', notification_settings = jsonb_set(notification_settings, '{unsubscribedOrganizationIds}', to_jsonb(ARRAY[?]::text[])) WHERE id = ?`, f.org.String(), unsubscribedOrg)
 	_ = outsider
 
-	e.respond(f, false, `{}`, nil)
-	r := e.respond(f, true, `{"q1":"jane@example.com"}`, nil)
+	e.respond(f, false, `{}`)
+	r := e.respond(f, true, `{"q1":"jane@example.com"}`)
 	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -257,15 +257,15 @@ func TestAutoComplete(t *testing.T) {
 		_ = e.db.Raw(`SELECT status FROM surveys WHERE id = ?`, f.survey).Row().Scan(&s)
 		return s
 	}
-	e.respond(f, false, `{}`, nil)
-	first := e.respond(f, true, `{}`, nil)
+	e.respond(f, false, `{}`)
+	first := e.respond(f, true, `{}`)
 	if err := e.work(job(response.EventResponseFinished, f, first, 1)); err != nil {
 		t.Fatal(err)
 	}
 	if status() != "inProgress" {
 		t.Fatal("a partial response must not count towards the limit")
 	}
-	second := e.respond(f, true, `{}`, nil)
+	second := e.respond(f, true, `{}`)
 	if err := e.work(job(response.EventResponseFinished, f, second, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestAutoComplete(t *testing.T) {
 	// The status moved after the snapshot: the guarded write does nothing.
 	g := e.fixture()
 	e.exec(`UPDATE surveys SET auto_complete = 1 WHERE id = ?`, g.survey)
-	r := e.respond(g, true, `{}`, nil)
+	r := e.respond(g, true, `{}`)
 	sv, err := e.worker.loadSurvey(context.Background(), g.survey)
 	if err != nil {
 		t.Fatal(err)
@@ -325,7 +325,7 @@ func TestHandoffs(t *testing.T) {
 	e.exec(`UPDATE organizations SET display_time_zone = 'Asia/Tokyo' WHERE id = ?`, f.org)
 	owner := e.user("owner@example.com", f.survey)
 	e.member(f.org, owner, "owner")
-	r := e.respond(f, true, `{}`, nil)
+	r := e.respond(f, true, `{}`)
 	if err := e.work(job(response.EventResponseCreated, f, r, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +372,7 @@ func TestRiverEndToEnd(t *testing.T) {
 	rec := newReceiver(t)
 	rec.failNext(1)
 	e.webhook(f.ws, rec.URL, webhook.GenerateSecret(), "{responseFinished}")
-	r := e.respond(f, true, `{"q1":"jane@example.com"}`, nil)
+	r := e.respond(f, true, `{"q1":"jane@example.com"}`)
 
 	pool, cleanup, err := jobs.OpenPool(context.Background(), e.cfg)
 	if err != nil {

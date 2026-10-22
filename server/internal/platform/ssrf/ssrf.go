@@ -6,6 +6,7 @@ package ssrf
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -281,7 +282,9 @@ func parseLegacyIPv4(host string) (addr netip.Addr, isNumeric, ok bool) {
 	for i, n := range numbers[:len(numbers)-1] {
 		v += n << (8 * (3 - i))
 	}
-	return netip.AddrFrom4([4]byte{byte(v >> 24), byte(v >> 16), byte(v >> 8), byte(v)}), true, true
+	var b [4]byte
+	binary.BigEndian.PutUint32(b[:], uint32(v)) //nolint:gosec // v < 2^32: the last part was bounded above and the others are at most 255
+	return netip.AddrFrom4(b), true, true
 }
 
 func isDigits(s string) bool {

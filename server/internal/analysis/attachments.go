@@ -242,12 +242,18 @@ func (x *AttachmentExporter) resolve(ctx context.Context, sv *surveyDoc, respons
 		x.log.ErrorContext(ctx, "Refusing to export a response file stored outside the survey's workspace", "response_id", responseID, "element_id", elementID, "storage_id", storageID, "survey_workspace_id", sv.WorkspaceID)
 		return nil, AttachmentForeignWorkspace, nil
 	}
-	name, err := url.PathUnescape(encoded)
-	if err != nil {
+	name, ok := unescape(encoded)
+	if !ok {
 		x.log.WarnContext(ctx, "Skipping an attachment whose storage URL has malformed percent-encoding", "response_id", responseID, "element_id", elementID)
 		return nil, AttachmentInvalidURL, nil
 	}
 	return &storedObject{storageID: storageID, access: access, fileName: name}, "", nil
+}
+
+// unescape is decodeURIComponent: the object is stored under the decoded name, the URL carries it percent-encoded. A malformed escape, which a respondent can write, is reported rather than failing the export.
+func unescape(s string) (string, bool) {
+	decoded, err := url.PathUnescape(s)
+	return decoded, err == nil
 }
 
 // originalFileName is forma2's getOriginalFileNameFromUrl: the URL's last segment without its query, the name the uploader gave it (the --fid--<uuid> suffix removed, the extension kept), percent-decoded; "" when that fails.

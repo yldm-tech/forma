@@ -124,11 +124,11 @@ func rewriteStrings(dec *json.Decoder, buf *bytes.Buffer, fn func(string) string
 	}
 	switch t := tok.(type) {
 	case json.Delim:
-		closing := byte(']')
+		opening, closing := byte('['), byte(']')
 		if t == '{' {
-			closing = '}'
+			opening, closing = '{', '}'
 		}
-		buf.WriteByte(byte(t))
+		buf.WriteByte(opening)
 		for first := true; dec.More(); first = false {
 			if !first {
 				buf.WriteByte(',')

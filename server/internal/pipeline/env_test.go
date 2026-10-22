@@ -148,10 +148,10 @@ func (e *env) teamAccess(org, ws, user uuid.UUID) {
 }
 
 // respond stores a response to the fixture's survey and returns it as the pipeline payload carries it.
-func (e *env) respond(f fixture, finished bool, data string, endingID *string) response.Response {
+func (e *env) respond(f fixture, finished bool, data string) response.Response {
 	e.t.Helper()
-	id := e.insert(`INSERT INTO responses (survey_id, finished, data, ending_id, contact_attributes, meta) VALUES (?, ?, ?::jsonb, ?, '{"email":"respondent@example.com"}'::jsonb, '{"url":"https://example.com/?a=1"}'::jsonb) RETURNING id`,
-		f.survey, finished, data, endingID)
+	id := e.insert(`INSERT INTO responses (survey_id, finished, data, contact_attributes, meta) VALUES (?, ?, ?::jsonb, '{"email":"respondent@example.com"}'::jsonb, '{"url":"https://example.com/?a=1"}'::jsonb) RETURNING id`,
+		f.survey, finished, data)
 	r, err := response.Load(context.Background(), e.db, id)
 	if err != nil || r == nil {
 		e.t.Fatalf("load response: %v", err)
