@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"mime/multipart"
+	"net/textproto"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -278,8 +279,13 @@ func (e *env) do(user uuid.UUID, method, path string, body any) *httptest.Respon
 	return e.request(&user, method, path, r, contentType, nil)
 }
 
-// upload posts a CSV import form.
+// upload posts a CSV import form as a browser does, the file declared as text/csv.
 func (e *env) upload(user, ws uuid.UUID, csv, action string, attributeMap map[string]string) *httptest.ResponseRecorder {
+	e.t.Helper()
+	return e.uploadFile(user, ws, csv, "contacts.csv", "text/csv", action, attributeMap)
+}
+
+func (e *env) uploadFile(user, ws uuid.UUID, csv, filename, contentType, action string, attributeMap map[string]string) *httptest.ResponseRecorder {
 	e.t.Helper()
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
@@ -290,7 +296,12 @@ func (e *env) upload(user, ws uuid.UUID, csv, action string, attributeMap map[st
 		raw, _ := json.Marshal(attributeMap)
 		_ = w.WriteField("attributeMap", string(raw))
 	}
-	part, err := w.CreateFormFile("file", "contacts.csv")
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", `form-data; name="file"; filename="`+filename+`"`)
+	if contentType != "" {
+		header.Set("Content-Type", contentType)
+	}
+	part, err := w.CreatePart(header)
 	if err != nil {
 		e.t.Fatal(err)
 	}
