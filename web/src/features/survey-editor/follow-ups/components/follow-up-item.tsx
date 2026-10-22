@@ -1,0 +1,219 @@
+import { Trash2Icon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { getDeclaredIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
+import { TSurvey } from "@forma/types/surveys/types";
+import { TUserLocale } from "@forma/types/user";
+import { TFollowUpEmailToUser } from "../../types/survey-follow-up";
+import { FollowUpModal } from "./follow-up-modal";
+import { getElementsFromBlocks } from "../../lib/client-utils";
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import { ConfirmationModal } from "../../../../components/ui/confirmation-modal";
+import { TooltipRenderer } from "../../../../components/ui/tooltip";
+
+interface FollowUpItemProps {
+  followUp: TSurveyFollowUp;
+  localSurvey: TSurvey;
+  selectedLanguageCode: string;
+  userEmail: string;
+  teamMemberDetails: TFollowUpEmailToUser[];
+  setLocalSurvey: React.Dispatch<React.SetStateAction<TSurvey>>;
+  locale: TUserLocale;
+}
+
+export const FollowUpItem = ({
+  followUp,
+  localSurvey,
+  selectedLanguageCode,
+  userEmail,
+  teamMemberDetails,
+  setLocalSurvey,
+  locale,
+}: Readonly<FollowUpItemProps>) => {
+  const { t } = useTranslation();
+  const [editFollowUpModalOpen, setEditFollowUpModalOpen] = useState(false);
+  const [deleteFollowUpModalOpen, setDeleteFollowUpModalOpen] = useState(false);
+
+  const isEmailToInvalid = useMemo(() => {
+    const { to } = followUp.action.properties;
+
+    if (!to) return true;
+
+    // Verified email is always valid as an option (handled at execution time)
+    if (to === "verifiedEmail") {
+      return false;
+    }
+
+    // Derive questions from blocks
+    const questions = getElementsFromBlocks(localSurvey.blocks);
+
+    const matchedQuestion = questions.find((question) => {
+      if (question.id !== to) {
+        return false;
+      }
+
+      if (question.type === TSurveyElementTypeEnum.OpenText) {
+        return question.inputType === "email";
+      }
+
+      if (question.type === TSurveyElementTypeEnum.ContactInfo) {
+        return question.email.show;
+      }
+
+      return false;
+    });
+
+    // ENG-1837: the id list comes from the Embedded Data definitions, but the `enabled` gate stays.
+    // `deriveLegacyEmbeddedData` ignores `hiddenFields.enabled` by design and TLinkedEmbeddedField
+    // carries no equivalent, and this is the one reader that consults the flag — reading it here is a
+    // flag read, not a field-list read, so it keeps this recipient label behaving exactly as before.
+    const matchedHiddenField = localSurvey.hiddenFields?.enabled
+      ? // Editor surface: the ids come from the Hidden Fields card, not the saved rows. Only the
+        // slice that feeds it is passed, so this memo keeps depending on it rather than on the whole
+        // survey object.
+        getDeclaredIngestedStorageKeys({ hiddenFields: localSurvey.hiddenFields }).find(
+          (storageKey) => storageKey === to
+        )
+      : undefined;
+
+    const updatedTeamMemberDetails = teamMemberDetails.map((teamMemberDetail) => {
+      if (teamMemberDetail.email === userEmail) {
+        return { name: "Yourself", email: userEmail };
+      }
+
+      return teamMemberDetail;
+    });
+
+    const isUserEmailInTeamMemberDetails = updatedTeamMemberDetails.some(
+      (teamMemberDetail) => teamMemberDetail.email === userEmail
+    );
+
+    const updatedTeamMembers = isUserEmailInTeamMemberDetails
+      ? updatedTeamMemberDetails
+      : [...updatedTeamMemberDetails, { email: userEmail, name: "Yourself" }];
+
+    const matchedEmail = updatedTeamMembers.find((detail) => detail.email === to);
+
+    return !matchedQuestion && !matchedHiddenField && !matchedEmail;
+  }, [
+    followUp.action.properties,
+    // The whole `hiddenFields`, not its two sub-properties: a narrower dependency than the body
+    // actually reads lets the memo keep a value built from stale hidden fields (ENG-2366).
+    localSurvey.hiddenFields,
+    localSurvey.blocks,
+    teamMemberDetails,
+    userEmail,
+  ]);
+
+  const isEndingInvalid = useMemo(() => {
+    return followUp.trigger.type === "endings" && !followUp.trigger.properties?.endingIds?.length;
+  }, [followUp.trigger.properties?.endingIds?.length, followUp.trigger.type]);
+
+  return (
+    <>
+      <div className="relative cursor-pointer rounded-lg border border-slate-300 bg-white p-4 hover:bg-slate-50">
+        <button
+          type="button"
+          className="flex w-full flex-col items-start gap-y-2"
+          onClick={() => {
+            setEditFollowUpModalOpen(true);
+          }}>
+          <h3 className="text-slate-900">{followUp.name}</h3>
+          <div className="flex gap-x-2">
+            <Badge
+              size="normal"
+              type="gray"
+              text={
+                followUp.trigger.type === "response"
+                  ? t("workspace.surveys.edit.follow_ups_item_response_tag")
+                  : t("workspace.surveys.edit.follow_ups_item_ending_tag")
+              }
+            />
+
+            <Badge
+              size="normal"
+              type="gray"
+              text={t("workspace.surveys.edit.follow_ups_item_send_email_tag")}
+            />
+
+            {isEmailToInvalid || isEndingInvalid ? (
+              <Badge
+                size="normal"
+                type="warning"
+                text={t("workspace.surveys.edit.follow_ups_item_issue_detected_tag")}
+              />
+            ) : null}
+          </div>
+        </button>
+
+        <div className="absolute top-4 right-4 flex items-center">
+          <TooltipRenderer tooltipContent={t("common.delete")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async (e) => {
+                e.stopPropagation();
+                setDeleteFollowUpModalOpen(true);
+              }}
+              aria-label={t("common.delete")}>
+              <Trash2Icon className="size-4 text-slate-500" />
+            </Button>
+          </TooltipRenderer>
+        </div>
+      </div>
+
+      <FollowUpModal
+        localSurvey={localSurvey}
+        setLocalSurvey={setLocalSurvey}
+        open={editFollowUpModalOpen}
+        setOpen={setEditFollowUpModalOpen}
+        selectedLanguageCode={selectedLanguageCode}
+        defaultValues={{
+          surveyFollowUpId: followUp.id,
+          followUpName: followUp.name,
+          triggerType: followUp.trigger.type,
+          endingIds: followUp.trigger.type === "endings" ? followUp.trigger.properties?.endingIds : null,
+          subject: followUp.action.properties.subject,
+          body: followUp.action.properties.body,
+          emailTo: followUp.action.properties.to,
+          replyTo: followUp.action.properties.replyTo,
+          attachResponseData: followUp.action.properties.attachResponseData,
+          includeVariables: followUp.action.properties.includeVariables ?? false,
+          includeHiddenFields: followUp.action.properties.includeHiddenFields ?? false,
+        }}
+        teamMemberDetails={teamMemberDetails}
+        userEmail={userEmail}
+        locale={locale}
+      />
+
+      <ConfirmationModal
+        open={deleteFollowUpModalOpen}
+        setOpen={setDeleteFollowUpModalOpen}
+        buttonText={t("common.delete")}
+        onConfirm={async () => {
+          setLocalSurvey((prev) => {
+            return {
+              ...prev,
+              followUps: prev.followUps.map((f) => {
+                if (f.id === followUp.id) {
+                  return {
+                    ...f,
+                    deleted: true,
+                  };
+                }
+
+                return f;
+              }),
+            };
+          });
+        }}
+        body={t("workspace.surveys.edit.follow_ups_delete_modal_text")}
+        title={t("workspace.surveys.edit.follow_ups_delete_modal_title")}
+        buttonVariant="destructive"
+      />
+    </>
+  );
+};

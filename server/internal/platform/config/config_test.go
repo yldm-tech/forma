@@ -63,6 +63,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.InviteDisabled || cfg.InviteRateLimitPer24Hours != 50 || cfg.SignupDomainCheckOnInvites {
 		t.Errorf("invites disabled %v, limit %d, domain check on invites %v; want enabled, 50, false", cfg.InviteDisabled, cfg.InviteRateLimitPer24Hours, cfg.SignupDomainCheckOnInvites)
 	}
+	if cfg.SurveySchedulingTimeZone != "Europe/Berlin" || cfg.SurveySchedulingLocalHour != 0 || cfg.SurveySchedulingLocalMinute != 0 {
+		t.Errorf("survey scheduling %s %02d:%02d, want Europe/Berlin 00:00", cfg.SurveySchedulingTimeZone, cfg.SurveySchedulingLocalHour, cfg.SurveySchedulingLocalMinute)
+	}
 	if cfg.SignupEnabled() || cfg.TurnstileConfigured() || cfg.SecureCookies() {
 		t.Errorf("SignupEnabled %v, TurnstileConfigured %v, SecureCookies %v; want all false on a plain http self-hosted instance", cfg.SignupEnabled(), cfg.TurnstileConfigured(), cfg.SecureCookies())
 	}
@@ -178,6 +181,10 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"zero invite limit":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "0"},
 		"invite limit text":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
 		"invite flag spelled":  {"INVITE_DISABLED", "yes"},
+		"unknown time zone":    {"SURVEY_SCHEDULING_TIME_ZONE", "Mars/Olympus"},
+		"local time zone":      {"SURVEY_SCHEDULING_TIME_ZONE", "Local"},
+		"scheduling hour":      {"SURVEY_SCHEDULING_LOCAL_HOUR", "24"},
+		"scheduling minute":    {"SURVEY_SCHEDULING_LOCAL_MINUTE", "60"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {

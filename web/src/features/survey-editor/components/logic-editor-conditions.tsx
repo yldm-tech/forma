@@ -1,0 +1,71 @@
+import { useTranslation } from "react-i18next";
+import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
+import { TConditionGroup } from "@forma/types/surveys/logic";
+import { TSurvey } from "@forma/types/surveys/types";
+import { createSharedConditionsFactory } from "../lib/shared-conditions-factory";
+import { getDefaultOperatorForElement } from "../lib/utils";
+import { ConditionsEditor } from "../../../components/ui/conditions-editor/index";
+import type {
+  TConditionsEditorCallbacks,
+  TConditionsEditorConfig,
+} from "../../../components/ui/conditions-editor/types";
+
+interface LogicEditorConditionsProps {
+  conditions: TConditionGroup;
+  updateBlockLogic: (blockIdx: number, logic: TSurveyBlockLogic[]) => void;
+  block: TSurveyBlock;
+  localSurvey: TSurvey;
+  blockIdx: number;
+  logicIdx: number;
+  depth?: number;
+}
+
+export function LogicEditorConditions({
+  conditions,
+  logicIdx,
+  block,
+  localSurvey,
+  blockIdx,
+  updateBlockLogic,
+  depth = 0,
+}: LogicEditorConditionsProps) {
+  const { t } = useTranslation();
+
+  const blockLogic = block.logic ?? [];
+  const firstElement = block.elements[0];
+
+  const { config, callbacks } = createSharedConditionsFactory(
+    {
+      survey: localSurvey,
+      t,
+      blockIdx,
+      getDefaultOperator: () => (firstElement ? getDefaultOperatorForElement(firstElement, t) : "equals"),
+      includeCreateGroup: true,
+      // Block logic runs in the renderer, which projects the client-available reserved values.
+      includeReservedFields: true,
+    },
+    {
+      onConditionsChange: (updater) => {
+        const logicCopy = structuredClone(blockLogic);
+        const logicItem = logicCopy[logicIdx];
+        if (!logicItem) return;
+        logicItem.conditions = updater(logicItem.conditions);
+
+        if (logicItem.conditions.conditions.length === 0) {
+          logicCopy.splice(logicIdx, 1);
+        }
+
+        updateBlockLogic(blockIdx, logicCopy);
+      },
+    }
+  );
+
+  return (
+    <ConditionsEditor
+      conditions={conditions}
+      config={config as TConditionsEditorConfig}
+      callbacks={callbacks as TConditionsEditorCallbacks}
+      depth={depth}
+    />
+  );
+}

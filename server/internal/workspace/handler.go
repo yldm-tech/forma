@@ -32,6 +32,11 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.PATCH("/workspaces/:workspaceId", h.update)
 	g.POST("/workspaces/:workspaceId/delete", h.delete)
 	g.GET("/environments/:environmentId", h.environment)
+	g.GET("/workspaces/:workspaceId/app-connection", h.appConnection)
+	g.POST("/workspaces/:workspaceId/languages", h.createLanguage)
+	g.PATCH("/workspaces/:workspaceId/languages/:languageId", h.updateLanguage)
+	g.DELETE("/workspaces/:workspaceId/languages/:languageId", h.deleteLanguage)
+	g.GET("/workspaces/:workspaceId/languages/:languageId/surveys", h.languageSurveys)
 }
 
 // userID is the authenticated caller; every route is mounted behind SessionAuth.Require.
@@ -261,4 +266,109 @@ func (h *Handler) environment(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, environmentResponse{WorkspaceID: id})
+}
+
+func (h *Handler) appConnection(c *gin.Context) {
+	id, err := httpapi.ParamUUID(c, "workspaceId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	res, err := h.svc.AppConnection(c.Request.Context(), userID(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// languageParams reads the workspace and language ids of a language route.
+func languageParams(c *gin.Context) (workspaceID, languageID uuid.UUID, ok bool) {
+	workspaceID, err := httpapi.ParamUUID(c, "workspaceId")
+	if err == nil {
+		languageID, err = httpapi.ParamUUID(c, "languageId")
+	}
+	if err != nil {
+		httpapi.Fail(c, err)
+		return uuid.Nil, uuid.Nil, false
+	}
+	return workspaceID, languageID, true
+}
+
+// createLanguageRequest is ZLanguageInput.
+type createLanguageRequest struct {
+	Code  string  `json:"code"`
+	Alias *string `json:"alias"`
+}
+
+func (h *Handler) createLanguage(c *gin.Context) {
+	id, err := httpapi.ParamUUID(c, "workspaceId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	var req createLanguageRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	l, err := h.svc.CreateLanguage(c.Request.Context(), userID(c), id, req.Code, req.Alias)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, l)
+}
+
+// updateLanguageRequest is ZLanguageUpdate: a code in the body is ignored, as zod stripped it.
+type updateLanguageRequest struct {
+	Alias *string `json:"alias"`
+}
+
+func (h *Handler) updateLanguage(c *gin.Context) {
+	ws, lang, ok := languageParams(c)
+	if !ok {
+		return
+	}
+	var req updateLanguageRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	l, err := h.svc.UpdateLanguage(c.Request.Context(), userID(c), ws, lang, req.Alias)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, l)
+}
+
+func (h *Handler) deleteLanguage(c *gin.Context) {
+	ws, lang, ok := languageParams(c)
+	if !ok {
+		return
+	}
+	l, err := h.svc.DeleteLanguage(c.Request.Context(), userID(c), ws, lang)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, l)
+}
+
+type languageSurveysResponse struct {
+	Surveys []string `json:"surveys"`
+}
+
+func (h *Handler) languageSurveys(c *gin.Context) {
+	ws, lang, ok := languageParams(c)
+	if !ok {
+		return
+	}
+	names, err := h.svc.SurveysUsingLanguage(c.Request.Context(), userID(c), ws, lang)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, languageSurveysResponse{Surveys: names})
 }

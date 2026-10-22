@@ -1,0 +1,67 @@
+import { HandshakeIcon, Undo2Icon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { TSurvey } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { recallToHeadline } from "../../../../lib/survey/recall";
+import {
+  SelectMenu,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../../components/ui/select-menu";
+
+interface EndingCardSelectorProps {
+  survey: TSurvey;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export const EndingCardSelector = ({ survey, value, onChange }: EndingCardSelectorProps) => {
+  const endings = survey.endings;
+  const { t } = useTranslation();
+  const endingCards = endings.filter((ending) => ending.type === "endScreen");
+  const redirectToUrls = endings.filter((ending) => ending.type === "redirectToUrl");
+
+  return (
+    <div className="space-y-1 text-sm">
+      <SelectMenu value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={t("workspace.surveys.edit.quotas.select_ending_card")} />
+        </SelectTrigger>
+        <SelectContent>
+          {endingCards.length > 0 && (
+            <SelectGroup>
+              <div className="flex items-center gap-2 p-2 text-sm text-slate-500">
+                <HandshakeIcon className="size-4" />
+                <span>{t("common.ending_card")}</span>
+              </div>
+              {/* Custom endings */}
+              {endingCards.map((ending) => (
+                <SelectItem key={ending.id} value={ending.id}>
+                  {getTextContent(
+                    recallToHeadline(ending.headline ?? {}, survey, false, "default")["default"] ?? ""
+                  )}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+          {redirectToUrls.length > 0 && (
+            <SelectGroup>
+              <div className="flex items-center gap-2 p-2 text-sm text-slate-500">
+                <Undo2Icon className="size-4" />
+                <span>{t("workspace.surveys.edit.redirect_to_url")}</span>
+              </div>
+              {redirectToUrls.map((ending) => (
+                <SelectItem key={ending.id} value={ending.id}>
+                  {ending.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+        </SelectContent>
+      </SelectMenu>
+    </div>
+  );
+};

@@ -35,6 +35,8 @@ export default defineConfig({
     clearMocks: false,
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
+    // Vitest stubs stylesheets out by default; the rich-text editor's test reads its stylesheet's source, so that one goes through Vite's pipeline.
+    css: { include: [/styles-editor-frontend\.css/] },
     // i18next-icu default-imports intl-messageformat, whose Node entry is CommonJS: externalized, the import is the module object rather than the class and every ICU message comes back unformatted. Transforming both resolves the ESM build, as the browser bundle does.
     server: { deps: { inline: ["i18next-icu", "intl-messageformat"] } },
   },

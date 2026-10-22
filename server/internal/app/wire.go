@@ -8,9 +8,11 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -24,8 +26,13 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -78,11 +85,46 @@ var inviteSet = wire.NewSet(
 	invite.NewHandler,
 )
 
-// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys, and the API key authentication of /api/v3.
 var apikeySet = wire.NewSet(
 	apikey.NewRepository,
 	apikey.NewService,
 	apikey.NewHandler,
+	apikey.NewAuthenticator,
+)
+
+// contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
+var contactSet = wire.NewSet(
+	contact.NewRepository,
+	contact.NewService,
+	contact.NewHandler,
+	contact.NewV3Handler,
+)
+
+// surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
+var surveySet = wire.NewSet(
+	surveydoc.NewValidator,
+	survey.LoadCatalog,
+	survey.NewRepository,
+	survey.NewService,
+	surveyv3.NewGuard,
+	survey.NewHandler,
+)
+
+// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events.
+var v3Set = wire.NewSet(
+	v3api.NewMiddleware,
+	v3api.NewAuditor,
+)
+
+// surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
+var surveyConfigSet = wire.NewSet(
+	actionclass.NewRepository,
+	actionclass.NewService,
+	actionclass.NewHandler,
+	tag.NewRepository,
+	tag.NewService,
+	tag.NewHandler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
@@ -98,6 +140,10 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		teamSet,
 		inviteSet,
 		apikeySet,
+		surveySet,
+		contactSet,
+		v3Set,
+		surveyConfigSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -115,6 +161,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.OpenSpiceDB,
 		authz.NewDelivery,
 		authz.NewAudit,
+		audit.New,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

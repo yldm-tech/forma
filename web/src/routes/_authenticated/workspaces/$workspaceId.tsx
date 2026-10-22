@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { AppShell } from "../../../components/shell/app-shell";
 import { MainNavigation } from "../../../components/shell/main-navigation";
 import { RoutePending } from "../../../components/shell/route-states";
+import { SettingsNavigation } from "../../../components/shell/settings-navigation";
 import { TopControlBar } from "../../../components/shell/top-control-bar";
+import { workspaceHomePath } from "../../../lib/navigation";
 import { guardPageError } from "../../../lib/route-guards";
 import { meQuery } from "../../../lib/queries/auth";
 import { organizationQuery } from "../../../lib/queries/organizations";
@@ -32,15 +34,28 @@ function WorkspaceLayout() {
   // The root page reopens the workspace the browser used last.
   useEffect(() => rememberWorkspace(workspaceId), [workspaceId]);
 
+  // forma2 swaps the whole sidebar for the settings one on any path under the workspace's settings.
+  const isSettingsMode = pathname.includes("/settings");
+
   return (
     <AppShell
       sidebar={
-        <MainNavigation
-          workspaceId={workspace.id}
-          organizationId={organization.id}
-          membershipRole={organization.membership.role}
-          pathname={pathname}
-        />
+        isSettingsMode ? (
+          <SettingsNavigation
+            organizationId={organization.id}
+            organizationName={organization.name}
+            membershipRole={organization.membership.role}
+            workspace={{ id: workspace.id, name: workspace.name }}
+            backUrl={workspaceHomePath(workspace.id)}
+            pathname={pathname}
+          />
+        ) : (
+          <MainNavigation
+            workspaceId={workspace.id}
+            membershipRole={organization.membership.role}
+            pathname={pathname}
+          />
+        )
       }
       topBar={
         <TopControlBar

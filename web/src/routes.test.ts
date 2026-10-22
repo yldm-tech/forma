@@ -18,6 +18,8 @@ const SERVER_PAGES = [
   "/invite?token=t",
   "/account/settings/profile",
   "/organizations/0190a000-0000-7000-8000-000000000001/landing",
+  "/organizations/0190a000-0000-7000-8000-000000000001/workspaces/new/plan",
+  "/organizations/0190a000-0000-7000-8000-000000000001/workspaces/new/survey",
   "/workspaces/0190a000-0000-7000-8000-000000000002/",
 ];
 
@@ -30,4 +32,19 @@ test.each(SERVER_PAGES)("%s is a page of the SPA", (href) => {
   const route = leaf ? router.routesById[leaf.routeId as keyof typeof router.routesById] : undefined;
   expect(leaf?.routeId).not.toBe("__root__");
   expect(route?.children).toBeUndefined();
+});
+
+// forma2 rendered the templates page in the survey editor's full-screen layout, outside the workspace's navigation, while the survey list sits inside it.
+test.each([
+  [
+    "/workspaces/0190a000-0000-7000-8000-000000000002/surveys/templates",
+    "/_authenticated/workspaces/$workspaceId_/surveys/templates",
+  ],
+  [
+    "/workspaces/0190a000-0000-7000-8000-000000000002/surveys",
+    "/_authenticated/workspaces/$workspaceId/surveys/",
+  ],
+])("%s is %s", (pathname, routeId) => {
+  const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+  expect(router.matchRoutes(pathname, {}).at(-1)?.routeId).toBe(routeId);
 });

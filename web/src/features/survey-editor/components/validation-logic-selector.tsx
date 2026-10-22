@@ -1,0 +1,32 @@
+import { useTranslation } from "react-i18next";
+import type { TValidationLogic } from "@forma/types/surveys/elements";
+import {
+  SelectMenu,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select-menu";
+
+interface ValidationLogicSelectorProps {
+  value: TValidationLogic;
+  onChange: (value: TValidationLogic) => void;
+}
+
+export const ValidationLogicSelector = ({ value, onChange }: ValidationLogicSelectorProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex w-full items-center gap-2">
+      <SelectMenu value={value} onValueChange={(val) => onChange(val as TValidationLogic)}>
+        <SelectTrigger className="h-8 w-fit bg-white">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="and">{t("workspace.surveys.edit.validation_logic_and")}</SelectItem>
+          <SelectItem value="or">{t("workspace.surveys.edit.validation_logic_or")}</SelectItem>
+        </SelectContent>
+      </SelectMenu>
+    </div>
+  );
+};

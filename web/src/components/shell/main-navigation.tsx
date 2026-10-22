@@ -1,25 +1,32 @@
 import { Link } from "@tanstack/react-router";
-import { MessageCircle, PanelLeftCloseIcon, PanelLeftOpenIcon, SettingsIcon } from "lucide-react";
+import {
+  BlocksIcon,
+  MessageCircle,
+  MousePointerClickIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+  SettingsIcon,
+  TagIcon,
+  UserIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
-import { organizationSettingsPath, workspaceHomePath } from "../../lib/navigation";
+import { workspaceHomePath, workspaceSettingsPath } from "../../lib/navigation";
 import { NAV_COLLAPSED_KEY, readStorage, writeStorage } from "../../lib/storage";
 import { Button } from "../ui/button";
 import { Wordmark } from "../ui/logo";
 import { NavigationLink } from "./navigation-link";
 
 /**
- * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land.
+ * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land.
  */
 export const MainNavigation = ({
   workspaceId,
-  organizationId,
   membershipRole,
   pathname,
 }: {
   workspaceId: string;
-  organizationId: string;
   membershipRole?: string;
   pathname: string;
 }) => {
@@ -33,7 +40,43 @@ export const MainNavigation = ({
       ? t("common.you_are_not_authorized_to_perform_this_action")
       : undefined;
   const homeHref = workspaceHomePath(workspaceId);
+  const base = `/workspaces/${workspaceId}`;
   const iconClassName = "h-4 w-4 shrink-0";
+  const items = [
+    {
+      href: homeHref,
+      label: t("common.surveys"),
+      icon: MessageCircle,
+      isActive: pathname === homeHref || pathname.startsWith(`${base}/surveys`),
+    },
+    {
+      href: `${base}/contacts`,
+      label: t("common.contacts"),
+      icon: UserIcon,
+      isActive:
+        pathname.startsWith(`${base}/contacts`) ||
+        pathname.startsWith(`${base}/segments`) ||
+        pathname.startsWith(`${base}/attributes`),
+    },
+    {
+      href: `${base}/user-actions`,
+      label: t("common.user_actions"),
+      icon: MousePointerClickIcon,
+      isActive: pathname.startsWith(`${base}/user-actions`),
+    },
+    {
+      href: `${base}/integrations`,
+      label: t("common.integrations"),
+      icon: BlocksIcon,
+      isActive: pathname.startsWith(`${base}/integrations`),
+    },
+    {
+      href: `${base}/tags`,
+      label: t("common.tags"),
+      icon: TagIcon,
+      isActive: pathname.startsWith(`${base}/tags`),
+    },
+  ];
 
   const toggle = () => {
     writeStorage(NAV_COLLAPSED_KEY, isCollapsed ? "false" : "true");
@@ -66,21 +109,24 @@ export const MainNavigation = ({
         </div>
         <nav aria-label={t("common.workspace")}>
           <ul>
-            <NavigationLink
-              href={homeHref}
-              isActive={pathname === homeHref || pathname.startsWith(`/workspaces/${workspaceId}/surveys`)}
-              isCollapsed={isCollapsed}
-              label={t("common.surveys")}
-              icon={<MessageCircle className={iconClassName} strokeWidth={1.5} />}
-              disabledReason={disabledReason}
-            />
+            {items.map((item) => (
+              <NavigationLink
+                key={item.href}
+                href={item.href}
+                isActive={item.isActive}
+                isCollapsed={isCollapsed}
+                label={item.label}
+                icon={<item.icon className={iconClassName} strokeWidth={1.5} />}
+                disabledReason={disabledReason}
+              />
+            ))}
           </ul>
         </nav>
       </div>
       <ul className="flex flex-col border-t border-slate-100 pt-2">
         <NavigationLink
-          href={organizationSettingsPath(organizationId, "general")}
-          isActive={false}
+          href={workspaceSettingsPath(workspaceId, "general")}
+          isActive={pathname.includes("/settings")}
           isCollapsed={isCollapsed}
           label={t("common.settings")}
           icon={<SettingsIcon className={iconClassName} strokeWidth={1.5} />}
