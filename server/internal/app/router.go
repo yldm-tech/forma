@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
@@ -18,7 +19,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -39,12 +42,18 @@ type routeRegistrar interface {
 	Register(r gin.IRouter)
 }
 
+// v3Registrar is a feature module's /api/v3 handler.
+type v3Registrar interface {
+	RegisterV3(r gin.IRouter)
+}
+
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler)
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, actionClassHandler, tagHandler)
+	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
 	web.Register(r)
@@ -56,5 +65,13 @@ func mountAppAPI(r *gin.Engine, p *Platform, handlers ...routeRegistrar) {
 	group := r.Group("/api/app", httpapi.ErrorHandler(p.Log), httpapi.CSRF(p.Config), authz.DecisionMemo())
 	for _, h := range handlers {
 		h.Register(group)
+	}
+}
+
+// mountV3API mounts /api/v3, the management API specified in docs/api-v3-reference. Errors are RFC 9457 problems, a signed-in browser's session is read for every route (each route then decides with v3api.Middleware.Auth whether it also accepts an API key), and each request evaluates a repeated authorization question once.
+func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, handlers ...v3Registrar) {
+	group := r.Group("/api/v3", v3api.ErrorHandler(p.Log), authz.DecisionMemo(), sessions.Optional())
+	for _, h := range handlers {
+		h.RegisterV3(group)
 	}
 }

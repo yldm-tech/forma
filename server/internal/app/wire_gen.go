@@ -9,6 +9,7 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
@@ -26,7 +27,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
@@ -69,6 +72,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		Audit:    emitter,
 		Authz:    authorizer,
 	}
+	sessions := auth.NewSessions(cfg, db, log)
 	pinger, err := health.NewDatabasePinger(db)
 	if err != nil {
 		cleanup3()
@@ -78,7 +82,6 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	handler := health.NewHandler(pinger, log)
 	repository := auth.NewRepository(db)
-	sessions := auth.NewSessions(cfg, db, log)
 	inviteRepository := invite.NewRepository(db)
 	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
 	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
@@ -113,6 +116,15 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	apikeyRepository := apikey.NewRepository(db)
 	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
 	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
+	actionclassRepository := actionclass.NewRepository(db)
+	actionclassService := actionclass.NewService(actionclassRepository, authorizer, limiter, emitter)
+	authenticator := apikey.NewAuthenticator(db, log)
+	middleware := v3api.NewMiddleware(cfg, authenticator, limiter)
+	actionclassHandler := actionclass.NewHandler(actionclassService, sessions, middleware)
+	tagRepository := tag.NewRepository(db)
+	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
+	auditor := v3api.NewAuditor(cfg, emitter)
+	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -120,7 +132,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, actionclassHandler, tagHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -182,3 +194,9 @@ var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(n
 
 // apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
 var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler)
+
+// v3Set is the /api/v3 conventions: authentication by session or API key, the api:v3 rate limit and audit events.
+var v3Set = wire.NewSet(apikey.NewAuthenticator, v3api.NewMiddleware, v3api.NewAuditor)
+
+// surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
+var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/wire"
 
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
@@ -25,7 +26,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -85,6 +88,23 @@ var apikeySet = wire.NewSet(
 	apikey.NewHandler,
 )
 
+// v3Set is the /api/v3 conventions: authentication by session or API key, the api:v3 rate limit and audit events.
+var v3Set = wire.NewSet(
+	apikey.NewAuthenticator,
+	v3api.NewMiddleware,
+	v3api.NewAuditor,
+)
+
+// surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
+var surveyConfigSet = wire.NewSet(
+	actionclass.NewRepository,
+	actionclass.NewService,
+	actionclass.NewHandler,
+	tag.NewRepository,
+	tag.NewService,
+	tag.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -98,6 +118,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		teamSet,
 		inviteSet,
 		apikeySet,
+		v3Set,
+		surveyConfigSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
