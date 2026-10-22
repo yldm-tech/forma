@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -331,5 +332,32 @@ func TestTemplates(t *testing.T) {
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("template %s: %d %s", tpl.ID, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+// The survey links the list and the editor build start at PUBLIC_URL when it is set, else at WEBAPP_URL, as forma2's getPublicDomain did.
+func TestPublicDomain(t *testing.T) {
+	for name, tc := range map[string]struct {
+		publicURL string
+		want      string
+	}{
+		"web app":    {"", webApp},
+		"public url": {"https://surveys.example.com/", "https://surveys.example.com"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, func(c *config.Config) {
+				if tc.publicURL != "" {
+					c.PublicURL, _ = url.Parse(tc.publicURL)
+				}
+			})
+			var out struct {
+				PublicDomain string `json:"publicDomain"`
+			}
+			e.ok(e.do(e.user(), http.MethodGet, "/api/app/public-domain", nil), http.StatusOK, &out)
+			if out.PublicDomain != tc.want {
+				t.Fatalf("public domain %q, want %q", out.PublicDomain, tc.want)
+			}
+			e.fails(e.request(http.MethodGet, "/api/app/public-domain", nil, nil), http.StatusUnauthorized, apperr.CodeNotAuthenticated, "")
+		})
 	}
 }

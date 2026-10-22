@@ -40,6 +40,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/quotas/:quotaId", h.deleteQuota)
 	g.GET("/quotas/:quotaId/response-count", h.quotaResponseCount)
 	g.GET("/workspaces/:workspaceId/survey-templates", h.templates)
+	g.GET("/public-domain", h.publicDomain)
 }
 
 // RegisterV3 mounts /api/v3/surveys on the engine.
@@ -287,6 +288,11 @@ func (h *Handler) templates(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"templates": templates, "xmTemplateIds": XMTemplateIDs})
+}
+
+// publicDomain tells the list and the editor where a survey's public link lives, which forma2's pages read on the server.
+func (h *Handler) publicDomain(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"publicDomain": h.svc.PublicDomain()})
 }
 
 // ---- /api/v3/surveys ----
