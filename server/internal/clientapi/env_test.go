@@ -202,7 +202,11 @@ func (e *env) workspace(columns ...any) uuid.UUID {
 	e.exec(`INSERT INTO organization_billing (organization_id, limits) VALUES (?, '{}'::jsonb)`, org)
 	ws := e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, ?) RETURNING id`, org, "Workspace "+uuid.NewString()[:8])
 	for i := 0; i+1 < len(columns); i += 2 {
-		e.exec(`UPDATE workspaces SET `+columns[i].(string)+` = ? WHERE id = ?`, columns[i+1], ws)
+		cast := ""
+		if columns[i] == "styling" {
+			cast = "::jsonb"
+		}
+		e.exec(`UPDATE workspaces SET `+columns[i].(string)+` = ?`+cast+` WHERE id = ?`, columns[i+1], ws)
 	}
 	for _, k := range [][2]string{{"userId", "User Id"}, {"email", "Email"}, {"firstName", "First Name"}, {"lastName", "Last Name"}, {"language", "Language"}} {
 		e.exec(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, is_unique) VALUES (?, ?, ?, 'default', ?)`, ws, k[0], k[1], k[0] == "userId" || k[0] == "email")

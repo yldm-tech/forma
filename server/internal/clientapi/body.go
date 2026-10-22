@@ -147,7 +147,12 @@ func (sc *jsonScanner) at(message string) error {
 			lineStart = i + 1
 		}
 	}
-	return &syntaxError{message: fmt.Sprintf("%s in JSON at position %d (line %d column %d)", message, sc.pos, line, sc.pos-lineStart+1)}
+	// V8 does not repeat "JSON" after a message that already ends with it.
+	where := " in JSON"
+	if strings.HasSuffix(message, "after JSON") {
+		where = ""
+	}
+	return &syntaxError{message: fmt.Sprintf("%s%s at position %d (line %d column %d)", message, where, sc.pos, line, sc.pos-lineStart+1)}
 }
 
 func (sc *jsonScanner) unexpectedEnd() error {
