@@ -128,7 +128,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	e.repo = NewRepository(db)
 	aiService := ai.NewService(ai.NewClient(cfg, log), ai.NewRepository(db), e.authz.Authorizer, log)
 	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, limiter, audit.New(cfg, log), surveydoc.NewValidator(schemas), cipher, catalog, aiService, log)
-	h := NewHandler(e.svc, headerSessions{}, v3api.NewGuard(cfg, headerSessions{}, apikey.NewAuthenticator(db, log), limiter, log), log)
+	h := NewHandler(e.svc, headerSessions{}, v3api.NewGuard(cfg, headerSessions{}, apikey.NewAuthenticator(db, log), limiter, log), limiter, log)
 	e.engine = httpserver.NewEngine(log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	h.Register(group)

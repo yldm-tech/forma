@@ -21,11 +21,12 @@ type Handler struct {
 	svc      *Service
 	sessions httpapi.SessionAuth
 	guard    *v3api.Guard
+	limiter  *ratelimit.Limiter
 	log      *slog.Logger
 }
 
-func NewHandler(svc *Service, sessions httpapi.SessionAuth, guard *v3api.Guard, log *slog.Logger) *Handler {
-	return &Handler{svc: svc, sessions: sessions, guard: guard, log: log}
+func NewHandler(svc *Service, sessions httpapi.SessionAuth, guard *v3api.Guard, limiter *ratelimit.Limiter, log *slog.Logger) *Handler {
+	return &Handler{svc: svc, sessions: sessions, guard: guard, limiter: limiter, log: log}
 }
 
 // Register mounts the /api/app routes on the group that already applies the error envelope and the CSRF check.
@@ -47,7 +48,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/workspaces/:workspaceId/survey-templates", h.templates)
 	g.GET("/public-domain", h.publicDomain)
 	// The create-with-AI dialog's streamed generation spends from the same per-user bucket as POST /api/v3/surveys/generate.
-	g.POST("/surveys/generate/stream", ratelimit.Middleware(h.svc.limiter, ratelimit.APIV3SurveyGenerate, ratelimit.ByUser), h.generateStream)
+	g.POST("/surveys/generate/stream", ratelimit.Middleware(h.limiter, ratelimit.APIV3SurveyGenerate, ratelimit.ByUser), h.generateStream)
 }
 
 // RegisterV3 mounts /api/v3/surveys on the engine.
