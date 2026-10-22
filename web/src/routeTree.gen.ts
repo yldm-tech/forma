@@ -51,7 +51,12 @@ import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport 
 import { Route as AuthenticatedWorkspacesWorkspaceIdContactsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/contacts/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdContactsContactIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId/contacts/$contactId'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/airtable'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/app-connection'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/google-sheets'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/notion'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/slack'
+import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/webhooks'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/surveys/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRouteImport } from './routes/_authenticated/workspaces/$workspaceId/surveys/$surveyId/route'
@@ -312,6 +317,12 @@ const AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute =
     path: '/integrations/',
     getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute =
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRouteImport.update({
+    id: '/integrations/airtable',
+    path: '/integrations/airtable',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute =
   AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRouteImport.update(
     {
@@ -320,6 +331,30 @@ const AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute =
       getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
     } as any,
   )
+const AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute =
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRouteImport.update({
+    id: '/integrations/google-sheets',
+    path: '/integrations/google-sheets',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute =
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRouteImport.update({
+    id: '/integrations/notion',
+    path: '/integrations/notion',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute =
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRouteImport.update({
+    id: '/integrations/slack',
+    path: '/integrations/slack',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute =
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRouteImport.update({
+    id: '/integrations/webhooks',
+    path: '/integrations/webhooks',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute =
   AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -498,7 +533,12 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
+  '/workspaces/$workspaceId/integrations/airtable': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute
   '/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
+  '/workspaces/$workspaceId/integrations/google-sheets': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute
+  '/workspaces/$workspaceId/integrations/notion': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute
+  '/workspaces/$workspaceId/integrations/slack': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute
+  '/workspaces/$workspaceId/integrations/webhooks': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute
   '/workspaces/$workspaceId/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/workspaces/$workspaceId/contacts/': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
@@ -558,7 +598,12 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
+  '/workspaces/$workspaceId/integrations/airtable': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute
   '/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
+  '/workspaces/$workspaceId/integrations/google-sheets': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute
+  '/workspaces/$workspaceId/integrations/notion': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute
+  '/workspaces/$workspaceId/integrations/slack': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute
+  '/workspaces/$workspaceId/integrations/webhooks': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute
   '/workspaces/$workspaceId/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/workspaces/$workspaceId/contacts': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
@@ -624,7 +669,12 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/_authenticated/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
+  '/_authenticated/workspaces/$workspaceId/integrations/airtable': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute
   '/_authenticated/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
+  '/_authenticated/workspaces/$workspaceId/integrations/google-sheets': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute
+  '/_authenticated/workspaces/$workspaceId/integrations/notion': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute
+  '/_authenticated/workspaces/$workspaceId/integrations/slack': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute
+  '/_authenticated/workspaces/$workspaceId/integrations/webhooks': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute
   '/_authenticated/workspaces/$workspaceId_/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/_authenticated/workspaces/$workspaceId/contacts/': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
@@ -690,7 +740,12 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/workspaces/$workspaceId/contacts/$contactId'
+    | '/workspaces/$workspaceId/integrations/airtable'
     | '/workspaces/$workspaceId/integrations/app-connection'
+    | '/workspaces/$workspaceId/integrations/google-sheets'
+    | '/workspaces/$workspaceId/integrations/notion'
+    | '/workspaces/$workspaceId/integrations/slack'
+    | '/workspaces/$workspaceId/integrations/webhooks'
     | '/workspaces/$workspaceId/surveys/templates'
     | '/organizations/$organizationId/settings/'
     | '/workspaces/$workspaceId/contacts/'
@@ -750,7 +805,12 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/workspaces/$workspaceId/contacts/$contactId'
+    | '/workspaces/$workspaceId/integrations/airtable'
     | '/workspaces/$workspaceId/integrations/app-connection'
+    | '/workspaces/$workspaceId/integrations/google-sheets'
+    | '/workspaces/$workspaceId/integrations/notion'
+    | '/workspaces/$workspaceId/integrations/slack'
+    | '/workspaces/$workspaceId/integrations/webhooks'
     | '/workspaces/$workspaceId/surveys/templates'
     | '/organizations/$organizationId/settings'
     | '/workspaces/$workspaceId/contacts'
@@ -815,7 +875,12 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
     | '/_authenticated/workspaces/$workspaceId/contacts/$contactId'
+    | '/_authenticated/workspaces/$workspaceId/integrations/airtable'
     | '/_authenticated/workspaces/$workspaceId/integrations/app-connection'
+    | '/_authenticated/workspaces/$workspaceId/integrations/google-sheets'
+    | '/_authenticated/workspaces/$workspaceId/integrations/notion'
+    | '/_authenticated/workspaces/$workspaceId/integrations/slack'
+    | '/_authenticated/workspaces/$workspaceId/integrations/webhooks'
     | '/_authenticated/workspaces/$workspaceId_/surveys/templates'
     | '/_authenticated/organizations/$organizationId/settings/'
     | '/_authenticated/workspaces/$workspaceId/contacts/'
@@ -1146,11 +1211,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRouteImport
       parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
+    '/_authenticated/workspaces/$workspaceId/integrations/airtable': {
+      id: '/_authenticated/workspaces/$workspaceId/integrations/airtable'
+      path: '/integrations/airtable'
+      fullPath: '/workspaces/$workspaceId/integrations/airtable'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
     '/_authenticated/workspaces/$workspaceId/integrations/app-connection': {
       id: '/_authenticated/workspaces/$workspaceId/integrations/app-connection'
       path: '/integrations/app-connection'
       fullPath: '/workspaces/$workspaceId/integrations/app-connection'
       preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/integrations/google-sheets': {
+      id: '/_authenticated/workspaces/$workspaceId/integrations/google-sheets'
+      path: '/integrations/google-sheets'
+      fullPath: '/workspaces/$workspaceId/integrations/google-sheets'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/integrations/notion': {
+      id: '/_authenticated/workspaces/$workspaceId/integrations/notion'
+      path: '/integrations/notion'
+      fullPath: '/workspaces/$workspaceId/integrations/notion'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/integrations/slack': {
+      id: '/_authenticated/workspaces/$workspaceId/integrations/slack'
+      path: '/integrations/slack'
+      fullPath: '/workspaces/$workspaceId/integrations/slack'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/integrations/webhooks': {
+      id: '/_authenticated/workspaces/$workspaceId/integrations/webhooks'
+      path: '/integrations/webhooks'
+      fullPath: '/workspaces/$workspaceId/integrations/webhooks'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRouteImport
       parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
     '/_authenticated/workspaces/$workspaceId/settings/': {
@@ -1379,7 +1479,12 @@ interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRouteWithChildren
   AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute
   AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute
+  AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute
   AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
@@ -1410,8 +1515,18 @@ const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWo
       AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRouteWithChildren,
     AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute:
       AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute,
+    AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute:
+      AuthenticatedWorkspacesWorkspaceIdIntegrationsAirtableRoute,
     AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute:
       AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute,
+    AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute:
+      AuthenticatedWorkspacesWorkspaceIdIntegrationsGoogleSheetsRoute,
+    AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute:
+      AuthenticatedWorkspacesWorkspaceIdIntegrationsNotionRoute,
+    AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute:
+      AuthenticatedWorkspacesWorkspaceIdIntegrationsSlackRoute,
+    AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute:
+      AuthenticatedWorkspacesWorkspaceIdIntegrationsWebhooksRoute,
     AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute:
       AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute,
     AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute:
