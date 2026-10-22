@@ -1,6 +1,8 @@
 // Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseFinished event then starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
 //
 // A webhook that fails is retried by retrying the whole job, which delivers again to every subscribed webhook with the same webhook-id, so a receiver can drop the duplicate; no other side effect runs on an attempt that will be retried. The last attempt logs the failure and carries on with the side effects. Integrations and workflows are later modules, called through the Handoffs interfaces when they are registered.
+//
+// An attempt whose context ends (River cancels it SHUTDOWN_TIMEOUT after the worker is asked to stop, and at jobTimeout) fails as soon as the pipeline sees it, so the side effects it cut short run on the retry instead of being lost. The side effects that had completed run again on that retry, as they did when forma2's BullMQ worker stopped mid-job.
 package pipeline
 
 import (
@@ -190,10 +192,16 @@ func (w *Worker) deliverWebhooks(ctx context.Context, job *river.Job[response.Pi
 	return nil
 }
 
-// responseFinished is forma2's runResponseFinishedSideEffects. None of its steps fails the job, except a workflow hand-off that asks for a retry, which runs first because it is the only step safe to replay.
+// autoCompleteTimeout bounds the survey auto-complete, which runs even when the attempt's context has ended: it is one idempotent update, and retrying the job for it would send every notification email again.
+const autoCompleteTimeout = 10 * time.Second
+
+// responseFinished is forma2's runResponseFinishedSideEffects. None of its steps fails the job, except a workflow hand-off that asks for a retry, which runs first because it is the only step safe to replay, and the end of the attempt's context before the notification emails are out.
 func (w *Worker) responseFinished(ctx context.Context, ev *Event, org *organization, log *slog.Logger) error {
 	recipients, err := w.notifier.Recipients(ctx, ev.WorkspaceID, ev.Survey.ID)
 	if err != nil {
+		if err := interrupted(ctx, "the notification recipient lookup"); err != nil {
+			return err
+		}
 		log.ErrorContext(ctx, "Response pipeline notification recipient lookup failed", "err", err)
 		recipients = nil
 	}
@@ -201,6 +209,9 @@ func (w *Worker) responseFinished(ctx context.Context, ev *Event, org *organizat
 	if w.handoffs.Workflows != nil && ev.Response.Finished {
 		if err := w.handoffs.Workflows.EnqueueResponseCompleted(ctx, ev); err != nil {
 			if errors.Is(err, ErrRetry) {
+				return err
+			}
+			if err := interrupted(ctx, "the workflow hand-off"); err != nil {
 				return err
 			}
 			log.ErrorContext(ctx, "Response pipeline workflow run enqueue failed", "err", err)
@@ -211,19 +222,38 @@ func (w *Worker) responseFinished(ctx context.Context, ev *Event, org *organizat
 		if err := w.handoffs.Integrations.HandleResponse(ctx, ev); err != nil {
 			log.ErrorContext(ctx, "Response pipeline integration handling failed", "err", err)
 		}
+		if err := interrupted(ctx, "the integrations"); err != nil {
+			return err
+		}
 	}
 
 	if ev.Survey.HasFollowUps {
 		if _, err := w.followUps.Send(ctx, ev.Response.ID, ev.Locale); err != nil {
 			log.ErrorContext(ctx, "Response pipeline follow-up delivery failed", "err", err, "rate_limited", followup.IsRateLimited(err))
 		}
+		if err := interrupted(ctx, "the follow-ups"); err != nil {
+			return err
+		}
 	}
 
 	if len(recipients) > 0 {
 		w.notify(ctx, ev, org, recipients, log)
+		if err := interrupted(ctx, "the notification emails"); err != nil {
+			return err
+		}
 	}
 
-	w.autoComplete(ctx, ev, log)
+	actx, cancel := context.WithTimeout(context.WithoutCancel(ctx), autoCompleteTimeout)
+	defer cancel()
+	w.autoComplete(actx, ev, log)
+	return nil
+}
+
+// interrupted is the error that fails the attempt when its context ended by the end of step: the step may have been cut short, the ones after it cannot run, and only a retry runs them.
+func interrupted(ctx context.Context, step string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("response pipeline interrupted during %s: %w", step, err)
+	}
 	return nil
 }
 

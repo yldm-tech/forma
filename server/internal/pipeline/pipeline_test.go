@@ -428,3 +428,54 @@ func TestRiverEndToEnd(t *testing.T) {
 		t.Fatalf("follow-ups %d, notifications %d; want one each", followUps, notifications)
 	}
 }
+
+// interrupter stands in for the hand-offs while River cancels the attempt's context in the middle of one of them, as it does SHUTDOWN_TIMEOUT after the worker is asked to stop.
+type interrupter struct {
+	cancel context.CancelFunc
+	at     string
+	order  []string
+}
+
+func (i *interrupter) step(ctx context.Context, name string) error {
+	i.order = append(i.order, name)
+	if name != i.at {
+		return nil
+	}
+	i.cancel()
+	return fmt.Errorf("%s: %w", name, ctx.Err())
+}
+
+func (i *interrupter) EnqueueResponseCompleted(ctx context.Context, _ *Event) error {
+	return i.step(ctx, "workflows")
+}
+
+func (i *interrupter) HandleResponse(ctx context.Context, _ *Event) error {
+	return i.step(ctx, "integrations")
+}
+
+// An attempt cancelled in the middle of the side effects fails, so River retries it, instead of completing with the follow-ups, emails and auto-complete it never ran.
+func TestInterruptedAttemptIsRetried(t *testing.T) {
+	for _, at := range []string{"workflows", "integrations"} {
+		t.Run(at, func(t *testing.T) {
+			rec := &interrupter{at: at}
+			e := newEnv(t, Handoffs{Integrations: rec, Workflows: rec})
+			f := e.fixture()
+			owner := e.user("owner@example.com", f.survey)
+			e.member(f.org, owner, "owner")
+			r := e.respond(f, true, `{}`)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			rec.cancel = cancel
+			err := e.worker.Work(ctx, job(response.EventResponseFinished, f, r, 1))
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("an interrupted attempt = %v", err)
+			}
+			if at == "workflows" && fmt.Sprint(rec.order) != "[workflows]" {
+				t.Errorf("steps after the interruption ran: %v", rec.order)
+			}
+			if len(e.mail.Messages()) != 0 {
+				t.Errorf("emails were sent on an attempt that will be retried")
+			}
+		})
+	}
+}
