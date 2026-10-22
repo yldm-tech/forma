@@ -68,10 +68,11 @@ type Config struct {
 	MailFrom                  string `env:"MAIL_FROM" envDefault:"noreply@forma.ylam.ai"`
 	MailFromName              string `env:"MAIL_FROM_NAME" envDefault:"Forma"`
 
-	// Legal links rendered in the footer of every email.
+	// Legal links rendered in the footer of every email and of the public survey pages; TermsURL appears on the survey pages only.
 	PrivacyURL     string `env:"PRIVACY_URL"`
 	ImprintURL     string `env:"IMPRINT_URL"`
 	ImprintAddress string `env:"IMPRINT_ADDRESS"`
+	TermsURL       string `env:"TERMS_URL"`
 
 	// AuditLogEnabled emits audit events; AuditLogGetUserIP records the client address in them instead of "unknown".
 	AuditLogEnabled   bool `env:"AUDIT_LOG_ENABLED" envDefault:"1"`
@@ -310,6 +311,15 @@ func (c Config) validate() error {
 	if _, ok := c.EncryptionPreviousKeys[c.EncryptionKeyVersion]; ok {
 		return fmt.Errorf("ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", c.EncryptionKeyVersion)
 	}
+	for _, s := range []struct {
+		name  string
+		value Secret
+	}{{"NEXTAUTH_SECRET", c.NextAuthSecret}, {"BETTER_AUTH_SECRET", c.BetterAuthSecret}} {
+		// HS256 needs a key at least as long as its hash; the JOSE library refuses a shorter one, so a short secret would silently invalidate every link survey token.
+		if s.value != "" && len(s.value) < 32 {
+			return fmt.Errorf("%s must be at least 32 characters (openssl rand -hex 32)", s.name)
+		}
+	}
 	switch c.UserManagementMinimumRole {
 	case "owner", "manager", "disabled":
 	default:
@@ -332,7 +342,7 @@ func (c Config) validate() error {
 	if addr, err := mail.ParseAddress(c.MailFrom); err != nil || addr.Name != "" || addr.Address != c.MailFrom {
 		return fmt.Errorf("MAIL_FROM must be a plain email address, got %q", c.MailFrom)
 	}
-	for _, link := range []struct{ name, value string }{{"PRIVACY_URL", c.PrivacyURL}, {"IMPRINT_URL", c.ImprintURL}} {
+	for _, link := range []struct{ name, value string }{{"PRIVACY_URL", c.PrivacyURL}, {"IMPRINT_URL", c.ImprintURL}, {"TERMS_URL", c.TermsURL}} {
 		if link.value == "" {
 			continue
 		}
