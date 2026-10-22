@@ -41,7 +41,7 @@ func newProviders(cfg config.Config) *providers {
 	if cfg.WebAppURL != nil {
 		webApp = trimSlash(cfg.WebAppURL.String())
 	}
-	return &providers{
+	return &providers{ //nolint:gosec // provider API addresses, not credentials
 		cfg:             cfg.Integrations,
 		http:            &http.Client{Timeout: requestTimeout},
 		webApp:          webApp,
@@ -99,7 +99,7 @@ func (p *providers) do(ctx context.Context, method, url string, header http.Head
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 16<<20))
 	if err != nil {
 		return nil, fmt.Errorf("read %s %s answer: %w", method, req.URL.Host, err)

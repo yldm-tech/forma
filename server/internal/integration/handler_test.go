@@ -97,7 +97,7 @@ func TestUndecryptableCredentialsShowAsDisconnected(t *testing.T) {
 func TestSaveLinks(t *testing.T) {
 	e := newEnv(t)
 	o := e.owner()
-	org := e.insert(`SELECT organization_id FROM workspaces WHERE id = ?`, o.ws)
+	org := o.org
 	sv := e.survey(o.ws)
 	path := "/api/app/workspaces/" + o.ws.String() + "/integrations/slack"
 	link := map[string]any{"createdAt": "2024-01-01T00:00:00Z", "surveyId": sv.String(), "surveyName": "Test Survey", "elementIds": []string{"q1"}, "elements": "Selected questions", "channelId": "C1", "channelName": "general", "includeMetadata": true}
@@ -154,7 +154,7 @@ func TestSaveLinks(t *testing.T) {
 func TestDeleteIntegration(t *testing.T) {
 	e := newEnv(t)
 	o := e.owner()
-	org := e.insert(`SELECT organization_id FROM workspaces WHERE id = ?`, o.ws)
+	org := o.org
 	id := e.connect(o.ws, TypeNotion, map[string]any{"access_token": "ntn", "bot_id": "b"}, "", nil)
 	reader := e.user()
 	e.grant(org, o.ws, reader, "read")

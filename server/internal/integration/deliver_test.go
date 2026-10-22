@@ -80,7 +80,7 @@ func TestAirtableWritesARecord(t *testing.T) {
 	e.airtableFake("Question 2")
 	e.connect(ws, TypeAirtable, freshAirtableKey(e.now), "a@example.com", []AirtableLink{{LinkBase: everything(sv), Elements: elements("q1", "q2"), BaseID: "base1", TableID: "table1", TableName: "Table 1"}})
 
-	ev := e.respond(ws, sv, responseData, `{"plan":"pro"}`)
+	ev := e.respond(ws, sv, `{"plan":"pro"}`)
 	if err := e.deliverer.HandleResponse(context.Background(), ev); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestCreatedAtUsesTheDisplayTimeZone(t *testing.T) {
 	link.IncludeCreatedAt = ptr(true)
 	e.connect(ws, TypeAirtable, freshAirtableKey(e.now), "a@example.com", []AirtableLink{link})
 
-	ev := e.respond(ws, sv, responseData, `null`)
+	ev := e.respond(ws, sv, `null`)
 	ev.DisplayTimeZone = "Asia/Manila"
 	if err := e.deliverer.HandleResponse(context.Background(), ev); err != nil {
 		t.Fatal(err)
@@ -148,14 +148,14 @@ func TestAirtableRefreshesOnceAndStoresTheRotation(t *testing.T) {
 		{LinkBase: base(sv), Elements: elements("q2"), BaseID: "base1", TableID: "table2"},
 	})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, other, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, other, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(e.fake.to(http.MethodPost, "/airtable/oauth2/v1/token")); n != 0 {
 		t.Fatalf("a response to another survey refreshed %d times", n)
 	}
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	refreshes := e.fake.to(http.MethodPost, "/airtable/oauth2/v1/token")
@@ -243,7 +243,7 @@ func TestGoogleSheetsWritesHeaderAndRow(t *testing.T) {
 	link := SheetLink{LinkBase: base(sv), Elements: elements("q1", "q3_picture", "q4_files", "missing"), SpreadsheetID: "sheet1", SpreadsheetName: "Sheet"}
 	e.connect(ws, TypeGoogleSheets, freshGoogleKey(e.now), "g@example.com", []SheetLink{link})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	updates := e.fake.to(http.MethodPut, "/sheets/v4/spreadsheets/sheet1/values/A1")
@@ -280,7 +280,7 @@ func TestGoogleSheetsRefresh(t *testing.T) {
 	near.ExpiryDate = e.now.Add(time.Minute).UnixMilli()
 	id := e.connect(ws, TypeGoogleSheets, near, "g@example.com", []SheetLink{link})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(e.fake.to(http.MethodGet, "/google/tokeninfo")); n != 0 {
@@ -301,7 +301,7 @@ func TestGoogleSheetsRefresh(t *testing.T) {
 	blank := near
 	blank.RefreshToken = ""
 	e.connect(ws2, TypeGoogleSheets, blank, "g@example.com", []SheetLink{{LinkBase: base(sv2), Elements: elements("q1"), SpreadsheetID: "sheet2"}})
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws2, sv2, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws2, sv2, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	if len(e.fake.to(http.MethodPut, "/sheets/v4/spreadsheets/sheet2")) != 0 || !strings.Contains(e.logs.String(), `"msg":"Error in google sheets integration","err":"invalid_grant"`) {
@@ -319,7 +319,7 @@ func TestSlackPostsTheMessage(t *testing.T) {
 	link.IncludeContactAttributes = ptr(true)
 	e.connect(ws, TypeSlack, map[string]any{"access_token": "xoxb-1", "token_type": "bot", "team": map[string]string{"id": "T1", "name": "Team"}}, "", []SlackLink{link})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `{"plan":"pro","email":"person@example.com"}`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `{"plan":"pro","email":"person@example.com"}`)); err != nil {
 		t.Fatal(err)
 	}
 	posts := e.fake.to(http.MethodPost, "/slack/api/chat.postMessage")
@@ -374,7 +374,7 @@ func TestNotionCreatesThePage(t *testing.T) {
 	}}
 	e.connect(ws, TypeNotion, map[string]any{"access_token": "ntn_1", "bot_id": "bot"}, "", []NotionLink{link})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `{"plan":"pro"}`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `{"plan":"pro"}`)); err != nil {
 		t.Fatal(err)
 	}
 	pages := e.fake.to(http.MethodPost, "/notion/v1/pages")
@@ -424,7 +424,7 @@ func TestFailuresAreLoggedAndIsolated(t *testing.T) {
 		{LinkBase: base(sv), Elements: elements("q2"), BaseID: "base1", TableID: "table1"},
 	})
 
-	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, responseData, `null`)); err != nil {
+	if err := e.deliverer.HandleResponse(context.Background(), e.respond(ws, sv, `null`)); err != nil {
 		t.Fatal(err)
 	}
 	logs := e.logs.String()
@@ -440,7 +440,7 @@ func TestFailuresAreLoggedAndIsolated(t *testing.T) {
 
 	// A link made in forma2 names the survey by its old id, which resolves to the migrated survey's id.
 	migrated := e.insert(`INSERT INTO surveys (id, workspace_id, name, status, blocks) VALUES (?, ?, 'Old', 'inProgress', ?::jsonb) RETURNING id`, legacyid.ID(legacy.SurveyID), ws, surveyBlocks)
-	answers, err := responsemail.Decode(&e.respond(ws, migrated, responseData, `null`).Response)
+	answers, err := responsemail.Decode(&e.respond(ws, migrated, `null`).Response)
 	if err != nil {
 		t.Fatal(err)
 	}

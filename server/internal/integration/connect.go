@@ -191,12 +191,12 @@ func (s *Service) notionCallback(ctx context.Context, workspaceID uuid.UUID, cod
 		return "", apperr.BadRequest("Missing code or error parameter")
 	}
 	k, err := s.p.notionExchange(ctx, code)
+	if errors.Is(err, errNotionExchange) {
+		s.log.ErrorContext(ctx, "Notion OAuth token exchange failed", "workspace_id", workspaceID, "err", err)
+		return s.pageURL(TypeNotion, workspaceID, "oauth_error"), nil
+	}
 	if err != nil {
 		return "", err
-	}
-	if k == nil {
-		s.log.ErrorContext(ctx, "Notion OAuth token exchange failed", "workspace_id", workspaceID)
-		return s.pageURL(TypeNotion, workspaceID, "oauth_error"), nil
 	}
 	if err := s.connect(ctx, workspaceID, TypeNotion, k, ""); err != nil {
 		return "", err

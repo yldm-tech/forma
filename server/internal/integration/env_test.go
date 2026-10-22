@@ -281,10 +281,10 @@ const responseData = `{"q1":"Answer 1","q2":["Choice 1","Choice 2"],"q3_picture"
 const responseMeta = `{"url":"http://example.com","source":"web","userAgent":{"browser":"Chrome","os":"Mac OS","device":"Desktop"},"country":"USA","action":"Action Name","ipAddress":"203.0.113.7"}`
 
 // respond stores a finished response to sv created at 2024-01-01T12:00:00Z and returns the pipeline event for it.
-func (e *env) respond(ws, sv uuid.UUID, data, contactAttributes string) *pipeline.Event {
+func (e *env) respond(ws, sv uuid.UUID, contactAttributes string) *pipeline.Event {
 	e.t.Helper()
 	id := e.insert(`INSERT INTO responses (survey_id, finished, data, variables, meta, contact_attributes, created_at) VALUES (?, true, ?::jsonb, '{"var1":"Variable Value"}'::jsonb, ?::jsonb, ?::jsonb, '2024-01-01T12:00:00Z') RETURNING id`,
-		sv, data, responseMeta, contactAttributes)
+		sv, responseData, responseMeta, contactAttributes)
 	r, err := response.Load(context.Background(), e.db, id)
 	if err != nil || r == nil {
 		e.t.Fatalf("load response: %v", err)

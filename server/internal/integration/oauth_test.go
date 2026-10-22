@@ -21,7 +21,7 @@ import (
 
 // oauthCaller is a signed-in user with one session, the owner of a workspace.
 type oauthCaller struct {
-	user, session, ws uuid.UUID
+	user, session, org, ws uuid.UUID
 }
 
 func (o oauthCaller) headers() reqHeaders {
@@ -30,8 +30,8 @@ func (o oauthCaller) headers() reqHeaders {
 
 func (e *env) owner() oauthCaller {
 	u := e.user()
-	_, ws := e.organization(u)
-	return oauthCaller{user: u, session: uuid.New(), ws: ws}
+	org, ws := e.organization(u)
+	return oauthCaller{user: u, session: uuid.New(), org: org, ws: ws}
 }
 
 type authorizeBody struct {
@@ -139,7 +139,7 @@ func sha256Hex(s string) string {
 func TestAuthorizeRefusals(t *testing.T) {
 	e := newEnv(t)
 	o := e.owner()
-	org := e.insert(`SELECT organization_id FROM workspaces WHERE id = ?`, o.ws)
+	org := o.org
 	reader := e.user()
 	e.grant(org, o.ws, reader, "read")
 

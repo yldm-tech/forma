@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,7 +28,10 @@ func (p *providers) notionAuthorizeURL(state string) string {
 	return p.notion + "/v1/oauth/authorize?" + strings.Join(q, "&")
 }
 
-// notionExchange is forma2's Notion callback token exchange. It returns Notion's token answer whole, which is what forma2 stored, or nil when Notion refused the code or answered without a usable credential (an access_token and a bot_id), which the callback reports as oauth_error rather than replace a working connection.
+// errNotionExchange is Notion refusing the code, or answering without a usable credential (an access_token and a bot_id), which the callback reports as oauth_error rather than replace a working connection.
+var errNotionExchange = errors.New("notion OAuth token exchange failed")
+
+// notionExchange is forma2's Notion callback token exchange. It returns Notion's token answer whole, which is what forma2 stored.
 func (p *providers) notionExchange(ctx context.Context, code string) (json.RawMessage, error) {
 	body, err := encodeJS(map[string]string{"grant_type": "authorization_code", "code": code, "redirect_uri": p.notionRedirectURI()})
 	if err != nil {
@@ -41,11 +45,11 @@ func (p *providers) notionExchange(ctx context.Context, code string) (json.RawMe
 		return nil, fmt.Errorf("notion token request: %w", err)
 	}
 	if !res.ok() {
-		return nil, nil
+		return nil, fmt.Errorf("%w: status %d", errNotionExchange, res.Status)
 	}
 	var k notionKey
-	if err := json.Unmarshal(res.Body, &k); err != nil || k.AccessToken == "" || k.BotID == "" {
-		return nil, nil
+	if json.Unmarshal(res.Body, &k) != nil || k.AccessToken == "" || k.BotID == "" {
+		return nil, fmt.Errorf("%w: no access_token and bot_id", errNotionExchange)
 	}
 	return json.RawMessage(res.Body), nil
 }
