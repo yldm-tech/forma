@@ -81,7 +81,8 @@ export interface SegmentUpdate {
 export const contactKeys = {
   attributeKeys: (workspaceId: string) => ["contact-attribute-keys", workspaceId] as const,
   attributeValues: (keyId: string) => ["contact-attribute-keys", "values", keyId] as const,
-  list: (workspaceId: string) => ["contacts", workspaceId] as const,
+  all: (workspaceId: string) => ["contacts", workspaceId] as const,
+  lists: (workspaceId: string) => ["contacts", workspaceId, "list"] as const,
   search: (workspaceId: string, search: string) => ["contacts", workspaceId, "list", search] as const,
   detail: (workspaceId: string, contactId: string) => ["contacts", workspaceId, "detail", contactId] as const,
   segments: (workspaceId: string) => ["segments", workspaceId] as const,
@@ -152,7 +153,8 @@ export const useDeleteContacts = (workspaceId: string) => {
         await Promise.all(contactIds.slice(i, i + 5).map(deleteContact));
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: contactKeys.list(workspaceId) }),
+    // Only the lists: a deleted contact's own page is being left, and refetching it would fail.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: contactKeys.lists(workspaceId) }),
   });
 };
 
@@ -163,7 +165,7 @@ export const useUpdateContactAttributes = (workspaceId: string, contactId: strin
       api.put<AttributeUpdateResult>(`/api/app/contacts/${contactId}/attributes`, { attributes }),
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: contactKeys.list(workspaceId) }),
+        queryClient.invalidateQueries({ queryKey: contactKeys.all(workspaceId) }),
         queryClient.invalidateQueries({ queryKey: contactKeys.attributeKeys(workspaceId) }),
       ]),
   });
@@ -189,7 +191,7 @@ export const useImportContacts = (workspaceId: string) => {
     },
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: contactKeys.list(workspaceId) }),
+        queryClient.invalidateQueries({ queryKey: contactKeys.lists(workspaceId) }),
         queryClient.invalidateQueries({ queryKey: contactKeys.attributeKeys(workspaceId) }),
       ]),
   });
