@@ -97,6 +97,7 @@ describe("api", () => {
     );
     const error = (await api.patch("/api/v3/tags/1", { name: "x" }).catch((e: unknown) => e)) as ApiError;
     expect(error.message).toBe("Unable to update tag");
+    expect(error.code).toBe("problem");
     expect(error.invalidParams).toEqual([{ name: "name", reason: "tag_name_already_exists" }]);
   });
 

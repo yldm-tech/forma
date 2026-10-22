@@ -8,6 +8,9 @@ export interface FieldError {
   param?: string;
 }
 
+/** The code of an RFC 9457 problem from /api/v3 that names none itself. */
+export const PROBLEM_CODE = "problem";
+
 /** One offending input of an RFC 9457 problem from /api/v3; reason carries the service's error code where it has one. */
 export interface InvalidParam {
   name: string;
@@ -64,7 +67,13 @@ const readError = async (response: Response): Promise<ApiError> => {
     invalid_params?: unknown;
   } | null;
   if (!body) return fallback;
-  const code = typeof body.code === "string" ? body.code : fallback.code;
+  // A v3 problem without its own code still carries a detail written for the user, unlike a body-less failure.
+  const code =
+    typeof body.code === "string"
+      ? body.code
+      : typeof body.detail === "string"
+        ? PROBLEM_CODE
+        : fallback.code;
   const message =
     typeof body.detail === "string"
       ? body.detail

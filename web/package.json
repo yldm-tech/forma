@@ -24,6 +24,7 @@
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "csv-parse": "7.0.2",
+    "date-fns": "catalog:",
     "i18next": "catalog:",
     "i18next-icu": "catalog:",
     "lucide-react": "catalog:",
