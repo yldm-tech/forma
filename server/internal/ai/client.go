@@ -114,10 +114,9 @@ const (
 
 // endpoints overrides where providers send their requests; production leaves it empty and tests point it at servers that speak each provider's protocol.
 type endpoints struct {
-	bedrock  string
-	vertex   string
-	vertexV1 bool
-	retries  *int
+	bedrock string
+	vertex  string
+	retries *int
 }
 
 // Client is forma2's @forma/ai: the configured provider, resolved once per model and kept for the life of the process.

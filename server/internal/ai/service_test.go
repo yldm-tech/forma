@@ -85,10 +85,9 @@ func (b *syncBuffer) lines(t *testing.T, msg string) []map[string]any {
 // fakeProvider is an OpenAI-compatible chat completions endpoint whose answer each test decides.
 type fakeProvider struct {
 	*httptest.Server
-	mu       sync.Mutex
-	bodies   []map[string]any
-	answer   func(body map[string]any) (status int, content string)
-	inFlight chan struct{}
+	mu     sync.Mutex
+	bodies []map[string]any
+	answer func(body map[string]any) (status int, content string)
 }
 
 func newFakeProvider(t *testing.T) *fakeProvider {
@@ -233,13 +232,14 @@ func (e *serviceEnv) fails(rec *httptest.ResponseRecorder, status int, code stri
 	return env
 }
 
-func expectCode(t *testing.T, err error, status int, code string) *apperr.Error {
+// expectCode asserts an expected failure with the status and code, and returns a copy of it.
+func expectCode(t *testing.T, err error, status int, code string) apperr.Error {
 	t.Helper()
 	e, ok := apperr.As(err)
 	if !ok || e.Status != status || e.Code != code {
 		t.Fatalf("want %d %s, got %v", status, code, err)
 	}
-	return e
+	return *e
 }
 
 // forma2's service.test.ts: the organization's AI configuration and the order assertOrganizationAIConfigured fails in.

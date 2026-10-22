@@ -112,8 +112,8 @@ func (p *draftParser) object(path []any, v any, present bool, allowed ...string)
 	return o
 }
 
-// text is a trimmed string of minLen to maxLen characters.
-func (p *draftParser) text(path []any, v any, present bool, minLen, maxLen int) (string, bool) {
+// text is a trimmed string of 1 to maxLen characters.
+func (p *draftParser) text(path []any, v any, present bool, maxLen int) (string, bool) {
 	s, ok := v.(string)
 	if !ok {
 		p.expected(path, "string", v, present)
@@ -121,8 +121,8 @@ func (p *draftParser) text(path []any, v any, present bool, minLen, maxLen int) 
 	}
 	s = strings.TrimSpace(s)
 	switch n := utf8.RuneCountInString(s); {
-	case n < minLen:
-		p.add(path, fmt.Sprintf("Too small: expected string to have >=%d characters", minLen), "")
+	case n < 1:
+		p.add(path, "Too small: expected string to have >=1 characters", "")
 		return "", false
 	case n > maxLen:
 		p.add(path, fmt.Sprintf("Too big: expected string to have <=%d characters", maxLen), "")
@@ -131,12 +131,13 @@ func (p *draftParser) text(path []any, v any, present bool, minLen, maxLen int) 
 	return s, true
 }
 
-func (p *draftParser) nullableText(o *object, key string, path []any, minLen, maxLen int) *string {
+// nullableText is a nullable trimmed string of 1 to maxLen characters.
+func (p *draftParser) nullableText(o *object, key string, path []any, maxLen int) *string {
 	v, present := o.get(key)
 	if present && v == nil {
 		return nil
 	}
-	s, ok := p.text(childPath(path, key), v, present, minLen, maxLen)
+	s, ok := p.text(childPath(path, key), v, present, maxLen)
 	if !ok {
 		return nil
 	}
@@ -166,7 +167,7 @@ func (p *draftParser) list(path []any, v any, present bool) []string {
 	}
 	out := make([]string, 0, len(items))
 	for i, item := range items {
-		s, _ := p.text(childPath(path, i), item, true, 1, 80)
+		s, _ := p.text(childPath(path, i), item, true, 80)
 		out = append(out, s)
 	}
 	return out
@@ -181,8 +182,8 @@ func (p *draftParser) draft(v any) *generatedDraft {
 	lang, present := o.get("language")
 	d.Language = p.enum([]any{"language"}, lang, present, userLocales)
 	name, present := o.get("name")
-	d.Name, _ = p.text([]any{"name"}, name, present, 1, 220)
-	d.Description = p.nullableText(o, "description", nil, 1, 320)
+	d.Name, _ = p.text([]any{"name"}, name, present, 220)
+	d.Description = p.nullableText(o, "description", nil, 320)
 
 	if wc, present := o.get("welcomeCard"); !present || wc != nil {
 		path := []any{"welcomeCard"}
@@ -190,16 +191,16 @@ func (p *draftParser) draft(v any) *generatedDraft {
 			enabled, present := w.get("enabled")
 			d.WelcomeCard = &generatedWelcomeCard{
 				Enabled:     p.boolean(childPath(path, "enabled"), enabled, present),
-				Headline:    p.nullableText(w, "headline", path, 1, 220),
-				Subheader:   p.nullableText(w, "subheader", path, 1, 320),
-				ButtonLabel: p.nullableText(w, "buttonLabel", path, 1, 220),
+				Headline:    p.nullableText(w, "headline", path, 220),
+				Subheader:   p.nullableText(w, "subheader", path, 320),
+				ButtonLabel: p.nullableText(w, "buttonLabel", path, 220),
 			}
 		}
 	}
 	if en, present := o.get("ending"); !present || en != nil {
 		path := []any{"ending"}
 		if e := p.object(path, en, present, "headline", "subheader"); e != nil {
-			d.Ending = &generatedEnding{Headline: p.nullableText(e, "headline", path, 1, 220), Subheader: p.nullableText(e, "subheader", path, 1, 320)}
+			d.Ending = &generatedEnding{Headline: p.nullableText(e, "headline", path, 220), Subheader: p.nullableText(e, "subheader", path, 320)}
 		}
 	}
 
@@ -228,7 +229,7 @@ func (p *draftParser) block(path []any, v any) generatedBlock {
 		return b
 	}
 	name, present := o.get("name")
-	b.Name, _ = p.text(childPath(path, "name"), name, present, 1, 220)
+	b.Name, _ = p.text(childPath(path, "name"), name, present, 220)
 	questions, present := o.get("questions")
 	qpath := childPath(path, "questions")
 	items, ok := questions.([]any)
@@ -257,11 +258,11 @@ func (p *draftParser) element(path []any, v any) generatedElement {
 	t, present := o.get("type")
 	e.Type = p.enum(childPath(path, "type"), t, present, generatedElementTypes)
 	h, present := o.get("headline")
-	e.Headline, _ = p.text(childPath(path, "headline"), h, present, 1, 220)
-	e.Subheader = p.nullableText(o, "subheader", path, 1, 320)
+	e.Headline, _ = p.text(childPath(path, "headline"), h, present, 220)
+	e.Subheader = p.nullableText(o, "subheader", path, 320)
 	r, present := o.get("required")
 	e.Required = p.boolean(childPath(path, "required"), r, present)
-	e.Placeholder = p.nullableText(o, "placeholder", path, 1, 120)
+	e.Placeholder = p.nullableText(o, "placeholder", path, 120)
 	if la, present := o.get("longAnswer"); !present || la != nil {
 		b := p.boolean(childPath(path, "longAnswer"), la, present)
 		e.LongAnswer = &b
@@ -281,8 +282,8 @@ func (p *draftParser) element(path []any, v any) generatedElement {
 	e.Choices = nullableList("choices", false)
 	e.Rows = nullableList("rows", !p.forAI)
 	e.Columns = nullableList("columns", !p.forAI)
-	e.LowerLabel = p.nullableText(o, "lowerLabel", path, 1, 60)
-	e.UpperLabel = p.nullableText(o, "upperLabel", path, 1, 60)
+	e.LowerLabel = p.nullableText(o, "lowerLabel", path, 60)
+	e.UpperLabel = p.nullableText(o, "upperLabel", path, 60)
 	if !skip("scale", false) {
 		sc, present := o.get("scale")
 		s := p.enum(childPath(path, "scale"), sc, present, []string{"number", "smiley", "star"})

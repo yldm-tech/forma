@@ -52,7 +52,7 @@ type recorder struct {
 	requests []recorded
 }
 
-func (r *recorder) record(t *testing.T, req *http.Request) recorded {
+func (r *recorder) record(t *testing.T, req *http.Request) {
 	t.Helper()
 	raw, _ := io.ReadAll(req.Body)
 	var body map[string]any
@@ -65,7 +65,6 @@ func (r *recorder) record(t *testing.T, req *http.Request) recorded {
 	r.mu.Lock()
 	r.requests = append(r.requests, rec)
 	r.mu.Unlock()
-	return rec
 }
 
 func (r *recorder) last(t *testing.T) recorded {

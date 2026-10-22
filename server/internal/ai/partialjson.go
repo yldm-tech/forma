@@ -17,6 +17,9 @@ func parsePartialJSON(text string) (any, bool) {
 	return nil, false
 }
 
+// jsonLiterals are the literals a truncated text may end inside, in the order fixJSON completes them.
+var jsonLiterals = []string{"true", "false", "null"}
+
 type jsonState int
 
 const (
@@ -101,7 +104,12 @@ func fixJSON(input string) string {
 		}
 	}
 	isLiteralPrefix := func(s string) bool {
-		return strings.HasPrefix("false", s) || strings.HasPrefix("true", s) || strings.HasPrefix("null", s)
+		for _, literal := range jsonLiterals {
+			if strings.HasPrefix(literal, s) {
+				return true
+			}
+		}
+		return false
 	}
 
 	for i := 0; i < len(input); i++ {
@@ -222,7 +230,7 @@ func fixJSON(input string) string {
 			result = append(result, ']')
 		case stateLiteral:
 			partial := input[literalStart:]
-			for _, lit := range []string{"true", "false", "null"} {
+			for _, lit := range jsonLiterals {
 				if strings.HasPrefix(lit, partial) {
 					result = append(result, lit[len(partial):]...)
 					break
