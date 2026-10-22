@@ -66,11 +66,8 @@ func (s *Service) Copy(ctx context.Context, caller Caller, surveyID, targetWorks
 		return nil, err
 	}
 	copied, err := s.copy(ctx, caller, source, targetWorkspaceID, *targetOrg)
-	id := ""
-	if copied != nil {
-		id = copied.ID.String()
-	}
-	s.record(ctx, caller, audit.ActionCopiedToOtherWorkspace, audit.TargetSurvey, id, targetOrg, err, nil, copied)
+	// forma2 audited the copy on the survey it was made from, whether or not it succeeded.
+	s.record(ctx, caller, audit.ActionCopiedToOtherWorkspace, audit.TargetSurvey, surveyID.String(), targetOrg, err, nil, copied)
 	return copied, err
 }
 

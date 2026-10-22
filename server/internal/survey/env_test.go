@@ -387,3 +387,47 @@ func (e *env) waitForLockWaiter() {
 	}
 	e.t.Fatal("no request waited for the survey's row lock")
 }
+
+// auditEvent is an audit event as the emitter logs it.
+type auditEvent struct {
+	Action string `json:"action"`
+	Status string `json:"status"`
+	Actor  struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	} `json:"actor"`
+	Target struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	} `json:"target"`
+	OrganizationID string `json:"organizationId"`
+}
+
+// lastAudit is the latest audit event with the action, failing the test when there is none.
+func (e *env) lastAudit(action audit.Action) auditEvent {
+	e.t.Helper()
+	var found *auditEvent
+	for _, line := range strings.Split(e.logs.String(), "\n") {
+		var rec struct {
+			Msg string `json:"msg"`
+			auditEvent
+		}
+		if json.Unmarshal([]byte(line), &rec) == nil && rec.Msg == "audit" && rec.Action == string(action) {
+			found = &rec.auditEvent
+		}
+	}
+	if found == nil {
+		e.t.Fatalf("no %s audit event", action)
+		return auditEvent{}
+	}
+	return *found
+}
+
+// expectAudit asserts the latest audit event with the action.
+func (e *env) expectAudit(action audit.Action, status audit.Status, actorType audit.ActorType, actorID string, target audit.Target, targetID string) {
+	e.t.Helper()
+	got := e.lastAudit(action)
+	if got.Status != string(status) || got.Actor.Type != string(actorType) || (actorID != "" && got.Actor.ID != actorID) || got.Target.Type != string(target) || got.Target.ID != targetID {
+		e.t.Fatalf("%s audit %+v, want %s by %s %s on %s %s", action, got, status, actorType, actorID, target, targetID)
+	}
+}

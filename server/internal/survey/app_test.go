@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
@@ -410,4 +411,48 @@ func TestPublicDomain(t *testing.T) {
 			e.fails(e.request(http.MethodGet, "/api/app/public-domain", nil, nil), http.StatusUnauthorized, apperr.CodeNotAuthenticated, "")
 		})
 	}
+}
+
+// forma2's audit events of the survey module: the action, its outcome, who acted (a user, or an API key as "api") and on what.
+func TestSurveyAuditEvents(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	target := e.workspace(org)
+	user := audit.ActorUser
+	id := e.createLink(owner, ws)
+	e.expectAudit(audit.ActionCreated, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
+
+	var copied Survey
+	e.ok(e.do(owner, http.MethodPost, appPath(id, "/copy"), map[string]any{"targetWorkspaceId": target}), http.StatusCreated, &copied)
+	// The copy is audited on the survey it was made from.
+	e.expectAudit(audit.ActionCopiedToOtherWorkspace, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
+
+	sv := e.editorSurvey(owner, id)
+	sv["name"] = "Audited"
+	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
+	e.expectAudit(audit.ActionUpdated, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
+
+	key := e.apiKey(org, ws, "write")
+	e.ok(e.v3Key(key, http.MethodPatch, surveysPath("/"+id), `{"name": "By key"}`), http.StatusOK, nil)
+	e.expectAudit(audit.ActionUpdated, audit.StatusSuccess, audit.ActorAPI, "", audit.TargetSurvey, id)
+	e.problem(e.v3Key(key, http.MethodPatch, surveysPath("/"+id), `{"blocks": []}`), http.StatusUnprocessableEntity, "")
+	e.expectAudit(audit.ActionUpdated, audit.StatusFailure, audit.ActorAPI, "", audit.TargetSurvey, id)
+
+	quota := map[string]any{"name": "Pros", "limit": 10, "logic": map[string]any{"connector": "and", "conditions": []any{}}, "action": "continueSurvey", "countPartialSubmissions": false}
+	var q Quota
+	e.ok(e.do(owner, http.MethodPost, appPath(id, "/quotas"), quota), http.StatusCreated, &q)
+	e.expectAudit(audit.ActionCreated, audit.StatusSuccess, user, owner.String(), audit.TargetQuota, q.ID.String())
+	quota["limit"] = 20
+	e.ok(e.do(owner, http.MethodPatch, "/api/app/quotas/"+q.ID.String(), quota), http.StatusOK, nil)
+	e.expectAudit(audit.ActionUpdated, audit.StatusSuccess, user, owner.String(), audit.TargetQuota, q.ID.String())
+	e.ok(e.do(owner, http.MethodDelete, "/api/app/quotas/"+q.ID.String(), nil), http.StatusNoContent, nil)
+	e.expectAudit(audit.ActionDeleted, audit.StatusSuccess, user, owner.String(), audit.TargetQuota, q.ID.String())
+
+	e.ok(e.v3(owner, http.MethodPost, surveysPath("/"+id+"/archive"), nil), http.StatusOK, nil)
+	e.expectAudit(audit.ActionArchived, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
+	e.ok(e.v3(owner, http.MethodPost, surveysPath("/"+id+"/restore"), nil), http.StatusOK, nil)
+	e.expectAudit(audit.ActionRestored, audit.StatusSuccess, user, owner.String(), audit.TargetSurvey, id)
+	e.ok(e.v3Key(key, http.MethodDelete, surveysPath("/"+id), nil), http.StatusNoContent, nil)
+	e.expectAudit(audit.ActionDeleted, audit.StatusSuccess, audit.ActorAPI, "", audit.TargetSurvey, id)
 }
