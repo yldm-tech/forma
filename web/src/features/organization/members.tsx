@@ -36,6 +36,7 @@ import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
 import { isInviteExpired } from "../../lib/invites";
 import { meQuery } from "../../lib/queries/auth";
+import { combinedQueryState } from "../../lib/query-state";
 import {
   type Invite,
   invitesQuery,
@@ -87,6 +88,11 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
     ...(invites.data ?? []).map((invite) => ({ kind: "invite" as const, invite })),
   ];
   const doesOrgHaveMoreThanOneOwner = hasMoreThanOneActiveOwner(members.data ?? []);
+  // A table missing its members, its invites or the caller's permissions would look complete and silently lose rows or actions, so any failure replaces it.
+  const state = combinedQueryState([members, invites, access]);
+  const retry = () => {
+    for (const query of [members, invites, access]) if (query.isError) void query.refetch();
+  };
 
   return (
     <SettingsCard
@@ -102,7 +108,14 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
           billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
         />
       </div>
-      {members.isPending || invites.isPending || access.isPending ? (
+      {state.status === "error" ? (
+        <div role="alert" className="flex flex-col items-start gap-3 px-4 py-6 text-sm text-red-600">
+          <p>{errorMessage(t, state.error)}</p>
+          <Button variant="secondary" size="sm" onClick={retry}>
+            {t("common.try_again")}
+          </Button>
+        </div>
+      ) : state.status === "pending" ? (
         <div className="space-y-4 px-4 py-4">
           <LoadingBlock />
           <LoadingBlock />
