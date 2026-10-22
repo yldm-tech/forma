@@ -264,7 +264,7 @@ func TestV3AppSurveyDistributionAndTargeting(t *testing.T) {
 	if ip := p.param(t, "targeting.filters.0.resource.root.contactAttributeKey"); ip.Reason != "Contact attribute key 'tier' was not found in this workspace" {
 		t.Fatalf("%+v", ip)
 	}
-	p = e.problem(e.v3(owner, http.MethodPost, surveysPath(""), body(`[]`, `[]`)), http.StatusBadRequest, appTriggerMessage)
+	e.problem(e.v3(owner, http.MethodPost, surveysPath(""), body(`[]`, `[]`)), http.StatusBadRequest, appTriggerMessage)
 
 	var created resource
 	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), body(`[{"actionClassId": "`+trigger.String()+`"}]`, planFilter)), http.StatusCreated, &created)

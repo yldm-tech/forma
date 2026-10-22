@@ -45,7 +45,9 @@ func TestProblemResponses(t *testing.T) {
 		t.Fatalf("internal error leaked: %s", rec.Body.String())
 	}
 
-	rec = serve(t, func(c *gin.Context) { Fail(c, log, TooManyRequests("Maximum number of requests reached. Please try again later.", 42)) }, http.MethodGet, "/api/v3/things", "")
+	rec = serve(t, func(c *gin.Context) {
+		Fail(c, log, TooManyRequests("Maximum number of requests reached. Please try again later.", 42))
+	}, http.MethodGet, "/api/v3/things", "")
 	if rec.Code != 429 || rec.Header().Get("Retry-After") != "42" {
 		t.Fatalf("rate limit %d %v", rec.Code, rec.Header())
 	}
@@ -63,7 +65,7 @@ func TestInputHelpers(t *testing.T) {
 			Fail(c, log, err)
 			return
 		}
-		OK(c, json.RawMessage(raw))
+		OK(c, raw)
 	}
 	if rec := serve(t, read, http.MethodPost, "/api/v3/things?lang=de", `{"a": 1}`); rec.Code != 200 || rec.Body.String() != `{"data":{"a":1}}` {
 		t.Fatalf("%d %s", rec.Code, rec.Body.String())
