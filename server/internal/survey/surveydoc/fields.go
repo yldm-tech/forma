@@ -47,7 +47,7 @@ func firstDuplicate(values []string) int {
 	return -1
 }
 
-// FieldIssues are the refinements zod attached to individual fields of the survey document (ZI18nString's default key, id rules, URL schemes, per-element rules, uniqueness within one list). Unlike the cross-field refinement they do not depend on the rest of the survey.
+// FieldIssues are the refinements zod attached to individual fields of the survey document (ZI18nString's default key, id rules, URL schemes, per-element rules, uniqueness within one list). Unlike the cross-field refinement they do not depend on the rest of the survey. They read the typed view, which holds only the keys each element's and ending's variant declares, so a key zod would have stripped is never checked.
 func FieldIssues(s *Survey) []Issue {
 	var is issues
 	wc := &s.WelcomeCard
@@ -114,8 +114,19 @@ func FieldIssues(s *Survey) []Issue {
 		is.followUpTrigger(path("followUps", i, "trigger"), f.Trigger)
 	}
 
+	if st := s.Styling; st != nil {
+		if st.Logo != nil {
+			is.storageURL(path("styling", "logo", "url"), st.Logo.URL)
+		}
+		// ZSurveyStylingBackground: an uploaded background needs its file.
+		if bg := st.Background; bg != nil && bg.BgType != nil && *bg.BgType == "upload" && (bg.Bg == nil || *bg.Bg == "") {
+			is.add(path("styling", "background"), "Invalid background")
+		}
+	}
+
 	is.i18n(path("metadata", "title"), s.MetadataTitle)
 	is.i18n(path("metadata", "description"), s.MetadataDescription)
+	is.storageURL(path("metadata", "ogImage"), s.MetadataOGImage)
 	return is
 }
 

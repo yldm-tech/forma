@@ -144,11 +144,18 @@ func Decode(d Document, languages []Language, followUps []FollowUpInput) (*Surve
 		var meta struct {
 			Title       I18nString `json:"title"`
 			Description I18nString `json:"description"`
+			OGImage     *string    `json:"ogImage"`
 		}
 		if err := json.Unmarshal(d.Metadata, &meta); err != nil {
 			return nil, fmt.Errorf("decode survey metadata: %w", err)
 		}
-		s.MetadataTitle, s.MetadataDescription = meta.Title, meta.Description
+		s.MetadataTitle, s.MetadataDescription, s.MetadataOGImage = meta.Title, meta.Description, meta.OGImage
+	}
+	if !isAbsent(d.Styling) {
+		s.Styling = &Styling{}
+		if err := json.Unmarshal(d.Styling, s.Styling); err != nil {
+			return nil, fmt.Errorf("decode survey styling: %w", err)
+		}
 	}
 	for _, f := range followUps {
 		fu := FollowUp{ID: f.ID, Name: f.Name, Deleted: f.Deleted}
