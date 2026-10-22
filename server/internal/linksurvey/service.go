@@ -228,7 +228,7 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 	if err != nil {
 		return page{}, err
 	}
-	p, err := s.render(ctx, renderInput{
+	p, err := s.render(renderInput{
 		survey: sv, fields: fields, linkSurveyID: rawID, q: q, singleUseID: singleUseID, singleUseResponse: singleUseResponse,
 		allowURLUserID: true, workspace: wc, locale: locale, responseCount: count,
 	})
@@ -257,7 +257,7 @@ func (s *Service) welcomeCardCount(ctx context.Context, sv *survey.Survey) (*int
 }
 
 // render is forma2's renderSurvey: the gates in front of a survey, in forma2's order, then the survey. A draft, non-link or archived survey is a 404.
-func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
+func (s *Service) render(in renderInput) (page, error) {
 	sv, q := in.survey, in.q
 	langParam := q.get("lang")
 	languageCode := resolveSurveyLanguageCode(langParam, sv.Languages)
@@ -468,7 +468,7 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 		return page{}, err
 	}
 	// forma2 passed the contact's existing response here, which the check above has already ruled out.
-	p, err := s.render(ctx, renderInput{
+	p, err := s.render(renderInput{
 		survey: sv, fields: fields, linkSurveyID: surveyRaw, q: q, singleUseID: singleUseID, contactID: contactID.String(),
 		workspace: wc, locale: locale, responseCount: count,
 	})

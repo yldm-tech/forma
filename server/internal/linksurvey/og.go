@@ -155,7 +155,7 @@ func wrap(face font.Face, text string, width fixed.Int26_6, spacing fixed.Int26_
 	measure := func(s string) fixed.Int26_6 {
 		w := font.MeasureString(face, s)
 		if n := len([]rune(s)); n > 1 {
-			w += spacing * fixed.Int26_6(n-1)
+			w += spacing * fixed.Int26_6(n-1) //nolint:gosec // n counts the runes of at most the name's 120 characters
 		}
 		return w
 	}
@@ -172,7 +172,6 @@ func wrap(face font.Face, text string, width fixed.Int26_6, spacing fixed.Int26_
 		}
 		if line != "" {
 			lines = append(lines, line)
-			line = ""
 		}
 		for measure(word) > width {
 			runes := []rune(word)

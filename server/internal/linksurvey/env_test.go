@@ -74,7 +74,9 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	limiter := ratelimit.New(cfg, cache, log)
+	// Windows are aligned to the wall clock. A clock frozen at the start of a window keeps a rate-limit scenario inside one window, and its counter alive for the whole minute, on a slow run.
+	frozen := time.Now().Truncate(time.Minute)
+	limiter := ratelimit.New(cfg, cache, log).WithClock(func() time.Time { return frozen })
 	surveyRepo := survey.NewRepository(db)
 	surveys := survey.NewService(cfg, surveyRepo, nil, limiter, audit.New(cfg, log), nil, cipher, nil, log)
 	mail := &mailertest.Transport{}
@@ -82,7 +84,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := &env{t: t, cfg: cfg, db: db, cache: cache, mail: mail, now: time.Now()}
+	e := &env{t: t, cfg: cfg, db: db, cache: cache, mail: mail, now: frozen}
 	e.svc = NewService(cfg, NewRepository(db, surveyRepo, cache, log), surveys, m, log)
 	e.svc.now = func() time.Time { return e.now }
 	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}, "survey.html": {Data: []byte(testShell)}})

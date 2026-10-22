@@ -266,6 +266,7 @@ func TestSurveyPageLanguage(t *testing.T) {
 	e.language(ws, id, "en", "", true, true)
 	e.language(ws, id, "de", "", false, true)
 	e.language(ws, id, "he", "", false, true)
+	e.language(ws, id, "fr", "", false, false)
 	cases := []struct {
 		lang, accept, languageCode, locale string
 	}{
@@ -273,6 +274,8 @@ func TestSurveyPageLanguage(t *testing.T) {
 		{"", "ja-JP", "default", "ja-JP"},
 		{"he", "ja-JP", "he", "ja-JP"},
 		{"it", "ja-JP", "default", "en-US"},
+		// A disabled language renders the default one.
+		{"fr", "ja-JP", "default", "en-US"},
 	}
 	for _, tc := range cases {
 		p := e.page("/s/"+id.String()+"?lang="+tc.lang, "Accept-Language", tc.accept)
@@ -383,7 +386,8 @@ func TestSurveyPagePin(t *testing.T) {
 	if p.view() != viewPin || s["survey"] != nil || s["surveyId"] != id.String() || s["locale"] != "ja-JP" {
 		t.Fatalf("view %q survey %v", p.view(), s)
 	}
-	if strings.Contains(p.Body, "1234") || strings.Contains(p.Body, "What do you think?") || strings.Contains(p.Body, "surveys.umd.js") {
+	// The PIN would appear as a JSON string; ids may contain its digits.
+	if strings.Contains(p.Body, `"1234"`) || strings.Contains(p.Body, `"pin":`) || strings.Contains(p.Body, "What do you think?") || strings.Contains(p.Body, "surveys.umd.js") {
 		t.Fatalf("the PIN gate leaks: %s", p.Body)
 	}
 	verified := e.survey(ws, "pin", "1234", "is_verify_email_enabled", true)

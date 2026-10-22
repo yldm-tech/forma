@@ -3,6 +3,7 @@ package linksurvey
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -181,7 +182,7 @@ func TestContactToken(t *testing.T) {
 	if err != nil || contactID != forma2Contact || surveyID != forma2Survey {
 		t.Fatalf("verifyContactToken = %q, %q, %v", contactID, surveyID, err)
 	}
-	if _, _, err := verifyContactToken(cfg, forma2ExpiredContactToken, testNow); err != errContactTokenExpired {
+	if _, _, err := verifyContactToken(cfg, forma2ExpiredContactToken, testNow); !errors.Is(err, errContactTokenExpired) {
 		t.Fatalf("expired token: %v", err)
 	}
 	plainIDs, _ := sign(string(cfg.EncryptionKeyText), contactClaims{ContactID: forma2Contact, SurveyID: forma2Survey})
@@ -201,7 +202,7 @@ func TestContactToken(t *testing.T) {
 			if name == "signed by another key" {
 				c = otherKey
 			}
-			if _, _, err := verifyContactToken(c, token, testNow); err != errContactTokenInvalid {
+			if _, _, err := verifyContactToken(c, token, testNow); !errors.Is(err, errContactTokenInvalid) {
 				t.Fatalf("err = %v, want invalid", err)
 			}
 		})
