@@ -17,7 +17,6 @@ import {
   type TSegmentFilter,
   type TSegmentFilterValue,
   type TSegmentOperator,
-  type TSegmentPersonFilter,
   type TSegmentSegmentFilter,
   type TSegmentSurveyInteractionFilterValue,
   type TSurveyInteractionOperator,
@@ -413,24 +412,6 @@ export const updateContactAttributeKeyInFilter = (
       }
     } else {
       updateContactAttributeKeyInFilter(resource, filterId, newContactAttributeKey);
-    }
-  }
-};
-
-export const updatePersonIdentifierInFilter = (
-  group: TBaseFilters,
-  filterId: string,
-  newPersonIdentifier: string
-) => {
-  for (let i = 0; i < group.length; i++) {
-    const { resource } = group[i]!;
-
-    if (isResourceFilter(resource)) {
-      if (resource.id === filterId) {
-        (resource as TSegmentPersonFilter).root.personIdentifier = newPersonIdentifier;
-      }
-    } else {
-      updatePersonIdentifierInFilter(resource, filterId, newPersonIdentifier);
     }
   }
 };

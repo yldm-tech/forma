@@ -83,9 +83,9 @@ export const ThemePreview = ({
             </button>
           </div>
         </div>
-        <div
-          className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-b-lg"
-          style={pageBackground}>
+        <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-b-lg">
+          {/* The brightness applies to the page background only, as forma2's MediaBackground drew it beneath the survey. */}
+          {pageBackground && <div aria-hidden="true" className="absolute inset-0" style={pageBackground} />}
           {isApp ? (
             <div
               className={cn("absolute w-[360px] overflow-hidden", PLACEMENT_CLASSES[workspace.placement])}
@@ -97,7 +97,10 @@ export const ThemePreview = ({
             </div>
           ) : (
             <div
-              className={cn("mx-auto flex w-full flex-1", isCardless ? "flex-col" : "items-center p-4")}
+              className={cn(
+                "relative mx-auto flex w-full flex-1",
+                isCardless ? "flex-col" : "items-center p-4"
+              )}
               style={
                 isCardless ? undefined : { maxWidth: getLinkSurveyCardMaxWidth(styling.linkSurveyCardWidth) }
               }>

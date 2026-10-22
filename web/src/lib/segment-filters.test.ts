@@ -27,7 +27,6 @@ import {
   updateDeviceTypeInFilter,
   updateFilterValue,
   updateOperatorInFilter,
-  updatePersonIdentifierInFilter,
   updateSegmentIdInFilter,
   updateSurveyInteractionValueInFilter,
 } from "./segment-filters";
@@ -534,30 +533,6 @@ describe("Segment Utils", () => {
     expect(
       ((group[1]!.resource as TBaseFilters)[0]!.resource as TSegmentAttributeFilter).root.contactAttributeKey
     ).toBe("newKey2");
-  });
-
-  test("updatePersonIdentifierInFilter", () => {
-    const filter1 = createMockFilter("f1", "person");
-    const baseFilter1 = createBaseFilter(filter1, null, "bf1");
-    const nestedFilter = createMockFilter("nf1", "person");
-    const nestedBaseFilter = createBaseFilter(nestedFilter, null, "nbf1");
-    const nestedGroup = createBaseFilter([nestedBaseFilter], "or", "ng1");
-    const group: TBaseFilters = [baseFilter1, nestedGroup];
-
-    updatePersonIdentifierInFilter(group, "f1", "newId1");
-    expect((group[0]!.resource as TSegmentPersonFilter).root.personIdentifier).toBe("newId1");
-
-    updatePersonIdentifierInFilter(group, "nf1", "newId2");
-    expect(
-      ((group[1]!.resource as TBaseFilters)[0]!.resource as TSegmentPersonFilter).root.personIdentifier
-    ).toBe("newId2");
-
-    // Update identifier of non-existent filter (should do nothing)
-    updatePersonIdentifierInFilter(group, "nonExistent", "anotherId");
-    expect((group[0]!.resource as TSegmentPersonFilter).root.personIdentifier).toBe("newId1");
-    expect(
-      ((group[1]!.resource as TBaseFilters)[0]!.resource as TSegmentPersonFilter).root.personIdentifier
-    ).toBe("newId2");
   });
 
   test("updateSegmentIdInFilter", () => {
