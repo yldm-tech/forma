@@ -248,7 +248,7 @@ func (r *Repository) copySegment(ctx context.Context, surveyID uuid.UUID, seg *S
 	var err error
 	switch {
 	case seg.IsPrivate:
-		id, err = r.createSegment(ctx, workspaceID, surveyID.String(), nil, true, seg.Filters)
+		id, err = r.createSegment(ctx, workspaceID, surveyID.String(), true, seg.Filters)
 	case sameWorkspace:
 		id = seg.ID
 	default:
@@ -260,7 +260,7 @@ func (r *Repository) copySegment(ctx context.Context, surveyID uuid.UUID, seg *S
 		if taken {
 			title = seg.Title + "-" + strconv.FormatInt(now.UnixMilli(), 10)
 		}
-		id, err = r.createSegment(ctx, workspaceID, title, nil, false, seg.Filters)
+		id, err = r.createSegment(ctx, workspaceID, title, false, seg.Filters)
 	}
 	if err != nil {
 		return err

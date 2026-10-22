@@ -1,7 +1,6 @@
 package survey
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -462,7 +461,7 @@ func (h *Handler) v3Template(c *gin.Context) {
 		h.fail(c, err)
 		return
 	}
-	in, err := ParseTemplateCreate(json.RawMessage(body))
+	in, err := ParseTemplateCreate(body)
 	if err != nil {
 		h.fail(c, err)
 		return

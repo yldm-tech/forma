@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -143,14 +144,15 @@ func ParseListQuery(q map[string][]string) (*ListQuery, *v3api.Problem) {
 		out.WorkspaceID = id
 	}
 	if raw, ok := get("limit"); ok {
-		var n int
-		if _, err := fmt.Sscanf(strings.TrimSpace(raw), "%d", &n); err != nil || fmt.Sprint(n) != strings.TrimSpace(raw) {
+		n, err := strconv.Atoi(strings.TrimSpace(raw))
+		switch {
+		case err != nil:
 			params = append(params, v3api.InvalidParam{Name: "limit", Reason: "Invalid input: expected int, received number"})
-		} else if n < 1 {
+		case n < 1:
 			params = append(params, v3api.InvalidParam{Name: "limit", Reason: "Too small: expected number to be >=1"})
-		} else if n > 250 {
+		case n > 250:
 			params = append(params, v3api.InvalidParam{Name: "limit", Reason: "Too big: expected number to be <=250"})
-		} else {
+		default:
 			out.Limit = n
 		}
 	}

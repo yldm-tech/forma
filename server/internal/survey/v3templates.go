@@ -69,11 +69,12 @@ func ParseTemplateCreate(body json.RawMessage) (*TemplateCreateInput, error) {
 			*f.dst = *f.value
 		}
 	}
-	if raw.DefaultLanguage == nil {
+	switch {
+	case raw.DefaultLanguage == nil:
 		missing("defaultLanguage")
-	} else if !IsSurveyDefaultLanguage(*raw.DefaultLanguage) {
+	case !IsSurveyDefaultLanguage(*raw.DefaultLanguage):
 		params = append(params, v3api.InvalidParam{Name: "defaultLanguage", Reason: "Unsupported survey default language"})
-	} else {
+	default:
 		in.DefaultLanguage = *raw.DefaultLanguage
 	}
 	if len(params) > 0 {

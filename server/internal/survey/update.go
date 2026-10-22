@@ -397,7 +397,7 @@ func (r *Repository) saveSegment(ctx context.Context, current *Survey, surveyTyp
 		if len(existing) > 0 {
 			id = existing[0]
 		} else {
-			created, err := r.createSegment(ctx, current.WorkspaceID, current.ID.String(), nil, true, nil)
+			created, err := r.createSegment(ctx, current.WorkspaceID, current.ID.String(), true, nil)
 			if err != nil {
 				return err
 			}

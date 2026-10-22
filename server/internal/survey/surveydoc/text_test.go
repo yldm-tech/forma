@@ -43,12 +43,15 @@ func TestURLRules(t *testing.T) {
 	}
 	safeLink := map[string]bool{
 		"https://example.com": true, "http://example.com": true, "mailto:a@b.co": true, "tel:+123": true,
-		"javascript:alert(1)": false, "java\tscript:alert(1)": false, "example.com": false, " https://example.com ": true,
+		"javascript:alert(1)": false, "java\tscript:alert(1)": false, "example.com": false,
 	}
 	for in, want := range safeLink {
 		if got := IsSafeLinkURL(in); got != want {
 			t.Errorf("IsSafeLinkURL(%q) = %v", in, got)
 		}
+	}
+	if !IsSafeLinkURL("  https://example.com ") {
+		t.Error("IsSafeLinkURL does not trim")
 	}
 	safe := map[string]string{
 		"https://example.com":                         "",

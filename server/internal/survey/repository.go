@@ -289,13 +289,13 @@ func (r *Repository) segmentInWorkspace(ctx context.Context, id, workspaceID uui
 }
 
 // createSegment inserts a segment and returns its id.
-func (r *Repository) createSegment(ctx context.Context, workspaceID uuid.UUID, title string, description *string, isPrivate bool, filters json.RawMessage) (uuid.UUID, error) {
+func (r *Repository) createSegment(ctx context.Context, workspaceID uuid.UUID, title string, isPrivate bool, filters json.RawMessage) (uuid.UUID, error) {
 	if isNullJSON(filters) {
 		filters = json.RawMessage(`[]`)
 	}
 	var id uuid.UUID
-	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, ?, ?::jsonb) RETURNING id`,
-		workspaceID, title, description, isPrivate, string(filters)).Row().Scan(&id)
+	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, is_private, filters) VALUES (?, ?, ?, ?::jsonb) RETURNING id`,
+		workspaceID, title, isPrivate, string(filters)).Row().Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("create segment: %w", err)
 	}

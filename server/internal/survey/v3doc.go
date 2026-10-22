@@ -677,7 +677,7 @@ func (p *parser) expected(path []any, expected string, v any, present bool) {
 	p.add(path, fmt.Sprintf("Invalid input: expected %s, received %s", expected, received), "")
 }
 
-func (p *parser) enum(path []any, v any, present bool, options []string) (string, bool) {
+func (p *parser) enum(path []any, v any, present bool, options []string) string {
 	s, ok := v.(string)
 	if !ok || !slices.Contains(options, s) {
 		quoted := make([]string, len(options))
@@ -689,9 +689,9 @@ func (p *parser) enum(path []any, v any, present bool, options []string) (string
 		} else {
 			p.add(path, "Invalid option: expected one of "+strings.Join(quoted, "|"), "")
 		}
-		return "", false
+		return ""
 	}
-	return s, true
+	return s
 }
 
 func number(v any) (float64, bool) {
@@ -830,7 +830,7 @@ func (p *parser) distribution(v any) *v3Distribution {
 	d := &v3Distribution{DisplayOption: "displayOnce", Triggers: []v3Trigger{}}
 	at := func(key string) []any { return []any{"distribution", key} }
 	if dv, ok := o.get("displayOption"); ok {
-		d.DisplayOption, _ = p.enum(at("displayOption"), dv, true, DisplayOptions)
+		d.DisplayOption = p.enum(at("displayOption"), dv, true, DisplayOptions)
 	}
 	if pv, ok := o.get("displayPercentage"); ok && pv != nil {
 		f, isNum := number(pv)
@@ -915,7 +915,7 @@ func (p *parser) parse(o *object, mode parseMode, allowed []string, surveyType s
 		}
 		d.Type = TypeLink
 		if t, ok := o.get("type"); ok {
-			d.Type, _ = p.enum([]any{"type"}, t, true, []string{TypeLink, TypeApp})
+			d.Type = p.enum([]any{"type"}, t, true, []string{TypeLink, TypeApp})
 		}
 		surveyType = d.Type
 	}
@@ -934,7 +934,7 @@ func (p *parser) parse(o *object, mode parseMode, allowed []string, surveyType s
 		d.Status = StatusDraft
 	}
 	if sv, ok := o.get("status"); ok {
-		d.Status, _ = p.enum([]any{"status"}, sv, true, Statuses)
+		d.Status = p.enum([]any{"status"}, sv, true, Statuses)
 	}
 	if !patch {
 		d.DefaultLanguage = defaultV3Language

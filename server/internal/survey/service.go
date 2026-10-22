@@ -95,7 +95,7 @@ func (s *Service) organizationOf(ctx context.Context, workspaceID uuid.UUID) *uu
 	return org
 }
 
-// authorized loads a survey and checks the caller may act on its workspace. A missing survey is forma2's ResourceNotFoundError("Survey"), a denial its AuthorizationError.
+// authorized loads a survey and checks the caller may take a survey action on it, which authz evaluates on the survey's workspace. A missing survey is forma2's ResourceNotFoundError("Survey"), a denial its AuthorizationError.
 func (s *Service) authorized(ctx context.Context, caller Caller, id uuid.UUID, action authz.Action) (*Survey, error) {
 	sv, err := s.repo.byID(ctx, id)
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *Service) authorized(ctx context.Context, caller Caller, id uuid.UUID, a
 	if sv == nil {
 		return nil, apperr.NotFound("Survey", "")
 	}
-	if err := s.authz.Require(ctx, caller.Actor, action, authz.Workspace(sv.WorkspaceID)); err != nil {
+	if err := s.authz.Require(ctx, caller.Actor, action, authz.Survey(sv.ID)); err != nil {
 		return nil, err
 	}
 	return sv, nil
@@ -123,15 +123,6 @@ func (s *Service) Get(ctx context.Context, caller Caller, id uuid.UUID) (*Survey
 // ValidationError is a document that breaks forma2's rules: 400 with every issue in details.issues, the first one as the message.
 func ValidationError(issues []surveydoc.Issue) *apperr.Error {
 	return &apperr.Error{Status: http.StatusBadRequest, Code: apperr.CodeValidation, Message: issues[0].Message, Details: map[string]any{"issues": issues}}
-}
-
-// documentLanguages is the survey's languages as the document rules see them.
-func documentLanguages(langs []SurveyLanguage) []surveydoc.Language {
-	out := make([]surveydoc.Language, len(langs))
-	for i, l := range langs {
-		out[i] = surveydoc.Language{Code: l.Language.Code, Default: l.Default, Enabled: l.Enabled}
-	}
-	return out
 }
 
 // declared reads the declared-field carriers of a document part pair; an absent part is "not declared".
@@ -250,7 +241,7 @@ func (s *Service) insertSurvey(ctx context.Context, n newSurvey, organizationID 
 		}
 		segmentID := n.SegmentID
 		if n.Record.Type == TypeApp && segmentID == nil {
-			id, err := tx.createSegment(ctx, n.WorkspaceID, n.ID.String(), nil, true, n.PrivateSegmentFilters)
+			id, err := tx.createSegment(ctx, n.WorkspaceID, n.ID.String(), true, n.PrivateSegmentFilters)
 			if err != nil {
 				return err
 			}
