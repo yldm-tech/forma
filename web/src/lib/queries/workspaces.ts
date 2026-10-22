@@ -151,11 +151,15 @@ export const workspaceTeamsQuery = (workspaceId: string) =>
     queryFn: ({ signal }) => api.get<WorkspaceTeam[]>(`/api/app/workspaces/${workspaceId}/teams`, { signal }),
   });
 
-/** forma2's updateWorkspaceAction; the workspace detail is refreshed with what the server stored. */
+/** forma2's updateWorkspaceAction. */
+export const updateWorkspace = (workspaceId: string, input: WorkspaceUpdate) =>
+  api.patch<Workspace>(`/api/app/workspaces/${workspaceId}`, input);
+
+/** updateWorkspace, refreshing the workspace detail with what the server stored. */
 export const useUpdateWorkspace = (workspaceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: WorkspaceUpdate) => api.patch<Workspace>(`/api/app/workspaces/${workspaceId}`, input),
+    mutationFn: (input: WorkspaceUpdate) => updateWorkspace(workspaceId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) }),
   });
 };

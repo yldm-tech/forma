@@ -12,6 +12,7 @@
     "clean": "rimraf node_modules dist"
   },
   "dependencies": {
+    "@forma/i18n-utils": "workspace:*",
     "@forma/types": "workspace:*",
     "@paralleldrive/cuid2": "2.3.1",
     "@radix-ui/react-dropdown-menu": "catalog:",

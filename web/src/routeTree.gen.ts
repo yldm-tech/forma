@@ -46,6 +46,8 @@ import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport 
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/general'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/languages'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/look'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/teams'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/index'
@@ -260,6 +262,20 @@ const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute =
     path: '/settings/workspace/general',
     getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRouteImport.update(
+    {
+      id: '/settings/workspace/languages',
+      path: '/settings/workspace/languages',
+      getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+    } as any,
+  )
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRouteImport.update({
+    id: '/settings/workspace/look',
+    path: '/settings/workspace/look',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute =
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRouteImport.update({
     id: '/settings/workspace/tags',
@@ -325,6 +341,8 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/workspaces/$workspaceId/settings/workspace/languages': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute
+  '/workspaces/$workspaceId/settings/workspace/look': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute
   '/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
   '/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
   '/workspaces/$workspaceId/settings/workspace/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
@@ -364,6 +382,8 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/workspaces/$workspaceId/settings/workspace/languages': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute
+  '/workspaces/$workspaceId/settings/workspace/look': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute
   '/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
   '/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
   '/workspaces/$workspaceId/settings/workspace': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
@@ -408,6 +428,8 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
   '/_authenticated/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/_authenticated/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/languages': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/look': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute
   '/_authenticated/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
   '/_authenticated/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
   '/_authenticated/workspaces/$workspaceId/settings/workspace/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
@@ -452,6 +474,8 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/'
     | '/workspaces/$workspaceId/settings/'
     | '/workspaces/$workspaceId/settings/workspace/general'
+    | '/workspaces/$workspaceId/settings/workspace/languages'
+    | '/workspaces/$workspaceId/settings/workspace/look'
     | '/workspaces/$workspaceId/settings/workspace/tags'
     | '/workspaces/$workspaceId/settings/workspace/teams'
     | '/workspaces/$workspaceId/settings/workspace/'
@@ -491,6 +515,8 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings'
     | '/workspaces/$workspaceId/settings'
     | '/workspaces/$workspaceId/settings/workspace/general'
+    | '/workspaces/$workspaceId/settings/workspace/languages'
+    | '/workspaces/$workspaceId/settings/workspace/look'
     | '/workspaces/$workspaceId/settings/workspace/tags'
     | '/workspaces/$workspaceId/settings/workspace/teams'
     | '/workspaces/$workspaceId/settings/workspace'
@@ -534,6 +560,8 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings/'
     | '/_authenticated/workspaces/$workspaceId/settings/'
     | '/_authenticated/workspaces/$workspaceId/settings/workspace/general'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/languages'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/look'
     | '/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
     | '/_authenticated/workspaces/$workspaceId/settings/workspace/teams'
     | '/_authenticated/workspaces/$workspaceId/settings/workspace/'
@@ -812,6 +840,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRouteImport
       parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/languages': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/languages'
+      path: '/settings/workspace/languages'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/languages'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/look': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/look'
+      path: '/settings/workspace/look'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/look'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
     '/_authenticated/workspaces/$workspaceId/settings/workspace/tags': {
       id: '/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
       path: '/settings/workspace/tags'
@@ -901,6 +943,8 @@ interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
@@ -916,6 +960,10 @@ const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWo
       AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute,
     AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute:
       AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLanguagesRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceLookRoute,
     AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute:
       AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute,
     AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute:

@@ -574,6 +574,9 @@ importers:
 
   web:
     dependencies:
+      '@forma/i18n-utils':
+        specifier: workspace:*
+        version: link:../packages/i18n-utils
       '@forma/types':
         specifier: workspace:*
         version: link:../packages/types
