@@ -125,6 +125,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"POST /api/app/surveys/:surveyId/segment/reset":                        true,
 		"GET /api/v3/surveys/:surveyId":                                        true,
 		"POST /api/v3/surveys/templates":                                       true,
+		"POST /api/v3/surveys/generate":                                        true,
 		"GET /api/v3/contact-attribute-keys":                                   true,
 		"GET /api/auth/callback/:provider":                                     true,
 		"POST /api/app/workspaces/:workspaceId/action-classes":                 true,

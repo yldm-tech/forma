@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 )
 
@@ -56,6 +57,9 @@ func (h *Handler) RegisterV3(r gin.IRouter) {
 	both.POST("/:surveyId/restore", h.v3Restore)
 	session := r.Group("/api/v3/surveys/templates", h.guard.Handlers(v3api.SessionOnly)...)
 	session.POST("", h.v3Template)
+	// forma2 charged AI generation to its own limit in place of api:v3.
+	generate := r.Group("/api/v3/surveys/generate", h.guard.LimitedHandlers(v3api.SessionOrAPIKey, ratelimit.APIV3SurveyGenerate)...)
+	generate.POST("", h.v3Generate)
 }
 
 func sessionCaller(c *gin.Context) Caller {
@@ -478,4 +482,23 @@ func (h *Handler) v3Template(c *gin.Context) {
 		return
 	}
 	v3api.Created(c, "/api/v3/surveys/"+r.ID.String(), r)
+}
+
+func (h *Handler) v3Generate(c *gin.Context) {
+	body, err := v3api.ReadJSON(c)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	value, err := decodeValue(body)
+	if err != nil {
+		h.fail(c, v3api.BadRequest("Invalid request body", v3api.InvalidParam{Name: "body", Reason: "Malformed JSON input, please check your request body"}))
+		return
+	}
+	in, err := ParseGenerate(value)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	h.fail(c, h.svc.GenerateV3(c.Request.Context(), v3Caller(c), in))
 }

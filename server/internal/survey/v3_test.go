@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -454,4 +455,56 @@ func TestV3SessionMutationsPassTheCSRFRule(t *testing.T) {
 	e.ok(e.request(http.MethodGet, surveysPath("/"+id), nil, crossSite), http.StatusOK, nil)
 	// An API key is not sent by a browser on its own.
 	e.ok(e.request(http.MethodPatch, surveysPath("/"+id), `{"name": "By key"}`, map[string]string{"x-api-key": e.apiKey(org, ws, "write"), "Origin": "", httpapi.CSRFHeader: ""}), http.StatusOK, nil)
+}
+
+// forma2's POST /api/v3/surveys/generate up to the AI provider call; this server has no AI provider, so a request that gets that far is answered as forma2 answered it on an instance without one.
+func TestV3Generate(t *testing.T) {
+	e := newEnv(t)
+	owner, reader, outsider := e.user(), e.user(), e.user()
+	org, ws := e.organization(owner)
+	e.member(org, reader, "member")
+	e.grant(org, ws, reader, "read")
+	prompt := "Understand why new users stop during onboarding and what would help them finish setup."
+	body := func(extra string) string {
+		return fmt.Sprintf(`{"workspaceId": %q, "prompt": %q%s}`, ws, prompt, extra)
+	}
+
+	e.problem(e.request(http.MethodPost, surveysPath("/generate"), body(""), nil), http.StatusUnauthorized, "Not authenticated")
+	cases := []struct {
+		name, body, param, reason string
+	}{
+		{"no prompt", fmt.Sprintf(`{"workspaceId": %q}`, ws), "prompt", "Invalid input: expected string, received undefined"},
+		{"a short prompt", fmt.Sprintf(`{"workspaceId": %q, "prompt": " ab "}`, ws), "prompt", "Prompt must be at least 4 characters"},
+		{"a workspace that is not an id", fmt.Sprintf(`{"workspaceId": "ws", "prompt": %q}`, prompt), "workspaceId", "Invalid UUID"},
+		{"an unknown type", body(`, "type": "email"`), "type", `Invalid option: expected one of "link"|"app"`},
+		{"an unsupported language", body(`, "languages": ["en-US", "xx"]`), "languages.1", "Language 'xx' is not supported for AI survey creation"},
+		{"a repeated language", body(`, "languages": ["de-DE", "de_de"]`), "languages", "languages must not repeat a locale"},
+		{"an unknown key", body(`, "model": "big"`), "body", `Unrecognized key: "model"`},
+	}
+	for _, tc := range cases {
+		p := e.problem(e.v3(owner, http.MethodPost, surveysPath("/generate"), tc.body), http.StatusBadRequest, "Invalid request body")
+		if got := p.param(t, tc.param); got.Reason != tc.reason {
+			t.Errorf("%s: %q", tc.name, got.Reason)
+		}
+	}
+	e.problem(e.v3(reader, http.MethodPost, surveysPath("/generate"), body("")), http.StatusForbidden, v3api.ForbiddenMessage)
+	e.problem(e.v3(outsider, http.MethodPost, surveysPath("/generate"), body("")), http.StatusForbidden, v3api.ForbiddenMessage)
+	e.problem(e.v3Key(e.apiKey(org, ws, "read"), http.MethodPost, surveysPath("/generate"), body("")), http.StatusForbidden, v3api.ForbiddenMessage)
+
+	vague := fmt.Sprintf(`{"workspaceId": %q, "prompt": "a survey please"}`, ws)
+	p := e.problem(e.v3(owner, http.MethodPost, surveysPath("/generate"), vague), http.StatusBadRequest, "Prompt needs more detail")
+	p.param(t, "prompt")
+
+	for _, rec := range []*httptest.ResponseRecorder{
+		e.v3(owner, http.MethodPost, surveysPath("/generate"), body(`, "type": "app", "languages": ["de-DE", "en-US"]`)),
+		e.v3Key(e.apiKey(org, ws, "write"), http.MethodPost, surveysPath("/generate"), body("")),
+	} {
+		p := e.problem(rec, http.StatusServiceUnavailable, "AI is not configured for this Forma instance.")
+		if p.Title != "AI Unavailable" || p.Code != "ai_instance_not_configured" {
+			t.Fatalf("unavailable %+v", p)
+		}
+	}
+	if e.count(`SELECT count(*) FROM surveys WHERE workspace_id = ?`, ws) != 0 {
+		t.Fatal("generate created a survey")
+	}
 }
