@@ -8,6 +8,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -26,4 +27,9 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	pipeline.RegisterJobs(reg, responsePipeline)
 	storage.RegisterJobs(reg, files, workspaces, log)
 	return reg
+}
+
+// NewHandoffs is the consumers the response pipeline hands a finished response to: the integrations.
+func NewHandoffs(integrations *integration.Deliverer) pipeline.Handoffs {
+	return pipeline.Handoffs{Integrations: integrations}
 }

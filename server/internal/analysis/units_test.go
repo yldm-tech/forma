@@ -86,7 +86,7 @@ func TestFormatTimestamp(t *testing.T) {
 		{winter, "Etc/UTC", "2026-01-01 20:00:00 UTC"},
 		{time.Date(2026, 1, 1, 23, 59, 59, 999_000_000, time.UTC), "UTC", "2026-01-01 23:59:59 UTC"},
 	} {
-		if got := formatTimestamp(c.at, c.zone); got != c.want {
+		if got := FormatTimestamp(c.at, c.zone); got != c.want {
 			t.Errorf("%s in %q: %q, want %q", c.at, c.zone, got, c.want)
 		}
 	}

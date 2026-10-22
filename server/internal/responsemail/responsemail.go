@@ -190,7 +190,12 @@ func (a *Answers) convert(el surveydoc.Element, label string) mailer.ResponseEle
 	return e
 }
 
-// processResponseData is forma2's processResponseData: a string as it is, a number as JavaScript prints it, a list joined by "; " without its empty entries, an object as "key: value" lines in its stored order without empty values, anything else as "".
+// Text is forma2's processResponseData of the answer stored under key, "" when there is none.
+func (a *Answers) Text(key string) string {
+	return processResponseData(a.Data[key], a.raw[key])
+}
+
+// processResponseData is forma2's processResponseData:a string as it is, a number as JavaScript prints it, a list joined by "; " without its empty entries, an object as "key: value" lines in its stored order without empty values, anything else as "".
 func processResponseData(v any, raw json.RawMessage) string {
 	switch x := v.(type) {
 	case string:

@@ -296,7 +296,7 @@ func (s *Service) exportRow(sv *surveyDoc, cols exportColumns, n int, r *respons
 
 	row["No."] = float64(n)
 	row["Response ID"] = r.ID.String()
-	row["Timestamp"] = formatTimestamp(r.CreatedAt, zone)
+	row["Timestamp"] = FormatTimestamp(r.CreatedAt, zone)
 	row["Finished"] = "No"
 	if r.Finished {
 		row["Finished"] = "Yes"
