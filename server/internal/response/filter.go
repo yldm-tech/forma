@@ -455,7 +455,7 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 		if err != nil {
 			return err
 		}
-		w.add(q(p, " = ", jsonb(v), "::jsonb"))
+		w.add(q(dataContains(p.keys, v), " AND ", p, " = ", jsonb(v), "::jsonb"))
 	case "notEquals":
 		v, err := value("string", "number", "boolean")
 		if err != nil {
@@ -473,7 +473,7 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 		if err != nil {
 			return err
 		}
-		w.add(q(p, " @> ", jsonb(v), "::jsonb"))
+		w.add(q(dataContains(p.keys, v), " AND ", p, " @> ", jsonb(v), "::jsonb"))
 	case "includesOne":
 		v, err := value("array")
 		if err != nil {
@@ -485,7 +485,7 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 	case "notUploaded":
 		w.add(q("(", p, ` = '"skipped"'::jsonb OR `, p, " IS NULL)"))
 	case "clicked", "accepted", "booked":
-		w.add(q(p, " = ", jsonb(c.Op), "::jsonb"))
+		w.add(q(dataContains(p.keys, c.Op), " AND ", p, " = ", jsonb(c.Op), "::jsonb"))
 	case "matrix":
 		var rows map[string]string
 		if json.Unmarshal(c.Value, &rows) != nil || len(rows) == 0 {
@@ -497,7 +497,8 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 			keys = append(keys, k)
 		}
 		slices.Sort(keys)
-		w.add(q(jsonPath{"data", []string{key, keys[0]}}, " = ", jsonb(rows[keys[0]]), "::jsonb"))
+		cell := []string{key, keys[0]}
+		w.add(q(dataContains(cell, rows[keys[0]]), " AND ", jsonPath{"data", cell}, " = ", jsonb(rows[keys[0]]), "::jsonb"))
 	case "contains", "doesNotContain", "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith":
 		v, err := value("string")
 		if err != nil {
@@ -559,12 +560,22 @@ func includesOne(sv *Survey, key string, values []any) *cond {
 	if len(values) == 0 {
 		return q("FALSE")
 	}
+	// An array answer holding v, or v itself: both are containments of response.data, which the GIN index answers.
 	c := q("(")
 	for i, v := range values {
 		if i > 0 {
 			c.w(" OR ")
 		}
-		c.w("(", p, " @> ", jsonb([]any{v}), "::jsonb OR ", p, " = ", jsonb(v), "::jsonb)")
+		c.w(dataContains(p.keys, []any{v}), " OR ", dataContains(p.keys, v))
 	}
 	return c.w(")")
+}
+
+// dataContains is `r.data @> {keys...: v}`, the containment the GIN index on responses.data (jsonb_path_ops) answers. Beside an exact path condition that implies it, it lets the planner narrow a large survey's responses through the index instead of reading every row.
+func dataContains(keys []string, v any) *cond {
+	doc := v
+	for i := len(keys) - 1; i >= 0; i-- {
+		doc = map[string]any{keys[i]: doc}
+	}
+	return q("r.data @> ", jsonb(doc), "::jsonb")
 }

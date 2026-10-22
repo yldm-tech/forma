@@ -3,6 +3,7 @@ package embeddeddata
 import (
 	"math"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,10 +33,18 @@ type ValueResponse struct {
 	Meta      map[string]any
 }
 
+// Where the response views show a reserved field: among the primary metadata, the secondary metadata, or not at all.
+const (
+	DisplayPrimary   = "primary"
+	DisplaySecondary = "secondary"
+	DisplayNone      = "none"
+)
+
 // ReservedField is one entry of RESERVED_FIELD_CATALOG: a value every response carries, addressed by Name and read rather than stored.
 type ReservedField struct {
 	Name     string
 	DataType string
+	Display  string
 	Privacy  string
 	read     func(r ValueResponse) any
 }
@@ -66,45 +75,59 @@ func jsRound(f float64) float64 { return math.Floor(f + 0.5) }
 
 // ReservedCatalog is RESERVED_FIELD_CATALOG, in its order.
 var ReservedCatalog = []ReservedField{
-	{Name: "source", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("source")},
-	{Name: "url", DataType: TypeString, Privacy: PrivacyRedactQuery, read: metaField("url")},
-	{Name: "country", DataType: TypeString, Privacy: PrivacyDrop, read: metaField("country")},
-	{Name: "action", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("action")},
-	{Name: "browser", DataType: TypeString, Privacy: PrivacyDrop, read: userAgentField("browser")},
-	{Name: "os", DataType: TypeString, Privacy: PrivacyDrop, read: userAgentField("os")},
-	{Name: "deviceType", DataType: TypeString, Privacy: PrivacyDrop, read: userAgentField("device")},
-	{Name: "ipAddress", DataType: TypeString, Privacy: PrivacyDrop, read: metaField("ipAddress")},
-	{Name: "finished", DataType: TypeBoolean, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.Finished }},
-	{Name: "language", DataType: TypeString, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
+	{Name: "source", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, read: metaField("source")},
+	{Name: "url", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyRedactQuery, read: metaField("url")},
+	{Name: "country", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: metaField("country")},
+	{Name: "action", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, read: metaField("action")},
+	{Name: "browser", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("browser")},
+	{Name: "os", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("os")},
+	{Name: "deviceType", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("device")},
+	{Name: "ipAddress", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyDrop, read: metaField("ipAddress")},
+	{Name: "finished", DataType: TypeBoolean, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.Finished }},
+	{Name: "language", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
 		if r.Language == nil {
 			return nil
 		}
 		return *r.Language
 	}},
-	{Name: "responseId", DataType: TypeString, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.ID }},
-	{Name: "surveyId", DataType: TypeString, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.SurveyID }},
+	{Name: "responseId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.ID }},
+	{Name: "surveyId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.SurveyID }},
 	// Total time to complete, in seconds: ttc._total holds milliseconds and only exists on finished responses.
-	{Name: "durationSeconds", DataType: TypeNumber, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
+	{Name: "durationSeconds", DataType: TypeNumber, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
 		if total, ok := r.TTC["_total"].(float64); ok {
 			return jsRound(total / 1000)
 		}
 		return jsvalue.Undefined
 	}},
-	{Name: "startedAt", DataType: TypeDate, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.CreatedAt }},
-	{Name: "finishedAt", DataType: TypeDate, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.UpdatedAt }},
-	{Name: "pagePath", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("pagePath")},
-	{Name: "pageReferrer", DataType: TypeString, Privacy: PrivacyRedactQuery, read: metaField("pageReferrer")},
-	{Name: "utmSource", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("utmSource")},
-	{Name: "utmMedium", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("utmMedium")},
-	{Name: "utmCampaign", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("utmCampaign")},
-	{Name: "utmTerm", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("utmTerm")},
-	{Name: "utmContent", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("utmContent")},
-	{Name: "screenWidth", DataType: TypeNumber, Privacy: PrivacyKeep, read: metaField("screenWidth")},
-	{Name: "screenHeight", DataType: TypeNumber, Privacy: PrivacyKeep, read: metaField("screenHeight")},
-	{Name: "viewportWidth", DataType: TypeNumber, Privacy: PrivacyKeep, read: metaField("viewportWidth")},
-	{Name: "viewportHeight", DataType: TypeNumber, Privacy: PrivacyKeep, read: metaField("viewportHeight")},
-	{Name: "timezone", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("timezone")},
-	{Name: "locale", DataType: TypeString, Privacy: PrivacyKeep, read: metaField("locale")},
+	{Name: "startedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.CreatedAt }},
+	{Name: "finishedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.UpdatedAt }},
+	{Name: "pagePath", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("pagePath")},
+	{Name: "pageReferrer", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyRedactQuery, read: metaField("pageReferrer")},
+	{Name: "utmSource", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmSource")},
+	{Name: "utmMedium", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmMedium")},
+	{Name: "utmCampaign", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmCampaign")},
+	{Name: "utmTerm", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmTerm")},
+	{Name: "utmContent", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmContent")},
+	{Name: "screenWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("screenWidth")},
+	{Name: "screenHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("screenHeight")},
+	{Name: "viewportWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("viewportWidth")},
+	{Name: "viewportHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("viewportHeight")},
+	{Name: "timezone", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("timezone")},
+	{Name: "locale", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("locale")},
+}
+
+var camelBoundary = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+
+// TitleCase is forma2's formatFieldNameToTitleCase, the label of a camelCase or snake_case name: "durationSeconds" is "Duration Seconds", "ip_address" is "Ip Address".
+func TitleCase(name string) string {
+	words := strings.Split(camelBoundary.ReplaceAllString(name, "${1}_${2}"), "_")
+	out := make([]string, 0, len(words))
+	for _, w := range words {
+		if w != "" {
+			out = append(out, strings.ToUpper(w[:1])+w[1:])
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 // ReservedPrivacy is the privacy of the reserved field named name, "" for a name the catalog does not hold.
