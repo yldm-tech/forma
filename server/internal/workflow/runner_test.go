@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
@@ -551,5 +552,57 @@ func TestCancelledSendIsRetried(t *testing.T) {
 	}
 	if s := e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run); s != RunCompleted || len(e.mails("jane@example.com")) != 1 {
 		t.Fatalf("the retry left the run %s, sent %+v\n%s", s, e.mail.Messages(), e.errorLogs())
+	}
+}
+
+// A workflow migrated from forma2 names its trigger survey by the forma2 id in its draft and published version: its runs send, the builder gets the id migrated from it, and it can be disabled, saved unchanged, tested and enabled again.
+func TestMigratedWorkflowWithForma2SurveyID(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	const legacy = "cm9zr4mps000008l8btfy1vtz"
+	survey := e.insert(`INSERT INTO surveys (id, workspace_id, name, status, blocks, endings) VALUES (?, ?, 'Old', 'inProgress', ?::jsonb, '[]'::jsonb) RETURNING id`, legacyid.ID(legacy), f.ws, blocks)
+	wf := e.enabled(f, "Migrated", definition(survey, "q1"))
+	e.exec(`UPDATE workflows SET definition = jsonb_set(definition, '{trigger,config,surveyId}', to_jsonb(?::text)) WHERE id = ?`, legacy, wf)
+	e.exec(`UPDATE workflow_versions SET definition = jsonb_set(definition, '{trigger,config,surveyId}', to_jsonb(?::text)) WHERE workflow_id = ?`, legacy, wf)
+
+	r := e.respond(survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+		t.Fatalf("run: %v\n%s", err, e.errorLogs())
+	}
+	if s := e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run); s != RunCompleted || len(e.mails("jane@example.com")) != 1 {
+		t.Fatalf("run %s, sent %+v", s, e.mail.Messages())
+	}
+
+	var got envelope[resource]
+	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows/"+wf.String(), nil), http.StatusOK, &got)
+	if got.Data.SurveyID == nil || *got.Data.SurveyID != survey.String() || !strings.Contains(string(got.Data.Definition), `"surveyId":"`+survey.String()+`"`) {
+		t.Fatalf("the builder gets %v %s", got.Data.SurveyID, got.Data.Definition)
+	}
+	e.ok(e.lifecycle(f.owner, wf, "disable"), http.StatusOK, nil)
+	stored := json.RawMessage(e.text(`SELECT definition::text FROM workflows WHERE id = ?`, wf))
+	e.ok(e.v3(f.owner, http.MethodPatch, "/api/v3/workflows/"+wf.String(), map[string]any{"definition": stored}), http.StatusOK, nil)
+	var tested envelope[TestResult]
+	e.ok(e.lifecycle(f.owner, wf, "test"), http.StatusOK, &tested)
+	if len(tested.Data.Problems) != 0 {
+		t.Fatalf("test problems %+v", tested.Data.Problems)
+	}
+	e.ok(e.lifecycle(f.owner, wf, "enable"), http.StatusOK, nil)
+	if e.text(`SELECT definition #>> '{trigger,config,surveyId}' FROM workflows WHERE id = ?`, wf) != survey.String() {
+		t.Fatal("the saved draft kept the forma2 id")
+	}
+}
+
+// A run queued before the migration carries forma2's survey and response ids in its trigger payload; they read as the ids migrated from them.
+func TestParsePayloadResolvesForma2IDs(t *testing.T) {
+	p, survey, resp, err := parsePayload(json.RawMessage(`{"type":"response.completed","workspaceId":"clws00000000000000000001","surveyId":"cm9zr4mps000008l8btfy1vtz","responseId":"cm9zr4q7i000108l84gozfggs","data":{},"triggeredAt":"2026-01-01T00:00:00.000Z"}`))
+	if err != nil || p == nil || survey != legacyid.ID("cm9zr4mps000008l8btfy1vtz") || resp != legacyid.ID("cm9zr4q7i000108l84gozfggs") {
+		t.Fatalf("%+v %s %s %v", p, survey, resp, err)
+	}
+	if _, _, _, err := parsePayload(json.RawMessage(`{"type":"response.completed","surveyId":"","responseId":"x","triggeredAt":"2026-01-01T00:00:00.000Z"}`)); err == nil {
+		t.Fatal("a payload without a survey id was read")
 	}
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
 // RunSummary is forma2's ZWorkflowRunSummary, the run shape a workflow embeds as its lastRun.
@@ -182,6 +184,10 @@ func toListItem(w *Workflow) ListItem {
 		item.TriggerType = t.Trigger.TriggerType
 		if t.Trigger.Config != nil {
 			item.SurveyID = t.Trigger.Config.SurveyID
+			if item.SurveyID != nil && surveydoc.IsCUID2(*item.SurveyID) {
+				id := legacyid.ID(*item.SurveyID).String()
+				item.SurveyID = &id
+			}
 		}
 	}
 	if w.LastRun != nil {
@@ -192,7 +198,22 @@ func toListItem(w *Workflow) ListItem {
 }
 
 func toResource(w *Workflow) Resource {
-	return Resource{ListItem: toListItem(w), Definition: w.Definition}
+	return Resource{ListItem: toListItem(w), Definition: canonicalTriggerSurvey(w.Definition)}
+}
+
+// canonicalTriggerSurvey is a stored definition with its trigger's survey named by the survey's id. A workflow migrated from forma2 keeps forma2's id there until it is next saved; the builder finds the trigger's survey by its id, so it gets the id migrated from it, which its save then stores. Anything else, a document that does not parse included, is returned as stored.
+func canonicalTriggerSurvey(raw json.RawMessage) json.RawMessage {
+	var doc, trigger, config map[string]json.RawMessage
+	var surveyID string
+	if json.Unmarshal(raw, &doc) != nil || json.Unmarshal(doc["trigger"], &trigger) != nil || json.Unmarshal(trigger["config"], &config) != nil ||
+		json.Unmarshal(config["surveyId"], &surveyID) != nil || !surveydoc.IsCUID2(surveyID) {
+		return raw
+	}
+	config["surveyId"], _ = json.Marshal(legacyid.ID(surveyID).String())
+	trigger["config"], _ = json.Marshal(config)
+	doc["trigger"], _ = json.Marshal(trigger)
+	out, _ := json.Marshal(doc)
+	return out
 }
 
 // sendEmailPII are the send_email fields that can carry personal data.

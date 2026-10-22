@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 const (
@@ -279,9 +281,17 @@ func TestDefinitionRules(t *testing.T) {
 		_, issues = ParseDefinition(raw(t, d))
 		failsWith(t, issues, "Invalid cuid2")
 	})
-	t.Run("needs the trigger's survey to be a UUID and the sender an address", func(t *testing.T) {
+	t.Run("reads a forma2 trigger survey id as the id migrated from it", func(t *testing.T) {
 		d := testDefinition()
 		d["trigger"].(map[string]any)["config"].(map[string]any)["surveyId"] = "cm9zr4mps000008l8btfy1vtz"
+		parsed, issues := ParseExecutable(raw(t, d))
+		if len(issues) > 0 || parsed.Trigger.Config.SurveyID != legacyid.ID("cm9zr4mps000008l8btfy1vtz").String() {
+			t.Fatalf("%+v %+v", issues, parsed)
+		}
+	})
+	t.Run("needs the trigger's survey to be a UUID and the sender an address", func(t *testing.T) {
+		d := testDefinition()
+		d["trigger"].(map[string]any)["config"].(map[string]any)["surveyId"] = "Not-A-Survey"
 		d["nodes"].([]any)[0].(map[string]any)["config"].(map[string]any)["from"] = "nobody"
 		_, issues := ParseDefinition(raw(t, d))
 		if len(issues) != 2 || issues[0].Name() != "trigger.config.surveyId" || issues[0].Message != "Invalid UUID" || issues[1].Name() != "nodes.0.config.from" || issues[1].Message != "Invalid email address" {
