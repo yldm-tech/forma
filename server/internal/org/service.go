@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -157,7 +158,7 @@ type TimeZone struct {
 // CodeAIInstanceNotConfigured is forma2's ai_instance_not_configured refusal.
 const CodeAIInstanceNotConfigured = "ai_instance_not_configured"
 
-// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). Enabling AI smart tools needs an AI provider configured on the instance; this server has no AI provider configuration (the AI module is not ported), so enabling is refused as forma2 refused it on such an instance, and disabling is always allowed.
+// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
 func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (*Organization, error) {
 	old, o, err := s.update(ctx, userID, organizationID, in)
 	s.record(ctx, audit.ActionUpdated, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, o)
@@ -187,7 +188,7 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	if old == nil {
 		return nil, nil, apperr.NotFound("Organization", organizationID.String())
 	}
-	if in.IsAISmartToolsEnabled != nil && *in.IsAISmartToolsEnabled && !old.IsAISmartToolsEnabled {
+	if in.IsAISmartToolsEnabled != nil && *in.IsAISmartToolsEnabled && !old.IsAISmartToolsEnabled && !ai.InstanceConfigured(s.cfg.AI) {
 		return old, nil, &apperr.Error{Status: http.StatusForbidden, Code: CodeAIInstanceNotConfigured,
 			Message: "AI is configured at the instance level via environment variables. Ask your administrator to set AI_PROVIDER, AI_MODEL, and the matching provider credentials before enabling AI features."}
 	}

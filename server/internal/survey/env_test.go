@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/authz/authztest"
@@ -125,7 +126,8 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	}
 	limiter := ratelimit.New(cfg, nil, log)
 	e.repo = NewRepository(db)
-	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, limiter, audit.New(cfg, log), surveydoc.NewValidator(schemas), cipher, catalog, log)
+	aiService := ai.NewService(ai.NewClient(cfg, log), ai.NewRepository(db), e.authz.Authorizer, log)
+	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, limiter, audit.New(cfg, log), surveydoc.NewValidator(schemas), cipher, catalog, aiService, log)
 	h := NewHandler(e.svc, headerSessions{}, v3api.NewGuard(cfg, headerSessions{}, apikey.NewAuthenticator(db, log), limiter, log), log)
 	e.engine = httpserver.NewEngine(log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

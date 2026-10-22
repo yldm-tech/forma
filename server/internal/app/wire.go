@@ -9,6 +9,7 @@ import (
 	"github.com/google/wire"
 
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/analysis"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
@@ -106,6 +107,14 @@ var contactSet = wire.NewSet(
 	contact.NewV3Handler,
 )
 
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+var aiSet = wire.NewSet(
+	ai.NewClient,
+	ai.NewRepository,
+	ai.NewService,
+	ai.NewHandler,
+)
+
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(
 	surveydoc.NewValidator,
@@ -175,6 +184,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		teamSet,
 		inviteSet,
 		apikeySet,
+		aiSet,
 		surveySet,
 		contactSet,
 		v3Set,
