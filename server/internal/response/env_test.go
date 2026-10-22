@@ -93,7 +93,7 @@ func newEnv(t *testing.T) *env {
 	u, _ := url.Parse(webApp)
 	cfg := config.Config{
 		WebAppURL: u, RateLimitingDisabled: true, AuditLogEnabled: true, UserManagementMinimumRole: "manager", TrustedProxyHopCount: 1,
-		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyVersion: 1,
+		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
 	}
 	db := pgtest.GORM(t)
 	e := &env{t: t, cfg: cfg, db: db, authz: authztest.New(t, cfg, db), logs: &syncBuffer{}}

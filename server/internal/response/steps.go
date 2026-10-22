@@ -94,8 +94,10 @@ func (s *Service) SingleUseID(sv *Survey, workspaceID uuid.UUID, v2 bool, single
 	if suID == "" {
 		return nil, refuse("Missing single use id")
 	}
-	canonical, ok := survey.CanonicalSingleUseID(s.cipher, s.key, sv.ID, sv.SingleUse.IsEncrypted, suID, query.Get("suToken"))
-	if !ok || canonical != *singleUseID {
+	// The link page's path names the survey as the link did, which for a link forma2 issued is the survey's forma2 id its signature was made over.
+	linkSurveyID, _, _ := strings.Cut(strings.TrimPrefix(u.Path, "/s/"), "/")
+	canonical := survey.CanonicalSingleUseID(s.cfg, s.cipher, sv.ID, sv.SingleUse.IsEncrypted, linkSurveyID, suID, query.Get("suToken"))
+	if canonical == "" || canonical != *singleUseID {
 		return nil, refuse("Invalid single use id")
 	}
 	return &canonical, nil

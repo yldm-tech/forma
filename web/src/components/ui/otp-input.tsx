@@ -9,11 +9,20 @@ interface OTPInputProps {
   valueLength: number;
   onChange: (value: string) => void;
   className?: string;
+  /** Classes for every digit box, such as the error border of a rejected PIN. */
+  inputBoxClassName?: string;
   disabled?: boolean;
 }
 
 /** forma2's OTPInput: one box per digit, digits only, pasting a whole code fills every box. */
-export const OTPInput = ({ value, valueLength, onChange, className, disabled }: OTPInputProps) => {
+export const OTPInput = ({
+  value,
+  valueLength,
+  onChange,
+  className,
+  inputBoxClassName,
+  disabled,
+}: OTPInputProps) => {
   const { t } = useTranslation();
   const digits = otpDigits(value, valueLength);
 
@@ -68,7 +77,7 @@ export const OTPInput = ({ value, valueLength, onChange, className, disabled }: 
           autoComplete="one-time-code"
           maxLength={valueLength}
           aria-label={t("common.digit_number_of_total", { number: index + 1, total: valueLength })}
-          className="h-11 w-full max-w-12 min-w-0 px-0 text-center shadow-xs sm:h-10"
+          className={cn("h-11 w-full max-w-12 min-w-0 px-0 text-center shadow-xs sm:h-10", inputBoxClassName)}
           value={digit}
           onChange={(e) => handleChange(e, index)}
           onKeyDown={handleKeyDown}

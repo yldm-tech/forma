@@ -17,7 +17,7 @@ import (
 type Service struct {
 	db      *gorm.DB
 	jobs    *jobs.Enqueuer
-	key     []byte
+	cfg     config.Config
 	cipher  *secret.Cipher
 	authz   *authz.Authorizer
 	limiter *ratelimit.Limiter
@@ -26,5 +26,5 @@ type Service struct {
 }
 
 func NewService(cfg config.Config, db *gorm.DB, enqueuer *jobs.Enqueuer, cipher *secret.Cipher, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{db: db, jobs: enqueuer, key: cfg.EncryptionKey, cipher: cipher, authz: authorizer, limiter: limiter, audit: emitter, log: log}
+	return &Service{db: db, jobs: enqueuer, cfg: cfg, cipher: cipher, authz: authorizer, limiter: limiter, audit: emitter, log: log}
 }

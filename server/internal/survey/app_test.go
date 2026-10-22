@@ -3,6 +3,7 @@ package survey
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -290,7 +291,7 @@ func TestSlugSingleUseAndQuotas(t *testing.T) {
 		Links []SingleUseLink `json:"links"`
 	}
 	e.ok(e.do(owner, http.MethodPost, appPath(id, "/single-use-links"), map[string]any{"isEncrypted": false, "count": 3}), http.StatusOK, &links)
-	if len(links.Links) != 3 || links.Links[0].SuToken != SingleUseSignature(e.cfg.EncryptionKey, uuid.MustParse(id), links.Links[0].SuID) {
+	if len(links.Links) != 3 || links.Links[0].SuToken != SingleUseSignature(string(e.cfg.EncryptionKeyText), id, links.Links[0].SuID) {
 		t.Fatalf("plain links %+v", links)
 	}
 	links.Links = nil
@@ -531,7 +532,7 @@ func TestEditorSaveTenantGuards(t *testing.T) {
 
 // A known answer of forma2's generateSurveySingleUseSignature, computed with its code (createHmac("sha256", ENCRYPTION_KEY).update(payload).digest("hex")) for the hex key of 32 bytes of 7: the plain links P3 verifies must carry exactly this token.
 func TestSingleUseSignatureMatchesForma2(t *testing.T) {
-	got := SingleUseSignature(bytes.Repeat([]byte{7}, 32), uuid.MustParse("01a16211-77de-7d59-ada1-7e2ea6ddb527"), "su-1")
+	got := SingleUseSignature(hex.EncodeToString(bytes.Repeat([]byte{7}, 32)), "01a16211-77de-7d59-ada1-7e2ea6ddb527", "su-1")
 	if got != "c38448563887c9d696d03df027af932d52e591114eb6b936d4ac92dd11069a1d" {
 		t.Fatalf("signature %s", got)
 	}

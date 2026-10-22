@@ -404,7 +404,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 	if name == "" {
 		name = "User"
 	}
-	locale := matchLocale(acceptLanguage)
+	locale := mailer.MatchLocale(acceptLanguage)
 	var userID uuid.UUID
 	var sess issuedToken
 	err := s.svc.repo.transaction(ctx, func(tx *Repository) error {

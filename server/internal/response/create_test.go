@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/survey"
 )
 
@@ -292,7 +293,7 @@ func TestCreateSingleUse(t *testing.T) {
 	_, ws := e.organization(e.user())
 	sv := e.survey(ws, surveyOpts{singleUse: `{"enabled": true, "isEncrypted": false}`})
 	ctx := context.Background()
-	token := survey.SingleUseSignature(e.cfg.EncryptionKey, sv, "abc123")
+	token := survey.SingleUseSignature(string(e.cfg.EncryptionKeyText), sv.String(), "abc123")
 	link := "https://app.example.com/s/" + sv.String() + "?suId=abc123&suToken=" + token
 
 	cases := []struct {
@@ -346,6 +347,26 @@ func TestSingleUseV2ReportsTheWorkspace(t *testing.T) {
 	if id, err := e.svc.SingleUseID(plain, ws, true, ptr("x"), nil); err != nil || *id != "x" {
 		t.Fatalf("SingleUseID = %v, %v", id, err)
 	}
+}
+
+// A plain link forma2 issued was signed over the survey's forma2 id, which the link page's path in meta.url still carries; the /s page accepts it, so the response it submits must pass too.
+func TestSingleUseAcceptsALinkForma2Signed(t *testing.T) {
+	e := newEnv(t)
+	ws := uuid.New()
+	const forma2Survey = "clsurveyaaaaaaaaaaaaaaa1"
+	// forma2's generateSurveySingleUseSignature for forma2Survey and "su-legacy" under the hex key of 32 bytes of 7, the same vector the survey package checks.
+	const forma2Token = "9e055152961ae65b7f985557e6ba3197da282c32c89ecdefef7f304ea8bc78d2"
+	sv := &Survey{ID: legacyid.ID(forma2Survey), Type: survey.TypeLink, SingleUse: SingleUse{Enabled: true}}
+	byForma2ID := "https://app.example.com/s/" + forma2Survey + "?suId=su-legacy&suToken=" + forma2Token
+	if id, err := e.svc.SingleUseID(sv, ws, true, ptr("su-legacy"), &byForma2ID); err != nil || *id != "su-legacy" {
+		t.Fatalf("SingleUseID = %v, %v", id, err)
+	}
+	byNewID := "https://app.example.com/s/" + sv.ID.String() + "?suId=su-legacy&suToken=" + forma2Token
+	_, err := e.svc.SingleUseID(sv, ws, true, ptr("su-legacy"), &byNewID)
+	appErr(t, err, http.StatusBadRequest, "Invalid single use id", map[string]any{"surveyId": sv.ID.String(), "workspaceId": ws.String()})
+	other := &Survey{ID: uuid.New(), Type: survey.TypeLink, SingleUse: SingleUse{Enabled: true}}
+	_, err = e.svc.SingleUseID(other, ws, true, ptr("su-legacy"), &byForma2ID)
+	appErr(t, err, http.StatusBadRequest, "Invalid single use id", map[string]any{"surveyId": other.ID.String(), "workspaceId": ws.String()})
 }
 
 func TestCreateRunsTheIngestContract(t *testing.T) {

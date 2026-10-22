@@ -135,3 +135,25 @@ func TestDecryptForma2Refuses(t *testing.T) {
 		t.Fatalf("bad tag: %v, want ErrUndecryptable", err)
 	}
 }
+
+func TestEncryptForma2RoundTrips(t *testing.T) {
+	hexKey, _ := hex.DecodeString(forma2HexKey)
+	sealed, err := EncryptForma2("user1@example.com", hexKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(sealed, ":")
+	if len(parts) != 3 || len(parts[0]) != 32 || len(parts[2]) != 32 || strings.Contains(sealed, "user1") {
+		t.Fatalf("sealed %q: want hex iv(16):ciphertext:tag(16)", sealed)
+	}
+	if got, err := DecryptForma2(sealed, hexKey, false); err != nil || got != "user1@example.com" {
+		t.Fatalf("DecryptForma2 = %q, %v", got, err)
+	}
+	again, _ := EncryptForma2("user1@example.com", hexKey)
+	if again == sealed {
+		t.Fatal("two encryptions are identical: the IV is not random")
+	}
+	if _, err := DecryptForma2(sealed, []byte(forma2LatinKey), false); err == nil {
+		t.Fatal("opened under another key")
+	}
+}

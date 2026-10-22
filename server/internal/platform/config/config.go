@@ -2,6 +2,9 @@
 package config
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -42,6 +45,11 @@ type Config struct {
 	EncryptionKeyVersion int `env:"ENCRYPTION_KEY_VERSION" envDefault:"1"`
 	// EncryptionPreviousKeys are retired keys by version ("<version>:<key>,..."), still accepted to open what they sealed. A 32-character key that contains a comma must be given in hex.
 	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
+	// EncryptionKeyText is ENCRYPTION_KEY exactly as configured. forma2 keyed its HMAC signatures and JWTs with the variable's text rather than the decoded key, so the links it issued (signed single-use links, personal contact links) verify only against the same text.
+	EncryptionKeyText Secret `env:"ENCRYPTION_KEY"`
+	// NextAuthSecret and BetterAuthSecret are forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET. They signed the link survey tokens (email verification links, PIN tokens); an instance migrated from forma2 keeps them so the links it already sent keep working. Without them the tokens are signed with a secret derived from ENCRYPTION_KEY.
+	NextAuthSecret   Secret `env:"NEXTAUTH_SECRET"`
+	BetterAuthSecret Secret `env:"BETTER_AUTH_SECRET"`
 
 	// RateLimitingDisabled turns every rate limit into a no-op that allows the request.
 	RateLimitingDisabled bool `env:"RATE_LIMITING_DISABLED" envDefault:"0"`
@@ -60,10 +68,11 @@ type Config struct {
 	MailFrom                  string `env:"MAIL_FROM" envDefault:"noreply@forma.ylam.ai"`
 	MailFromName              string `env:"MAIL_FROM_NAME" envDefault:"Forma"`
 
-	// Legal links rendered in the footer of every email.
+	// Legal links rendered in the footer of every email and of the public survey pages; TermsURL appears on the survey pages only.
 	PrivacyURL     string `env:"PRIVACY_URL"`
 	ImprintURL     string `env:"IMPRINT_URL"`
 	ImprintAddress string `env:"IMPRINT_ADDRESS"`
+	TermsURL       string `env:"TERMS_URL"`
 
 	// AuditLogEnabled emits audit events; AuditLogGetUserIP records the client address in them instead of "unknown".
 	AuditLogEnabled   bool `env:"AUDIT_LOG_ENABLED" envDefault:"1"`
@@ -250,6 +259,29 @@ func (c Config) RecaptchaConfigured() bool {
 	return c.RecaptchaSiteKey != "" && c.RecaptchaSecretKey != ""
 }
 
+// LinkSurveyEmailSecret signs the link survey email verification tokens, forma2's NEXTAUTH_SECRET.
+func (c Config) LinkSurveyEmailSecret() string {
+	if c.NextAuthSecret != "" {
+		return string(c.NextAuthSecret)
+	}
+	return c.derivedTokenSecret()
+}
+
+// LinkSurveyPinSecret signs the link survey PIN tokens, forma2's BETTER_AUTH_SECRET falling back to NEXTAUTH_SECRET.
+func (c Config) LinkSurveyPinSecret() string {
+	if c.BetterAuthSecret != "" {
+		return string(c.BetterAuthSecret)
+	}
+	return c.LinkSurveyEmailSecret()
+}
+
+// derivedTokenSecret is the token signing secret of an instance that never ran forma2: HMAC-SHA256 of a fixed label under the encryption key, so it needs no configuration of its own and changes only when the key does.
+func (c Config) derivedTokenSecret() string {
+	mac := hmac.New(sha256.New, c.EncryptionKey)
+	mac.Write([]byte("forma.link-survey-token-secret.v1"))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
 // TurnstileConfigured reports whether sign-up requires a Turnstile challenge.
 func (c Config) TurnstileConfigured() bool {
 	return c.TurnstileSiteKey != "" && c.TurnstileSecretKey != ""
@@ -309,6 +341,15 @@ func (c Config) validate() error {
 	if _, ok := c.EncryptionPreviousKeys[c.EncryptionKeyVersion]; ok {
 		return fmt.Errorf("ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", c.EncryptionKeyVersion)
 	}
+	for _, s := range []struct {
+		name  string
+		value Secret
+	}{{"NEXTAUTH_SECRET", c.NextAuthSecret}, {"BETTER_AUTH_SECRET", c.BetterAuthSecret}} {
+		// HS256 needs a key at least as long as its hash; the JOSE library refuses a shorter one, so a short secret would silently invalidate every link survey token.
+		if s.value != "" && len(s.value) < 32 {
+			return fmt.Errorf("%s must be at least 32 characters (openssl rand -hex 32)", s.name)
+		}
+	}
 	switch c.UserManagementMinimumRole {
 	case "owner", "manager", "disabled":
 	default:
@@ -331,7 +372,7 @@ func (c Config) validate() error {
 	if addr, err := mail.ParseAddress(c.MailFrom); err != nil || addr.Name != "" || addr.Address != c.MailFrom {
 		return fmt.Errorf("MAIL_FROM must be a plain email address, got %q", c.MailFrom)
 	}
-	for _, link := range []struct{ name, value string }{{"PRIVACY_URL", c.PrivacyURL}, {"IMPRINT_URL", c.ImprintURL}} {
+	for _, link := range []struct{ name, value string }{{"PRIVACY_URL", c.PrivacyURL}, {"IMPRINT_URL", c.ImprintURL}, {"TERMS_URL", c.TermsURL}} {
 		if link.value == "" {
 			continue
 		}

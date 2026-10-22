@@ -142,6 +142,11 @@ func (r *Repository) byID(ctx context.Context, id uuid.UUID) (*Survey, error) {
 	return s, nil
 }
 
+// ByID is byID for a caller that decides on its own what a survey may show: the public link survey pages, which serve any live link survey to anyone.
+func (r *Repository) ByID(ctx context.Context, id uuid.UUID) (*Survey, error) {
+	return r.byID(ctx, id)
+}
+
 func (r *Repository) loadRelations(ctx context.Context, s *Survey, segmentID *uuid.UUID) error {
 	langs, err := r.surveyLanguages(ctx, s.ID)
 	if err != nil {

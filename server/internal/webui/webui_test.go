@@ -112,3 +112,25 @@ func TestServeWithoutBuild(t *testing.T) {
 		t.Fatalf("code = %d, want 404 when no index.html is embedded", rec.Code)
 	}
 }
+
+// The survey page bundle's HTML is a template the public survey pages fill in; it is handed to them and never served as it is.
+func TestSurveyShell(t *testing.T) {
+	files := fstest.MapFS{
+		"index.html":  {Data: []byte(indexHTML)},
+		"survey.html": {Data: []byte("<!doctype html><!--forma:head--><!--forma:state-->")},
+	}
+	h, err := NewFromFS(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(h.SurveyShell()) != "<!doctype html><!--forma:head--><!--forma:state-->" {
+		t.Fatalf("SurveyShell = %q", h.SurveyShell())
+	}
+	if rec := get(newEngine(t, files), http.MethodGet, "/survey.html"); rec.Code != http.StatusNotFound {
+		t.Fatalf("/survey.html answered %d", rec.Code)
+	}
+	without, err := NewFromFS(fstest.MapFS{"index.html": {Data: []byte(indexHTML)}})
+	if err != nil || without.SurveyShell() != nil {
+		t.Fatalf("a build without the survey page: %q, %v", without.SurveyShell(), err)
+	}
+}

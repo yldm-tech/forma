@@ -740,6 +740,9 @@ importers:
       '@tanstack/router-plugin':
         specifier: 1.168.42
         version: 1.168.42(@tanstack/react-router@1.170.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.2)(webpack@5.105.4(esbuild@0.28.1))
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/markdown-it':
         specifier: 14.2.0
         version: 14.2.0
@@ -755,6 +758,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1(@noble/hashes@2.3.0)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3

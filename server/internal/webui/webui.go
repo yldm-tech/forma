@@ -19,7 +19,12 @@ var embedded embed.FS
 type Handler struct {
 	files fs.FS
 	index []byte
+	// survey is the survey page bundle's HTML, which the public survey pages fill in; it is never served as a file.
+	survey []byte
 }
+
+// surveyShell is the survey page bundle's entry in the build (web/survey.html).
+const surveyShell = "survey.html"
 
 // New uses the build embedded at compile time. A binary compiled without a web build still starts; it answers every page with 404 and keeps the API working.
 func New() (*Handler, error) {
@@ -35,7 +40,16 @@ func NewFromFS(files fs.FS) (*Handler, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	return &Handler{files: files, index: index}, nil
+	survey, err := fs.ReadFile(files, surveyShell)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+	return &Handler{files: files, index: index, survey: survey}, nil
+}
+
+// SurveyShell is the survey page bundle's HTML, or nil when the binary was built without the web UI.
+func (h *Handler) SurveyShell() []byte {
+	return h.survey
 }
 
 // Register installs the handler for every route nothing else matched.
@@ -56,6 +70,10 @@ func (h *Handler) serve(c *gin.Context) {
 	}
 
 	name := strings.TrimPrefix(path.Clean(p), "/")
+	if name == surveyShell {
+		c.Status(http.StatusNotFound)
+		return
+	}
 	if name != "" && name != "index.html" {
 		if info, err := fs.Stat(h.files, name); err == nil && !info.IsDir() {
 			switch {

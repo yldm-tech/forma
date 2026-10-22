@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/gin-gonic/gin"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/invite"
+	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -27,6 +29,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/v3api"
+	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -104,12 +107,25 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	mountAuthenticatedV3API(r, p, sessions, nil, contact.NewV3Handler(nil))
 	mountV3API(r, p, sessions, actionClasses, tags)
 	sso.RegisterCallbacks(r)
+	web, err := webui.NewFromFS(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	linksurvey.NewHandler(cfg, nil, nil, web, log).Register(r)
 
 	want := map[string]bool{
-		"POST /api/app/invites/accept":                                         true,
-		"POST /api/app/invites/inspect":                                        true,
-		"POST /api/app/invites/:inviteId/link":                                 true,
-		"POST /api/app/organizations/:organizationId/invites/bulk":             true,
+		"GET /s/:surveyId":                                         true,
+		"HEAD /s/:surveyId":                                        true,
+		"POST /s/:surveyId/pin":                                    true,
+		"POST /s/:surveyId/verify-email":                           true,
+		"GET /c/:token":                                            true,
+		"GET /p/:slug":                                             true,
+		"GET /api/v1/client/og":                                    true,
+		"OPTIONS /api/v1/client/og":                                true,
+		"POST /api/app/invites/accept":                             true,
+		"POST /api/app/invites/inspect":                            true,
+		"POST /api/app/invites/:inviteId/link":                     true,
+		"POST /api/app/organizations/:organizationId/invites/bulk": true,
 		"POST /api/app/organizations/:organizationId/invites/:inviteId/resend": true,
 		"GET /api/app/organizations/:organizationId/teams":                     true,
 		"PUT /api/app/teams/:teamId":                                           true,
