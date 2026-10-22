@@ -15,14 +15,19 @@ const archivedAt = "2026-10-01T00:00:00.000Z";
 
 // forma2's SurveyCard and SurveyDropDownMenu rules.
 describe("surveyRowRules", () => {
-  // forma2 opened a published or archived survey's summary, which is not ported: a row leads only to the editor, the one survey page that exists.
-  test("a row opens the editor, the only survey page there is", () => {
+  test("a draft opens its editor, any other survey its summary, an archived one always its summary", () => {
     expect(surveyRowRules(row({ status: "draft" }), "ws", false).href).toBe("/workspaces/ws/surveys/s1/edit");
-    expect(surveyRowRules(row(), "ws", false).href).toBe("/workspaces/ws/surveys/s1/edit");
-    expect(surveyRowRules(row({ status: "completed" }), "ws", false).isClickable).toBe(true);
+    expect(surveyRowRules(row(), "ws", false).href).toBe("/workspaces/ws/surveys/s1/summary");
+    expect(surveyRowRules(row({ status: "completed" }), "ws", true).href).toBe(
+      "/workspaces/ws/surveys/s1/summary"
+    );
+    expect(surveyRowRules(row({ archivedAt }), "ws", false).href).toBe("/workspaces/ws/surveys/s1/summary");
+    expect(surveyRowRules(row({ status: "draft", archivedAt }), "ws", false).href).toBe(
+      "/workspaces/ws/surveys/s1/summary"
+    );
   });
 
-  test("a survey the member cannot edit, or an archived one, is not clickable; only a read-only draft disables its menu", () => {
+  test("only a read-only draft or an archived draft is not clickable; only a read-only draft disables its menu", () => {
     expect(surveyRowRules(row({ status: "draft" }), "ws", true)).toMatchObject({
       isClickable: false,
       isMenuDisabled: true,
@@ -32,10 +37,11 @@ describe("surveyRowRules", () => {
       isMenuDisabled: false,
     });
     expect(surveyRowRules(row({ status: "completed" }), "ws", true)).toMatchObject({
-      isClickable: false,
+      isClickable: true,
       isMenuDisabled: false,
     });
-    expect(surveyRowRules(row({ archivedAt }), "ws", false).isClickable).toBe(false);
+    expect(surveyRowRules(row({ archivedAt }), "ws", false).isClickable).toBe(true);
+    expect(surveyRowRules(row({ status: "draft" }), "ws", false).isClickable).toBe(true);
   });
 
   test("preview and copy link are for published link surveys that are not archived", () => {

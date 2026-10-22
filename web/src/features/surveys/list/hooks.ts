@@ -6,6 +6,7 @@ import {
   useMutationState,
   useQueryClient,
 } from "@tanstack/react-query";
+import { analysisKeys } from "../../survey-analysis/api";
 import { forgetEditorSurvey } from "../../survey-editor/api";
 import { type SurveyListPage, surveysApi } from "../api";
 import type { SurveyFilters, SurveyStatus } from "./filters";
@@ -80,6 +81,7 @@ const useSurveyRemoval = (
     // Awaited, so the mutation stays pending (and its survey hidden) until the cache holds server data again.
     onSettled: (_data, _error, { surveyId }) => {
       forgetEditorSurvey(queryClient, surveyId);
+      queryClient.removeQueries({ queryKey: analysisKeys.all(surveyId) });
       return queryClient.invalidateQueries({ queryKey: surveyKeys.lists() });
     },
   });
@@ -112,6 +114,7 @@ const useSurveyPatch = <TVariables extends { surveyId: string }>(
     },
     onSettled: (_data, _error, variables) => {
       forgetEditorSurvey(queryClient, variables.surveyId);
+      queryClient.removeQueries({ queryKey: analysisKeys.all(variables.surveyId) });
       return queryClient.invalidateQueries({ queryKey: surveyKeys.lists() });
     },
   });

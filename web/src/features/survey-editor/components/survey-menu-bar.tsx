@@ -21,6 +21,7 @@ import { ApiError } from "../../../lib/api";
 import { errorMessage } from "../../../lib/errors";
 import { isDeepEqual } from "../../../lib/survey/object";
 import { toast } from "../../../lib/toast";
+import { analysisKeys } from "../../survey-analysis/api";
 import { useCreateSegment } from "../../segments/api";
 import { type SurveySaveInput, saveSurvey, surveyEditorKeys } from "../api";
 import { ZEditorSurvey } from "../lib/editor-schema";
@@ -165,6 +166,8 @@ export const SurveyMenuBar = ({
     // Set before the baseline changes, so the beforeunload prompt stays quiet while it does.
     isSuccessfullySavedRef.current = true;
     queryClient.setQueryData(surveyEditorKeys.survey(saved.id), saved);
+    // The analysis views read the survey and summarise against its elements; they read both again after a save.
+    queryClient.removeQueries({ queryKey: analysisKeys.all(saved.id) });
   };
 
   const clearSurveyLocalStorage = () => {
@@ -412,12 +415,17 @@ export const SurveyMenuBar = ({
     const isSurveySaved =
       localSurvey.status === "draft" ? await handleSurveySaveDraft() : await handleSurveySave();
     if (isSurveySaved) {
-      // Navigate explicitly rather than history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted/bookmarked URL, hard reload), and back() silently no-ops there. forma2 returned a published survey to its summary, which is not ported, so every survey returns to the list.
-      await router.navigate({ href: `${workspaceBasePath}/surveys` });
+      // Navigate explicitly rather than history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted/bookmarked URL, hard reload), and back() silently no-ops there. "Save & Close" renders only for a published survey, whose editor is reached from its summary, so it returns there; a draft gets here only through the unsaved-changes dialog, and the list never links a draft to a summary, since a draft has no responses to summarise, so a draft returns to the list.
+      await router.navigate({
+        href:
+          localSurvey.status === "draft"
+            ? `${workspaceBasePath}/surveys`
+            : `${workspaceBasePath}/surveys/${localSurvey.id}/summary`,
+      });
     }
   };
 
-  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey list, where forma2 left for the summary, which is not ported, and announced the result there. */
+  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey's summary, which announces the result: ?success=true celebrates a publish and opens a link survey's share modal, ?scheduled=true confirms a schedule. */
   const publishAs = async (status: "inProgress" | "paused") => {
     // Scheduling lands on "paused", which is live enough to need a trigger.
     if (blockOnMissingTrigger(status)) return;
@@ -446,12 +454,10 @@ export const SurveyMenuBar = ({
       // Set so the beforeunload prompt stays quiet during navigation
       isSuccessfullySavedRef.current = true;
       queryClient.setQueryData(surveyEditorKeys.survey(published.id), published);
-      toast.success(
-        status === "inProgress"
-          ? t("workspace.surveys.summary.congrats")
-          : t("workspace.surveys.summary.survey_scheduled_successfully")
-      );
-      await router.navigate({ href: `${workspaceBasePath}/surveys` });
+      queryClient.removeQueries({ queryKey: analysisKeys.all(published.id) });
+      await router.navigate({
+        href: `${workspaceBasePath}/surveys/${published.id}/summary?${status === "inProgress" ? "success" : "scheduled"}=true`,
+      });
     } catch (error) {
       stop();
       reportSaveFailure(error, t("workspace.surveys.edit.error_publishing_survey"));
