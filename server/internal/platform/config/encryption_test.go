@@ -94,3 +94,50 @@ func TestLoadRejectsInvalidEncryptionKeys(t *testing.T) {
 		})
 	}
 }
+
+// forma2 keyed its signatures with ENCRYPTION_KEY's text, so the text is kept next to the decoded key, and it never prints either.
+func TestLoadKeepsTheEncryptionKeyText(t *testing.T) {
+	setRequired(t)
+	t.Setenv("ENCRYPTION_KEY", strings.ToUpper(testHexKey))
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(cfg.EncryptionKeyText) != strings.ToUpper(testHexKey) || len(cfg.EncryptionKey) != 32 {
+		t.Fatalf("text %d chars, key %d bytes", len(cfg.EncryptionKeyText), len(cfg.EncryptionKey))
+	}
+	if s := fmt.Sprintf("%v %s %+v", cfg.EncryptionKeyText, cfg.EncryptionKeyText, cfg); strings.Contains(strings.ToLower(s), "a0ff678f") {
+		t.Fatalf("formatted key text leaks: %s", s)
+	}
+}
+
+func TestLinkSurveyTokenSecrets(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	derived := cfg.LinkSurveyEmailSecret()
+	if len(derived) != 64 || derived != cfg.LinkSurveyPinSecret() || strings.Contains(derived, testHexKey) {
+		t.Fatalf("derived secrets %q / %q", derived, cfg.LinkSurveyPinSecret())
+	}
+
+	// forma2: email tokens use NEXTAUTH_SECRET; PIN tokens prefer BETTER_AUTH_SECRET and fall back to NEXTAUTH_SECRET.
+	t.Setenv("NEXTAUTH_SECRET", "next-secret")
+	if cfg, err = Load(); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LinkSurveyEmailSecret() != "next-secret" || cfg.LinkSurveyPinSecret() != "next-secret" {
+		t.Fatalf("with NEXTAUTH_SECRET: %q / %q", cfg.LinkSurveyEmailSecret(), cfg.LinkSurveyPinSecret())
+	}
+	t.Setenv("BETTER_AUTH_SECRET", "better-secret")
+	if cfg, err = Load(); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LinkSurveyEmailSecret() != "next-secret" || cfg.LinkSurveyPinSecret() != "better-secret" {
+		t.Fatalf("with both: %q / %q", cfg.LinkSurveyEmailSecret(), cfg.LinkSurveyPinSecret())
+	}
+	if s := fmt.Sprintf("%+v", cfg); strings.Contains(s, "next-secret") || strings.Contains(s, "better-secret") {
+		t.Fatalf("formatted config leaks a secret: %s", s)
+	}
+}
