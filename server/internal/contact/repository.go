@@ -2,6 +2,7 @@ package contact
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,16 +49,28 @@ func isUniqueViolation(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-func (r *Repository) workspaceOrganization(ctx context.Context, workspaceID uuid.UUID) (*uuid.UUID, error) {
-	var org uuid.UUID
-	res := r.db.WithContext(ctx).Raw(`SELECT organization_id FROM workspaces WHERE id = ?`, workspaceID).Scan(&org)
-	if res.Error != nil {
-		return nil, fmt.Errorf("read workspace organization: %w", res.Error)
-	}
-	if res.RowsAffected == 0 {
+// optionalID reads the single uuid a query returns, or nil when it returns no row.
+func (r *Repository) optionalID(ctx context.Context, what, query string, args ...any) (*uuid.UUID, error) {
+	var id *uuid.UUID
+	err := r.db.WithContext(ctx).Raw(query, args...).Row().Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
-	return &org, nil
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", what, err)
+	}
+	return id, nil
+}
+
+// returningID runs a statement that returns one id.
+func (r *Repository) returningID(ctx context.Context, query string, args ...any) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := r.db.WithContext(ctx).Raw(query, args...).Row().Scan(&id)
+	return id, err
+}
+
+func (r *Repository) workspaceOrganization(ctx context.Context, workspaceID uuid.UUID) (*uuid.UUID, error) {
+	return r.optionalID(ctx, "read workspace organization", `SELECT organization_id FROM workspaces WHERE id = ?`, workspaceID)
 }
 
 // ---- attribute keys ----
@@ -148,15 +161,7 @@ func (r *Repository) createKeys(ctx context.Context, workspaceID uuid.UUID, keys
 // ---- contacts ----
 
 func (r *Repository) contactWorkspace(ctx context.Context, contactID uuid.UUID) (*uuid.UUID, error) {
-	var ws uuid.UUID
-	res := r.db.WithContext(ctx).Raw(`SELECT workspace_id FROM contacts WHERE id = ?`, contactID).Scan(&ws)
-	if res.Error != nil {
-		return nil, fmt.Errorf("read contact workspace: %w", res.Error)
-	}
-	if res.RowsAffected == 0 {
-		return nil, nil
-	}
-	return &ws, nil
+	return r.optionalID(ctx, "read contact workspace", `SELECT workspace_id FROM contacts WHERE id = ?`, contactID)
 }
 
 type contactRow struct {
@@ -401,8 +406,8 @@ func (r *Repository) userIDOwners(ctx context.Context, workspaceID uuid.UUID, us
 }
 
 func (r *Repository) insertContact(ctx context.Context, workspaceID uuid.UUID) (uuid.UUID, error) {
-	var id uuid.UUID
-	if err := r.db.WithContext(ctx).Raw(`INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, workspaceID).Scan(&id).Error; err != nil {
+	id, err := r.returningID(ctx, `INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, workspaceID)
+	if err != nil {
 		return uuid.Nil, fmt.Errorf("create contact: %w", err)
 	}
 	return id, nil
@@ -503,8 +508,7 @@ func (r *Repository) segment(ctx context.Context, id uuid.UUID) (*Segment, error
 }
 
 func (r *Repository) insertSegment(ctx context.Context, workspaceID uuid.UUID, title string, description *string, isPrivate bool, filters json.RawMessage) (uuid.UUID, error) {
-	var id uuid.UUID
-	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, ?, ?) RETURNING id`, workspaceID, title, description, isPrivate, string(filters)).Scan(&id).Error
+	id, err := r.returningID(ctx, `INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, ?, ?) RETURNING id`, workspaceID, title, description, isPrivate, string(filters))
 	if isUniqueViolation(err) {
 		return uuid.Nil, errSegmentTitleTaken
 	}
@@ -516,10 +520,9 @@ func (r *Repository) insertSegment(ctx context.Context, workspaceID uuid.UUID, t
 
 // upsertPrivateSegment is forma2's private-segment upsert on (workspace, title): an existing segment of that title gets the filters, and the description when one is given.
 func (r *Repository) upsertPrivateSegment(ctx context.Context, workspaceID uuid.UUID, title string, description *string, filters json.RawMessage) (uuid.UUID, error) {
-	var id uuid.UUID
-	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, true, ?)
+	id, err := r.returningID(ctx, `INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, true, ?)
 		ON CONFLICT (workspace_id, title) DO UPDATE SET filters = EXCLUDED.filters, description = CASE WHEN ? THEN EXCLUDED.description ELSE segments.description END, updated_at = now()
-		RETURNING id`, workspaceID, title, description, string(filters), description != nil).Scan(&id).Error
+		RETURNING id`, workspaceID, title, description, string(filters), description != nil)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("upsert segment: %w", err)
 	}
@@ -623,14 +626,7 @@ func (r *Repository) segmentTitles(ctx context.Context, workspaceID uuid.UUID) (
 }
 
 func (r *Repository) privateSegmentID(ctx context.Context, workspaceID uuid.UUID, title string) (*uuid.UUID, error) {
-	var ids []uuid.UUID
-	if err := r.db.WithContext(ctx).Raw(`SELECT id FROM segments WHERE workspace_id = ? AND title = ? AND is_private FOR UPDATE`, workspaceID, title).Scan(&ids).Error; err != nil {
-		return nil, fmt.Errorf("find private segment: %w", err)
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return &ids[0], nil
+	return r.optionalID(ctx, "find private segment", `SELECT id FROM segments WHERE workspace_id = ? AND title = ? AND is_private ORDER BY created_at LIMIT 1 FOR UPDATE`, workspaceID, title)
 }
 
 func (r *Repository) clearFilters(ctx context.Context, id uuid.UUID) error {
@@ -642,14 +638,7 @@ func (r *Repository) clearFilters(ctx context.Context, id uuid.UUID) error {
 
 // surveySegment is the segment a survey targets, locking the survey.
 func (r *Repository) surveySegment(ctx context.Context, surveyID uuid.UUID) (*uuid.UUID, error) {
-	var ids []*uuid.UUID
-	if err := r.db.WithContext(ctx).Raw(`SELECT segment_id FROM surveys WHERE id = ? FOR UPDATE`, surveyID).Scan(&ids).Error; err != nil {
-		return nil, fmt.Errorf("read survey segment: %w", err)
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return ids[0], nil
+	return r.optionalID(ctx, "read survey segment", `SELECT segment_id FROM surveys WHERE id = ? FOR UPDATE`, surveyID)
 }
 
 // deleteOwnPrivateSegment deletes a survey's own targeting segment: private and titled with the survey's id.
