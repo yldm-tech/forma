@@ -1,0 +1,56 @@
+{
+  "case": "v2-responses-create-partial",
+  "description": "Partial (finished=false) response in de-DE with ttc, meta.url/source, hidden field values (utm_source, campaign) inside data, and the display id.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/client/<id:workspace>/responses",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "content-type": "application/json"
+    },
+    "body": {
+      "surveyId": "<id:survey:link>",
+      "displayId": "<id:display:anonymous>",
+      "contactId": null,
+      "finished": false,
+      "language": "de-DE",
+      "data": {
+        "feedback": "Mehr Beispiele",
+        "utm_source": "newsletter",
+        "campaign": "autumn"
+      },
+      "ttc": {
+        "feedback": 4210
+      },
+      "variables": {},
+      "endingId": null,
+      "meta": {
+        "url": "<webapp-url>/s/<id:survey:link>?utm_source=newsletter&campaign=autumn&lang=de-DE",
+        "source": ""
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control",
+      "access-control-allow-methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:partial>",
+        "quotaFull": false
+      }
+    }
+  }
+}
