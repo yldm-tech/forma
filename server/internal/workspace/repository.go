@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 // Repository reads and writes workspaces and the rows a new workspace starts with. Every query names the organization or workspace it is scoped to.
@@ -210,6 +211,25 @@ func (r *Repository) byEnvironmentID(ctx context.Context, environmentID string) 
 	}
 	if err != nil {
 		return nil, fmt.Errorf("resolve environment id: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return &rows[0], nil
+}
+
+// ClientWorkspace is the workspace an id from outside resolved to.
+type ClientWorkspace struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+// ResolveClientID is forma2's findWorkspaceByIdOrLegacyEnvId, for ids that arrive from outside (an SDK snippet, a stored /storage URL): the workspace with that id, where a forma2 id resolves to the workspace migrated from it, or else the one whose legacy environment id it is. It returns nil when nothing matches. The id is not authenticated: the caller authorizes whatever it reads next.
+func (r *Repository) ResolveClientID(ctx context.Context, raw string) (*ClientWorkspace, error) {
+	var rows []ClientWorkspace
+	id, _ := legacyid.Resolve(raw)
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id FROM workspaces WHERE id = ? OR legacy_environment_id = ? ORDER BY id = ? DESC LIMIT 1`, id, raw, id).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("resolve client id: %w", err)
 	}
 	if len(rows) == 0 {
 		return nil, nil

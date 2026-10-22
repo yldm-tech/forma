@@ -2,12 +2,14 @@ package workspace
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"slices"
 	"sync"
 	"testing"
 
@@ -78,6 +80,26 @@ type env struct {
 	svc    *Service
 	engine *gin.Engine
 	logs   *syncBuffer
+	files  *recordedFiles
+}
+
+// recordedFiles stands in for the storage module, which imports this package and has its own tests against a real bucket; it records which ids a deletion cleaned up.
+type recordedFiles struct {
+	mu      sync.Mutex
+	deleted [][]string
+}
+
+func (f *recordedFiles) DeleteWorkspaceFiles(_ context.Context, ids ...string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.deleted = append(f.deleted, ids)
+	return nil
+}
+
+func (f *recordedFiles) calls() [][]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.deleted)
 }
 
 func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
@@ -96,7 +118,8 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		t.Fatal(err)
 	}
 	e.repo = NewRepository(db, log)
-	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, ratelimit.New(cfg, nil, log), audit.New(cfg, log), schemas, log)
+	e.files = &recordedFiles{}
+	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, ratelimit.New(cfg, nil, log), audit.New(cfg, log), schemas, e.files, log)
 	e.engine = gin.New()
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)

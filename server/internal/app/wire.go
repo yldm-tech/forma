@@ -29,6 +29,7 @@ import (
 	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
@@ -135,6 +136,14 @@ var responseSet = wire.NewSet(
 	response.NewHandler,
 )
 
+// storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
+var storageSet = wire.NewSet(
+	storage.NewBucket,
+	storage.NewService,
+	wire.Bind(new(workspace.FileStore), new(*storage.Service)),
+	storage.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -153,6 +162,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		v3Set,
 		surveyConfigSet,
 		responseSet,
+		storageSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

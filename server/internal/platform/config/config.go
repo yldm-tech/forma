@@ -114,6 +114,9 @@ type Config struct {
 	// SSO is single sign-on through Google, GitHub, Azure AD and a generic OpenID Connect provider.
 	SSO SSOConfig
 
+	// S3 is the object store uploaded files live in.
+	S3 S3Config
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -129,6 +132,30 @@ type AuthzConfig struct {
 	Insecure bool `env:"AUTHZED_INSECURE" envDefault:"0"`
 	// Consistency is what permission checks and resource lookups ask SpiceDB for: fully_consistent (the default, and what forma2 always used) evaluates at the newest revision; minimize_latency lets SpiceDB answer from its quantized cache, so a delivered revocation can take effect a few seconds later. Operational reads always use fully_consistent.
 	Consistency string `env:"AUTHZED_CONSISTENCY" envDefault:"fully_consistent"`
+}
+
+// S3Config is forma2's file storage configuration. Only the bucket is required, and file storage is configured exactly when it is set (forma2's IS_STORAGE_CONFIGURED). The region is passed on only when set, and the keys only when both are set; otherwise the AWS default credential chain applies (environment, shared credentials file, web identity, container and instance roles).
+type S3Config struct {
+	AccessKey string `env:"S3_ACCESS_KEY"`
+	SecretKey string `env:"S3_SECRET_KEY"`
+	Region    string `env:"S3_REGION"`
+	// EndpointURL is an S3-compatible service (RustFS, MinIO, StorJ, ...) as scheme://host[:port]; unset means Amazon S3.
+	EndpointURL *url.URL `env:"S3_ENDPOINT_URL"`
+	// ForcePathStyle addresses the bucket as <endpoint>/<bucket> instead of <bucket>.<endpoint>, which most self-hosted services need.
+	ForcePathStyle bool   `env:"S3_FORCE_PATH_STYLE" envDefault:"0"`
+	BucketName     string `env:"S3_BUCKET_NAME"`
+}
+
+// Configured is forma2's IS_STORAGE_CONFIGURED.
+func (s S3Config) Configured() bool { return s.BucketName != "" }
+
+func (s S3Config) validate() error {
+	if u := s.EndpointURL; u != nil {
+		if (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("S3_ENDPOINT_URL must be an http(s) URL without a path, got %q", u.String())
+		}
+	}
+	return nil
 }
 
 // SSOConfig is forma2's single sign-on configuration. A provider is offered exactly when its own credentials are set; there is no other switch.
@@ -271,6 +298,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.SSO.validate(); err != nil {
+		return err
+	}
+	if err := c.S3.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {

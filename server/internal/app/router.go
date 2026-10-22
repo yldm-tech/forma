@@ -22,6 +22,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
@@ -52,7 +53,7 @@ type v3Registrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, storageHandler *storage.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
@@ -63,6 +64,8 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
+	// Stored files, at the URLs surveys, responses and emails embed: forma2's paths and answers, outside /api/app.
+	storageHandler.Register(r)
 	web.Register(r)
 	return r
 }

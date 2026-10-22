@@ -29,11 +29,18 @@ type Service struct {
 	limiter *ratelimit.Limiter
 	audit   *audit.Emitter
 	schemas *jsonschema.Validator
+	files   FileStore
 	log     *slog.Logger
 }
 
-func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, log: log}
+// FileStore holds the files uploaded to workspaces. The storage module implements it; it cannot be imported here, because it resolves the workspace ids in its URLs through this package.
+type FileStore interface {
+	// DeleteWorkspaceFiles deletes every file stored under any of ids.
+	DeleteWorkspaceFiles(ctx context.Context, ids ...string) error
+}
+
+func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, files FileStore, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, files: files, log: log}
 }
 
 // record emits forma2's audit event for a workspace mutation, a failure included, as withAuditLogging did for every error its handler threw.
@@ -475,6 +482,14 @@ func (s *Service) delete(ctx context.Context, userID, workspaceID uuid.UUID, con
 	deleted, err := s.repo.deleteIfNotLast(ctx, workspaceID, *org)
 	if err != nil {
 		return nil, org.String(), err
+	}
+	// The workspace's files go with it: those stored under its id and, for a workspace from before the workspace rename, under its environment id. A failure leaves orphaned objects behind but does not undo the deletion, as in forma2.
+	fileIDs := []string{workspaceID.String()}
+	if deleted.LegacyEnvironmentID != nil {
+		fileIDs = append(fileIDs, *deleted.LegacyEnvironmentID)
+	}
+	if err := s.files.DeleteWorkspaceFiles(ctx, fileIDs...); err != nil {
+		s.log.ErrorContext(ctx, "Error deleting S3 files", "err", err, "workspaceId", workspaceID.String())
 	}
 	// The workspace is gone; failing to pick where to go next must not report the deletion as failed, and "/" resolves a landing workspace on its own.
 	dest, err := s.destinationAfterDeletion(ctx, *org)

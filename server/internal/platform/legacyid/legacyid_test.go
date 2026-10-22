@@ -6,35 +6,51 @@ import (
 	"github.com/google/uuid"
 )
 
+func TestNamespaceIsDerivedAsDocumented(t *testing.T) {
+	if got := uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://forma.ylam.ai/ns/legacy-id")); got != Namespace {
+		t.Fatalf("namespace %s, derivation gives %s", Namespace, got)
+	}
+}
+
 func TestResolve(t *testing.T) {
-	native := uuid.MustParse("0199a3b2-7c4d-7e8f-9a0b-1c2d3e4f5a6b")
+	native := uuid.MustParse("01a16211-77de-7d59-ada1-7e2ea6ddb527")
 	cases := []struct {
-		in   string
+		raw  string
 		want uuid.UUID
 		ok   bool
 	}{
-		{in: native.String(), want: native, ok: true},
-		{in: "clsurveyaaaaaaaaaaaaaaaa", want: uuid.NewSHA1(Namespace, []byte("clsurveyaaaaaaaaaaaaaaaa")), ok: true},
-		// Only the canonical 36-character spelling is a UUID; uuid.Parse's other spellings are legacy ids like any other string.
-		{in: "0199a3b27c4d7e8f9a0b1c2d3e4f5a6b", want: uuid.NewSHA1(Namespace, []byte("0199a3b27c4d7e8f9a0b1c2d3e4f5a6b")), ok: true},
-		{in: "", want: uuid.Nil, ok: false},
+		{native.String(), native, true},
+		// uuid.Parse also reads braced and urn forms; only the canonical 36-character form is a UUID here, anything else is a forma2 id.
+		{"{" + native.String() + "}", ID("{" + native.String() + "}"), true},
+		{"urn:uuid:" + native.String(), ID("urn:uuid:" + native.String()), true},
+		{"clxbivtla014iye2vfrn436xd", ID("clxbivtla014iye2vfrn436xd"), true},
+		{"", uuid.Nil, false},
 	}
-	for _, c := range cases {
-		got, ok := Resolve(c.in)
-		if got != c.want || ok != c.ok {
-			t.Errorf("Resolve(%q) = %v, %v; want %v, %v", c.in, got, ok, c.want, c.ok)
+	for _, tc := range cases {
+		got, ok := Resolve(tc.raw)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("Resolve(%q) = %s, %v; want %s, %v", tc.raw, got, ok, tc.want, tc.ok)
 		}
 	}
 }
 
-func TestFromLegacyIsAVersion5UUIDInTheNamespace(t *testing.T) {
-	id := FromLegacy("clworkspaceaaaaaaaaaaaaa")
-	if id.Version() != 5 {
-		t.Fatalf("version %d, want 5", id.Version())
+func TestIDIsStableAndVersion5(t *testing.T) {
+	a, b := ID("clxbivtla014iye2vfrn436xd"), ID("clxbivtla014iye2vfrn436xd")
+	if a != b || a.Version() != 5 {
+		t.Fatalf("ID = %s, %s (version %d)", a, b, a.Version())
 	}
-	// A known answer, so a change to the namespace or the function cannot pass unnoticed: every migrated row depends on it.
-	// Computed independently with Python's uuid.uuid5.
-	if got, want := id.String(), "5ddc5569-9576-53f6-9bc5-b00ec07484ce"; got != want {
-		t.Fatalf("FromLegacy = %s, want %s", got, want)
+	if ID("clxbivtla014iye2vfrn436xe") == a {
+		t.Fatal("two old ids map to one id")
+	}
+}
+
+func TestMatches(t *testing.T) {
+	native := uuid.MustParse("01a16211-77de-7d59-ada1-7e2ea6ddb527")
+	migrated := ID("clxbivtla014iye2vfrn436xd")
+	if !Matches(native.String(), native) || !Matches("clxbivtla014iye2vfrn436xd", migrated) {
+		t.Fatal("a matching claim was refused")
+	}
+	if Matches("", uuid.Nil) || Matches("clxbivtla014iye2vfrn436xd", native) || Matches(migrated.String(), native) {
+		t.Fatal("a foreign claim matched")
 	}
 }

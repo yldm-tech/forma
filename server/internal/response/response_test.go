@@ -41,7 +41,7 @@ func TestResolveID(t *testing.T) {
 	if got, err := ResolveID(native.String()); err != nil || got != native {
 		t.Errorf("ResolveID(uuid) = %v, %v", got, err)
 	}
-	if got, err := ResolveID("clsurveyaaaaaaaaaaaaaaaa"); err != nil || got != legacyid.FromLegacy("clsurveyaaaaaaaaaaaaaaaa") {
+	if got, err := ResolveID("clsurveyaaaaaaaaaaaaaaaa"); err != nil || got != legacyid.ID("clsurveyaaaaaaaaaaaaaaaa") {
 		t.Errorf("ResolveID(cuid) = %v, %v", got, err)
 	}
 	for _, bad := range []string{"", "not-a-cuid", "UPPER", "a b"} {

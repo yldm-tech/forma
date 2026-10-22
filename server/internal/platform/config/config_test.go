@@ -185,6 +185,10 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"local time zone":      {"SURVEY_SCHEDULING_TIME_ZONE", "Local"},
 		"scheduling hour":      {"SURVEY_SCHEDULING_LOCAL_HOUR", "24"},
 		"scheduling minute":    {"SURVEY_SCHEDULING_LOCAL_MINUTE", "60"},
+		"s3 endpoint scheme":   {"S3_ENDPOINT_URL", "s3://bucket"},
+		"s3 endpoint path":     {"S3_ENDPOINT_URL", "https://gateway.example.com/forma"},
+		"s3 endpoint relative": {"S3_ENDPOINT_URL", "localhost:9000"},
+		"s3 path style flag":   {"S3_FORCE_PATH_STYLE", "true"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -331,5 +335,36 @@ func TestLoadSSO(t *testing.T) {
 	t.Setenv("OIDC_CLIENT_SECRET", "")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load: %v", err)
+	}
+}
+
+func TestLoadS3(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.S3.Configured() || cfg.S3.ForcePathStyle || cfg.S3.EndpointURL != nil {
+		t.Fatalf("S3 = %+v, want storage unconfigured by default", cfg.S3)
+	}
+
+	for k, v := range map[string]string{
+		"S3_ACCESS_KEY": "devrustfs-service", "S3_SECRET_KEY": "devrustfs-service123", "S3_REGION": "us-east-1",
+		"S3_BUCKET_NAME": "forma", "S3_ENDPOINT_URL": "http://localhost:9000", "S3_FORCE_PATH_STYLE": "1",
+	} {
+		t.Setenv(k, v)
+	}
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := cfg.S3
+	if !s.Configured() || !s.ForcePathStyle || s.EndpointURL.Host != "localhost:9000" || s.Region != "us-east-1" || s.AccessKey != "devrustfs-service" || s.SecretKey != "devrustfs-service123" {
+		t.Fatalf("S3 = %+v", s)
+	}
+
+	t.Setenv("S3_ENDPOINT_URL", "https://gateway.storjshare.io/")
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load rejected an endpoint with a bare trailing slash: %v", err)
 	}
 }

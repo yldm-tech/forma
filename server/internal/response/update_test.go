@@ -134,12 +134,12 @@ func TestAMigratedResponseIsFoundByItsForma2ID(t *testing.T) {
 	_, ws := e.organization(e.user())
 	sv := e.survey(ws, surveyOpts{})
 	legacy := "clmigratedresponseaaaaa1"
-	e.exec(`INSERT INTO responses (id, survey_id) VALUES (?, ?)`, legacyid.FromLegacy(legacy), sv)
+	e.exec(`INSERT INTO responses (id, survey_id) VALUES (?, ?)`, legacyid.ID(legacy), sv)
 	res, err := e.update(context.Background(), ws, legacy, `{"q1":"x"}`, UpdateInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.ID != legacyid.FromLegacy(legacy) {
+	if res.ID != legacyid.ID(legacy) {
 		t.Fatalf("updated %s", res.ID)
 	}
 }
