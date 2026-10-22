@@ -457,7 +457,7 @@ func TestV3SessionMutationsPassTheCSRFRule(t *testing.T) {
 	e.ok(e.request(http.MethodPatch, surveysPath("/"+id), `{"name": "By key"}`, map[string]string{"x-api-key": e.apiKey(org, ws, "write"), "Origin": "", httpapi.CSRFHeader: ""}), http.StatusOK, nil)
 }
 
-// forma2's POST /api/v3/surveys/generate up to the AI provider call; this server has no AI provider, so a request that gets that far is answered as forma2 answered it on an instance without one.
+// forma2's POST /api/v3/surveys/generate up to the AI provider call, on an instance without an AI provider: the body, the workspace and the prompt are checked first, then the organization's AI smart tools toggle, then the instance's configuration.
 func TestV3Generate(t *testing.T) {
 	e := newEnv(t)
 	owner, reader, outsider := e.user(), e.user(), e.user()
@@ -495,6 +495,11 @@ func TestV3Generate(t *testing.T) {
 	p := e.problem(e.v3(owner, http.MethodPost, surveysPath("/generate"), vague), http.StatusBadRequest, "Prompt needs more detail")
 	p.param(t, "prompt")
 
+	p = e.problem(e.v3(owner, http.MethodPost, surveysPath("/generate"), body("")), http.StatusForbidden, "AI smart tools are disabled for this organization.")
+	if p.Title != "AI Unavailable" || p.Code != "ai_smart_tools_disabled" {
+		t.Fatalf("disabled %+v", p)
+	}
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
 	for _, rec := range []*httptest.ResponseRecorder{
 		e.v3(owner, http.MethodPost, surveysPath("/generate"), body(`, "type": "app", "languages": ["de-DE", "en-US"]`)),
 		e.v3Key(e.apiKey(org, ws, "write"), http.MethodPost, surveysPath("/generate"), body("")),
