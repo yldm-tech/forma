@@ -20,3 +20,19 @@ export const untilAuthorized = async <T>(
     }
   }
 };
+
+/**
+ * Loads something until it reports itself settled, for answers the server marks as built from a projection that has not caught up yet (the root page's destination right after joining an organization). The last answer is returned once settled or once the window has passed, so a projection that never catches up degrades to the unsettled answer instead of an error.
+ */
+export const untilSettled = async <T>(
+  load: () => Promise<T>,
+  pending: (value: T) => boolean,
+  { timeoutMs = 15_000, intervalMs = 500, wait = sleep, now = Date.now } = {}
+): Promise<T> => {
+  const deadline = now() + timeoutMs;
+  for (;;) {
+    const value = await load();
+    if (!pending(value) || now() >= deadline) return value;
+    await wait(intervalMs);
+  }
+};

@@ -62,6 +62,36 @@ func TestHome(t *testing.T) {
 	}
 }
 
+// A membership the authorization projection has not delivered yet (sign-up, an accepted invite, SSO provisioning) is reported as pending, so the SPA waits for it instead of sending the user to create an organization or into an older one.
+func TestHomeWhileTheProjectionLags(t *testing.T) {
+	e := newEnv(t)
+	owner, joiner, veteran := e.user(), e.user(), e.user()
+	acme := e.organization(owner, "Acme")
+	old := e.organization(veteran, "Old")
+	e.survey(old.WorkspaceID)
+	if h := e.home(veteran); h.Pending || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{old.WorkspaceID}) {
+		t.Fatalf("settled home %+v", h)
+	}
+
+	e.member(acme.ID, joiner, RoleManager)
+	e.member(acme.ID, veteran, RoleManager)
+	var h Home
+	e.ok(e.doUndelivered(joiner, http.MethodGet, "/api/app/home", nil), http.StatusOK, &h)
+	if !h.Pending || h.Path != "/setup/organization/create" {
+		t.Fatalf("home of a user whose only membership is undelivered %+v", h)
+	}
+	e.ok(e.doUndelivered(veteran, http.MethodGet, "/api/app/home", nil), http.StatusOK, &h)
+	if !h.Pending {
+		t.Fatalf("home of a user whose new membership is undelivered %+v", h)
+	}
+	if h := e.home(joiner); h.Pending || h.Path == "/setup/organization/create" {
+		t.Fatalf("home once delivered %+v", h)
+	}
+	if h := e.home(veteran); h.Pending {
+		t.Fatalf("home once delivered %+v", h)
+	}
+}
+
 func TestHomeOnCloudStartsWithThePlan(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	owner := e.user()

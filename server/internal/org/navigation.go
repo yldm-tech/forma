@@ -20,6 +20,8 @@ const (
 type Home struct {
 	Path         string      `json:"path,omitempty"`
 	WorkspaceIDs []uuid.UUID `json:"workspaceIds"`
+	// Pending is true while the user belongs to an organization the authorization projection has not delivered yet (a sign-up, an accepted invite or an SSO sign-in that just joined one): the rest of the answer leaves that organization out, so the SPA asks again shortly before following it.
+	Pending bool `json:"pending"`
 }
 
 // Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; an owner or manager of their first organization goes through the onboarding gate; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
@@ -38,12 +40,30 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if err != nil {
 		return nil, err
 	}
+	listed := make([]uuid.UUID, len(orgs))
+	for i, o := range orgs {
+		listed[i] = o.ID
+	}
+	pending, err := s.repo.hasMembershipOutside(ctx, *userID, listed)
+	if err != nil {
+		return nil, err
+	}
+	home, err := s.home(ctx, *userID, orgs)
+	if err != nil {
+		return nil, err
+	}
+	home.Pending = pending
+	return home, nil
+}
+
+// home picks the destination among the organizations the user can see.
+func (s *Service) home(ctx context.Context, userID uuid.UUID, orgs []Summary) (*Home, error) {
 	if len(orgs) == 0 {
 		return &Home{Path: createOrgPath, WorkspaceIDs: []uuid.UUID{}}, nil
 	}
 	first := orgs[0]
 	if first.Role == RoleOwner || first.Role == RoleManager {
-		path, err := s.navigation.OnboardingRedirect(ctx, *userID, first.ID)
+		path, err := s.navigation.OnboardingRedirect(ctx, userID, first.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +75,7 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	for i, o := range orgs {
 		orgIDs[i] = o.ID
 	}
-	ids, err := s.navigation.ReadableIDs(ctx, *userID, orgIDs)
+	ids, err := s.navigation.ReadableIDs(ctx, userID, orgIDs)
 	if err != nil {
 		return nil, err
 	}

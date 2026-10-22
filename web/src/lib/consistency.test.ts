@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { ApiError } from "./api";
-import { untilAuthorized } from "./consistency";
+import { untilAuthorized, untilSettled } from "./consistency";
 
 const clock = () => {
   let t = 0;
@@ -36,4 +36,30 @@ test("any other failure is not retried", async () => {
   }, clock()).catch((e: unknown) => e);
   expect(error).toMatchObject({ status: 500 });
   expect(calls).toBe(1);
+});
+
+test("asks again while the answer is pending", async () => {
+  let calls = 0;
+  const result = await untilSettled(
+    async () => ({ pending: ++calls < 3 }),
+    (a) => a.pending,
+    clock()
+  );
+  expect(result).toEqual({ pending: false });
+  expect(calls).toBe(3);
+});
+
+test("settles for the pending answer after the window", async () => {
+  const c = clock();
+  const result = await untilSettled(
+    async () => ({ pending: true }),
+    (a) => a.pending,
+    {
+      ...c,
+      timeoutMs: 2000,
+      intervalMs: 500,
+    }
+  );
+  expect(result).toEqual({ pending: true });
+  expect(c.now()).toBe(2000);
 });

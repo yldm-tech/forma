@@ -49,6 +49,8 @@ export interface OrganizationNavigation {
 export interface Home {
   path?: string;
   workspaceIds: string[];
+  /** The user belongs to an organization the server's authorization has not caught up with yet; the rest of the answer leaves it out. */
+  pending?: boolean;
 }
 
 export const organizationKeys = {

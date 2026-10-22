@@ -249,6 +249,22 @@ func (r *Repository) activeOwnerCount(ctx context.Context, organizationID uuid.U
 	return n, nil
 }
 
+// hasMembershipOutside reports whether the user belongs to an organization other than the given ones.
+func (r *Repository) hasMembershipOutside(ctx context.Context, userID uuid.UUID, organizationIDs []uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id = ?`
+	args := []any{userID}
+	// NOT IN with an empty list would compare against NULL and match nothing.
+	if len(organizationIDs) > 0 {
+		query += ` AND organization_id NOT IN ?`
+		args = append(args, organizationIDs)
+	}
+	var exists bool
+	if err := r.db.WithContext(ctx).Raw(query+`)`, args...).Scan(&exists).Error; err != nil {
+		return false, fmt.Errorf("check memberships: %w", err)
+	}
+	return exists, nil
+}
+
 // membershipCount is the number of organizations the user belongs to.
 func (r *Repository) membershipCount(ctx context.Context, userID uuid.UUID) (int64, error) {
 	var n int64

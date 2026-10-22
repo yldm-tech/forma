@@ -186,6 +186,12 @@ func (e *env) survey(ws uuid.UUID) {
 func (e *env) do(user uuid.UUID, method, path string, body any) *httptest.ResponseRecorder {
 	e.t.Helper()
 	e.authz.Deliver(e.t)
+	return e.doUndelivered(user, method, path, body)
+}
+
+// doUndelivered sends a request without delivering the projection first, as a request that arrives before the worker's next tick does.
+func (e *env) doUndelivered(user uuid.UUID, method, path string, body any) *httptest.ResponseRecorder {
+	e.t.Helper()
 	var r io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
