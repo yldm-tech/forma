@@ -206,7 +206,7 @@ func uuidArray(ids []uuid.UUID) string {
 // endResponse is the update a quota's endSurvey action makes, forma2's updateResponse(id, {finished: true, endingId}): the response is finished on the quota's ending and its time to complete gains its total.
 func endResponse(ctx context.Context, tx *gorm.DB, responseID uuid.UUID, endingID *string) error {
 	var ttcRaw []byte
-	if err := tx.WithContext(ctx).Raw(`SELECT ttc FROM responses WHERE id = ? FOR UPDATE`, responseID).Scan(&ttcRaw).Error; err != nil {
+	if err := tx.WithContext(ctx).Raw(`SELECT ttc FROM responses WHERE id = ? FOR UPDATE`, responseID).Row().Scan(&ttcRaw); err != nil {
 		return fmt.Errorf("load response ttc: %w", err)
 	}
 	ttc, err := decodeTTC(ttcRaw)
