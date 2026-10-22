@@ -199,3 +199,24 @@ func TestAQuotaFailureNeverFailsTheResponse(t *testing.T) {
 }
 
 const actionContinueSurvey = "continueSurvey"
+
+// A statement that fails inside the quota evaluation aborts only its savepoint: the response and its pipeline events still commit.
+func TestAFailingQuotaStatementIsRolledBackToItsSavepoint(t *testing.T) {
+	e := newEnv(t)
+	_, ws := e.organization(e.user())
+	sv := e.survey(ws, surveyOpts{})
+	e.quotaOn(sv, "Q", "yes", 5, actionContinueSurvey, nil, true)
+	e.exec(`CREATE FUNCTION refuse_quota_link() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'quota link refused'; END $$ LANGUAGE plpgsql`)
+	e.exec(`CREATE TRIGGER refuse_quota_link BEFORE INSERT ON response_quota_links FOR EACH ROW EXECUTE FUNCTION refuse_quota_link()`)
+
+	res, err := e.submit(context.Background(), ws, sv, `{"q1":"yes"}`, CreateInput{Finished: true})
+	if err != nil {
+		t.Fatalf("a failing quota statement failed the response: %v", err)
+	}
+	if e.count(`SELECT count(*) FROM responses WHERE id = ?`, res.ID) != 1 || len(pipelineEvents(e, res.ID)) != 2 || e.count(`SELECT count(*) FROM response_quota_links`) != 0 {
+		t.Fatal("the response did not commit without its quota links")
+	}
+	if !contains(e.logs.String(), "quota link refused") {
+		t.Fatal("the quota failure was not logged")
+	}
+}
