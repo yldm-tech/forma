@@ -140,8 +140,45 @@ func (s *Service) List(ctx context.Context, userID, workspaceID uuid.UUID) (*Ove
 	out := &Overview{Integrations: make([]View, len(found)), Enabled: s.enabled()}
 	for i, in := range found {
 		out.Integrations[i] = in.view()
+		if out.Integrations[i].Config, err = canonicalSurveyIDs(out.Integrations[i].Config); err != nil {
+			return nil, fmt.Errorf("integration %s config: %w", in.ID, err)
+		}
 	}
 	return out, nil
+}
+
+// canonicalSurveyIDs is config with every link's surveyId as the id of the survey it names. Links made in forma2 keep its survey ids, which delivery resolves; the pages find a link's survey by its id, so they get the id migrated from it, and the next save stores that. Every other field is passed through as stored.
+func canonicalSurveyIDs(config json.RawMessage) (json.RawMessage, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(config, &doc); err != nil {
+		return nil, err
+	}
+	if len(doc["data"]) == 0 {
+		return config, nil
+	}
+	var links []map[string]json.RawMessage
+	if err := json.Unmarshal(doc["data"], &links); err != nil {
+		return nil, err
+	}
+	changed := false
+	for _, l := range links {
+		var raw string
+		if json.Unmarshal(l["surveyId"], &raw) != nil {
+			continue
+		}
+		if id, ok := legacyid.Resolve(raw); ok && id.String() != raw {
+			l["surveyId"], _ = json.Marshal(id.String())
+			changed = true
+		}
+	}
+	if !changed {
+		return config, nil
+	}
+	var err error
+	if doc["data"], err = json.Marshal(links); err != nil {
+		return nil, err
+	}
+	return json.Marshal(doc)
 }
 
 // SurveyElement is an element a link can select, with its headline in every language.

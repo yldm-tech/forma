@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 // auditEvent is the part of an audit record the tests check.
@@ -78,6 +80,32 @@ func TestListNeverSendsTokens(t *testing.T) {
 	outsider := e.user()
 	if rec := e.do(http.MethodGet, "/api/app/workspaces/"+o.ws.String()+"/integrations", asUser(outsider), nil); rec.Code != http.StatusForbidden {
 		t.Errorf("an outsider listed: %d", rec.Code)
+	}
+}
+
+// A link made in forma2 names its survey by the forma2 id; the pages get the id migrated from it, which is how they find the survey to edit the link, and every other field as stored.
+func TestListNamesMigratedSurveysByTheirIDs(t *testing.T) {
+	e := newEnv(t)
+	o := e.owner()
+	current := e.survey(o.ws)
+	const legacy = "clsv00000000000000000042"
+	migrated := e.insert(`INSERT INTO surveys (id, workspace_id, name, status, blocks) VALUES (?, ?, 'Old', 'inProgress', ?::jsonb) RETURNING id`, legacyid.ID(legacy), o.ws, surveyBlocks)
+	old := base(current)
+	old.SurveyID = legacy
+	e.connect(o.ws, TypeSlack, map[string]any{"access_token": "xoxb", "team": map[string]string{"name": "T"}}, "", []SlackLink{
+		{LinkBase: old, Elements: elements("q2"), ChannelID: "C1", ChannelName: "general"},
+		{LinkBase: base(current), Elements: elements("q1"), ChannelID: "C2"},
+	})
+	out := decode[Overview](t, e.do(http.MethodGet, "/api/app/workspaces/"+o.ws.String()+"/integrations", asUser(o.user), nil))
+	links, err := decodeLinks[SlackLink](out.Integrations[0].Config)
+	if err != nil || len(links) != 2 {
+		t.Fatalf("links = %+v %v", links, err)
+	}
+	if links[0].SurveyID != migrated.String() || links[0].ChannelID != "C1" || links[0].ChannelName != "general" || links[0].ElementIDs[0] != "q2" || links[0].SurveyName != "Test Survey" {
+		t.Errorf("the migrated link = %+v", links[0])
+	}
+	if links[1].SurveyID != current.String() || links[1].ChannelID != "C2" {
+		t.Errorf("the current link = %+v", links[1])
 	}
 }
 
