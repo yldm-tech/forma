@@ -37,6 +37,7 @@ import { Route as AuthenticatedOrganizationsOrganizationIdSettingsRouteImport } 
 import { Route as AuthenticatedSetupOrganizationCreateRouteImport } from './routes/_authenticated/setup/organization/create'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport } from './routes/_authenticated/workspaces/$workspaceId/attributes'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSegmentsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/segments'
 import { Route as AuthenticatedWorkspacesWorkspaceIdTagsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/tags'
 import { Route as AuthenticatedWorkspacesWorkspaceIdUserActionsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/user-actions'
 import { Route as AuthForgotPasswordResetIndexRouteImport } from './routes/auth/forgot-password/reset/index'
@@ -215,6 +216,12 @@ const AuthenticatedWorkspacesWorkspaceIdAttributesRoute =
     path: '/attributes',
     getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdSegmentsRoute =
+  AuthenticatedWorkspacesWorkspaceIdSegmentsRouteImport.update({
+    id: '/segments',
+    path: '/segments',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdTagsRoute =
   AuthenticatedWorkspacesWorkspaceIdTagsRouteImport.update({
     id: '/tags',
@@ -381,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
+  '/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
   '/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -429,6 +437,7 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
+  '/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
   '/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -482,6 +491,7 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
   '/_authenticated/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/_authenticated/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
+  '/_authenticated/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
   '/_authenticated/workspaces/$workspaceId/tags': typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   '/_authenticated/workspaces/$workspaceId/user-actions': typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   '/auth/forgot-password/reset/success': typeof AuthForgotPasswordResetSuccessRoute
@@ -535,6 +545,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
+    | '/workspaces/$workspaceId/segments'
     | '/workspaces/$workspaceId/tags'
     | '/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -583,6 +594,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/landing'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
+    | '/workspaces/$workspaceId/segments'
     | '/workspaces/$workspaceId/tags'
     | '/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -635,6 +647,7 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings'
     | '/_authenticated/setup/organization/create'
     | '/_authenticated/workspaces/$workspaceId/attributes'
+    | '/_authenticated/workspaces/$workspaceId/segments'
     | '/_authenticated/workspaces/$workspaceId/tags'
     | '/_authenticated/workspaces/$workspaceId/user-actions'
     | '/auth/forgot-password/reset/success'
@@ -870,6 +883,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport
       parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
     }
+    '/_authenticated/workspaces/$workspaceId/segments': {
+      id: '/_authenticated/workspaces/$workspaceId/segments'
+      path: '/segments'
+      fullPath: '/workspaces/$workspaceId/segments'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
     '/_authenticated/workspaces/$workspaceId/tags': {
       id: '/_authenticated/workspaces/$workspaceId/tags'
       path: '/tags'
@@ -1083,6 +1103,7 @@ const AuthenticatedAccountSettingsRouteWithChildren =
 
 interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdAttributesRoute: typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
+  AuthenticatedWorkspacesWorkspaceIdSegmentsRoute: typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
   AuthenticatedWorkspacesWorkspaceIdTagsRoute: typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   AuthenticatedWorkspacesWorkspaceIdUserActionsRoute: typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
@@ -1105,6 +1126,8 @@ const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWo
   {
     AuthenticatedWorkspacesWorkspaceIdAttributesRoute:
       AuthenticatedWorkspacesWorkspaceIdAttributesRoute,
+    AuthenticatedWorkspacesWorkspaceIdSegmentsRoute:
+      AuthenticatedWorkspacesWorkspaceIdSegmentsRoute,
     AuthenticatedWorkspacesWorkspaceIdTagsRoute:
       AuthenticatedWorkspacesWorkspaceIdTagsRoute,
     AuthenticatedWorkspacesWorkspaceIdUserActionsRoute:
