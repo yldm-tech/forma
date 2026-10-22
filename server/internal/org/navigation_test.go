@@ -9,6 +9,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
 func (e *env) home(user uuid.UUID) Home {
@@ -37,8 +38,8 @@ func TestHome(t *testing.T) {
 	}
 
 	c := e.organization(owner, "Acme")
-	// The new-workspace flow's pages need the survey module, so an owner whose workspace has no survey yet opens the workspace instead of a page the SPA does not have.
-	if h := e.home(owner); h.Path != "" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
+	// An owner whose onboarding workspace has no survey yet creates the first one.
+	if h := e.home(owner); h.Path != "/organizations/"+c.ID.String()+"/workspaces/new/survey" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
 		t.Fatalf("owner home without a survey %+v", h)
 	}
 	e.survey(c.WorkspaceID)
@@ -92,12 +93,54 @@ func TestHomeWhileTheProjectionLags(t *testing.T) {
 	}
 }
 
-func TestHomeOnCloudOpensTheWorkspace(t *testing.T) {
+// forma2's onboarding gate: only an owner or manager of the user's first organization is sent into the new-workspace flow, and only while that organization's onboarding workspace (the oldest one they can open) has no survey, archived ones included.
+func TestHomeOnboardingGate(t *testing.T) {
+	e := newEnv(t)
+	owner, manager, member := e.user(), e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, manager, RoleManager)
+	e.member(c.ID, member, RoleMember)
+	onboarding := "/organizations/" + c.ID.String() + "/workspaces/new/survey"
+
+	if h := e.home(manager); h.Path != onboarding {
+		t.Fatalf("manager home without a survey %+v", h)
+	}
+	// A member cannot create the first survey, so the gate does not apply and they land on the organization.
+	if h := e.home(member); h.Path != "/organizations/"+c.ID.String()+"/landing" {
+		t.Fatalf("member home without a survey %+v", h)
+	}
+
+	// A survey in a newer workspace does not complete the onboarding of the oldest one.
+	var second workspace.Workspace
+	e.ok(e.do(owner, http.MethodPost, orgPath(c.ID, "/workspaces"), map[string]string{"name": "Second"}), http.StatusCreated, &second)
+	e.survey(second.ID)
+	if h := e.home(owner); h.Path != onboarding || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID, second.ID}) {
+		t.Fatalf("owner home with a survey only in a newer workspace %+v", h)
+	}
+
+	e.survey(c.WorkspaceID)
+	e.exec(`UPDATE surveys SET archived_at = now() WHERE workspace_id = ?`, c.WorkspaceID)
+	if h := e.home(owner); h.Path != "" {
+		t.Fatalf("owner home with an archived survey %+v", h)
+	}
+
+	// The gate looks at the first organization only: a newer organization without a survey does not redirect.
+	e.organization(owner, "Later")
+	if h := e.home(owner); h.Path != "" {
+		t.Fatalf("owner home with a newer organization without a survey %+v", h)
+	}
+}
+
+func TestHomeOnCloudStartsWithThePlan(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	owner := e.user()
 	c := e.organization(owner, "Acme")
+	if h := e.home(owner); h.Path != "/organizations/"+c.ID.String()+"/workspaces/new/plan" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
+		t.Fatalf("cloud owner home without a survey %+v", h)
+	}
+	e.survey(c.WorkspaceID)
 	if h := e.home(owner); h.Path != "" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
-		t.Fatalf("cloud owner home %+v", h)
+		t.Fatalf("cloud owner home with a survey %+v", h)
 	}
 }
 

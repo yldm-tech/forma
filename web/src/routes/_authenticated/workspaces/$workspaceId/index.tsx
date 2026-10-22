@@ -1,19 +1,8 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { PageContentWrapper, PageHeader } from "../../../../components/ui/page";
-import { workspaceQuery } from "../../../../lib/queries/workspaces";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// The workspace's landing page. Its content, the survey list, belongs to the survey module.
+// forma2's workspace page: the workspace opens on its surveys. The workspace layout's loader, which runs for the surveys page as well, sends a billing member to the billing path instead.
 export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId/")({
-  component: WorkspaceHome,
+  beforeLoad: ({ params }) => {
+    throw redirect({ href: `/workspaces/${params.workspaceId}/surveys`, replace: true });
+  },
 });
-
-function WorkspaceHome() {
-  const { workspaceId } = Route.useParams();
-  const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
-  return (
-    <PageContentWrapper>
-      <PageHeader pageTitle={workspace.name} />
-    </PageContentWrapper>
-  );
-}

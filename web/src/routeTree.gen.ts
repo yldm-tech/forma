@@ -42,7 +42,14 @@ import { Route as AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImpo
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/api-keys'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
+import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/route'
 import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport } from './routes/_authenticated/setup/organization/$organizationId/invite'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/surveys/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRouteImport } from './routes/_authenticated/workspaces/$workspaceId_/surveys/templates'
+import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/ai'
+import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/plan'
+import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/survey'
+import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/templates'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRouteImport } from './routes/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -230,12 +237,62 @@ const AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute =
     path: '/teams',
     getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
   } as any)
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteImport.update({
+    id: '/organizations/$organizationId/workspaces/new',
+    path: '/organizations/$organizationId/workspaces/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSetupOrganizationOrganizationIdInviteRoute =
   AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport.update({
     id: '/setup/organization/$organizationId/invite',
     path: '/setup/organization/$organizationId/invite',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdSurveysIndexRouteImport.update({
+    id: '/surveys/',
+    path: '/surveys/',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute =
+  AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRouteImport.update({
+    id: '/workspaces/$workspaceId_/surveys/templates',
+    path: '/workspaces/$workspaceId/surveys/templates',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRouteImport.update({
+    id: '/ai',
+    path: '/ai',
+    getParentRoute: () =>
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRouteImport.update({
+    id: '/plan',
+    path: '/plan',
+    getParentRoute: () =>
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRouteImport.update(
+    {
+      id: '/survey',
+      path: '/survey',
+      getParentRoute: () =>
+        AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute,
+    } as any,
+  )
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRouteImport.update(
+    {
+      id: '/templates',
+      path: '/templates',
+      getParentRoute: () =>
+        AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute,
+    } as any,
+  )
 const AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute =
   AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRouteImport.update({
     id: '/workspaces/$workspaceId_/surveys/$surveyId/edit',
@@ -272,11 +329,18 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
   '/workspaces/$workspaceId/': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
   '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
+  '/organizations/$organizationId/workspaces/new': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/workspaces/$workspaceId/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/surveys/': typeof AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute
+  '/organizations/$organizationId/workspaces/new/ai': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute
+  '/organizations/$organizationId/workspaces/new/plan': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute
+  '/organizations/$organizationId/workspaces/new/survey': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute
+  '/organizations/$organizationId/workspaces/new/templates': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute
   '/workspaces/$workspaceId/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -305,11 +369,18 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
   '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
   '/auth/forgot-password/reset': typeof AuthForgotPasswordResetIndexRoute
+  '/organizations/$organizationId/workspaces/new': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/workspaces/$workspaceId/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/surveys': typeof AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute
+  '/organizations/$organizationId/workspaces/new/ai': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute
+  '/organizations/$organizationId/workspaces/new/plan': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute
+  '/organizations/$organizationId/workspaces/new/survey': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute
+  '/organizations/$organizationId/workspaces/new/templates': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute
   '/workspaces/$workspaceId/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRoutesById {
@@ -343,11 +414,18 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/': typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
   '/_authenticated/workspaces/$workspaceId/': typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
   '/auth/forgot-password/reset/': typeof AuthForgotPasswordResetIndexRoute
+  '/_authenticated/organizations/$organizationId/workspaces/new': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   '/_authenticated/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/_authenticated/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/_authenticated/workspaces/$workspaceId_/surveys/templates': typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/_authenticated/workspaces/$workspaceId/surveys/': typeof AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute
+  '/_authenticated/organizations/$organizationId/workspaces/new/ai': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute
+  '/_authenticated/organizations/$organizationId/workspaces/new/plan': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute
+  '/_authenticated/organizations/$organizationId/workspaces/new/survey': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute
+  '/_authenticated/organizations/$organizationId/workspaces/new/templates': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute
   '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 export interface FileRouteTypes {
@@ -381,11 +459,18 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/'
     | '/workspaces/$workspaceId/'
     | '/auth/forgot-password/reset/'
+    | '/organizations/$organizationId/workspaces/new'
     | '/organizations/$organizationId/settings/api-keys'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
+    | '/workspaces/$workspaceId/surveys/templates'
     | '/organizations/$organizationId/settings/'
+    | '/workspaces/$workspaceId/surveys/'
+    | '/organizations/$organizationId/workspaces/new/ai'
+    | '/organizations/$organizationId/workspaces/new/plan'
+    | '/organizations/$organizationId/workspaces/new/survey'
+    | '/organizations/$organizationId/workspaces/new/templates'
     | '/workspaces/$workspaceId/surveys/$surveyId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -414,11 +499,18 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId'
     | '/workspaces/$workspaceId'
     | '/auth/forgot-password/reset'
+    | '/organizations/$organizationId/workspaces/new'
     | '/organizations/$organizationId/settings/api-keys'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
+    | '/workspaces/$workspaceId/surveys/templates'
     | '/organizations/$organizationId/settings'
+    | '/workspaces/$workspaceId/surveys'
+    | '/organizations/$organizationId/workspaces/new/ai'
+    | '/organizations/$organizationId/workspaces/new/plan'
+    | '/organizations/$organizationId/workspaces/new/survey'
+    | '/organizations/$organizationId/workspaces/new/templates'
     | '/workspaces/$workspaceId/surveys/$surveyId/edit'
   id:
     | '__root__'
@@ -451,11 +543,18 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/'
     | '/_authenticated/workspaces/$workspaceId/'
     | '/auth/forgot-password/reset/'
+    | '/_authenticated/organizations/$organizationId/workspaces/new'
     | '/_authenticated/organizations/$organizationId/settings/api-keys'
     | '/_authenticated/organizations/$organizationId/settings/general'
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
+    | '/_authenticated/workspaces/$workspaceId_/surveys/templates'
     | '/_authenticated/organizations/$organizationId/settings/'
+    | '/_authenticated/workspaces/$workspaceId/surveys/'
+    | '/_authenticated/organizations/$organizationId/workspaces/new/ai'
+    | '/_authenticated/organizations/$organizationId/workspaces/new/plan'
+    | '/_authenticated/organizations/$organizationId/workspaces/new/survey'
+    | '/_authenticated/organizations/$organizationId/workspaces/new/templates'
     | '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -702,12 +801,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport
       parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
     }
+    '/_authenticated/organizations/$organizationId/workspaces/new': {
+      id: '/_authenticated/organizations/$organizationId/workspaces/new'
+      path: '/organizations/$organizationId/workspaces/new'
+      fullPath: '/organizations/$organizationId/workspaces/new'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/setup/organization/$organizationId/invite': {
       id: '/_authenticated/setup/organization/$organizationId/invite'
       path: '/setup/organization/$organizationId/invite'
       fullPath: '/setup/organization/$organizationId/invite'
       preLoaderRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/surveys/': {
+      id: '/_authenticated/workspaces/$workspaceId/surveys/'
+      path: '/surveys'
+      fullPath: '/workspaces/$workspaceId/surveys/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId_/surveys/templates': {
+      id: '/_authenticated/workspaces/$workspaceId_/surveys/templates'
+      path: '/workspaces/$workspaceId/surveys/templates'
+      fullPath: '/workspaces/$workspaceId/surveys/templates'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/organizations/$organizationId/workspaces/new/ai': {
+      id: '/_authenticated/organizations/$organizationId/workspaces/new/ai'
+      path: '/ai'
+      fullPath: '/organizations/$organizationId/workspaces/new/ai'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute
+    }
+    '/_authenticated/organizations/$organizationId/workspaces/new/plan': {
+      id: '/_authenticated/organizations/$organizationId/workspaces/new/plan'
+      path: '/plan'
+      fullPath: '/organizations/$organizationId/workspaces/new/plan'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute
+    }
+    '/_authenticated/organizations/$organizationId/workspaces/new/survey': {
+      id: '/_authenticated/organizations/$organizationId/workspaces/new/survey'
+      path: '/survey'
+      fullPath: '/organizations/$organizationId/workspaces/new/survey'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute
+    }
+    '/_authenticated/organizations/$organizationId/workspaces/new/templates': {
+      id: '/_authenticated/organizations/$organizationId/workspaces/new/templates'
+      path: '/templates'
+      fullPath: '/organizations/$organizationId/workspaces/new/templates'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute
     }
     '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit': {
       id: '/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit'
@@ -775,12 +923,15 @@ const AuthenticatedAccountSettingsRouteWithChildren =
 
 interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute
 }
 
 const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWorkspaceIdRouteChildren =
   {
     AuthenticatedWorkspacesWorkspaceIdIndexRoute:
       AuthenticatedWorkspacesWorkspaceIdIndexRoute,
+    AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdSurveysIndexRoute,
   }
 
 const AuthenticatedWorkspacesWorkspaceIdRouteWithChildren =
@@ -812,6 +963,30 @@ const AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren =
     AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren,
   )
 
+interface AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteChildren {
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute
+}
+
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteChildren: AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteChildren =
+  {
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute:
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewAiRoute,
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute:
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewPlanRoute,
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute:
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewSurveyRoute,
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute:
+      AuthenticatedOrganizationsOrganizationIdWorkspacesNewTemplatesRoute,
+  }
+
+const AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren =
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute._addFileChildren(
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRouteWithChildren
   AuthenticatedEnvironmentsEnvironmentIdRoute: typeof AuthenticatedEnvironmentsEnvironmentIdRoute
@@ -820,7 +995,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOrganizationsOrganizationIdSettingsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
   AuthenticatedSetupOrganizationCreateRoute: typeof AuthenticatedSetupOrganizationCreateRoute
   AuthenticatedOrganizationsOrganizationIdIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   AuthenticatedSetupOrganizationOrganizationIdInviteRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute
   AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute: typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute
 }
 
@@ -839,8 +1016,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedSetupOrganizationCreateRoute,
   AuthenticatedOrganizationsOrganizationIdIndexRoute:
     AuthenticatedOrganizationsOrganizationIdIndexRoute,
+  AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute:
+    AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren,
   AuthenticatedSetupOrganizationOrganizationIdInviteRoute:
     AuthenticatedSetupOrganizationOrganizationIdInviteRoute,
+  AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute:
+    AuthenticatedWorkspacesWorkspaceIdSurveysTemplatesRoute,
   AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute:
     AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdEditRoute,
 }

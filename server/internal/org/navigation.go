@@ -24,9 +24,7 @@ type Home struct {
 	Pending bool `json:"pending"`
 }
 
-// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
-//
-// forma2 also sent an owner or manager whose first organization's onboarding workspace has no survey into the new-workspace flow (workspace.Service.OnboardingRedirect). That flow's pages create the first survey, which the survey module brings; until they exist the gate would send every new owner to a page the SPA does not have, on every visit, with no way to satisfy it, so the root page does not apply it.
+// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
 func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if userID == nil {
 		hasUser, err := s.repo.hasAnyUser(ctx)
@@ -56,6 +54,15 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	ids, err := s.navigation.ReadableIDs(ctx, *userID, listed)
 	if err != nil {
 		return nil, err
+	}
+	if first := orgs[0]; first.Role == RoleOwner || first.Role == RoleManager {
+		path, err := s.navigation.OnboardingRedirect(ctx, *userID, first.ID)
+		if err != nil {
+			return nil, err
+		}
+		if path != "" {
+			return &Home{Path: path, WorkspaceIDs: ids, Pending: pending}, nil
+		}
 	}
 	if len(ids) == 0 {
 		return &Home{Path: workspace.LandingPath(orgs[0].ID), WorkspaceIDs: ids, Pending: pending}, nil

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +71,15 @@ func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorize
 		cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, docs: docs, cipher: cipher, catalog: catalog, log: log, now: time.Now,
 		scheduler: NewScheduler(repo, emitter, log), schedule: NewSchedule(cfg),
 	}
+}
+
+// PublicDomain is forma2's getPublicDomain: the origin survey links are built on, PUBLIC_URL when it is set and WEBAPP_URL otherwise, without a trailing slash so a path can be appended to it.
+func (s *Service) PublicDomain() string {
+	u := s.cfg.WebAppURL
+	if s.cfg.PublicURL != nil {
+		u = s.cfg.PublicURL
+	}
+	return strings.TrimRight(u.String(), "/")
 }
 
 // record emits forma2's audit event for a survey mutation; a failure is recorded without objects.
