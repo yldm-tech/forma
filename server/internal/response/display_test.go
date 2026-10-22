@@ -118,3 +118,37 @@ func TestDisplayResponseID(t *testing.T) {
 	_, err = e.svc.DisplayResponseID(ctx, e.workspace(org), d.String())
 	appErr(t, err, http.StatusNotFound, "Display not found", map[string]any{"resource_id": d.String(), "resource_type": "Display"})
 }
+
+func TestContactInteractionsAreTheRowsTheSDKFiltersOn(t *testing.T) {
+	e := newEnv(t)
+	_, ws := e.organization(e.user())
+	first, second := e.survey(ws, surveyOpts{typ: survey.TypeApp}), e.survey(ws, surveyOpts{typ: survey.TypeApp})
+	ctx := context.Background()
+	c := e.contact(ws, "u1")
+
+	empty, err := e.svc.ContactInteractions(ctx, c)
+	if err != nil || len(empty.Displays) != 0 || len(empty.Responses) != 0 || empty.LastDisplayAt != nil {
+		t.Fatalf("interactions of a new contact: %+v, %v", empty, err)
+	}
+	d1, err := e.svc.CreateDisplay(ctx, DisplayInput{WorkspaceID: ws, SurveyID: first.String(), UserID: ptr("u1")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.exec(`UPDATE displays SET created_at = now() - interval '1 day' WHERE id = ?`, d1.ID)
+	if _, err := e.svc.CreateDisplay(ctx, DisplayInput{WorkspaceID: ws, SurveyID: second.String(), UserID: ptr("u1")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.submit(ctx, ws, first, `{}`, CreateInput{UserID: ptr("u1"), DisplayID: ptr(d1.ID.String())}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.svc.ContactInteractions(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Displays) != 2 || got.Displays[0].SurveyID != second || got.Displays[1].SurveyID != first || len(got.Responses) != 1 || got.Responses[0] != first {
+		t.Fatalf("interactions %+v", got)
+	}
+	if !got.LastDisplayAt.Equal(got.Displays[0].CreatedAt) {
+		t.Fatalf("lastDisplayAt %v, want the newest display", got.LastDisplayAt)
+	}
+}

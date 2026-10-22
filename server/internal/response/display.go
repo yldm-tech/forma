@@ -3,6 +3,7 @@ package response
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -115,4 +116,32 @@ func (s *Service) DisplayResponseID(ctx context.Context, workspaceID uuid.UUID, 
 		return nil, NotFound("Display", &rawDisplayID)
 	}
 	return rows[0].ResponseID, nil
+}
+
+// DisplayRef is one display of a contact, as the SDK's user state lists it.
+type DisplayRef struct {
+	SurveyID  uuid.UUID `json:"surveyId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// Interactions is the recontact and display-limit bookkeeping of one contact, forma2's user state fields: its displays newest first, the surveys it responded to, and when it was last shown a survey. The server keeps no counters; the SDK's filterSurveys decides displayOption, displayLimit and recontactDays from these.
+type Interactions struct {
+	Displays      []DisplayRef `json:"displays"`
+	Responses     []uuid.UUID  `json:"responses"`
+	LastDisplayAt *time.Time   `json:"lastDisplayAt"`
+}
+
+// ContactInteractions reads a contact's Interactions.
+func (s *Service) ContactInteractions(ctx context.Context, contactID uuid.UUID) (*Interactions, error) {
+	out := &Interactions{Displays: []DisplayRef{}, Responses: []uuid.UUID{}}
+	if err := s.db.WithContext(ctx).Raw(`SELECT survey_id, created_at FROM displays WHERE contact_id = ? ORDER BY created_at DESC, id DESC`, contactID).Scan(&out.Displays).Error; err != nil {
+		return nil, fmt.Errorf("load contact displays: %w", err)
+	}
+	if err := s.db.WithContext(ctx).Raw(`SELECT survey_id FROM responses WHERE contact_id = ? ORDER BY created_at, id`, contactID).Scan(&out.Responses).Error; err != nil {
+		return nil, fmt.Errorf("load contact responses: %w", err)
+	}
+	if len(out.Displays) > 0 {
+		out.LastDisplayAt = &out.Displays[0].CreatedAt
+	}
+	return out, nil
 }
