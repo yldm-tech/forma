@@ -3,7 +3,6 @@ import type { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TUserLocale } from "@forma/types/user";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
-import { Button } from "../../../../components/ui/button";
 import type { TFollowUpEmailToUser } from "../../types/survey-follow-up";
 import { WORKFLOWS_DOCS_URL, formatSurveyFollowUpsSunsetDate } from "../lib/deprecation";
 import { FollowUpItem } from "./follow-up-item";
@@ -12,20 +11,18 @@ interface FollowUpsViewProps {
   localSurvey: TSurvey;
   setLocalSurvey: React.Dispatch<React.SetStateAction<TSurvey>>;
   selectedLanguageCode: string;
-  workspaceId: string;
   userEmail: string;
   teamMemberDetails: TFollowUpEmailToUser[];
   locale: TUserLocale;
 }
 
 /**
- * forma2's Follow-ups tab with Workflows available, which is every deployment: follow-ups are deprecated, a survey's existing ones can still be read, fixed and deleted, and new automation starts as a Workflow.
+ * forma2's Follow-ups tab with Workflows available: follow-ups are deprecated, and a survey's existing ones can still be read, fixed and deleted. forma2 offered a "New workflow" button here; the Workflows pages are not ported to this app yet, so it is left out rather than leading nowhere, and the deprecation notice links to the Workflows documentation.
  */
 export const FollowUpsView = ({
   localSurvey,
   setLocalSurvey,
   selectedLanguageCode,
-  workspaceId,
   userEmail,
   teamMemberDetails,
   locale,
@@ -48,15 +45,6 @@ export const FollowUpsView = ({
           </a>
         </AlertButton>
       </Alert>
-
-      <div className="flex justify-end">
-        <Button size="sm" asChild>
-          {/* New tab on purpose: the editor only autosaves drafts, so on a published survey navigating away here would drop whatever the author has not saved yet. */}
-          <a href={`/workspaces/${workspaceId}/workflows`} target="_blank" rel="noopener noreferrer">
-            {t("common.new_workflow")}
-          </a>
-        </Button>
-      </div>
 
       {surveyFollowUps.length > 0 && (
         <div className="flex flex-col gap-y-2">

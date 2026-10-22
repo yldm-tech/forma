@@ -320,6 +320,8 @@ export const SurveyMenuBar = ({
         surveyRef.current = { ...savedData };
         lastSavedSurveyRef.current = structuredClone(savedData);
         isSuccessfullySavedRef.current = true;
+        // The cached survey is the baseline the editor reopens on within gcTime; left behind, it would bring back the version before this autosave, and the next save would conflict with, or overwrite, what was autosaved.
+        queryClient.setQueryData(surveyEditorKeys.survey(savedData.id), savedData);
         setLastAutoSaved(new Date());
       } catch (error) {
         // Autosave stays quiet about a transient failure — it retries in ten seconds. A concurrent edit is not transient: it stops the loop, so it is reported once, here.
@@ -410,17 +412,12 @@ export const SurveyMenuBar = ({
     const isSurveySaved =
       localSurvey.status === "draft" ? await handleSurveySaveDraft() : await handleSurveySave();
     if (isSurveySaved) {
-      // Navigate explicitly rather than history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted/bookmarked URL, hard reload), and back() silently no-ops there. A draft is reached from the survey list (a draft has no responses to summarise), any other survey from its summary.
-      await router.navigate({
-        href:
-          localSurvey.status === "draft"
-            ? `${workspaceBasePath}/surveys`
-            : `${workspaceBasePath}/surveys/${localSurvey.id}/summary`,
-      });
+      // Navigate explicitly rather than history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted/bookmarked URL, hard reload), and back() silently no-ops there. forma2 returned a published survey to its summary, which is not ported, so every survey returns to the list.
+      await router.navigate({ href: `${workspaceBasePath}/surveys` });
     }
   };
 
-  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the summary. */
+  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey list, where forma2 left for the summary, which is not ported, and announced the result there. */
   const publishAs = async (status: "inProgress" | "paused") => {
     // Scheduling lands on "paused", which is live enough to need a trigger.
     if (blockOnMissingTrigger(status)) return;
@@ -449,9 +446,12 @@ export const SurveyMenuBar = ({
       // Set so the beforeunload prompt stays quiet during navigation
       isSuccessfullySavedRef.current = true;
       queryClient.setQueryData(surveyEditorKeys.survey(published.id), published);
-      await router.navigate({
-        href: `${workspaceBasePath}/surveys/${localSurvey.id}/summary?${status === "inProgress" ? "success" : "scheduled"}=true`,
-      });
+      toast.success(
+        status === "inProgress"
+          ? t("workspace.surveys.summary.congrats")
+          : t("workspace.surveys.summary.survey_scheduled_successfully")
+      );
+      await router.navigate({ href: `${workspaceBasePath}/surveys` });
     } catch (error) {
       stop();
       reportSaveFailure(error, t("workspace.surveys.edit.error_publishing_survey"));

@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TActionClass } from "@forma/types/action-classes";
 import type { TContactAttributeKey } from "@forma/types/contact-attribute-key";
 import type { TSurveyQuota, TSurveyQuotaInput } from "@forma/types/quota";
@@ -105,6 +105,18 @@ interface SurveyListPage {
   meta: { nextCursor: string | null };
 }
 
+/** The longest name filter the v3 survey list accepts, in characters (code points). */
+const NAME_FILTER_MAX_LENGTH = 512;
+
+/** The name filter that finds a survey by its name: the name, cut to what the list accepts. A survey name has no length limit, and a cut name still matches the survey it was cut from. */
+export const surveyNameFilter = (name: string): string =>
+  Array.from(name).slice(0, NAME_FILTER_MAX_LENGTH).join("");
+
+/** Drops the editor's cached survey after a change made outside the editor (the survey list's rename, status change, archive or restore), so the editor reopens on the stored survey rather than on its stale baseline. */
+export const forgetEditorSurvey = (queryClient: QueryClient, surveyId: string): void => {
+  queryClient.removeQueries({ queryKey: surveyEditorKeys.survey(surveyId), exact: true });
+};
+
 const findResponseCounts = async (
   workspaceId: string,
   surveyId: string,
@@ -117,7 +129,7 @@ const findResponseCounts = async (
       workspaceId,
       limit: "250",
       includeTotalCount: "false",
-      "filter[name][contains]": name,
+      "filter[name][contains]": surveyNameFilter(name),
     });
     params.append("filter[status][in]", "draft,inProgress,paused,completed,archived");
     if (cursor) params.set("cursor", cursor);

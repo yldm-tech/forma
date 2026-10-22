@@ -24,7 +24,7 @@ const SurveyTypeIndicator = ({ type }: { type: string }) => {
   );
 };
 
-/** forma2's SurveyCard: one row of the list, opening the survey's editor or summary, with its actions menu. */
+/** forma2's SurveyCard: one row of the list, opening the survey's editor, with its actions menu. */
 export const SurveyCard = ({
   survey,
   workspaceId,

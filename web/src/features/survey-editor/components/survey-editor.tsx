@@ -238,7 +238,6 @@ export const SurveyEditor = ({
                 localSurvey={localSurvey}
                 setLocalSurvey={setLocalSurveyState}
                 selectedLanguageCode={selectedLanguageCode}
-                workspaceId={workspace.id}
                 userEmail={userEmail}
                 teamMemberDetails={teamMemberDetails}
                 locale={locale}

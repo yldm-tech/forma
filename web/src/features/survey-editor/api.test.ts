@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { ApiError } from "../../lib/api";
 import type { WorkspaceDetail } from "../../lib/queries/workspaces";
-import { type SurveyWire, parseSurvey, responseCountsQuery, saveSurvey, toEditorWorkspace } from "./api";
+import { QueryClient } from "@tanstack/react-query";
+import {
+  type SurveyWire,
+  forgetEditorSurvey,
+  parseSurvey,
+  responseCountsQuery,
+  saveSurvey,
+  surveyEditorKeys,
+  toEditorWorkspace,
+} from "./api";
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -165,5 +174,44 @@ describe("responseCountsQuery", () => {
       responseCount: 0,
       finishedResponseCount: 0,
     });
+  });
+});
+
+describe("responseCountsQuery with a long name", () => {
+  // The v3 list refuses a name filter over 512 characters with a 400, which the editor's loader rethrew: a survey with a longer name could not be opened at all.
+  test("filters by the name cut to the 512 characters the list accepts", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      json(200, {
+        data: [{ id: "survey", responseCount: 2, completedResponseCount: 1 }],
+        meta: { nextCursor: null },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const name = "😀".repeat(300) + "x".repeat(300);
+    const queryFn = responseCountsQuery("ws", "survey", name).queryFn as (context: {
+      signal: AbortSignal;
+    }) => Promise<unknown>;
+    await expect(queryFn({ signal: new AbortController().signal })).resolves.toEqual({
+      responseCount: 2,
+      finishedResponseCount: 1,
+    });
+    const filter = new URL((fetchMock.mock.calls[0] as [string])[0], "http://localhost").searchParams.get(
+      "filter[name][contains]"
+    );
+    expect(Array.from(filter ?? "")).toHaveLength(512);
+    expect(name.startsWith(filter ?? "-")).toBe(true);
+  });
+});
+
+describe("forgetEditorSurvey", () => {
+  test("drops only the editor's cached copy of that survey", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(surveyEditorKeys.survey("s1"), { id: "s1" });
+    queryClient.setQueryData(surveyEditorKeys.survey("s2"), { id: "s2" });
+    queryClient.setQueryData(surveyEditorKeys.quotas("s1"), []);
+    forgetEditorSurvey(queryClient, "s1");
+    expect(queryClient.getQueryData(surveyEditorKeys.survey("s1"))).toBeUndefined();
+    expect(queryClient.getQueryData(surveyEditorKeys.survey("s2"))).toEqual({ id: "s2" });
+    expect(queryClient.getQueryData(surveyEditorKeys.quotas("s1"))).toEqual([]);
   });
 });

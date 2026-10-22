@@ -9,9 +9,9 @@ export interface SurveyRowRules {
   isArchived: boolean;
   /** A paused survey with a publish date is waiting to be published. */
   isScheduled: boolean;
-  /** Where the row leads: an archived survey is read-only and opens its summary, a draft the editor, anything else the summary. */
+  /** Where the row leads: the editor. forma2 opened a published or archived survey's summary, which is not ported yet. */
   href: string;
-  /** A read-only or archived draft has no page to open. */
+  /** A survey the member may not edit, or an archived one, has no page to open until the summary is ported. */
   isClickable: boolean;
   /** Only a read-only draft, which has no action at all, disables its menu; an archived survey keeps it for restore and delete. */
   isMenuDisabled: boolean;
@@ -35,8 +35,8 @@ export const surveyRowRules = (
   return {
     isArchived,
     isScheduled: !isArchived && survey.status === "paused" && survey.publishOn !== null,
-    href: !isArchived && survey.status === "draft" ? `${base}/edit` : `${base}/summary`,
-    isClickable: !(survey.status === "draft" && (isReadOnly || isArchived)),
+    href: `${base}/edit`,
+    isClickable: !isReadOnly && !isArchived,
     isMenuDisabled: survey.status === "draft" && isReadOnly,
     canManage,
     canPreviewOrCopyLink,
