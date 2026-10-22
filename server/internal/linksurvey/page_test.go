@@ -510,6 +510,26 @@ func TestContactPage(t *testing.T) {
 	}
 }
 
+// A personal link to a single-use survey needs a valid single-use id as well, as forma2's contact page checked: without one, or with a forged one, the page is "link invalid", and with one the survey carries it.
+func TestContactPageSingleUse(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace("link_survey_branding", "false")
+	id := e.survey(ws, "single_use", `{"enabled":true,"isEncrypted":false}`)
+	contact := e.contact(ws)
+	token := contactToken(t, e.cfg, contact.String(), id.String(), nil)
+	signature := survey.SingleUseSignature(string(e.cfg.EncryptionKeyText), id.String(), "su-1")
+	for _, query := range []string{"", "?suId=su-1", "?suId=su-1&suToken=" + strings.Repeat("0", 64), "?suId=su-2&suToken=" + signature} {
+		p := e.page("/c/" + token + query)
+		if p.Status != http.StatusOK || p.view() != viewInactive || p.sub("inactive")["status"] != inactiveLinkInvalid || p.sub("inactive", "workspace")["linkSurveyBranding"] != false {
+			t.Fatalf("%q: status %d view %q inactive %v", query, p.Status, p.view(), p.sub("inactive"))
+		}
+	}
+	p := e.page("/c/" + token + "?suId=su-1&suToken=" + signature)
+	if p.view() != viewSurvey || p.sub("survey")["singleUseId"] != "su-1" || p.sub("survey")["contactId"] != contact.String() {
+		t.Fatalf("valid link: view %q survey %v", p.view(), p.sub("survey"))
+	}
+}
+
 func TestPrettyURL(t *testing.T) {
 	e := newEnv(t)
 	id := e.survey(e.workspace(), "slug", "feedback")
