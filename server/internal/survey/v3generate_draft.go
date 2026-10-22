@@ -54,16 +54,16 @@ type generatedBlock struct {
 
 // generatedElement is forma2's TGeneratedSurveyElement. A nil list or pointer is the model's null (or an absent optional key); Range is 0 when null.
 type generatedElement struct {
-	Type                    string
-	Headline                string
-	Subheader               *string
-	Required                bool
-	Placeholder             *string
-	LongAnswer              *bool
-	Choices, Rows, Columns  []string
-	LowerLabel, UpperLabel  *string
-	Scale, Format           *string
-	Range                   int
+	Type                   string
+	Headline               string
+	Subheader              *string
+	Required               bool
+	Placeholder            *string
+	LongAnswer             *bool
+	Choices, Rows, Columns []string
+	LowerLabel, UpperLabel *string
+	Scale, Format          *string
+	Range                  int
 }
 
 // draftParser reads a draft with zod's semantics: strings are trimmed before their bounds are checked, objects are strict, and nullable keys accept null. forAI is ZGeneratedSurveyDraftForAI, which also requires rows, columns and format and reads range only as a string; otherwise it is ZGeneratedSurveyDraft, which lets those three keys be absent and reads a numeric range too.

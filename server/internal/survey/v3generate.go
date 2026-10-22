@@ -13,8 +13,8 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/langcode"
+	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 )
 
@@ -163,7 +163,6 @@ func generateLocale(code string) string {
 	}
 	return ""
 }
-
 
 // GenerateValidation is forma2's TV3SurveyGenerateValidation.
 type GenerateValidation struct {
