@@ -69,17 +69,16 @@ type AttributeDetail struct {
 
 // Service holds the contact rules. Every method takes the acting user and authorizes through authz on the workspace the resource belongs to.
 type Service struct {
-	repo      *Repository
-	authz     *authz.Authorizer
-	limiter   *ratelimit.Limiter
-	audit     *audit.Emitter
-	schemas   *jsonschema.Validator
-	evaluator *Evaluator
-	log       *slog.Logger
+	repo    *Repository
+	authz   *authz.Authorizer
+	limiter *ratelimit.Limiter
+	audit   *audit.Emitter
+	schemas *jsonschema.Validator
+	log     *slog.Logger
 }
 
-func NewService(repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, evaluator *Evaluator, log *slog.Logger) *Service {
-	return &Service{repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, evaluator: evaluator, log: log}
+func NewService(repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, log *slog.Logger) *Service {
+	return &Service{repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, log: log}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.

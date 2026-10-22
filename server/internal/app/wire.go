@@ -90,7 +90,6 @@ var apikeySet = wire.NewSet(
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
 var contactSet = wire.NewSet(
 	contact.NewRepository,
-	contact.NewEvaluator,
 	contact.NewService,
 	contact.NewHandler,
 	contact.NewV3Handler,

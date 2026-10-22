@@ -117,7 +117,7 @@ func newEnv(t *testing.T) *env {
 	emitter := audit.New(cfg, log)
 	e.repo = NewRepository(db)
 	e.evaluator = NewEvaluator(db, log)
-	e.svc = NewService(e.repo, e.authz.Authorizer, limiter, emitter, schemas, e.evaluator, log)
+	e.svc = NewService(e.repo, e.authz.Authorizer, limiter, emitter, schemas, log)
 	e.apiKeys = apikey.NewService(apikey.NewRepository(db), e.authz.Authorizer, emitter)
 
 	e.engine = httpserver.NewEngine(log)

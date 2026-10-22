@@ -515,7 +515,7 @@ func evaluateInteractionsOnly(tree Filters, data Interactions, now time.Time) (r
 	return combine(pairs), true, nil
 }
 
-// Evaluator decides segment membership.
+// Evaluator decides segment membership for the client API, which asks it on every identify of a contact.
 type Evaluator struct {
 	db  *gorm.DB
 	log *slog.Logger

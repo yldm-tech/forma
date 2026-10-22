@@ -116,8 +116,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	apikeyService := apikey.NewService(apikeyRepository, authorizer, emitter)
 	apikeyHandler := apikey.NewHandler(apikeyService, sessions, validator)
 	contactRepository := contact.NewRepository(db)
-	evaluator := contact.NewEvaluator(db, log)
-	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, evaluator, log)
+	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)
 	contactHandler := contact.NewHandler(contactService, sessions)
 	v3Handler := contact.NewV3Handler(contactService)
 	webuiHandler, err := webui.New()
@@ -191,4 +190,4 @@ var inviteSet = wire.NewSet(invite.NewRepository, invite.NewService, wire.Bind(n
 var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewHandler, apikey.NewAuthenticator)
 
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
-var contactSet = wire.NewSet(contact.NewRepository, contact.NewEvaluator, contact.NewService, contact.NewHandler, contact.NewV3Handler)
+var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
