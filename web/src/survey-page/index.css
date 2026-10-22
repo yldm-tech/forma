@@ -1,0 +1,6 @@
+/* The public survey page's styles: only the classes its own components and the shared UI components it renders use, so a respondent never downloads the admin app's. */
+@import "tailwindcss" source(none);
+@import "../theme.css";
+
+@source "./";
+@source "../components/ui";

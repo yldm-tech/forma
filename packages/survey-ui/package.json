@@ -52,6 +52,14 @@
     "./youtube-id": {
       "types": "./dist/lib/youtube-id.d.ts",
       "import": "./dist/lib/youtube-id.js"
+    },
+    "./smileys": {
+      "types": "./dist/components/general/smileys.d.ts",
+      "import": "./dist/components/general/smileys.js"
+    },
+    "./storage": {
+      "types": "./dist/lib/storage.d.ts",
+      "import": "./dist/lib/storage.js"
     }
   },
   "scripts": {

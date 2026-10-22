@@ -157,34 +157,41 @@ func TestLoadRejectsMissingRequired(t *testing.T) {
 
 func TestLoadRejectsInvalidValues(t *testing.T) {
 	cases := map[string][2]string{
-		"unknown log format":   {"LOG_FORMAT", "yaml"},
-		"zero pool size":       {"DATABASE_MAX_OPEN_CONNS", "0"},
-		"unparseable duration": {"SHUTDOWN_TIMEOUT", "soon"},
-		"unparseable level":    {"LOG_LEVEL", "loud"},
-		"hop count too high":   {"TRUSTED_PROXY_HOP_COUNT", "11"},
-		"negative hop count":   {"TRUSTED_PROXY_HOP_COUNT", "-1"},
-		"flag spelled true":    {"RATE_LIMITING_DISABLED", "true"},
-		"non-numeric port":     {"SMTP_PORT", "smtp"},
-		"port out of range":    {"SMTP_PORT", "70000"},
-		"mail from with name":  {"MAIL_FROM", "Forma <noreply@example.com>"},
-		"mail from not email":  {"MAIL_FROM", "noreply"},
-		"relative privacy url": {"PRIVACY_URL", "/privacy"},
-		"negative concurrency": {"WORKER_CONCURRENCY", "-1"},
-		"reset lifetime short": {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "4"},
-		"reset lifetime long":  {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "121"},
-		"zero session max age": {"SESSION_MAX_AGE", "0"},
-		"session max age text": {"SESSION_MAX_AGE", "1d"},
-		"default org not uuid": {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxyz123abc"},
-		"default org role":     {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
-		"relative auth url":    {"BETTER_AUTH_URL", "/api/auth"},
-		"nextauth url scheme":  {"NEXTAUTH_URL", "ftp://auth.example.com"},
-		"zero invite limit":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "0"},
-		"invite limit text":    {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
-		"invite flag spelled":  {"INVITE_DISABLED", "yes"},
-		"unknown time zone":    {"SURVEY_SCHEDULING_TIME_ZONE", "Mars/Olympus"},
-		"local time zone":      {"SURVEY_SCHEDULING_TIME_ZONE", "Local"},
-		"scheduling hour":      {"SURVEY_SCHEDULING_LOCAL_HOUR", "24"},
-		"scheduling minute":    {"SURVEY_SCHEDULING_LOCAL_MINUTE", "60"},
+		"unknown log format":       {"LOG_FORMAT", "yaml"},
+		"zero pool size":           {"DATABASE_MAX_OPEN_CONNS", "0"},
+		"unparseable duration":     {"SHUTDOWN_TIMEOUT", "soon"},
+		"unparseable level":        {"LOG_LEVEL", "loud"},
+		"hop count too high":       {"TRUSTED_PROXY_HOP_COUNT", "11"},
+		"negative hop count":       {"TRUSTED_PROXY_HOP_COUNT", "-1"},
+		"flag spelled true":        {"RATE_LIMITING_DISABLED", "true"},
+		"non-numeric port":         {"SMTP_PORT", "smtp"},
+		"port out of range":        {"SMTP_PORT", "70000"},
+		"mail from with name":      {"MAIL_FROM", "Forma <noreply@example.com>"},
+		"mail from not email":      {"MAIL_FROM", "noreply"},
+		"relative privacy url":     {"PRIVACY_URL", "/privacy"},
+		"relative terms url":       {"TERMS_URL", "terms"},
+		"short nextauth secret":    {"NEXTAUTH_SECRET", "too-short"},
+		"short better auth secret": {"BETTER_AUTH_SECRET", "too-short"},
+		"negative concurrency":     {"WORKER_CONCURRENCY", "-1"},
+		"reset lifetime short":     {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "4"},
+		"reset lifetime long":      {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "121"},
+		"zero session max age":     {"SESSION_MAX_AGE", "0"},
+		"session max age text":     {"SESSION_MAX_AGE", "1d"},
+		"default org not uuid":     {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxyz123abc"},
+		"default org role":         {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
+		"relative auth url":        {"BETTER_AUTH_URL", "/api/auth"},
+		"nextauth url scheme":      {"NEXTAUTH_URL", "ftp://auth.example.com"},
+		"zero invite limit":        {"INVITE_RATE_LIMIT_PER_24_HOURS", "0"},
+		"invite limit text":        {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
+		"invite flag spelled":      {"INVITE_DISABLED", "yes"},
+		"unknown time zone":        {"SURVEY_SCHEDULING_TIME_ZONE", "Mars/Olympus"},
+		"local time zone":          {"SURVEY_SCHEDULING_TIME_ZONE", "Local"},
+		"scheduling hour":          {"SURVEY_SCHEDULING_LOCAL_HOUR", "24"},
+		"scheduling minute":        {"SURVEY_SCHEDULING_LOCAL_MINUTE", "60"},
+		"s3 endpoint scheme":       {"S3_ENDPOINT_URL", "s3://bucket"},
+		"s3 endpoint path":         {"S3_ENDPOINT_URL", "https://gateway.example.com/forma"},
+		"s3 endpoint relative":     {"S3_ENDPOINT_URL", "localhost:9000"},
+		"s3 path style flag":       {"S3_FORCE_PATH_STYLE", "true"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -331,5 +338,36 @@ func TestLoadSSO(t *testing.T) {
 	t.Setenv("OIDC_CLIENT_SECRET", "")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load: %v", err)
+	}
+}
+
+func TestLoadS3(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.S3.Configured() || cfg.S3.ForcePathStyle || cfg.S3.EndpointURL != nil {
+		t.Fatalf("S3 = %+v, want storage unconfigured by default", cfg.S3)
+	}
+
+	for k, v := range map[string]string{
+		"S3_ACCESS_KEY": "devrustfs-service", "S3_SECRET_KEY": "devrustfs-service123", "S3_REGION": "us-east-1",
+		"S3_BUCKET_NAME": "forma", "S3_ENDPOINT_URL": "http://localhost:9000", "S3_FORCE_PATH_STYLE": "1",
+	} {
+		t.Setenv(k, v)
+	}
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := cfg.S3
+	if !s.Configured() || !s.ForcePathStyle || s.EndpointURL.Host != "localhost:9000" || s.Region != "us-east-1" || s.AccessKey != "devrustfs-service" || s.SecretKey != "devrustfs-service123" {
+		t.Fatalf("S3 = %+v", s)
+	}
+
+	t.Setenv("S3_ENDPOINT_URL", "https://gateway.storjshare.io/")
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load rejected an endpoint with a bare trailing slash: %v", err)
 	}
 }

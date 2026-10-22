@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 func TestCreateWorkspace(t *testing.T) {
@@ -288,10 +290,17 @@ func TestDeleteWorkspace(t *testing.T) {
 	e.fails(e.do(owner, http.MethodPost, wsPath(first, "/delete"), map[string]string{"confirmationName": DefaultName}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "You can't delete the last workspace.")
 
 	third := e.workspace(org, "Third")
+	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, third)
 	e.survey(first)
 	d = del(owner, third, "Third")
 	if d.Destination.Path != "/workspaces/"+first.String()+"/" {
 		t.Fatalf("destination after onboarding %+v", d.Destination)
+	}
+
+	// Only the two deletions that happened cleaned up files: under the workspace id, and under the environment id a workspace from before the rename stored its files under.
+	want := [][]string{{second.String()}, {third.String(), "clegacyenvaaaaaaaaaaaaaa1"}}
+	if got := e.files.calls(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("deleted files under %v, want %v", got, want)
 	}
 }
 
@@ -346,6 +355,41 @@ func TestValidStorageURL(t *testing.T) {
 	for in, want := range cases {
 		if got := validStorageURL(in); got != want {
 			t.Errorf("validStorageURL(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestResolveClientID(t *testing.T) {
+	e := newEnv(t)
+	org, ws := e.organization(e.user())
+	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, ws)
+	// A workspace migrated from forma2 carries uuidv5 of its old id.
+	migrated := legacyid.ID("clmigratedwsaaaaaaaaaaa1")
+	e.exec(`INSERT INTO workspaces (id, organization_id, name) VALUES (?, ?, 'Migrated')`, migrated, org)
+
+	for raw, want := range map[string]uuid.UUID{
+		ws.String():                  ws,
+		strings.ToUpper(ws.String()): ws,
+		"clegacyenvaaaaaaaaaaaaaa1":  ws,
+		"clmigratedwsaaaaaaaaaaa1":   migrated,
+		migrated.String():            migrated,
+		"clunknownaaaaaaaaaaaaaaa1":  uuid.Nil,
+		uuid.NewString():             uuid.Nil,
+		"../" + ws.String():          uuid.Nil,
+		strings.Repeat("x", 4096):    uuid.Nil,
+	} {
+		got, err := e.repo.ResolveClientID(t.Context(), raw)
+		if err != nil {
+			t.Fatalf("ResolveClientID(%.40q): %v", raw, err)
+		}
+		if want == uuid.Nil {
+			if got != nil {
+				t.Errorf("ResolveClientID(%.40q) = %+v, want nothing", raw, got)
+			}
+			continue
+		}
+		if got == nil || got.ID != want || got.OrganizationID != org {
+			t.Errorf("ResolveClientID(%.40q) = %+v, want workspace %s of %s", raw, got, want, org)
 		}
 	}
 }

@@ -83,3 +83,10 @@ func (r *EncryptionKeyring) UnmarshalText(text []byte) error {
 func (r EncryptionKeyring) String() string { return fmt.Sprintf("[%d redacted keys]", len(r)) }
 
 func (r EncryptionKeyring) LogValue() slog.Value { return slog.StringValue(r.String()) }
+
+// Secret is a configured secret string. It never prints or logs its value.
+type Secret string
+
+func (s Secret) String() string { return "[redacted]" }
+
+func (s Secret) LogValue() slog.Value { return slog.StringValue("[redacted]") }

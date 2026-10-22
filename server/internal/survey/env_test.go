@@ -103,7 +103,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	u, _ := url.Parse(webApp)
 	cfg := config.Config{
 		WebAppURL: u, RateLimitingDisabled: true, AuditLogEnabled: true, UserManagementMinimumRole: "manager", TrustedProxyHopCount: 1,
-		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyVersion: 1, SurveySchedulingTimeZone: "Europe/Berlin",
+		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1, SurveySchedulingTimeZone: "Europe/Berlin",
 	}
 	for _, f := range configure {
 		f(&cfg)

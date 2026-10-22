@@ -9,13 +9,16 @@ import (
 	"github.com/google/wire"
 
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/analysis"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -28,6 +31,8 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
@@ -127,6 +132,36 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+var responseSet = wire.NewSet(
+	jobs.NewEnqueuer,
+	response.NewService,
+	response.NewHandler,
+	analysis.NewService,
+	analysis.NewHandler,
+)
+
+// storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
+var storageSet = wire.NewSet(
+	storage.NewBucket,
+	storage.NewService,
+	wire.Bind(new(workspace.FileStore), new(*storage.Service)),
+	storage.NewHandler,
+)
+
+// linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
+var linkSurveySet = wire.NewSet(
+	linksurvey.NewRepository,
+	linksurvey.NewService,
+	linksurvey.NewHandler,
+)
+
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier.
+var clientAPISet = wire.NewSet(
+	clientapi.NewRecaptcha,
+	clientapi.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -144,6 +179,10 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		contactSet,
 		v3Set,
 		surveyConfigSet,
+		responseSet,
+		storageSet,
+		linkSurveySet,
+		clientAPISet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -162,6 +201,9 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewDelivery,
 		authz.NewAudit,
 		audit.New,
+		storage.NewBucket,
+		storage.NewService,
+		workspace.NewRepository,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

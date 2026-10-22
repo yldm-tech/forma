@@ -1,12 +1,10 @@
-package auth
+package mailer
 
 import (
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 )
 
 // localeParts are the subtags of a BCP 47 tag that matching cares about, lowercased.
@@ -60,8 +58,8 @@ func scoreLocale(available, requested localeParts) int {
 	return 1
 }
 
-// matchLocale is forma2's findMatchingLocale, which gave a new SSO user the best of the shipped locales for their browser's Accept-Language: requested tags are tried best weighted first, ties in header order, and the first with any match wins.
-func matchLocale(acceptLanguage string) string {
+// MatchLocale is forma2's findMatchingLocale: the best of the shipped locales for a browser's Accept-Language header, DefaultLocale when none serves it. Requested tags are tried best weighted first, ties in header order, and the first with any match wins.
+func MatchLocale(acceptLanguage string) string {
 	type weighted struct {
 		parts   localeParts
 		quality float64
@@ -89,7 +87,7 @@ func matchLocale(acceptLanguage string) string {
 	sort.SliceStable(requested, func(i, j int) bool { return requested[i].quality > requested[j].quality })
 	for _, r := range requested {
 		best, bestScore := "", 0
-		for _, locale := range mailer.Locales {
+		for _, locale := range Locales {
 			if score := scoreLocale(parseLocaleTag(locale), r.parts); score > bestScore {
 				best, bestScore = locale, score
 			}
@@ -98,5 +96,5 @@ func matchLocale(acceptLanguage string) string {
 			return best
 		}
 	}
-	return defaultLocale
+	return DefaultLocale
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,6 +14,9 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
@@ -25,10 +29,10 @@ type SingleUseLink struct {
 	SuToken string `json:"suToken,omitempty"`
 }
 
-// SingleUseSignature is forma2's generateSurveySingleUseSignature: HMAC-SHA256 of "forma.single-use.v1:<surveyId>:<suId>" under ENCRYPTION_KEY, hex. forma2 keyed it with the key's text; a 64-character hex key, the documented form, is its lowercase hex here.
-func SingleUseSignature(key []byte, surveyID uuid.UUID, singleUseID string) string {
-	mac := hmac.New(sha256.New, []byte(hex.EncodeToString(key)))
-	mac.Write([]byte(singleUseSignaturePrefix + ":" + surveyID.String() + ":" + singleUseID))
+// SingleUseSignature is forma2's generateSurveySingleUseSignature: HMAC-SHA256 of "forma.single-use.v1:<surveyId>:<suId>" keyed with ENCRYPTION_KEY's text, hex. surveyID is the id the link was signed for: the survey's UUID, or for a link forma2 issued, the survey's forma2 id.
+func SingleUseSignature(keyText, surveyID, singleUseID string) string {
+	mac := hmac.New(sha256.New, []byte(keyText))
+	mac.Write([]byte(singleUseSignaturePrefix + ":" + surveyID + ":" + singleUseID))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
@@ -80,7 +84,83 @@ func (s *Service) SingleUseLinks(ctx context.Context, caller Caller, surveyID uu
 		if id == "" {
 			id = surveydoc.NewID()
 		}
-		links = append(links, SingleUseLink{SuID: id, SuToken: SingleUseSignature(s.cfg.EncryptionKey, surveyID, id)})
+		links = append(links, SingleUseLink{SuID: id, SuToken: SingleUseSignature(string(s.cfg.EncryptionKeyText), surveyID.String(), id)})
 	}
 	return links, nil
+}
+
+// SingleUse is a survey's singleUse document, forma2's TSurveySingleUse.
+type SingleUse struct {
+	Enabled     bool    `json:"enabled"`
+	IsEncrypted bool    `json:"isEncrypted"`
+	Heading     *string `json:"heading,omitempty"`
+	Subheading  *string `json:"subheading,omitempty"`
+}
+
+// SingleUseSettings reads the survey's singleUse document; an absent one is single use switched off.
+func (s *Survey) SingleUseSettings() SingleUse {
+	var su SingleUse
+	if !isNullJSON(s.SingleUse) {
+		_ = json.Unmarshal(s.SingleUse, &su)
+	}
+	return su
+}
+
+// CheckSingleUseLink is forma2's checkAndValidateSingleUseId on the survey's link page: CanonicalSingleUseID for the survey, with linkSurveyID the id the request named the survey by.
+func (s *Service) CheckSingleUseLink(sv *Survey, linkSurveyID, suID, suToken string) string {
+	return CanonicalSingleUseID(s.cfg, s.cipher, sv.ID, sv.SingleUseSettings().IsEncrypted, linkSurveyID, suID, suToken)
+}
+
+// CanonicalSingleUseID is forma2's validateSurveySingleUseLinkParams: the canonical single-use id a link's suId and suToken name for the survey surveyID, or "" when they name none. suId is trimmed first. An encrypted suId must open to a cuid: one forma2 sealed ("iv:ciphertext:tag" under ENCRYPTION_KEY) or one this server sealed for this survey. A plain suId must carry its signature, keyed with ENCRYPTION_KEY's text; a link forma2 issued was signed over the survey's forma2 id, which is also the id in that link's path, so linkSurveyID (the id the link named the survey by) is tried too when it is the survey's forma2 id.
+func CanonicalSingleUseID(cfg config.Config, cipher *secret.Cipher, surveyID uuid.UUID, isEncrypted bool, linkSurveyID, suID, suToken string) string {
+	trimmed := strings.TrimSpace(suID)
+	if trimmed == "" {
+		return ""
+	}
+	if isEncrypted {
+		id := openSingleUseID(cfg, cipher, surveyID, trimmed)
+		if !isCuid(id) {
+			return ""
+		}
+		return id
+	}
+	if suToken == "" {
+		return ""
+	}
+	signedFor := []string{surveyID.String()}
+	if linkSurveyID != surveyID.String() && legacyid.Matches(linkSurveyID, surveyID) {
+		signedFor = append(signedFor, linkSurveyID)
+	}
+	for _, id := range signedFor {
+		want := SingleUseSignature(string(cfg.EncryptionKeyText), id, trimmed)
+		if hmac.Equal([]byte(want), []byte(suToken)) {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+// openSingleUseID decrypts an encrypted suId, or returns "" when it does not open.
+func openSingleUseID(cfg config.Config, cipher *secret.Cipher, surveyID uuid.UUID, suID string) string {
+	if strings.Contains(suID, ":") {
+		id, err := secret.DecryptForma2(suID, cfg.EncryptionKey, false)
+		if err != nil {
+			return ""
+		}
+		return id
+	}
+	sealed, err := base64.RawURLEncoding.DecodeString(suID)
+	if err != nil {
+		return ""
+	}
+	id, err := cipher.Open(sealed, singleUseContext(surveyID))
+	if err != nil {
+		return ""
+	}
+	return string(id)
+}
+
+// isCuid is @paralleldrive/cuid2's isCuid, which forma2 required of a decrypted single-use id: 2 to 32 lowercase letters and digits.
+func isCuid(id string) bool {
+	return len(id) >= 2 && len(id) <= 32 && surveydoc.IsCUID2(id)
 }

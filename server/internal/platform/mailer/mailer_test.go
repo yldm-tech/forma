@@ -52,6 +52,7 @@ var everyTemplate = []mailer.Content{
 	mailer.InviteAccepted{InviterName: "Ada", InviteeName: "Grace"},
 	mailer.DeleteAccountConfirmation{DeleteLink: "https://app.example.com/auth/delete-account?token=d1", LinkValidityInMinutes: 60},
 	mailer.SSORecoveryFactorsRemoved{PasswordRemoved: true, TwoFactorRemoved: true, SingleSignOnRemoved: true, SecuritySettingsLink: "https://app.example.com/account/settings/profile"},
+	mailer.LinkSurvey{SurveyName: "Customer Feedback", SurveyLink: "https://surveys.example.com/s/s1?verify=t1"},
 }
 
 var placeholder = regexp.MustCompile(`\{[A-Za-z]+\}`)
@@ -118,6 +119,10 @@ func TestRenderEnglishCopy(t *testing.T) {
 			"You can keep signing in with single sign-on. To use a password or two-factor authentication again, set them up in your security settings.",
 			"Review security settings", `href="https://app.example.com/account/settings/profile"`,
 			"If you did not just sign in with single sign-on, contact your administrator immediately.",
+		}},
+		{everyTemplate[8], "Your survey is ready to be filled out.", []string{
+			"Hey 👋", "Thanks for validating your email!", "To fill out the survey please click on the button below:", "Take survey",
+			`href="https://surveys.example.com/s/s1?verify=t1"`, "Survey name: Customer Feedback",
 		}},
 	}
 	for _, tc := range cases {
@@ -346,5 +351,24 @@ func TestSMTPDelivery(t *testing.T) {
 	want, _, _ := m.Render("ja-JP", everyTemplate[4])
 	if got.Subject != want || got.From.Name != "Forma" || got.From.Address != "noreply@forma.ylam.ai" || got.To[0].Address != "grace@example.com" {
 		t.Fatalf("delivered %+v", got)
+	}
+}
+
+// An organization's logo replaces Forma's in the link survey email; Forma's own logo URL counts as no custom logo, as in forma2's EmailTemplate.
+func TestRenderOrganizationLogo(t *testing.T) {
+	m := newMailer(t, baseConfig(), nil)
+	_, html, err := m.Render("en-US", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://cdn.example.com/acme.png"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, `src="https://cdn.example.com/acme.png"`) || strings.Contains(html, "logo-transparent.png") || strings.Contains(html, "utm_campaign=email_logo") {
+		t.Fatalf("organization logo not used:\n%s", html)
+	}
+	_, html, err = m.Render("en-US", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://app.forma.ylam.ai/logo-transparent.png"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, "utm_campaign=email_logo") {
+		t.Fatalf("Forma's logo URL was treated as a custom logo:\n%s", html)
 	}
 }

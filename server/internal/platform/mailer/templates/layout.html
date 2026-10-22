@@ -8,7 +8,7 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td align="center" style="text-align:center">
-<a href="https://forma.ylam.ai?utm_source=forma-app&amp;utm_medium=email&amp;utm_campaign=email_logo" target="_blank"><img alt="Logo" src="https://app.forma.ylam.ai/logo-transparent.png" width="240" style="display:block;margin:0 auto;width:240px;border:0"></a>
+{{- with .Logo}}<img alt="Logo" src="{{.}}" width="320" style="display:block;margin:0 auto;width:320px;max-height:100px;object-fit:contain;border:0">{{else}}<a href="https://forma.ylam.ai?utm_source=forma-app&amp;utm_medium=email&amp;utm_campaign=email_logo" target="_blank"><img alt="Logo" src="https://app.forma.ylam.ai/logo-transparent.png" width="240" style="display:block;margin:0 auto;width:240px;border:0"></a>{{end}}
 </td>
 </tr>
 </table>

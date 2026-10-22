@@ -9,7 +9,7 @@ BIN := bin/forma
 .PHONY: help deps-up deps-down authz-schema migrate dev-server dev-worker dev-web build web embed server generate lint test check clean
 
 help:
-	@echo "deps-up      start local dependencies (docker compose) and write the SpiceDB schema"
+	@echo "deps-up      start local dependencies (docker compose), write the SpiceDB schema and create the storage bucket"
 	@echo "deps-down    stop local dependencies"
 	@echo "authz-schema write authzed/schema.zed into SpiceDB (reads .env, else .env.example)"
 	@echo "migrate      apply pending database and job queue migrations (reads .env)"
@@ -25,6 +25,7 @@ help:
 deps-up:
 	docker compose -f docker-compose.dev.yml up -d --wait
 	$(MAKE) authz-schema
+	docker compose -f docker-compose.dev.yml run --rm rustfs-init
 
 deps-down:
 	docker compose -f docker-compose.dev.yml down

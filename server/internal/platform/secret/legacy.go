@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -14,10 +15,29 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-// The decryptors below read values forma2 stored, so the data migration can carry them over. Nothing in the running server writes these formats.
+// The decryptors below read values forma2 stored or put in links and tokens it issued, so the data migration can carry them over and those links keep working. EncryptForma2 writes the one format that still travels in tokens this server issues, so a token stays readable by either implementation.
 
 // forma2GCMIVSize is the 16-byte IV forma2's lib/crypto.ts used with AES-GCM (the AES block size, not GCM's usual 12).
 const forma2GCMIVSize = 16
+
+// EncryptForma2 is forma2's lib/crypto.ts symmetricEncrypt: AES-256-GCM under key with a random 16-byte IV, written as hex "iv:ciphertext:tag".
+func EncryptForma2(plaintext string, key []byte) (string, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("forma2 key: %w", err)
+	}
+	gcm, err := cipher.NewGCMWithNonceSize(block, forma2GCMIVSize)
+	if err != nil {
+		return "", err
+	}
+	iv := make([]byte, forma2GCMIVSize)
+	if _, err := rand.Read(iv); err != nil {
+		return "", fmt.Errorf("generate iv: %w", err)
+	}
+	sealed := gcm.Seal(nil, iv, []byte(plaintext), nil)
+	ct, tag := sealed[:len(sealed)-gcm.Overhead()], sealed[len(sealed)-gcm.Overhead():]
+	return hex.EncodeToString(iv) + ":" + hex.EncodeToString(ct) + ":" + hex.EncodeToString(tag), nil
+}
 
 // DecryptForma2 opens a value forma2's lib/crypto.ts symmetricEncrypt wrote under ENCRYPTION_KEY: AES-256-GCM as hex "iv:ciphertext:tag". The two-part "iv:ciphertext" form is the pre-GCM AES-256-CBC format; like forma2, it is refused unless allowLegacyCBC is set, which is only safe for values read from forma2's own database, because CBC carries no authentication tag. A GCM value that fails its tag is never retried as CBC.
 func DecryptForma2(payload string, key []byte, allowLegacyCBC bool) (string, error) {

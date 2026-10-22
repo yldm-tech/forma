@@ -129,8 +129,8 @@ func isIPv4(parts []string) bool {
 // ImageFileExtensions are forma2's IMAGE_FILE_EXTENSIONS; svg is excluded because it is not sanitized.
 var ImageFileExtensions = []string{"png", "jpeg", "jpg", "webp", "heic"}
 
-// originalFileName is forma2's getOriginalFileNameFromUrl: the last path segment, with the "--fid--" storage suffix removed.
-func originalFileName(fileURL string) string {
+// OriginalFileName is forma2's getOriginalFileNameFromUrl: the last path segment, with the "--fid--" storage suffix removed.
+func OriginalFileName(fileURL string) string {
 	var last string
 	if strings.HasPrefix(fileURL, "/storage/") {
 		segments := strings.Split(fileURL, "/")
@@ -172,7 +172,7 @@ func originalFileName(fileURL string) string {
 
 // IsValidImageFile is forma2's isValidImageFile: the file name ends in a supported image extension.
 func IsValidImageFile(fileURL string) bool {
-	name := originalFileName(fileURL)
+	name := OriginalFileName(fileURL)
 	if name == "" || strings.HasSuffix(name, ".") {
 		return false
 	}
