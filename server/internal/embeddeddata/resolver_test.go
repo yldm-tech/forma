@@ -135,3 +135,32 @@ func TestLogicVariableValue(t *testing.T) {
 		}
 	}
 }
+
+// The catalog's display placement, as forma2's RESERVED_FIELD_CATALOG declares it: what the response views show first, what they show second, and what they never show.
+func TestCatalogDisplay(t *testing.T) {
+	byDisplay := map[string][]string{}
+	for _, e := range ReservedCatalog {
+		byDisplay[e.Display] = append(byDisplay[e.Display], e.Name)
+	}
+	want := map[string][]string{
+		DisplayPrimary: {"source", "url", "country", "action", "browser", "os", "deviceType"},
+		DisplaySecondary: {"ipAddress", "pagePath", "pageReferrer", "utmSource", "utmMedium", "utmCampaign", "utmTerm", "utmContent",
+			"screenWidth", "screenHeight", "viewportWidth", "viewportHeight", "timezone", "locale"},
+		DisplayNone: {"finished", "language", "responseId", "surveyId", "durationSeconds", "startedAt", "finishedAt"},
+	}
+	if !reflect.DeepEqual(byDisplay, want) {
+		t.Errorf("display placement %v", byDisplay)
+	}
+}
+
+// forma2's formatFieldNameToTitleCase cases (packages/types/safe-identifier.test.ts).
+func TestTitleCase(t *testing.T) {
+	for in, want := range map[string]string{
+		"durationSeconds": "Duration Seconds", "ip_address": "Ip Address", "utmSource": "Utm Source", "deviceType": "Device Type",
+		"os": "Os", "a__b": "A B", "_lead": "Lead", "screenWidth2X": "Screen Width2 X", "": "",
+	} {
+		if got := TitleCase(in); got != want {
+			t.Errorf("TitleCase(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
