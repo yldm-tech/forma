@@ -154,7 +154,7 @@ func TestFilterDataOffersTheValuesOfTheNewestResponses(t *testing.T) {
 	quota := e.insert(`INSERT INTO survey_quotas (survey_id, name, "limit", logic, action) VALUES (?, 'Q', 5, '{"connector":"and","conditions":[]}'::jsonb, 'continueSurvey') RETURNING id`, sv)
 	for i := range 60 {
 		e.response(sv, row{at: at(i), data: fmt.Sprintf(`{"utm":"src-%d","q1":"x"}`, i%3), variables: fmt.Sprintf(`{"plan":"p%d","score":%d}`, i, i),
-			meta: fmt.Sprintf(`{"url":"https://example.com/p%d?token=secret","userAgent":{"browser":"Chrome","os":"macOS"},"country":"DE","ipAddress":"10.0.0.1","screenWidth":1440}`, i),
+			meta:              fmt.Sprintf(`{"url":"https://example.com/p%d?token=secret","userAgent":{"browser":"Chrome","os":"macOS"},"country":"DE","ipAddress":"10.0.0.1","screenWidth":1440}`, i),
 			contactAttributes: ptr(fmt.Sprintf(`{"email":"u%d@example.com","seats":3}`, i%2))})
 	}
 	e.response(sv, row{at: at(100), data: `{"utm":42}`, meta: `{"url":5}`})

@@ -34,9 +34,9 @@ func jsRound(f float64) float64 {
 	return r
 }
 
-// round2 is forma2's convertFloatTo2Decimal, Math.round(x * 100) / 100.
+// round2 is forma2's convertFloatTo2Decimal, Math.round(x * 100) / 100. The conversion rounds the product before jsRound subtracts from it: Go may otherwise fuse the two into one multiply-subtract and round differently from JavaScript (2.675 would give 2.67, not 2.68).
 func round2(f float64) float64 {
-	return jsRound(f*100) / 100
+	return jsRound(float64(f*100)) / 100
 }
 
 // percent is round2(part / whole * 100), 0 when whole is 0.
