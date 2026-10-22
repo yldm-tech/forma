@@ -154,6 +154,15 @@ func (r *Repository) hasAnyUser(ctx context.Context) (bool, error) {
 	return exists, nil
 }
 
+// firstUserLocked takes the transaction-scoped lock that serializes first-administrator sign-ups and reports whether the instance still has no user.
+func (r *Repository) firstUserLocked(ctx context.Context) (bool, error) {
+	if err := r.db.WithContext(ctx).Exec(`SELECT pg_advisory_xact_lock(hashtext('forma.first-administrator-signup'))`).Error; err != nil {
+		return false, fmt.Errorf("lock first sign-up: %w", err)
+	}
+	hasUser, err := r.hasAnyUser(ctx)
+	return !hasUser, err
+}
+
 // insertUser creates a user unless the address is taken. created is false, and nothing is written, for a duplicate.
 func (r *Repository) insertUser(ctx context.Context, name, email, locale string) (id uuid.UUID, created bool, err error) {
 	ids, err := r.scanIDs(ctx,

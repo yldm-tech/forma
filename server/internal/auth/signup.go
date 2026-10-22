@@ -91,6 +91,16 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	var notifyInviter func(context.Context)
 	created := false
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
+		// On a closed instance only the first user gets in uninvited. The check above ran before the slow password hash, so concurrent first sign-ups are serialized here and the check repeated under the lock: exactly one of them becomes the administrator.
+		if !invited && !s.cfg.SignupEnabled() {
+			allowed, err := tx.firstUserLocked(ctx)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return errSignupDisabled()
+			}
+		}
 		var err error
 		userID, created, err = tx.insertUser(ctx, in.Name, email, locale)
 		if err != nil || !created {

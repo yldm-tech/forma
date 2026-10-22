@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -138,6 +139,42 @@ func TestSignupOnAClosedInstance(t *testing.T) {
 	failures := e.auditEvents(audit.ActionCreated)
 	if last := failures[len(failures)-1]; field(last, "status") != "failure" || field(last, "target", "id") != "unknown" {
 		t.Fatalf("refused sign-up audited as %v", last)
+	}
+}
+
+// Two uninvited sign-ups racing on a fresh closed instance: exactly one becomes the first administrator, the other is refused as any later uninvited sign-up is.
+func TestFirstAdministratorSignupRace(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	emails := []string{"first@example.com", "second@example.com"}
+	responses := make([]response, len(emails))
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i, email := range emails {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b := e.browser()
+			<-start
+			responses[i] = b.post("/auth/signup", signupBody(email))
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	admitted, refused := 0, 0
+	for _, r := range responses {
+		switch {
+		case r.Code == http.StatusOK:
+			admitted++
+		case statusErr(r, http.StatusBadRequest, CodeSignupDisabled) == nil:
+			refused++
+		default:
+			t.Fatalf("unexpected answer %d %s", r.Code, r.Body.String())
+		}
+	}
+	if admitted != 1 || refused != 1 || e.count(`SELECT count(*) FROM users`) != 1 || e.count(`SELECT count(*) FROM organizations`) != 1 {
+		t.Fatalf("%d admitted, %d refused, %d users, %d organizations", admitted, refused, e.count(`SELECT count(*) FROM users`), e.count(`SELECT count(*) FROM organizations`))
 	}
 }
 
