@@ -50,12 +50,18 @@ func block(t *testing.T, lines []string, start, end string) []string {
 func TestCanonicalMapMatchesI18nUtils(t *testing.T) {
 	lines := block(t, readLines(t, "../../../packages/i18n-utils/src/canonical.ts"), "export const LANGUAGE_CANONICAL_MAP", "};")
 	want := map[string]string{}
+	var keys []string
 	for _, l := range lines {
 		m := mapEntry.FindStringSubmatch(l)
 		if m == nil {
 			t.Fatalf("unexpected line in LANGUAGE_CANONICAL_MAP: %q", l)
 		}
 		want[m[1]] = m[2]
+		keys = append(keys, m[1])
+	}
+	// LegacyCodes lists aliases in the source map's order, which it rebuilds by sorting keys case-insensitively.
+	if !slices.IsSortedFunc(keys, func(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) }) {
+		t.Fatal("LANGUAGE_CANONICAL_MAP is no longer sorted case-insensitively; LegacyCodes would list aliases in another order")
 	}
 	if len(want) != len(canonicalMap) {
 		t.Fatalf("canonicalMap has %d entries, i18n-utils %d", len(canonicalMap), len(want))
@@ -145,5 +151,23 @@ func TestRuntimeBundle(t *testing.T) {
 		if IsSurveyRuntimeLanguage(in) != (want != "") {
 			t.Errorf("IsSurveyRuntimeLanguage(%q) disagrees with RuntimeBundle", in)
 		}
+	}
+}
+
+// forma2's toLegacyLanguageCodes cases (apps/web/lib/i18n/i18n.test.ts), plus aliases that only the canonical map surfaces.
+func TestLegacyCodes(t *testing.T) {
+	cases := map[string][]string{
+		"de-DE": {"de"}, "fil-PH": {"tl"}, "ak-GH": {"ak", "tw"}, "zh-Hant-TW": {"zh-Hant", "zh-TW"}, "zh-Hans-CN": {"zh", "zh-CN", "zh-Hans"},
+		"de-AT": nil, "xx-YY": nil,
+	}
+	for code, want := range cases {
+		if got := LegacyCodes(code); !slices.Equal(got, want) {
+			t.Errorf("LegacyCodes(%q) = %v, want %v", code, got, want)
+		}
+	}
+	aliases := LegacyCodes("de-DE")
+	aliases[0] = "MUTATED"
+	if got := LegacyCodes("de-DE"); !slices.Equal(got, []string{"de"}) {
+		t.Fatalf("a caller's change leaked into the table: %v", got)
 	}
 }

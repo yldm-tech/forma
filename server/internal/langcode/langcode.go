@@ -2,6 +2,7 @@
 package langcode
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -18,6 +19,21 @@ var (
 		m := make(map[string]bool, len(canonicalMap))
 		for _, code := range canonicalMap {
 			m[code] = true
+		}
+		return m
+	}()
+	// legacyByCanonical is the reverse of canonicalMap without the identities, each list in the source map's order (keys sorted case-insensitively).
+	legacyByCanonical = func() map[string][]string {
+		keys := make([]string, 0, len(canonicalMap))
+		for k := range canonicalMap {
+			keys = append(keys, k)
+		}
+		slices.SortFunc(keys, func(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) })
+		m := map[string][]string{}
+		for _, k := range keys {
+			if canonical := canonicalMap[k]; canonical != k {
+				m[canonical] = append(m[canonical], k)
+			}
 		}
 		return m
 	}()
@@ -65,6 +81,11 @@ func Normalize(input string) string {
 		parts = append(parts, t.script)
 	}
 	return strings.Join(append(parts, t.region), "-")
+}
+
+// LegacyCodes is forma2's toLegacyLanguageCodes: the known codes that canonicalize to canonical, other than itself (de-DE gives de, zh-Hant-TW gives zh-Hant and zh-TW), in the order forma2 listed them. The SDK-facing surfaces still speak these, since older SDKs match a survey's languages by exact code.
+func LegacyCodes(canonical string) []string {
+	return slices.Clone(legacyByCanonical[canonical])
 }
 
 // IsCanonical reports whether code is one of the curated canonical tags (forma2's CANONICAL_LANGUAGE_CODES), exactly as spelled.
