@@ -35,10 +35,6 @@ export default defineConfig({
     tailwindcss(),
     surveyPageLocales(),
   ]),
-  resolve: {
-    // The hoisted install nests a second React under react-i18next (packages/surveys resolves it against another React version); two Reacts in one page break every hook, so the SPA always takes the root copy.
-    dedupe: ["react", "react-dom"],
-  },
   server: {
     port: 5173,
     proxy: {
@@ -63,12 +59,14 @@ export default defineConfig({
     // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
     // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
     clearMocks: false,
-    environment: "node",
-    include: ["src/**/*.test.{ts,tsx}"],
+    // Component tests (*.test.tsx) render into a DOM; everything else runs in Node, where a file that needs a DOM asks for one with a @vitest-environment comment.
+    projects: [
+      { extends: true, test: { name: "node", environment: "node", include: ["src/**/*.test.ts"] } },
+      { extends: true, test: { name: "dom", environment: "jsdom", include: ["src/**/*.test.tsx"] } },
+    ],
     // Vitest stubs stylesheets out by default; the rich-text editor's test reads its stylesheet's source, so that one goes through Vite's pipeline.
     css: { include: [/styles-editor-frontend\.css/] },
     // i18next-icu default-imports intl-messageformat, whose Node entry is CommonJS: externalized, the import is the module object rather than the class and every ICU message comes back unformatted. Transforming both resolves the ESM build, as the browser bundle does.
-    // react-i18next is transformed too, so the React it imports is the deduplicated root copy (see resolve.dedupe) rather than the one nested under it, which would break every hook in a component test.
-    server: { deps: { inline: ["i18next-icu", "intl-messageformat", "react-i18next"] } },
+    server: { deps: { inline: ["i18next-icu", "intl-messageformat"] } },
   },
 });
