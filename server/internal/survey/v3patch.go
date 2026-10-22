@@ -200,7 +200,7 @@ func (s *Service) preparePatch(sv *Survey, body any) (*v3Document, *surveydoc.Su
 	return merged, typed, nil, nil
 }
 
-// PatchV3 is forma2's PATCH /api/v3/surveys/{id} behind workspace.write. An archived survey is read-only; everything the patch could be refused for is checked before the first write.
+// PatchV3 is forma2's PATCH /api/v3/surveys/{id} behind workspace.write. An archived survey is read-only; everything the patch could be refused for is checked before the first write. The patch is merged into, checked against and written over the stored survey as it is under a row lock, so a concurrent change (an archive, a slug, another patch) is neither overwritten nor bypassed.
 func (s *Service) PatchV3(ctx context.Context, caller Caller, id uuid.UUID, body json.RawMessage) (*v3Resource, error) {
 	value, err := decodeValue(body)
 	if err != nil {
@@ -211,44 +211,79 @@ func (s *Service) PatchV3(ctx context.Context, caller Caller, id uuid.UUID, body
 		return nil, err
 	}
 	if current.ArchivedAt != nil {
-		return nil, v3api.Unprocessable("Survey is archived", v3api.InvalidParam{Name: "archivedAt", Reason: "This survey is archived. Restore it before editing."})
+		return nil, errArchivedV3
 	}
-	updated, err := s.patchV3(ctx, current, value)
+	before, updated, err := s.patchV3(ctx, current.ID, value)
 	if err != nil {
 		s.recordV3(ctx, caller, audit.ActionUpdated, id.String(), current.WorkspaceID, err, nil, nil)
 		return nil, err
 	}
-	oldResource, _ := toV3Resource(current, nil)
+	oldResource, _ := toV3Resource(before, nil)
 	r, _ := toV3Resource(updated, nil)
 	s.recordV3(ctx, caller, audit.ActionUpdated, id.String(), current.WorkspaceID, nil, oldResource, r)
 	return r, nil
 }
 
-func (s *Service) patchV3(ctx context.Context, current *Survey, body any) (*Survey, error) {
+// errArchivedV3 refuses a change to an archived survey.
+var errArchivedV3 = v3api.Unprocessable("Survey is archived", v3api.InvalidParam{Name: "archivedAt", Reason: "This survey is archived. Restore it before editing."})
+
+// patchV3 applies the patch to the survey as it is stored under the row lock, returning that survey and the patched one.
+func (s *Service) patchV3(ctx context.Context, id uuid.UUID, body any) (before, after *Survey, err error) {
+	err = s.repo.transaction(ctx, func(tx *Repository) error {
+		current, err := tx.lockForUpdate(ctx, id)
+		if err != nil {
+			return err
+		}
+		if current == nil {
+			return v3api.Forbidden("")
+		}
+		if current.ArchivedAt != nil {
+			return errArchivedV3
+		}
+		before = current
+		return s.applyPatchV3(ctx, tx, current, body)
+	})
+	if err != nil {
+		return nil, nil, v3Problem(err)
+	}
+	sv, err := s.repo.byID(ctx, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if changed, err := s.scheduler.reconcileIfDue(ctx, sv, s.now()); err != nil {
+		return nil, nil, err
+	} else if changed {
+		sv, err = s.repo.byID(ctx, id)
+	}
+	return before, sv, err
+}
+
+// applyPatchV3 checks the patch against the locked survey and writes it in tx.
+func (s *Service) applyPatchV3(ctx context.Context, tx *Repository, current *Survey, body any) error {
 	d, typed, params, err := s.preparePatch(current, body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(params) > 0 {
-		return nil, v3api.Unprocessable(failedValidation, params...)
+		return v3api.Unprocessable(failedValidation, params...)
 	}
 	triggerCount := len(current.Triggers)
 	if d.Distribution != nil {
 		triggerCount = len(d.Distribution.Triggers)
 	}
 	if appSurveyMissingTriggers(current.Type, d.Status, triggerCount) {
-		return nil, v3api.Unprocessable(failedValidation, v3api.InvalidParam{Name: "triggers", Reason: appTriggerMessage})
+		return v3api.Unprocessable(failedValidation, v3api.InvalidParam{Name: "triggers", Reason: appTriggerMessage})
 	}
 	existing, err := declared(current.Variables, current.HiddenFields)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if errs := surveydoc.ValidateNewDeclaredFieldNames(existing, surveydoc.DeclaredFields{Variables: &typed.Variables, HiddenFields: &typed.HiddenFields}); len(errs) > 0 {
 		params := make([]v3api.InvalidParam, len(errs))
 		for i, e := range errs {
 			params[i] = v3api.InvalidParam{Name: e.Field, Reason: surveydoc.DescribeDeclaredFieldNameError(e), Code: v3api.CodeForbiddenIdentifier, Identifier: e.Field}
 		}
-		return nil, v3api.Unprocessable(failedValidation, params...)
+		return v3api.Unprocessable(failedValidation, params...)
 	}
 
 	var triggerIDs []uuid.UUID
@@ -256,10 +291,10 @@ func (s *Service) patchV3(ctx context.Context, current *Survey, body any) (*Surv
 	if current.Type == TypeApp && d.Distribution != nil {
 		ids, tps, err := s.resolveTriggers(ctx, current.WorkspaceID, d.Distribution.Triggers)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if len(tps) > 0 {
-			return nil, v3api.Unprocessable(failedValidation, tps...)
+			return v3api.Unprocessable(failedValidation, tps...)
 		}
 		triggerIDs = ids
 		next := json.RawMessage(`[]`)
@@ -272,14 +307,14 @@ func (s *Service) patchV3(ctx context.Context, current *Survey, body any) (*Surv
 		}
 		if !sameJSON(stored, next) {
 			if current.Segment == nil {
-				return nil, v3api.Unprocessable(failedValidation, v3api.InvalidParam{Name: "targeting.filters", Reason: "Cannot apply contact targeting: this app survey has no segment to store filters on."})
+				return v3api.Unprocessable(failedValidation, v3api.InvalidParam{Name: "targeting.filters", Reason: "Cannot apply contact targeting: this app survey has no segment to store filters on."})
 			}
 			tps, err := s.targetingParams(ctx, current.WorkspaceID, next)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if len(tps) > 0 {
-				return nil, v3api.Unprocessable(failedValidation, tps...)
+				return v3api.Unprocessable(failedValidation, tps...)
 			}
 			segmentFilters = next
 		}
@@ -293,11 +328,11 @@ func (s *Service) patchV3(ctx context.Context, current *Survey, body any) (*Surv
 	currentStatus := current.Status
 	publishOn, closeOn, err := s.schedule.normalize(&currentStatus, d.Status, current.PublishOn, current.CloseOn)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	languages, err := s.repo.ensureLanguages(ctx, current.WorkspaceID, codes)
+	languages, err := tx.ensureLanguages(ctx, current.WorkspaceID, codes)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	links := make([]languageLink, 0, len(requests))
 	for _, r := range requests {
@@ -311,39 +346,25 @@ func (s *Service) patchV3(ctx context.Context, current *Survey, body any) (*Surv
 	if current.Type == TypeApp && d.Distribution != nil {
 		applyDistribution(&rec, d.Distribution)
 	}
-	err = s.repo.transaction(ctx, func(tx *Repository) error {
-		if segmentFilters != nil {
-			if err := tx.setSegmentFilters(ctx, current.Segment.ID, segmentFilters); err != nil {
-				return err
-			}
-		}
-		if err := tx.update(ctx, current.ID, rec); err != nil {
+	if segmentFilters != nil {
+		if err := tx.setSegmentFilters(ctx, current.Segment.ID, segmentFilters); err != nil {
 			return err
 		}
-		if err := tx.setLanguages(ctx, current.ID, links); err != nil {
+	}
+	if err := tx.update(ctx, current.ID, rec); err != nil {
+		return err
+	}
+	if err := tx.setLanguages(ctx, current.ID, links); err != nil {
+		return err
+	}
+	if current.Type == TypeApp && d.Distribution != nil {
+		if err := tx.setTriggers(ctx, current.ID, triggerIDs); err != nil {
 			return err
 		}
-		if current.Type == TypeApp && d.Distribution != nil {
-			if err := tx.setTriggers(ctx, current.ID, triggerIDs); err != nil {
-				return err
-			}
-		}
-		return tx.reconcileEmbeddedData(ctx, current.ID, current.WorkspaceID, embeddedPatch{Variables: &typed.Variables, HiddenFields: &typed.HiddenFields})
-	})
-	if err != nil {
-		return nil, v3Problem(err)
 	}
-	sv, err := s.repo.byID(ctx, current.ID)
-	if err != nil {
-		return nil, err
-	}
-	if changed, err := s.scheduler.reconcileIfDue(ctx, sv, s.now()); err != nil {
-		return nil, err
-	} else if changed {
-		return s.repo.byID(ctx, current.ID)
-	}
-	return sv, nil
+	return tx.reconcileEmbeddedData(ctx, current.ID, current.WorkspaceID, embeddedPatch{Variables: &typed.Variables, HiddenFields: &typed.HiddenFields})
 }
+
 
 // DeleteV3, ArchiveV3 and RestoreV3 are the v3 forms of Delete, Archive and Restore: a missing survey is the same 403 as a denied one.
 func (s *Service) DeleteV3(ctx context.Context, caller Caller, id uuid.UUID) error {

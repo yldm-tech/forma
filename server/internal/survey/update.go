@@ -179,15 +179,27 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 	if !isNullJSON(in.Recaptcha) && json.Unmarshal(in.Recaptcha, &recaptcha) == nil && recaptcha.Enabled && !s.cfg.RecaptchaConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
-	if draft && in.UpdatedAt != nil && current.UpdatedAt.After(*in.UpdatedAt) {
-		return nil, apperr.OperationNotAllowed("survey_modified_elsewhere:" + current.UpdatedAt.UTC().Format(time.RFC3339Nano))
+	if err := draftVersionConflict(current, &in, draft); err != nil {
+		return nil, err
 	}
 	updated, err := s.update(ctx, current, &in, draft)
 	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, in.ID.String(), s.organizationOf(ctx, current.WorkspaceID), err, current, updated)
 	return updated, err
 }
 
-// update is forma2's updateSurveyInternal for one stored survey.
+// draftVersionConflict refuses a draft save whose version is older than the stored survey's. Versions are compared to the millisecond: forma2 stored them at that precision, and the editor, holding them as JavaScript Dates, sends back no finer one, while updated_at carries microseconds. The stored version is named at the same precision, so the editor can adopt it.
+func draftVersionConflict(stored *Survey, in *UpdateInput, draft bool) error {
+	if !draft || in.UpdatedAt == nil {
+		return nil
+	}
+	version := stored.UpdatedAt.UTC().Truncate(time.Millisecond)
+	if version.After(in.UpdatedAt.Truncate(time.Millisecond)) {
+		return apperr.OperationNotAllowed("survey_modified_elsewhere:" + version.Format("2006-01-02T15:04:05.000Z07:00"))
+	}
+	return nil
+}
+
+// update is forma2's updateSurveyInternal for one stored survey. Everything the save depends on in the stored row (its archive stamp, version, status, declared fields, segment, slug and every column the save does not carry) is read again under a row lock in the transaction that writes it, so a concurrent change is neither overwritten nor bypassed; current is the unlocked snapshot the request was authorized against.
 func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, skipValidation bool) (*Survey, error) {
 	langIDs := make([]uuid.UUID, len(in.Languages))
 	for i, l := range in.Languages {
@@ -225,8 +237,29 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		parsed = doc
 	}
 
-	if current.ArchivedAt != nil {
-		return nil, apperr.InvalidInput(apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
+	incoming, err := declared(in.Variables, in.HiddenFields)
+	if err != nil {
+		return nil, err
+	}
+	// The stored survey's state allows the save: it is not archived, its declared names are not renamed into reserved ones, and a save without validation keeps a draft a draft.
+	storedAllows := func(stored *Survey) error {
+		if stored.ArchivedAt != nil {
+			return apperr.InvalidInput(apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
+		}
+		existing, err := declared(stored.Variables, stored.HiddenFields)
+		if err != nil {
+			return err
+		}
+		if err := guardDeclaredFields(existing, incoming); err != nil {
+			return err
+		}
+		if skipValidation && (stored.Status != StatusDraft || in.Status != StatusDraft) {
+			return apperr.OperationNotAllowed("Only draft surveys can be updated without validation")
+		}
+		return nil
+	}
+	if err := storedAllows(current); err != nil {
+		return nil, err
 	}
 	if in.Segment != nil {
 		seg, err := s.repo.segmentInWorkspace(ctx, in.Segment.ID, current.WorkspaceID)
@@ -240,20 +273,6 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 	languages, err := s.checkLanguages(ctx, current.WorkspaceID, langIDs)
 	if err != nil {
 		return nil, err
-	}
-	existing, err := declared(current.Variables, current.HiddenFields)
-	if err != nil {
-		return nil, err
-	}
-	incoming, err := declared(in.Variables, in.HiddenFields)
-	if err != nil {
-		return nil, err
-	}
-	if err := guardDeclaredFields(existing, incoming); err != nil {
-		return nil, err
-	}
-	if skipValidation && (current.Status != StatusDraft || in.Status != StatusDraft) {
-		return nil, apperr.OperationNotAllowed("Only draft surveys can be updated without validation")
 	}
 	if !skipValidation {
 		if appSurveyMissingTriggers(in.Type, in.Status, len(in.Triggers)) {
@@ -280,41 +299,54 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		}
 	}
 
-	rec := recordOf(current)
-	rec.Name, rec.Type, rec.Status = in.Name, in.Type, in.Status
-	rec.WelcomeCard, rec.Blocks, rec.Endings, rec.HiddenFields, rec.Variables = in.WelcomeCard, stripIsDraft(in.Blocks), in.Endings, in.HiddenFields, in.Variables
-	if !isNullJSON(in.Metadata) {
-		rec.Metadata = in.Metadata
-	}
-	rec.InlineTriggers, rec.SurveyClosedMessage, rec.WorkspaceOverwrites, rec.Styling = in.InlineTriggers, in.SurveyClosedMessage, in.WorkspaceOverwrites, in.Styling
-	rec.SingleUse, rec.Recaptcha = in.SingleUse, in.Recaptcha
-	rec.DisplayOption, rec.AutoClose, rec.RecontactDays, rec.DisplayLimit, rec.AutoComplete = in.DisplayOption, in.AutoClose, in.RecontactDays, in.DisplayLimit, in.AutoComplete
-	rec.DisplayPercentage, rec.Delay = in.DisplayPercentage, in.Delay
-	rec.IsVerifyEmailEnabled, rec.IsBackButtonHidden, rec.IsAutoProgressingEnabled = in.IsVerifyEmailEnabled, in.IsBackButtonHidden, in.IsAutoProgressingEnabled
-	rec.IsCaptureIPEnabled, rec.IsAnonymizeResponsesEnabled, rec.ShowLanguageSwitch = in.IsCaptureIPEnabled, in.IsAnonymizeResponsesEnabled, in.ShowLanguageSwitch
-	rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
-	currentStatus := current.Status
-	if rec.PublishOn, rec.CloseOn, err = s.schedule.normalize(&currentStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
-		return nil, err
-	}
-
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
-		if err := tx.setLanguages(ctx, current.ID, links); err != nil {
+		stored, err := tx.lockForUpdate(ctx, current.ID)
+		if err != nil {
 			return err
 		}
-		if err := tx.setTriggers(ctx, current.ID, triggerIDs); err != nil {
+		if stored == nil {
+			return apperr.NotFound("Survey", current.ID.String())
+		}
+		if err := draftVersionConflict(stored, in, skipValidation); err != nil {
 			return err
 		}
-		if err := tx.saveSegment(ctx, current, in.Type, in.Segment); err != nil {
+		if err := storedAllows(stored); err != nil {
 			return err
 		}
-		if err := tx.applyFollowUps(ctx, current.ID, followUps); err != nil {
+		rec := recordOf(stored)
+		rec.Name, rec.Type, rec.Status = in.Name, in.Type, in.Status
+		rec.WelcomeCard, rec.Blocks, rec.Endings, rec.HiddenFields, rec.Variables = in.WelcomeCard, stripIsDraft(in.Blocks), in.Endings, in.HiddenFields, in.Variables
+		if !isNullJSON(in.Metadata) {
+			rec.Metadata = in.Metadata
+		}
+		rec.InlineTriggers, rec.SurveyClosedMessage, rec.WorkspaceOverwrites, rec.Styling = in.InlineTriggers, in.SurveyClosedMessage, in.WorkspaceOverwrites, in.Styling
+		rec.SingleUse, rec.Recaptcha = in.SingleUse, in.Recaptcha
+		rec.DisplayOption, rec.AutoClose, rec.RecontactDays, rec.DisplayLimit, rec.AutoComplete = in.DisplayOption, in.AutoClose, in.RecontactDays, in.DisplayLimit, in.AutoComplete
+		rec.DisplayPercentage, rec.Delay = in.DisplayPercentage, in.Delay
+		rec.IsVerifyEmailEnabled, rec.IsBackButtonHidden, rec.IsAutoProgressingEnabled = in.IsVerifyEmailEnabled, in.IsBackButtonHidden, in.IsAutoProgressingEnabled
+		rec.IsCaptureIPEnabled, rec.IsAnonymizeResponsesEnabled, rec.ShowLanguageSwitch = in.IsCaptureIPEnabled, in.IsAnonymizeResponsesEnabled, in.ShowLanguageSwitch
+		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
+		storedStatus := stored.Status
+		if rec.PublishOn, rec.CloseOn, err = s.schedule.normalize(&storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
 			return err
 		}
-		if err := tx.update(ctx, current.ID, rec); err != nil {
+
+		if err := tx.setLanguages(ctx, stored.ID, links); err != nil {
 			return err
 		}
-		return tx.reconcileEmbeddedData(ctx, current.ID, current.WorkspaceID, embeddedPatch{Variables: incoming.Variables, HiddenFields: incoming.HiddenFields})
+		if err := tx.setTriggers(ctx, stored.ID, triggerIDs); err != nil {
+			return err
+		}
+		if err := tx.saveSegment(ctx, stored, in.Type, in.Segment); err != nil {
+			return err
+		}
+		if err := tx.applyFollowUps(ctx, stored.ID, followUps); err != nil {
+			return err
+		}
+		if err := tx.update(ctx, stored.ID, rec); err != nil {
+			return err
+		}
+		return tx.reconcileEmbeddedData(ctx, stored.ID, stored.WorkspaceID, embeddedPatch{Variables: incoming.Variables, HiddenFields: incoming.HiddenFields})
 	})
 	if err != nil {
 		if errors.Is(err, errSlugTaken) {
