@@ -67,6 +67,21 @@ func TestCanonicalMapMatchesI18nUtils(t *testing.T) {
 	}
 }
 
+func TestCanonicalCodesMatchI18nUtils(t *testing.T) {
+	lines := block(t, readLines(t, "../../../packages/i18n-utils/src/canonical.ts"), "export const CANONICAL_LANGUAGE_CODES", "];")
+	if len(lines) != len(canonicalCodes) {
+		t.Fatalf("canonicalCodes has %d codes, i18n-utils %d", len(canonicalCodes), len(lines))
+	}
+	for _, l := range lines {
+		if code := strings.Trim(strings.TrimSpace(l), `",`); !IsCanonical(code) {
+			t.Errorf("%q is canonical in i18n-utils but not here", code)
+		}
+	}
+	if IsCanonical("de") || IsCanonical("de-de") {
+		t.Fatal("a legacy or miscased code passed as canonical")
+	}
+}
+
 func TestRuntimeLanguagesMatchI18nUtils(t *testing.T) {
 	lines := block(t, readLines(t, "../../../packages/i18n-utils/src/survey-runtime-languages.ts"), "export const SURVEY_RUNTIME_LANGUAGE_CODES", "] as const;")
 	var want []string
