@@ -94,7 +94,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 
 	sso := auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log))
 
-	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(sessions, nil, nil, log), log)
+	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(cfg, sessions, nil, nil, log), log)
 
 	r := httpserver.NewEngine(log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)

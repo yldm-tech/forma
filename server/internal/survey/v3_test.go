@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 )
 
@@ -417,4 +418,40 @@ func TestV3PatchRespectsAConcurrentArchive(t *testing.T) {
 	if name, wc := e.text(`SELECT name FROM surveys WHERE id = ?`, id), e.text(`SELECT welcome_card::text FROM surveys WHERE id = ?`, id); name != "Renamed" || !strings.Contains(wc, `"enabled": false`) {
 		t.Fatalf("name %q welcome card %s", name, wc)
 	}
+}
+
+// A session is an ambient credential: every session-authenticated v3 mutation must come from the app's origin with the X-Requested-With header, as on /api/app and the other v3 routes. An API key is exempt.
+func TestV3SessionMutationsPassTheCSRFRule(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	var created resource
+	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), linkSurvey(ws)), http.StatusCreated, &created)
+	id := created.Data["id"].(string)
+
+	crossSite := map[string]string{testUserHeader: owner.String(), "Origin": "https://evil.example.com"}
+	noHeader := map[string]string{testUserHeader: owner.String(), httpapi.CSRFHeader: ""}
+	for _, r := range []struct{ method, path, body string }{
+		{http.MethodPost, surveysPath(""), linkSurvey(ws)},
+		{http.MethodPost, surveysPath("/validate"), linkSurvey(ws)},
+		{http.MethodPatch, surveysPath("/" + id), `{"name": "Hijacked"}`},
+		{http.MethodPost, surveysPath("/" + id + "/archive"), ""},
+		{http.MethodPost, surveysPath("/" + id + "/restore"), ""},
+		{http.MethodDelete, surveysPath("/" + id), ""},
+		{http.MethodPost, surveysPath("/templates"), `{}`},
+	} {
+		var body any
+		if r.body != "" {
+			body = r.body
+		}
+		e.problem(e.request(r.method, r.path, body, crossSite), http.StatusForbidden, "Cross-origin request rejected")
+		e.problem(e.request(r.method, r.path, body, noHeader), http.StatusForbidden, "Missing X-Requested-With header")
+	}
+	if e.count(`SELECT count(*) FROM surveys WHERE id = ? AND name = 'Product Feedback' AND archived_at IS NULL`, id) != 1 || e.count(`SELECT count(*) FROM surveys WHERE workspace_id = ?`, ws) != 1 {
+		t.Fatal("a cross-site request changed a survey")
+	}
+	// A read needs no origin.
+	e.ok(e.request(http.MethodGet, surveysPath("/"+id), nil, crossSite), http.StatusOK, nil)
+	// An API key is not sent by a browser on its own.
+	e.ok(e.request(http.MethodPatch, surveysPath("/"+id), `{"name": "By key"}`, map[string]string{"x-api-key": e.apiKey(org, ws, "write"), "Origin": "", httpapi.CSRFHeader: ""}), http.StatusOK, nil)
 }

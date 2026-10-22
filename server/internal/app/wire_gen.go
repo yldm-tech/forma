@@ -131,7 +131,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, log)
-	guard := v3api.NewGuard(sessions, authenticator, limiter, log)
+	guard := v3api.NewGuard(cfg, sessions, authenticator, limiter, log)
 	surveyHandler := survey.NewHandler(surveyService, sessions, guard, log)
 	contactRepository := contact.NewRepository(db)
 	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)

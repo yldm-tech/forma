@@ -15,6 +15,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -189,15 +190,18 @@ type Guard struct {
 	sessions httpapi.SessionAuth
 	keys     *apikey.Authenticator
 	limiter  *ratelimit.Limiter
+	csrf     func(*http.Request) *apperr.Error
 	log      *slog.Logger
 }
 
-func NewGuard(sessions httpapi.SessionAuth, keys *apikey.Authenticator, limiter *ratelimit.Limiter, log *slog.Logger) *Guard {
-	return &Guard{sessions: sessions, keys: keys, limiter: limiter, log: log}
+func NewGuard(cfg config.Config, sessions httpapi.SessionAuth, keys *apikey.Authenticator, limiter *ratelimit.Limiter, log *slog.Logger) *Guard {
+	return &Guard{sessions: sessions, keys: keys, limiter: limiter, csrf: httpapi.CSRFCheck(cfg), log: log}
 }
 
-// authenticate resolves the caller, answering 401 when there is none, then charges the api:v3 limit to the user or key. It must follow the session middleware's Optional handler, which Handlers installs.
-func (g *Guard) authenticate(mode AuthMode) gin.HandlerFunc {
+// authenticate resolves the caller, answering 401 when there is none, then charges the rule's limit to the user or key. It must follow the session middleware's Optional handler, which Handlers installs.
+//
+// forma2's route handlers trusted the session cookie's SameSite attribute alone; a session-authenticated mutation here must also pass the /api/app CSRF rule (an allowed Origin and the X-Requested-With header the SPA always sends), as on the other v3 routes. API keys are not ambient credentials and are exempt.
+func (g *Guard) authenticate(mode AuthMode, rule ratelimit.Rule) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		var actor *authz.Actor
@@ -223,7 +227,13 @@ func (g *Guard) authenticate(mode AuthMode) gin.HandlerFunc {
 			WriteProblem(c, Unauthorized(detail))
 			return
 		}
-		if err := g.limiter.Apply(ctx, ratelimit.APIV3, actor.ID.String()); err != nil {
+		if actor.Type != authz.ActorAPIKey {
+			if e := g.csrf(c.Request); e != nil {
+				WriteProblem(c, Forbidden(e.Message))
+				return
+			}
+		}
+		if err := g.limiter.Apply(ctx, rule, actor.ID.String()); err != nil {
 			if e, ok := apperr.As(err); ok && e.Status == http.StatusTooManyRequests {
 				WriteProblem(c, TooManyRequests(e.Message, e.RetryAfter))
 				return
@@ -236,9 +246,30 @@ func (g *Guard) authenticate(mode AuthMode) gin.HandlerFunc {
 	}
 }
 
-// Handlers is the middleware chain of a v3 route group: the optional session, the authorization decision memo, then authentication and the rate limit.
+// Handlers is the middleware chain of a v3 route group: the renderer of the errors the session middleware records, the optional session, the authorization decision memo, then authentication, the CSRF rule and the api:v3 rate limit.
 func (g *Guard) Handlers(mode AuthMode) []gin.HandlerFunc {
-	return []gin.HandlerFunc{g.sessions.Optional(), authz.DecisionMemo(), g.authenticate(mode)}
+	return g.LimitedHandlers(mode, ratelimit.APIV3)
+}
+
+// LimitedHandlers is Handlers charging rule in place of api:v3, forma2's customRateLimitConfig.
+func (g *Guard) LimitedHandlers(mode AuthMode, rule ratelimit.Rule) []gin.HandlerFunc {
+	return []gin.HandlerFunc{g.renderErrors(), g.sessions.Optional(), authz.DecisionMemo(), g.authenticate(mode, rule)}
+}
+
+// renderErrors answers with a problem when a middleware recorded an error with httpapi.Fail and wrote nothing, as the session middleware does when the session cannot be read: an *apperr.Error with its status and message, anything else as a logged 500.
+func (g *Guard) renderErrors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		if len(c.Errors) == 0 || c.Writer.Written() {
+			return
+		}
+		err := c.Errors.Last().Err
+		if e, ok := apperr.As(err); ok && e.Status < http.StatusInternalServerError {
+			WriteProblem(c, &Problem{Status: e.Status, Title: http.StatusText(e.Status), Detail: e.Message, Code: e.Code, RetryAfter: e.RetryAfter})
+			return
+		}
+		Fail(c, g.log, err)
+	}
 }
 
 // RequireWorkspace is forma2's requireV3WorkspaceAccess: the caller must hold the action on the workspace; a missing workspace and a denial are the same 403, so existence does not leak. An authorization failure (SpiceDB unreachable) is returned as is.
