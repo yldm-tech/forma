@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
+	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
@@ -112,20 +113,25 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		t.Fatal(err)
 	}
 	linksurvey.NewHandler(cfg, nil, nil, web, log).Register(r)
+	clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log).Register(r)
 
 	want := map[string]bool{
-		"GET /s/:surveyId":                                         true,
-		"HEAD /s/:surveyId":                                        true,
-		"POST /s/:surveyId/pin":                                    true,
-		"POST /s/:surveyId/verify-email":                           true,
-		"GET /c/:token":                                            true,
-		"GET /p/:slug":                                             true,
-		"GET /api/v1/client/og":                                    true,
-		"OPTIONS /api/v1/client/og":                                true,
-		"POST /api/app/invites/accept":                             true,
-		"POST /api/app/invites/inspect":                            true,
-		"POST /api/app/invites/:inviteId/link":                     true,
-		"POST /api/app/organizations/:organizationId/invites/bulk": true,
+		"GET /s/:surveyId":                                                     true,
+		"HEAD /s/:surveyId":                                                    true,
+		"POST /s/:surveyId/pin":                                                true,
+		"POST /s/:surveyId/verify-email":                                       true,
+		"GET /c/:token":                                                        true,
+		"GET /p/:slug":                                                         true,
+		"GET /api/v1/client/og":                                                true,
+		"OPTIONS /api/v1/client/og":                                            true,
+		"GET /api/v1/client/:workspaceId/environment":                          true,
+		"POST /api/v2/client/:workspaceId/responses":                           true,
+		"PUT /api/v2/client/:workspaceId/responses/:responseId":                true,
+		"GET /api/v1/client/:workspaceId/displays/:displayId/response":         true,
+		"POST /api/app/invites/accept":                                         true,
+		"POST /api/app/invites/inspect":                                        true,
+		"POST /api/app/invites/:inviteId/link":                                 true,
+		"POST /api/app/organizations/:organizationId/invites/bulk":             true,
 		"POST /api/app/organizations/:organizationId/invites/:inviteId/resend": true,
 		"GET /api/app/organizations/:organizationId/teams":                     true,
 		"PUT /api/app/teams/:teamId":                                           true,

@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
@@ -152,6 +153,12 @@ var linkSurveySet = wire.NewSet(
 	linksurvey.NewHandler,
 )
 
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier.
+var clientAPISet = wire.NewSet(
+	clientapi.NewRecaptcha,
+	clientapi.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -172,6 +179,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		responseSet,
 		storageSet,
 		linkSurveySet,
+		clientAPISet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
