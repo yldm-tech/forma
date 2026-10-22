@@ -67,6 +67,12 @@ func (b *syncBuffer) Write(p []byte) (int, error) {
 	return b.buf.Write(p)
 }
 
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 // lines are the JSON log lines with the given message.
 func (b *syncBuffer) lines(t *testing.T, msg string) []map[string]any {
 	t.Helper()
@@ -556,5 +562,29 @@ func TestAvailabilityAndTranslationRoutes(t *testing.T) {
 	env := e.fails(e.do(owner, http.MethodPost, translate, body), http.StatusTooManyRequests, CodeQuotaExceeded)
 	if env.Details["retryAfter"] != float64(17) {
 		t.Fatalf("%+v", env)
+	}
+}
+
+// The operator's query parameters can carry an API key (AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON is a secret); a request that never reached the gateway fails with an error that does not name them, in the log or to the caller.
+func TestTransportFailureDoesNotLogQueryParameters(t *testing.T) {
+	e := newServiceEnv(t, func(c *config.AIConfig) { c.OpenAICompatibleQueryParamsJSON = `{"api-key": "sk-query-secret"}` })
+	org, _ := e.organization(e.user(), true)
+	e.provider.Close()
+	_, err := e.svc.GenerateText(t.Context(), org, "", Request{Prompt: "Hi"})
+	if err == nil || strings.Contains(err.Error(), "sk-query-secret") {
+		t.Fatalf("generation error %v", err)
+	}
+	out, err := e.svc.TranslateFields(t.Context(), org, fields(1), "en", "de")
+	if err == nil && len(out.FailedPaths) == 0 {
+		t.Fatalf("translation through an unreachable gateway succeeded: %+v", out)
+	}
+	if err != nil && strings.Contains(err.Error(), "sk-query-secret") {
+		t.Fatalf("translation error %v", err)
+	}
+	if len(e.logs.lines(t, "Failed to generate organization AI text")) != 1 || len(e.logs.lines(t, "AI translation chunk failed")) != 1 {
+		t.Fatalf("the failures were not logged: %s", e.logs.String())
+	}
+	if strings.Contains(e.logs.String(), "sk-query-secret") {
+		t.Fatalf("the log carries the query secret: %s", e.logs.String())
 	}
 }

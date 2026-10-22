@@ -214,7 +214,7 @@ func (c *Client) GenerateText(ctx context.Context, feature Feature, req Request)
 	model := c.Model(feature)
 	out, err := p.generate(ctx, req.call(model))
 	if err != nil {
-		return nil, err
+		return nil, redactRequestURL(err)
 	}
 	return &TextResult{Text: out.text, FinishReason: out.finishReason, Usage: out.usage, Model: model}, nil
 }
@@ -270,7 +270,7 @@ func (c *Client) object(ctx context.Context, feature Feature, req ObjectRequest,
 		})
 	}
 	if err != nil {
-		return nil, err
+		return nil, redactRequestURL(err)
 	}
 	if out.finishReason == FinishLength {
 		return nil, &OutputTokenLimitError{MaxOutputTokens: req.MaxOutputTokens, OutputTokens: out.usage.OutputTokens, ReasoningTokens: out.usage.ReasoningTokens}

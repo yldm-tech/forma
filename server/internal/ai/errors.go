@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -12,6 +13,22 @@ import (
 	"github.com/openai/openai-go/v3"
 	"google.golang.org/genai"
 )
+
+// redactRequestURL drops the query and credentials from the URL of a request that failed before an answer arrived. A provider SDK returns net/http's *url.Error unchanged for a connection, TLS, DNS or timeout failure, and its text names the request URL, whose query carries AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON (often a gateway's API key); every log line and error message that follows reads that text.
+func redactRequestURL(err error) error {
+	var urlErr *url.Error
+	if !errors.As(err, &urlErr) {
+		return err
+	}
+	u, parseErr := url.Parse(urlErr.URL)
+	if parseErr != nil {
+		urlErr.URL = ""
+		return err
+	}
+	u.User, u.RawQuery, u.ForceQuery, u.Fragment, u.RawFragment = nil, "", false, "", ""
+	urlErr.URL = u.String()
+	return err
+}
 
 // ConfigurationError is forma2's AIConfigurationError: the instance's AI configuration cannot serve a generation.
 type ConfigurationError struct {
