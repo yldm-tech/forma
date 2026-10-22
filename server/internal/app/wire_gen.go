@@ -29,6 +29,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
@@ -145,6 +146,15 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
 	auditor := v3api2.NewAuditor(cfg, emitter)
 	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	responseService := response.NewService(cfg, db, enqueuer, cipher, authorizer, limiter, emitter, log)
+	responseHandler := response.NewHandler(responseService, sessions)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -152,7 +162,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -227,3 +237,6 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
+
+// responseSet is response collection: the steps the client API drives, the response views' routes under /api/app, and the job enqueuer its writes share their transaction with.
+var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler)

@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/survey"
 )
 
@@ -20,5 +21,6 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
 	survey.RegisterJobs(reg, cfg, db, emitter, log)
+	response.RegisterJobs(reg, log)
 	return reg
 }
