@@ -1,0 +1,43 @@
+{
+  "case": "page-s-unknown-survey",
+  "description": "Survey page for an unknown id.",
+  "request": {
+    "method": "GET",
+    "path": "/s/clunknownsurveyaaaaaaaaa1",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "accept": "text/html,application/xhtml+xml"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors *",
+      "content-type": "text/html; charset=utf-8",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding"
+    },
+    "bodyFormat": "html-head",
+    "body": {
+      "title": "Forma",
+      "meta": [
+        {
+          "name": "viewport",
+          "content": "width=device-width, initial-scale=1, viewport-fit=contain"
+        },
+        {
+          "name": "robots",
+          "content": "noindex"
+        },
+        {
+          "name": "description",
+          "content": "Open-Source Survey Suite"
+        }
+      ],
+      "links": []
+    }
+  }
+}
