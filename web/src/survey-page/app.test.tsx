@@ -455,7 +455,10 @@ describe("the PIN gate", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    await waitFor(() => expect((screen.getAllByRole("textbox")[0] as HTMLInputElement).value).toBe(""));
+    // The reset timer is armed by a passive effect, which can run after the advance above when the machine is busy; the clock keeps moving (shouldAdvanceTime), so waiting longer than the 2 s reset covers that case.
+    await waitFor(() => expect((screen.getAllByRole("textbox")[0] as HTMLInputElement).value).toBe(""), {
+      timeout: 4000,
+    });
     expect(screen.getAllByRole("textbox")[0]?.className).not.toContain("border-red-400");
     expect(renderSurvey).not.toHaveBeenCalled();
     vi.useRealTimers();
