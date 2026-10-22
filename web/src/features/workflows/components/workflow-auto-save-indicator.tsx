@@ -30,15 +30,16 @@ export const WorkflowAutoSaveIndicator = () => {
   const isDirty = useAtomValue(isWorkflowDirtyAtom);
   const isSaving = useAtomValue(isWorkflowSavingAtom);
   const { isNameValid } = useAtomValue(workflowValidityAtom);
-  const [showSaved, setShowSaved] = useState(false);
+  // The save whose flash has run out; the flash shows while the last save is newer than it.
+  const [expiredSavedAt, setExpiredSavedAt] = useState<number | null>(null);
+  const showSaved = lastSavedAt !== null && lastSavedAt !== expiredSavedAt;
 
   // A dirty draft without a name is never sent, so it must not claim a save is on its way.
   const isBlocked = isDirty && !isNameValid;
 
   useEffect(() => {
     if (!lastSavedAt) return;
-    setShowSaved(true);
-    const timer = setTimeout(() => setShowSaved(false), SAVED_FLASH_MS);
+    const timer = setTimeout(() => setExpiredSavedAt(lastSavedAt), SAVED_FLASH_MS);
     return () => clearTimeout(timer);
   }, [lastSavedAt]);
 

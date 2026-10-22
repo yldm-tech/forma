@@ -108,16 +108,16 @@ export const useWorkflowBuilder = ({
   const draftSignature = useAtomValue(workflowDraftSignatureAtom);
   const setSaveError = useSetAtom(setWorkflowSaveErrorAtom);
 
-  const [isFetching, setIsFetching] = useState(loadOnMount);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // The workflow the last load settled for, and its error; a load is in flight until it names the current workflow.
+  const [settledLoad, setSettledLoad] = useState<{ workflowId: string; error: string | null } | null>(null);
+  const isFetching = loadOnMount && settledLoad?.workflowId !== workflowId;
+  const loadError = settledLoad?.workflowId === workflowId ? settledLoad.error : null;
   // Loading means nothing correct to render yet: remounting for the same workflow (the editor and runs tabs) keeps the editor on screen.
   const isLoading = isFetching && workflow?.id !== workflowId;
 
   useEffect(() => {
     if (!loadOnMount) return;
     const controller = new AbortController();
-    setIsFetching(true);
-    setLoadError(null);
 
     // Whether the editor already holds unsaved edits for this workflow; re-read at each use, since a draft can be saved or edited while the fetch is in flight.
     const holdsUnsavedDraft = () =>
@@ -129,10 +129,11 @@ export const useWorkflowBuilder = ({
         if (controller.signal.aborted) return;
         if (workspaceId && loadedWorkflow.workspaceId !== workspaceId) {
           const message = t("workspace.workflows.load_failed");
-          setLoadError(message);
+          setSettledLoad({ workflowId, error: message });
           toast.error(message);
           return;
         }
+        setSettledLoad({ workflowId, error: null });
         // Hydrating over an unsaved draft would destroy it and make it read clean; refresh only the server snapshot and let the autosave retry the draft.
         if (holdsUnsavedDraft()) {
           setWorkflow(loadedWorkflow);
@@ -147,12 +148,8 @@ export const useWorkflowBuilder = ({
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         const message = getWorkflowApiErrorMessage(error, t("workspace.workflows.load_failed"));
-        setLoadError(message);
+        setSettledLoad({ workflowId, error: message });
         toast.error(message);
-      })
-      .finally(() => {
-        if (controller.signal.aborted) return;
-        setIsFetching(false);
       });
 
     return () => controller.abort();
