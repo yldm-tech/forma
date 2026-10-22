@@ -45,6 +45,8 @@ import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteIm
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
 import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport } from './routes/_authenticated/setup/organization/$organizationId/invite'
+import { Route as AuthenticatedWorkspacesWorkspaceIdContactsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/contacts/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdContactsContactIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId/contacts/$contactId'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRouteImport } from './routes/_authenticated/workspaces/$workspaceId/integrations/app-connection'
 import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/index'
@@ -260,6 +262,18 @@ const AuthenticatedSetupOrganizationOrganizationIdInviteRoute =
     path: '/setup/organization/$organizationId/invite',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdContactsIndexRouteImport.update({
+    id: '/contacts/',
+    path: '/contacts/',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute =
+  AuthenticatedWorkspacesWorkspaceIdContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
 const AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute =
   AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRouteImport.update({
     id: '/integrations/',
@@ -370,8 +384,10 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
   '/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/contacts/': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
   '/workspaces/$workspaceId/integrations/': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute
   '/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
@@ -415,8 +431,10 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
   '/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/contacts': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
   '/workspaces/$workspaceId/integrations': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute
   '/workspaces/$workspaceId/settings': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
@@ -465,8 +483,10 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
+  '/_authenticated/workspaces/$workspaceId/contacts/$contactId': typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
   '/_authenticated/workspaces/$workspaceId/integrations/app-connection': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/_authenticated/workspaces/$workspaceId/contacts/': typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
   '/_authenticated/workspaces/$workspaceId/integrations/': typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute
   '/_authenticated/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   '/_authenticated/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
@@ -515,8 +535,10 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
+    | '/workspaces/$workspaceId/contacts/$contactId'
     | '/workspaces/$workspaceId/integrations/app-connection'
     | '/organizations/$organizationId/settings/'
+    | '/workspaces/$workspaceId/contacts/'
     | '/workspaces/$workspaceId/integrations/'
     | '/workspaces/$workspaceId/settings/'
     | '/workspaces/$workspaceId/settings/workspace/general'
@@ -560,8 +582,10 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
+    | '/workspaces/$workspaceId/contacts/$contactId'
     | '/workspaces/$workspaceId/integrations/app-connection'
     | '/organizations/$organizationId/settings'
+    | '/workspaces/$workspaceId/contacts'
     | '/workspaces/$workspaceId/integrations'
     | '/workspaces/$workspaceId/settings'
     | '/workspaces/$workspaceId/settings/workspace/general'
@@ -609,8 +633,10 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings/general'
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
+    | '/_authenticated/workspaces/$workspaceId/contacts/$contactId'
     | '/_authenticated/workspaces/$workspaceId/integrations/app-connection'
     | '/_authenticated/organizations/$organizationId/settings/'
+    | '/_authenticated/workspaces/$workspaceId/contacts/'
     | '/_authenticated/workspaces/$workspaceId/integrations/'
     | '/_authenticated/workspaces/$workspaceId/settings/'
     | '/_authenticated/workspaces/$workspaceId/settings/workspace/general'
@@ -887,6 +913,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/workspaces/$workspaceId/contacts/': {
+      id: '/_authenticated/workspaces/$workspaceId/contacts/'
+      path: '/contacts'
+      fullPath: '/workspaces/$workspaceId/contacts/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/contacts/$contactId': {
+      id: '/_authenticated/workspaces/$workspaceId/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/workspaces/$workspaceId/contacts/$contactId'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
     '/_authenticated/workspaces/$workspaceId/integrations/': {
       id: '/_authenticated/workspaces/$workspaceId/integrations/'
       path: '/integrations'
@@ -1025,7 +1065,9 @@ interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdTagsRoute: typeof AuthenticatedWorkspacesWorkspaceIdTagsRoute
   AuthenticatedWorkspacesWorkspaceIdUserActionsRoute: typeof AuthenticatedWorkspacesWorkspaceIdUserActionsRoute
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute
   AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute
+  AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
   AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
@@ -1046,8 +1088,12 @@ const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWo
       AuthenticatedWorkspacesWorkspaceIdUserActionsRoute,
     AuthenticatedWorkspacesWorkspaceIdIndexRoute:
       AuthenticatedWorkspacesWorkspaceIdIndexRoute,
+    AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute:
+      AuthenticatedWorkspacesWorkspaceIdContactsContactIdRoute,
     AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute:
       AuthenticatedWorkspacesWorkspaceIdIntegrationsAppConnectionRoute,
+    AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdContactsIndexRoute,
     AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute:
       AuthenticatedWorkspacesWorkspaceIdIntegrationsIndexRoute,
     AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute:
