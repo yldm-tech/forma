@@ -4,11 +4,12 @@ import { describe, expect, test } from "vite-plus/test";
 import { FollowUpsView } from "./follow-ups-view";
 
 describe("FollowUpsView", () => {
-  // The Workflows pages are not ported, so a link to them would open the not-found page.
-  test("links to no page this app does not have", () => {
+  test("links New workflow to the survey's workspace workflows and the deprecation notice to the docs", () => {
     const html = renderToStaticMarkup(
       <FollowUpsView
-        localSurvey={{ followUps: [] } as unknown as TSurvey}
+        localSurvey={
+          { followUps: [], workspaceId: "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f" } as unknown as TSurvey
+        }
         setLocalSurvey={() => {}}
         selectedLanguageCode="default"
         userEmail="me@example.com"
@@ -16,7 +17,7 @@ describe("FollowUpsView", () => {
         locale="en-US"
       />
     );
-    expect(html).not.toMatch(/href="\/workspaces\//);
+    expect(html).toContain('href="/workspaces/0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f/workflows"');
     expect(html).toContain('href="https://forma.yldm.ai/docs/workflows/overview"');
   });
 });
