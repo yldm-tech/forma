@@ -58,7 +58,7 @@ type v3Registrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, notificationHandler *notification.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
 	healthHandler.Register(r)
@@ -73,6 +73,8 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	surveyHandler.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, apiKeys, contactV3Handler)
 	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
+	// forma2's internal routes outside /api/v3 that follow its conventions without its contract: the attachment ZIP export.
+	mountInternalAPI(r, p, sessions, attachmentsHandler)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
 	// Stored files, at the URLs surveys, responses and emails embed: forma2's paths and answers, outside /api/app.
@@ -105,5 +107,13 @@ func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, handle
 	group := r.Group("/api/v3", v3api.ErrorHandler(p.Log), authz.DecisionMemo(), sessions.Optional())
 	for _, h := range handlers {
 		h.RegisterV3(group)
+	}
+}
+
+// mountInternalAPI mounts the /api routes forma2 kept under (internal): v3's problems and per-route authentication, no published contract.
+func mountInternalAPI(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, handlers ...routeRegistrar) {
+	group := r.Group("/api", v3api.ErrorHandler(p.Log), authz.DecisionMemo(), sessions.Optional())
+	for _, h := range handlers {
+		h.Register(group)
 	}
 }

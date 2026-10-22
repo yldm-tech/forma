@@ -137,13 +137,15 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
 var responseSet = wire.NewSet(
 	jobs.NewEnqueuer,
 	response.NewService,
 	response.NewHandler,
 	analysis.NewService,
 	analysis.NewHandler,
+	analysis.NewAttachmentExporter,
+	analysis.NewAttachmentsHandler,
 )
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.

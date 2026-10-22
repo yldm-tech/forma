@@ -80,6 +80,12 @@ type storedFile struct {
 	fileName  string
 }
 
+// ParseFileURL is forma2's parseStorageFileUrl for other modules: the storage id a stored file's URL names, its access type and its percent-encoded name with its directories; ok is false for a URL that is not a stored file's.
+func ParseFileURL(fileURL string) (storageID string, access AccessType, fileName string, ok bool) {
+	f, ok := parseFileURL(fileURL)
+	return f.storageID, f.access, f.fileName, ok
+}
+
 // parseFileURL is forma2's parseStorageFileUrl: a relative /storage/ URL or the path of an absolute one, without its query or fragment, split into the storage id, the access type and the rest.
 func parseFileURL(fileURL string) (storedFile, bool) {
 	path := fileURL

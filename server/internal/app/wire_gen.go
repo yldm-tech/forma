@@ -193,7 +193,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	webhookHandler := webhook.NewHandler(webhookService, sessions)
 	v1Handler := webhook.NewV1Handler(cfg, webhookService, authenticator, workspaceRepository, log)
 	notificationHandler := notification.NewHandler()
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, webuiHandler)
+	attachmentExporter := analysis.NewAttachmentExporter(db, storageService, workspaceRepository, log)
+	attachmentsHandler := analysis.NewAttachmentsHandler(analysisService, attachmentExporter, middleware, auditor, limiter, log)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -306,8 +308,8 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
-var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler)
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
 var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)
