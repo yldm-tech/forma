@@ -211,7 +211,16 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	delivery := authz.NewDelivery(db, client, log)
 	authzAudit := authz.NewAudit(db, client, log)
 	emitter := audit.New(cfg, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter)
+	bucket, err := storage.NewBucket(cfg, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	service := storage.NewService(bucket)
+	repository := workspace.NewRepository(db, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository)
 	worker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup3()

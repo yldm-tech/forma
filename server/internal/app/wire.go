@@ -201,6 +201,9 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewDelivery,
 		authz.NewAudit,
 		audit.New,
+		storage.NewBucket,
+		storage.NewService,
+		workspace.NewRepository,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)
