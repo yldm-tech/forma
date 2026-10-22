@@ -38,9 +38,12 @@ func TestJavaScriptNumberRules(t *testing.T) {
 	if jsRound(-2.5) != -2 || jsRound(2.5) != 3 || jsRound(0.49999999999999994) != 0 {
 		t.Error("jsRound does not round halves up")
 	}
-	for in, want := range map[string]float64{"7": 7, "-3": -3, "2.5": 2, "1e+21": 1, " 12px": 12} {
-		if got := parseIntJS(in); got != want {
-			t.Errorf("parseInt(%q) = %v, want %v", in, got, want)
+	for _, c := range []struct {
+		in   string
+		want float64
+	}{{"7", 7}, {"-3", -3}, {"2.5", 2}, {"1e+21", 1}, {"\t12px", 12}} {
+		if got := parseIntJS(c.in); got != c.want {
+			t.Errorf("parseInt(%q) = %v, want %v", c.in, got, c.want)
 		}
 	}
 	if !math.IsNaN(parseIntJS("NaN")) {

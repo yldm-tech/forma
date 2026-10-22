@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -236,7 +237,7 @@ type (
 	}
 )
 
-// Summary is forma2's getSurveySummaryAction: the survey's statistics over the responses matching the filter.
+// Summary is forma2's getSurveySummaryAction: the survey's statistics over the responses matching the filter. Responses, displays and quotas are read in one read-only snapshot, so the counts agree with each other.
 func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filter *response.Criteria) (*Summary, error) {
 	sv, err := s.readableSurvey(ctx, userID, surveyID, authz.SurveyResponseRead)
 	if err != nil {
@@ -247,14 +248,18 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 		return nil, err
 	}
 	agg := newSummarizer(sv)
-	if err := readSummaryResponses(ctx, s.db, surveyID, clause, agg.add); err != nil {
-		return nil, err
-	}
-	displays, err := displayCount(ctx, s.db, surveyID, filter, clause)
-	if err != nil {
-		return nil, err
-	}
-	quotas, err := quotaProgress(ctx, s.db, surveyID)
+	var displays int
+	var quotas []QuotaProgress
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := readSummaryResponses(ctx, tx, surveyID, clause, agg.add); err != nil {
+			return err
+		}
+		if displays, err = displayCount(ctx, tx, surveyID, filter, clause); err != nil {
+			return err
+		}
+		quotas, err = quotaProgress(ctx, tx, surveyID)
+		return err
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}

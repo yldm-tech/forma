@@ -41,7 +41,7 @@ var zoneNames = map[string]map[int]string{
 	"America/Grenada":                {-14400: "AST"},
 	"America/Guadeloupe":             {-14400: "AST"},
 	"America/Guatemala":              {-21600: "CST"},
-	"America/Guayaquil":              {-18000: "ECT"},
+	"America/Guayaquil":              {-18000: "ECT"}, //nolint:misspell // Ecuador Time, as ICU prints it
 	"America/Guyana":                 {-14400: "GYT"},
 	"America/Halifax":                {-14400: "AST", -10800: "ADT"},
 	"America/Indiana/Indianapolis":   {-18000: "EST", -14400: "EDT"},

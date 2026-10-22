@@ -161,13 +161,3 @@ func (sv *surveyDoc) languageCode(language *string) string {
 	}
 	return "default"
 }
-
-// elementByID is the first element with the id, as forma2's elements.find.
-func (sv *surveyDoc) elementByID(id string) *element {
-	for i := range sv.Elements {
-		if sv.Elements[i].ID == id {
-			return &sv.Elements[i]
-		}
-	}
-	return nil
-}
