@@ -78,7 +78,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	frozen := time.Now().Truncate(time.Minute)
 	limiter := ratelimit.New(cfg, cache, log).WithClock(func() time.Time { return frozen })
 	surveyRepo := survey.NewRepository(db)
-	surveys := survey.NewService(cfg, surveyRepo, nil, limiter, audit.New(cfg, log), nil, cipher, nil, log)
+	surveys := survey.NewService(cfg, surveyRepo, nil, limiter, audit.New(cfg, log), nil, cipher, nil, nil, log)
 	mail := &mailertest.Transport{}
 	m, err := mailer.NewWithTransport(cfg, mail, log)
 	if err != nil {

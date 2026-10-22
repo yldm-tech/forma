@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/analysis"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/apiv3"
@@ -58,7 +59,7 @@ type v3Registrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
 	healthHandler.Register(r)
@@ -68,7 +69,7 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	clientAPIHandler.Register(r)
 	// The webhook subscription API Zapier, Make, n8n and Activepieces call with an API key: forma2's paths and v1 envelope, outside /api/app.
 	webhookV1Handler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler, responseHandler, analysisHandler, webhookHandler)
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, webhookHandler)
 	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope. Its modules were built on three middleware stacks, each mounted on its own /api/v3 group: the survey module's guard, the contact module's group-wide authentication, and the per-route v3api middleware of action classes and tags.
 	surveyHandler.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, apiKeys, contactV3Handler)

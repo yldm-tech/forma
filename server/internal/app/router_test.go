@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
@@ -98,12 +99,12 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 
 	sso := auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log))
 
-	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(cfg, sessions, nil, nil, log), log)
+	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(cfg, sessions, nil, nil, log), nil, log)
 
 	r := httpserver.NewEngine(log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)
 	actionClasses, tags := actionclass.NewHandler(nil, sessions, v3), tag.NewHandler(nil, sessions, v3, nil)
-	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags)
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, sessions))
 	surveys.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, nil, contact.NewV3Handler(nil))
 	mountV3API(r, p, sessions, actionClasses, tags)
@@ -137,6 +138,11 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"PUT /api/app/teams/:teamId":                                           true,
 		"GET /api/app/workspaces/:workspaceId/teams":                           true,
 		"GET /api/app/workspaces/:workspaceId":                                 true,
+		"GET /api/app/workspaces/:workspaceId/ai":                              true,
+		"POST /api/app/workspaces/:workspaceId/ai/translations":                true,
+		"GET /api/app/organizations/:organizationId/ai":                        true,
+		"GET /api/app/surveys/:surveyId/ai/translation-availability":           true,
+		"POST /api/app/surveys/generate/stream":                                true,
 		"GET /api/app/organizations/:organizationId/workspaces":                true,
 		"GET /api/app/organizations/:organizationId/members":                   true,
 		"PATCH /api/app/organizations/:organizationId/api-keys/:apiKeyId":      true,

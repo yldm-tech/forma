@@ -11,6 +11,8 @@ interface TranslationRowProps {
   onChange: (path: string, value: string) => void;
   localSurvey: TSurvey;
   languageCode: string;
+  /** Set while AI is translating this row. */
+  disabled?: boolean;
 }
 
 const DefaultTextCell = ({
@@ -38,7 +40,14 @@ const DefaultTextCell = ({
   return <div className="text-sm text-slate-700">{text}</div>;
 };
 
-export const TranslationRow = ({ s, value, onChange, localSurvey, languageCode }: TranslationRowProps) => {
+export const TranslationRow = ({
+  s,
+  value,
+  onChange,
+  localSurvey,
+  languageCode,
+  disabled,
+}: TranslationRowProps) => {
   const { t } = useTranslation();
 
   const defaultText = s.value.default || "";
@@ -67,6 +76,7 @@ export const TranslationRow = ({ s, value, onChange, localSurvey, languageCode }
             localSurvey={localSurvey}
             languageCode={languageCode}
             elementId={s.elementId}
+            disabled={disabled}
           />
         ) : (
           <Input
@@ -74,6 +84,7 @@ export const TranslationRow = ({ s, value, onChange, localSurvey, languageCode }
             className="text-sm"
             value={value}
             onChange={(e) => onChange(s.path, e.target.value)}
+            disabled={disabled}
             placeholder=""
           />
         )}

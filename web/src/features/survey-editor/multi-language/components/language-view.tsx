@@ -1,4 +1,5 @@
 import { ArrowUpRight, EllipsisVerticalIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TLanguage as Language } from "@forma/types/workspace";
@@ -6,6 +7,7 @@ import { getLanguageLabel } from "@forma/i18n-utils/utils";
 import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { cn } from "../../../../lib/cn";
+import { surveyTranslationAIQuery } from "../../../ai/availability";
 import {
   addMultiLanguageLabels,
   extractLanguageCodes,
@@ -65,6 +67,8 @@ export const LanguageView = ({
 }: LanguageViewProps) => {
   const { t } = useTranslation();
   const { workspaceId } = localSurvey;
+  // forma2 asked once, on mount, whether the survey's organization may translate with AI.
+  const aiTranslation = useQuery(surveyTranslationAIQuery(localSurvey.id));
 
   const [isMultiLanguageActivated, setIsMultiLanguageActivated] = useState(localSurvey.languages.length > 0);
   const [confirmationModalInfo, setConfirmationModalInfo] = useState<ConfirmationModalInfo>({
@@ -537,6 +541,9 @@ export const LanguageView = ({
         defaultLanguageName={
           defaultLanguage ? (getLanguageLabel(defaultLanguage.code, locale) ?? defaultLanguage.code) : ""
         }
+        workspaceId={workspaceId}
+        isAIAvailable={aiTranslation.data?.available ?? false}
+        aiUnavailableReason={aiTranslation.data?.reason}
       />
     </div>
   );

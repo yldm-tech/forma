@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { PlusCircleIcon } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
@@ -35,6 +35,7 @@ import { accessFlags } from "../../lib/roles";
 import { forgetWorkspace } from "../../lib/storage";
 import { UTC_DEFAULT, ianaTimeZones, organizationSettingsChanges } from "../../lib/time-zones";
 import { toast } from "../../lib/toast";
+import { aiKeys, organizationAIQuery } from "../ai/availability";
 import { organizationNameError } from "../../lib/validation";
 
 /** forma2's organization general settings page. */
@@ -166,16 +167,23 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
 };
 
 /**
- * forma2's AISettingsToggle. This server has no AI provider, so enabling is refused as forma2 refused it on an unconfigured instance; an organization migrated with the tools on can still switch them off.
+ * forma2's AISettingsToggle: owners and managers switch AI smart tools on and off. AI needs a provider configured on the instance; without one the toggle reads off, cannot be used, and says why.
  */
 const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const { isOwnerOrManager: canEdit } = accessFlags(organization.membership.role);
   const update = useUpdateOrganization(organization.id);
   const queryClient = useQueryClient();
-  const enabled = organization.isAISmartToolsEnabled;
+  const ai = useQuery(organizationAIQuery(organization.id));
+  const isInstanceConfigured = ai.data?.isInstanceConfigured ?? false;
+  const enabled = isInstanceConfigured && organization.isAISmartToolsEnabled;
+  const blockedMessage = t("workspace.settings.general.ai_instance_not_configured");
 
   const toggle = async (checked: boolean) => {
+    if (checked && !isInstanceConfigured) {
+      toast.error(blockedMessage);
+      return;
+    }
     try {
       await update.mutateAsync({ isAISmartToolsEnabled: checked });
       toast.success(t("workspace.settings.general.ai_settings_updated_successfully"));
@@ -183,19 +191,22 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
       toast.error(errorMessage(t, error));
     }
     await queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organization.id) });
+    await queryClient.invalidateQueries({ queryKey: aiKeys.organization(organization.id) });
   };
 
   return (
     <div className="space-y-4 pb-4">
-      <Alert variant="warning" role="status">
-        <AlertDescription>{t("workspace.settings.general.ai_instance_not_configured")}</AlertDescription>
-      </Alert>
+      {ai.isSuccess && !isInstanceConfigured && (
+        <Alert variant="warning" role="status">
+          <AlertDescription>{blockedMessage}</AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center gap-x-4">
         <Switch
           id="ai-smart-tools-toggle"
           aria-labelledby="ai-smart-tools-title"
           checked={enabled}
-          disabled={!canEdit || !enabled || update.isPending}
+          disabled={!canEdit || !isInstanceConfigured || update.isPending}
           onCheckedChange={(checked) => void toggle(checked)}
         />
         <div>

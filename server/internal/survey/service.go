@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -62,13 +63,14 @@ type Service struct {
 	schedule  Schedule
 	cipher    *secret.Cipher
 	catalog   *Catalog
+	ai        *ai.Service
 	log       *slog.Logger
 	now       func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, docs *surveydoc.Validator, cipher *secret.Cipher, catalog *Catalog, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, docs *surveydoc.Validator, cipher *secret.Cipher, catalog *Catalog, aiService *ai.Service, log *slog.Logger) *Service {
 	return &Service{
-		cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, docs: docs, cipher: cipher, catalog: catalog, log: log, now: time.Now,
+		cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, docs: docs, cipher: cipher, catalog: catalog, ai: aiService, log: log, now: time.Now,
 		scheduler: NewScheduler(repo, emitter, log), schedule: NewSchedule(cfg),
 	}
 }

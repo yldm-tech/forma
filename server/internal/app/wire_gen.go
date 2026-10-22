@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/google/wire"
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/analysis"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
@@ -148,9 +149,12 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, log)
+	aiClient := ai.NewClient(cfg, log)
+	aiRepository := ai.NewRepository(db)
+	aiService := ai.NewService(aiClient, aiRepository, authorizer, log)
+	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, aiService, log)
 	guard := v3api.NewGuard(cfg, sessions, authenticator, limiter, log)
-	surveyHandler := survey.NewHandler(surveyService, sessions, guard, log)
+	surveyHandler := survey.NewHandler(surveyService, sessions, guard, limiter, log)
 	contactRepository := contact.NewRepository(db)
 	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)
 	contactHandler := contact.NewHandler(contactService, sessions)
@@ -174,6 +178,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
 	analysisHandler := analysis.NewHandler(analysisService, sessions)
+	aiHandler := ai.NewHandler(aiService, sessions)
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
@@ -195,7 +200,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	notificationHandler := notification.NewHandler()
 	attachmentExporter := analysis.NewAttachmentExporter(db, storageService, workspaceRepository, log)
 	attachmentsHandler := analysis.NewAttachmentsHandler(analysisService, attachmentExporter, middleware, auditor, limiter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, notificationHandler, attachmentsHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -298,6 +303,9 @@ var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewH
 
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
 var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
+
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewHandler)
 
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)

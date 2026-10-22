@@ -138,11 +138,14 @@ export const TemplateList = ({
   surveyType,
   defaultLanguage,
   search,
+  aiCard,
 }: {
   workspaceId: string;
   surveyType: "link" | "app";
   defaultLanguage: string;
   search: string;
+  /** The create-with-AI card, shown after "start from scratch" where the gallery is a workspace's first survey. */
+  aiCard?: ReactNode;
 }) => {
   const { t, i18n } = useTranslation();
   const catalog = useQuery(surveyTemplatesQuery(workspaceId, i18n.language));
@@ -207,6 +210,7 @@ export const TemplateList = ({
             <p className="text-left text-xs text-slate-600">{custom.description}</p>
           </TemplateCard>
         )}
+        {aiCard}
         {templates.map((template) => (
           <TemplateCard
             key={template.id}

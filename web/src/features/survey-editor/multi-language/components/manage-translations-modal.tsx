@@ -1,9 +1,17 @@
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, SparklesIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { cn } from "../../../../lib/cn";
+import { ApiError } from "../../../../lib/api";
+import { toast } from "../../../../lib/toast";
+import {
+  type AIUnavailableReason,
+  getAIUnavailableMessage,
+  getAIUnavailableMessageForErrorCode,
+  translateSurveyFields,
+} from "../../../ai/availability";
 import { Button } from "../../../../components/ui/button";
 import {
   Dialog,
@@ -25,6 +33,7 @@ import {
   getProgressTextColor,
   setTranslationAtPathMutable,
 } from "../lib/utils";
+import { TooltipRenderer } from "../../../../components/ui/tooltip";
 import { TranslationRow } from "./translation-row";
 
 interface ManageTranslationsModalProps {
@@ -35,6 +44,9 @@ interface ManageTranslationsModalProps {
   languageCode: string;
   languageName: string;
   defaultLanguageName: string;
+  workspaceId: string;
+  isAIAvailable: boolean;
+  aiUnavailableReason?: AIUnavailableReason;
 }
 
 export const ManageTranslationsModal = ({
@@ -45,6 +57,9 @@ export const ManageTranslationsModal = ({
   languageCode,
   languageName,
   defaultLanguageName,
+  workspaceId,
+  isAIAvailable,
+  aiUnavailableReason,
 }: ManageTranslationsModalProps) => {
   const { t } = useTranslation();
 
@@ -52,6 +67,8 @@ export const ManageTranslationsModal = ({
 
   const [draftTranslations, setDraftTranslations] = useState<Record<string, string>>({});
   const [missingFirst, setMissingFirst] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatingPaths, setTranslatingPaths] = useState<Set<string>>(new Set());
 
   // Initialize drafts when modal opens
   useEffect(() => {
@@ -114,6 +131,57 @@ export const ManageTranslationsModal = ({
     setDraftTranslations((prev) => ({ ...prev, [path]: value }));
   }, []);
 
+  // forma2's AI translation: only the fields still empty here whose default text is not.
+  const emptyFields = useMemo(
+    () => strings.filter((s) => isDraftEmpty(s) && (s.value.default || "").trim() !== ""),
+    [isDraftEmpty, strings]
+  );
+
+  const aiErrorMessage = (errorCode: string): string => {
+    const unavailable = getAIUnavailableMessageForErrorCode(errorCode, t);
+    if (unavailable) return unavailable;
+    if (errorCode === "ai_quota_exceeded") return t("workspace.surveys.edit.ai_translation_quota_exceeded");
+    return t("workspace.surveys.edit.ai_translation_failed");
+  };
+
+  const handleTranslateWithAI = async () => {
+    if (emptyFields.length === 0) return;
+    setIsTranslating(true);
+    setTranslatingPaths(new Set(emptyFields.map((s) => s.path)));
+    const toastId = toast.loading(t("workspace.surveys.edit.ai_translating"));
+    try {
+      const result = await translateSurveyFields(workspaceId, {
+        fields: emptyFields.map((s) => ({
+          path: s.path,
+          defaultText: s.value.default || "",
+          isRichText: s.isRichText,
+        })),
+        // The names the editor shows, which is what the model is told to translate between.
+        sourceLanguage: defaultLanguageName,
+        targetLanguage: languageName,
+      });
+      setDraftTranslations((prev) => ({ ...prev, ...result.translations }));
+      toast.success(t("workspace.surveys.edit.ai_translation_complete"), { id: toastId });
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? aiErrorMessage(error.code)
+          : t("workspace.surveys.edit.ai_translation_failed"),
+        {
+          id: toastId,
+        }
+      );
+    } finally {
+      setIsTranslating(false);
+      setTranslatingPaths(new Set());
+    }
+  };
+
+  let aiTooltip: string | undefined;
+  if (!isAIAvailable && !isTranslating) aiTooltip = getAIUnavailableMessage(aiUnavailableReason, t);
+  else if (emptyFields.length === 0 && !isTranslating)
+    aiTooltip = t("workspace.surveys.edit.ai_translation_all_fields_populated");
+
   const handleSave = () => {
     const updatedSurvey = structuredClone(localSurvey);
     for (const s of strings) {
@@ -157,6 +225,17 @@ export const ManageTranslationsModal = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <TooltipRenderer tooltipContent={aiTooltip} shouldRender={aiTooltip !== undefined}>
+              <Button
+                size="sm"
+                className="text-xs"
+                onClick={() => void handleTranslateWithAI()}
+                disabled={!isAIAvailable || isTranslating || emptyFields.length === 0}
+                loading={isTranslating}>
+                <SparklesIcon className="size-3.5" />
+                {t("workspace.surveys.edit.ai_translate")}
+              </Button>
+            </TooltipRenderer>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="sm" className="text-xs">
@@ -201,6 +280,7 @@ export const ManageTranslationsModal = ({
                 onChange={handleDraftChange}
                 localSurvey={mergedSurvey}
                 languageCode={languageCode}
+                disabled={translatingPaths.has(s.path)}
               />
             ))}
           </tbody>

@@ -1,13 +1,17 @@
 package survey
 
 import (
+	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 )
@@ -17,11 +21,12 @@ type Handler struct {
 	svc      *Service
 	sessions httpapi.SessionAuth
 	guard    *v3api.Guard
+	limiter  *ratelimit.Limiter
 	log      *slog.Logger
 }
 
-func NewHandler(svc *Service, sessions httpapi.SessionAuth, guard *v3api.Guard, log *slog.Logger) *Handler {
-	return &Handler{svc: svc, sessions: sessions, guard: guard, log: log}
+func NewHandler(svc *Service, sessions httpapi.SessionAuth, guard *v3api.Guard, limiter *ratelimit.Limiter, log *slog.Logger) *Handler {
+	return &Handler{svc: svc, sessions: sessions, guard: guard, limiter: limiter, log: log}
 }
 
 // Register mounts the /api/app routes on the group that already applies the error envelope and the CSRF check.
@@ -42,6 +47,8 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/quotas/:quotaId/response-count", h.quotaResponseCount)
 	g.GET("/workspaces/:workspaceId/survey-templates", h.templates)
 	g.GET("/public-domain", h.publicDomain)
+	// The create-with-AI dialog's streamed generation spends from the same per-user bucket as POST /api/v3/surveys/generate.
+	g.POST("/surveys/generate/stream", ratelimit.Middleware(h.limiter, ratelimit.APIV3SurveyGenerate, ratelimit.ByUser), h.generateStream)
 }
 
 // RegisterV3 mounts /api/v3/surveys on the engine.
@@ -60,6 +67,61 @@ func (h *Handler) RegisterV3(r gin.IRouter) {
 	// forma2 charged AI generation to its own limit in place of api:v3.
 	generate := r.Group("/api/v3/surveys/generate", h.guard.LimitedHandlers(v3api.SessionOrAPIKey, ratelimit.APIV3SurveyGenerate)...)
 	generate.POST("", h.v3Generate)
+}
+
+// appError is a v3 problem as the /api/app envelope: its status, code and detail, with the offending params under details.
+func appError(err error) error {
+	var p *v3api.Problem
+	if !errors.As(err, &p) {
+		return err
+	}
+	e := &apperr.Error{Status: p.Status, Code: p.Code, Message: p.Detail, RetryAfter: p.RetryAfter}
+	if len(p.InvalidParams) > 0 {
+		e.Details = map[string]any{"invalid_params": p.InvalidParams}
+	}
+	return e
+}
+
+// generateStream answers every refusal with the error envelope before the stream opens, then streams the generation as NDJSON, flushing each event.
+func (h *Handler) generateStream(c *gin.Context) {
+	body, err := v3api.ReadJSON(c)
+	if err != nil {
+		httpapi.Fail(c, appError(err))
+		return
+	}
+	value, err := decodeValue(body)
+	if err != nil {
+		httpapi.Fail(c, apperr.BadRequest("Malformed JSON input, please check your request body"))
+		return
+	}
+	in, err := ParseGenerate(value)
+	if err != nil {
+		httpapi.Fail(c, appError(err))
+		return
+	}
+	ctx := c.Request.Context()
+	stream, err := h.svc.StartGenerationStream(ctx, sessionCaller(c), in)
+	if err != nil {
+		httpapi.Fail(c, appError(err))
+		return
+	}
+	c.Header("Content-Type", GenerationStreamContentType)
+	// no-transform forbids an intermediary from coalescing the body; X-Accel-Buffering keeps nginx from holding it.
+	c.Header("Cache-Control", "no-cache, no-store, no-transform")
+	c.Header("X-Accel-Buffering", "no")
+	c.Status(http.StatusOK)
+	c.Writer.Flush()
+	enc := json.NewEncoder(c.Writer)
+	enc.SetEscapeHTML(false)
+	stream.Run(ctx, httpserver.RequestID(c), func(event any) {
+		if ctx.Err() != nil {
+			return
+		}
+		if err := enc.Encode(event); err != nil {
+			return
+		}
+		c.Writer.Flush()
+	})
 }
 
 func sessionCaller(c *gin.Context) Caller {
@@ -500,5 +562,10 @@ func (h *Handler) v3Generate(c *gin.Context) {
 		h.fail(c, err)
 		return
 	}
-	h.fail(c, h.svc.GenerateV3(c.Request.Context(), v3Caller(c), in))
+	out, err := h.svc.GenerateV3(c.Request.Context(), v3Caller(c), in)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	v3api.OK(c, out)
 }

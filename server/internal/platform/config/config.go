@@ -129,6 +129,9 @@ type Config struct {
 	// S3 is the object store uploaded files live in.
 	S3 S3Config
 
+	// AI is the instance's AI provider, forma2's AI_* variables.
+	AI AIConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -336,6 +339,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.S3.validate(); err != nil {
+		return err
+	}
+	if err := c.AI.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {
