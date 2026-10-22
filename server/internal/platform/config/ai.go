@@ -46,8 +46,9 @@ type AIConfig struct {
 	AzureAPIVersion   string `env:"AI_AZURE_API_VERSION"`
 
 	// An OpenAI-compatible chat completions endpoint (vLLM, ...). SupportsStructuredOutputs is forma2's flag, on for "true" or "1" in any case.
-	OpenAICompatibleBaseURL                   string `env:"AI_OPENAI_COMPATIBLE_BASE_URL"`
-	OpenAICompatibleAPIKey                    Secret `env:"AI_OPENAI_COMPATIBLE_API_KEY"`
+	OpenAICompatibleBaseURL string `env:"AI_OPENAI_COMPATIBLE_BASE_URL"`
+	OpenAICompatibleAPIKey  Secret `env:"AI_OPENAI_COMPATIBLE_API_KEY"`
+	// OpenAICompatibleProviderName is read so an instance that set it keeps starting; it only named the AI SDK's provider options and changes nothing on the wire.
 	OpenAICompatibleProviderName              string `env:"AI_OPENAI_COMPATIBLE_PROVIDER_NAME"`
 	OpenAICompatibleSupportsStructuredOutputs string `env:"AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS"`
 	OpenAICompatibleHeadersJSON               Secret `env:"AI_OPENAI_COMPATIBLE_HEADERS_JSON"`
