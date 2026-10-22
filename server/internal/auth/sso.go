@@ -451,11 +451,11 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 
 // callbackInvited is forma2's validateSsoInviteToken as gateSsoProvisioning used it for the domain exemption: the callback URL (already validated, absolute) carries an invite link in its token parameter, as the invite page's sign-in does, and the link is live and issued to this address.
 func (s *SSO) callbackInvited(ctx context.Context, callbackURL, email string) (bool, error) {
-	u, err := url.Parse(callbackURL)
-	if err != nil {
-		return false, nil
+	token := ""
+	// An unparsable URL carries no invite.
+	if u, err := url.Parse(callbackURL); err == nil {
+		token = u.Query().Get("token")
 	}
-	token := u.Query().Get("token")
 	if token == "" {
 		return false, nil
 	}
