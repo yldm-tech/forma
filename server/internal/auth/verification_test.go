@@ -222,7 +222,7 @@ func TestResendRenewsTheIntent(t *testing.T) {
 func TestVerificationRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+	e.inOneWindow(func(_ int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		send := func() response {
@@ -233,7 +233,7 @@ func TestVerificationRateLimits(t *testing.T) {
 		}
 		return statusErr(send(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
 	})
-	e.inOneWindow(time.Minute, func(run int, _ string) error {
+	e.inOneWindow(func(run int, _ string) error {
 		b := e.browser()
 		b.ip = fmt.Sprintf("192.0.2.%d", 10+run)
 		send := func() response { return b.post("/auth/verification/verify", map[string]string{"token": "unknown"}) }

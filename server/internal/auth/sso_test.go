@@ -939,7 +939,7 @@ func TestSSORecoveryRefusals(t *testing.T) {
 		t.Parallel()
 		e, _, _ := start(t)
 		e.enableRateLimits()
-		e.inOneWindow(time.Minute, func(run int, ip string) error {
+		e.inOneWindow(func(run int, ip string) error {
 			b := e.browser()
 			b.ip = ip
 			send := func() response {

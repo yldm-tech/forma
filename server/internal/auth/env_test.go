@@ -240,27 +240,20 @@ func (e *env) breach(password string) {
 	e.breached[sha1Hex(password)] = true
 }
 
-// enableRateLimits turns the limiter on, against this env's Valkey.
+// enableRateLimits turns the limiter on, against this env's Valkey, with its clock frozen: windows are aligned to the wall clock, and a scenario that straddles a boundary on a busy machine would see its count split across two windows.
 func (e *env) enableRateLimits() {
 	cfg := e.cfg
 	cfg.RateLimitingDisabled = false
-	e.svc.limiter = ratelimit.New(cfg, e.rdb, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	frozen := time.Now()
+	e.svc.limiter = ratelimit.New(cfg, e.rdb, slog.New(slog.NewTextHandler(io.Discard, nil))).WithClock(func() time.Time { return frozen })
 }
 
-// inOneWindow runs a rate-limit scenario until one run starts and ends inside the same window of the given length, so a window boundary cannot split the count; a run under the race detector can take tens of seconds. Each run gets its own number and client address, so whatever an interrupted run counted does not carry over. The scenario reports a failed expectation as an error.
-func (e *env) inOneWindow(window time.Duration, scenario func(run int, ip string) error) {
+// inOneWindow runs a rate-limit scenario once; enableRateLimits froze the limiter's clock, so every request lands in the same window however long the run takes. The scenario reports a failed expectation as an error.
+func (e *env) inOneWindow(scenario func(run int, ip string) error) {
 	e.t.Helper()
-	for run := 0; run < 3; run++ {
-		start := time.Now().Truncate(window)
-		err := scenario(run, fmt.Sprintf("198.51.100.%d", 10+run))
-		if time.Now().Truncate(window).Equal(start) {
-			if err != nil {
-				e.t.Fatal(err)
-			}
-			return
-		}
+	if err := scenario(0, "198.51.100.10"); err != nil {
+		e.t.Fatal(err)
 	}
-	e.t.Fatalf("no run fit in one %v window", window)
 }
 
 // statusErr reports a response that does not have the status and, when given, the error code.

@@ -169,7 +169,7 @@ func TestDeleteAccountRateLimits(t *testing.T) {
 	signedIn := e.browser()
 	signedIn.signIn("ada@example.com", strongPassword)
 	e.enableRateLimits()
-	e.inOneWindow(time.Hour, func(run int, ip string) error {
+	e.inOneWindow(func(run int, ip string) error {
 		sso := e.sessionFor(e.seedUser(fmt.Sprintf("sso%d@example.com", run), "", userOpts{noPassword: true, sso: true}))
 		b := e.browser()
 		b.ip = ip

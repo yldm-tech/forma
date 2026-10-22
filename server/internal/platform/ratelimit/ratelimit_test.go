@@ -348,3 +348,23 @@ func TestMiddleware(t *testing.T) {
 		t.Fatalf("ByUser without a session: %d, want 401", rec.Code)
 	}
 }
+
+func TestWithClockReadsTheGivenTimeAndLeavesTheOriginalAlone(t *testing.T) {
+	original := newLimiter(nil, fixedNow)
+	later := original.WithClock(func() time.Time { return time.Unix(windowBase+60, 0) })
+
+	w, err := later.window(perMinute, "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.key != "fb:rate_limit:test:minute:id:1699999260" {
+		t.Fatalf("copy uses window %q, want the one its clock is in", w.key)
+	}
+	w, err = original.window(perMinute, "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.key != "fb:rate_limit:test:minute:id:1699999200" {
+		t.Fatalf("original moved to window %q; WithClock must not mutate it", w.key)
+	}
+}

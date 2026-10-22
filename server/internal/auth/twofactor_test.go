@@ -400,7 +400,7 @@ func TestTwoFactorRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
 	e.enableRateLimits()
-	e.inOneWindow(time.Minute, func(run int, ip string) error {
+	e.inOneWindow(func(run int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		send := func() response { return verifyTOTP(b, "000000") }
@@ -412,7 +412,7 @@ func TestTwoFactorRateLimits(t *testing.T) {
 		}
 		return statusErr(verifyBackup(b, "aaaaa-bbbbb"), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
 	})
-	e.inOneWindow(time.Minute, func(run int, ip string) error {
+	e.inOneWindow(func(run int, ip string) error {
 		b := e.sessionFor(e.seedUser(fmt.Sprintf("u%d@example.com", run), strongPassword, userOpts{}))
 		b.ip = ip
 		send := func() response {

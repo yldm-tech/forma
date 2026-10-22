@@ -472,7 +472,7 @@ func TestSignupRateLimit(t *testing.T) {
 	e := newEnv(t)
 	e.seedUser("admin@example.com", strongPassword, userOpts{})
 	e.enableRateLimits()
-	e.inOneWindow(time.Hour, func(run int, ip string) error {
+	e.inOneWindow(func(run int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		send := func() response { return b.post("/auth/signup", signupBody("x@example.com")) }

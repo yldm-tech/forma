@@ -78,7 +78,7 @@ func TestPasswordResetDisabled(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.PasswordResetDisabled = true })
 	e.enableRateLimits()
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
-	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+	e.inOneWindow(func(_ int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		send := func() response { return forgot(b, "ada@example.com") }
@@ -176,7 +176,7 @@ func TestResetPasswordTokenExpiresAndValidates(t *testing.T) {
 func TestPasswordResetRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	e.inOneWindow(time.Hour, func(_ int, ip string) error {
+	e.inOneWindow(func(_ int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		request := func() response { return forgot(b, "nobody@example.com") }
@@ -242,7 +242,7 @@ func TestChangePasswordRateLimit(t *testing.T) {
 	signedIn := e.browser()
 	signedIn.signIn("ada@example.com", strongPassword)
 	e.enableRateLimits()
-	e.inOneWindow(time.Minute, func(_ int, ip string) error {
+	e.inOneWindow(func(_ int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		b.cookies = signedIn.cookies

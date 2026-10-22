@@ -77,6 +77,13 @@ func New(cfg config.Config, rdb *redis.Client, log *slog.Logger) *Limiter {
 	return &Limiter{rdb: rdb, disabled: cfg.RateLimitingDisabled, log: log, now: time.Now}
 }
 
+// WithClock returns a copy of the limiter that reads the time from now. Windows are aligned to the wall clock, so tests freeze it to keep a scenario from straddling a window boundary on a busy machine.
+func (l *Limiter) WithClock(now func() time.Time) *Limiter {
+	c := *l
+	c.now = now
+	return &c
+}
+
 type window struct {
 	key        string
 	ttlSeconds int64

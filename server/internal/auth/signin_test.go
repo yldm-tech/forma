@@ -217,7 +217,7 @@ func TestFailureThrottle(t *testing.T) {
 func TestSignInRateLimit(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	e.inOneWindow(time.Minute, func(_ int, ip string) error {
+	e.inOneWindow(func(_ int, ip string) error {
 		b := e.browser()
 		b.ip = ip
 		send := func() response { return b.post("/auth/sign-in", credentials("ada@example.com", "Wrong-Password-1")) }

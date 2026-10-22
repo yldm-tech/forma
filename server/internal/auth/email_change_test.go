@@ -228,7 +228,7 @@ func TestEmailChangeToATakenAddress(t *testing.T) {
 func TestEmailChangeRateLimits(t *testing.T) {
 	e := newEnv(t)
 	e.enableRateLimits()
-	e.inOneWindow(time.Hour, func(run int, ip string) error {
+	e.inOneWindow(func(run int, ip string) error {
 		email := fmt.Sprintf("ada%d@example.com", run)
 		sess := e.sessionFor(e.seedUser(email, strongPassword, userOpts{}))
 		sess.ip = ip
