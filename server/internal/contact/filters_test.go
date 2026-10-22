@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -23,12 +24,12 @@ func interactionLeaf(operator, scope string, ids []string, amount int, unit stri
 	return map[string]any{"id": "interaction", "root": map[string]any{"type": "surveyInteraction"}, "value": map[string]any{"surveyScope": scope, "surveyIds": ids, "within": map[string]any{"amount": amount, "unit": unit}}, "qualifier": map[string]any{"operator": operator}}
 }
 
-var nodeIDs int
+// nodeIDs numbers tree entries across the package's parallel tests.
+var nodeIDs atomic.Int64
 
 // node is a tree entry with a fresh id, which must be a cuid2-shaped string.
 func node(connector any, resource any) map[string]any {
-	nodeIDs++
-	return map[string]any{"id": fmt.Sprintf("node%d", nodeIDs), "connector": connector, "resource": resource}
+	return map[string]any{"id": fmt.Sprintf("node%d", nodeIDs.Add(1)), "connector": connector, "resource": resource}
 }
 
 func tree(nodes ...map[string]any) []map[string]any {
