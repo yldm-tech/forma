@@ -14,9 +14,9 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
 import { toast } from "../../../lib/toast";
-import type { TWorkflowResource } from "../api";
+import { type TWorkflowResource, workflowKeys } from "../api";
 import type { TWorkflowDefinition } from "../definition";
-import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
+import { WORKFLOW_AUTOSAVE_DELAY_MS, useWorkflowBuilder } from "../hooks/use-workflow-builder";
 import { WorkflowHeaderCta } from "./workflow-header-cta";
 import { WorkflowPageTitle } from "./workflow-page-title";
 
@@ -29,6 +29,13 @@ let i18n: I18n;
 
 beforeAll(async () => {
   i18n = await initI18n("en-US");
+  // jsdom has the <dialog> element but not its modal methods, which the delete dialog opens with.
+  HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+    this.open = false;
+  };
   // Radix's popper measures its anchor; jsdom has no layout to observe.
   vi.stubGlobal(
     "ResizeObserver",
@@ -47,6 +54,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const executableDefinition: TWorkflowDefinition = {
@@ -142,6 +150,9 @@ const stubWorkflowsApi = (initial: TWorkflowResource, { patchStatus }: { patchSt
         workflow = { ...workflow, status: "enabled" };
         return ok(workflow);
       }
+      if (method === "DELETE" && path === `/api/v3/workflows/${WORKFLOW_ID}`) {
+        return new Response(null, { status: 204 });
+      }
       throw new Error(`unexpected ${method} ${path}`);
     })
   );
@@ -178,6 +189,8 @@ const renderBuilder = () => {
     history: createMemoryHistory({ initialEntries: [BUILDER_PATH] }),
   });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The workflows list as the list page left it in the cache, fresh for the SPA's staleTime.
+  queryClient.setQueryData(WORKFLOW_LIST_KEY, { pages: [], pageParams: [] });
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
@@ -187,7 +200,10 @@ const renderBuilder = () => {
       </QueryClientProvider>
     </I18nextProvider>
   );
+  return queryClient;
 };
+
+const WORKFLOW_LIST_KEY = workflowKeys.list({ workspaceId: WORKSPACE_ID, limit: 20, nameContains: "" });
 
 const openStatusMenu = async (statusLabel: string) => {
   const trigger = await screen.findByRole("button", { name: statusLabel });
@@ -247,6 +263,8 @@ describe("workflow builder save and publish", () => {
   });
 
   test("publishing is refused, without an enable request, when the unsaved edits cannot be saved", async () => {
+    // Fake timers that still advance on their own, so the UI settles as usual while the test can jump past the autosave's debounce.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const requests = stubWorkflowsApi(workflowResource(executableDefinition), { patchStatus: 400 });
     renderBuilder();
 
@@ -261,10 +279,11 @@ describe("workflow builder save and publish", () => {
       )
     );
     expect(requests.some((request) => request.path.endsWith("/enable"))).toBe(false);
-    // The refused draft is reported by the pill and not sent again by the autosave.
+    // The refused draft is reported by the pill and not sent again by the autosave, even once its debounce has passed.
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toContain(i18n.t("workspace.workflows.autosave_failed"))
     );
+    await vi.advanceTimersByTimeAsync(WORKFLOW_AUTOSAVE_DELAY_MS * 2);
     expect(requests.filter((request) => request.method === "PATCH")).toHaveLength(1);
   });
 
@@ -294,5 +313,49 @@ describe("workflow builder save and publish", () => {
       expect(toastMessages()).toContain(`error: ${i18n.t("workspace.workflows.name_required")}`)
     );
     expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+});
+
+describe("workflow builder and the workflows list", () => {
+  const listIsStale = (queryClient: QueryClient) =>
+    queryClient.getQueryState(WORKFLOW_LIST_KEY)?.isInvalidated;
+
+  test("a saved rename marks the cached list stale, so it shows the new name", async () => {
+    const requests = stubWorkflowsApi(workflowResource(executableDefinition));
+    const queryClient = renderBuilder();
+
+    const title = await screen.findByRole("textbox", { name: i18n.t("common.workflow_name") });
+    fireEvent.change(title, { target: { value: "Welcome flow" } });
+    await waitFor(() => expect(requests.some((request) => request.method === "PATCH")).toBe(true), {
+      timeout: 5000,
+    });
+    await waitFor(() => expect(listIsStale(queryClient)).toBe(true));
+  });
+
+  test("a lifecycle transition marks the cached list stale, so it shows the new status", async () => {
+    const requests = stubWorkflowsApi(workflowResource(executableDefinition));
+    const queryClient = renderBuilder();
+
+    await openStatusMenu(i18n.t("common.draft"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: i18n.t("common.enable") }));
+    await waitFor(() =>
+      expect(toastMessages()).toContain(`success: ${i18n.t("workspace.workflows.enable_success")}`)
+    );
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+    await waitFor(() => expect(listIsStale(queryClient)).toBe(true));
+  });
+
+  test("deleting from the header marks the cached list stale before it is shown again", async () => {
+    const requests = stubWorkflowsApi({ ...workflowResource(executableDefinition), status: "archived" });
+    const queryClient = renderBuilder();
+
+    await openStatusMenu(i18n.t("common.archived"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: i18n.t("common.delete") }));
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("common.delete") }));
+    await waitFor(() =>
+      expect(toastMessages()).toContain(`success: ${i18n.t("workspace.workflows.delete_success")}`)
+    );
+    expect(requests.some((request) => request.method === "DELETE")).toBe(true);
+    expect(listIsStale(queryClient)).toBe(true);
   });
 });

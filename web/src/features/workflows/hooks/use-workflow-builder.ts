@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +10,7 @@ import {
   type TWorkflowResource,
   classifyWorkflowSaveError,
   getWorkflowApiErrorMessage,
+  workflowKeys,
   workflowsApi,
 } from "../api";
 import { type TWorkflowDefinition, ZWorkflowDefinition } from "../definition";
@@ -93,6 +95,7 @@ export const useWorkflowBuilder = ({
 }: UseWorkflowBuilderArgs) => {
   const { t } = useTranslation();
   const store = useStore();
+  const queryClient = useQueryClient();
   const workflow = useAtomValue(workflowAtom);
   const definition = useAtomValue(workflowDefinitionAtom);
   const isDirty = useAtomValue(isWorkflowDirtyAtom);
@@ -193,6 +196,8 @@ export const useWorkflowBuilder = ({
       try {
         const savedWorkflow = await workflowsApi.update(currentWorkflow.id, patch);
         setWorkflow(savedWorkflow);
+        // The list shows the name; the unmount flush can land after the list has already refetched, so it is marked stale whenever a save lands.
+        void queryClient.invalidateQueries({ queryKey: workflowKeys.lists() });
         // The editor state as sent, not the parsed payload: zod's normalization would make the snapshot never equal the state it came from, leaving the editor permanently dirty.
         markDraftSaved({
           workflowName: trimmedName,
@@ -214,7 +219,7 @@ export const useWorkflowBuilder = ({
         setIsSaving(false);
       }
     },
-    [store, setWorkflow, markDraftSaved, setIsSaving, setSaveError, t]
+    [store, queryClient, setWorkflow, markDraftSaved, setIsSaving, setSaveError, t]
   );
 
   // Autosave: the page-level instance persists a dirty draft shortly after the user stops editing. The draft signature in the dependencies resets the timer on each edit, and isSaving re-arms it when edits piled up during a save.
@@ -330,6 +335,7 @@ export const useWorkflowBuilder = ({
       setIsTransitioning(true);
       try {
         setWorkflow(await op.run(workflow.id));
+        void queryClient.invalidateQueries({ queryKey: workflowKeys.lists() });
         toast.success(op.success());
       } catch (error) {
         toast.error(getWorkflowApiErrorMessage(error, op.failure()));
@@ -337,7 +343,7 @@ export const useWorkflowBuilder = ({
         setIsTransitioning(false);
       }
     },
-    [store, workflow, setWorkflow, setIsTransitioning, save, t, isReadOnly]
+    [store, queryClient, workflow, setWorkflow, setIsTransitioning, save, t, isReadOnly]
   );
 
   return {

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import {
@@ -20,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 import { toast } from "../../../lib/toast";
-import { getWorkflowApiErrorMessage, workflowsApi } from "../api";
+import { getWorkflowApiErrorMessage, workflowKeys, workflowsApi } from "../api";
 import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
 import { getWorkflowStatusBadge } from "../lib/display";
 import { hasWorkflowSaveFailedAtom, workflowAtom, workflowValidityAtom } from "../state/editor";
@@ -34,6 +35,7 @@ export const WorkflowHeaderCta = ({
 }: Readonly<{ workflowId: string; isReadOnly: boolean; isEditTab: boolean }>) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const workflow = useAtomValue(workflowAtom);
   const validity = useAtomValue(workflowValidityAtom);
   const hasSaveFailed = useAtomValue(hasWorkflowSaveFailedAtom);
@@ -59,6 +61,8 @@ export const WorkflowHeaderCta = ({
     setIsDeleting(true);
     try {
       await workflowsApi.remove(workflow.id);
+      // The list the user is sent to must not show the deleted workflow from its cache.
+      await queryClient.invalidateQueries({ queryKey: workflowKeys.lists() });
       toast.success(t("workspace.workflows.delete_success"));
       await navigate({ href: `/workspaces/${workflow.workspaceId}/workflows` });
     } catch (error) {
