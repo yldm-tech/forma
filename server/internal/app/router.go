@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
@@ -40,11 +41,13 @@ type routeRegistrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler)
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler)
+	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope.
+	surveyHandler.RegisterV3(r)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
 	web.Register(r)
