@@ -71,19 +71,19 @@ func TestParseRecall(t *testing.T) {
 	}
 	variables := map[string]any{"plan": "pro"}
 	cases := map[string]string{
-		"Hi #recall:name/fallback:there#!":                "Hi Jane!",
-		"#recall:plan/fallback:x#":                        "pro",
-		"#recall:missing/fallback:dear nbspfriend#":       "dear  friend",
-		"#recall:empty/fallback:fb#":                      "fb",
-		"#recall:when/fallback:x#":                        "Monday, January 5, 2026",
-		"#recall:legacy/fallback:x#":                      "Monday, January 5, 2026",
-		"#recall:notADate/fallback:x#":                    "2026-02-30",
-		"#recall:multi/fallback:x#":                       "a, b",
-		"#recall:address/fallback:x#":                     "Berlin",
-		"#recall:n/fallback:x#":                           "7",
-		"#recall:loop/fallback:x#":                        "#recall:loop/fallback:x#",
-		"#recall:unterminated":                            "#recall:unterminated",
-		"$& #recall:name/fallback:x# $'":                  "$& Jane $'",
+		"Hi #recall:name/fallback:there#!":                 "Hi Jane!",
+		"#recall:plan/fallback:x#":                         "pro",
+		"#recall:missing/fallback:dear nbspfriend#":        "dear  friend",
+		"#recall:empty/fallback:fb#":                       "fb",
+		"#recall:when/fallback:x#":                         "Monday, January 5, 2026",
+		"#recall:legacy/fallback:x#":                       "Monday, January 5, 2026",
+		"#recall:notADate/fallback:x#":                     "2026-02-30",
+		"#recall:multi/fallback:x#":                        "a, b",
+		"#recall:address/fallback:x#":                      "Berlin",
+		"#recall:n/fallback:x#":                            "7",
+		"#recall:loop/fallback:x#":                         "#recall:loop/fallback:x#",
+		"#recall:unterminated":                             "#recall:unterminated",
+		"$& #recall:name/fallback:x# $'":                   "$& Jane $'",
 		"#recall:name/fallback:a##recall:plan/fallback:b#": "Janepro",
 	}
 	for in, want := range cases {
@@ -184,7 +184,7 @@ func seed(t *testing.T, db *gorm.DB) (*Survey, *response.Response) {
 	now := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
 	r := &response.Response{
 		ID: uuid.New(), CreatedAt: now, UpdatedAt: now, SurveyID: sid, Finished: true,
-		Data: json.RawMessage(`{"q1":"Great","q2":"/storage/ws/private/report.pdf","q3":["c2","c1","gone"],"q4":["A","","B"],"q5":{"street":"Main 1","zip":"","city":"Berlin"},"q6":9,"hidden1":"Ada","hidden2":""}`),
+		Data:      json.RawMessage(`{"q1":"Great","q2":"/storage/ws/private/report.pdf","q3":["c2","c1","gone"],"q4":["A","","B"],"q5":{"street":"Main 1","zip":"","city":"Berlin"},"q6":9,"hidden1":"Ada","hidden2":""}`),
 		Variables: json.RawMessage(`{"score":0,"tier":true}`),
 		TTC:       json.RawMessage(`{}`), Meta: json.RawMessage(`{}`),
 	}
