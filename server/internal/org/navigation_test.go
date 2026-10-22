@@ -37,13 +37,13 @@ func TestHome(t *testing.T) {
 	}
 
 	c := e.organization(owner, "Acme")
-	// The owner's first organization has no survey yet: onboarding.
-	if h := e.home(owner); h.Path != "/organizations/"+c.ID.String()+"/workspaces/new/survey" {
-		t.Fatalf("onboarding home %+v", h)
+	// The new-workspace flow's pages need the survey module, so an owner whose workspace has no survey yet opens the workspace instead of a page the SPA does not have.
+	if h := e.home(owner); h.Path != "" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
+		t.Fatalf("owner home without a survey %+v", h)
 	}
 	e.survey(c.WorkspaceID)
 	if h := e.home(owner); h.Path != "" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
-		t.Fatalf("home after onboarding %+v", h)
+		t.Fatalf("owner home with a survey %+v", h)
 	}
 
 	// A member without a team grant can open nothing and lands on the organization.
@@ -92,12 +92,12 @@ func TestHomeWhileTheProjectionLags(t *testing.T) {
 	}
 }
 
-func TestHomeOnCloudStartsWithThePlan(t *testing.T) {
+func TestHomeOnCloudOpensTheWorkspace(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	owner := e.user()
 	c := e.organization(owner, "Acme")
-	if h := e.home(owner); h.Path != "/organizations/"+c.ID.String()+"/workspaces/new/plan" {
-		t.Fatalf("cloud onboarding home %+v", h)
+	if h := e.home(owner); h.Path != "" || !slices.Equal(h.WorkspaceIDs, []uuid.UUID{c.WorkspaceID}) {
+		t.Fatalf("cloud owner home %+v", h)
 	}
 }
 

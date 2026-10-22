@@ -24,7 +24,9 @@ type Home struct {
 	Pending bool `json:"pending"`
 }
 
-// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; an owner or manager of their first organization goes through the onboarding gate; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
+// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
+//
+// forma2 also sent an owner or manager whose first organization's onboarding workspace has no survey into the new-workspace flow (workspace.Service.OnboardingRedirect). That flow's pages create the first survey, which the survey module brings; until they exist the gate would send every new owner to a page the SPA does not have, on every visit, with no way to satisfy it, so the root page does not apply it.
 func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if userID == nil {
 		hasUser, err := s.repo.hasAnyUser(ctx)
@@ -48,41 +50,17 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if err != nil {
 		return nil, err
 	}
-	home, err := s.home(ctx, *userID, orgs)
-	if err != nil {
-		return nil, err
-	}
-	home.Pending = pending
-	return home, nil
-}
-
-// home picks the destination among the organizations the user can see.
-func (s *Service) home(ctx context.Context, userID uuid.UUID, orgs []Summary) (*Home, error) {
 	if len(orgs) == 0 {
-		return &Home{Path: createOrgPath, WorkspaceIDs: []uuid.UUID{}}, nil
+		return &Home{Path: createOrgPath, WorkspaceIDs: []uuid.UUID{}, Pending: pending}, nil
 	}
-	first := orgs[0]
-	if first.Role == RoleOwner || first.Role == RoleManager {
-		path, err := s.navigation.OnboardingRedirect(ctx, userID, first.ID)
-		if err != nil {
-			return nil, err
-		}
-		if path != "" {
-			return &Home{Path: path, WorkspaceIDs: []uuid.UUID{}}, nil
-		}
-	}
-	orgIDs := make([]uuid.UUID, len(orgs))
-	for i, o := range orgs {
-		orgIDs[i] = o.ID
-	}
-	ids, err := s.navigation.ReadableIDs(ctx, userID, orgIDs)
+	ids, err := s.navigation.ReadableIDs(ctx, *userID, listed)
 	if err != nil {
 		return nil, err
 	}
 	if len(ids) == 0 {
-		return &Home{Path: workspace.LandingPath(first.ID), WorkspaceIDs: ids}, nil
+		return &Home{Path: workspace.LandingPath(orgs[0].ID), WorkspaceIDs: ids, Pending: pending}, nil
 	}
-	return &Home{WorkspaceIDs: ids}, nil
+	return &Home{WorkspaceIDs: ids, Pending: pending}, nil
 }
 
 // Navigation is where the organization route sends the browser, and whether its landing page offers to create a workspace.
