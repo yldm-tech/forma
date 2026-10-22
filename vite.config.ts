@@ -87,6 +87,11 @@ export default defineConfig({
         rules: { "jsx-a11y/no-autofocus": "off" },
       },
       {
+        // The AI draft preview's list scrolls on its own, and a scroll container that cannot take focus cannot be scrolled from the keyboard (WCAG 2.1.1, forma2's AiDraftPreview); the container is a named region, not a control.
+        files: ["web/src/features/surveys/ai-create/ai-draft-preview.tsx"],
+        rules: { "jsx-a11y/no-noninteractive-tabindex": "off" },
+      },
+      {
         // The link survey page hands the respondent runtime its autoFocus option, as forma2 did: the survey is the whole page, and the option is off whenever the page is framed by another site.
         files: ["web/src/survey-page/components/survey-client-wrapper.tsx"],
         rules: { "jsx-a11y/no-autofocus": "off" },

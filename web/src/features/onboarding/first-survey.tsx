@@ -1,9 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ActivityIcon,
   PencilLineIcon,
   ShoppingCartIcon,
   SmileIcon,
+  SparklesIcon,
   SquareLibraryIcon,
   StarIcon,
   ThumbsUpIcon,
@@ -11,13 +13,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getAIUnavailableMessage, workspaceAIQuery } from "../ai/availability";
 import { CUSTOM_TEMPLATE_ID } from "../surveys/api";
 import { useCreateSurveyFromTemplate } from "../surveys/templates/use-create-survey";
 import { onboardingPath } from "./onboarding";
 import { OnboardingOptions } from "./onboarding-options";
 
 /**
- * forma2's CreateFirstSurvey, the onboarding step that creates the workspace's first survey: from one of the experience-management templates, or from scratch. Both open the editor in its CX mode. forma2's third option, generating the survey with AI, is left out: this server has no AI provider.
+ * forma2's CreateFirstSurvey, the onboarding step that creates the workspace's first survey: written by AI, from one of the experience-management templates, or from scratch. Each opens the editor in its CX mode; the AI option is disabled, with the reason under it, where AI is unavailable.
  */
 export const CreateFirstSurvey = ({
   organizationId,
@@ -31,10 +34,20 @@ export const CreateFirstSurvey = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { create, isPending } = useCreateSurveyFromTemplate("cx");
+  const ai = useQuery(workspaceAIQuery(workspaceId));
+  const isAIAvailable = ai.data?.available ?? false;
   return (
     <OnboardingOptions
       title={t("organizations.workspaces.new.survey.title")}
       options={[
+        {
+          title: t("workspace.surveys.ai_create.create_with_ai"),
+          description: t("organizations.workspaces.new.survey.create_with_ai_description"),
+          icon: SparklesIcon,
+          disabled: !isAIAvailable,
+          disabledDescription: ai.isSuccess ? getAIUnavailableMessage(ai.data.reason, t) : undefined,
+          onSelect: () => void navigate({ href: onboardingPath(organizationId, "ai") }),
+        },
         {
           title: t("organizations.workspaces.new.survey.use_template"),
           description: t("organizations.workspaces.new.survey.use_template_description"),

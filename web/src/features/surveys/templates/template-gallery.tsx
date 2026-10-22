@@ -3,18 +3,21 @@ import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
+import { CreateWithAICard } from "../ai-create/create-with-ai-card";
 import { TemplateList } from "./template-list";
 
 /**
- * forma2's TemplateContainerWithPreview: the template gallery with its search, as the templates page (under a menu bar with a back button) or as the survey list of a workspace without any survey yet.
+ * forma2's TemplateContainerWithPreview: the template gallery with its search, as the templates page (under a menu bar with a back button) or as the survey list of a workspace without any survey yet, which also offers a draft written by AI.
  */
 export const TemplateGallery = ({
   workspaceId,
+  organizationId,
   surveyType,
   defaultLanguage,
   isTemplatePage,
 }: {
   workspaceId: string;
+  organizationId?: string;
   surveyType: "link" | "app";
   defaultLanguage: string;
   isTemplatePage: boolean;
@@ -57,6 +60,15 @@ export const TemplateGallery = ({
           surveyType={surveyType}
           defaultLanguage={defaultLanguage}
           search={search}
+          aiCard={
+            isTemplatePage ? undefined : (
+              <CreateWithAICard
+                workspaceId={workspaceId}
+                organizationId={organizationId}
+                surveyType={surveyType}
+              />
+            )
+          }
         />
       </div>
     </div>
