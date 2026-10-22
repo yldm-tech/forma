@@ -9,6 +9,7 @@ package app
 import (
 	"context"
 	"github.com/google/wire"
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
@@ -30,7 +31,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
@@ -134,6 +137,14 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)
 	contactHandler := contact.NewHandler(contactService, sessions)
 	v3Handler := contact.NewV3Handler(contactService)
+	actionclassRepository := actionclass.NewRepository(db)
+	actionclassService := actionclass.NewService(actionclassRepository, authorizer, limiter, emitter)
+	middleware := v3api2.NewMiddleware(cfg, authenticator, limiter)
+	actionclassHandler := actionclass.NewHandler(actionclassService, sessions, middleware)
+	tagRepository := tag.NewRepository(db)
+	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
+	auditor := v3api2.NewAuditor(cfg, emitter)
+	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -141,7 +152,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -210,3 +221,9 @@ var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.
 
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)
+
+// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events.
+var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
+
+// surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
+var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)

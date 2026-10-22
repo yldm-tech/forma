@@ -13,7 +13,15 @@ var surveyRuntimeLanguages = []string{
 
 var (
 	canonicalByLower = lowerKeys(canonicalMap)
-	runtimeByLower   = func() map[string]string {
+	// canonicalCodes is CANONICAL_LANGUAGE_CODES: the distinct canonical tags, the only codes a workspace language may be stored under.
+	canonicalCodes = func() map[string]bool {
+		m := make(map[string]bool, len(canonicalMap))
+		for _, code := range canonicalMap {
+			m[code] = true
+		}
+		return m
+	}()
+	runtimeByLower = func() map[string]string {
 		m := make(map[string]string, len(surveyRuntimeLanguages))
 		for _, code := range surveyRuntimeLanguages {
 			m[strings.ToLower(code)] = code
@@ -57,6 +65,11 @@ func Normalize(input string) string {
 		parts = append(parts, t.script)
 	}
 	return strings.Join(append(parts, t.region), "-")
+}
+
+// IsCanonical reports whether code is one of the curated canonical tags (forma2's CANONICAL_LANGUAGE_CODES), exactly as spelled.
+func IsCanonical(code string) bool {
+	return canonicalCodes[code]
 }
 
 // RuntimeBundle is forma2's resolveSurveyRuntimeBundle: the bundle the survey runtime would serve a language from, or "" when it ships none. The code itself, its canonical form, or its language's default tag (de-AT renders de-DE strings) may name a bundle; the runtime's final English fallback deliberately does not count.

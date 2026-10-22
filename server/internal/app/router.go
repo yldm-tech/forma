@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/server/internal/actionclass"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/apiv3"
 	"github.com/yldm-tech/forma/server/internal/auth"
@@ -21,7 +22,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -42,15 +45,21 @@ type routeRegistrar interface {
 	Register(r gin.IRouter)
 }
 
+// v3Registrar is a feature module's /api/v3 handler.
+type v3Registrar interface {
+	RegisterV3(r gin.IRouter)
+}
+
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler)
-	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope.
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler)
+	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope. Its modules were built on three middleware stacks, each mounted on its own /api/v3 group: the survey module's guard, the contact module's group-wide authentication, and the per-route v3api middleware of action classes and tags.
 	surveyHandler.RegisterV3(r)
-	mountV3API(r, p, sessions, apiKeys, contactV3Handler)
+	mountAuthenticatedV3API(r, p, sessions, apiKeys, contactV3Handler)
+	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
 	web.Register(r)
@@ -65,11 +74,19 @@ func mountAppAPI(r *gin.Engine, p *Platform, handlers ...routeRegistrar) {
 	}
 }
 
-// mountV3API mounts /api/v3, the management API specified in docs/api-v3-reference. Every route under it answers failures as RFC 9457 problems, authenticates by session or API key, and charges forma2's api.v3 rate limit to the caller.
-func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, handlers ...routeRegistrar) {
+// mountAuthenticatedV3API mounts /api/v3 routes whose handlers rely on the group to authenticate every request. Every route under it answers failures as RFC 9457 problems, authenticates by session or API key, and charges forma2's api.v3 rate limit to the caller.
+func mountAuthenticatedV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, handlers ...routeRegistrar) {
 	middleware := append([]gin.HandlerFunc{apiv3.ErrorHandler(p.Log), authz.DecisionMemo()}, apiv3.Authenticate(sessions, apiKeys, p.Limiter)...)
 	group := r.Group("/api/v3", middleware...)
 	for _, h := range handlers {
 		h.Register(group)
+	}
+}
+
+// mountV3API mounts /api/v3, the management API specified in docs/api-v3-reference. Errors are RFC 9457 problems, a signed-in browser's session is read for every route (each route then decides with v3api.Middleware.Auth whether it also accepts an API key), and each request evaluates a repeated authorization question once.
+func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, handlers ...v3Registrar) {
+	group := r.Group("/api/v3", v3api.ErrorHandler(p.Log), authz.DecisionMemo(), sessions.Optional())
+	for _, h := range handlers {
+		h.RegisterV3(group)
 	}
 }
