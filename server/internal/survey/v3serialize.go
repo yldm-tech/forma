@@ -190,9 +190,9 @@ func toV3Resource(s *Survey, lang []string) (*v3Resource, *languageError) {
 	r := &v3Resource{
 		ID: s.ID, WorkspaceID: s.WorkspaceID, CreatedAt: isoTime(s.CreatedAt), UpdatedAt: isoTime(s.UpdatedAt), Name: s.Name, Type: s.Type,
 		Status: s.Status, ArchivedAt: isoTimePtr(s.ArchivedAt), DefaultLanguage: defaultLanguage, Languages: languages,
-		WelcomeCard: publicValue(decoded(s.WelcomeCard), defaultLanguage, codes, fallback),
-		Blocks:      publicValue(decoded(s.Blocks), defaultLanguage, codes, fallback),
-		Endings:     publicValue(decoded(s.Endings), defaultLanguage, codes, fallback),
+		WelcomeCard:  publicValue(decoded(s.WelcomeCard), defaultLanguage, codes, fallback),
+		Blocks:       publicValue(decoded(s.Blocks), defaultLanguage, codes, fallback),
+		Endings:      publicValue(decoded(s.Endings), defaultLanguage, codes, fallback),
 		HiddenFields: s.HiddenFields, Variables: s.Variables,
 	}
 	meta := decoded(s.Metadata)
