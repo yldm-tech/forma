@@ -29,6 +29,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
@@ -110,7 +111,15 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, log)
+	bucket, err := storage.NewBucket(cfg, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	storageService := storage.NewService(bucket)
+	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, storageService, log)
 	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, log)
 	orgHandler := org.NewHandler(orgService, sessions)
 	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
@@ -145,6 +154,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
 	auditor := v3api2.NewAuditor(cfg, emitter)
 	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
+	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -152,7 +162,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, storageHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -227,3 +237,6 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
+
+// storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
+var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)

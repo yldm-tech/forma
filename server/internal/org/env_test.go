@@ -26,6 +26,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -109,7 +110,12 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	limiter := ratelimit.New(cfg, nil, log)
 	emitter := audit.New(cfg, log)
 	wsRepo := workspace.NewRepository(db, log)
-	wsSvc := workspace.NewService(cfg, wsRepo, e.authz.Authorizer, limiter, emitter, schemas, log)
+	// No bucket is configured, so deleting a workspace has no files to delete.
+	bucket, err := storage.NewBucket(cfg, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wsSvc := workspace.NewService(cfg, wsRepo, e.authz.Authorizer, limiter, emitter, schemas, storage.NewService(bucket), log)
 	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, log)
 
 	e.engine = gin.New()
