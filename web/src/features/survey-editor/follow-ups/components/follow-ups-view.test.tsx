@@ -1,10 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type { TSurvey } from "@forma/types/surveys/types";
-import { describe, expect, test, vi } from "vite-plus/test";
+import { describe, expect, test } from "vite-plus/test";
 import { FollowUpsView } from "./follow-ups-view";
-
-// Under Vitest, react-i18next resolves a React of its own, whose hooks cannot run inside this render; the view's text is not what is tested.
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 describe("FollowUpsView", () => {
   // The Workflows pages are not ported, so a link to them would open the not-found page.
