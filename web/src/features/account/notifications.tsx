@@ -1,19 +1,22 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { UsersIcon } from "lucide-react";
+import { HelpCircleIcon, SlackIcon, UsersIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
 import { errorMessage } from "../../lib/errors";
 import { organizationSettingsPath } from "../../lib/navigation";
-import { type UnsubscribeLink, unsubscribeTarget } from "../../lib/notifications";
+import { type UnsubscribeLink, alertRows, unsubscribeTarget } from "../../lib/notifications";
 import {
   type NotificationOrganization,
   notificationsQuery,
   useSetNotification,
 } from "../../lib/queries/auth";
+import { workspaceQuery } from "../../lib/queries/workspaces";
+import { WORKSPACE_ID_KEY, readStorage } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 
 /** forma2's notifications page: per organization, whether new surveys alert the user, and a per-response alert switch for every survey they can see. */
@@ -78,7 +81,30 @@ export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
           ))
         )}
       </SettingsCard>
+      <IntegrationsTip />
     </PageContentWrapper>
+  );
+};
+
+/** forma2's IntegrationsTip: Slack and other channels are integrations of the workspace the user works in, the one this browser last opened, when they can still open it. */
+const IntegrationsTip = () => {
+  const { t } = useTranslation();
+  const remembered = readStorage(WORKSPACE_ID_KEY);
+  const workspace = useQuery({ ...workspaceQuery(remembered ?? ""), enabled: !!remembered, retry: false });
+  if (!workspace.data) return null;
+  return (
+    <div className="flex max-w-4xl items-center gap-y-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs md:gap-y-0 md:text-base">
+      <SlackIcon className="mr-3 size-4 text-blue-400" />
+      <p className="text-sm">
+        {t("workspace.settings.notifications.need_slack_or_discord_notifications")}?
+        <Link
+          to="/workspaces/$workspaceId/integrations"
+          params={{ workspaceId: workspace.data.id }}
+          className="ml-1 cursor-pointer text-sm underline">
+          {t("workspace.settings.notifications.use_the_integration")}
+        </Link>
+      </p>
+    </div>
   );
 };
 
@@ -117,10 +143,18 @@ const OrganizationAlerts = ({
             <TableRow>
               <TableHead className="w-[45%]">{t("common.survey")}</TableHead>
               <TableHead className="w-[30%]">{t("common.workspace")}</TableHead>
-              <TableHead
-                className="w-[25%] text-center"
-                title={t("workspace.settings.notifications.every_response_tooltip")}>
-                {t("workspace.settings.notifications.every_response")}
+              <TableHead className="w-[25%] text-center">
+                <TooltipProvider delayDuration={50}>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex cursor-default items-center gap-x-2">
+                      <span>{t("workspace.settings.notifications.every_response")}</span>
+                      <HelpCircleIcon className="size-4 shrink-0 text-slate-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t("workspace.settings.notifications.every_response_tooltip")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -132,7 +166,7 @@ const OrganizationAlerts = ({
                 </TableCell>
               </TableRow>
             ) : (
-              organization.surveys.map((survey) => (
+              alertRows(organization.surveys).map((survey) => (
                 <TableRow key={survey.id}>
                   <TableCell className="font-medium text-slate-900">{survey.name}</TableCell>
                   <TableCell className="text-slate-500">{survey.workspaceName}</TableCell>

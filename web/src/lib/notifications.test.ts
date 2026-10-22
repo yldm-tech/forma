@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { unsubscribeTarget } from "./notifications";
+import { alertRows, unsubscribeTarget } from "./notifications";
 
 const organizations = [
   {
@@ -30,4 +30,36 @@ test("an unsubscribe link switches off only what is on and on this page", () => 
   ).toBeNull();
   expect(unsubscribeTarget({ type: "weekly", elementId: "o1" }, organizations)).toBeNull();
   expect(unsubscribeTarget({}, organizations)).toBeNull();
+});
+
+const survey = (id: string, name: string, workspaceName: string) => ({
+  id,
+  name,
+  workspaceId: workspaceName,
+  workspaceName,
+  alert: false,
+});
+
+test("alert rows keep a workspace's surveys together, by workspace then survey name", () => {
+  const rows = alertRows([
+    survey("s1", "NPS Survey", "Website"),
+    survey("s2", "Onboarding Feedback", "Docs Portal"),
+    survey("s3", "Churn Survey", "Website"),
+  ]);
+  expect(rows.map((row) => [row.workspaceName, row.name])).toEqual([
+    ["Docs Portal", "Onboarding Feedback"],
+    ["Website", "Churn Survey"],
+    ["Website", "NPS Survey"],
+  ]);
+});
+
+test("alert rows order same-named surveys by id, so their rows cannot swap", () => {
+  const duplicates = [survey("s2", "NPS Survey", "Website"), survey("s1", "NPS Survey", "Website")];
+  expect(alertRows(duplicates).map((row) => row.id)).toEqual(["s1", "s2"]);
+  expect(alertRows([...duplicates].reverse()).map((row) => row.id)).toEqual(["s1", "s2"]);
+});
+
+test("alert rows order numbered workspaces the way a reader counts them", () => {
+  const rows = alertRows([survey("s1", "NPS", "Workspace 10"), survey("s2", "NPS", "Workspace 2")]);
+  expect(rows.map((row) => row.workspaceName)).toEqual(["Workspace 2", "Workspace 10"]);
 });
