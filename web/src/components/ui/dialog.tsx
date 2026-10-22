@@ -27,6 +27,36 @@ const WIDTHS = {
   wide: "sm:w-[90dvw] md:w-[720px] lg:w-[960px]",
 };
 
+/** The parts of a dialog's cancel and close events its handlers read. */
+interface DialogEvent {
+  target: EventTarget | null;
+  currentTarget: EventTarget | null;
+  preventDefault: () => void;
+}
+
+/**
+ * The <dialog>'s cancel (Escape) and close handlers. React dispatches these two events along the component tree, not the DOM, so a dialog opened inside another (a confirmation over a settings modal) delivers its own cancel and close to the outer one's handlers too; each handler acts only on events of its own element, or closing the confirmation would close the modal under it.
+ */
+export const dialogEventHandlers = ({
+  open,
+  onOpenChange,
+  disableCloseOnOutsideClick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  disableCloseOnOutsideClick: boolean;
+}) => ({
+  onCancel: (e: DialogEvent) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    if (!disableCloseOnOutsideClick) onOpenChange(false);
+  },
+  onClose: (e: DialogEvent) => {
+    if (e.target !== e.currentTarget) return;
+    if (open) onOpenChange(false);
+  },
+});
+
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -79,13 +109,7 @@ export const Dialog = ({
       }}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!disableCloseOnOutsideClick) onOpenChange(false);
-      }}
-      onClose={() => {
-        if (open) onOpenChange(false);
-      }}
+      {...dialogEventHandlers({ open, onOpenChange, disableCloseOnOutsideClick })}
       className={cn(
         "m-auto max-h-[90dvh] w-full max-w-[calc(100vw-2rem)] overflow-visible rounded-lg border bg-white p-0 text-left text-slate-900 shadow-lg",
         WIDTHS[width],
