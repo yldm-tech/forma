@@ -47,7 +47,7 @@ func (in notionInput) falsy() bool {
 }
 
 // notionProperties is forma2's buildNotionPayloadProperties: each mapping entry's value under its column's name, as {<column type>: value}, null when getValue gave a falsy value (so a false checkbox and a 0 number are written as null, as forma2 wrote them). A picture selection's answer is the chosen pictures' URLs.
-func (r *response) notionProperties(mapping []NotionMapping) map[string]any {
+func (r *submission) notionProperties(mapping []NotionMapping) map[string]any {
 	pictureElements := map[string]surveydoc.Element{}
 	for _, el := range r.survey.Elements() {
 		if el.Type == surveydoc.ElementPictureSelection {

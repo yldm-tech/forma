@@ -79,8 +79,8 @@ func selectionOf(l LinkBase, e Elements) selection {
 	}
 }
 
-// response is a finished response as the writers read it: its decoded answers, its stored JSON in the order PostgreSQL returns it, and the survey it answers.
-type response struct {
+// submission is a finished response as the writers read it: its decoded answers, its stored JSON in the order PostgreSQL returns it, and the survey it answers.
+type submission struct {
 	answers *responsemail.Answers
 	survey  *responsemail.Survey
 	// data keeps each answer's stored JSON, for the Notion values that are written as JSON.
@@ -92,8 +92,8 @@ type response struct {
 	timeZone          string
 }
 
-func newResponse(answers *responsemail.Answers, sv *responsemail.Survey, files fileURLs, timeZone string) (*response, error) {
-	r := &response{answers: answers, survey: sv, data: map[string]json.RawMessage{}, meta: map[string]any{}, files: files, timeZone: timeZone}
+func newSubmission(answers *responsemail.Answers, sv *responsemail.Survey, files fileURLs, timeZone string) (*submission, error) {
+	r := &submission{answers: answers, survey: sv, data: map[string]json.RawMessage{}, meta: map[string]any{}, files: files, timeZone: timeZone}
 	res := answers.Response
 	if len(res.Data) > 0 && string(res.Data) != "null" {
 		if err := json.Unmarshal(res.Data, &r.data); err != nil {
@@ -119,7 +119,7 @@ func newResponse(answers *responsemail.Answers, sv *responsemail.Survey, files f
 }
 
 // metadata is forma2's convertMetaObjectToString: the response's metadata that is set, one "Name: value" line each.
-func (r *response) metadata() string {
+func (r *submission) metadata() string {
 	var lines []string
 	add := func(label string, v any) {
 		if truthy(v) {
@@ -154,7 +154,7 @@ func truthy(v any) bool {
 }
 
 // build is forma2's processDataForIntegration: the selected elements' answers (and, with hidden fields, the survey's ingested fields) in order, then the metadata, the computed variables the response captured, the creation time in the organization's zone and the contact attributes, as the link asks. Slack's labels expand recall against the response; every other integration's labels are column headers, the same for every response, so recall shows its fallbacks.
-func (r *response) build(sel selection, slack bool) (*row, error) {
+func (r *submission) build(sel selection, slack bool) (*row, error) {
 	ingested := ingestedKeys(r.survey)
 	ids := sel.elementIDs
 	if sel.includeHiddenFields {
@@ -218,7 +218,7 @@ func ingestedKeys(sv *responsemail.Survey) []string {
 }
 
 // answer is forma2's processElementResponse: a picture selection as the chosen pictures' URLs, one a line; a file upload list as its URLs joined by "; "; anything else as processResponseData's text. Relative storage URLs are made absolute.
-func (r *response) answer(el surveydoc.Element) string {
+func (r *submission) answer(el surveydoc.Element) string {
 	v, present := r.answers.Data[el.ID]
 	if !present {
 		return ""

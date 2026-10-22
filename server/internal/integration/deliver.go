@@ -51,7 +51,7 @@ func (d *Deliverer) HandleResponse(ctx context.Context, ev *pipeline.Event) erro
 	if err != nil {
 		return err
 	}
-	r, err := newResponse(answers, ev.Survey.Survey, d.files, ev.DisplayTimeZone)
+	r, err := newSubmission(answers, ev.Survey.Survey, d.files, ev.DisplayTimeZone)
 	if err != nil {
 		return err
 	}
@@ -72,12 +72,12 @@ func (d *Deliverer) HandleResponse(ctx context.Context, ev *pipeline.Event) erro
 }
 
 // forSurvey reports whether a link is for the response's survey; links made in forma2 name it by its old id.
-func forSurvey(l LinkBase, r *response) bool {
+func forSurvey(l LinkBase, r *submission) bool {
 	id, ok := legacyid.Resolve(l.SurveyID)
 	return ok && id == r.answers.Response.SurveyID
 }
 
-func (d *Deliverer) deliver(ctx context.Context, in *Integration, r *response) error {
+func (d *Deliverer) deliver(ctx context.Context, in *Integration, r *submission) error {
 	switch in.Type {
 	case TypeGoogleSheets:
 		return d.sheets(ctx, in, r)
@@ -97,7 +97,7 @@ type linkOf interface {
 }
 
 // forLinks calls write with each of the integration's links for the response's survey, in their stored order, stopping at the first failure as forma2 did.
-func forLinks[T linkOf](in *Integration, r *response, write func(link T) error) error {
+func forLinks[T linkOf](in *Integration, r *submission, write func(link T) error) error {
 	links, err := decodeLinks[T](in.Config)
 	if err != nil {
 		return fmt.Errorf("decode %s links: %w", in.Type, err)
@@ -114,7 +114,7 @@ func forLinks[T linkOf](in *Integration, r *response, write func(link T) error) 
 }
 
 // sheets authorizes once, for the first link of the survey.
-func (d *Deliverer) sheets(ctx context.Context, in *Integration, r *response) error {
+func (d *Deliverer) sheets(ctx context.Context, in *Integration, r *submission) error {
 	token := ""
 	return forLinks(in, r, func(l SheetLink) error {
 		if token == "" {
@@ -132,7 +132,7 @@ func (d *Deliverer) sheets(ctx context.Context, in *Integration, r *response) er
 }
 
 // airtable resolves the credential once, and only when some link is for the response's survey, so a response to an unrelated survey never spends a refresh.
-func (d *Deliverer) airtable(ctx context.Context, in *Integration, r *response) error {
+func (d *Deliverer) airtable(ctx context.Context, in *Integration, r *submission) error {
 	var k *AirtableKey
 	return forLinks(in, r, func(l AirtableLink) error {
 		if k == nil {
@@ -149,7 +149,7 @@ func (d *Deliverer) airtable(ctx context.Context, in *Integration, r *response) 
 	})
 }
 
-func (d *Deliverer) slack(ctx context.Context, in *Integration, r *response) error {
+func (d *Deliverer) slack(ctx context.Context, in *Integration, r *submission) error {
 	return forLinks(in, r, func(l SlackLink) error {
 		k, ok := key[SlackKey](in)
 		if !ok {
@@ -163,7 +163,7 @@ func (d *Deliverer) slack(ctx context.Context, in *Integration, r *response) err
 	})
 }
 
-func (d *Deliverer) notion(ctx context.Context, in *Integration, r *response) error {
+func (d *Deliverer) notion(ctx context.Context, in *Integration, r *submission) error {
 	return forLinks(in, r, func(l NotionLink) error {
 		k, ok := key[notionKey](in)
 		if !ok {
