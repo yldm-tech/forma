@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -127,7 +128,7 @@ func (h *Handler) download(c *gin.Context) {
 	ctx := c.Request.Context()
 	req, details := parseFileRequest(c)
 	if details != nil {
-		badRequest(c, "Fields are missing or incorrectly formatted", details, true)
+		v1api.BadRequest(c, "Fields are missing or incorrectly formatted", details, true)
 		return
 	}
 	ws, err := h.workspaces.ResolveClientID(ctx, req.rawID)
@@ -136,7 +137,7 @@ func (h *Handler) download(c *gin.Context) {
 		return
 	}
 	if ws == nil {
-		notFoundResponse(c, "Workspace", req.rawID, false)
+		v1api.NotFound(c, "Workspace", req.rawID, false)
 		return
 	}
 	if req.access == AccessPrivate {
@@ -182,7 +183,7 @@ func (h *Handler) delete(c *gin.Context) {
 			org = ws.OrganizationID.String()
 		}
 		h.auditDeletion(c, deletion{workspaceID: req.rawID, organizationID: org, actorID: audit.Unknown, failureReason: "Parameter validation failed"})
-		badRequest(c, "Fields are missing or incorrectly formatted", details, true)
+		v1api.BadRequest(c, "Fields are missing or incorrectly formatted", details, true)
 		return
 	}
 	ws, err := h.workspaces.ResolveClientID(ctx, req.rawID)
@@ -192,7 +193,7 @@ func (h *Handler) delete(c *gin.Context) {
 	}
 	if ws == nil {
 		h.auditDeletion(c, deletion{workspaceID: req.rawID, actorID: audit.Unknown, failureReason: "Workspace not found"})
-		notFoundResponse(c, "Workspace", req.rawID, false)
+		v1api.NotFound(c, "Workspace", req.rawID, false)
 		return
 	}
 	failed := deletion{workspaceID: ws.ID.String(), organizationID: ws.OrganizationID.String(), access: req.access, actorID: audit.Unknown}
@@ -214,7 +215,7 @@ func (h *Handler) delete(c *gin.Context) {
 	if caller != uuid.Nil {
 		if err := h.limiter.Apply(ctx, ratelimit.StorageDelete, caller.String()); err != nil {
 			if e, ok := apperr.As(err); ok {
-				writeError(c, http.StatusTooManyRequests, "too_many_requests", e.Message, nil, false)
+				v1api.TooManyRequests(c, e.Message)
 				return
 			}
 			h.unexpected(c, err)
@@ -232,7 +233,7 @@ func (h *Handler) delete(c *gin.Context) {
 	succeeded := failed
 	succeeded.success = true
 	h.auditDeletion(c, succeeded)
-	writeJSON(c, http.StatusOK, map[string]string{"data": "File deleted successfully"}, false)
+	v1api.Success(c, "File deleted successfully")
 }
 
 var (
@@ -274,9 +275,9 @@ func (h *Handler) authorize(c *gin.Context, workspaceID uuid.UUID, action authz.
 func (h *Handler) refuse(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, errUnauthorized):
-		unauthorized(c)
+		v1api.Unauthorized(c)
 	case errors.Is(err, errNotAuthenticated):
-		notAuthenticated(c)
+		v1api.NotAuthenticated(c)
 	default:
 		h.unexpected(c, err)
 	}

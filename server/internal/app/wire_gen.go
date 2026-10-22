@@ -10,17 +10,22 @@ import (
 	"context"
 	"github.com/google/wire"
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/analysis"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -30,6 +35,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -39,7 +45,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
 	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
+	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 	"log/slog"
 )
@@ -143,9 +151,12 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, log)
+	aiClient := ai.NewClient(cfg, log)
+	aiRepository := ai.NewRepository(db)
+	aiService := ai.NewService(aiClient, aiRepository, authorizer, log)
+	surveyService := survey.NewService(cfg, surveyRepository, authorizer, limiter, emitter, surveydocValidator, cipher, catalog, aiService, log)
 	guard := v3api.NewGuard(cfg, sessions, authenticator, limiter, log)
-	surveyHandler := survey.NewHandler(surveyService, sessions, guard, log)
+	surveyHandler := survey.NewHandler(surveyService, sessions, guard, limiter, log)
 	contactRepository := contact.NewRepository(db)
 	contactService := contact.NewService(contactRepository, authorizer, limiter, emitter, validator, log)
 	contactHandler := contact.NewHandler(contactService, sessions)
@@ -169,6 +180,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
 	analysisHandler := analysis.NewHandler(analysisService, sessions)
+	aiHandler := ai.NewHandler(aiService, sessions)
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
@@ -182,7 +194,22 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	linksurveyHandler := linksurvey.NewHandler(cfg, linksurveyService, limiter, webuiHandler, log)
 	recaptcha := clientapi.NewRecaptcha(cfg, log)
 	clientapiHandler := clientapi.NewHandler(cfg, db, client, limiter, workspaceRepository, responseService, contactService, storageService, recaptcha, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, storageHandler, linksurveyHandler, clientapiHandler, webuiHandler)
+	webhookRepository := webhook.NewRepository(db)
+	ssrfGuard := ssrf.New(cfg)
+	webhookService := webhook.NewService(webhookRepository, authorizer, limiter, emitter, ssrfGuard, log)
+	webhookHandler := webhook.NewHandler(webhookService, sessions)
+	v1Handler := webhook.NewV1Handler(cfg, webhookService, authenticator, workspaceRepository, log)
+	integrationRepository := integration.NewRepository(db, cipher, log)
+	integrationService := integration.NewService(cfg, integrationRepository, authorizer, limiter, emitter, client, log)
+	integrationHandler := integration.NewHandler(integrationService, sessions)
+	oAuthHandler := integration.NewOAuthHandler(integrationService, sessions, limiter, log)
+	notificationHandler := notification.NewHandler(webuiHandler)
+	attachmentExporter := analysis.NewAttachmentExporter(db, storageService, workspaceRepository, log)
+	attachmentsHandler := analysis.NewAttachmentsHandler(analysisService, attachmentExporter, middleware, auditor, limiter, log)
+	workflowRepository := workflow.NewRepository(db)
+	workflowService := workflow.NewService(workflowRepository, db, authorizer, log)
+	workflowHandler := workflow.NewHandler(cfg, workflowService, guard, sessions, emitter, log)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -191,7 +218,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}, nil
 }
 
-// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool and the SpiceDB connection.
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool, the Valkey client and the SpiceDB connection.
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	pool, cleanup, err := jobs.OpenPool(ctx, cfg)
 	if err != nil {
@@ -220,15 +247,60 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	service := storage.NewService(bucket)
 	repository := workspace.NewRepository(db, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository)
-	worker, err := jobs.NewWorker(cfg, pool, registry, log)
+	webhookRepository := webhook.NewRepository(db)
+	guard := ssrf.New(cfg)
+	deliverer := webhook.NewDeliverer(webhookRepository, guard)
+	mailerMailer, err := mailer.New(cfg, log)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	return worker, func() {
+	redisClient, cleanup4, err := valkey.Open(ctx, cfg, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	limiter := ratelimit.New(cfg, redisClient, log)
+	sender := followup.NewSender(cfg, db, mailerMailer, limiter, log)
+	notifier := notification.NewNotifier(cfg, db, mailerMailer, log)
+	cipher, err := secret.NewCipher(cfg)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	integrationRepository := integration.NewRepository(db, cipher, log)
+	integrationDeliverer := integration.NewDeliverer(cfg, integrationRepository, redisClient, log)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, log)
+	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer)
+	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
+	runner := workflow.NewRunner(cfg, db, mailerMailer, log)
+	reconciler := workflow.NewReconciler(db, enqueuer, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler)
+	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	return jobsWorker, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -258,6 +330,9 @@ var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewH
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
 var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
 
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewHandler)
+
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)
 
@@ -267,8 +342,8 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
-var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler)
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
 var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)
@@ -278,3 +353,15 @@ var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService,
 
 // clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier.
 var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
+
+// webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
+var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)
+
+// integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
+var integrationSet = wire.NewSet(integration.NewRepository, integration.NewService, integration.NewHandler, integration.NewOAuthHandler)
+
+// workflowSet is workflows: the /api/v3/workflows management API and the builder's authoring context under /api/app.
+var workflowSet = wire.NewSet(workflow.NewRepository, workflow.NewService, workflow.NewHandler)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
+var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, newPipelineHandoffs, pipeline.NewWorker)

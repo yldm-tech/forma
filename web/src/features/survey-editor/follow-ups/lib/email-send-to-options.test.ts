@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
-import { buildEmailSendToOptions } from "./email-send-to-options";
+import {
+  type EmailSendToOption,
+  buildEmailSendToOptions,
+  findEmailSendToOption,
+} from "./email-send-to-options";
 
 const { mockGetElementsFromBlocks, mockRecallToHeadline, mockGetTextContent } = vi.hoisted(() => ({
   mockGetElementsFromBlocks: vi.fn(),
@@ -143,5 +147,48 @@ describe("buildEmailSendToOptions", () => {
       { id: "alice@example.com", type: "user", label: "Alice (alice@example.com)" },
       { id: "me@example.com", type: "user", label: "Yourself (me@example.com)" },
     ]);
+  });
+});
+
+describe("findEmailSendToOption", () => {
+  const options: EmailSendToOption[] = [
+    { id: "verifiedEmail", type: "verifiedEmail", label: "Verified email" },
+    { id: "aBc123", type: "openTextElement", label: "Your email" },
+    { id: "userEmail", type: "hiddenField", label: "userEmail" },
+    { id: "alice@example.com", type: "user", label: "Alice (alice@example.com)" },
+  ];
+
+  // The v3 API accepts `to` verbatim, so a stored recipient can differ in case from the member's address while the runtime allowlist, which normalizes both sides, still sends to it.
+  test("matches a member option regardless of case", () => {
+    expect(findEmailSendToOption(options, "Alice@Example.com")?.id).toBe("alice@example.com");
+  });
+
+  // A padded `to` is no literal recipient at runtime, so every run fails resolving it as an element id; matching it to a member would hide a warning that is correct.
+  test("leaves a padded address unmatched, matching how the runtime classifies it", () => {
+    expect(findEmailSendToOption(options, " alice@example.com")).toBeUndefined();
+    expect(findEmailSendToOption(options, "alice@example.com ")).toBeUndefined();
+  });
+
+  // A hidden field can be named after a member's address; options list elements before members, so the exact id wins.
+  test("prefers an exact non-user match over a case-insensitive member match", () => {
+    const collidingOptions: EmailSendToOption[] = [
+      { id: "Alice@Example.com", type: "hiddenField", label: "Alice@Example.com" },
+      { id: "alice@example.com", type: "user", label: "Alice (alice@example.com)" },
+    ];
+    expect(findEmailSendToOption(collidingOptions, "Alice@Example.com")?.type).toBe("hiddenField");
+    expect(findEmailSendToOption(collidingOptions, "ALICE@EXAMPLE.COM")?.type).toBe("user");
+  });
+
+  test("matches element and hidden-field ids case-sensitively", () => {
+    expect(findEmailSendToOption(options, "aBc123")?.type).toBe("openTextElement");
+    expect(findEmailSendToOption(options, "abc123")).toBeUndefined();
+    expect(findEmailSendToOption(options, "userEmail")?.type).toBe("hiddenField");
+    expect(findEmailSendToOption(options, "useremail")).toBeUndefined();
+    expect(findEmailSendToOption(options, "verifiedEmail")?.type).toBe("verifiedEmail");
+  });
+
+  test("returns undefined for an empty value or a recipient no option covers", () => {
+    expect(findEmailSendToOption(options, "")).toBeUndefined();
+    expect(findEmailSendToOption(options, "outsider@external.example")).toBeUndefined();
   });
 });

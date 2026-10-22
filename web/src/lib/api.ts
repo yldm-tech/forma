@@ -177,6 +177,24 @@ export const downloadFile = async (
   };
 };
 
+/** POSTs a JSON body to an endpoint that answers a stream, and returns the open response for the caller to read; a refusal before the stream opened still throws ApiError from the error envelope. */
+export const openStream = async (
+  path: string,
+  body: unknown,
+  options: RequestOptions = {}
+): Promise<Response> => {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: new Headers({ "Content-Type": "application/json", [CSRF_HEADER]: "XMLHttpRequest" }),
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    cache: "no-store",
+    signal: options.signal,
+  });
+  if (!response.ok) throw await readError(response);
+  return response;
+};
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) => request<T>("GET", path, undefined, options),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>

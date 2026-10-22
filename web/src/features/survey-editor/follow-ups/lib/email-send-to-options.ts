@@ -4,6 +4,7 @@ import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { recallToHeadline } from "../../../../lib/survey/recall";
+import { isLiteralEmailRecipient } from "../../../workflows/definition";
 import type { TFollowUpEmailToUser } from "../../types/survey-follow-up";
 import { getElementsFromBlocks } from "../../lib/client-utils";
 
@@ -90,4 +91,20 @@ export const buildEmailSendToOptions = ({
       type: "user" as EmailSendToOption["type"],
     })),
   ];
+};
+
+/**
+ * forma2's findEmailSendToOption: the option a stored `to` selects, or undefined. A member option's id is an address, matched trimmed and lower-cased as the runtime allowlist compares recipients, and only when the value is itself a literal address as the runtime classifies it (a padded address is not one, and must keep its "not available" warning). Element and hidden-field ids are opaque and match exactly.
+ */
+export const findEmailSendToOption = (
+  options: EmailSendToOption[],
+  value: string
+): EmailSendToOption | undefined => {
+  if (value === "") return undefined;
+  const normalizedEmail = isLiteralEmailRecipient(value) ? value.trim().toLowerCase() : null;
+  return options.find((option) =>
+    option.type === "user"
+      ? normalizedEmail !== null && option.id.trim().toLowerCase() === normalizedEmail
+      : option.id === value
+  );
 };

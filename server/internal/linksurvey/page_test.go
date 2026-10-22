@@ -2,6 +2,7 @@ package linksurvey
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
@@ -713,16 +715,33 @@ func TestSendVerificationEmailRateLimit(t *testing.T) {
 }
 
 // The OG route shares the client API's per-address budget (api:client, 100 a minute) and answers forma2's 429 body.
+// The first request is real and writes the counter the handler keys by address; the counter is then moved to 99 so the 100th and 101st requests sit on the limit. Rendering all 100 images instead takes longer than the counter's one-minute expiry under the race detector, which reset the count mid-test.
 func TestOgImageRateLimit(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.RateLimitingDisabled = false })
-	for i := range 100 {
-		if rec := e.request(http.MethodGet, "/api/v1/client/og?name=x", nil); rec.Code != http.StatusOK {
-			t.Fatalf("request %d: %d", i+1, rec.Code)
-		}
+	if rec := e.request(http.MethodGet, "/api/v1/client/og?name=x", nil); rec.Code != http.StatusOK {
+		t.Fatalf("request 1: %d", rec.Code)
+	}
+	ctx := context.Background()
+	keys, err := e.cache.Keys(ctx, "fb:rate_limit:api:client:*").Result()
+	if err != nil || len(keys) != 1 {
+		t.Fatalf("counter keys %v, %v", keys, err)
+	}
+	if count, err := e.cache.Get(ctx, keys[0]).Int(); err != nil || count != 1 {
+		t.Fatalf("count after one request = %d, %v", count, err)
+	}
+	if err := e.cache.SetArgs(ctx, keys[0], 99, redis.SetArgs{KeepTTL: true}).Err(); err != nil {
+		t.Fatal(err)
+	}
+	if rec := e.request(http.MethodGet, "/api/v1/client/og?name=x", nil); rec.Code != http.StatusOK {
+		t.Fatalf("request 100: %d", rec.Code)
 	}
 	rec := e.request(http.MethodGet, "/api/v1/client/og?name=x", nil)
 	if rec.Code != http.StatusTooManyRequests || rec.Body.String() != `{"code":"too_many_requests","message":"Maximum number of requests reached. Please try again later.","details":{}}` {
-		t.Fatalf("%d %s", rec.Code, rec.Body)
+		// An allowed request answers with the PNG, which is not worth printing.
+		if rec.Header().Get("Content-Type") != "application/json" {
+			t.Fatalf("request 101: %d %s", rec.Code, rec.Header().Get("Content-Type"))
+		}
+		t.Fatalf("request 101: %d %s", rec.Code, rec.Body)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" || rec.Header().Get("Access-Control-Allow-Origin") != "*" || rec.Header().Get("Content-Type") != "application/json" || rec.Header().Get("Retry-After") != "" {
 		t.Fatalf("headers %v", rec.Header())

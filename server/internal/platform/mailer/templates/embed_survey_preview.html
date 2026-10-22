@@ -1,0 +1,7 @@
+{{define "content"}}
+{{template "heading" (.T "emails.embed_survey_preview_email_heading")}}
+{{template "text" (.T "emails.embed_survey_preview_email_text")}}
+<p style="font-size:14px;line-height:24px;margin:16px 0"><b>{{.T "emails.embed_survey_preview_email_didnt_request"}}</b> {{.T "emails.embed_survey_preview_email_fight_spam"}}</p>
+<div style="font-size:14px">{{.Content.HTML}}</div>
+<p style="font-size:14px;line-height:24px;margin:16px 0;text-align:center;color:#334155">{{.T "emails.embed_survey_preview_email_workspace_id"}}: {{.Content.WorkspaceID}}</p>
+{{end}}

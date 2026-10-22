@@ -7,22 +7,26 @@ export interface OnboardingOption {
   icon: LucideIcon;
   onSelect: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
+  /** Said under a disabled card: why it cannot be chosen. */
+  disabledDescription?: string;
 }
 
 /** forma2's OptionCard (size md): a large clickable card with an icon, a title and a description, covered by a spinner while its action runs. */
 const OptionCard = ({ option }: { option: OnboardingOption }) => {
   const Icon = option.icon;
   const loading = option.isLoading ?? false;
+  const unavailable = loading || (option.disabled ?? false);
   return (
     <div className="relative h-full w-full">
       <button
         type="button"
-        disabled={loading}
+        disabled={unavailable}
         onClick={option.onSelect}
         aria-busy={loading || undefined}
         className={cn(
           "flex h-full w-80 flex-col items-center rounded-xl border border-slate-200 bg-white p-6 shadow-lg transition-transform duration-200",
-          loading
+          unavailable
             ? "cursor-not-allowed opacity-50"
             : "cursor-pointer hover:scale-[1.03] hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:outline-hidden"
         )}>
@@ -55,6 +59,9 @@ export const OnboardingOptions = ({ title, options }: { title: string; options: 
       {options.map((option) => (
         <div key={option.title} className="flex h-full flex-col items-center gap-2">
           <OptionCard option={option} />
+          {option.disabled && option.disabledDescription && (
+            <p className="max-w-80 text-xs text-slate-400">{option.disabledDescription}</p>
+          )}
         </div>
       ))}
     </div>

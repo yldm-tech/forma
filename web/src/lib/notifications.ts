@@ -1,4 +1,4 @@
-import type { NotificationOrganization, NotificationType } from "./queries/auth";
+import type { NotificationOrganization, NotificationSurvey, NotificationType } from "./queries/auth";
 
 /** An email's unsubscribe link: /account/settings/notifications?type=alert|unsubscribedOrganizationIds&elementId=<id>. */
 export interface UnsubscribeLink {
@@ -24,3 +24,15 @@ export const unsubscribeTarget = (
   }
   return null;
 };
+
+/** Pinned to one locale so the order does not depend on the browser's; numeric keeps "Workspace 2" ahead of "Workspace 10". */
+const collator = new Intl.Collator("en", { numeric: true });
+
+/** forma2's getAlertRows: an organization's surveys by workspace name, then survey name, then id, so a workspace's surveys stay together and two same-named surveys never swap places. */
+export const alertRows = (surveys: readonly NotificationSurvey[]): NotificationSurvey[] =>
+  [...surveys].sort(
+    (a, b) =>
+      collator.compare(a.workspaceName, b.workspaceName) ||
+      collator.compare(a.name, b.name) ||
+      collator.compare(a.id, b.id)
+  );

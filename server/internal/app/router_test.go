@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/actionclass"
+	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
@@ -31,6 +32,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -98,13 +100,16 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 
 	sso := auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log))
 
-	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(cfg, sessions, nil, nil, log), log)
+	surveys := survey.NewHandler(nil, sessions, surveyv3.NewGuard(cfg, sessions, nil, nil, log), nil, log)
+
+	workflows := workflow.NewHandler(cfg, nil, surveyv3.NewGuard(cfg, sessions, nil, nil, log), sessions, nil, log)
 
 	r := httpserver.NewEngine(log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)
 	actionClasses, tags := actionclass.NewHandler(nil, sessions, v3), tag.NewHandler(nil, sessions, v3, nil)
-	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags)
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, sessions), workflows)
 	surveys.RegisterV3(r)
+	workflows.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, nil, contact.NewV3Handler(nil))
 	mountV3API(r, p, sessions, actionClasses, tags)
 	sso.RegisterCallbacks(r)
@@ -137,6 +142,11 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"PUT /api/app/teams/:teamId":                                           true,
 		"GET /api/app/workspaces/:workspaceId/teams":                           true,
 		"GET /api/app/workspaces/:workspaceId":                                 true,
+		"GET /api/app/workspaces/:workspaceId/ai":                              true,
+		"POST /api/app/workspaces/:workspaceId/ai/translations":                true,
+		"GET /api/app/organizations/:organizationId/ai":                        true,
+		"GET /api/app/surveys/:surveyId/ai/translation-availability":           true,
+		"POST /api/app/surveys/generate/stream":                                true,
 		"GET /api/app/organizations/:organizationId/workspaces":                true,
 		"GET /api/app/organizations/:organizationId/members":                   true,
 		"PATCH /api/app/organizations/:organizationId/api-keys/:apiKeyId":      true,
@@ -158,6 +168,13 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"GET /api/v3/action-classes":                                           true,
 		"GET /api/v3/tags":                                                     true,
 		"POST /api/v3/tags/:tagId/merge":                                       true,
+		"GET /api/v3/workflows":                                                true,
+		"GET /api/v3/workflows/runs":                                           true,
+		"GET /api/v3/workflows/runs/:runId":                                    true,
+		"PATCH /api/v3/workflows/:workflowId":                                  true,
+		"POST /api/v3/workflows/:workflowId/enable":                            true,
+		"POST /api/v3/workflows/:workflowId/test":                              true,
+		"GET /api/app/workspaces/:workspaceId/workflows/authoring-context":     true,
 	}
 	for _, route := range r.Routes() {
 		delete(want, route.Method+" "+route.Path)

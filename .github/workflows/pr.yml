@@ -16,7 +16,8 @@ jobs:
   server:
     name: Go server
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # A change to a shared package invalidates the whole Go test cache, and the full `go test -race` run (bcrypt at production cost, testcontainers per package) takes longer than 15 minutes on a hosted runner.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: server

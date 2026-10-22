@@ -57,6 +57,11 @@ func (h *Handler) Register(r *gin.Engine) {
 	r.NoRoute(h.serve)
 }
 
+// ServePage answers a client route whose path another handler also mounts, as NoRoute would have.
+func (h *Handler) ServePage(c *gin.Context) {
+	h.serve(c)
+}
+
 func (h *Handler) serve(c *gin.Context) {
 	p := c.Request.URL.Path
 	// API and probe paths never fall back to the SPA: a client calling a missing endpoint must get a 404, not an HTML page with status 200.

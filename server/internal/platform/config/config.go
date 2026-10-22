@@ -78,6 +78,9 @@ type Config struct {
 	AuditLogEnabled   bool `env:"AUDIT_LOG_ENABLED" envDefault:"1"`
 	AuditLogGetUserIP bool `env:"AUDIT_LOG_GET_USER_IP" envDefault:"0"`
 
+	// DangerouslyAllowWebhookInternalURLs lets webhooks target private, loopback, link-local and metadata addresses and follow redirects, for self-hosted instances whose receivers live on the internal network, forma2's DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS. A host name that does not resolve is still refused.
+	DangerouslyAllowWebhookInternalURLs bool `env:"DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS" envDefault:"0"`
+
 	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did.
 	WorkerConcurrency int `env:"WORKER_CONCURRENCY" envDefault:"0"`
 
@@ -125,6 +128,12 @@ type Config struct {
 
 	// S3 is the object store uploaded files live in.
 	S3 S3Config
+
+	// AI is the instance's AI provider, forma2's AI_* variables.
+	AI AIConfig
+
+	// Integrations are the OAuth apps of Google Sheets, Airtable, Notion and Slack.
+	Integrations IntegrationsConfig
 
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
@@ -188,6 +197,35 @@ type SSOConfig struct {
 	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
+}
+
+// IntegrationsConfig is forma2's OAuth app credentials of the third-party integrations, under its variable names. An integration can be connected exactly when its variables are set.
+type IntegrationsConfig struct {
+	// GoogleSheetsRedirectURL is used verbatim as the OAuth redirect URI; it is <WEBAPP_URL>/api/google-sheet/callback unless the app was registered under another origin.
+	GoogleSheetsClientID     string `env:"GOOGLE_SHEETS_CLIENT_ID"`
+	GoogleSheetsClientSecret string `env:"GOOGLE_SHEETS_CLIENT_SECRET"`
+	GoogleSheetsRedirectURL  string `env:"GOOGLE_SHEETS_REDIRECT_URL"`
+	// AirtableClientID is a public OAuth client: Airtable is authorized with PKCE and no secret.
+	AirtableClientID   string `env:"AIRTABLE_CLIENT_ID"`
+	NotionClientID     string `env:"NOTION_OAUTH_CLIENT_ID"`
+	NotionClientSecret string `env:"NOTION_OAUTH_CLIENT_SECRET"`
+	SlackClientID      string `env:"SLACK_CLIENT_ID"`
+	SlackClientSecret  string `env:"SLACK_CLIENT_SECRET"`
+}
+
+// GoogleSheetsEnabled, AirtableEnabled, NotionEnabled and SlackEnabled are what forma2's integration pages checked before offering to connect.
+func (c IntegrationsConfig) GoogleSheetsEnabled() bool {
+	return c.GoogleSheetsClientID != "" && c.GoogleSheetsClientSecret != "" && c.GoogleSheetsRedirectURL != ""
+}
+
+func (c IntegrationsConfig) AirtableEnabled() bool { return c.AirtableClientID != "" }
+
+func (c IntegrationsConfig) NotionEnabled() bool {
+	return c.NotionClientID != "" && c.NotionClientSecret != ""
+}
+
+func (c IntegrationsConfig) SlackEnabled() bool {
+	return c.SlackClientID != "" && c.SlackClientSecret != ""
 }
 
 // GoogleEnabled, GitHubEnabled, AzureADEnabled and OIDCEnabled are forma2's *_OAUTH_ENABLED: a provider needs its client id and secret (and the generic one its issuer).
@@ -333,6 +371,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.S3.validate(); err != nil {
+		return err
+	}
+	if err := c.AI.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {

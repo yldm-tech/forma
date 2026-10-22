@@ -1,0 +1,748 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { i18n as I18n } from "i18next";
+import { type ReactNode, Suspense } from "react";
+import { I18nextProvider } from "react-i18next";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
+import { initI18n } from "../../../lib/i18n";
+import type { WorkspaceDetail } from "../../../lib/queries/workspaces";
+import { toast } from "../../../lib/toast";
+import { IntegrationsPage } from "../../workspace-settings/integrations";
+import type { Integration, IntegrationsOverview, LinkableSurvey, Webhook } from "../api";
+import { AirtablePage } from "./airtable";
+import { GoogleSheetsPage } from "./google-sheets";
+import { NotionPage } from "./notion";
+import { SlackPage } from "./slack";
+import { WebhooksPage } from "./webhooks";
+
+const WS = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
+const BASE = `/api/app/workspaces/${WS}/integrations`;
+
+let i18n: I18n;
+const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, options);
+
+beforeAll(async () => {
+  i18n = await initI18n("en-US");
+  // jsdom has no modal dialogs; showing one is setting its open attribute.
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  };
+  // The router restores the scroll position on navigation, which jsdom does not implement.
+  window.scrollTo = () => {};
+  // Radix's checkbox measures itself; jsdom lays nothing out, so there is nothing to observe.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+afterEach(() => {
+  cleanup();
+  for (const shown of toast.getSnapshot()) toast.dismiss(shown.id);
+  vi.unstubAllGlobals();
+});
+
+interface Call {
+  method: string;
+  path: string;
+  body: unknown;
+}
+
+type Handler = (body: unknown) => { status?: number; body?: unknown };
+
+const reply = (status: number, body?: unknown) =>
+  status === 204
+    ? new Response(null, { status })
+    : new Response(JSON.stringify(body ?? {}), { status, headers: { "content-type": "application/json" } });
+
+/** The Go server, answering "METHOD /path" (query string ignored) from handlers and recording every request. */
+const stubServer = (handlers: Record<string, Handler>): Call[] => {
+  const calls: Call[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string, init: RequestInit = {}) => {
+      const method = init.method ?? "GET";
+      const path = input.split("?")[0] ?? input;
+      const body = typeof init.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+      calls.push({ method, path: input, body });
+      const handler = handlers[`${method} ${path}`];
+      if (!handler) return reply(404, { code: "not_found", message: `no stub for ${method} ${path}` });
+      const answer = handler(body);
+      return reply(answer.status ?? 200, answer.body);
+    })
+  );
+  return calls;
+};
+
+const renderPage = (node: ReactNode) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const rootRoute = createRootRoute({ component: Outlet });
+  const routeTree = rootRoute.addChildren([
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+      component: () => <Suspense fallback={null}>{node}</Suspense>,
+    }),
+  ]);
+  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </I18nextProvider>
+  );
+};
+
+const toasts = () => toast.getSnapshot().map((shown) => shown.message);
+
+const survey: LinkableSurvey = {
+  id: "0192f7a8-1c3e-7b2a-9d4f-000000000001",
+  name: "Feedback",
+  elements: [
+    { id: "q1", type: "openText", headline: { default: "What is your name?" } },
+    { id: "q2", type: "rating", headline: { default: "How was it?" } },
+  ],
+  hiddenFields: [],
+  variables: [],
+};
+
+const integration = <T extends Integration["type"]>(
+  type: T,
+  data: Integration<T>["config"]["data"],
+  connection: Integration["connection"]
+): Integration<T> => ({
+  id: `integration-${type}`,
+  type,
+  config: { data },
+  connection,
+  createdAt: "2026-10-01T00:00:00.000Z",
+  updatedAt: "2026-10-01T00:00:00.000Z",
+  lastErrorAt: null,
+  lastErrorMessage: null,
+  consecutiveFailures: 0,
+});
+
+const overview = (integrations: Integration[], enabled = true): IntegrationsOverview => ({
+  integrations,
+  enabled: { googleSheets: enabled, airtable: enabled, notion: enabled, slack: enabled },
+});
+
+const webhook = (overrides: Partial<Webhook> = {}): Webhook => ({
+  id: "0192f7a8-1c3e-7b2a-9d4f-0000000000a1",
+  name: "Orders",
+  createdAt: "2026-10-01T00:00:00.000Z",
+  updatedAt: "2026-10-02T00:00:00.000Z",
+  url: "https://hooks.example.com/forma",
+  source: "user",
+  workspaceId: WS,
+  triggers: ["responseFinished"],
+  surveyIds: [],
+  allSurveys: true,
+  ...overrides,
+});
+
+describe("integrations page", () => {
+  const workspace = (isReadOnly: boolean) =>
+    ({
+      id: WS,
+      appSetupCompleted: false,
+      access: { role: "member", canWrite: !isReadOnly, canManage: false, isReadOnly },
+    }) as unknown as WorkspaceDetail;
+
+  const card = (label: string) => within(screen.getByRole("heading", { name: label }).parentElement!);
+
+  test("counts webhooks by source and offers Manage for a connected integration", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([integration("googleSheets", [], { connected: true })]) }),
+      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+        body: {
+          webhooks: [webhook(), webhook({ id: "w2" }), webhook({ id: "w3", source: "zapier" })],
+          allowInternalUrls: false,
+        },
+      }),
+    });
+    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+
+    expect(await screen.findByText("2 webhooks")).toBeTruthy();
+    expect(card("Zapier").getByText("1 zap")).toBeTruthy();
+    const sheets = card("Google Sheets");
+    expect(sheets.getByRole("link", { name: t("common.manage") }).getAttribute("href")).toBe(
+      `/workspaces/${WS}/integrations/google-sheets`
+    );
+    expect(
+      card("Slack")
+        .getByRole("link", { name: t("common.connect") })
+        .getAttribute("href")
+    ).toBe(`/workspaces/${WS}/integrations/slack`);
+    expect(card("Slack").getByText(t("common.not_connected"))).toBeTruthy();
+  });
+
+  test("a read-only member cannot open the integrations, but still sees the webhooks", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([]) }),
+      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+        body: { webhooks: [], allowInternalUrls: false },
+      }),
+    });
+    renderPage(<IntegrationsPage workspace={workspace(true)} />);
+
+    await screen.findAllByText(t("common.not_connected"));
+    expect(card("Google Sheets").getByRole("button", { name: t("common.connect") })).toHaveProperty(
+      "disabled",
+      true
+    );
+    expect(
+      card("Webhooks").getByRole("link", { name: t("workspace.integrations.manage_webhooks") })
+    ).toBeTruthy();
+  });
+});
+
+describe("Google Sheets", () => {
+  test("a refused authorization is reported, and Connect sends the browser to the provider", async () => {
+    const replace = vi.fn();
+    vi.stubGlobal("location", { ...globalThis.location, replace });
+    const calls = stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([]) }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [] }),
+      [`POST ${BASE}/googleSheets/connect`]: () => ({
+        body: { authUrl: "https://accounts.google.com/o/oauth2/auth?state=s" },
+      }),
+    });
+    renderPage(<GoogleSheetsPage workspaceId={WS} oauthError="access_denied" />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: t("workspace.integrations.google_sheets.connect_with_google_sheets"),
+      })
+    );
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/auth?state=s")
+    );
+    expect(calls.some((call) => call.method === "POST" && call.path === `${BASE}/googleSheets/connect`)).toBe(
+      true
+    );
+    expect(toasts()).toContain(t("workspace.integrations.connecting_integration_failed_please_try_again"));
+  });
+
+  test("an instance without Google credentials cannot connect and says how to configure it", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([], false) }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [] }),
+    });
+    renderPage(<GoogleSheetsPage workspaceId={WS} />);
+
+    const connect = await screen.findByRole("button", {
+      name: t("workspace.integrations.google_sheets.connect_with_google_sheets"),
+    });
+    expect(connect).toHaveProperty("disabled", true);
+    expect(
+      screen.getByText(t("workspace.integrations.google_sheets.google_sheet_integration_is_not_configured"), {
+        exact: false,
+      })
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "docs" }).getAttribute("href")).toBe(
+      "https://forma.yldm.ai/docs/integrations/google-sheets"
+    );
+  });
+
+  const connected = (links: Integration<"googleSheets">["config"]["data"] = []) => ({
+    [`GET ${BASE}`]: () => ({
+      body: overview([integration("googleSheets", links, { connected: true, email: "me@example.com" })]),
+    }),
+    [`GET ${BASE}/surveys`]: () => ({ body: [survey] }),
+    [`GET ${BASE}/googleSheets/validate`]: () => ({ body: { connected: true } }),
+  });
+
+  const existing = {
+    createdAt: "2026-10-01T00:00:00.000Z",
+    surveyId: "other",
+    surveyName: "Other survey",
+    elementIds: ["x"],
+    elements: "All questions",
+    spreadsheetId: "old",
+    spreadsheetName: "Old sheet",
+    includeCreatedAt: true,
+  };
+
+  test("linking a sheet looks up its name and saves every link", async () => {
+    const calls = stubServer({
+      ...connected([existing]),
+      [`GET ${BASE}/googleSheets/spreadsheets/abc123`]: () => ({ body: { name: "Responses" } }),
+      [`PUT ${BASE}/googleSheets`]: () => ({ body: { id: "integration-googleSheets" } }),
+    });
+    renderPage(<GoogleSheetsPage workspaceId={WS} />);
+
+    expect(
+      await screen.findByText(t("workspace.integrations.connected_with_email", { email: "me@example.com" }))
+    ).toBeTruthy();
+    expect(screen.getByText("Old sheet")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: t("workspace.integrations.google_sheets.link_new_sheet") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.google_sheets.spreadsheet_url")), {
+      target: { value: "https://docs.google.com/spreadsheets/d/abc123/edit#gid=0" },
+    });
+    fireEvent.change(dialog.getByLabelText(t("common.select_survey")), { target: { value: survey.id } });
+    // Choosing a survey selects every question.
+    expect(dialog.getByRole("checkbox", { name: "How was it?" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(
+      dialog.getByRole("button", { name: t("workspace.integrations.google_sheets.link_google_sheet") })
+    );
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    const saved = calls.find((call) => call.method === "PUT")?.body as { data: Record<string, unknown>[] };
+    expect(saved.data).toHaveLength(2);
+    expect(saved.data[0]).toEqual(existing);
+    expect(saved.data[1]).toMatchObject({
+      surveyId: survey.id,
+      surveyName: "Feedback",
+      spreadsheetId: "abc123",
+      spreadsheetName: "Responses",
+      elementIds: ["q1", "q2"],
+      elements: t("common.all_questions"),
+      includeCreatedAt: true,
+      includeVariables: false,
+      includeHiddenFields: false,
+      includeMetadata: false,
+      includeContactAttributes: false,
+    });
+    await waitFor(() =>
+      expect(toasts()).toContain(t("workspace.integrations.integration_added_successfully"))
+    );
+  });
+
+  test("a spreadsheet the account cannot open is reported and nothing is saved", async () => {
+    const calls = stubServer({
+      ...connected(),
+      [`GET ${BASE}/googleSheets/spreadsheets/abc123`]: () => ({
+        status: 403,
+        body: { code: "insufficient_permission", message: "insufficient_permission" },
+      }),
+    });
+    renderPage(<GoogleSheetsPage workspaceId={WS} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("workspace.integrations.google_sheets.link_new_sheet") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.google_sheets.spreadsheet_url")), {
+      target: { value: "https://docs.google.com/spreadsheets/d/abc123" },
+    });
+    fireEvent.change(dialog.getByLabelText(t("common.select_survey")), { target: { value: survey.id } });
+    fireEvent.click(
+      dialog.getByRole("button", { name: t("workspace.integrations.google_sheets.link_google_sheet") })
+    );
+
+    await waitFor(() =>
+      expect(toasts()).toContain(t("workspace.integrations.google_sheets.spreadsheet_permission_error"))
+    );
+    expect(calls.some((call) => call.method === "PUT")).toBe(false);
+  });
+
+  test("a credential Google no longer refreshes offers reconnecting", async () => {
+    stubServer({
+      ...connected(),
+      [`GET ${BASE}/googleSheets/validate`]: () => ({
+        status: 400,
+        body: { code: "invalid_grant", message: "invalid_grant" },
+      }),
+    });
+    renderPage(<GoogleSheetsPage workspaceId={WS} />);
+
+    expect(
+      await screen.findByText(t("workspace.integrations.google_sheets.reconnect_button_description"))
+    ).toBeTruthy();
+  });
+});
+
+describe("Airtable", () => {
+  test("choosing a base loads its tables, and the link names the table", async () => {
+    const calls = stubServer({
+      [`GET ${BASE}`]: () => ({
+        body: overview([integration("airtable", [], { connected: true, email: "me@example.com" })]),
+      }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [survey] }),
+      [`GET ${BASE}/airtable/bases`]: () => ({ body: [{ id: "app1", name: "CRM" }] }),
+      [`GET ${BASE}/airtable/bases/app1/tables`]: () => ({ body: [{ id: "tbl1", name: "Leads" }] }),
+      [`PUT ${BASE}/airtable`]: () => ({ body: { id: "integration-airtable" } }),
+    });
+    renderPage(<AirtablePage workspaceId={WS} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("workspace.integrations.airtable.link_new_table") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(await dialog.findByLabelText(t("workspace.integrations.airtable.airtable_base")), {
+      target: { value: "app1" },
+    });
+    await dialog.findByRole("option", { name: "Leads" });
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.airtable.table_name")), {
+      target: { value: "tbl1" },
+    });
+    fireEvent.change(dialog.getByLabelText(t("common.select_survey")), { target: { value: survey.id } });
+    // Airtable starts with no question selected, as forma2's modal did.
+    fireEvent.click(dialog.getByRole("checkbox", { name: "How was it?" }));
+    fireEvent.click(dialog.getByRole("button", { name: t("common.save") }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    const saved = calls.find((call) => call.method === "PUT")?.body as { data: Record<string, unknown>[] };
+    expect(saved.data).toEqual([
+      expect.objectContaining({
+        baseId: "app1",
+        tableId: "tbl1",
+        tableName: "Leads",
+        elementIds: ["q2"],
+        elements: t("common.selected_questions"),
+      }),
+    ]);
+  });
+
+  test("bases that cannot be listed offer reconnecting", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({
+        body: overview([integration("airtable", [], { connected: true, email: "me@example.com" })]),
+      }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [] }),
+      [`GET ${BASE}/airtable/bases`]: () => ({
+        status: 502,
+        body: { code: "integration_provider_error", message: "Failed to get Airtable token" },
+      }),
+    });
+    renderPage(<AirtablePage workspaceId={WS} />);
+
+    expect(await screen.findByText(t("workspace.integrations.reconnect_button_description"))).toBeTruthy();
+  });
+});
+
+describe("Notion", () => {
+  test("a property an element cannot be written to is explained and blocks the link until it is fixed", async () => {
+    const calls = stubServer({
+      [`GET ${BASE}`]: () => ({
+        body: overview([integration("notion", [], { connected: true, workspaceName: "Team space" })]),
+      }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [survey] }),
+      [`GET /api/app/workspaces/${WS}/contact-attribute-keys`]: () => ({ body: [] }),
+      [`GET ${BASE}/notion/databases`]: () => ({
+        body: [
+          {
+            id: "db1",
+            name: "Responses",
+            properties: [
+              { id: "p1", name: "Name", type: "title" },
+              { id: "p2", name: "Score", type: "number" },
+            ],
+          },
+        ],
+      }),
+      [`PUT ${BASE}/notion`]: () => ({ body: { id: "integration-notion" } }),
+    });
+    renderPage(<NotionPage workspaceId={WS} />);
+
+    expect(
+      await screen.findByText(
+        t("workspace.integrations.notion.connected_with_workspace", { workspace: "Team space" })
+      )
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: t("workspace.integrations.notion.link_new_database") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(await dialog.findByLabelText(t("workspace.integrations.notion.select_a_database")), {
+      target: { value: "db1" },
+    });
+    fireEvent.change(dialog.getByLabelText(t("common.select_survey")), { target: { value: survey.id } });
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.notion.select_a_survey_question")), {
+      target: { value: "q2" },
+    });
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.notion.select_a_field_to_map")), {
+      target: { value: "p1" },
+    });
+
+    expect(dialog.getByRole("alert").textContent).toContain("Mapping Error");
+    const link = dialog.getByRole("button", { name: t("workspace.integrations.notion.link_database") });
+    expect(link).toHaveProperty("disabled", true);
+
+    fireEvent.change(dialog.getByLabelText(t("workspace.integrations.notion.select_a_field_to_map")), {
+      target: { value: "p2" },
+    });
+    expect(dialog.queryByRole("alert")).toBeNull();
+    fireEvent.click(link);
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    const saved = calls.find((call) => call.method === "PUT")?.body as { data: Record<string, unknown>[] };
+    expect(saved.data).toEqual([
+      {
+        createdAt: expect.any(String),
+        surveyId: survey.id,
+        surveyName: "Feedback",
+        databaseId: "db1",
+        databaseName: "Responses",
+        mapping: [
+          {
+            element: { id: "q2", name: "How was it?", type: "rating" },
+            column: { id: "p2", name: "Score", type: "number" },
+          },
+        ],
+      },
+    ]);
+  });
+});
+
+describe("Slack", () => {
+  const slackLink = {
+    createdAt: "2026-10-01T00:00:00.000Z",
+    surveyId: survey.id,
+    surveyName: "Feedback",
+    elementIds: ["q1"],
+    elements: "Selected questions",
+    channelId: "C1",
+    channelName: "general",
+  };
+
+  test("Slack refusing for a missing scope offers reconnecting", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({
+        body: overview([integration("slack", [], { connected: true, teamName: "Acme" })]),
+      }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [] }),
+      [`GET ${BASE}/slack/channels`]: () => ({
+        status: 502,
+        body: { code: "integration_provider_error", message: "missing_scope" },
+      }),
+    });
+    renderPage(<SlackPage workspaceId={WS} />);
+
+    expect(
+      await screen.findByRole("button", { name: t("workspace.integrations.slack.slack_reconnect_button") })
+    ).toBeTruthy();
+    expect(
+      screen.getByText(t("workspace.integrations.slack.connected_with_team", { team: "Acme" }))
+    ).toBeTruthy();
+  });
+
+  test("deleting a link saves the others", async () => {
+    const calls = stubServer({
+      [`GET ${BASE}`]: () => ({
+        body: overview([integration("slack", [slackLink], { connected: true, teamName: "Acme" })]),
+      }),
+      [`GET ${BASE}/surveys`]: () => ({ body: [survey] }),
+      [`GET ${BASE}/slack/channels`]: () => ({ body: [{ id: "C1", name: "general" }] }),
+      [`PUT ${BASE}/slack`]: () => ({ body: { id: "integration-slack" } }),
+    });
+    renderPage(<SlackPage workspaceId={WS} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /general/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByLabelText(t("workspace.integrations.slack.select_channel"))).toHaveProperty(
+      "value",
+      "C1"
+    );
+    fireEvent.click(dialog.getByRole("button", { name: t("common.delete") }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ data: [] });
+    await waitFor(() =>
+      expect(toasts()).toContain(t("workspace.integrations.integration_removed_successfully"))
+    );
+  });
+});
+
+describe("webhooks", () => {
+  const WEBHOOKS = `/api/app/workspaces/${WS}/webhooks`;
+  const surveysList = () => ({
+    body: {
+      data: [{ id: survey.id, name: "Feedback" }],
+      meta: { limit: 200, nextCursor: null, totalCount: 1, workspaceSurveyCount: 1 },
+    },
+  });
+
+  test("adding a webhook tests the endpoint first and keeps the secret that signed the test, shown once", async () => {
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true, secret: "whsec_c2VjcmV0" } }),
+      [`POST ${WEBHOOKS}`]: (body) => ({
+        status: 201,
+        body: webhook({ ...(body as Partial<Webhook>), secret: "whsec_c2VjcmV0" }),
+      }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    expect(await screen.findByText(t("workspace.integrations.webhooks.empty_webhook_message"))).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(t("common.url")), {
+      target: { value: "https://hooks.example.com/forma" },
+    });
+    fireEvent.click(
+      dialog.getByRole("checkbox", { name: t("workspace.integrations.webhooks.response_finished") })
+    );
+    fireEvent.click(
+      dialog.getByRole("checkbox", { name: t("workspace.integrations.webhooks.all_current_and_new_surveys") })
+    );
+    fireEvent.click(dialog.getByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") }));
+
+    expect(await screen.findByDisplayValue("whsec_c2VjcmV0")).toBeTruthy();
+    const posts = calls.filter((call) => call.method === "POST");
+    expect(posts.map((call) => call.path)).toEqual([`${WEBHOOKS}/test`, WEBHOOKS]);
+    expect(posts[0]?.body).toEqual({ url: "https://hooks.example.com/forma" });
+    expect(posts[1]?.body).toEqual({
+      name: "",
+      url: "https://hooks.example.com/forma",
+      source: "user",
+      triggers: ["responseFinished"],
+      surveyIds: [],
+      allSurveys: true,
+      webhookSecret: "whsec_c2VjcmV0",
+    });
+  });
+
+  test("an endpoint the test could not reach is reported in the user's language and nothing is created", async () => {
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST ${WEBHOOKS}/test`]: () => ({
+        status: 400,
+        body: { code: "endpoint_not_found_error", message: "Not Found (404): The endpoint doesn't exist" },
+      }),
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(t("common.url")), {
+      target: { value: "https://hooks.example.com/forma" },
+    });
+    fireEvent.click(dialog.getByRole("button", { name: t("workspace.integrations.webhooks.test_endpoint") }));
+
+    await waitFor(() =>
+      expect(toasts()).toContain(
+        `${t("workspace.integrations.webhooks.endpoint_pinged_error")} \n ${t("workspace.integrations.webhooks.endpoint_not_found_error")}`
+      )
+    );
+    expect(calls.filter((call) => call.method === "POST").map((call) => call.path)).toEqual([
+      `${WEBHOOKS}/test`,
+    ]);
+  });
+
+  test("the form refuses an http URL before asking the server", async () => {
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(t("common.url")), {
+      target: { value: "http://hooks.example.com" },
+    });
+    fireEvent.click(dialog.getByRole("button", { name: t("workspace.integrations.webhooks.test_endpoint") }));
+
+    await waitFor(() => expect(toasts()).toContain("URL must start with https://"));
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  test("editing tests the endpoint with the stored secret, which the browser never sees", async () => {
+    const existing = webhook({ surveyIds: [survey.id], allSurveys: false });
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true } }),
+      [`PATCH /api/app/webhooks/${existing.id}`]: (body) => ({ body: webhook(body as Partial<Webhook>) }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    fireEvent.change(dialog.getByLabelText(t("common.name")), { target: { value: "Orders v2" } });
+    fireEvent.click(dialog.getByRole("button", { name: t("common.save_changes") }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
+    expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+      url: existing.url,
+      webhookId: existing.id,
+    });
+    expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({
+      name: "Orders v2",
+      url: existing.url,
+      source: "user",
+      triggers: ["responseFinished"],
+      surveyIds: [survey.id],
+      allSurveys: false,
+    });
+  });
+
+  test("a webhook whose surveys were all deleted is saved with its own scope, never widened to every survey", async () => {
+    const existing = webhook({ surveyIds: ["0192f7a8-1c3e-7b2a-9d4f-00000000dead"], allSurveys: false });
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true } }),
+      [`PATCH /api/app/webhooks/${existing.id}`]: (body) => ({ body: webhook(body as Partial<Webhook>) }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.queryByText("Feedback")).toBeNull();
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    expect(
+      dialog
+        .getByRole("checkbox", { name: t("workspace.integrations.webhooks.all_current_and_new_surveys") })
+        .getAttribute("aria-checked")
+    ).toBe("false");
+    fireEvent.change(dialog.getByLabelText(t("common.name")), { target: { value: "Orders v2" } });
+    fireEvent.click(dialog.getByRole("button", { name: t("common.save_changes") }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
+    expect(calls.find((call) => call.method === "PATCH")?.body).toMatchObject({
+      surveyIds: [existing.surveyIds[0]],
+      allSurveys: false,
+    });
+  });
+
+  test("a webhook a third party created keeps its URL, triggers and surveys; a read-only member cannot add one", async () => {
+    stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({
+        body: { webhooks: [webhook({ source: "zapier", name: null })], allowInternalUrls: false },
+      }),
+      "GET /api/v3/surveys": surveysList,
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /hooks\.example\.com/ }));
+    expect(
+      screen.queryByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
+    ).toBeNull();
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("zapier")).toBeTruthy();
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    expect(dialog.getByLabelText(t("common.url"))).toHaveProperty("readOnly", true);
+    expect(
+      dialog.getByRole("checkbox", { name: t("workspace.integrations.webhooks.response_finished") })
+    ).toHaveProperty("disabled", true);
+    expect(dialog.queryByRole("button", { name: t("common.save_changes") })).toBeNull();
+  });
+});

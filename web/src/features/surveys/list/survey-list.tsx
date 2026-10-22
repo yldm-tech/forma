@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDownIcon, LayoutTemplateIcon, PlusCircleIcon } from "lucide-react";
+import { ChevronDownIcon, LayoutTemplateIcon, PlusCircleIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
@@ -12,6 +12,8 @@ import {
 } from "../../../components/ui/dropdown-menu";
 import { PageContentWrapper, PageHeader } from "../../../components/ui/page";
 import { readStorage, writeStorage } from "../../../lib/storage";
+import { workspaceAIQuery } from "../../ai/availability";
+import { CreateWithAIDialog } from "../ai-create/create-with-ai-dialog";
 import { CUSTOM_TEMPLATE_ID, publicDomainQuery, v3ErrorMessage } from "../api";
 import { TemplateGallery } from "../templates/template-gallery";
 import { useCreateSurveyFromTemplate } from "../templates/use-create-survey";
@@ -37,50 +39,73 @@ import { SurveyCard } from "./survey-card";
 import type { SurveyActions } from "./survey-dropdown-menu";
 import { SurveyFilters } from "./survey-filters";
 
-/** forma2's NewSurveyMenu, without "Create with AI", which this server does not offer: the template gallery, or a blank survey opened in the editor. */
+/** forma2's NewSurveyMenu: a draft written by AI, the template gallery, or a blank survey opened in the editor. */
 const NewSurveyMenu = ({
   workspaceId,
+  organizationId,
   surveyType,
   defaultLanguage,
 }: {
   workspaceId: string;
+  organizationId: string;
   surveyType: "link" | "app";
   defaultLanguage: string;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { create, isPending } = useCreateSurveyFromTemplate();
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const ai = useQuery(workspaceAIQuery(workspaceId)).data;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm">
-          {t("workspace.surveys.new_survey")}
-          <ChevronDownIcon />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem
-          icon={<LayoutTemplateIcon className="size-4" />}
-          onSelect={() => void navigate({ href: `/workspaces/${workspaceId}/surveys/templates` })}>
-          {t("workspace.surveys.ai_create.choose_template")}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={isPending}
-          icon={<PlusCircleIcon className="size-4" />}
-          onSelect={(event) => {
-            event.preventDefault();
-            void create({
-              workspaceId,
-              templateId: CUSTOM_TEMPLATE_ID,
-              source: "custom",
-              surveyType,
-              defaultLanguage,
-            });
-          }}>
-          {t("workspace.surveys.ai_create.start_from_scratch")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm">
+            {t("workspace.surveys.new_survey")}
+            <ChevronDownIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem
+            icon={<SparklesIcon className="size-4" />}
+            onSelect={() => setIsAIDialogOpen(true)}>
+            {t("workspace.surveys.ai_create.create_with_ai")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            icon={<LayoutTemplateIcon className="size-4" />}
+            onSelect={() => void navigate({ href: `/workspaces/${workspaceId}/surveys/templates` })}>
+            {t("workspace.surveys.ai_create.choose_template")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={isPending}
+            icon={<PlusCircleIcon className="size-4" />}
+            onSelect={(event) => {
+              event.preventDefault();
+              void create({
+                workspaceId,
+                templateId: CUSTOM_TEMPLATE_ID,
+                source: "custom",
+                surveyType,
+                defaultLanguage,
+              });
+            }}>
+            {t("workspace.surveys.ai_create.start_from_scratch")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {isAIDialogOpen && (
+        <CreateWithAIDialog
+          open
+          onOpenChange={setIsAIDialogOpen}
+          workspaceId={workspaceId}
+          organizationId={organizationId}
+          locale={i18n.language}
+          surveyType={surveyType}
+          isAIAvailable={ai?.available ?? false}
+          aiUnavailableReason={ai?.reason}
+        />
+      )}
+    </>
   );
 };
 
@@ -170,6 +195,7 @@ export const SurveysList = ({
     return (
       <TemplateGallery
         workspaceId={workspaceId}
+        organizationId={organizationId}
         surveyType={surveyType}
         defaultLanguage={defaultLanguage}
         isTemplatePage={false}
@@ -259,6 +285,7 @@ export const SurveysList = ({
           isReadOnly ? undefined : (
             <NewSurveyMenu
               workspaceId={workspaceId}
+              organizationId={organizationId}
               surveyType={surveyType}
               defaultLanguage={defaultLanguage}
             />

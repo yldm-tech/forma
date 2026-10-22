@@ -163,7 +163,7 @@ func TestUpdateOrganization(t *testing.T) {
 	}
 	e.fails(e.do(owner, http.MethodPatch, path, map[string]any{"name": ""}), http.StatusBadRequest, apperr.CodeValidation, "")
 
-	// No AI provider is configured on this server: enabling is refused, disabling always works.
+	// No AI provider is configured on this instance: enabling is refused, disabling always works.
 	e.fails(e.do(manager, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": true}), http.StatusForbidden, CodeAIInstanceNotConfigured, "")
 	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, c.ID)
 	e.ok(e.do(manager, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": false}), http.StatusOK, &o)
@@ -171,6 +171,29 @@ func TestUpdateOrganization(t *testing.T) {
 		t.Fatal("AI smart tools still enabled")
 	}
 	e.fails(e.do(member, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": false}), http.StatusForbidden, apperr.CodeForbidden, "")
+}
+
+// forma2's assertOrganizationAISettingsUpdateAllowed: with an AI provider configured, owners and managers switch AI smart tools on and off.
+func TestUpdateOrganizationAISmartToolsOnConfiguredInstance(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) {
+		c.AI = config.AIConfig{Provider: config.AIProviderOpenAICompatible, Model: "qwen", OpenAICompatibleBaseURL: "http://vllm:8000/v1"}
+	})
+	owner, manager, member := e.user(), e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, manager, RoleManager)
+	e.member(c.ID, member, RoleMember)
+	path := orgPath(c.ID, "")
+
+	var o Organization
+	e.ok(e.do(manager, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": true}), http.StatusOK, &o)
+	if !o.IsAISmartToolsEnabled {
+		t.Fatal("AI smart tools not enabled")
+	}
+	e.fails(e.do(member, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": false}), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.ok(e.do(owner, http.MethodPatch, path, map[string]any{"isAISmartToolsEnabled": false}), http.StatusOK, &o)
+	if o.IsAISmartToolsEnabled {
+		t.Fatal("AI smart tools still enabled")
+	}
 }
 
 func TestDeleteOrganization(t *testing.T) {
