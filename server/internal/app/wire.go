@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -78,11 +79,21 @@ var inviteSet = wire.NewSet(
 	invite.NewHandler,
 )
 
-// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys.
+// apikeySet is the organization API key module under /api/app/organizations/:organizationId/api-keys, and the API key authentication of /api/v3.
 var apikeySet = wire.NewSet(
 	apikey.NewRepository,
 	apikey.NewService,
 	apikey.NewHandler,
+	apikey.NewAuthenticator,
+)
+
+// contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
+var contactSet = wire.NewSet(
+	contact.NewRepository,
+	contact.NewEvaluator,
+	contact.NewService,
+	contact.NewHandler,
+	contact.NewV3Handler,
 )
 
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
@@ -98,6 +109,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		teamSet,
 		inviteSet,
 		apikeySet,
+		contactSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

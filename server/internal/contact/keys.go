@@ -39,11 +39,6 @@ func (s *Service) Keys(ctx context.Context, userID, workspaceID uuid.UUID) ([]Ke
 	return s.repo.keys(ctx, workspaceID)
 }
 
-// WorkspaceKeys lists a workspace's keys for a caller already authorized on it (the v3 API).
-func (s *Service) WorkspaceKeys(ctx context.Context, workspaceID uuid.UUID) ([]Key, error) {
-	return s.repo.keys(ctx, workspaceID)
-}
-
 // CreateKey is forma2's createContactAttributeKeyAction: a custom key that is a safe identifier and not reserved, named after its key unless a name is given, of type string unless another is given.
 func (s *Service) CreateKey(ctx context.Context, userID, workspaceID uuid.UUID, in NewKeyInput) (k *Key, err error) {
 	ev := audit.Event{Action: audit.ActionCreated, TargetType: audit.TargetContactAttributeKey}

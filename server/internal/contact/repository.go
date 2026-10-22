@@ -2,8 +2,10 @@ package contact
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -428,4 +430,232 @@ func (r *Repository) contactsByID(ctx context.Context, ids []uuid.UUID) ([]Conta
 	}
 	sort.Slice(rows, func(i, j int) bool { return position[rows[i].ID] < position[rows[j].ID] })
 	return r.withAttributes(ctx, rows)
+}
+
+// ---- segments ----
+
+var errSegmentTitleTaken = errors.New("segment title taken")
+
+type segmentRow struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Title       string
+	Description *string
+	IsPrivate   bool
+	Filters     []byte
+	WorkspaceID uuid.UUID
+}
+
+const segmentColumns = `id, created_at, updated_at, title, description, is_private, filters, workspace_id`
+
+// segments reads a workspace's segments, or the one with the given id, with the surveys that target them.
+func (r *Repository) segments(ctx context.Context, workspaceID uuid.UUID, id *uuid.UUID) ([]Segment, error) {
+	query := `SELECT ` + segmentColumns + ` FROM segments WHERE workspace_id = ? ORDER BY created_at, id`
+	args := []any{workspaceID}
+	if id != nil {
+		query = `SELECT ` + segmentColumns + ` FROM segments WHERE id = ?`
+		args = []any{*id}
+	}
+	var rows []segmentRow
+	if err := r.db.WithContext(ctx).Raw(query, args...).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("read segments: %w", err)
+	}
+	out := make([]Segment, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, len(rows))
+	index := make(map[uuid.UUID]int, len(rows))
+	for i, s := range rows {
+		ids[i] = s.ID
+		index[s.ID] = i
+		out[i] = Segment{ID: s.ID, CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt, Title: s.Title, Description: s.Description, IsPrivate: s.IsPrivate, Filters: s.Filters, WorkspaceID: s.WorkspaceID, Surveys: []uuid.UUID{}, ActiveSurveys: []SurveyRef{}, InactiveSurveys: []SurveyRef{}}
+	}
+	var surveys []struct {
+		ID        uuid.UUID
+		Name      string
+		Status    string
+		SegmentID uuid.UUID
+	}
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, name, status, segment_id FROM surveys WHERE segment_id IN ? ORDER BY created_at, id`, ids).Scan(&surveys).Error; err != nil {
+		return nil, fmt.Errorf("read segment surveys: %w", err)
+	}
+	for _, sv := range surveys {
+		seg := &out[index[sv.SegmentID]]
+		seg.Surveys = append(seg.Surveys, sv.ID)
+		ref := SurveyRef{ID: sv.ID, Name: sv.Name}
+		if sv.Status == surveyStatusInProgress {
+			seg.ActiveSurveys = append(seg.ActiveSurveys, ref)
+		} else {
+			seg.InactiveSurveys = append(seg.InactiveSurveys, ref)
+		}
+	}
+	return out, nil
+}
+
+func (r *Repository) segment(ctx context.Context, id uuid.UUID) (*Segment, error) {
+	segs, err := r.segments(ctx, uuid.Nil, &id)
+	if err != nil || len(segs) == 0 {
+		return nil, err
+	}
+	return &segs[0], nil
+}
+
+func (r *Repository) insertSegment(ctx context.Context, workspaceID uuid.UUID, title string, description *string, isPrivate bool, filters json.RawMessage) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, ?, ?) RETURNING id`, workspaceID, title, description, isPrivate, string(filters)).Scan(&id).Error
+	if isUniqueViolation(err) {
+		return uuid.Nil, errSegmentTitleTaken
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("create segment: %w", err)
+	}
+	return id, nil
+}
+
+// upsertPrivateSegment is forma2's private-segment upsert on (workspace, title): an existing segment of that title gets the filters, and the description when one is given.
+func (r *Repository) upsertPrivateSegment(ctx context.Context, workspaceID uuid.UUID, title string, description *string, filters json.RawMessage) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := r.db.WithContext(ctx).Raw(`INSERT INTO segments (workspace_id, title, description, is_private, filters) VALUES (?, ?, ?, true, ?)
+		ON CONFLICT (workspace_id, title) DO UPDATE SET filters = EXCLUDED.filters, description = CASE WHEN ? THEN EXCLUDED.description ELSE segments.description END, updated_at = now()
+		RETURNING id`, workspaceID, title, description, string(filters), description != nil).Scan(&id).Error
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("upsert segment: %w", err)
+	}
+	return id, nil
+}
+
+func (r *Repository) updateSegment(ctx context.Context, id uuid.UUID, in SegmentUpdate) error {
+	sets := []string{"updated_at = now()"}
+	var args []any
+	if in.Title != nil {
+		sets = append(sets, "title = ?")
+		args = append(args, *in.Title)
+	}
+	if in.DescriptionSet {
+		sets = append(sets, "description = ?")
+		args = append(args, in.Description)
+	}
+	if in.IsPrivate != nil {
+		sets = append(sets, "is_private = ?")
+		args = append(args, *in.IsPrivate)
+	}
+	if in.Filters != nil {
+		sets = append(sets, "filters = ?")
+		args = append(args, string(in.Filters))
+	}
+	err := r.db.WithContext(ctx).Exec(`UPDATE segments SET `+strings.Join(sets, ", ")+` WHERE id = ?`, append(args, id)...).Error
+	if isUniqueViolation(err) {
+		return errSegmentTitleTaken
+	}
+	if err != nil {
+		return fmt.Errorf("update segment: %w", err)
+	}
+	return nil
+}
+
+// linkSurveys makes the workspace's surveys target the segment.
+func (r *Repository) linkSurveys(ctx context.Context, segmentID, workspaceID uuid.UUID, surveyIDs []uuid.UUID) error {
+	if len(surveyIDs) == 0 {
+		return nil
+	}
+	if err := r.db.WithContext(ctx).Exec(`UPDATE surveys SET segment_id = ? WHERE id IN ? AND workspace_id = ?`, segmentID, surveyIDs, workspaceID).Error; err != nil {
+		return fmt.Errorf("link surveys to segment: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) deleteSegment(ctx context.Context, id uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Exec(`DELETE FROM segments WHERE id = ?`, id).Error; err != nil {
+		return fmt.Errorf("delete segment: %w", err)
+	}
+	return nil
+}
+
+// surveyWorkspaces maps the surveys that exist to their workspaces, looked up in bounded batches.
+func (r *Repository) surveyWorkspaces(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	out := map[uuid.UUID]uuid.UUID{}
+	unique := slices.Compact(slices.SortedFunc(slices.Values(ids), func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }))
+	for start := 0; start < len(unique); start += surveyWorkspaceLookupBatchSize {
+		batch := unique[start:min(start+surveyWorkspaceLookupBatchSize, len(unique))]
+		var rows []struct {
+			ID          uuid.UUID
+			WorkspaceID uuid.UUID
+		}
+		if err := r.db.WithContext(ctx).Raw(`SELECT id, workspace_id FROM surveys WHERE id IN ?`, batch).Scan(&rows).Error; err != nil {
+			return nil, fmt.Errorf("read survey workspaces: %w", err)
+		}
+		for _, row := range rows {
+			out[row.ID] = row.WorkspaceID
+		}
+	}
+	return out, nil
+}
+
+// surveysInWorkspace reports which of the ids, as written in a filter, are surveys of the workspace.
+func (r *Repository) surveysInWorkspace(ctx context.Context, workspaceID uuid.UUID, ids []string) (map[string]bool, error) {
+	var found []string
+	if err := r.db.WithContext(ctx).Raw(`SELECT id::text FROM surveys WHERE workspace_id = ? AND id::text IN ?`, workspaceID, ids).Scan(&found).Error; err != nil {
+		return nil, fmt.Errorf("check filter surveys: %w", err)
+	}
+	out := make(map[string]bool, len(found))
+	for _, id := range found {
+		out[id] = true
+	}
+	return out, nil
+}
+
+func (r *Repository) surveyRefs(ctx context.Context, workspaceID uuid.UUID) ([]SurveyFilterRef, error) {
+	refs := []SurveyFilterRef{}
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, name, status FROM surveys WHERE workspace_id = ? ORDER BY updated_at DESC, id LIMIT ?`, workspaceID, MaxSurveyFilterRefs).Scan(&refs).Error; err != nil {
+		return nil, fmt.Errorf("list surveys: %w", err)
+	}
+	return refs, nil
+}
+
+func (r *Repository) segmentTitles(ctx context.Context, workspaceID uuid.UUID) ([]string, error) {
+	var titles []string
+	if err := r.db.WithContext(ctx).Raw(`SELECT title FROM segments WHERE workspace_id = ?`, workspaceID).Scan(&titles).Error; err != nil {
+		return nil, fmt.Errorf("list segment titles: %w", err)
+	}
+	return titles, nil
+}
+
+func (r *Repository) privateSegmentID(ctx context.Context, workspaceID uuid.UUID, title string) (*uuid.UUID, error) {
+	var ids []uuid.UUID
+	if err := r.db.WithContext(ctx).Raw(`SELECT id FROM segments WHERE workspace_id = ? AND title = ? AND is_private FOR UPDATE`, workspaceID, title).Scan(&ids).Error; err != nil {
+		return nil, fmt.Errorf("find private segment: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return &ids[0], nil
+}
+
+func (r *Repository) clearFilters(ctx context.Context, id uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Exec(`UPDATE segments SET filters = '[]', updated_at = now() WHERE id = ?`, id).Error; err != nil {
+		return fmt.Errorf("reset segment filters: %w", err)
+	}
+	return nil
+}
+
+// surveySegment is the segment a survey targets, locking the survey.
+func (r *Repository) surveySegment(ctx context.Context, surveyID uuid.UUID) (*uuid.UUID, error) {
+	var ids []*uuid.UUID
+	if err := r.db.WithContext(ctx).Raw(`SELECT segment_id FROM surveys WHERE id = ? FOR UPDATE`, surveyID).Scan(&ids).Error; err != nil {
+		return nil, fmt.Errorf("read survey segment: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return ids[0], nil
+}
+
+// deleteOwnPrivateSegment deletes a survey's own targeting segment: private and titled with the survey's id.
+func (r *Repository) deleteOwnPrivateSegment(ctx context.Context, segmentID uuid.UUID, surveyID string) error {
+	if err := r.db.WithContext(ctx).Exec(`DELETE FROM segments WHERE id = ? AND is_private AND title = ?`, segmentID, surveyID).Error; err != nil {
+		return fmt.Errorf("delete survey segment: %w", err)
+	}
+	return nil
 }

@@ -7,8 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/apikey"
+	"github.com/yldm-tech/forma/server/internal/apiv3"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/org"
@@ -40,11 +42,12 @@ type routeRegistrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(p.ClientIP.Middleware())
 	healthHandler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler)
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, contactHandler)
+	mountV3API(r, p, sessions, apiKeys, contactV3Handler)
 	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
 	ssoHandler.RegisterCallbacks(r)
 	web.Register(r)
@@ -54,6 +57,15 @@ func NewRouter(p *Platform, healthHandler *health.Handler, authHandler *auth.Han
 // mountAppAPI mounts /api/app, the session-authenticated API only the admin SPA calls. Every route under it answers errors with the JSON envelope, every mutation must pass the CSRF check, and each request evaluates a repeated authorization question once. Feature modules' handlers are passed here as they land.
 func mountAppAPI(r *gin.Engine, p *Platform, handlers ...routeRegistrar) {
 	group := r.Group("/api/app", httpapi.ErrorHandler(p.Log), httpapi.CSRF(p.Config), authz.DecisionMemo())
+	for _, h := range handlers {
+		h.Register(group)
+	}
+}
+
+// mountV3API mounts /api/v3, the management API specified in docs/api-v3-reference. Every route under it answers failures as RFC 9457 problems, authenticates by session or API key, and charges forma2's api.v3 rate limit to the caller.
+func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, handlers ...routeRegistrar) {
+	middleware := append([]gin.HandlerFunc{apiv3.ErrorHandler(p.Log), authz.DecisionMemo()}, apiv3.Authenticate(sessions, apiKeys, p.Limiter)...)
+	group := r.Group("/api/v3", middleware...)
 	for _, h := range handlers {
 		h.Register(group)
 	}
