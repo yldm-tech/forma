@@ -250,12 +250,16 @@ func (s *Service) patchV3(ctx context.Context, id uuid.UUID, body any) (before, 
 	if err != nil {
 		return nil, nil, err
 	}
-	if changed, err := s.scheduler.reconcileIfDue(ctx, sv, s.now()); err != nil {
+	changed, err := s.scheduler.reconcileIfDue(ctx, sv, s.now())
+	if err != nil {
 		return nil, nil, err
-	} else if changed {
-		sv, err = s.repo.byID(ctx, id)
 	}
-	return before, sv, err
+	if changed {
+		if sv, err = s.repo.byID(ctx, id); err != nil {
+			return nil, nil, err
+		}
+	}
+	return before, sv, nil
 }
 
 // applyPatchV3 checks the patch against the locked survey and writes it in tx.
