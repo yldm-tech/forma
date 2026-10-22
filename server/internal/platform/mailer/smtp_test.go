@@ -1,8 +1,10 @@
 package mailer
 
 import (
+	"bytes"
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,5 +51,36 @@ func TestSMTPStalledServerTimesOut(t *testing.T) {
 func TestSMTPTransportRejectsAMalformedPort(t *testing.T) {
 	if _, err := newSMTPTransport(config.Config{SMTPHost: "smtp.example.com", SMTPPort: "smtp"}, defaultTimeouts); err == nil {
 		t.Fatal("accepted a non-numeric port")
+	}
+}
+
+// A message with a MessageID carries exactly that Message-ID, so a workflow step sent again is recognizable as the same message; one without gets a random id.
+func TestMessageIDHeader(t *testing.T) {
+	header := func(msg Message) string {
+		t.Helper()
+		m, err := newMsg(msg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if _, err := m.WriteTo(&buf); err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(buf.String(), "\r\n") {
+			if strings.HasPrefix(line, "Message-ID: ") {
+				return strings.TrimPrefix(line, "Message-ID: ")
+			}
+		}
+		t.Fatalf("no Message-ID in %s", buf.String())
+		return ""
+	}
+	base := Message{From: "noreply@example.com", To: "user@example.com", Subject: "s", HTML: "<p>h</p>"}
+	fixed := base
+	fixed.MessageID = "<0123456789abcdef0123456789abcdef@example.com>"
+	if got := header(fixed); got != fixed.MessageID {
+		t.Fatalf("Message-ID %q, want %q", got, fixed.MessageID)
+	}
+	if a, b := header(base), header(base); a == b || !strings.HasPrefix(a, "<") {
+		t.Fatalf("random Message-IDs %q and %q", a, b)
 	}
 }

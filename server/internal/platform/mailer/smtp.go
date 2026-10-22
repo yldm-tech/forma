@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/mail"
 	"strconv"
+	"strings"
 	"time"
 
 	gomail "github.com/wneessen/go-mail"
@@ -62,27 +63,39 @@ func newSMTPTransport(cfg config.Config, t timeouts) (*smtpTransport, error) {
 }
 
 func (s *smtpTransport) Send(ctx context.Context, msg Message) error {
+	m, err := newMsg(msg)
+	if err != nil {
+		return err
+	}
+	dialCtx, cancel := context.WithTimeout(ctx, s.timeouts.connect)
+	defer cancel()
+	return s.client.DialAndSendWithContext(dialCtx, m)
+}
+
+// newMsg builds the MIME message of msg.
+func newMsg(msg Message) (*gomail.Msg, error) {
 	m := gomail.NewMsg()
 	if err := m.From(msg.From); err != nil {
-		return fmt.Errorf("from address: %w", err)
+		return nil, fmt.Errorf("from address: %w", err)
 	}
 	if err := m.To(msg.To); err != nil {
-		return fmt.Errorf("recipient address: %w", err)
+		return nil, fmt.Errorf("recipient address: %w", err)
 	}
 	if msg.ReplyTo != "" {
 		// A follow-up replies to every address its author listed, joined with ", " as forma2 joined them.
 		addrs, err := mail.ParseAddressList(msg.ReplyTo)
 		if err != nil {
-			return fmt.Errorf("reply-to address: %w", err)
+			return nil, fmt.Errorf("reply-to address: %w", err)
 		}
 		m.ReplyToMailAddress(addrs...)
 	}
 	m.Subject(msg.Subject)
 	m.SetDate()
-	m.SetMessageID()
+	if msg.MessageID != "" {
+		m.SetMessageIDWithValue(strings.TrimSuffix(strings.TrimPrefix(msg.MessageID, "<"), ">"))
+	} else {
+		m.SetMessageID()
+	}
 	m.SetBodyString(gomail.TypeTextHTML, msg.HTML)
-
-	dialCtx, cancel := context.WithTimeout(ctx, s.timeouts.connect)
-	defer cancel()
-	return s.client.DialAndSendWithContext(dialCtx, m)
+	return m, nil
 }

@@ -10,13 +10,14 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
-// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list.
+// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list. MessageID, in its <id@domain> form, replaces the random Message-ID a send otherwise gets, so a message sent again for the same reason carries the same id.
 type Message struct {
-	To      string
-	From    string
-	ReplyTo string
-	Subject string
-	HTML    string
+	To        string
+	From      string
+	ReplyTo   string
+	Subject   string
+	HTML      string
+	MessageID string
 }
 
 // Transport delivers a message. The SMTP transport is the production one; mailertest.Transport captures messages for tests.
