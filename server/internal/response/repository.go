@@ -221,6 +221,12 @@ func loadResponse(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Response, []
 	return &r[0], flags, nil
 }
 
+// Load is forma2's getResponse: the response with its contact and tags as it is stored now; nil when it does not exist. It authorizes nothing, for the background work that acts on a response after it was written.
+func Load(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Response, error) {
+	r, _, err := loadResponse(ctx, db, id)
+	return r, err
+}
+
 // ttcTotal is forma2's calculateTtcTotal: _total becomes the sum of every value, a _total already present included. Keys are summed in sorted order so the result does not depend on map order.
 func ttcTotal(ttc map[string]float64) map[string]float64 {
 	out := make(map[string]float64, len(ttc)+1)

@@ -1,13 +1,7 @@
 package response
 
 import (
-	"context"
-	"log/slog"
-
 	"github.com/google/uuid"
-	"github.com/riverqueue/river"
-
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 )
 
 // Response pipeline events, forma2's ZResponsePipelineEvent.
@@ -28,18 +22,8 @@ type PipelineArgs struct {
 	Locale      string    `json:"locale,omitempty"`
 }
 
+// Kind is forma2's job name; the pipeline module works it.
 func (PipelineArgs) Kind() string { return "response-pipeline.process" }
-
-// pipelineWorker accepts pipeline jobs until the pipeline itself is ported (P4), which replaces it.
-type pipelineWorker struct {
-	river.WorkerDefaults[PipelineArgs]
-	log *slog.Logger
-}
-
-func (w *pipelineWorker) Work(ctx context.Context, job *river.Job[PipelineArgs]) error {
-	w.log.DebugContext(ctx, "response pipeline event has no consumer yet", "event", job.Args.Event, "response_id", job.Args.Response.ID, "survey_id", job.Args.SurveyID)
-	return nil
-}
 
 // DeleteFilesArgs is the cleanup of a deleted response's uploads: the storage URLs its file upload answers held, to delete from the survey's workspace, forma2's deleteResponseFileUrls. The storage module works it; a URL whose storage id does not resolve to WorkspaceID must be left alone, since response data is written by respondents.
 type DeleteFilesArgs struct {
@@ -48,8 +32,3 @@ type DeleteFilesArgs struct {
 }
 
 func (DeleteFilesArgs) Kind() string { return "response.delete-files" }
-
-// RegisterJobs adds the module's background work to `forma worker`.
-func RegisterJobs(reg *jobs.Registry, log *slog.Logger) {
-	jobs.Add(reg, &pipelineWorker{log: log})
-}
