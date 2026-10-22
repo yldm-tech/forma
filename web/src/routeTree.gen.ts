@@ -43,6 +43,13 @@ import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteIm
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
 import { Route as AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport } from './routes/_authenticated/setup/organization/$organizationId/invite'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/general'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/teams'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/index'
+import { Route as AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRouteImport } from './routes/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -235,6 +242,52 @@ const AuthenticatedSetupOrganizationOrganizationIdInviteRoute =
     path: '/setup/organization/$organizationId/invite',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRouteImport.update({
+    id: '/settings/workspace/',
+    path: '/settings/workspace/',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRouteImport.update({
+    id: '/settings/workspace/general',
+    path: '/settings/workspace/general',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRouteImport.update({
+    id: '/settings/workspace/tags',
+    path: '/settings/workspace/tags',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRouteImport.update({
+    id: '/settings/workspace/teams',
+    path: '/settings/workspace/teams',
+    getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+  } as any)
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRouteImport.update(
+    {
+      id: '/settings/workspace/integrations/',
+      path: '/settings/workspace/integrations/',
+      getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+    } as any,
+  )
+const AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute =
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRouteImport.update(
+    {
+      id: '/settings/workspace/integrations/$',
+      path: '/settings/workspace/integrations/$',
+      getParentRoute: () => AuthenticatedWorkspacesWorkspaceIdRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -270,6 +323,13 @@ export interface FileRoutesByFullPath {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
+  '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
+  '/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
+  '/workspaces/$workspaceId/settings/workspace/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
+  '/workspaces/$workspaceId/settings/workspace/integrations/$': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute
+  '/workspaces/$workspaceId/settings/workspace/integrations/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -302,6 +362,13 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/workspaces/$workspaceId/settings': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
+  '/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
+  '/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
+  '/workspaces/$workspaceId/settings/workspace': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
+  '/workspaces/$workspaceId/settings/workspace/integrations/$': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute
+  '/workspaces/$workspaceId/settings/workspace/integrations': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -339,6 +406,13 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
   '/_authenticated/organizations/$organizationId/settings/': typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
+  '/_authenticated/workspaces/$workspaceId/settings/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/general': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/tags': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/teams': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute
+  '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/': typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -376,6 +450,13 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/organizations/$organizationId/settings/'
+    | '/workspaces/$workspaceId/settings/'
+    | '/workspaces/$workspaceId/settings/workspace/general'
+    | '/workspaces/$workspaceId/settings/workspace/tags'
+    | '/workspaces/$workspaceId/settings/workspace/teams'
+    | '/workspaces/$workspaceId/settings/workspace/'
+    | '/workspaces/$workspaceId/settings/workspace/integrations/$'
+    | '/workspaces/$workspaceId/settings/workspace/integrations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -408,6 +489,13 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
     | '/organizations/$organizationId/settings'
+    | '/workspaces/$workspaceId/settings'
+    | '/workspaces/$workspaceId/settings/workspace/general'
+    | '/workspaces/$workspaceId/settings/workspace/tags'
+    | '/workspaces/$workspaceId/settings/workspace/teams'
+    | '/workspaces/$workspaceId/settings/workspace'
+    | '/workspaces/$workspaceId/settings/workspace/integrations/$'
+    | '/workspaces/$workspaceId/settings/workspace/integrations'
   id:
     | '__root__'
     | '/'
@@ -444,6 +532,13 @@ export interface FileRouteTypes {
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
     | '/_authenticated/organizations/$organizationId/settings/'
+    | '/_authenticated/workspaces/$workspaceId/settings/'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/general'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/teams'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$'
+    | '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -696,6 +791,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSetupOrganizationOrganizationIdInviteRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/workspaces/$workspaceId/settings/': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/'
+      path: '/settings'
+      fullPath: '/workspaces/$workspaceId/settings/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/'
+      path: '/settings/workspace'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/general': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/general'
+      path: '/settings/workspace/general'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/general'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/tags': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/tags'
+      path: '/settings/workspace/tags'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/tags'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/teams': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/teams'
+      path: '/settings/workspace/teams'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/teams'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/'
+      path: '/settings/workspace/integrations'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/integrations/'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
+    '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$': {
+      id: '/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$'
+      path: '/settings/workspace/integrations/$'
+      fullPath: '/workspaces/$workspaceId/settings/workspace/integrations/$'
+      preLoaderRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRouteImport
+      parentRoute: typeof AuthenticatedWorkspacesWorkspaceIdRoute
+    }
   }
 }
 
@@ -755,12 +899,33 @@ const AuthenticatedAccountSettingsRouteWithChildren =
 
 interface AuthenticatedWorkspacesWorkspaceIdRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdIndexRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute
+  AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute: typeof AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute
 }
 
 const AuthenticatedWorkspacesWorkspaceIdRouteChildren: AuthenticatedWorkspacesWorkspaceIdRouteChildren =
   {
     AuthenticatedWorkspacesWorkspaceIdIndexRoute:
       AuthenticatedWorkspacesWorkspaceIdIndexRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsIndexRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceGeneralRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTagsRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceTeamsRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIndexRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsSplatRoute,
+    AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute:
+      AuthenticatedWorkspacesWorkspaceIdSettingsWorkspaceIntegrationsIndexRoute,
   }
 
 const AuthenticatedWorkspacesWorkspaceIdRouteWithChildren =

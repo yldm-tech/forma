@@ -8,6 +8,12 @@ export interface FieldError {
   param?: string;
 }
 
+/** One offending input of an RFC 9457 problem from /api/v3; reason carries the service's error code where it has one. */
+export interface InvalidParam {
+  name: string;
+  reason: string;
+}
+
 /** A non-2xx response, decoded from the `{code, message, details}` envelope (or RFC 9457 problem details on /api/v3). */
 export class ApiError extends Error {
   constructor(
@@ -16,7 +22,9 @@ export class ApiError extends Error {
     message: string,
     readonly details?: Record<string, unknown>,
     /** Seconds until a rate-limited request may succeed. */
-    readonly retryAfter?: number
+    readonly retryAfter?: number,
+    /** The invalid_params of a v3 problem, empty for any other error. */
+    readonly invalidParams: InvalidParam[] = []
   ) {
     super(message);
     this.name = "ApiError";
@@ -53,6 +61,7 @@ const readError = async (response: Response): Promise<ApiError> => {
     message?: unknown;
     detail?: unknown;
     details?: unknown;
+    invalid_params?: unknown;
   } | null;
   if (!body) return fallback;
   const code = typeof body.code === "string" ? body.code : fallback.code;
@@ -66,7 +75,15 @@ const readError = async (response: Response): Promise<ApiError> => {
     body.details && typeof body.details === "object" && !Array.isArray(body.details)
       ? (body.details as Record<string, unknown>)
       : undefined;
-  return new ApiError(response.status, code, message, details, parseRetryAfter(response, details));
+  const invalidParams = Array.isArray(body.invalid_params) ? (body.invalid_params as InvalidParam[]) : [];
+  return new ApiError(
+    response.status,
+    code,
+    message,
+    details,
+    parseRetryAfter(response, details),
+    invalidParams
+  );
 };
 
 export interface RequestOptions {
@@ -80,8 +97,11 @@ const request = async <T>(
   options: RequestOptions = {}
 ): Promise<T> => {
   const headers = new Headers({ Accept: "application/json", [CSRF_HEADER]: "XMLHttpRequest" });
-  let payload: string | undefined;
-  if (body !== undefined) {
+  let payload: string | FormData | undefined;
+  // A form is sent as multipart, with the boundary the browser writes into its own Content-Type.
+  if (body instanceof FormData) {
+    payload = body;
+  } else if (body !== undefined) {
     headers.set("Content-Type", "application/json");
     payload = JSON.stringify(body);
   }
