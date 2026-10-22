@@ -223,6 +223,11 @@ func (g *Guard) Post(ctx context.Context, t *Target, header http.Header, body []
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return 0, ErrTimeout
 		}
+		// The client's error names the URL, whose path and query may carry the receiver's token.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			return 0, urlErr.Err
+		}
 		return 0, err
 	}
 	_ = res.Body.Close()
