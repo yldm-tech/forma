@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -328,3 +329,61 @@ type resource struct {
 }
 
 func surveysPath(rest string) string { return "/api/v3/surveys" + rest }
+
+// holdSurveyLock locks the survey's row in a transaction of its own until release is called with the statements to run before the commit; a request that writes the survey meanwhile waits for the lock.
+func (e *env) holdSurveyLock(id string) (release func(statements ...string)) {
+	e.t.Helper()
+	tx := e.db.Begin()
+	if err := tx.Exec(`SELECT id FROM surveys WHERE id = ? FOR UPDATE`, id).Error; err != nil {
+		e.t.Fatal(err)
+	}
+	return func(statements ...string) {
+		e.t.Helper()
+		for _, stmt := range statements {
+			if err := tx.Exec(stmt, id).Error; err != nil {
+				tx.Rollback()
+				e.t.Fatalf("exec %q: %v", stmt, err)
+			}
+		}
+		if err := tx.Commit().Error; err != nil {
+			e.t.Fatal(err)
+		}
+	}
+}
+
+// async sends a request from another goroutine and returns where its response arrives.
+func (e *env) async(method, path string, body any, headers map[string]string) <-chan *httptest.ResponseRecorder {
+	e.t.Helper()
+	e.authz.Deliver(e.t)
+	raw, err := json.Marshal(body)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	req := httptest.NewRequest(method, path, bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", webApp)
+	req.Header.Set(httpapi.CSRFHeader, "XMLHttpRequest")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	out := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		rec := httptest.NewRecorder()
+		e.engine.ServeHTTP(rec, req)
+		out <- rec
+	}()
+	return out
+}
+
+// waitForLockWaiter returns once a session of the test database waits for a lock.
+func (e *env) waitForLockWaiter() {
+	e.t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if e.count(`SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'`) > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	e.t.Fatal("no request waited for the survey's row lock")
+}

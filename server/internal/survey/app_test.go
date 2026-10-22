@@ -107,6 +107,56 @@ func TestEditorSave(t *testing.T) {
 	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusBadRequest, apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
 }
 
+// The editor holds updatedAt as a JavaScript Date, which keeps milliseconds, while updated_at has microseconds: a draft save compares the two, and names the stored version, at millisecond precision, as forma2's DateTime(3) did.
+func TestEditorDraftSaveComparesVersionsToTheMillisecond(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	sv := e.editorSurvey(owner, id)
+
+	e.exec(`UPDATE surveys SET updated_at = '2026-10-01 10:00:00.123456+00' WHERE id = ?`, id)
+	sv["updatedAt"] = "2026-10-01T10:00:00.123Z"
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusOK, nil)
+
+	e.exec(`UPDATE surveys SET updated_at = '2026-10-01 10:00:01.123456+00' WHERE id = ?`, id)
+	sv["updatedAt"] = "2026-10-01T10:00:00.999Z"
+	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusForbidden, apperr.CodeOperationNotAllowed, "survey_modified_elsewhere:2026-10-01T10:00:01.123Z")
+	// Adopting the version the conflict named is a save based on the stored survey.
+	sv["updatedAt"] = "2026-10-01T10:00:01.123Z"
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusOK, nil)
+}
+
+// An editor save writes the survey as it is under the row lock: a slug set while the save waited is kept, not reverted to the snapshot the save started from.
+func TestEditorSaveKeepsAConcurrentChange(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	sv := e.editorSurvey(owner, id)
+	sv["name"] = "Saved while locked"
+
+	release := e.holdSurveyLock(id)
+	saved := e.async(http.MethodPut, appPath(id, ""), sv, map[string]string{testUserHeader: owner.String()})
+	e.waitForLockWaiter()
+	release(`UPDATE surveys SET slug = 'set-meanwhile' WHERE id = ?`)
+	e.ok(<-saved, http.StatusOK, nil)
+	if slug, name := e.text(`SELECT slug FROM surveys WHERE id = ?`, id), e.text(`SELECT name FROM surveys WHERE id = ?`, id); slug != "set-meanwhile" || name != "Saved while locked" {
+		t.Fatalf("slug %q name %q", slug, name)
+	}
+
+	// A survey archived while the save waited is not written.
+	sv["name"] = "Never saved"
+	release = e.holdSurveyLock(id)
+	saved = e.async(http.MethodPut, appPath(id, ""), sv, map[string]string{testUserHeader: owner.String()})
+	e.waitForLockWaiter()
+	release(`UPDATE surveys SET archived_at = now() WHERE id = ?`)
+	e.fails(<-saved, http.StatusBadRequest, apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
+	if name := e.text(`SELECT name FROM surveys WHERE id = ?`, id); name != "Saved while locked" {
+		t.Fatalf("archived survey written: %q", name)
+	}
+}
+
 func TestEditorSaveSchedulesAndAppSegment(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()

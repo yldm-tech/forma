@@ -365,7 +365,6 @@ func (s *Service) applyPatchV3(ctx context.Context, tx *Repository, current *Sur
 	return tx.reconcileEmbeddedData(ctx, current.ID, current.WorkspaceID, embeddedPatch{Variables: &typed.Variables, HiddenFields: &typed.HiddenFields})
 }
 
-
 // DeleteV3, ArchiveV3 and RestoreV3 are the v3 forms of Delete, Archive and Restore: a missing survey is the same 403 as a denied one.
 func (s *Service) DeleteV3(ctx context.Context, caller Caller, id uuid.UUID) error {
 	return v3Problem(s.Delete(ctx, caller, id))

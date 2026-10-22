@@ -387,3 +387,34 @@ func TestV3ImmutableElementIDsOnceLive(t *testing.T) {
 		t.Fatalf("%+v", ip)
 	}
 }
+
+// A v3 patch is merged into and written over the survey as it is under the row lock: one archived while the patch waited stays archived and paused instead of going live.
+func TestV3PatchRespectsAConcurrentArchive(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	var created resource
+	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), linkSurvey(ws)), http.StatusCreated, &created)
+	id := created.Data["id"].(string)
+
+	release := e.holdSurveyLock(id)
+	patched := e.async(http.MethodPatch, surveysPath("/"+id), map[string]any{"status": "inProgress"}, map[string]string{testUserHeader: owner.String()})
+	e.waitForLockWaiter()
+	release(`UPDATE surveys SET archived_at = now(), status = 'paused' WHERE id = ?`)
+	p := e.problem(<-patched, http.StatusUnprocessableEntity, "Survey is archived")
+	p.param(t, "archivedAt")
+	if status := e.text(`SELECT status FROM surveys WHERE id = ?`, id); status != "paused" {
+		t.Fatalf("archived survey patched to %q", status)
+	}
+
+	// Two patches of different fields both land: the second is merged into what the first wrote.
+	e.exec(`UPDATE surveys SET archived_at = NULL WHERE id = ?`, id)
+	release = e.holdSurveyLock(id)
+	renamed := e.async(http.MethodPatch, surveysPath("/"+id), map[string]any{"name": "Renamed"}, map[string]string{testUserHeader: owner.String()})
+	e.waitForLockWaiter()
+	release(`UPDATE surveys SET welcome_card = '{"enabled": false}' WHERE id = ?`)
+	e.ok(<-renamed, http.StatusOK, nil)
+	if name, wc := e.text(`SELECT name FROM surveys WHERE id = ?`, id), e.text(`SELECT welcome_card::text FROM surveys WHERE id = ?`, id); name != "Renamed" || !strings.Contains(wc, `"enabled": false`) {
+		t.Fatalf("name %q welcome card %s", name, wc)
+	}
+}
