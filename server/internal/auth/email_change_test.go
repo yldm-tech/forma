@@ -186,6 +186,30 @@ func TestEmailChangeLinksDie(t *testing.T) {
 	expectStatus(t, confirm(late), http.StatusBadRequest, CodeInvalidToken)
 }
 
+// A reset link mailed to the old address stops working once the address moves, whether the move is confirmed from the new mailbox or applied at once with EMAIL_VERIFICATION_DISABLED: the old mailbox may no longer be the user's.
+func TestEmailChangeRevokesPasswordResetLinks(t *testing.T) {
+	t.Parallel()
+	for _, disabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("verification disabled %v", disabled), func(t *testing.T) {
+			t.Parallel()
+			e := newEnv(t, func(c *config.Config) { c.EmailVerificationDisabled = disabled })
+			id := e.seedUser("ada@example.com", strongPassword, userOpts{})
+			expectStatus(t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
+			reset := e.lastToken("ada@example.com", subjectReset)
+
+			expectStatus(t, changeEmail(e.sessionFor(id), "new@example.com", strongPassword), http.StatusNoContent, "")
+			if !disabled {
+				expectStatus(t, e.browser().post("/auth/email/verify", map[string]string{"token": e.lastToken("new@example.com", subjectEmailChange)}), http.StatusOK, "")
+			}
+			if email, _ := e.emailOf(id); email != "new@example.com" {
+				t.Fatalf("the address is still %s", email)
+			}
+			expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": reset, "password": newPassword}), http.StatusBadRequest, CodeInvalidPasswordResetToken)
+			e.browser().signIn("new@example.com", strongPassword)
+		})
+	}
+}
+
 // A link for an address someone else took in the meantime fails and stays unused.
 func TestEmailChangeToATakenAddress(t *testing.T) {
 	t.Parallel()
