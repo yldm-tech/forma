@@ -106,6 +106,22 @@ func (SSORecoveryFactorsRemoved) subjectKey() string {
 	return "emails.sso_recovery_factors_removed_email_subject"
 }
 
+// LinkSurvey sends a respondent who verified their address the link to a survey that requires email verification. SurveyName comes from the survey row, never from the request. LogoURL is the organization's email logo, absolute, or empty for Forma's.
+type LinkSurvey struct {
+	SurveyName string
+	SurveyLink string
+	LogoURL    string
+}
+
+func (LinkSurvey) template() string   { return "link_survey" }
+func (LinkSurvey) subjectKey() string { return "emails.verified_link_survey_email_subject" }
+func (c LinkSurvey) logo() string     { return c.LogoURL }
+
+// brandedContent is content that replaces Forma's logo at the top of the email with the organization's.
+type brandedContent interface {
+	logo() string
+}
+
 type legal struct {
 	PrivacyURL     string
 	ImprintURL     string
@@ -184,6 +200,17 @@ type view struct {
 	Legal   legal
 	r       *renderer
 }
+
+// Logo is the organization logo that replaces Forma's, or "" for Forma's (forma2's EmailTemplate treats its own logo URL as no custom logo).
+func (v view) Logo() string {
+	if b, ok := v.Content.(brandedContent); ok && b.logo() != formaLogoURL {
+		return b.logo()
+	}
+	return ""
+}
+
+// formaLogoURL is the default logo of every email.
+const formaLogoURL = "https://app.forma.ylam.ai/logo-transparent.png"
 
 // T translates an "emails." key in the view's locale and interpolates {name} placeholders from name/value pairs. A key missing from the locale falls back to en-US, and one missing there renders as the key, as i18next does.
 func (v view) T(key string, pairs ...any) string {
