@@ -19,8 +19,8 @@ type listed struct {
 	Tags     []struct {
 		Name string `json:"name"`
 	} `json:"tags"`
-	Quotas []QuotaRef `json:"quotas"`
-	Contact *Contact  `json:"contact"`
+	Quotas  []QuotaRef `json:"quotas"`
+	Contact *Contact   `json:"contact"`
 }
 
 func decodeList(t *testing.T, body []byte) []listed {
@@ -56,6 +56,7 @@ func TestListAndCountFilterTheSurveysResponses(t *testing.T) {
 	ctx := context.Background()
 	q := e.quotaOn(sv, "Q", "a", 10, actionContinueSurvey, nil, true)
 	e.contact(ws, "u1", "plan", "gold")
+	e.field(ws, sv, "score", "computed", "number", false)
 
 	mk := func(data string, in CreateInput) uuid.UUID {
 		res, err := e.submit(ctx, ws, sv, data, in)
@@ -64,8 +65,8 @@ func TestListAndCountFilterTheSurveysResponses(t *testing.T) {
 		}
 		return res.ID
 	}
-	r1 := mk(`{"q1":"a","q2":"One"}`, CreateInput{Finished: true, Language: ptr("de"), UserID: ptr("u1"), Meta: ClientMeta{URL: ptr("https://shop.example.com/p")}, Request: RequestInfo{UserAgent: UserAgent{Browser: "Chrome"}, Country: "DE"}, TTC: map[string]float64{"q1": 2400}})
-	r2 := mk(`{"q1":"b","q2":"something else"}`, CreateInput{Finished: false, Language: ptr("fr"), Request: RequestInfo{UserAgent: UserAgent{Browser: "Firefox"}}})
+	r1 := mk(`{"q1":"a","q2":"One"}`, CreateInput{Finished: true, Language: ptr("de"), UserID: ptr("u1"), Variables: map[string]any{"score": 5.0}, Meta: ClientMeta{URL: ptr("https://shop.example.com/p")}, Request: RequestInfo{UserAgent: UserAgent{Browser: "Chrome"}, Country: "DE"}, TTC: map[string]float64{"q1": 2400}})
+	r2 := mk(`{"q1":"b","q2":"something else"}`, CreateInput{Finished: false, Language: ptr("fr"), Variables: map[string]any{"score": 1.0}, Request: RequestInfo{UserAgent: UserAgent{Browser: "Firefox"}}})
 	r3 := mk(`{"q1":"c","f1":["https://files/1"]}`, CreateInput{Finished: true})
 	e.tag(ws, "vip", r1, r3)
 	e.tag(ws, "spam", r3)
@@ -93,6 +94,10 @@ func TestListAndCountFilterTheSurveysResponses(t *testing.T) {
 		{"reserved country isNotSet", `{"reserved":{"country":{"op":"isNotSet"}}}`, []uuid.UUID{r3, r2}},
 		{"reserved durationSeconds rounds like the read seam", `{"reserved":{"durationSeconds":{"op":"equals","value":2}}}`, []uuid.UUID{r1}},
 		{"reserved names a survey element shadows filter nothing", `{"reserved":{"q1":{"op":"equals","value":"zzz"}}}`, []uuid.UUID{r3, r2, r1}},
+		{"variables compare as their type", `{"variables":{"score":{"op":"greaterThan","value":3}}}`, []uuid.UUID{r1}},
+		{"variables isNotSet", `{"variables":{"score":{"op":"isNotSet"}}}`, []uuid.UUID{r3}},
+		{"a variable the survey does not compute filters nothing", `{"variables":{"nope":{"op":"isSet"}}}`, []uuid.UUID{r3, r2, r1}},
+		{"a text operator on a number variable matches nothing", `{"variables":{"score":{"op":"contains","value":"5"}}}`, []uuid.UUID{}},
 		{"quota screenedIn", `{"quotas":{"` + q.String() + `":{"op":"screenedIn"}}}`, []uuid.UUID{r1}},
 		{"quota screenedOutNotInQuota", `{"quotas":{"` + q.String() + `":{"op":"screenedOutNotInQuota"}}}`, []uuid.UUID{r3, r2}},
 		{"created before", `{"createdAt":{"max":"2000-01-01T00:00:00Z"}}`, []uuid.UUID{}},

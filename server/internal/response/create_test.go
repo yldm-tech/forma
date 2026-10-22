@@ -46,14 +46,14 @@ func TestCreateStoresTheResponseAsForma2Did(t *testing.T) {
 
 	res, err := e.submit(ctx, ws, sv, `{"q1":"hello","plan":"gold","rogue":"x"}`, CreateInput{
 		UserID: ptr("user-1"), Finished: true, Language: ptr(" de "), Variables: map[string]any{"v": 1.0},
-		TTC:  map[string]float64{"q1": 1000, "q2": -5, "q3": 1e12},
-		Meta: ClientMeta{Source: ptr("link"), URL: ptr("https://example.com/s/x?a=1"), PagePath: ptr("/s/x"), ScreenWidth: ptr(1280.0)},
+		TTC:     map[string]float64{"q1": 1000, "q2": -5, "q3": 1e12},
+		Meta:    ClientMeta{Source: ptr("link"), URL: ptr("https://example.com/s/x?a=1"), PagePath: ptr("/s/x"), ScreenWidth: ptr(1280.0)},
 		Request: RequestInfo{UserAgent: UserAgent{Browser: "Chrome", OS: "macOS"}, Country: "DE"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.QuotaFull.QuotaFull || res.QuotaFull.Quota != nil {
+	if res.QuotaFull.QuotaFull || res.Quota != nil {
 		t.Fatalf("quota %+v on a survey without quotas", res.QuotaFull)
 	}
 	row := stored(e, res.ID)
@@ -345,5 +345,42 @@ func TestSingleUseV2ReportsTheWorkspace(t *testing.T) {
 	}
 	if id, err := e.svc.SingleUseID(plain, ws, true, ptr("x"), nil); err != nil || *id != "x" {
 		t.Fatalf("SingleUseID = %v, %v", id, err)
+	}
+}
+
+func TestCreateRunsTheIngestContract(t *testing.T) {
+	e := newEnv(t)
+	_, ws := e.organization(e.user())
+	sv := e.survey(ws, surveyOpts{hiddenFieldIDs: []string{"plan", "locked", "seats"}})
+	e.field(ws, sv, "Plan", "ingested", "string", false)
+	e.field(ws, sv, "locked", "ingested", "string", true)
+	e.field(ws, sv, "seats", "ingested", "number", false)
+	e.field(ws, sv, "score", "computed", "number", false)
+	res, err := e.submit(context.Background(), ws, sv, `{"q1":"answer","plan":"gold","locked":"x","seats":"many","score":"9","rogue":"y","q2":{"nested":{"deep":1}}}`, CreateInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := stored(e, res.ID)
+	if want := map[string]any{"q1": "answer", "Plan": "gold", "seats": "many"}; !reflect.DeepEqual(row["data"], want) {
+		t.Fatalf("data %v, want %v", row["data"], want)
+	}
+	if want := []any{map[string]any{"key": "seats", "reason": "coercion_failed"}}; !reflect.DeepEqual(row["ingest_flags"], want) {
+		t.Fatalf("ingest flags %v", row["ingest_flags"])
+	}
+	if !contains(e.logs.String(), "Embedded Data ingest dropped or flagged incoming keys") {
+		t.Fatal("the drops were not logged")
+	}
+
+	// A survey that declares hidden fields but has no ingested rows drops everything, loudly.
+	bare := e.survey(ws, surveyOpts{hiddenFieldIDs: []string{"plan"}})
+	res, err = e.submit(context.Background(), ws, bare, `{"plan":"gold"}`, CreateInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data := stored(e, res.ID)["data"]; !reflect.DeepEqual(data, map[string]any{}) {
+		t.Fatalf("data %v", data)
+	}
+	if !contains(e.logs.String(), "resolved no ingested fields for a survey that declares hidden fields") {
+		t.Fatal("the fail-closed allow-list was not warned about")
 	}
 }

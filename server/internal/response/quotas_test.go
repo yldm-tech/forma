@@ -29,7 +29,6 @@ func TestAQuotaScreensResponsesInUntilItIsFull(t *testing.T) {
 	q := e.quotaOn(sv, "Q", "yes", 2, actionEndSurvey, ptr("end1"), false)
 	ctx := context.Background()
 
-	var ids []uuid.UUID
 	for range 2 {
 		res, err := e.submit(ctx, ws, sv, `{"q1":"yes"}`, CreateInput{Finished: true})
 		if err != nil {
@@ -38,7 +37,6 @@ func TestAQuotaScreensResponsesInUntilItIsFull(t *testing.T) {
 		if res.QuotaFull.QuotaFull {
 			t.Fatalf("quota full before its limit: %+v", res)
 		}
-		ids = append(ids, res.ID)
 		if s := linkStatus(e, res.ID, q); s != statusScreenedIn {
 			t.Fatalf("link %q, want screenedIn", s)
 		}
@@ -111,7 +109,7 @@ func TestPartialResponsesCountOnlyWhereTheQuotaSaysSo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if third.QuotaFull.Quota == nil || third.QuotaFull.Quota.ID != counting || third.QuotaFull.Quota.EndingCardID != "" {
+	if third.Quota == nil || third.Quota.ID != counting || third.Quota.EndingCardID != "" {
 		t.Fatalf("quota %+v, want the newest full quota", third.QuotaFull)
 	}
 	if stored(e, third.ID)["finished"] != true || linkStatus(e, third.ID, finishedOnly) != statusScreenedOut || linkStatus(e, third.ID, counting) != statusScreenedOut {

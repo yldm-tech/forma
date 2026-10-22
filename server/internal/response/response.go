@@ -86,7 +86,7 @@ const (
 
 func details(kv ...any) map[string]any {
 	d := map[string]any{}
-	for i := 0; i < len(kv); i += 2 {
+	for i := 0; i+1 < len(kv); i += 2 {
 		d[kv[i].(string)] = kv[i+1]
 	}
 	return d

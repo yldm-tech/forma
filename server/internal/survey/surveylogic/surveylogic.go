@@ -98,11 +98,6 @@ func isArray(v any) bool {
 	return ok
 }
 
-func isString(v any) bool {
-	_, ok := v.(string)
-	return ok
-}
-
 // isObject is typeof v === "object": arrays, objects and null.
 func isObject(v any) bool {
 	switch v.(type) {
