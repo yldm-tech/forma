@@ -24,7 +24,7 @@ var (
 	APIMCPAuth = Rule{Namespace: "api:mcp:auth", Window: time.Minute, Limit: 30}
 	// APIV3SurveyGenerate bounds AI survey generation.
 	APIV3SurveyGenerate = Rule{Namespace: "api:v3:surveys:generate", Window: time.Minute, Limit: 10}
-	// APIClient is per environment and client IP; APIClientEnvironment is per environment, bounding distributed-IP abuse of one environment.
+	// APIClient is per client IP, charged by every client API route but storage. APIClientEnvironment (per environment and client IP) is defined by forma2 but had no call site there, so the client API does not apply it.
 	APIClient            = Rule{Namespace: "api:client", Window: time.Minute, Limit: 100}
 	APIClientEnvironment = Rule{Namespace: "api:client:environment", Window: time.Minute, Limit: 1000}
 
