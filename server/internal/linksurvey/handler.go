@@ -54,6 +54,9 @@ func (h *Handler) Register(r gin.IRouter) {
 		r.Handle(method, "/c/:token", h.contactPage)
 		r.Handle(method, "/p/:slug", h.prettyURL)
 		r.Handle(method, "/api/v1/client/og", h.ogImage)
+		for _, page := range []string{"/s/:surveyId", "/c/:token", "/p/:slug"} {
+			r.Handle(method, page+"/*rest", h.subpath)
+		}
 	}
 	r.OPTIONS("/api/v1/client/og", h.ogOptions)
 	gates := r.Group("/s/:surveyId", httpapi.ErrorHandler(h.log), httpapi.CSRF(h.cfg))
@@ -86,6 +89,19 @@ func (h *Handler) prettyURL(c *gin.Context) {
 	}
 	c.Header("Cache-Control", pageCacheControl)
 	c.Redirect(http.StatusTemporaryRedirect, target)
+}
+
+// subpath answers a path below a survey page. forma2 had no route there, so Next answered its not-found page with 404, and with a 308 to the page itself for a trailing slash. Without this route the admin SPA's fallback would answer with its own shell and 200, frameable by any site under /s and /c.
+func (h *Handler) subpath(c *gin.Context) {
+	if c.Param("rest") == "/" {
+		target := strings.TrimSuffix(c.Request.URL.EscapedPath(), "/")
+		if c.Request.URL.RawQuery != "" {
+			target += "?" + c.Request.URL.RawQuery
+		}
+		c.Redirect(http.StatusPermanentRedirect, target)
+		return
+	}
+	h.writePage(c, page{Status: http.StatusNotFound, Head: notFoundHead(rootViewport), State: pageState{View: viewNotFound, Locale: localeOf(c)}}, nil, rootViewport)
 }
 
 func localeOf(c *gin.Context) string {

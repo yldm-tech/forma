@@ -45,6 +45,30 @@ func TestSurveyPageNotFound(t *testing.T) {
 	}
 }
 
+// forma2 had no route below /s/[surveyId], /c/[jwt] or /p/[slug]: Next answered any deeper path, the gate endpoints' paths read with GET included, with its not-found page, never with the admin app, and a trailing slash with a 308 to the page itself.
+func TestSurveyPageSubpathsAreNotFound(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	id := e.survey(ws).String()
+	for _, target := range []string{"/s/" + id + "/foo", "/s/" + id + "/pin", "/s/" + id + "/verify-email", "/s/" + id + "/a/b", "/c/token/x", "/p/slug/x"} {
+		t.Run(target, func(t *testing.T) {
+			p := e.page(target)
+			if p.Status != http.StatusNotFound || p.view() != viewNotFound || p.meta("robots") != "noindex" || p.meta("viewport") != rootViewport {
+				t.Fatalf("status %d view %q robots %q viewport %q", p.Status, p.view(), p.meta("robots"), p.meta("viewport"))
+			}
+			if rec := e.request(http.MethodHead, target, nil); rec.Code != http.StatusNotFound {
+				t.Fatalf("HEAD: %d", rec.Code)
+			}
+		})
+	}
+	for target, want := range map[string]string{"/s/" + id + "/?lang=de": "/s/" + id + "?lang=de", "/c/a%20b/": "/c/a%20b", "/p/slug/": "/p/slug"} {
+		rec := e.request(http.MethodGet, target, nil)
+		if rec.Code != http.StatusPermanentRedirect || rec.Header().Get("Location") != want {
+			t.Errorf("%s: %d %q, want 308 %q", target, rec.Code, rec.Header().Get("Location"), want)
+		}
+	}
+}
+
 func TestSurveyPageInactive(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace("link_survey_branding", "false")
