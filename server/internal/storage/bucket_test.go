@@ -24,6 +24,7 @@ import (
 	"github.com/minio/minio-go/v7"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/server/internal/storage/s3test"
 )
 
@@ -263,7 +264,7 @@ func TestPresignedFieldsJSON(t *testing.T) {
 	// Written as the response writer writes every body: without HTML escaping, as JSON.stringify.
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	writeJSON(c, http.StatusOK, map[string]any{"presignedFields": fields}, false)
+	v1api.WriteJSON(c, http.StatusOK, map[string]any{"presignedFields": fields}, false)
 	if want := `{"presignedFields":{"Content-Type":"text/plain; x=<a&b>","bucket":"b","key":"a\"b\\c"}}`; rec.Body.String() != want {
 		t.Fatalf("JSON = %s, want %s", rec.Body.String(), want)
 	}

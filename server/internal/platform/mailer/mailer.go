@@ -10,7 +10,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
-// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>.
+// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list.
 type Message struct {
 	To      string
 	From    string

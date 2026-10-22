@@ -1,0 +1,31 @@
+{{define "content"}}
+<div dir="auto">{{.Content.Body}}</div>
+{{- if .Content.ResponseData}}
+<hr style="border:none;border-top:1px solid #eaeaea;margin:26px 0;width:100%">
+<p style="font-size:16px;line-height:24px;margin:16px 0;font-weight:600;color:#0f172a">{{.T "emails.response_data"}}</p>
+{{- end}}
+{{- range .Content.ResponseData}}{{if .Answered}}
+<p dir="auto" style="font-size:14px;line-height:24px;margin:16px 0 8px;font-weight:600;color:#0f172a">{{.Label}}</p>
+{{- if .FileUpload}}
+<p style="font-size:14px;line-height:24px;margin:0;font-style:italic;white-space:pre-wrap;word-break:break-word">{{$.T "emails.render_email_response_value_file_upload_response_link_not_included"}}</p>
+{{- else if .PictureSelection}}
+<p style="margin:0">{{range .Items}}<img alt="{{lastSegment .}}" src="{{.}}" style="height:112px;margin:8px"> {{end}}</p>
+{{- else if .Ranking}}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="auto" style="margin-bottom:8px;font-size:14px;color:#334155">
+{{- range $i, $item := .RankedItems}}
+<tr><td style="width:24px;color:#94a3b8;padding-bottom:4px">#{{inc $i}}</td><td style="background-color:#f1f5f9;border-radius:4px;padding:4px 8px">{{$item}}</td></tr>
+{{- end}}
+</table>
+{{- else}}
+<p dir="auto" style="font-size:14px;line-height:24px;margin:0;white-space:pre-wrap;word-break:break-word">{{.Text}}</p>
+{{- end}}
+{{- end}}{{end}}
+{{- range .Content.Variables}}
+<p dir="auto" style="font-size:14px;line-height:24px;margin:16px 0 8px;font-weight:600;color:#0f172a">{{if .Number}}{{$.T "emails.number_variable"}}{{else}}{{$.T "emails.text_variable"}}{{end}}: <span dir="auto">{{.Name}}</span></p>
+<p dir="auto" style="font-size:14px;line-height:24px;margin:0;white-space:pre-wrap;word-break:break-word;color:#334155">{{.Value}}</p>
+{{- end}}
+{{- range .Content.HiddenFields}}
+<p dir="auto" style="font-size:14px;line-height:24px;margin:16px 0 8px;font-weight:600;color:#0f172a">{{$.T "emails.hidden_field"}}: {{.ID}}</p>
+<p dir="auto" style="font-size:14px;line-height:24px;margin:0;white-space:pre-wrap;word-break:break-word;color:#334155">{{.Value}}</p>
+{{- end}}
+{{end}}

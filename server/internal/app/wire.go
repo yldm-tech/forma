@@ -15,11 +15,14 @@ import (
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -29,6 +32,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
 	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -38,6 +42,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
 	"github.com/yldm-tech/forma/server/internal/v3api"
+	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -132,13 +137,15 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
 var responseSet = wire.NewSet(
 	jobs.NewEnqueuer,
 	response.NewService,
 	response.NewHandler,
 	analysis.NewService,
 	analysis.NewHandler,
+	analysis.NewAttachmentExporter,
+	analysis.NewAttachmentsHandler,
 )
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
@@ -162,6 +169,29 @@ var clientAPISet = wire.NewSet(
 	clientapi.NewHandler,
 )
 
+// webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
+var webhookSet = wire.NewSet(
+	ssrf.New,
+	webhook.NewRepository,
+	webhook.NewService,
+	webhook.NewHandler,
+	webhook.NewV1Handler,
+)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs, empty until those modules land.
+var pipelineSet = wire.NewSet(
+	valkey.Open,
+	ratelimit.New,
+	mailer.New,
+	ssrf.New,
+	webhook.NewRepository,
+	webhook.NewDeliverer,
+	followup.NewSender,
+	notification.NewNotifier,
+	wire.Value(pipeline.Handoffs{}),
+	pipeline.NewWorker,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -183,6 +213,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		storageSet,
 		linkSurveySet,
 		clientAPISet,
+		webhookSet,
+		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -192,7 +224,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	return nil, nil, nil
 }
 
-// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool and the SpiceDB connection.
+// InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool, the Valkey client and the SpiceDB connection.
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	wire.Build(
 		jobs.OpenPool,
@@ -204,6 +236,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		storage.NewBucket,
 		storage.NewService,
 		workspace.NewRepository,
+		pipelineSet,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

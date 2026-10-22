@@ -53,9 +53,42 @@ var everyTemplate = []mailer.Content{
 	mailer.DeleteAccountConfirmation{DeleteLink: "https://app.example.com/auth/delete-account?token=d1", LinkValidityInMinutes: 60},
 	mailer.SSORecoveryFactorsRemoved{PasswordRemoved: true, TwoFactorRemoved: true, SingleSignOnRemoved: true, SecuritySettingsLink: "https://app.example.com/account/settings/profile"},
 	mailer.LinkSurvey{SurveyName: "Customer Feedback", SurveyLink: "https://surveys.example.com/s/s1?verify=t1"},
+	responseFinished,
+	followUp,
+	mailer.EmbedSurveyPreview{HTML: `<table><tr><td>How likely are you to recommend us?</td></tr></table>`, WorkspaceID: "ws1"},
+	mailer.EmailCustomizationPreview{UserName: "Ada"},
 }
 
-var placeholder = regexp.MustCompile(`\{[A-Za-z]+\}`)
+var responseFinished = mailer.ResponseFinished{
+	SurveyName: "Customer Feedback",
+	Elements: []mailer.ResponseElement{
+		{Label: "What did you like?", Type: "openText", Text: "Speed\nand <b>price</b>"},
+		{Label: "Skipped", Type: "openText"},
+		{Label: "Attach a file", Type: "fileUpload", Items: []string{"https://app.example.com/storage/ws/private/My%20Report.pdf"}},
+		{Label: "Pick one", Type: "pictureSelection", Items: []string{"https://cdn.example.com/a/cat.png"}},
+		{Label: "Rank these", Type: "ranking", Items: []string{"Price", "", "Speed"}},
+		{Label: "No files", Type: "fileUpload", Items: []string{}},
+	},
+	EmbeddedFields:             []mailer.EmbeddedValue{{Name: "Score", Number: true, Value: "0"}},
+	HiddenFields:               []mailer.HiddenValue{{ID: "utm_source", Value: "newsletter"}},
+	ResponsesURL:               "https://app.example.com/workspaces/ws1/surveys/s1/responses?utm_source=email_notification&utm_medium=email&utm_content=view_responses_CTA",
+	ResponseCount:              15,
+	UnsubscribeSurveyURL:       "https://app.example.com/workspaces/ws1/settings/notifications?type=alert&elementId=s1",
+	UnsubscribeOrganizationURL: "https://app.example.com/workspaces/ws1/settings/notifications?type=unsubscribedOrganizationIds&elementId=o1",
+}
+
+var followUp = mailer.FollowUp{
+	Subject:      "Thanks for {your} feedback",
+	Body:         `<p>Thanks <b>Ada</b>!</p>`,
+	ResponseData: []mailer.ResponseElement{{Label: "What did you like?", Type: "openText", Text: "Speed"}, {Label: "Attach a file", Type: "fileUpload", Items: []string{"https://app.example.com/storage/ws/private/a.pdf"}}},
+	Variables:    []mailer.EmbeddedValue{{Name: "Score", Number: true, Value: "7"}, {Name: "Tier", Value: "gold"}},
+	HiddenFields: []mailer.HiddenValue{{ID: "utm_source", Value: "newsletter"}},
+}
+
+var (
+	placeholder  = regexp.MustCompile(`\{[A-Za-z]+\}`)
+	untranslated = regexp.MustCompile(`emails\.[a-z0-9_]+`)
+)
 
 // Every template renders a complete document in every locale with no key or placeholder left untranslated (forma2's render.test.ts).
 func TestRenderEveryTemplateInEveryLocale(t *testing.T) {
@@ -73,7 +106,8 @@ func TestRenderEveryTemplateInEveryLocale(t *testing.T) {
 				if !strings.HasPrefix(html, "<!DOCTYPE html>") || !strings.Contains(html, `<html lang="`+locale+`">`) || !strings.HasSuffix(strings.TrimSpace(html), "</html>") {
 					t.Fatalf("not a complete document:\n%s", html)
 				}
-				if strings.Contains(html, "emails.") || placeholder.MatchString(html) || placeholder.MatchString(subject) {
+				_, literalSubject := content.(mailer.FollowUp)
+				if untranslated.MatchString(html) || placeholder.MatchString(html) || (!literalSubject && placeholder.MatchString(subject)) {
 					t.Fatalf("untranslated key or placeholder left:\n%s", html)
 				}
 			})
@@ -127,6 +161,7 @@ func TestRenderEnglishCopy(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%T", tc.content), func(t *testing.T) {
+			t.Parallel()
 			subject, html, err := m.Render("en-US", tc.content)
 			if err != nil {
 				t.Fatal(err)
@@ -370,5 +405,122 @@ func TestRenderOrganizationLogo(t *testing.T) {
 	}
 	if !strings.Contains(html, "utm_campaign=email_logo") {
 		t.Fatalf("Forma's logo URL was treated as a custom logo:\n%s", html)
+	}
+}
+
+// forma2's ResponseFinishedEmail (packages/email render.test.ts and response-finished-email.tsx): the survey in the subject, every answered element, the computed and hidden fields, the CTA counting the other responses, and the two unsubscribe links, without the sign-off of the account emails.
+func TestRenderResponseFinished(t *testing.T) {
+	t.Parallel()
+	m := newMailer(t, baseConfig(), nil)
+	subject, html, err := m.Render("en-US", responseFinished)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subject != "A response for Customer Feedback was completed ✅" {
+		t.Errorf("subject = %q", subject)
+	}
+	for _, want := range []string{
+		"Hey 👋", "Congrats, you received a new response to your survey! Someone just completed your survey: Customer Feedback",
+		"What did you like?", "Speed\nand &lt;b&gt;price&lt;/b&gt;", "white-space:pre-wrap",
+		`href="https://app.example.com/storage/ws/private/My%20Report.pdf"`, ">My Report.pdf</a>",
+		`alt="cat.png" src="https://cdn.example.com/a/cat.png"`, "#1</td>", ">Price</td>", "#2</td>", ">Speed</td>", "No files",
+		"Score", ">0</p>", "utm_source", "newsletter", "View 14 more responses",
+		`href="https://app.example.com/workspaces/ws1/surveys/s1/responses?utm_source=email_notification&amp;utm_medium=email&amp;utm_content=view_responses_CTA"`,
+		"Do not want to get these notifications?",
+		`href="https://app.example.com/workspaces/ws1/settings/notifications?type=alert&amp;elementId=s1"`, "Turn off notifications for this form",
+		`href="https://app.example.com/workspaces/ws1/settings/notifications?type=unsubscribedOrganizationIds&amp;elementId=o1"`, "Turn off notifications for all newly created forms",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	for _, absent := range []string{"Skipped", "Have a great day!", "#3</td>"} {
+		if strings.Contains(html, absent) {
+			t.Errorf("unexpected %q", absent)
+		}
+	}
+	single := responseFinished
+	single.ResponseCount = 1
+	if _, html, _ := m.Render("en-US", single); !strings.Contains(html, "View survey summary") || strings.Contains(html, "more responses") {
+		t.Error("a first response must link to the summary")
+	}
+	if subject, _, _ := m.Render("ja-JP", responseFinished); !strings.Contains(subject, "Customer Feedback") || strings.Contains(subject, "{surveyName}") {
+		t.Errorf("ja-JP subject = %q", subject)
+	}
+}
+
+// forma2's FollowUpEmail: the body as given, then the response data with file links withheld, the variables and the hidden fields, every text node dir="auto"; the subject is the author's.
+func TestRenderFollowUp(t *testing.T) {
+	t.Parallel()
+	m := newMailer(t, baseConfig(), nil)
+	subject, html, err := m.Render("en-US", followUp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subject != "Thanks for {your} feedback" {
+		t.Errorf("subject = %q", subject)
+	}
+	for _, want := range []string{
+		`<div dir="auto"><p>Thanks <b>Ada</b>!</p></div>`, "Response data", "What did you like?", "Speed",
+		"Link to uploaded file is not included for data privacy reasons", "Number variable: <span dir=\"auto\">Score</span>",
+		"Text variable: <span dir=\"auto\">Tier</span>", "gold", "Hidden field: utm_source", "newsletter",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, "a.pdf") || strings.Contains(html, "Have a great day!") {
+		t.Error("file link or sign-off rendered")
+	}
+	bare := mailer.FollowUp{Subject: "Hi", Body: "<p>Hi</p>"}
+	if _, html, _ := m.Render("en-US", bare); strings.Contains(html, "Response data") {
+		t.Error("the response data heading needs response data")
+	}
+}
+
+func TestRenderPreviewEmails(t *testing.T) {
+	t.Parallel()
+	m := newMailer(t, baseConfig(), nil)
+	subject, html, err := m.Render("en-US", everyTemplate[11])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<meta name="color-scheme" content="only light">`, `<meta name="supported-color-schemes" content="light">`, ":root{color-scheme:only light}",
+		"Preview Email Embed", "This is how the code snippet looks embedded into an email:", "<b>Did not request this?</b> Help us fight spam",
+		"<td>How likely are you to recommend us?</td>", "Workspace ID: ws1",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("embed preview missing %q", want)
+		}
+	}
+	if subject != "Forma Email Survey Preview" || strings.Contains(html, "Have a great day!") {
+		t.Errorf("embed preview subject %q or sign-off rendered", subject)
+	}
+	subject, html, err = m.Render("en-US", mailer.EmailCustomizationPreview{UserName: "Ada", LogoURL: "https://cdn.example.com/logo.png"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Hey Ada", "This is an email preview to show you which logo will be rendered in the emails.", `src="https://cdn.example.com/logo.png"`} {
+		if !strings.Contains(html, want) {
+			t.Errorf("customization preview missing %q", want)
+		}
+	}
+	if subject != "Forma Email Customization Preview" || strings.Contains(html, "color-scheme") {
+		t.Errorf("customization preview subject %q or light mode", subject)
+	}
+}
+
+func TestFileName(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string]string{
+		"https://app.example.com/storage/ws/private/My%20Report.pdf": "My Report.pdf",
+		"https://app.example.com/":                                   "file",
+		"/storage/ws/public/a%20b.png":                               "a%20b.png",
+		"plain":                                                      "plain",
+	} {
+		if got := mailer.FileName(in); got != want {
+			t.Errorf("FileName(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

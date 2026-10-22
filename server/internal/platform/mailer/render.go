@@ -122,6 +122,21 @@ type brandedContent interface {
 	logo() string
 }
 
+// unsignedContent is content without forma2's EmailFooter sign-off ("Have a great day! The Forma Team"), which only the account and invite emails and the link survey email carried.
+type unsignedContent interface {
+	unsigned()
+}
+
+// lightOnlyContent is content rendered with forma2's forceLightMode: email clients are asked not to darken it, so embedded survey markup keeps its colors.
+type lightOnlyContent interface {
+	lightOnly()
+}
+
+// subjectContent is content whose subject takes {name} values, or is not a catalogue entry at all.
+type subjectContent interface {
+	subject(t func(key string, pairs ...any) string) string
+}
+
 type legal struct {
 	PrivacyURL     string
 	ImprintURL     string
@@ -146,7 +161,12 @@ func newRenderer(cfg config.Config) (*renderer, error) {
 		return nil, err
 	}
 	base, err := template.New("layout.html").
-		Funcs(template.FuncMap{"button": func(href, label string) button { return button{Href: href, Label: label} }}).
+		Funcs(template.FuncMap{
+			"button":      func(href, label string) button { return button{Href: href, Label: label} },
+			"fileName":    FileName,
+			"lastSegment": LastSegment,
+			"inc":         func(i int) int { return i + 1 },
+		}).
 		ParseFS(templateFS, "templates/layout.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse email layout: %w", err)
@@ -209,6 +229,18 @@ func (v view) Logo() string {
 	return ""
 }
 
+// SignOff reports whether the email ends with forma2's EmailFooter sign-off.
+func (v view) SignOff() bool {
+	_, unsigned := v.Content.(unsignedContent)
+	return !unsigned
+}
+
+// LightOnly reports whether the email is rendered with forma2's forceLightMode.
+func (v view) LightOnly() bool {
+	_, light := v.Content.(lightOnlyContent)
+	return light
+}
+
 // formaLogoURL is the default logo of every email.
 const formaLogoURL = "https://app.forma.ylam.ai/logo-transparent.png"
 
@@ -242,6 +274,9 @@ func (r *renderer) render(locale string, content Content) (subject, html string,
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout", view{Locale: locale, Content: content, Legal: r.legal, r: r}); err != nil {
 		return "", "", fmt.Errorf("render email %s: %w", content.template(), err)
+	}
+	if sc, ok := content.(subjectContent); ok {
+		return sc.subject(func(key string, pairs ...any) string { return r.translate(locale, key, pairs...) }), buf.String(), nil
 	}
 	return r.translate(locale, content.subjectKey()), buf.String(), nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/mail"
 	"strconv"
 	"time"
 
@@ -69,9 +70,12 @@ func (s *smtpTransport) Send(ctx context.Context, msg Message) error {
 		return fmt.Errorf("recipient address: %w", err)
 	}
 	if msg.ReplyTo != "" {
-		if err := m.ReplyTo(msg.ReplyTo); err != nil {
+		// A follow-up replies to every address its author listed, joined with ", " as forma2 joined them.
+		addrs, err := mail.ParseAddressList(msg.ReplyTo)
+		if err != nil {
 			return fmt.Errorf("reply-to address: %w", err)
 		}
+		m.ReplyToMailAddress(addrs...)
 	}
 	m.Subject(msg.Subject)
 	m.SetDate()
