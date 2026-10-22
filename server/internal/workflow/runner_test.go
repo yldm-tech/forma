@@ -243,6 +243,27 @@ func TestRunSendsEveryStepOnce(t *testing.T) {
 	}
 }
 
+// An organization without a whitelabel logo, every new one, has a NULL logo URL; the run still sends.
+func TestRunWithoutWhitelabelLogo(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	e.exec(`UPDATE organizations SET whitelabel = '{}' WHERE id = ?`, f.org)
+	wf := e.enabled(f, "No logo", definition(f.survey, "owner@example.com"))
+	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	e.db.Raw(`SELECT status FROM workflow_runs WHERE id = ?`, run).Scan(&status)
+	if status != RunCompleted || len(e.mails("owner@example.com")) != 1 {
+		t.Fatalf("run %s, sent %+v\n%s", status, e.mail.Messages(), e.errorLogs())
+	}
+}
+
 func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()

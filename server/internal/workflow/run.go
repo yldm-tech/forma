@@ -260,12 +260,13 @@ func (r *Runner) loadContext(ctx context.Context, workspaceID, surveyID, respons
 		return nil, err
 	}
 	ec := &emailContext{survey: sv, answers: answers, allowed: map[string]bool{}}
-	var logos []*string
-	if err := r.db.WithContext(ctx).Raw(`SELECT o.whitelabel ->> 'logoUrl' FROM organizations o JOIN workspaces w ON w.organization_id = o.id WHERE w.id = ?`, workspaceID).Scan(&logos).Error; err != nil {
+	// Scanned into a struct: GORM cannot scan a NULL column into a []*string, and an organization without a whitelabel logo has one.
+	var orgs []struct{ LogoURL *string }
+	if err := r.db.WithContext(ctx).Raw(`SELECT o.whitelabel ->> 'logoUrl' AS logo_url FROM organizations o JOIN workspaces w ON w.organization_id = o.id WHERE w.id = ?`, workspaceID).Scan(&orgs).Error; err != nil {
 		return nil, fmt.Errorf("load workflow organization: %w", err)
 	}
-	if len(logos) > 0 && logos[0] != nil {
-		ec.logo = *logos[0]
+	if len(orgs) > 0 && orgs[0].LogoURL != nil {
+		ec.logo = *orgs[0].LogoURL
 	}
 	if resp.Language != nil && slices.Contains(mailer.Locales, *resp.Language) {
 		ec.locale = *resp.Language
