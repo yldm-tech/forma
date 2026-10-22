@@ -508,3 +508,94 @@ func TestV3Generate(t *testing.T) {
 		t.Fatal("generate created a survey")
 	}
 }
+
+// translatedDocument is the translatable content of the survey created from linkSurvey, in the given languages, as members of a patch body.
+func translatedDocument(created resource, languages ...string) string {
+	tr := func(text string) string {
+		parts := make([]string, len(languages))
+		for i, l := range languages {
+			parts[i] = fmt.Sprintf("%q: %q", l, text+" "+l)
+		}
+		return "{" + strings.Join(parts, ", ") + "}"
+	}
+	blocks := created.Data["blocks"].([]any)
+	blockID := func(i int) string { return blocks[i].(map[string]any)["id"].(string) }
+	return fmt.Sprintf(`"metadata": {"title": %s}, "welcomeCard": {"enabled": true, "headline": %s},
+	  "blocks": [
+	    {"id": %q, "name": "Main", "elements": [{"id": "satisfaction", "type": "openText", "headline": %s, "required": true}]},
+	    {"id": %q, "name": "Rate", "elements": [{"id": "rating", "type": "rating", "headline": %s, "required": false, "scale": "star", "range": 5}]}
+	  ],
+	  "endings": [{"id": "endingone", "type": "endScreen", "headline": %s}]`, tr("Feedback"), tr("Welcome"), blockID(0), tr("Improve?"), blockID(1), tr("Rate us"), tr("Thanks"))
+}
+
+// forma2's patch.test.ts "reserved names for newly declared fields": a name the survey does not already declare may not be reserved, and a refused patch writes nothing, not even a workspace language it asked for.
+func TestV3PatchRefusesNewReservedNames(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	var created resource
+	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), linkSurvey(ws)), http.StatusCreated, &created)
+	id := created.Data["id"].(string)
+	path := surveysPath("/" + id)
+	hidden := func() string { return e.text(`SELECT hidden_fields::text FROM surveys WHERE id = ?`, id) }
+	before := hidden()
+
+	p := e.problem(e.v3(owner, http.MethodPatch, path, `{"hiddenFields": {"enabled": true, "fieldIds": ["plan", "country"]}, "languages": [{"code": "de-DE", "enabled": true}, {"code": "fr-FR", "enabled": true}], `+translatedDocument(created, "en-US", "de-DE", "fr-FR")+`}`), http.StatusUnprocessableEntity, "")
+	if got := p.param(t, "country"); got.Code != v3api.CodeForbiddenIdentifier || got.Identifier != "country" || !strings.Contains(got.Reason, `Field name "country" cannot be used`) {
+		t.Fatalf("param %+v", got)
+	}
+	if hidden() != before || e.count(`SELECT count(*) FROM languages WHERE workspace_id = ? AND code = 'fr-FR'`, ws) != 0 {
+		t.Fatal("a refused patch wrote")
+	}
+	p = e.problem(e.v3(owner, http.MethodPatch, path, `{"variables": [{"id": "varbrowser", "name": "browser", "type": "text", "value": ""}]}`), http.StatusUnprocessableEntity, "")
+	if got := p.param(t, "browser"); got.Code != v3api.CodeForbiddenIdentifier {
+		t.Fatalf("param %+v", got)
+	}
+	e.ok(e.v3(owner, http.MethodPatch, path, `{"hiddenFields": {"enabled": true, "fieldIds": ["plan", "team_size"]}}`), http.StatusOK, nil)
+
+	// A survey that already declares a reserved name keeps it, but may not add another.
+	e.exec(`UPDATE surveys SET hidden_fields = '{"enabled": true, "fieldIds": ["country"]}' WHERE id = ?`, id)
+	e.ok(e.v3(owner, http.MethodPatch, path, `{"name": "Renamed"}`), http.StatusOK, nil)
+	if !strings.Contains(hidden(), `"country"`) {
+		t.Fatalf("grandfathered field dropped: %s", hidden())
+	}
+	p = e.problem(e.v3(owner, http.MethodPatch, path, `{"hiddenFields": {"enabled": true, "fieldIds": ["country", "url"]}}`), http.StatusUnprocessableEntity, "")
+	p.param(t, "url")
+}
+
+// A patch's languages replace the survey's: a language it leaves out is unlinked, one it adds is linked (and created in the workspace when new), and a patch refused for another reason creates no workspace language.
+func TestV3PatchReplacesLanguages(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	var created resource
+	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), linkSurvey(ws)), http.StatusCreated, &created)
+	id := created.Data["id"].(string)
+	path := surveysPath("/" + id)
+	linked := func() []string {
+		var codes []string
+		if err := e.db.Raw(`SELECT l.code FROM survey_languages sl JOIN languages l ON l.id = sl.language_id WHERE sl.survey_id = ? ORDER BY l.code`, id).Scan(&codes).Error; err != nil {
+			t.Fatal(err)
+		}
+		return codes
+	}
+	if got := strings.Join(linked(), ","); got != "de-DE,en-US" {
+		t.Fatalf("languages %s", got)
+	}
+
+	var patched resource
+	e.ok(e.v3(owner, http.MethodPatch, path, `{"languages": [{"code": "fr-FR", "enabled": true}], `+translatedDocument(created, "en-US", "fr-FR")+`}`), http.StatusOK, &patched)
+	if got := strings.Join(linked(), ","); got != "en-US,fr-FR" {
+		t.Fatalf("languages after replacing %s", got)
+	}
+	if e.count(`SELECT count(*) FROM languages WHERE workspace_id = ? AND code = 'fr-FR'`, ws) != 1 || e.count(`SELECT count(*) FROM languages WHERE workspace_id = ? AND code = 'de-DE'`, ws) != 1 {
+		t.Fatal("workspace languages")
+	}
+
+	app := strings.Replace(linkSurvey(ws), `"name": " Product Feedback ",`, `"name": "App", "type": "app",`, 1)
+	e.ok(e.v3(owner, http.MethodPost, surveysPath(""), app), http.StatusCreated, &created)
+	p := e.problem(e.v3(owner, http.MethodPatch, surveysPath("/"+created.Data["id"].(string)), `{"languages": [{"code": "de-DE", "enabled": true}, {"code": "it-IT", "enabled": true}], `+translatedDocument(created, "en-US", "de-DE", "it-IT")+`, "distribution": {"triggers": [{"actionClassId": "`+uuid.NewString()+`"}]}}`), http.StatusUnprocessableEntity, "")
+	if len(p.InvalidParams) == 0 || e.count(`SELECT count(*) FROM languages WHERE workspace_id = ? AND code = 'it-IT'`, ws) != 0 {
+		t.Fatalf("a refused patch left a language: %+v", p)
+	}
+}
