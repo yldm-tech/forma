@@ -39,7 +39,7 @@ export const useConnect = (workspaceId: string, type: IntegrationType) => {
   const connect = async () => {
     setIsConnecting(true);
     try {
-      window.location.replace(await connectIntegration(workspaceId, type));
+      globalThis.location.replace(await connectIntegration(workspaceId, type));
     } catch (error) {
       toast.error(errorMessage(t, error));
       setIsConnecting(false);
