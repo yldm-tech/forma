@@ -59,19 +59,20 @@ func TestOpenAICompatibleGenerateObject(t *testing.T) {
 		t.Fatalf("headers %v", r.header)
 	}
 	expectBody(t, r.body, map[string]any{
-		"model":                                   "Qwen/Qwen2.5-7B-Instruct",
-		"messages.0.role":                         "system",
-		"messages.0.content":                      "You write drafts.",
-		"messages.1.role":                         "user",
-		"messages.1.content":                      "Write one.",
-		"max_tokens":                              float64(100),
-		"temperature":                             0.2,
+		"model":              "Qwen/Qwen2.5-7B-Instruct",
+		"messages.0.role":    "system",
+		"messages.0.content": "You write drafts.",
+		"messages.1.role":    "user",
+		"messages.1.content": "Write one.",
+		"max_tokens":         float64(100),
+		"temperature":        0.2,
+		"stream":             nil,
+
 		"response_format.type":                    "json_schema",
 		"response_format.json_schema.name":        "FormaThing",
 		"response_format.json_schema.description": "A thing.",
 		"response_format.json_schema.strict":      true,
 		"response_format.json_schema.schema":      schemaValue(t),
-		"stream":                                  nil,
 	})
 }
 
