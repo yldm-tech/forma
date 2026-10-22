@@ -36,9 +36,6 @@
                   "$ref": "#/$defs/__schema3"
                 },
                 {
-                  "$ref": "#/$defs/__schema9"
-                },
-                {
                   "$ref": "#/$defs/__schema10"
                 },
                 {
@@ -46,6 +43,9 @@
                 },
                 {
                   "$ref": "#/$defs/__schema12"
+                },
+                {
+                  "$ref": "#/$defs/__schema13"
                 }
               ]
             },
@@ -190,7 +190,7 @@
           "$ref": "#/$defs/__schema7"
         },
         "within": {
-          "$ref": "#/$defs/__schema8"
+          "$ref": "#/$defs/__schema9"
         }
       },
       "required": [
@@ -211,10 +211,22 @@
       "maxItems": 100,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema2"
+        "$ref": "#/$defs/__schema8"
       }
     },
     "__schema8": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema2"
+        },
+        {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        }
+      ]
+    },
+    "__schema9": {
       "type": "object",
       "properties": {
         "amount": {
@@ -237,7 +249,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema9": {
+    "__schema10": {
       "type": "object",
       "properties": {
         "id": {
@@ -294,7 +306,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema10": {
+    "__schema11": {
       "type": "object",
       "properties": {
         "id": {
@@ -345,7 +357,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema11": {
+    "__schema12": {
       "type": "object",
       "properties": {
         "id": {
@@ -396,7 +408,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema12": {
+    "__schema13": {
       "type": "object",
       "properties": {
         "id": {
