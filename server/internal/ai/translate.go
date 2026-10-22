@@ -1,10 +1,12 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -80,11 +82,15 @@ Rules:
 		}
 		// A schema naming exactly these ids makes the provider return exactly this set, the shape zod's object schema had.
 		schema, _ := json.Marshal(map[string]any{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "properties": properties, "required": required, "additionalProperties": false})
-		prompt, _ := json.Marshal(items)
+		// JSON.stringify's encoding: markup in rich text reaches the model as written, not as \u003c escapes.
+		var prompt bytes.Buffer
+		enc := json.NewEncoder(&prompt)
+		enc.SetEscapeHTML(false)
+		_ = enc.Encode(items)
 		temperature := 0.0
 		res, err := s.GenerateObject(ctx, organizationID, FeatureTranslation, ObjectRequest{
 			Request: Request{
-				System: system, Prompt: string(prompt), Temperature: &temperature, Timeout: translationTimeout,
+				System: system, Prompt: strings.TrimSuffix(prompt.String(), "\n"), Temperature: &temperature, Timeout: translationTimeout,
 				MaxOutputTokens: min(translationMaxOutputTokens, max(translationMinOutputTokens, len(chunk)*translationTokensPerField)),
 			},
 			Schema: schema,
