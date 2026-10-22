@@ -130,4 +130,3 @@ func TestRenderOgImageWrapsAndHandlesEmptyNames(t *testing.T) {
 		}
 	}
 }
-

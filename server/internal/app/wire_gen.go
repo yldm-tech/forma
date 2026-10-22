@@ -17,6 +17,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -145,6 +146,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
 	auditor := v3api2.NewAuditor(cfg, emitter)
 	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
+	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
+	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
 	webuiHandler, err := webui.New()
 	if err != nil {
 		cleanup3()
@@ -152,7 +155,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, webuiHandler)
+	linksurveyHandler := linksurvey.NewHandler(cfg, linksurveyService, limiter, webuiHandler, log)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, linksurveyHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -227,3 +231,6 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
+
+// linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
+var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService, linksurvey.NewHandler)

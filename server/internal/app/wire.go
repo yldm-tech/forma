@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -127,6 +128,13 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
+// linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
+var linkSurveySet = wire.NewSet(
+	linksurvey.NewRepository,
+	linksurvey.NewService,
+	linksurvey.NewHandler,
+)
+
 // InitializeServer builds `forma serve`. The returned cleanup closes the database pool, the Valkey client and the SpiceDB connection.
 func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*httpserver.Server, func(), error) {
 	wire.Build(
@@ -144,6 +152,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		contactSet,
 		v3Set,
 		surveyConfigSet,
+		linkSurveySet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
