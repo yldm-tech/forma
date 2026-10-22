@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "../../lib/clipboard";
 
-/** forma2's IdBadge (column variant): an identifier with a copy button, under its label when it has one. */
+/** forma2's IdBadge: an identifier with a copy button, under its label in the column variant, alone in a table cell. */
 export const IdBadge = ({ id, label }: { id: string; label?: string }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);

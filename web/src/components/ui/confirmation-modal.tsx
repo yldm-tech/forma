@@ -15,7 +15,7 @@ interface SecondaryButtonProps {
 interface ConfirmationModalProps {
   title: string;
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   onConfirm: () => void;
   description?: string;
   body: React.ReactNode;

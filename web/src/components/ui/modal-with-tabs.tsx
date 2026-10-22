@@ -1,21 +1,13 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { cn } from "../../lib/cn";
 import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
 
-interface ModalWithTabsProps {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  icon?: React.ReactNode;
-  label?: string;
-  description?: string;
-  tabs: TabProps[];
-  closeOnOutsideClick?: boolean;
-}
-
-interface TabProps {
+export interface ModalTab {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
+/** forma2's ModalWithTabs: a dialog whose body switches between tabs, opening on the first. The caller remounts it (or closes it) to start over on the first tab. */
 export const ModalWithTabs = ({
   open,
   setOpen,
@@ -23,46 +15,60 @@ export const ModalWithTabs = ({
   icon,
   label,
   description,
-  closeOnOutsideClick,
-}: ModalWithTabsProps) => {
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  tabs: ModalTab[];
+  icon?: ReactNode;
+  label: string;
+  description?: string;
+}) => {
+  const id = useId();
   const [activeTab, setActiveTab] = useState(0);
-
-  const handleTabClick = (index: number) => {
-    setActiveTab(index);
+  const close = (next: boolean) => {
+    if (!next) setActiveTab(0);
+    setOpen(next);
   };
-
-  useEffect(() => {
-    if (!open) {
-      setActiveTab(0);
-    }
-  }, [open]);
-
+  const current = tabs[Math.min(activeTab, tabs.length - 1)];
   return (
-    <Dialog open={open} onOpenChange={setOpen} disableCloseOnOutsideClick={closeOnOutsideClick}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogHeader>
         {icon}
         <DialogTitle>{label}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        {description && <DialogDescription>{description}</DialogDescription>}
       </DialogHeader>
       <DialogBody>
-        {tabs.length > 1 ? (
-          <div className="flex h-full w-full items-center justify-center gap-x-2 border-b border-slate-200 px-6">
+        {tabs.length > 1 && (
+          <div
+            role="tablist"
+            className="flex w-full items-center justify-center gap-x-2 border-b border-slate-200 px-6">
             {tabs.map((tab, index) => (
               <button
                 type="button"
-                key={index}
-                className={`mr-4 px-1 pb-3 focus:outline-hidden ${
+                role="tab"
+                id={`${id}-tab-${index}`}
+                aria-selected={activeTab === index}
+                aria-controls={`${id}-panel`}
+                key={tab.title}
+                className={cn(
+                  "mr-4 px-1 pb-3 focus:outline-hidden",
                   activeTab === index
                     ? "border-brand-dark border-b-2 font-semibold text-slate-900"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
-                onClick={() => handleTabClick(index)}>
+                )}
+                onClick={() => setActiveTab(index)}>
                 {tab.title}
               </button>
             ))}
           </div>
-        ) : null}
-        <div className={tabs.length > 1 ? "flex-1 pt-4" : "flex-1"}>{tabs[activeTab]?.children}</div>
+        )}
+        <div
+          id={`${id}-panel`}
+          role={tabs.length > 1 ? "tabpanel" : undefined}
+          aria-labelledby={tabs.length > 1 ? `${id}-tab-${activeTab}` : undefined}
+          className={tabs.length > 1 ? "flex-1 pt-4" : "flex-1"}>
+          {current?.children}
+        </div>
       </DialogBody>
     </Dialog>
   );

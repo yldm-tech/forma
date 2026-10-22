@@ -81,6 +81,37 @@ describe("api", () => {
     });
   });
 
+  test("keeps the invalid_params of a v3 problem", async () => {
+    vi.stubGlobal(
+      "fetch",
+      respond(
+        422,
+        {
+          title: "Unprocessable Content",
+          status: 422,
+          detail: "Unable to update tag",
+          invalid_params: [{ name: "name", reason: "tag_name_already_exists" }],
+        },
+        { "content-type": "application/problem+json" }
+      )
+    );
+    const error = (await api.patch("/api/v3/tags/1", { name: "x" }).catch((e: unknown) => e)) as ApiError;
+    expect(error.message).toBe("Unable to update tag");
+    expect(error.code).toBe("problem");
+    expect(error.invalidParams).toEqual([{ name: "name", reason: "tag_name_already_exists" }]);
+  });
+
+  test("sends a form as multipart without setting the content type itself", async () => {
+    const fetchMock = respond(200, { contacts: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    const form = new FormData();
+    form.append("duplicateContactsAction", "skip");
+    await api.post("/api/app/workspaces/w/contacts/import", form);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(form);
+    expect(new Headers(init.headers).has("content-type")).toBe(false);
+  });
+
   test("falls back when the error body is not JSON", async () => {
     vi.stubGlobal("fetch", respond(502, "<html>Bad Gateway</html>", { "content-type": "text/html" }));
     const error = await api.get("/health/ready").catch((e: unknown) => e);
