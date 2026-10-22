@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
-import { ApiError, CSRF_HEADER, api } from "./api";
+import { ApiError, CSRF_HEADER, api, contentDispositionFilename, downloadFile } from "./api";
 
 const respond = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   vi.fn().mockResolvedValue(
@@ -117,5 +117,45 @@ describe("api", () => {
     const error = await api.get("/health/ready").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 502, code: "http_error" });
+  });
+});
+
+describe("contentDispositionFilename", () => {
+  test("reads a quoted, a bare and an RFC 5987 file name", () => {
+    expect(contentDispositionFilename('attachment; filename="export-a-2026-01-01-00-00-00-utc.csv"')).toBe(
+      "export-a-2026-01-01-00-00-00-utc.csv"
+    );
+    expect(contentDispositionFilename("attachment; filename=a.xlsx")).toBe("a.xlsx");
+    expect(contentDispositionFilename("attachment; filename=\"x\"; filename*=UTF-8''%E6%97%A5.csv")).toBe(
+      "日.csv"
+    );
+  });
+
+  test("is null without a header or a file name", () => {
+    expect(contentDispositionFilename(null)).toBeNull();
+    expect(contentDispositionFilename("inline")).toBeNull();
+  });
+});
+
+describe("downloadFile", () => {
+  test("posts the JSON body with the CSRF header and answers the file and its name", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("﻿a,b", {
+        status: 200,
+        headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="r.csv"' },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const file = await downloadFile("/api/app/surveys/s/responses/export", { format: "csv" });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get(CSRF_HEADER)).toBe("XMLHttpRequest");
+    expect(init.body).toBe(JSON.stringify({ format: "csv" }));
+    expect(file.filename).toBe("r.csv");
+    expect(Array.from(new Uint8Array(await file.blob.arrayBuffer()).slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+  });
+
+  test("throws the error envelope of a failure", async () => {
+    vi.stubGlobal("fetch", respond(403, { code: "forbidden", message: "Not authorized" }));
+    await expect(downloadFile("/x", {})).rejects.toMatchObject({ status: 403, code: "forbidden" });
   });
 });
