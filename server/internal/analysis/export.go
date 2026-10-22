@@ -44,7 +44,7 @@ var exportBasicsCovered = map[string]bool{"responseId": true, "surveyId": true, 
 // reservedExportEntries is forma2's getReservedExportEntries: the reserved catalog minus what the fixed columns carry, what the survey's own names shadow, and the IP address unless the survey captures it. The anonymize switch removes no column: anonymized responses export empty cells.
 func reservedExportEntries(sv *surveyDoc) []embeddeddata.ReservedField {
 	var out []embeddeddata.ReservedField
-	for _, e := range embeddeddata.DropShadowed(embeddeddata.ReservedCatalog, embeddeddata.ShadowingNames(sv.Fields, sv.ElementIDs())) {
+	for _, e := range embeddeddata.DropShadowed(embeddeddata.ReservedCatalog, embeddeddata.ShadowingNames(sv.Fields, sv.elementIDs())) {
 		if exportBasicsCovered[e.Name] || (e.Name == "ipAddress" && !sv.IsCaptureIPEnabled) {
 			continue
 		}

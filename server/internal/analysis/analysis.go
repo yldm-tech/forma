@@ -94,24 +94,41 @@ func loadSurveyDoc(ctx context.Context, db *gorm.DB, id uuid.UUID) (*surveyDoc, 
 	for _, l := range languages {
 		doc.Languages = append(doc.Languages, surveyLanguage{Code: l.Code, Default: l.IsDefault})
 	}
+	if err := doc.readBlocks(sv.Blocks); err != nil {
+		return nil, fmt.Errorf("decode survey %s blocks: %w", id, err)
+	}
+	return doc, nil
+}
+
+// readBlocks sets the block ids and the elements, in document order, from the stored blocks.
+func (sv *surveyDoc) readBlocks(raw json.RawMessage) error {
 	var blocks []struct {
 		ID       string            `json:"id"`
 		Elements []json.RawMessage `json:"elements"`
 	}
-	if err := json.Unmarshal(sv.Blocks, &blocks); err != nil {
-		return nil, fmt.Errorf("decode survey %s blocks: %w", id, err)
+	if err := json.Unmarshal(raw, &blocks); err != nil {
+		return err
 	}
 	for _, b := range blocks {
-		doc.BlockIDs = append(doc.BlockIDs, b.ID)
+		sv.BlockIDs = append(sv.BlockIDs, b.ID)
 		for _, raw := range b.Elements {
 			var el surveydoc.Element
 			if err := json.Unmarshal(raw, &el); err != nil {
-				return nil, fmt.Errorf("decode survey %s element: %w", id, err)
+				return err
 			}
-			doc.Elements = append(doc.Elements, element{Element: el, Raw: raw, BlockID: b.ID})
+			sv.Elements = append(sv.Elements, element{Element: el, Raw: raw, BlockID: b.ID})
 		}
 	}
-	return doc, nil
+	return nil
+}
+
+// elementIDs are the ids of the survey's elements in document order.
+func (sv *surveyDoc) elementIDs() []string {
+	ids := make([]string, len(sv.Elements))
+	for i, el := range sv.Elements {
+		ids[i] = el.ID
+	}
+	return ids
 }
 
 // readableSurvey authorizes reading the survey's responses (forma2's workspace.read on the survey's workspace) and loads it. An unknown survey is the same 403 as a foreign one, so ids cannot be probed.

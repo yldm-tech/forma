@@ -63,7 +63,7 @@ func (v *valueSet) add(key, value string) {
 // reservedFilterEntries is forma2's getReservedFilterEntries: the reserved fields the response table shows, and durationSeconds, minus what the survey's own names shadow, what an anonymized survey no longer captures, and the IP address unless the survey captures it.
 func reservedFilterEntries(sv *surveyDoc) []embeddeddata.ReservedField {
 	var out []embeddeddata.ReservedField
-	for _, e := range embeddeddata.DropShadowed(embeddeddata.ReservedCatalog, embeddeddata.ShadowingNames(sv.Fields, sv.ElementIDs())) {
+	for _, e := range embeddeddata.DropShadowed(embeddeddata.ReservedCatalog, embeddeddata.ShadowingNames(sv.Fields, sv.elementIDs())) {
 		if e.Display == embeddeddata.DisplayNone && e.Name != "durationSeconds" {
 			continue
 		}
