@@ -93,7 +93,7 @@ func TestAllowedExtensions(t *testing.T) {
 		t.Fatalf("%d extensions with %d MIME types, want forma2's 26", len(AllowedExtensions), len(mimeTypes))
 	}
 	for _, ext := range AllowedExtensions {
-		if !IsAllowedExtension(ext) || MIMEType(ext) == "" {
+		if !IsAllowedExtension(ext) || mimeTypes[ext] == "" {
 			t.Errorf("%s has no MIME type", ext)
 		}
 	}
@@ -102,7 +102,7 @@ func TestAllowedExtensions(t *testing.T) {
 			t.Errorf("%q is allowed", ext)
 		}
 	}
-	if MIMEType("jpg") != "image/jpeg" || MIMEType("7z") != "application/x-7z-compressed" || MIMEType("eml") != "message/rfc822" {
+	if mimeTypes["jpg"] != "image/jpeg" || mimeTypes["7z"] != "application/x-7z-compressed" || mimeTypes["eml"] != "message/rfc822" {
 		t.Error("MIME types differ from forma2's")
 	}
 	if !slices.Equal(AllowedExtensions[:5], []string{"heic", "png", "jpeg", "jpg", "webp"}) {

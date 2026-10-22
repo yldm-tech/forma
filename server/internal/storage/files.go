@@ -65,9 +65,6 @@ var mimeTypes = map[string]string{
 	"tar":  "application/x-tar",
 }
 
-// MIMEType is the content type an allowed extension must be uploaded with, or "" for an extension that is not allowed.
-func MIMEType(extension string) string { return mimeTypes[extension] }
-
 // IsAllowedExtension reports whether extension (lowercase, without the dot) may be uploaded.
 func IsAllowedExtension(extension string) bool {
 	_, ok := mimeTypes[extension]

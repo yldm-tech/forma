@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ const Image = "rustfs/rustfs:1.0.0-rc.2@sha256:7d6d361c49c08d427250fb59aae5d78df
 
 const (
 	accessKey = "forma-test"
-	secretKey = "forma-test-secret"
+	secretKey = "forma-test-secret" //nolint:gosec // the credential of a throwaway test container
 	region    = "us-east-1"
 )
 
@@ -86,11 +87,28 @@ func Config(t testing.TB) config.S3Config {
 	var b [8]byte
 	_, _ = rand.Read(b[:])
 	bucket := "forma-" + hex.EncodeToString(b[:])
-	if err := admin.MakeBucket(t.Context(), bucket, minio.MakeBucketOptions{Region: region}); err != nil {
+	if err := makeBucket(t.Context(), bucket); err != nil {
 		t.Fatalf("s3test: create bucket: %v", err)
 	}
 	u := *endpoint
 	return config.S3Config{AccessKey: accessKey, SecretKey: secretKey, Region: region, EndpointURL: &u, ForcePathStyle: true, BucketName: bucket}
+}
+
+// creating serializes bucket creation: RustFS refuses concurrent creations ("bucket creation concurrency limit reached; retry later"), and parallel tests would otherwise race for it.
+var creating sync.Mutex
+
+// makeBucket creates bucket, retrying while the server reports itself busy.
+func makeBucket(ctx context.Context, bucket string) error {
+	creating.Lock()
+	defer creating.Unlock()
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		err := admin.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: region})
+		if err == nil || !strings.Contains(err.Error(), "retry later") || time.Now().After(deadline) {
+			return err
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 // Client is a client with full access to the server, for a test to arrange or inspect objects directly.
