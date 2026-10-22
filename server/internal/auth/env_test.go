@@ -240,11 +240,11 @@ func (e *env) breach(password string) {
 	e.breached[sha1Hex(password)] = true
 }
 
-// enableRateLimits turns the limiter on, against this env's Valkey, with its clock frozen: windows are aligned to the wall clock, and a scenario that straddles a boundary on a busy machine would see its count split across two windows.
+// enableRateLimits turns the limiter on, against this env's Valkey, with its clock frozen. Windows are aligned to the wall clock, so a scenario that straddled a boundary on a busy machine saw its count split across two windows. The clock is frozen at the start of a UTC day, which starts a window of every rule length that divides a day: the limiter derives a key's TTL from its clock while Valkey expires the key in real time, so a frozen instant near a window's end would expire the count mid-scenario, and the start of a window gives each key the full window to live.
 func (e *env) enableRateLimits() {
 	cfg := e.cfg
 	cfg.RateLimitingDisabled = false
-	frozen := time.Now()
+	frozen := time.Now().UTC().Truncate(24 * time.Hour)
 	e.svc.limiter = ratelimit.New(cfg, e.rdb, slog.New(slog.NewTextHandler(io.Discard, nil))).WithClock(func() time.Time { return frozen })
 }
 
