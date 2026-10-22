@@ -6,6 +6,7 @@ package jsonschema
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -13,6 +14,9 @@ import (
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/santhosh-tekuri/jsonschema/v6/kind"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 // Regenerate with `vp run --filter @forma/types export-json-schema`; CI fails when these are stale.
@@ -87,4 +91,73 @@ func (v *Validator) Validate(name string, document []byte) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	return nil
+}
+
+// Violation is one way a document fails its schema: where in the document, and what.
+type Violation struct {
+	// Location is the path of the offending value: object keys, and array indexes in decimal.
+	Location []string
+	Message  string
+}
+
+var english = message.NewPrinter(language.English)
+
+// Violations checks a document against the named schema and lists the failures, or none when it conforms. A value that matches none of a union's alternatives is reported inside the one alternative its type or "type" discriminator selects; when no single alternative is selected it is one violation, "Invalid input", at the value, as zod reports a failed union. Only an unknown schema or malformed JSON is an error.
+func (v *Validator) Violations(name string, document []byte) ([]Violation, error) {
+	err := v.Validate(name, document)
+	if err == nil {
+		return nil, nil
+	}
+	var verr *jsonschema.ValidationError
+	if !errors.As(err, &verr) {
+		return nil, err
+	}
+	var out []Violation
+	collectViolations(verr, &out)
+	return out, nil
+}
+
+func collectViolations(e *jsonschema.ValidationError, out *[]Violation) {
+	switch e.ErrorKind.(type) {
+	case *kind.AnyOf, *kind.OneOf:
+		var selected []*jsonschema.ValidationError
+		for _, c := range e.Causes {
+			if !rejectedOnShape(c, len(e.InstanceLocation)) {
+				selected = append(selected, c)
+			}
+		}
+		if len(selected) == 1 {
+			collectViolations(selected[0], out)
+			return
+		}
+		*out = append(*out, Violation{Location: e.InstanceLocation, Message: "Invalid input"})
+		return
+	}
+	if len(e.Causes) == 0 {
+		*out = append(*out, Violation{Location: e.InstanceLocation, Message: e.ErrorKind.LocalizedString(english)})
+		return
+	}
+	for _, c := range e.Causes {
+		collectViolations(c, out)
+	}
+}
+
+// rejectedOnShape reports whether a union alternative failed only because the value is of another type, or because its "type" discriminator names another alternative: such an alternative was never the one the value meant.
+func rejectedOnShape(e *jsonschema.ValidationError, depth int) bool {
+	if len(e.Causes) == 0 {
+		switch e.ErrorKind.(type) {
+		case *kind.Type:
+			return len(e.InstanceLocation) == depth
+		case *kind.Const, *kind.Enum:
+			loc := e.InstanceLocation
+			return len(loc) == depth+1 && loc[depth] == "type"
+		}
+		return false
+	}
+	for _, c := range e.Causes {
+		if rejectedOnShape(c, depth) {
+			return true
+		}
+	}
+	return false
 }
