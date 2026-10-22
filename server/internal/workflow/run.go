@@ -204,6 +204,14 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 	return nil
 }
 
+// recordTimeout bounds the writes that record an outcome after the job's context may have ended.
+const recordTimeout = 10 * time.Second
+
+// detached is ctx without its cancellation, bounded by recordTimeout. River cancels a run's context at runTimeout and SHUTDOWN_TIMEOUT after the worker is asked to stop, usually while a send is waiting on it; the step's outcome and the run's failure must still be written, or the retry finds the step running, takes it for another delivery's and abandons a send that never happened.
+func detached(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
+}
+
 // recordFailure writes the failure onto a run that is not yet terminal: the error and, on the last attempt, the failed status. A run another delivery finalized keeps its verdict.
 func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID, cause error, data json.RawMessage, final bool, log *slog.Logger) {
 	set := map[string]any{"error": cause.Error(), "last_error_at": gorm.Expr("now()"), "updated_at": gorm.Expr("now()")}
@@ -214,7 +222,9 @@ func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID
 	if data != nil {
 		set["data"] = gorm.Expr("?::jsonb", string(data))
 	}
-	res := r.db.WithContext(ctx).Table("workflow_runs").Where("id = ? AND workspace_id = ? AND status NOT IN ('completed', 'failed', 'canceled')", runID, workspaceID).Updates(set)
+	rctx, cancel := detached(ctx)
+	defer cancel()
+	res := r.db.WithContext(rctx).Table("workflow_runs").Where("id = ? AND workspace_id = ? AND status NOT IN ('completed', 'failed', 'canceled')", runID, workspaceID).Updates(set)
 	switch {
 	case res.Error != nil:
 		log.ErrorContext(ctx, "Failed to persist workflow run failure state", "err", res.Error)
@@ -364,7 +374,9 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 	if errMsg != "" {
 		stored = &errMsg
 	}
-	if err := r.db.WithContext(ctx).Exec(`UPDATE workflow_run_logs SET status = ?, output = ?::jsonb, error = ?, finished_at = ? WHERE run_id = ? AND step_id = ?`,
+	rctx, cancel := detached(ctx)
+	defer cancel()
+	if err := r.db.WithContext(rctx).Exec(`UPDATE workflow_run_logs SET status = ?, output = ?::jsonb, error = ?, finished_at = ? WHERE run_id = ? AND step_id = ?`,
 		status, string(output), stored, finishedAt, runID, step.ID).Error; err != nil {
 		return nil, false, fmt.Errorf("record workflow step: %w", err)
 	}

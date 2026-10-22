@@ -510,3 +510,46 @@ func TestRiverEndToEnd(t *testing.T) {
 		t.Fatal("the run's steps were not recorded")
 	}
 }
+
+// cancellingTransport is an SMTP server the job's context ends on before anything is sent, as River cancels a run at runTimeout or SHUTDOWN_TIMEOUT after the worker is asked to stop.
+type cancellingTransport struct {
+	cancel context.CancelFunc
+}
+
+func (c *cancellingTransport) Send(ctx context.Context, _ mailer.Message) error {
+	c.cancel()
+	return ctx.Err()
+}
+
+// A step whose send the job's cancellation cut short is recorded as failed, with the run's error, so the retry sends it again rather than finding it running and abandoning the run.
+func TestCancelledSendIsRetried(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	wf := e.enabled(f, "One step", definition(f.survey, "q1"))
+	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	m, err := mailer.NewWithTransport(e.cfg, &cancellingTransport{cancel: cancel}, e.log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := NewRunner(e.cfg, e.db, m, e.log).Work(ctx, runJob(run, wf, f.ws, 1)); err == nil {
+		t.Fatal("a cancelled attempt succeeded")
+	}
+	if s := e.text(`SELECT status FROM workflow_run_logs WHERE run_id = ?`, run); s != StepFailed {
+		t.Fatalf("the cut-short step is %s", s)
+	}
+	if e.count(`SELECT count(*) FROM workflow_runs WHERE id = ? AND last_error_at IS NOT NULL`, run) != 1 {
+		t.Fatal("the run's failure was not recorded")
+	}
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run); s != RunCompleted || len(e.mails("jane@example.com")) != 1 {
+		t.Fatalf("the retry left the run %s, sent %+v\n%s", s, e.mail.Messages(), e.errorLogs())
+	}
+}
