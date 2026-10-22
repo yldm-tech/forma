@@ -302,11 +302,17 @@ func TestDialerRefusesBlockedAddresses(t *testing.T) {
 	if err := refuseBlocked("tcp", "93.184.216.34:443", nil); err != nil {
 		t.Errorf("public address refused: %v", err)
 	}
+	// The production dialer carries the check: a live loopback listener is never reached, and the refusal is the guard's own, not the operating system's.
+	var reached atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { reached.Add(1) }))
+	defer srv.Close()
 	g := New(config.Config{})
-	g.resolver = fakeResolver{"hooks.example": {"93.184.216.34"}}
-	target := &Target{URL: mustURL(t, "http://127.0.0.1:1/hook"), Addr: netip.MustParseAddr("127.0.0.1")}
-	if _, err := g.Post(context.Background(), target, nil, nil, time.Second); err == nil || !strings.Contains(err.Error(), "refused") {
+	target := &Target{URL: mustURL(t, srv.URL+"/hook"), Addr: netip.MustParseAddr("127.0.0.1")}
+	if _, err := g.Post(context.Background(), target, nil, nil, time.Second); err == nil || !strings.Contains(err.Error(), "webhook connection to a private or internal address refused") {
 		t.Fatalf("Post to loopback = %v, want the dialer's refusal", err)
+	}
+	if reached.Load() != 0 {
+		t.Fatal("the loopback listener was reached")
 	}
 }
 
