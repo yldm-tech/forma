@@ -23,6 +23,8 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
@@ -198,7 +200,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	ssrfGuard := ssrf.New(cfg)
 	webhookService := webhook.NewService(webhookRepository, authorizer, limiter, emitter, ssrfGuard, log)
 	webhookHandler := webhook.NewHandler(webhookService, sessions)
-	v1Handler := webhook.NewV1Handler(cfg, webhookService, authenticator, workspaceRepository, log)
+	wrapper := mgmtv1.New(cfg, authenticator, limiter, emitter, authorizer, workspaceRepository, log)
+	v1Handler := webhook.NewV1Handler(webhookService, wrapper, log)
+	mgmtapiHandler := mgmtapi.NewHandler(cfg, db, client, wrapper, authenticator, authorizer, limiter, emitter, workspaceRepository, sessions, surveyService, responseService, actionclassService, contactService, webhookService, storageService, log)
 	integrationRepository := integration.NewRepository(db, cipher, log)
 	integrationService := integration.NewService(cfg, integrationRepository, authorizer, limiter, emitter, client, log)
 	integrationHandler := integration.NewHandler(integrationService, sessions)
@@ -209,7 +213,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	workflowRepository := workflow.NewRepository(db)
 	workflowService := workflow.NewService(workflowRepository, db, authorizer, log)
 	workflowHandler := workflow.NewHandler(cfg, workflowService, guard, sessions, emitter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -356,6 +360,9 @@ var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
 
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
 var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)
+
+// managementAPISet is forma2's API-key management APIs: the v1 wrapper the /api/v1 routes share (/api/v1/management and /api/v1/webhooks), and /api/v1/management with /api/v2.
+var managementAPISet = wire.NewSet(mgmtv1.New, mgmtapi.NewHandler)
 
 // integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
 var integrationSet = wire.NewSet(integration.NewRepository, integration.NewService, integration.NewHandler, integration.NewOAuthHandler)

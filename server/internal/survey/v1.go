@@ -13,7 +13,6 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
@@ -589,7 +588,7 @@ func v1FollowUps(v any) ([]surveydoc.FollowUpInput, error) {
 	return out, nil
 }
 
-// UpdateV1 is forma2's PUT /api/v1/management/surveys/{id} after the survey was found and authorized: the body may carry legacy questions or blocks, not both; questions become blocks; the stored survey with the body's members over it is checked against ZSurveyUpdateInput and saved as the editor saves it, with the reCAPTCHA check and the slug. Like forma2's updateSurvey it never changes the redirect URL. The update is audited as the editor's is.
+// UpdateV1 is forma2's PUT /api/v1/management/surveys/{id} after the survey was found and authorized: the body may carry legacy questions or blocks, not both; questions become blocks; the stored survey with the body's members over it is checked against ZSurveyUpdateInput and saved as the editor saves it, with the reCAPTCHA check and the slug. Like forma2's updateSurvey it never changes the redirect URL. The API records the audit event.
 func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, body map[string]any) (*Survey, error) {
 	if nonEmptyArray(body["questions"]) && nonEmptyArray(body["blocks"]) {
 		return nil, apperr.InvalidInput(apperr.CodeBadRequest, "Cannot provide both questions and blocks. Please provide only one of these fields.")
@@ -628,7 +627,6 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 	if err == nil {
 		updated, err = s.v1Slug(ctx, updated, merged)
 	}
-	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, current.ID.String(), s.organizationOf(ctx, current.WorkspaceID), err, current, updated)
 	if e, ok := apperr.As(err); ok && e.Code == apperr.CodeValidation {
 		if list, ok := e.Details["issues"].([]surveydoc.Issue); ok {
 			return nil, &V1Invalid{Issues: list}

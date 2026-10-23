@@ -618,3 +618,31 @@ func isMember(ctx context.Context, db *gorm.DB, workspaceID, contactID uuid.UUID
 	}
 	return in, nil
 }
+
+// SegmentContacts is forma2's getContactsInSegment query: the contacts of the segment's workspace its filters match (evaluated without a device, so a device filter constrains nothing), newest first, limit of them after offset, and how many match in all.
+func (e *Evaluator) SegmentContacts(ctx context.Context, segmentID uuid.UUID, limit, offset int) ([]uuid.UUID, int64, error) {
+	tree, workspaceID, err := loadSegmentFilters(ctx, e.db, segmentID.String())
+	if err != nil {
+		return nil, 0, notFound(err)
+	}
+	b := &builder{db: e.db, log: e.log, workspaceID: workspaceID, now: e.now()}
+	cond, err := b.tree(ctx, tree, []string{segmentID.String()})
+	if err != nil {
+		return nil, 0, notFound(err)
+	}
+	where := ` FROM contacts c WHERE c.workspace_id = ?`
+	args := []any{workspaceID}
+	if !cond.empty() {
+		where += " AND (" + cond.sql + ")"
+		args = append(args, cond.args...)
+	}
+	var total int64
+	if err := e.db.WithContext(ctx).Raw(`SELECT count(*)`+where, args...).Scan(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count segment contacts: %w", err)
+	}
+	ids := []uuid.UUID{}
+	if err := e.db.WithContext(ctx).Raw(`SELECT c.id`+where+` ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, append(args, limit, offset)...).Scan(&ids).Error; err != nil {
+		return nil, 0, fmt.Errorf("list segment contacts: %w", err)
+	}
+	return ids, total, nil
+}

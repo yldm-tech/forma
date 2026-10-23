@@ -48,7 +48,7 @@ func (s *Service) CreateKey(ctx context.Context, userID, workspaceID uuid.UUID, 
 		return nil, apperr.InvalidInput(CodeKeyUnsafe, "Key must be a safe identifier: only lowercase letters, numbers, and underscores, and must start with a letter")
 	}
 	if IsReservedKey(in.Key) {
-		return nil, apperr.InvalidInput(CodeKeyReserved, reservedKeyValidationMessage)
+		return nil, apperr.InvalidInput(CodeKeyReserved, ReservedKeyValidationMessage)
 	}
 	org, err := s.organizationOf(ctx, workspaceID)
 	if err != nil {

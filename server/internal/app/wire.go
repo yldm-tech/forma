@@ -22,6 +22,8 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
@@ -189,6 +191,12 @@ var webhookSet = wire.NewSet(
 	webhook.NewV1Handler,
 )
 
+// managementAPISet is forma2's API-key management APIs: the v1 wrapper the /api/v1 routes share (/api/v1/management and /api/v1/webhooks), and /api/v1/management with /api/v2.
+var managementAPISet = wire.NewSet(
+	mgmtv1.New,
+	mgmtapi.NewHandler,
+)
+
 // integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
 var integrationSet = wire.NewSet(
 	integration.NewRepository,
@@ -248,6 +256,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,
+		managementAPISet,
 		integrationSet,
 		workflowSet,
 		notification.NewHandler,

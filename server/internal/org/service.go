@@ -118,7 +118,7 @@ func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*D
 	if o == nil {
 		return nil, errOrganizationNotFound()
 	}
-	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: userManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole)}, nil
+	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: UserManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole)}, nil
 }
 
 func errOrganizationNotFound() *apperr.Error { return apperr.NotFound("Organization", "") }
