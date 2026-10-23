@@ -104,8 +104,6 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
         - "traefik.http.services.forma.loadbalancer.server.port=3000"  # Forward traffic to Forma on port 3000
       ports:
         - 3000:3000
-      volumes:
-        - uploads:/home/nextjs/apps/web/uploads/
       <<: *environment
 
     traefik:
