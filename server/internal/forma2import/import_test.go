@@ -612,7 +612,7 @@ func checkSurveys(t *testing.T, db *gorm.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	engine := httpserver.NewEngine(log)
+	engine := httpserver.NewEngine(cfg, log)
 	linksurvey.NewHandler(cfg, svc, limiter, web, log).Register(engine)
 	for _, path := range []string{"/s/" + survey1, "/s/" + legacyid.ID(survey1).String()} {
 		rec := httptest.NewRecorder()
