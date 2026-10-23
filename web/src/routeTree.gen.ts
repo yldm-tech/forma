@@ -23,6 +23,7 @@ import { Route as AuthSsoRecoveryRouteImport } from './routes/auth/sso-recovery'
 import { Route as AuthVerificationRequestedRouteImport } from './routes/auth/verification-requested'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
 import { Route as SetupIntroRouteImport } from './routes/setup/intro'
+import { Route as AuthenticatedAccountAuthorizeRouteImport } from './routes/_authenticated/account/authorize'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account/settings'
 import { Route as AuthenticatedEnvironmentsEnvironmentIdRouteImport } from './routes/_authenticated/environments/$environmentId'
 import { Route as AuthenticatedWorkspacesWorkspaceIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId'
@@ -156,6 +157,12 @@ const SetupIntroRoute = SetupIntroRouteImport.update({
   path: '/setup/intro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccountAuthorizeRoute =
+  AuthenticatedAccountAuthorizeRouteImport.update({
+    id: '/account/authorize',
+    path: '/account/authorize',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAccountSettingsRoute =
   AuthenticatedAccountSettingsRouteImport.update({
     id: '/account/settings',
@@ -551,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -626,6 +634,7 @@ export interface FileRoutesByTo {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
@@ -697,6 +706,7 @@ export interface FileRoutesById {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/_authenticated/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/_authenticated/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/_authenticated/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -774,6 +784,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/account/authorize'
     | '/account/settings'
     | '/environments/$environmentId'
     | '/workspaces/$workspaceId'
@@ -849,6 +860,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/account/authorize'
     | '/environments/$environmentId'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password'
@@ -919,6 +931,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/_authenticated/account/authorize'
     | '/_authenticated/account/settings'
     | '/_authenticated/environments/$environmentId'
     | '/_authenticated/workspaces/$workspaceId'
@@ -1090,6 +1103,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/setup/intro'
       preLoaderRoute: typeof SetupIntroRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/account/authorize': {
+      id: '/_authenticated/account/authorize'
+      path: '/account/authorize'
+      fullPath: '/account/authorize'
+      preLoaderRoute: typeof AuthenticatedAccountAuthorizeRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/account/settings': {
       id: '/_authenticated/account/settings'
@@ -1767,6 +1787,7 @@ const AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildre
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAccountAuthorizeRoute: typeof AuthenticatedAccountAuthorizeRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRouteWithChildren
   AuthenticatedEnvironmentsEnvironmentIdRoute: typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -1781,6 +1802,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccountAuthorizeRoute: AuthenticatedAccountAuthorizeRoute,
   AuthenticatedAccountSettingsRoute:
     AuthenticatedAccountSettingsRouteWithChildren,
   AuthenticatedEnvironmentsEnvironmentIdRoute:
