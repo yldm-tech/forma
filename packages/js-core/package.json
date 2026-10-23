@@ -38,7 +38,6 @@
   "author": "Forma <hola@forma.yldm.ai>",
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
-    "@forma/vite-plugins": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
