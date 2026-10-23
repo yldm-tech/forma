@@ -163,7 +163,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	e.engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	e.h.Register(e.engine)
 	web.Register(e.engine)

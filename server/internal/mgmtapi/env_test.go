@@ -216,7 +216,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	e.engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	webhook.NewV1Handler(webhooks, v1, log).Register(e.engine)
 	h.Register(e.engine)

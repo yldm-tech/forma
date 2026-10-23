@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 )
@@ -98,7 +99,7 @@ func TestParseWorkspaceListQuery(t *testing.T) {
 
 func TestErrorHandler(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	r := httpserver.NewEngine(log)
+	r := httpserver.NewEngine(config.Config{}, log)
 	g := r.Group("/api/v3", ErrorHandler(log))
 	g.GET("/limited", func(c *gin.Context) { httpapi.Fail(c, apperr.TooManyRequests(42)) })
 	g.GET("/broken", func(c *gin.Context) { httpapi.Fail(c, errors.New("database is on fire")) })

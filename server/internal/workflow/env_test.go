@@ -139,7 +139,7 @@ func newEnv(t *testing.T) *env {
 	limiter := ratelimit.New(cfg, nil, e.log)
 	svc := NewService(NewRepository(db), db, e.authz.Authorizer, e.log)
 	h := NewHandler(cfg, svc, v3api.NewGuard(cfg, headerSessions{}, apikey.NewAuthenticator(db, e.log), limiter, e.log), headerSessions{}, audit.New(cfg, e.log), e.log)
-	e.engine = httpserver.NewEngine(e.log)
+	e.engine = httpserver.NewEngine(cfg, e.log)
 	h.Register(e.engine.Group("/api/app", httpapi.ErrorHandler(e.log), httpapi.CSRF(cfg), authz.DecisionMemo()))
 	h.RegisterV3(e.engine)
 	e.meter = &meterRecorder{}

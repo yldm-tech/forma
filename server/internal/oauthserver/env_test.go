@@ -107,7 +107,7 @@ func newEnv(t *testing.T, rateLimits ...bool) *env {
 		t.Fatal(err)
 	}
 	e.verifier = NewTokenVerifier(cfg, e.keys)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	e.handler.Register(e.engine)
 	NewAppHandler(e.handler, sessions).Register(e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg)))
 	return e

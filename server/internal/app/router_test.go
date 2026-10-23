@@ -55,7 +55,7 @@ func TestAppAPIConventions(t *testing.T) {
 	cfg := config.Config{WebAppURL: webURL, TrustedProxyHopCount: 1}
 	p := &Platform{Config: cfg, Log: log, ClientIP: httpapi.NewClientIPResolver(cfg, log)}
 
-	r := httpserver.NewEngine(log)
+	r := httpserver.NewEngine(cfg, log)
 	r.Use(p.ClientIP.Middleware())
 	mountAppAPI(r, p, echoModule{})
 
@@ -106,7 +106,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 
 	workflows := workflow.NewHandler(cfg, nil, surveyv3.NewGuard(cfg, sessions, nil, nil, log), sessions, nil, log)
 
-	r := httpserver.NewEngine(log)
+	r := httpserver.NewEngine(cfg, log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)
 	actionClasses, tags := actionclass.NewHandler(nil, sessions, v3), tag.NewHandler(nil, sessions, v3, nil)
 	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, nil, sessions), workflows, billing.NewHandler(nil, sessions), plain.NewHandler(cfg, nil, sessions))

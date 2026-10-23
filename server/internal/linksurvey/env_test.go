@@ -92,7 +92,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		t.Fatal(err)
 	}
 	h := NewHandler(cfg, e.svc, limiter, web, log)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	e.engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	h.Register(e.engine)
 	return e

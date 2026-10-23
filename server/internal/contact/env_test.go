@@ -120,7 +120,7 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(e.repo, e.authz.Authorizer, limiter, emitter, schemas, log)
 	e.apiKeys = apikey.NewService(apikey.NewRepository(db), e.authz.Authorizer, emitter)
 
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
 	v3 := e.engine.Group("/api/v3", append([]gin.HandlerFunc{apiv3.ErrorHandler(log), authz.DecisionMemo()}, apiv3.Authenticate(headerSessions{}, apikey.NewAuthenticator(db, log), limiter)...)...)

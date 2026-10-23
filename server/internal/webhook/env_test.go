@@ -102,7 +102,7 @@ func newEnv(t *testing.T, allowInternal bool) *env {
 	frozen := time.Now()
 	limiter := ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
 	e.svc = NewService(NewRepository(db), e.authz.Authorizer, limiter, audit.New(cfg, log), ssrf.New(cfg), log)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
 	v1 := mgmtv1.New(cfg, apikey.NewAuthenticator(db, log), limiter, audit.New(cfg, log), e.authz.Authorizer, workspace.NewRepository(db, log), log)

@@ -152,7 +152,7 @@ func newAttachmentsEnv(t *testing.T) *attachmentsEnv {
 	middleware := v3api.NewMiddleware(cfg, apikey.NewAuthenticator(e.db, log), limiter)
 	h := NewAttachmentsHandler(e.svc, exporter, middleware, v3api.NewAuditor(cfg, audit.New(cfg, log)), limiter, log)
 	h.now = func() time.Time { return time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC) }
-	a.router = httpserver.NewEngine(log)
+	a.router = httpserver.NewEngine(cfg, log)
 	h.Register(a.router.Group("/api", v3api.ErrorHandler(log), authz.DecisionMemo(), sessionFromHeader{}.Optional()))
 	return a
 }
