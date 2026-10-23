@@ -24,7 +24,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/instance"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
@@ -34,14 +36,17 @@ import (
 	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	surveyv3 "github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/unsplash"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
@@ -204,7 +209,7 @@ func servedV3Operations(t *testing.T) []string {
 		tag.NewHandler(nil, sessions, v3, nil),
 		response.NewHandler(nil, sessions),
 		analysis.NewHandler(nil, sessions),
-		ai.NewHandler(nil, sessions),
+		ai.NewHandler(nil, nil, sessions),
 		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
 		linksurvey.NewHandler(cfg, nil, nil, web, log),
 		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log),
@@ -221,7 +226,12 @@ func servedV3Operations(t *testing.T) []string {
 		mcpHandler,
 		billing.NewHandler(nil, sessions),
 		billing.NewWebhookHandler(nil, log),
+		instance.NewHandler(nil, nil, sessions),
 		web,
+		unsplash.NewHandler(nil, sessions),
+		contactsurvey.NewHandler(nil, sessions),
+		emailembed.NewHandler(nil, sessions),
+		plain.NewHandler(cfg, nil, sessions),
 	)
 
 	var ops []string

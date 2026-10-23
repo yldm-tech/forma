@@ -165,7 +165,6 @@ type Config struct {
 
 	// Warnings are deprecated settings found while loading, still honoured. They are written once the logger exists (logger.New), since configuration is read before it.
 	Warnings []string
-
 }
 
 // LevelFatal and LevelAudit are forma2's two levels above error. Nothing is logged at fatal: LOG_LEVEL=fatal keeps only audit events, as it did in forma2. LevelAudit sits above every other level, so no LOG_LEVEL but audit's own filters audit events out.
