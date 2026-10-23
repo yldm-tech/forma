@@ -1,7 +1,7 @@
 import { type Server, createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test } from "@playwright/test";
-import { DEFAULT_QUESTION, finishOnboarding, post, signUpAndSignIn } from "./helpers";
+import { DEFAULT_QUESTION, finishOnboarding, post, signUpAndSignIn, startSurveyFromScratch } from "./helpers";
 
 // forma2's js.spec.ts: a website & app survey triggered on a page view, shown by the SDK (/js/forma.umd.cjs, packages/js-core) on a customer's page, answered there and found in the responses view.
 
@@ -43,18 +43,34 @@ test("shows an app survey through the SDK on a host page and records the answer"
   await signUpAndSignIn(page, baseURL!, "sdk");
   const { organizationId, workspaceId } = await finishOnboarding(page);
 
+  const actionId = await test.step("capture a page-view action in the survey editor", async () => {
+    // The editor's "Capture new action" form validates the action with the workspace's id, a UUID on the Go server.
+    await startSurveyFromScratch(page, workspaceId);
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByText("Survey Type", { exact: true }).click();
+    await page.getByRole("radio", { name: /Website & App Survey/ }).click();
+    await page.getByText("Survey Trigger", { exact: true }).click();
+    await page.getByRole("button", { name: "Add action" }).click();
+    const modal = page.getByRole("dialog", { name: "Add action" });
+    await modal.getByRole("button", { name: "Capture new action" }).click();
+    await modal.getByText("Page View", { exact: true }).click();
+    await modal.getByLabel("What did your user do?").fill("New Session");
+    await modal.getByRole("button", { name: "Create action" }).click();
+    await expect(modal).toBeHidden();
+    await expect(page.getByRole("heading", { name: "New Session" })).toBeVisible();
+
+    const response = await page.request.get(`/api/app/workspaces/${workspaceId}/action-classes`);
+    expect(response.ok()).toBe(true);
+    const { actionClasses } = (await response.json()) as {
+      actionClasses: { id: string; name: string; noCodeConfig: { type: string } | null }[];
+    };
+    const action = actionClasses.find((actionClass) => actionClass.name === "New Session");
+    expect(action?.noCodeConfig?.type).toBe("pageView");
+    return action!.id;
+  });
+
   const surveyId = await test.step("create a website & app survey triggered on every page view", async () => {
-    // Set up over the APIs a customer's backend uses rather than in the editor: publishing an app survey from the editor creates its private segment with no filters, which the server refuses ("At least one filter is required"), and the editor's own "Capture new action" form refuses the rewrite's uuids. The v1 management API creates the private segment itself, as forma2's did.
-    const action = await post<{ id: string }>(
-      page.request,
-      baseURL!,
-      `/api/app/workspaces/${workspaceId}/action-classes`,
-      {
-        name: "New Session",
-        type: "noCode",
-        noCodeConfig: { type: "pageView", urlFilters: [] },
-      }
-    );
+    // Created over the API a customer's backend uses rather than published from the editor: publishing an app survey from the editor creates its private segment with no filters, which the server refuses ("At least one filter is required"). The v1 management API creates the private segment itself, as forma2's did.
     const { key } = await post<{ key: string }>(
       page.request,
       baseURL!,
@@ -87,7 +103,7 @@ test("shows an app survey through the SDK on a host page and records the answer"
         },
       ],
       endings: [{ id: "sdkend", type: "endScreen", headline: { default: "Thank you!" } }],
-      triggers: [{ actionClass: { id: action.id } }],
+      triggers: [{ actionClass: { id: actionId } }],
     };
     // The key's workspace grant reaches the authorization service a moment after it is created (the worker delivers the projection); until then the API answers 401.
     let created: { data: { id: string } } | undefined;
