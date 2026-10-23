@@ -12,6 +12,7 @@ import {
 } from "../../../../components/ui/table";
 import { timeSince } from "../../../../lib/time";
 import { type TWorkflowRunListItem, getWorkflowApiErrorMessage } from "../../api";
+import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
 import { getWorkflowRunStatusBadge, getWorkflowTriggerTypeLabel } from "../../lib/display";
 import { RunsTableSkeleton } from "../workflows-loading";
 import { WorkflowRunDetailDrawer } from "./workflow-run-detail-drawer";
@@ -47,6 +48,16 @@ export const WorkflowRunsTable = ({
   const locale = i18n.language;
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null;
+
+  const openRun = (run: TWorkflowRunListItem) => {
+    trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.runDetailOpened, {
+      run_id: run.id,
+      workflow_id: run.workflowId,
+      run_status: run.status,
+      scope: showWorkflowColumn ? "workspace" : "workflow",
+    });
+    setSelectedRunId(run.id);
+  };
 
   if (isLoading && runs.length === 0) return <RunsTableSkeleton />;
 
@@ -84,11 +95,11 @@ export const WorkflowRunsTable = ({
                   key={run.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => setSelectedRunId(run.id)}
+                  onClick={() => openRun(run)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setSelectedRunId(run.id);
+                      openRun(run);
                     }
                   }}
                   className="cursor-pointer hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-hidden">

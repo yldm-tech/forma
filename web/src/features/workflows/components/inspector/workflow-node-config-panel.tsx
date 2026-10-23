@@ -1,7 +1,14 @@
 import { useAtomValue, useSetAtom } from "jotai";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../../../components/ui/alert";
-import type { TWorkflowDefinition, TWorkflowNode, TWorkflowStatus } from "../../definition";
+import {
+  type TWorkflowDefinition,
+  type TWorkflowNode,
+  type TWorkflowStatus,
+  getWorkflowNodeConcreteType,
+} from "../../definition";
+import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
 import { getNodeRegistryEntry } from "../../lib/node-registry";
 import {
   isWorkflowReadOnlyAtom,
@@ -55,6 +62,19 @@ export const WorkflowNodeConfigPanel = ({ isEditable }: Readonly<{ isEditable: b
   const setDefinition = useSetAtom(setWorkflowDefinitionAtom);
 
   const selectedNode = findSelectedNode(definition, selectedNodeId);
+
+  // Which node kinds people open, and whether they land on one with no form yet (if_else). Keyed on the node, so re-renders of an open panel do not report again.
+  const nodeType = selectedNode ? getWorkflowNodeConcreteType(selectedNode) : null;
+  const hasConfigForm = selectedNode ? getNodeRegistryEntry(selectedNode).ConfigForm !== null : false;
+  useEffect(() => {
+    if (!selectedNodeId || !nodeType) return;
+    trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.inspectorOpened, {
+      node_type: nodeType,
+      has_config_form: hasConfigForm,
+      is_editable: isEditable,
+    });
+  }, [selectedNodeId, nodeType, hasConfigForm, isEditable]);
+
   if (!selectedNode || !definition) return null;
   const registryEntry = getNodeRegistryEntry(selectedNode);
 
