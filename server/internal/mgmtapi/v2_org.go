@@ -240,7 +240,7 @@ func (h *Handler) v2ListUsers(c *gin.Context) {
 	var is issues
 	f := is.commonFilter(q)
 	var uf userFilter
-	uf.ID = is.optString("id", q.get("id"), optional)
+	uf.ID = filterID(is.optString("id", q.get("id"), optional))
 	uf.Email = is.optString("email", q.get("email"), optional)
 	is.dateRange(f)
 	if is.failed() {

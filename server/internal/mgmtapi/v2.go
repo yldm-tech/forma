@@ -401,6 +401,15 @@ func (is *issues) commonFilter(q object) listFilter {
 	return f
 }
 
+// filterID reads an id a list is filtered by: a UUID, or a forma2 id resolved to the row migrated from it. An empty value is no filter, as forma2's truthiness checks had it.
+func filterID(raw *string) *uuid.UUID {
+	if raw == nil || *raw == "" {
+		return nil
+	}
+	id, _ := legacyid.Resolve(*raw)
+	return &id
+}
+
 // saturatingInt converts a finite, non-negative float64 to int, capping at math.MaxInt64: Go leaves an out-of-range conversion to the platform (amd64 yields math.MinInt64), and an offset that large is an empty page anyway.
 func saturatingInt(n float64) int {
 	if n >= math.MaxInt64 {

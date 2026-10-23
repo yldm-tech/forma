@@ -369,7 +369,7 @@ func managedError(err error) error {
 type ManagedQuery struct {
 	WorkspaceIDs []uuid.UUID
 	SurveyID     *uuid.UUID
-	ContactID    *string
+	ContactID    *uuid.UUID
 	// DateField is the column Start and End bound: "created_at" or "updated_at".
 	DateField string
 	Start     *time.Time
@@ -392,7 +392,7 @@ func (q ManagedQuery) where() (string, []any) {
 		args = append(args, *q.SurveyID)
 	}
 	if q.ContactID != nil {
-		where += ` AND r.contact_id::text = ?`
+		where += ` AND r.contact_id = ?`
 		args = append(args, *q.ContactID)
 	}
 	field := "r.created_at"

@@ -60,7 +60,7 @@ func (h *Handler) v2ListResponses(c *gin.Context) {
 	var is issues
 	f := is.commonFilter(q)
 	surveyID, hasSurvey := is.id("surveyId", q.get("surveyId"), optional)
-	contactID := is.optString("contactId", q.get("contactId"), optional)
+	contactID := filterID(is.optString("contactId", q.get("contactId"), optional))
 	is.dateRange(f)
 	if is.failed() {
 		v2Error(c, http.StatusUnprocessableEntity, is.v2Details())

@@ -152,7 +152,7 @@ type orgUser struct {
 
 // userFilter is the users list's own filters beside the common ones.
 type userFilter struct {
-	ID    *string
+	ID    *uuid.UUID
 	Email *string
 }
 
@@ -169,7 +169,7 @@ func (r *Repository) userPage(ctx context.Context, organizationID uuid.UUID, uf 
 		args = append(args, "%"+escapeLike(*uf.Email)+"%")
 	}
 	if uf.ID != nil {
-		where += ` AND u.id::text = ?`
+		where += ` AND u.id = ?`
 		args = append(args, *uf.ID)
 	}
 	f.DateField = "u." + f.DateField
