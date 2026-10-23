@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -60,7 +61,7 @@ func TestContactRequests(t *testing.T) {
 			return (&createWorker{client: c}).Work(context.Background(), &river.Job[CreateContactArgs]{Args: CreateContactArgs{UserID: userID, Email: "ada@example.com"}})
 		}, call{"POST", "/v3/contacts", "xkeysib-test", "application/json", "application/json", `{"email":"ada@example.com","ext_id":"0190a000-0000-7000-8000-0000000000aa","updateEnabled":false,"listIds":[7]}`}},
 		"update": {http.StatusNoContent, func(c *Client) error {
-			return (&updateWorker{client: c}).Work(context.Background(), &river.Job[UpdateContactArgs]{Args: UpdateContactArgs{UserID: userID, Email: "ada@new.example"}})
+			return (&updateWorker{client: c}).Work(context.Background(), &river.Job[UpdateContactArgs]{Args: UpdateContactArgs{UserID: userID, OldEmail: "Ada@Example.com", Email: "ada@new.example"}})
 		}, call{"PUT", "/v3/contacts/0190a000-0000-7000-8000-0000000000aa?identifierType=ext_id", "xkeysib-test", "application/json", "application/json", `{"attributes":{"EMAIL":"ada@new.example"}}`}},
 		"delete": {http.StatusNoContent, func(c *Client) error {
 			return (&deleteWorker{client: c}).Work(context.Background(), &river.Job[DeleteContactArgs]{Args: DeleteContactArgs{Email: "Ada+forma@Example.com"}})
@@ -86,6 +87,63 @@ func TestCreateContactWithoutList(t *testing.T) {
 	}
 	if got := calls()[0].body; got != `{"email":"ada@example.com","ext_id":"0190a000-0000-7000-8000-0000000000aa","updateEnabled":false}` {
 		t.Errorf("body %s", got)
+	}
+}
+
+// A contact forma2 created has forma2's user id as its ext_id, which the migrated user's id no longer matches, so after the ext_id lookup finds nothing the contact is found by the address it had before the change.
+func TestUpdateContactCreatedByForma2(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		byEmail int
+		cancel  bool
+	}{
+		"moved":             {http.StatusNoContent, false},
+		"unknown address":   {http.StatusNotFound, true},
+		"brevo unavailable": {http.StatusBadGateway, false},
+	} {
+		var mu sync.Mutex
+		var uris []string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			mu.Lock()
+			uris = append(uris, r.Method+" "+r.URL.RequestURI()+" "+string(body))
+			mu.Unlock()
+			if strings.Contains(r.URL.RawQuery, "identifierType=ext_id") {
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = io.WriteString(w, `{"code":"document_not_found","message":"Contact does not exist"}`)
+				return
+			}
+			w.WriteHeader(tc.byEmail)
+		}))
+		c := NewClient(config.Config{Brevo: config.BrevoConfig{APIKey: "xkeysib-test"}})
+		c.baseURL = srv.URL + "/v3"
+		err := (&updateWorker{client: c}).Work(context.Background(), &river.Job[UpdateContactArgs]{Args: UpdateContactArgs{UserID: userID, OldEmail: "Ada+forma@Example.com", Email: "ada@new.example"}})
+		srv.Close()
+		var cancel *river.JobCancelError
+		if (tc.byEmail == http.StatusNoContent) != (err == nil) || errors.As(err, &cancel) != tc.cancel {
+			t.Errorf("%s: %v, want cancelled %v", name, err, tc.cancel)
+		}
+		want := []string{
+			`PUT /v3/contacts/0190a000-0000-7000-8000-0000000000aa?identifierType=ext_id {"attributes":{"EMAIL":"ada@new.example"}}`,
+			`PUT /v3/contacts/ada%2Bforma%40example.com?identifierType=email_id {"attributes":{"EMAIL":"ada@new.example"}}`,
+		}
+		if len(uris) != 2 || uris[0] != want[0] || uris[1] != want[1] {
+			t.Errorf("%s sent %q, want %q", name, uris, want)
+		}
+	}
+}
+
+// A job queued before the old address was recorded with it only looks the contact up by ext_id.
+func TestUpdateContactWithoutOldEmail(t *testing.T) {
+	t.Parallel()
+	c, calls := stub(t, http.StatusNotFound, `{"code":"document_not_found"}`)
+	err := c.updateContact(context.Background(), userID, "", "ada@new.example")
+	var cancel *river.JobCancelError
+	if !errors.As(err, &cancel) {
+		t.Errorf("%v, want cancelled", err)
+	}
+	if n := len(calls()); n != 1 {
+		t.Errorf("%d requests, want 1", n)
 	}
 }
 
@@ -127,7 +185,7 @@ func TestContactsEnqueueOnlyWhenConfigured(t *testing.T) {
 	enqueueAll := func(c *Contacts) {
 		t.Helper()
 		err := enq.Transaction(ctx, db, func(tx *jobs.Tx) error {
-			return errors.Join(c.Verified(ctx, tx, userID, "ada@example.com"), c.EmailChanged(ctx, tx, userID, "ada@new.example"), c.Deleted(ctx, tx, "ada@new.example"))
+			return errors.Join(c.Verified(ctx, tx, userID, "ada@example.com"), c.EmailChanged(ctx, tx, userID, "ada@example.com", "ada@new.example"), c.Deleted(ctx, tx, "ada@new.example"))
 		})
 		if err != nil {
 			t.Fatal(err)
