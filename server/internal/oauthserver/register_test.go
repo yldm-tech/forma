@@ -219,12 +219,9 @@ func TestEndSession(t *testing.T) {
 			t.Errorf("%s: %d %v", tc.name, rec.Code, out)
 		}
 	}
-	// A browser gets Better Auth's error page, or, naming no client, the web app, where Forma signs out.
+	// A browser gets Better Auth's error page.
 	page := e.do(http.MethodGet, "/api/auth/oauth2/end-session?client_id="+clientID, nil, map[string]string{"Accept": "text/html", "Sec-Fetch-Mode": "navigate"})
 	if page.Code != http.StatusUnauthorized || !strings.Contains(page.Body.String(), "The client is not allowed to initiate logout") || !strings.HasPrefix(page.Header().Get("Content-Type"), "text/html") {
 		t.Errorf("browser refusal: %d %s", page.Code, page.Body.String())
-	}
-	if to := location(t, e.do(http.MethodGet, "/api/auth/oauth2/end-session", nil, map[string]string{"Accept": "text/html", "Sec-Fetch-Mode": "navigate"})); to.String() != webApp+"/" {
-		t.Errorf("browser without a client went to %s", to)
 	}
 }

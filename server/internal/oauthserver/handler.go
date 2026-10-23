@@ -38,13 +38,15 @@ type Handler struct {
 	repo     *repository
 	storage  *storage
 	provider *op.Provider
-	sessions httpapi.SessionAuth
-	limiter  *ratelimit.Limiter
-	log      *slog.Logger
-	now      func() time.Time
+	sessions Sessions
+	// confirmation signs the state of RP-initiated logout's confirmation page.
+	confirmation logoutConfirmation
+	limiter      *ratelimit.Limiter
+	log          *slog.Logger
+	now          func() time.Time
 }
 
-func NewHandler(cfg config.Config, db *gorm.DB, keys *Keys, sessions httpapi.SessionAuth, limiter *ratelimit.Limiter, log *slog.Logger) (*Handler, error) {
+func NewHandler(cfg config.Config, db *gorm.DB, keys *Keys, sessions Sessions, limiter *ratelimit.Limiter, log *slog.Logger) (*Handler, error) {
 	urls := NewURLs(cfg)
 	repo := &repository{db: db}
 	format := newTokenFormat()
@@ -67,7 +69,7 @@ func NewHandler(cfg config.Config, db *gorm.DB, keys *Keys, sessions httpapi.Ses
 	if err != nil {
 		return nil, fmt.Errorf("create oauth provider: %w", err)
 	}
-	return &Handler{urls: urls, repo: repo, storage: s, provider: provider, sessions: sessions, limiter: limiter, log: log, now: time.Now}, nil
+	return &Handler{urls: urls, repo: repo, storage: s, provider: provider, sessions: sessions, confirmation: newLogoutConfirmation(cfg, urls), limiter: limiter, log: log, now: time.Now}, nil
 }
 
 // Register mounts the authorization server. The SSO callbacks under /api/auth/callback and /api/auth/oauth2/callback are the auth module's and stay separate.
@@ -88,8 +90,9 @@ func (h *Handler) Register(r gin.IRouter) {
 		g.OPTIONS(path, provider)
 	}
 	g.POST("/oauth2/register", h.limit(ratelimit.BAOAuthRegister), h.register)
-	g.GET(endSessionPath, h.endSession)
-	g.POST(endSessionPath, h.endSession)
+	g.GET(endSessionPath, httpapi.ErrorHandler(h.log), h.sessions.Optional(), h.endSession)
+	g.POST(endSessionPath, httpapi.ErrorHandler(h.log), h.sessions.Optional(), h.endSession)
+	g.POST(endSessionConfirmPath, httpapi.ErrorHandler(h.log), h.sessions.Optional(), h.confirmEndSession)
 	g.GET(loginPath, httpapi.ErrorHandler(h.log), h.sessions.Optional(), h.continueAuthorization)
 	g.GET("/.well-known/oauth-authorization-server", h.metadata)
 	g.GET("/.well-known/openid-configuration", h.metadata)

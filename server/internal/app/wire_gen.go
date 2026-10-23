@@ -350,7 +350,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
 // authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)

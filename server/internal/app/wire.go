@@ -72,6 +72,7 @@ var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
 	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
+	wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)),
 	auth.NewService,
 	auth.NewTwoFactor,
 	auth.NewHandler,

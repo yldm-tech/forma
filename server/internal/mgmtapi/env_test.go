@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -78,6 +79,11 @@ func (headerSessions) Require() gin.HandlerFunc {
 		httpapi.SetActor(c, httpapi.Actor{UserID: id})
 		c.Next()
 	}
+}
+
+// End is never reached: these tests do not sign a browser out through the authorization server's RP-initiated logout.
+func (headerSessions) End(*gin.Context, uuid.UUID) error {
+	return errors.New("headerSessions cannot end a session")
 }
 
 func (headerSessions) Optional() gin.HandlerFunc {
