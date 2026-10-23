@@ -96,6 +96,7 @@ type Survey struct {
 	WorkspaceID                 uuid.UUID        `json:"workspaceId"`
 	CreatedBy                   *uuid.UUID       `json:"createdBy"`
 	Status                      string           `json:"status"`
+	RedirectURL                 *string          `json:"redirectUrl"`
 	DisplayOption               string           `json:"displayOption"`
 	AutoClose                   *int             `json:"autoClose"`
 	Triggers                    []Trigger        `json:"triggers"`

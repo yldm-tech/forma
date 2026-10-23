@@ -2,142 +2,41 @@ package webhook
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/v1api"
-	"github.com/yldm-tech/forma/server/internal/workspace"
-)
-
-// cuid2 is zod's cuid2 shape, every forma2 id.
-var cuid2 = regexp.MustCompile(`^[0-9a-z]+$`)
-
-// maxBodyBytes is forma2's DEFAULT_REQUEST_BODY_LIMIT_BYTES.
-const maxBodyBytes = 2 * 1024 * 1024
-
-// Messages of the v1 API's unexpected failures: an error escaping the handler (forma2's wrapper) and one its handleApiError caught.
-const (
-	messageUnexpected = "An unexpected error occurred."
-	messageGeneric    = "Something went wrong. Please try again."
 )
 
 // V1Handler serves /api/v1/webhooks, the subscription API Zapier, Make, n8n and Activepieces call with an API key: forma2's paths, envelopes and status codes, an authorization failure included (401 unauthorized, not 403).
 type V1Handler struct {
-	cfg        config.Config
-	svc        *Service
-	keys       *apikey.Authenticator
-	workspaces *workspace.Repository
-	log        *slog.Logger
+	svc *Service
+	v1  *mgmtv1.Wrapper
+	log *slog.Logger
 }
 
-func NewV1Handler(cfg config.Config, svc *Service, keys *apikey.Authenticator, workspaces *workspace.Repository, log *slog.Logger) *V1Handler {
-	return &V1Handler{cfg: cfg, svc: svc, keys: keys, workspaces: workspaces, log: log}
+func NewV1Handler(svc *Service, v1 *mgmtv1.Wrapper, log *slog.Logger) *V1Handler {
+	return &V1Handler{svc: svc, v1: v1, log: log}
 }
 
-// Register mounts the routes outside /api/app: they answer with forma2's v1 envelope and accept an API key only.
+// Register mounts the routes outside /api/app: they answer with forma2's v1 envelope and accept an API key only, charged to forma2's api:v1 limit.
 func (h *V1Handler) Register(r gin.IRouter) {
-	g := r.Group("/api/v1/webhooks", h.authenticate)
+	g := r.Group("/api/v1/webhooks", mgmtv1.Front(h.log), h.v1.APIKey(apikey.Options{}, ratelimit.APIV1))
 	g.GET("", h.list)
-	g.POST("", h.audited(audit.ActionCreated, h.create))
+	g.POST("", h.v1.Audited(audit.ActionCreated, audit.TargetWebhook, h.create))
 	g.GET("/:webhookId", h.get)
-	g.DELETE("/:webhookId", h.audited(audit.ActionDeleted, h.delete))
-}
-
-// Context keys of the authenticated key and the audit record.
-const (
-	principalKey = "webhook.v1.principal"
-	auditKey     = "webhook.v1.audit"
-)
-
-func principal(c *gin.Context) *apikey.Principal {
-	v, _ := c.Get(principalKey)
-	p, _ := v.(*apikey.Principal)
-	return p
-}
-
-// authenticate is the front of forma2's withV1ApiWrapper for a management route: an API key (a session is never read), then api:v1, 100 requests a minute per key.
-func (h *V1Handler) authenticate(c *gin.Context) {
-	ctx := c.Request.Context()
-	p, err := h.keys.Authenticate(ctx, c.Request.Header, apikey.Options{})
-	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
-		return
-	}
-	if p == nil {
-		v1api.NotAuthenticated(c)
-		return
-	}
-	c.Set(principalKey, p)
-	if err := h.svc.limiter.Apply(ctx, ratelimit.APIV1, p.APIKeyID.String()); err != nil {
-		if e, ok := apperr.As(err); ok && e.Status == http.StatusTooManyRequests {
-			v1api.TooManyRequests(c, apperr.TooManyRequestsMessage)
-			return
-		}
-		h.unexpected(c, err, messageGeneric)
-		return
-	}
-	c.Next()
-}
-
-func (h *V1Handler) unexpected(c *gin.Context, err error, message string) {
-	h.log.ErrorContext(c.Request.Context(), "v1 webhooks request failed", "route", c.FullPath(), "err", err)
-	v1api.InternalError(c, message)
-}
-
-// v1Audit is the audit record of one v1 mutation, filled in by the handler as it learns the target.
-type v1Audit struct {
-	targetID  string
-	oldObject any
-	newObject any
-	failed    bool
-}
-
-// audited records the request's audit event once the handler has answered, as forma2's wrapper did: the API key as the actor in its organization, success only for a 2xx that the handler did not mark failed, and the request id on a failure.
-func (h *V1Handler) audited(action audit.Action, handler gin.HandlerFunc) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		rec := &v1Audit{targetID: audit.Unknown}
-		c.Set(auditKey, rec)
-		handler(c)
-		p := principal(c)
-		e := audit.Event{
-			Action: action, TargetType: audit.TargetWebhook, TargetID: rec.targetID, ActorType: audit.ActorAPI,
-			ActorID: p.APIKeyID.String(), OrganizationID: p.OrganizationID.String(), Status: audit.StatusFailure,
-			OldObject: rec.oldObject, NewObject: rec.newObject,
-			APIURL: h.cfg.WebAppURL.Scheme + "://" + h.cfg.WebAppURL.Host + c.Request.URL.RequestURI(),
-		}
-		if status := c.Writer.Status(); status >= 200 && status < 300 && !rec.failed {
-			e.Status = audit.StatusSuccess
-		} else {
-			e.EventID = httpserver.RequestID(c)
-		}
-		ctx := c.Request.Context()
-		h.svc.audit.Log(ctx, audit.FromRequest(ctx, e))
-	}
-}
-
-func auditRecord(c *gin.Context) *v1Audit {
-	v, _ := c.Get(auditKey)
-	rec, _ := v.(*v1Audit)
-	return rec
+	g.DELETE("/:webhookId", h.v1.Audited(audit.ActionDeleted, audit.TargetWebhook, h.delete))
 }
 
 // withEnvironmentIDs is forma2's addLegacyEnvironmentIdToList: each webhook with environmentId, its workspace's legacy environment id or the workspace's own id.
@@ -183,7 +82,7 @@ func (h *V1Handler) bestEffort(c *gin.Context, w *Webhook, withSecret bool) View
 // list is forma2's GET: every webhook of every workspace the key has a grant on, without secrets.
 func (h *V1Handler) list(c *gin.Context) {
 	ctx := c.Request.Context()
-	p := principal(c)
+	p := mgmtv1.PrincipalOf(c)
 	ids := []uuid.UUID{}
 	for _, g := range p.WorkspacePermissions {
 		if !slices.Contains(ids, g.WorkspaceID) {
@@ -192,20 +91,15 @@ func (h *V1Handler) list(c *gin.Context) {
 	}
 	found, err := h.svc.repo.OfWorkspaces(ctx, ids)
 	if err != nil {
-		h.unexpected(c, err, messageGeneric)
+		h.v1.Unexpected(c, err, mgmtv1.MessageGeneric)
 		return
 	}
 	views, err := h.withEnvironmentIDs(ctx, found, false)
 	if err != nil {
-		h.unexpected(c, err, messageGeneric)
+		h.v1.Unexpected(c, err, mgmtv1.MessageGeneric)
 		return
 	}
 	v1api.Success(c, views)
-}
-
-// can is forma2's can(apiKey, workspace.<method's action>, workspace).
-func (h *V1Handler) can(c *gin.Context, method string, workspaceID uuid.UUID) (bool, error) {
-	return h.svc.authz.Can(c.Request.Context(), principal(c).Actor(), authz.WorkspaceActionForMethod(method), authz.Workspace(workspaceID))
 }
 
 // byPathID loads the webhook the path names, by its id or the forma2 id it was migrated from. It answers 404 itself and returns nil when there is none.
@@ -214,7 +108,7 @@ func (h *V1Handler) byPathID(c *gin.Context) *Webhook {
 	id, _ := legacyid.Resolve(raw)
 	w, err := h.svc.repo.ByID(c.Request.Context(), id)
 	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
+		h.v1.Unexpected(c, err, mgmtv1.MessageUnexpected)
 		return nil
 	}
 	if w == nil {
@@ -230,18 +124,12 @@ func (h *V1Handler) get(c *gin.Context) {
 	if w == nil {
 		return
 	}
-	allowed, err := h.can(c, http.MethodGet, w.WorkspaceID)
-	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
-		return
-	}
-	if !allowed {
-		v1api.Unauthorized(c)
+	if !h.v1.Authorize(c, http.MethodGet, w.WorkspaceID) {
 		return
 	}
 	views, err := h.withEnvironmentIDs(c.Request.Context(), []*Webhook{w}, false)
 	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
+		h.v1.Unexpected(c, err, mgmtv1.MessageUnexpected)
 		return
 	}
 	v1api.Success(c, views[0])
@@ -249,28 +137,22 @@ func (h *V1Handler) get(c *gin.Context) {
 
 // delete is forma2's DELETE /{webhookId}: 404 for an unknown id, then workspace.manage (401 when refused); a failed delete is answered 404 and audited as a failure.
 func (h *V1Handler) delete(c *gin.Context) {
-	rec := auditRecord(c)
-	rec.targetID = c.Param("webhookId")
+	rec := mgmtv1.AuditOf(c)
+	rec.TargetID = c.Param("webhookId")
 	w := h.byPathID(c)
 	if w == nil {
 		return
 	}
-	allowed, err := h.can(c, http.MethodDelete, w.WorkspaceID)
-	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
+	if !h.v1.Authorize(c, http.MethodDelete, w.WorkspaceID) {
 		return
 	}
-	if !allowed {
-		v1api.Unauthorized(c)
-		return
-	}
-	rec.oldObject = w.view()
+	rec.OldObject = w.view()
 	deleted, err := h.svc.repo.delete(c.Request.Context(), w.ID)
 	if err != nil || !deleted {
 		if err != nil {
 			h.log.ErrorContext(c.Request.Context(), "Error deleting webhook", "err", err)
 		}
-		rec.failed = true
+		rec.Failed = true
 		v1api.NotFound(c, "Webhook", c.Param("webhookId"), false)
 		return
 	}
@@ -280,44 +162,12 @@ func (h *V1Handler) delete(c *gin.Context) {
 // create is forma2's POST: the body read with its 2 MiB limit, the workspace resolved from workspaceId or the legacy environmentId and authorized for workspace.write, the input validated, the URL's SSRF check, then the webhook with a new secret. The answer is the only one that carries the secret.
 func (h *V1Handler) create(c *gin.Context) {
 	ctx := c.Request.Context()
-	body, err := readJSONObject(c.Request)
-	if err != nil {
-		if errors.Is(err, errBodyTooLarge) {
-			v1api.PayloadTooLarge(c, map[string]any{"error": err.Error()})
-			return
-		}
-		v1api.BadRequest(c, "Malformed JSON input, please check your request body", nil, false)
-		return
-	}
-	rawID := body["workspaceId"]
-	if !truthy(rawID) {
-		rawID = body["environmentId"]
-	}
-	if !truthy(rawID) {
-		v1api.BadRequest(c, "workspaceId must be provided", nil, false)
-		return
-	}
-	rawWorkspace, ok := rawID.(string)
+	body, ok := mgmtv1.ReadBody(c)
 	if !ok {
-		v1api.BadRequest(c, "workspaceId must be a string", nil, false)
 		return
 	}
-	ws, err := h.workspaces.ResolveClientID(ctx, rawWorkspace)
-	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
-		return
-	}
-	if ws == nil {
-		v1api.NotFound(c, "Workspace", rawWorkspace, false)
-		return
-	}
-	allowed, err := h.can(c, http.MethodPost, ws.ID)
-	if err != nil {
-		h.unexpected(c, err, messageUnexpected)
-		return
-	}
-	if !allowed {
-		v1api.Unauthorized(c)
+	ws, ok := h.v1.ResolveWorkspace(c, body, http.MethodPost)
+	if !ok {
 		return
 	}
 	in, details := parseV1Input(body)
@@ -331,11 +181,11 @@ func (h *V1Handler) create(c *gin.Context) {
 			v1api.BadRequest(c, e.Message, nil, false)
 			return
 		}
-		h.unexpected(c, err, messageGeneric)
+		h.v1.Unexpected(c, err, mgmtv1.MessageGeneric)
 		return
 	}
-	rec := auditRecord(c)
-	rec.targetID, rec.newObject = w.ID.String(), w.auditObject()
+	rec := mgmtv1.AuditOf(c)
+	rec.TargetID, rec.NewObject = w.ID.String(), w.auditObject()
 	v1api.Success(c, h.bestEffort(c, w, true))
 }
 
@@ -355,74 +205,6 @@ func (s *Service) createV1(ctx context.Context, workspaceID uuid.UUID, in Input)
 	return s.repo.ByID(ctx, id)
 }
 
-var errBodyTooLarge = fmt.Errorf("Request body must not exceed %d bytes", maxBodyBytes) //nolint:staticcheck // forma2's message, which clients see
-
-// readJSONObject is forma2's parseJsonBodyWithLimit: a declared or actual body over 2 MiB is refused, and the body must be JSON. A body that is JSON but not an object reads as an object without members, as forma2's property reads on it found nothing.
-func readJSONObject(r *http.Request) (map[string]any, error) {
-	if r.ContentLength > maxBodyBytes {
-		return nil, errBodyTooLarge
-	}
-	b, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
-	if err != nil {
-		return nil, fmt.Errorf("read request body: %w", err)
-	}
-	if len(b) > maxBodyBytes {
-		return nil, errBodyTooLarge
-	}
-	var v any
-	if err := json.Unmarshal(b, &v); err != nil {
-		return nil, err
-	}
-	obj, _ := v.(map[string]any)
-	if obj == nil {
-		obj = map[string]any{}
-	}
-	return obj, nil
-}
-
-// truthy is JavaScript's Boolean(v) for a JSON value.
-func truthy(v any) bool {
-	switch x := v.(type) {
-	case nil:
-		return false
-	case bool:
-		return x
-	case float64:
-		return x != 0
-	case string:
-		return x != ""
-	}
-	return true
-}
-
-// jsType is the type name zod's messages report for a JSON value.
-func jsType(v any, present bool) string {
-	switch v.(type) {
-	case nil:
-		if !present {
-			return "undefined"
-		}
-		return "null"
-	case string:
-		return "string"
-	case float64:
-		return "number"
-	case bool:
-		return "boolean"
-	case []any:
-		return "array"
-	}
-	return "object"
-}
-
-func quotedOptions(values []string) string {
-	q := make([]string, len(values))
-	for i, v := range values {
-		q[i] = `"` + v + `"`
-	}
-	return strings.Join(q, "|")
-}
-
 // parseV1Input is forma2's ZWebhookInput.safeParse with its error details, path to message: name (string or null) and source optional, surveyIds an optional list of ids, triggers a required non-empty list of the three events, url a required URL. Other members are ignored.
 func parseV1Input(body map[string]any) (Input, map[string]any) {
 	var in Input
@@ -433,28 +215,28 @@ func parseV1Input(body map[string]any) (Input, map[string]any) {
 		case string:
 			in.Name = &x
 		default:
-			details["name"] = "Invalid input: expected string, received " + jsType(v, true)
+			details["name"] = "Invalid input: expected string, received " + v1api.JSType(v, true)
 		}
 	}
 	if v, present := body["source"]; present {
 		s, ok := v.(string)
 		if !ok || !slices.Contains(Sources, s) {
-			details["source"] = "Invalid option: expected one of " + quotedOptions(Sources)
+			details["source"] = "Invalid option: expected one of " + v1api.QuotedOptions(Sources)
 		}
 		in.Source = s
 	}
 	if v, present := body["surveyIds"]; present {
 		list, ok := v.([]any)
 		if !ok {
-			details["surveyIds"] = "Invalid input: expected array, received " + jsType(v, true)
+			details["surveyIds"] = "Invalid input: expected array, received " + v1api.JSType(v, true)
 		}
 		for i, e := range list {
 			s, ok := e.(string)
 			if !ok {
-				details[fmt.Sprintf("surveyIds.%d", i)] = "Invalid input: expected string, received " + jsType(e, true)
+				details[fmt.Sprintf("surveyIds.%d", i)] = "Invalid input: expected string, received " + v1api.JSType(e, true)
 				continue
 			}
-			if _, err := uuid.Parse(s); (err != nil || len(s) != 36) && !cuid2.MatchString(s) {
+			if !v1api.IsID(s) {
 				details[fmt.Sprintf("surveyIds.%d", i)] = "Invalid cuid2"
 				continue
 			}
@@ -465,14 +247,14 @@ func parseV1Input(body map[string]any) (Input, map[string]any) {
 	list, ok := v.([]any)
 	switch {
 	case !ok:
-		details["triggers"] = "Invalid input: expected array, received " + jsType(v, present)
+		details["triggers"] = "Invalid input: expected array, received " + v1api.JSType(v, present)
 	case len(list) == 0:
 		details["triggers"] = "At least one trigger is required"
 	}
 	for i, e := range list {
 		s, ok := e.(string)
 		if !ok || !slices.Contains(Triggers, s) {
-			details[fmt.Sprintf("triggers.%d", i)] = "Invalid option: expected one of " + quotedOptions(Triggers)
+			details[fmt.Sprintf("triggers.%d", i)] = "Invalid option: expected one of " + v1api.QuotedOptions(Triggers)
 			continue
 		}
 		in.Triggers = append(in.Triggers, s)
@@ -481,8 +263,8 @@ func parseV1Input(body map[string]any) (Input, map[string]any) {
 	s, ok := v.(string)
 	switch {
 	case !ok:
-		details["url"] = "Invalid input: expected string, received " + jsType(v, present)
-	case !isURL(s):
+		details["url"] = "Invalid input: expected string, received " + v1api.JSType(v, present)
+	case !v1api.IsURL(s):
 		details["url"] = "Invalid URL"
 	}
 	in.URL = s
@@ -490,10 +272,4 @@ func parseV1Input(body map[string]any) (Input, map[string]any) {
 		return in, details
 	}
 	return in, nil
-}
-
-// isURL is zod's z.url(): an absolute URL with a scheme and a host.
-func isURL(s string) bool {
-	u, err := url.Parse(s)
-	return err == nil && u.Scheme != "" && u.Host != ""
 }

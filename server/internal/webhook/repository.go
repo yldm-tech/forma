@@ -147,6 +147,20 @@ func (r *Repository) update(ctx context.Context, id uuid.UUID, f fields) error {
 	})
 }
 
+// replace is forma2's v2 updateWebhook: every writable column, the source included.
+func (r *Repository) replace(ctx context.Context, id uuid.UUID, f fields) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE webhooks SET name = ?, url = ?, source = ?, triggers = ?::text[], all_surveys = ?, updated_at = now() WHERE id = ?`,
+			f.Name, f.URL, f.Source, textArray(f.Triggers), f.AllSurveys, id).Error; err != nil {
+			return fmt.Errorf("update webhook: %w", err)
+		}
+		if err := tx.Exec(`DELETE FROM webhook_surveys WHERE webhook_id = ?`, id).Error; err != nil {
+			return fmt.Errorf("clear webhook surveys: %w", err)
+		}
+		return setSurveys(tx, id, f.SurveyIDs)
+	})
+}
+
 func setSurveys(tx *gorm.DB, id uuid.UUID, surveyIDs []uuid.UUID) error {
 	if len(surveyIDs) == 0 {
 		return nil

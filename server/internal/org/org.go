@@ -73,8 +73,8 @@ type Member struct {
 	IsActive bool      `json:"isActive"`
 }
 
-// userManagementAllowed is forma2's getUserManagementAccess: whether a role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. It shapes the SPA's pages; the endpoints decide through organization.manage_access, which the authorizer maps the same way.
-func userManagementAllowed(role, minimumRole string) bool {
+// UserManagementAllowed is forma2's getUserManagementAccess: whether a role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. It shapes the SPA's pages and bounds what an organization API key may do with users and teams (the key acts with its creator's role); the session endpoints decide through organization.manage_access, which the authorizer maps the same way.
+func UserManagementAllowed(role, minimumRole string) bool {
 	switch minimumRole {
 	case "owner":
 		return role == RoleOwner

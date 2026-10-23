@@ -95,15 +95,15 @@ func Blocked(addr netip.Addr) bool {
 	return false
 }
 
-// resolver looks up a host's addresses; net.Resolver is the production one.
-type resolver interface {
+// Resolver looks up a host's addresses; net.Resolver is the production one.
+type Resolver interface {
 	LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error)
 }
 
 // Guard validates user-supplied URLs and sends requests to them.
 type Guard struct {
 	allowInternal bool
-	resolver      resolver
+	resolver      Resolver
 	// dial connects to the pinned address; tests route it to a local listener.
 	dial func(ctx context.Context, network, address string) (net.Conn, error)
 }
@@ -115,6 +115,12 @@ func New(cfg config.Config) *Guard {
 		dialer.Control = refuseBlocked
 	}
 	g.dial = dialer.DialContext
+	return g
+}
+
+// WithResolver makes the guard look host names up with r: a test seam for the suites of the modules that validate URLs, which must not depend on the network's DNS.
+func (g *Guard) WithResolver(r Resolver) *Guard {
+	g.resolver = r
 	return g
 }
 

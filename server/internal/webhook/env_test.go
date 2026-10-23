@@ -23,6 +23,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/authz/authztest"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -104,7 +105,8 @@ func newEnv(t *testing.T, allowInternal bool) *env {
 	e.engine = httpserver.NewEngine(log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
-	NewV1Handler(cfg, e.svc, apikey.NewAuthenticator(db, log), workspace.NewRepository(db, log), log).Register(e.engine)
+	v1 := mgmtv1.New(cfg, apikey.NewAuthenticator(db, log), limiter, audit.New(cfg, log), e.authz.Authorizer, workspace.NewRepository(db, log), log)
+	NewV1Handler(e.svc, v1, log).Register(e.engine)
 	return e
 }
 

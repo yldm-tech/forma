@@ -72,21 +72,30 @@ func (s *Service) SingleUseLinks(ctx context.Context, caller Caller, surveyID uu
 	}
 	links := make([]SingleUseLink, 0, count)
 	for range count {
-		if in.IsEncrypted {
-			sealed, err := s.cipher.Seal([]byte(surveydoc.NewID()), singleUseContext(surveyID))
-			if err != nil {
-				return nil, fmt.Errorf("seal single-use id: %w", err)
-			}
-			links = append(links, SingleUseLink{SuID: base64.RawURLEncoding.EncodeToString(sealed)})
+		if custom != "" {
+			links = append(links, SingleUseLink{SuID: custom, SuToken: SingleUseSignature(string(s.cfg.EncryptionKeyText), surveyID.String(), custom)})
 			continue
 		}
-		id := custom
-		if id == "" {
-			id = surveydoc.NewID()
+		link, err := s.NewSingleUseLink(surveyID, in.IsEncrypted)
+		if err != nil {
+			return nil, err
 		}
-		links = append(links, SingleUseLink{SuID: id, SuToken: SingleUseSignature(string(s.cfg.EncryptionKeyText), surveyID.String(), id)})
+		links = append(links, link)
 	}
 	return links, nil
+}
+
+// NewSingleUseLink is forma2's generateSurveySingleUseLinkParams: a new single-use id for the survey, sealed under ENCRYPTION_KEY when encrypted, otherwise plain with its signature. It authorizes nothing; the caller decided the link may be issued.
+func (s *Service) NewSingleUseLink(surveyID uuid.UUID, encrypted bool) (SingleUseLink, error) {
+	if encrypted {
+		sealed, err := s.cipher.Seal([]byte(surveydoc.NewID()), singleUseContext(surveyID))
+		if err != nil {
+			return SingleUseLink{}, fmt.Errorf("seal single-use id: %w", err)
+		}
+		return SingleUseLink{SuID: base64.RawURLEncoding.EncodeToString(sealed)}, nil
+	}
+	id := surveydoc.NewID()
+	return SingleUseLink{SuID: id, SuToken: SingleUseSignature(string(s.cfg.EncryptionKeyText), surveyID.String(), id)}, nil
 }
 
 // SingleUse is a survey's singleUse document, forma2's TSurveySingleUse.

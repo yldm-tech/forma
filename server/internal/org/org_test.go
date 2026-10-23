@@ -238,8 +238,8 @@ func TestUserManagementAllowed(t *testing.T) {
 	}
 	for _, tc := range cases {
 		for _, role := range []string{RoleOwner, RoleManager, RoleMember, RoleBilling} {
-			if got := userManagementAllowed(role, tc.minimum); got != slices.Contains(tc.allowed, role) {
-				t.Errorf("userManagementAllowed(%s, %s) = %v", role, tc.minimum, got)
+			if got := UserManagementAllowed(role, tc.minimum); got != slices.Contains(tc.allowed, role) {
+				t.Errorf("UserManagementAllowed(%s, %s) = %v", role, tc.minimum, got)
 			}
 		}
 	}
