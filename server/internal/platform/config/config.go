@@ -12,6 +12,7 @@ import (
 	"net/mail"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,8 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 type Config struct {
@@ -265,10 +268,18 @@ func (s SSOConfig) OIDCEnabled() bool {
 // SAMLEnabled is forma2's SAML_OAUTH_ENABLED. Its licence check always granted SAML, so the variable is the only gate.
 func (s SSOConfig) SAMLEnabled() bool { return s.SAMLDatabaseURL != "" }
 
+// forma2ID is zod's cuid2 pattern, which forma2 validated AUTH_SSO_DEFAULT_ORGANIZATION_ID against.
+var forma2ID = regexp.MustCompile(`^[0-9a-z]+$`)
+
+// DefaultOrganization is the organization AUTH_SSO_DEFAULT_ORGANIZATION_ID names, if set. A forma2 id resolves to the row it was migrated to, so a value set for forma2 keeps naming the same organization.
+func (s SSOConfig) DefaultOrganization() (uuid.UUID, bool) {
+	return legacyid.Resolve(s.DefaultOrganizationID)
+}
+
 func (s SSOConfig) validate() error {
-	if s.DefaultOrganizationID != "" {
-		if _, err := uuid.Parse(s.DefaultOrganizationID); err != nil {
-			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID), got %q", s.DefaultOrganizationID)
+	if id := s.DefaultOrganizationID; id != "" {
+		if _, err := uuid.Parse(id); (err != nil || len(id) != 36) && !forma2ID.MatchString(id) {
+			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID, or the cuid2 id forma2 knew it by), got %q", id)
 		}
 	}
 	switch s.DefaultOrganizationRole {

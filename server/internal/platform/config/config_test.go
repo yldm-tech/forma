@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 // unsetEnv removes a variable for the duration of the test; t.Setenv first records the value to restore.
@@ -187,7 +189,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"reset lifetime long":      {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "121"},
 		"zero session max age":     {"SESSION_MAX_AGE", "0"},
 		"session max age text":     {"SESSION_MAX_AGE", "1d"},
-		"default org not uuid":     {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxyz123abc"},
+		"default org uppercase":    {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "CLXYZ123ABC"},
+		"default org braced uuid":  {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "{0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10}"},
 		"default org role":         {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
 		"relative auth url":        {"BETTER_AUTH_URL", "/api/auth"},
 		"nextauth url scheme":      {"NEXTAUTH_URL", "ftp://auth.example.com"},
@@ -441,6 +444,18 @@ func TestLoadSSO(t *testing.T) {
 	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || !s.SAMLEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
 		s.DefaultOrganizationRole != "member" || s.BetterAuthURL.Host != "auth.example.com" {
 		t.Fatalf("SSO = %+v", s)
+	}
+
+	if id, ok := s.DefaultOrganization(); !ok || id.String() != "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10" {
+		t.Fatalf("DefaultOrganization = %s, %v", id, ok)
+	}
+	// forma2 validated the variable as a cuid2, so an existing deployment's value is its organization's forma2 id, which names the migrated row.
+	t.Setenv("AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxbivtla014iye2vfrn436xd")
+	if cfg, err = Load(); err != nil {
+		t.Fatalf("Load with a forma2 organization id: %v", err)
+	}
+	if id, ok := cfg.SSO.DefaultOrganization(); !ok || id != legacyid.ID("clxbivtla014iye2vfrn436xd") {
+		t.Fatalf("DefaultOrganization = %s, %v; want the migrated id", id, ok)
 	}
 
 	t.Setenv("OIDC_ISSUER", "idp.example.com")

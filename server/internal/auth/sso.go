@@ -441,7 +441,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		return callbackResult{}, err
 	}
 	orgForAudit := audit.Unknown
-	defaultOrg, hasDefaultOrg := s.defaultOrganization()
+	defaultOrg, hasDefaultOrg := s.cfg.SSO.DefaultOrganization()
 	if hasDefaultOrg {
 		orgForAudit = defaultOrg.String()
 	}
@@ -488,15 +488,6 @@ func (s *SSO) callbackInvited(ctx context.Context, callbackURL, email string) (b
 
 // emailLocalSeparators are the characters of an address's local part that read as word breaks in a name derived from it.
 var emailLocalSeparators = regexp.MustCompile(`[._+]+`)
-
-func (s *SSO) defaultOrganization() (uuid.UUID, bool) {
-	if s.cfg.SSO.DefaultOrganizationID == "" {
-		return uuid.Nil, false
-	}
-	// Validated at start-up.
-	id, err := uuid.Parse(s.cfg.SSO.DefaultOrganizationID)
-	return id, err == nil
-}
 
 // defaultMembershipAttempts is how often the membership write is tried before it is given up and logged (forma2's MAX_ATTEMPTS).
 const defaultMembershipAttempts = 2
