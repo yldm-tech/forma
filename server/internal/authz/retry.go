@@ -83,6 +83,7 @@ func (r *runner) do(ctx context.Context, operation string, call func(ctx context
 		adm := r.breaker.admit()
 		if !adm.admitted {
 			r.log.WarnContext(ctx, "AuthZed request short-circuited by an open circuit", "component", "authz", "attempt_count", 0, "error_code", adm.code, "operation", operation)
+			recordShortCircuit(ctx, adm.code, operation)
 			return newError(adm.code, operation, true, 0)
 		}
 		// A half-open probe only asks whether SpiceDB is back: one call, not three plus two backoffs.
@@ -105,12 +106,14 @@ func (r *runner) do(ctx context.Context, operation string, call func(ctx context
 		e := mapError(err, operation, attempt)
 		if !r.shouldRetry(e) || attempt >= attempts {
 			r.log.WarnContext(ctx, "AuthZed request failed", "component", "authz", "attempt_count", attempt, "duration_ms", time.Since(started).Milliseconds(), "error_code", e.Code, "grpc_status", e.GRPCStatus, "operation", operation, "retryable", e.Retryable)
+			recordRequestFailure(ctx, e)
 			if r.breaker != nil {
 				r.breaker.recordFailure(e.Code)
 			}
 			return e
 		}
 
+		recordRequestRetry(ctx, e)
 		delay := retryDelay(attempt-1, r.random())
 		r.log.DebugContext(ctx, "AuthZed request retry scheduled", "component", "authz", "attempt_count", attempt, "duration_ms", time.Since(started).Milliseconds(), "error_code", e.Code, "grpc_status", e.GRPCStatus, "operation", operation, "retryable", e.Retryable, "retry_delay_ms", delay.Milliseconds())
 		if err := r.sleep(ctx, delay); err != nil {

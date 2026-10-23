@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -308,18 +309,28 @@ func (s *Service) StartHobby(ctx context.Context, userID, organizationID uuid.UU
 	if err := s.engine.Reconcile(ctx, organizationID); err != nil {
 		return err
 	}
-	_, err := s.engine.Sync(ctx, organizationID, nil)
-	return err
+	if _, err := s.engine.Sync(ctx, organizationID, nil); err != nil {
+		return err
+	}
+	analytics.Capture(userID.String(), "stayed_on_hobby_plan", analytics.Properties{"organization_id": organizationID.String()}, analytics.Groups{OrganizationID: organizationID.String()})
+	return nil
 }
 
 // StartProTrial is forma2's startProTrialAction, the onboarding plan step's trial. AI smart tools are granted at once, before Stripe's entitlements catch up, so the next page already offers them.
 func (s *Service) StartProTrial(ctx context.Context, userID, organizationID uuid.UUID) error {
-	err := s.startProTrial(ctx, userID, organizationID)
-	s.record(ctx, organizationID, err, map[string]any{"plan": PlanPro, "trialDurationDays": proTrialDays})
+	days := trialDays(organizationID)
+	err := s.startProTrial(ctx, userID, organizationID, days)
+	s.record(ctx, organizationID, err, map[string]any{"plan": PlanPro, "trialDurationDays": days})
+	if err == nil {
+		org := organizationID.String()
+		groups := analytics.Groups{OrganizationID: org}
+		analytics.Capture(userID.String(), "free_trial_started", analytics.Properties{"plan": PlanPro, "organization_id": org, "trial_duration_days": days}, groups)
+		analytics.Capture(userID.String(), "reverse_trial_started", analytics.Properties{"organization_id": org}, groups)
+	}
 	return err
 }
 
-func (s *Service) startProTrial(ctx context.Context, userID, organizationID uuid.UUID) error {
+func (s *Service) startProTrial(ctx context.Context, userID, organizationID uuid.UUID, days int64) error {
 	if err := s.require(ctx, userID, organizationID, authz.OrganizationManage); err != nil {
 		return err
 	}
@@ -330,7 +341,7 @@ func (s *Service) startProTrial(ctx context.Context, userID, organizationID uuid
 	if err != nil {
 		return err
 	}
-	if err := s.engine.StartProTrial(ctx, organizationID, customer, proTrialDays); err != nil {
+	if err := s.engine.StartProTrial(ctx, organizationID, customer, days); err != nil {
 		return err
 	}
 	if err := s.engine.Reconcile(ctx, organizationID); err != nil {

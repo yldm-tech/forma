@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -87,6 +88,7 @@ func (s *Service) Create(ctx context.Context, user httpapi.Actor, organizationID
 		return nil, err
 	}
 	view := View{ID: id, Label: in.Label, CreatedAt: createdAt, OrganizationAccess: in.OrganizationAccess, WorkspacePermissions: grants}
+	analytics.Capture(user.UserID.String(), "api_key_created", analytics.Properties{"api_key_id": id.String()}, analytics.Groups{OrganizationID: organizationID.String()})
 	return &Created{View: view, Key: key.Key}, nil
 }
 

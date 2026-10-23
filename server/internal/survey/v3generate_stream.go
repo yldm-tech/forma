@@ -104,6 +104,7 @@ func shouldEmitSnapshot(now time.Time, lastEmittedAt *time.Time, serialized, las
 // GenerationStream is a survey generation whose guards have all passed: the caller may write to the workspace, the prompt has enough detail, and AI is available to the organization.
 type GenerationStream struct {
 	svc            *Service
+	caller         Caller
 	in             *GenerateInput
 	organizationID uuid.UUID
 }
@@ -120,7 +121,7 @@ func (s *Service) StartGenerationStream(ctx context.Context, caller Caller, in *
 	if _, err := s.ai.Assert(ctx, organizationID); err != nil {
 		return nil, s.generationProblem(ctx, err, in.WorkspaceID, organizationID)
 	}
-	return &GenerationStream{svc: s, in: in, organizationID: organizationID}, nil
+	return &GenerationStream{svc: s, caller: caller, in: in, organizationID: organizationID}, nil
 }
 
 // Run streams the generation through emit: start, the draft's snapshots, the completed draft as the final snapshot, one translating event per further language, then done; or an error event in place of whatever could not be finished. A cancelled context is the client hanging up: nothing more is emitted and the provider call stops with it.
@@ -158,6 +159,7 @@ func (g *GenerationStream) Run(ctx context.Context, requestID string, emit func(
 		})
 		if err == nil {
 			emit(streamDoneEvent{Type: "done", GenerateResult: *res})
+			captureGenerated(g.caller, g.organizationID, g.in, true)
 			return
 		}
 	}

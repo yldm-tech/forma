@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 )
@@ -74,6 +75,11 @@ func (s *Service) CreateKey(ctx context.Context, userID, workspaceID uuid.UUID, 
 		return nil, err
 	}
 	ev.TargetID, ev.NewObject = k.ID.String(), k
+	analytics.Capture(userID.String(), "contact_attribute_key_created", analytics.Properties{
+		"organization_id": org.String(),
+		"workspace_id":    workspaceID.String(),
+		"key":             in.Key,
+	}, analytics.Groups{OrganizationID: org.String(), WorkspaceID: workspaceID.String()})
 	return k, nil
 }
 

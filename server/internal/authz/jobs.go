@@ -101,6 +101,7 @@ func (a *Audit) pass(ctx context.Context, name string, apply bool) BackfillResul
 		codes = append(codes, f.Code)
 	}
 	a.log.InfoContext(ctx, "AuthZed reconciliation pass finished", "component", "authz", "operation", "scheduled_reconciliation", "pass", name, "status", res.Status, "duration_ms", time.Since(started).Milliseconds(), "failed", res.Counters.Failed, "failure_codes", codes)
+	recordReconciliationPass(ctx, name, res.Status, time.Since(started), int64(res.Counters.Failed), codes)
 	return res
 }
 
@@ -110,8 +111,10 @@ func (a *Audit) Run(ctx context.Context) error {
 	if observed.Status == StatusDrifted {
 		applied := a.pass(ctx, "apply", true)
 		a.log.InfoContext(ctx, "AuthZed reconciliation repaired drift", "component", "authz", "operation", "scheduled_reconciliation", "repaired", applied.Counters.Reconciled, "failed", applied.Counters.Failed)
+		recordReconciliationRepair(ctx, int64(applied.Counters.Reconciled), int64(applied.Counters.Failed))
 		result = a.pass(ctx, "confirm", false)
 	}
+	recordReconciliationAudit(ctx, result.Status, int64(observed.Counters.Missing+observed.Counters.MismatchedPermissions), int64(result.Counters.Failed))
 	if result.Status != StatusReconciled {
 		a.log.WarnContext(ctx, "Scheduled AuthZed relationship reconciliation did not finish cleanly", "component", "authz", "operation", "scheduled_reconciliation", "drift", result.Counters.Missing+result.Counters.MismatchedPermissions, "failures", result.Counters.Failed, "status", result.Status)
 	}

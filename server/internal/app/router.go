@@ -25,12 +25,14 @@ import (
 	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
@@ -67,7 +69,7 @@ type v3Registrar interface {
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
 func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, managementHandler *mgmtapi.Handler, integrationHandler *integration.Handler, integrationOAuthHandler *integration.OAuthHandler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, workflowHandler *workflow.Handler, oauthHandler *oauthserver.Handler, oauthAppHandler *oauthserver.AppHandler, mcpHandler *mcp.Handler, billingHandler *billing.Handler, stripeWebhookHandler *billing.WebhookHandler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
-	r.Use(httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
+	r.Use(telemetry.Middleware(p.Config.Telemetry.ServiceName), authz.Surface(), httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
 	healthHandler.Register(r)
 	// The public survey pages and their OG image, served on PUBLIC_URL when it is set.
 	linkSurveyHandler.Register(r)
@@ -94,6 +96,10 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	oauthHandler.Register(r)
 	// The integrations' OAuth authorize routes and the callbacks registered with Google, Airtable, Notion and Slack: forma2's paths and v1 envelope, outside /api/app.
 	integrationOAuthHandler.Register(r)
+	// The browser's PostHog requests, proxied first-party at forma2's /ingest when POSTHOG_KEY is set.
+	if p.Config.Telemetry.PostHogKey != "" {
+		r.Any(analytics.IngestPath+"/*path", analytics.IngestProxy())
+	}
 	// Stored files, at the URLs surveys, responses and emails embed: forma2's paths and answers, outside /api/app.
 	storageHandler.Register(r)
 	// The unsubscribe and view-responses links of the response-finished email, which emails already sent carry.

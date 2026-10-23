@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 )
@@ -260,12 +261,25 @@ func (s *Service) Import(ctx context.Context, userID, workspaceID uuid.UUID, in 
 	if err := validateRecords(mapped); err != nil {
 		return nil, err
 	}
+	var existing int64
+	if analytics.Enabled() {
+		if err := s.repo.db.WithContext(ctx).Raw(`SELECT count(*) FROM contacts WHERE workspace_id = ?`, workspaceID).Scan(&existing).Error; err != nil {
+			return nil, fmt.Errorf("count contacts: %w", err)
+		}
+	}
 	contacts, err := s.importRecords(ctx, workspaceID, mapped, keys, in.DuplicateAction)
 	if err != nil {
 		return nil, err
 	}
 	res = &ImportResult{Contacts: contacts}
 	ev.NewObject = map[string]any{"contacts": contacts}
+	analytics.Capture(userID.String(), "contact_created", analytics.Properties{
+		"organization_id":        org.String(),
+		"workspace_id":           workspaceID.String(),
+		"existing_contact_count": existing,
+		"creation_method":        "import",
+		"import_count":           len(contacts),
+	}, analytics.Groups{OrganizationID: org.String(), WorkspaceID: workspaceID.String()})
 	return res, nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -89,7 +90,24 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string) (*C
 	if err != nil {
 		return nil, err
 	}
+	s.captureCreated(ctx, userID, o, workspaceID)
 	return &Created{Organization: o, WorkspaceID: workspaceID}, nil
+}
+
+// captureCreated is forma2's product events of a new organization. It is the user's first when they belong to no other, as in forma2's setup flow; the switcher only ever creates further ones.
+func (s *Service) captureCreated(ctx context.Context, userID uuid.UUID, o *Organization, workspaceID uuid.UUID) {
+	if !analytics.Enabled() {
+		return
+	}
+	var creator struct {
+		Email       string
+		Memberships int64
+	}
+	if err := s.repo.db.WithContext(ctx).Raw(`SELECT u.email, (SELECT count(*) FROM memberships m WHERE m.user_id = u.id) AS memberships FROM users u WHERE u.id = ?`, userID).Scan(&creator).Error; err != nil {
+		s.log.WarnContext(ctx, "Failed to read the organization's creator for PostHog", "err", err)
+		return
+	}
+	analytics.OrganizationCreated(userID.String(), o.ID.String(), o.Name, workspaceID.String(), workspace.DefaultName, analytics.EmailDomain(creator.Email), creator.Memberships == 1)
 }
 
 // List is forma2's getOrganizationsByUserId: the organizations the user may read, oldest first, 30 per page when a page is given.

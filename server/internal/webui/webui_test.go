@@ -8,6 +8,8 @@ import (
 	"testing/fstest"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
 const indexHTML = "<!doctype html><title>Forma</title>"
@@ -132,5 +134,28 @@ func TestSurveyShell(t *testing.T) {
 	without, err := NewFromFS(fstest.MapFS{"index.html": {Data: []byte(indexHTML)}})
 	if err != nil || without.SurveyShell() != nil {
 		t.Fatalf("a build without the survey page: %q, %v", without.SurveyShell(), err)
+	}
+}
+
+func TestRuntimeConfigIsWrittenIntoThePage(t *testing.T) {
+	index := []byte("<html><head><title>Forma</title></head><body></body></html>")
+	if got := withRuntimeConfig(index, config.Config{}); string(got) != string(index) {
+		t.Errorf("page without Sentry or PostHog = %s, want it unchanged", got)
+	}
+	var cfg config.Config
+	cfg.Telemetry.SentryDSN = "https://public@o0.ingest.sentry.io/1?x=</script><script>alert(1)</script>"
+	cfg.Telemetry.SentryEnvironment = "staging"
+	cfg.Telemetry.PostHogKey = "phc_key"
+	got := string(withRuntimeConfig(index, cfg))
+	for _, want := range []string{
+		`<head><title>Forma</title><script id="forma-runtime-config">window.__formaSentryClientConfig={"dsn":"https://public@o0.ingest.sentry.io/1?x=\u003c/script\u003e\u003cscript\u003ealert(1)\u003c/script\u003e","environment":"staging"};`,
+		`window.__formaPostHogConfig={"key":"phc_key","apiHost":"/ingest","uiHost":"https://eu.i.posthog.com"};</script></head>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("page = %s, want it to contain %s", got, want)
+		}
+	}
+	if strings.Count(got, "</script>") != 1 {
+		t.Errorf("a configured value closed the script element: %s", got)
 	}
 }

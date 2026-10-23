@@ -50,6 +50,7 @@ func NewRunner(cfg config.Config, db *gorm.DB, m *mailer.Mailer, log *slog.Logge
 type claimedRun struct {
 	ID                 uuid.UUID
 	Status             string
+	TriggerType        string
 	TriggerPayload     json.RawMessage
 	VersionDefinition  json.RawMessage
 	WorkflowDefinition json.RawMessage
@@ -116,17 +117,24 @@ func (r *Runner) Work(ctx context.Context, job *river.Job[RunArgs]) error {
 	if errors.As(err, &stepErr) {
 		data = stepErr.data
 	}
-	r.recordFailure(ctx, run.ID, args.WorkspaceID, err, data, final, log)
+	recorded := r.recordFailure(ctx, run.ID, args.WorkspaceID, err, data, final, log)
 	if !final {
 		return err
 	}
 	log.ErrorContext(ctx, "Workflow run job failed after final attempt", "err", err)
+	// Only the delivery whose terminal write landed reports the failure, so a run is reported once and never over another delivery's verdict.
+	if recorded {
+		captureRunFailed(ctx, r.db, log, runFailure{
+			runID: run.ID, workflowID: args.WorkflowID, workspaceID: args.WorkspaceID, triggerType: run.TriggerType,
+			failedStepType: failedStepType(data), errorKind: classifyRunError(err), attempt: job.Attempt,
+		})
+	}
 	return nil
 }
 
 func (r *Runner) loadRun(ctx context.Context, id, workspaceID uuid.UUID) (*claimedRun, error) {
 	var rows []claimedRun
-	if err := r.db.WithContext(ctx).Raw(`SELECT r.id, r.status, r.trigger_payload, v.definition AS version_definition, w.definition AS workflow_definition
+	if err := r.db.WithContext(ctx).Raw(`SELECT r.id, r.status, r.trigger_type, r.trigger_payload, v.definition AS version_definition, w.definition AS workflow_definition
 		FROM workflow_runs r JOIN workflows w ON w.id = r.workflow_id LEFT JOIN workflow_versions v ON v.id = r.workflow_version_id
 		WHERE r.id = ? AND r.workspace_id = ?`, id, workspaceID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load workflow run: %w", err)
@@ -213,8 +221,8 @@ func detached(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
 }
 
-// recordFailure writes the failure onto a run that is not yet terminal: the error and, on the last attempt, the failed status. A run another delivery finalized keeps its verdict.
-func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID, cause error, data json.RawMessage, final bool, log *slog.Logger) {
+// recordFailure writes the failure onto a run that is not yet terminal: the error and, on the last attempt, the failed status. A run another delivery finalized keeps its verdict. It reports whether the write landed.
+func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID, cause error, data json.RawMessage, final bool, log *slog.Logger) bool {
 	set := map[string]any{"error": cause.Error(), "last_error_at": gorm.Expr("now()"), "updated_at": gorm.Expr("now()")}
 	if final {
 		set["status"] = RunFailed
@@ -232,6 +240,7 @@ func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID
 	case res.RowsAffected == 0:
 		log.InfoContext(ctx, "Workflow run already finalized by another delivery; skipping failure write")
 	}
+	return res.Error == nil && res.RowsAffected > 0
 }
 
 // emailContext is what every step of a run renders against, loaded once.

@@ -2,10 +2,12 @@ package actionclass
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -76,7 +78,34 @@ func (s *Service) Create(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		id = ac.ID
 	}
 	s.record(ctx, audit.ActionCreated, id, org, err, nil, ac)
+	if err == nil {
+		captureCreated(userID, org, workspaceID, in)
+	}
 	return ac, err
+}
+
+// captureCreated is forma2's action_class_created: its type and how it triggers (codeAction, or the no-code trigger type).
+func captureCreated(userID uuid.UUID, organizationID *uuid.UUID, workspaceID uuid.UUID, in Input) {
+	trigger := "codeAction"
+	if in.Type != "code" {
+		var config struct {
+			Type string `json:"type"`
+		}
+		trigger = "noCode"
+		if json.Unmarshal(in.NoCodeConfig, &config) == nil && config.Type != "" {
+			trigger = config.Type
+		}
+	}
+	org := ""
+	if organizationID != nil {
+		org = organizationID.String()
+	}
+	analytics.Capture(userID.String(), "action_class_created", analytics.Properties{
+		"organization_id": org,
+		"workspace_id":    workspaceID.String(),
+		"type":            in.Type,
+		"trigger_type":    trigger,
+	}, analytics.Groups{OrganizationID: org, WorkspaceID: workspaceID.String()})
 }
 
 // target loads an action class and authorizes action on its own workspace. A missing action class is forma2's ResourceNotFoundError("ActionClass").

@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/server/internal/langcode"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
@@ -265,9 +266,19 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 	}
 
 	if !ws.AppSetupCompleted {
-		// Conditional, so concurrent first builds flip the flag once.
-		if err := db.Exec(`UPDATE workspaces SET app_setup_completed = true WHERE id = ? AND app_setup_completed = false`, workspaceID).Error; err != nil {
-			return nil, fmt.Errorf("mark app setup completed: %w", err)
+		// Conditional, so concurrent first builds flip the flag once, and only the build that flipped it reports the activation.
+		res := db.Exec(`UPDATE workspaces SET app_setup_completed = true WHERE id = ? AND app_setup_completed = false`, workspaceID)
+		if res.Error != nil {
+			return nil, fmt.Errorf("mark app setup completed: %w", res.Error)
+		}
+		if res.RowsAffected > 0 {
+			code := 0
+			for _, a := range actionClasses {
+				if a.Type == "code" {
+					code++
+				}
+			}
+			h.captureAppConnected(ctx, workspaceID, len(surveys), code, len(actionClasses)-code)
 		}
 	}
 
@@ -399,4 +410,27 @@ func (h *Handler) resolveStorageURLs(v any) any {
 		return h.resolveStorageURLs(json.RawMessage(b))
 	}
 	return v
+}
+
+// captureAppConnected is forma2's app_connected, the first time the SDK loads a workspace's state: what the workspace had to show it. The workspace is the distinct id; nobody is signed in.
+func (h *Handler) captureAppConnected(ctx context.Context, workspaceID uuid.UUID, surveys, codeActions, noCodeActions int) {
+	if !analytics.Enabled() {
+		return
+	}
+	var orgs []string
+	if err := h.db.WithContext(ctx).Raw(`SELECT organization_id::text FROM workspaces WHERE id = ?`, workspaceID).Scan(&orgs).Error; err != nil {
+		h.log.WarnContext(ctx, "Failed to capture PostHog app_connected event", "err", err)
+		return
+	}
+	org, groups := "", analytics.Groups{}
+	if len(orgs) == 1 {
+		org, groups = orgs[0], analytics.Groups{OrganizationID: orgs[0], WorkspaceID: workspaceID.String()}
+	}
+	analytics.Capture(workspaceID.String(), "app_connected", analytics.Properties{
+		"num_surveys":         surveys,
+		"num_code_actions":    codeActions,
+		"num_no_code_actions": noCodeActions,
+		"organization_id":     org,
+		"workspace_id":        workspaceID.String(),
+	}, groups)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 )
@@ -178,6 +179,11 @@ func (s *Service) CreateSegment(ctx context.Context, userID, workspaceID uuid.UU
 		return nil, err
 	}
 	ev.TargetID, ev.NewObject = id.String(), seg
+	analytics.Capture(userID.String(), "segment_created", analytics.Properties{
+		"organization_id": org.String(),
+		"workspace_id":    workspaceID.String(),
+		"is_private":      in.IsPrivate,
+	}, analytics.Groups{OrganizationID: org.String(), WorkspaceID: workspaceID.String()})
 	return seg, nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -298,6 +299,10 @@ func (s *Service) Create(ctx context.Context, inviterID, organizationID uuid.UUI
 	ev.TargetID = id.String()
 	ev.NewObject = map[string]any{"email": in.Email, "name": in.Name, "role": in.Role, "teamIds": in.TeamIDs}
 	s.sendInviteBestEffort(ctx, inviter, id, in.Email, in.Name, token)
+	analytics.Capture(inviterID.String(), "team_member_invited", analytics.Properties{
+		"organization_id": organizationID.String(),
+		"invitee_role":    in.Role,
+	}, analytics.Groups{OrganizationID: organizationID.String()})
 	return id, nil
 }
 
@@ -411,6 +416,11 @@ func (s *Service) Bulk(ctx context.Context, inviterID, organizationID uuid.UUID,
 		results = append(results, BulkResult{Email: in.Email, Success: true})
 	}
 	ev.NewObject = map[string]any{"invitedCount": len(invited), "totalCount": len(invitees), "emails": invited}
+	analytics.Capture(inviterID.String(), "team_members_bulk_invited", analytics.Properties{
+		"organization_id": organizationID.String(),
+		"invited_count":   len(invited),
+		"total_count":     len(invitees),
+	}, analytics.Groups{OrganizationID: organizationID.String()})
 	return results, nil
 }
 

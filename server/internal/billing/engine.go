@@ -492,6 +492,7 @@ func (e *Engine) Sync(ctx context.Context, organizationID uuid.UUID, ev *eventRe
 	if err := e.repo.writeSync(ctx, updated); err != nil {
 		return nil, err
 	}
+	e.captureSync(ctx, organizationID, existing, next, sub != nil)
 	return updated, nil
 }
 

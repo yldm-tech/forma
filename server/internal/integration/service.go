@@ -302,6 +302,7 @@ func (s *Service) SaveLinks(ctx context.Context, userID, workspaceID uuid.UUID, 
 	if err != nil {
 		return uuid.Nil, err
 	}
+	s.captureConnected(ctx, userID, workspaceID, typ)
 	return saved.ID, nil
 }
 

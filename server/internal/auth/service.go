@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
@@ -173,6 +174,13 @@ func (s *Service) finalizeSignIn(ctx context.Context, userID uuid.UUID, method s
 		Action: audit.ActionSignedIn, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(),
 		Status: audit.StatusSuccess, NewObject: map[string]string{"authMethod": method, "sessionStrategy": "database"},
 	})
+	if analytics.Enabled() {
+		if previous, organizations, err := s.repo.signInFacts(ctx, userID); err != nil {
+			s.log.WarnContext(ctx, "Failed to capture PostHog sign-in event", "err", err)
+		} else {
+			captureSignedIn(userID, method, previous, organizations, s.now())
+		}
+	}
 	if err := s.repo.touchLastLogin(ctx, userID, s.now()); err != nil {
 		s.log.ErrorContext(ctx, "Failed to record successful sign-in", "err", err, "userId", userID.String())
 	}

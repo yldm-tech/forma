@@ -145,6 +145,7 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 		Action: audit.ActionCreated, TargetType: audit.TargetUser, TargetID: userID.String(), OrganizationID: orgID.String(), Status: audit.StatusSuccess,
 		NewObject: map[string]any{"id": userID.String(), "name": in.Name, "email": email, "locale": locale},
 	})
+	s.captureCredentialSignUp(ctx, userID, email, orgID, invited)
 	return intent, nil
 }
 

@@ -4,16 +4,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/logger"
+	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
 )
 
 const usage = `usage: forma <command>
@@ -84,6 +88,7 @@ func serve(ctx context.Context) error {
 		return err
 	}
 	log := logger.New(cfg, os.Stdout)
+	defer startTelemetry(ctx, cfg, log)()
 
 	srv, cleanup, err := app.InitializeServer(ctx, cfg, log)
 	if err != nil {
@@ -100,6 +105,7 @@ func worker(ctx context.Context) error {
 		return err
 	}
 	log := logger.New(cfg, os.Stdout)
+	defer startTelemetry(ctx, cfg, log)()
 
 	w, cleanup, err := app.InitializeWorker(ctx, cfg, log)
 	if err != nil {
@@ -108,4 +114,25 @@ func worker(ctx context.Context) error {
 	defer cleanup()
 
 	return w.Run(ctx)
+}
+
+// telemetryShutdownTimeout bounds the final flush of spans, metrics and error reports.
+const telemetryShutdownTimeout = 10 * time.Second
+
+// startTelemetry sets up OpenTelemetry, Sentry and PostHog before anything else is built, so every instrument, error report and product event of the process goes through them. The returned function flushes all three; it runs last, after the process has drained its work.
+func startTelemetry(ctx context.Context, cfg config.Config, log *slog.Logger) func() {
+	otel := telemetry.Setup(ctx, cfg, log)
+	flushSentry := telemetry.SetupSentry(ctx, cfg, log)
+	closeAnalytics, err := analytics.Setup(cfg, log)
+	if err != nil {
+		log.ErrorContext(ctx, "PostHog could not be set up; product analytics are off", "err", err)
+		closeAnalytics = func() {}
+	}
+	return func() {
+		closeAnalytics()
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
+		defer cancel()
+		otel.Shutdown(shutdownCtx)
+		flushSentry()
+	}
 }

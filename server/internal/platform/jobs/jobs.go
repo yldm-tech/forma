@@ -17,6 +17,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
 )
 
 // Retry and retention follow forma2's BullMQ defaults: three attempts with exponential backoff from five seconds, completed jobs kept for a day and failed ones for a week.
@@ -69,7 +70,12 @@ func OpenPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, func(), er
 		pool.Close()
 		return nil, nil, fmt.Errorf("ping database: %w", err)
 	}
-	return pool, pool.Close, nil
+	stopObserving, err := telemetry.ObservePgxPool("jobs", pool)
+	if err != nil {
+		pool.Close()
+		return nil, nil, err
+	}
+	return pool, func() { stopObserving(); pool.Close() }, nil
 }
 
 // Registry collects the job kinds and periodic jobs a worker runs. It starts with the platform's own system.test-log job; feature modules add theirs in app.NewJobRegistry.
@@ -122,6 +128,7 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		Queues:                      map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: concurrency}},
 		MaxAttempts:                 maxAttempts,
 		RetryPolicy:                 exponentialRetry{},
+		Middleware:                  []rivertype.Middleware{&metricsMiddleware{metrics: defaultJobMetrics()}},
 		CompletedJobRetentionPeriod: completedRetention,
 		DiscardedJobRetentionPeriod: discardedRetention,
 		// On shutdown, running jobs get the same grace period as in-flight HTTP requests before their contexts are cancelled.

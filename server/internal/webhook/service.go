@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
@@ -198,6 +199,13 @@ func (s *Service) Create(ctx context.Context, userID, workspaceID uuid.UUID, in 
 	s.audit.Log(ctx, audit.FromRequest(ctx, e))
 	if err != nil {
 		return nil, err
+	}
+	if org != nil {
+		analytics.Capture(userID.String(), "integration_connected", analytics.Properties{
+			"integration_type": "webhook",
+			"organization_id":  org.String(),
+			"workspace_id":     workspaceID.String(),
+		}, analytics.Groups{OrganizationID: org.String(), WorkspaceID: workspaceID.String()})
 	}
 	v := created.viewWithSecret()
 	v.AllSurveys = &created.AllSurveys

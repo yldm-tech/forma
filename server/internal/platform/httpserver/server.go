@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -34,7 +36,7 @@ func NewEngine(log *slog.Logger) *gin.Engine {
 		panic(fmt.Sprintf("disable trusted proxies: %v", err))
 	}
 	r.HandleMethodNotAllowed = true
-	r.Use(requestID(), securityHeaders(), accessLog(log), recovery(log))
+	r.Use(requestID(), securityHeaders(), accessLog(log), recovery(log), reportServerErrors())
 	return r
 }
 
@@ -152,6 +154,12 @@ func recovery(log *slog.Logger) gin.HandlerFunc {
 			"route", routeOf(c),
 			"panic", recovered,
 		)
+		// Reported from inside the recovering goroutine, so the event's stack trace is the panic's.
+		err, ok := recovered.(error)
+		if !ok {
+			err = fmt.Errorf("%v", recovered)
+		}
+		withErrorScope(c, http.StatusInternalServerError, func(hub *sentry.Hub) { hub.CaptureException(err) })
 		// Same envelope and wording as an unexpected error returned by a handler (see httpapi.ErrorHandler).
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": "internal_server_error", "message": "Something went wrong while executing the operation."})
 	})
@@ -163,4 +171,54 @@ func routeOf(c *gin.Context) string {
 		return r
 	}
 	return "(unmatched)"
+}
+
+// apiVersionPattern reads the API version off a path, forma2's getApiVersionFromPath.
+var apiVersionPattern = regexp.MustCompile(`^/api/(v[123])(?:/|$)`)
+
+// reportServerErrors is forma2's API error reporter: a request answered with a 5xx is reported to Sentry, when Sentry is set up, with the error a handler recorded or, without one, forma2's synthetic "API <version> error, id: <request id>". Panics are reported by recovery instead, with their stack.
+func reportServerErrors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		status := c.Writer.Status()
+		if status < http.StatusInternalServerError {
+			return
+		}
+		withErrorScope(c, status, func(hub *sentry.Hub) {
+			err := c.Errors.Last()
+			if err != nil {
+				hub.CaptureException(err.Err)
+				return
+			}
+			version := apiVersion(c.Request.URL.Path)
+			if version == "unknown" {
+				hub.CaptureException(fmt.Errorf("API error, id: %s", RequestID(c)))
+				return
+			}
+			hub.CaptureException(fmt.Errorf("API %s error, id: %s", strings.ToUpper(version), RequestID(c)))
+		})
+	}
+}
+
+// withErrorScope reports to Sentry, when it is set up, in a scope tagged as forma2 tagged API errors. The path is the route pattern, never the raw path, which can carry a token.
+func withErrorScope(c *gin.Context, status int, report func(hub *sentry.Hub)) {
+	hub := sentry.CurrentHub()
+	if hub.Client() == nil {
+		return
+	}
+	hub = hub.Clone()
+	version := apiVersion(c.Request.URL.Path)
+	hub.WithScope(func(scope *sentry.Scope) {
+		scope.SetLevel(sentry.LevelError)
+		scope.SetTags(map[string]string{"apiVersion": version, "correlationId": RequestID(c), "method": c.Request.Method, "path": routeOf(c)})
+		scope.SetContext("apiRequest", sentry.Context{"apiVersion": version, "correlationId": RequestID(c), "method": c.Request.Method, "path": routeOf(c), "status": status})
+		report(hub)
+	})
+}
+
+func apiVersion(path string) string {
+	if m := apiVersionPattern.FindStringSubmatch(path); m != nil {
+		return m[1]
+	}
+	return "unknown"
 }

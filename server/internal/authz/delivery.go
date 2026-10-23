@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -299,9 +300,20 @@ func (d *Delivery) processBatch(ctx context.Context, owner string) (BatchResult,
 	if err != nil || len(events) == 0 {
 		return BatchResult{}, err
 	}
+	started := time.Now()
 	out := d.deliverAll(ctx, events)
+	duration := time.Since(started)
 	if err := markDelivered(ctx, d.db, owner, out.delivered); err != nil {
 		return BatchResult{}, err
+	}
+	deliveredAt := time.Now()
+	for _, e := range events {
+		if e.IsRevocation && slices.Contains(out.delivered, e.ID) {
+			recordRevocationDelivery(ctx, deliveredAt.Sub(e.CreatedAt))
+		}
+	}
+	if len(out.delivered) > 0 {
+		recordOutboxDelivery(ctx, len(out.delivered), duration, "delivered")
 	}
 	res := BatchResult{Claimed: len(events), Delivered: len(out.delivered)}
 	codes := map[Code]bool{}
@@ -322,6 +334,7 @@ func (d *Delivery) processBatch(ctx context.Context, owner string) (BatchResult,
 		slices.Sort(sorted)
 		// Counts and stable codes only, never an event, target or tenant identifier.
 		d.log.WarnContext(ctx, "AuthZed projection outbox delivery failed", "component", "authz", "count", res.Failed, "dead_lettered", res.DeadLettered, "error_codes", sorted, "operation", "projection_outbox_delivery", "status", "failed")
+		recordOutboxDelivery(ctx, res.Failed, duration, "failed")
 	}
 	return res, nil
 }
@@ -354,6 +367,7 @@ func (d *Delivery) Drain(ctx context.Context, maxBatches int) (DrainResult, erro
 	if err != nil {
 		return total, err
 	}
+	recordOutboxStatus(ctx, status)
 	total.Remaining = status.Pending
 	total.Status = "partial"
 	if status.Pending == 0 {

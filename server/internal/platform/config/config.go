@@ -141,6 +141,9 @@ type Config struct {
 	// Stripe is Forma Cloud's billing account. Billing runs only on Forma Cloud with STRIPE_SECRET_KEY set; everywhere else it is off.
 	Stripe StripeConfig
 
+	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
+	Telemetry TelemetryConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -398,6 +401,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.AI.validate(); err != nil {
+		return err
+	}
+	if err := c.Telemetry.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {

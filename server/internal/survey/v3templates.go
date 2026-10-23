@@ -168,7 +168,14 @@ func (s *Service) CreateFromTemplateV3(ctx context.Context, caller Caller, in *T
 	if len(issues) > 0 {
 		return nil, v3api.BadRequest("Invalid template survey document", invalidParams(issues, "data")...)
 	}
-	return s.createFromDocument(ctx, caller, in.WorkspaceID, d)
+	createdFrom := "template"
+	switch in.Source {
+	case "custom":
+		createdFrom = "blank"
+	case "xm":
+		createdFrom = "xm-template"
+	}
+	return s.createFromDocument(ctx, caller, in.WorkspaceID, d, createdFrom)
 }
 
 // Templates is the template catalog for the editor's template picker, in the user's dashboard language, behind workspace.read: the custom template, then forma2's templates, with the workspace's name filled in.

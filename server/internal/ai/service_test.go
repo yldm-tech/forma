@@ -17,6 +17,9 @@ import (
 	"sync"
 	"testing"
 
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -295,6 +298,8 @@ func TestServiceAssertOnUnconfiguredInstance(t *testing.T) {
 // Usage is recorded once per completed generation, under the feature and the model it actually ran on; a translation runs on AI_MODEL_TRANSLATION.
 func TestServiceRecordsUsageAndRoutesFeatures(t *testing.T) {
 	e := newServiceEnv(t, nil)
+	reader := sdkmetric.NewManualReader()
+	e.svc.usage = newUsageMeters(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
 	org, _ := e.organization(e.user(), true)
 	e.provider.answer = func(map[string]any) (int, string) { return http.StatusOK, `{"name": "Onboarding", "range": null}` }
 	if _, err := e.svc.GenerateObject(t.Context(), org, FeatureSurveyGeneration, testObjectRequest()); err != nil {
@@ -330,6 +335,41 @@ func TestServiceRecordsUsageAndRoutesFeatures(t *testing.T) {
 	for _, line := range usage {
 		if _, ok := line["prompt"]; ok {
 			t.Fatal("a usage line carries the prompt")
+		}
+	}
+
+	// The same facts as forma2's counters, by feature and model and never by organization.
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(t.Context(), &rm); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != "forma.ai" {
+			t.Errorf("scope %q, want forma.ai", sm.Scope.Name)
+		}
+		for _, m := range sm.Metrics {
+			for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+				if _, ok := dp.Attributes.Value("organizationId"); ok {
+					t.Errorf("%s carries the organization", m.Name)
+				}
+				feature, _ := dp.Attributes.Value("feature")
+				model, _ := dp.Attributes.Value("model")
+				kind, _ := dp.Attributes.Value("kind")
+				got[m.Name+"|"+feature.AsString()+"|"+model.AsString()+"|"+kind.AsString()] += dp.Value
+			}
+		}
+	}
+	for key, n := range map[string]int64{
+		"forma_ai_generations_total|ai_survey_generation|qwen|":      1,
+		"forma_ai_generations_total|ai_translation|qwen-small|":      1,
+		"forma_ai_generations_total|unknown|qwen|":                   1,
+		"forma_ai_tokens_total|ai_survey_generation|qwen|input":      12,
+		"forma_ai_tokens_total|ai_survey_generation|qwen|output":     7,
+		"forma_ai_reasoning_tokens_total|ai_survey_generation|qwen|": 3,
+	} {
+		if got[key] != n {
+			t.Errorf("%s = %d, want %d (all: %v)", key, got[key], n, got)
 		}
 	}
 }

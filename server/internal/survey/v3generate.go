@@ -230,6 +230,7 @@ func (s *Service) GenerateV3(ctx context.Context, caller Caller, in *GenerateInp
 	if err == nil {
 		var res *GenerateResult
 		if res, err = s.finishGeneration(ctx, organizationID, in, out.Object, nil); err == nil {
+			captureGenerated(caller, organizationID, in, false)
 			return res, nil
 		}
 	}
