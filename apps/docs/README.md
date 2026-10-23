@@ -14,7 +14,7 @@ npm i -g mint
 
 ```bash
 git clone https://github.com/yldm-tech/forma.git
-cd forma/docs
+cd forma/apps/docs
 ```
 
 3. Run the documentation locally:
@@ -34,5 +34,5 @@ The documentation will be available at `http://localhost:3000`.
 ### Troubleshooting
 
 - If `mint dev` isn't running, try `mint update` to get the latest version of the CLI. If both `mint` and the legacy `mintlify` package are installed, uninstall `mintlify`
-- If a page loads as a 404, ensure you're in the `docs` folder with the `docs.json` file
+- If a page loads as a 404, ensure you're in the `apps/docs` folder with the `docs.json` file
 - For other issues, please check our [Contributing Guidelines](https://github.com/yldm-tech/forma/blob/main/CONTRIBUTING.md)

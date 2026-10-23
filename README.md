@@ -32,7 +32,7 @@ The tags `v1.0.0` to `v3.1.0` belong to a different, earlier project that used t
 
 ## Development
 
-You need [Go](https://go.dev/) (see `server/go.mod`), [Node.js](https://nodejs.org/en) (see `.node-version`), [pnpm](https://pnpm.io/) and [Docker](https://www.docker.com/).
+You need [Go](https://go.dev/) (see `apps/server/go.mod`), [Node.js](https://nodejs.org/en) (see `.node-version`), [pnpm](https://pnpm.io/) and [Docker](https://www.docker.com/).
 
 ```bash
 pnpm install

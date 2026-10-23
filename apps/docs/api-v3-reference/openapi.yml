@@ -1,4 +1,4 @@
-# GENERATED FILE — do not edit. Source of truth: docs/api-v3-reference/src/ (one file per path/schema).
+# GENERATED FILE — do not edit. Source of truth: apps/docs/api-v3-reference/src/ (one file per path/schema).
 # Regenerate with `pnpm api:v3:bundle`; CI verifies freshness with `pnpm api:v3:check`.
 # V3 API — surveys, workflows, action classes, contact attribute keys and tags (hand-maintained source; not produced by generate-api-specs).
 openapi: 3.1.1
@@ -13,7 +13,7 @@ info:
 
     Authenticate all management endpoints with **session cookie** or **`x-api-key`** (management key with access to the workspace).
 
-    **Spec location:** source of truth is the multi-file tree at `docs/api-v3-reference/src/` (root `openapi.yml` plus one file per path and component); `docs/api-v3-reference/openapi.yml` is the generated single-file bundle (alongside v2 at `docs/api-v2-reference/openapi.yml`).
+    **Spec location:** source of truth is the multi-file tree at `apps/docs/api-v3-reference/src/` (root `openapi.yml` plus one file per path and component); `apps/docs/api-v3-reference/openapi.yml` is the generated single-file bundle (alongside v2 at `apps/docs/api-v2-reference/openapi.yml`).
 
     **workspaceId**
     `workspaceId` is the canonical container identifier for this API. It is a **required query parameter on collection read endpoints** (`GET /api/v3/surveys`, `GET /api/v3/action-classes`, `GET /api/v3/contact-attribute-keys`) because those operate within a workspace. **`POST /api/v3/surveys` instead requires `workspaceId` in the request body**, not as a query parameter. Single-resource endpoints (`GET`/`PATCH`/`DELETE /api/v3/surveys/{surveyId}`) locate the resource by its globally-unique id and resolve the workspace from it, so they do **not** accept a `workspaceId` query parameter — sending one returns **400** (`Unrecognized key: "workspaceId"`).
@@ -49,7 +49,7 @@ info:
     Prompt text is sent to the configured AI provider for generation, but it is not stored by this endpoint, not logged by default, and not included in audit data.
 
     **OpenAPI**
-    This spec is **not** produced by `pnpm generate-api-specs` (that script only builds v2 → `docs/api-v2-reference/openapi.yml`). When the route contract changes, edit the files under `docs/api-v3-reference/src/`, then run `pnpm api:v3:bundle` to regenerate the committed single-file bundle. `pnpm api:v3:lint` lints the source tree; `pnpm api:v3:check` (CI) fails when the bundle is stale.
+    This spec is **not** produced by `pnpm generate-api-specs` (that script only builds v2 → `apps/docs/api-v2-reference/openapi.yml`). When the route contract changes, edit the files under `apps/docs/api-v3-reference/src/`, then run `pnpm api:v3:bundle` to regenerate the committed single-file bundle. `pnpm api:v3:lint` lints the source tree; `pnpm api:v3:check` (CI) fails when the bundle is stale.
 
     **Workflows Scope 1**
     Workflows are a follow-up extension of the existing v3 Survey API work. The Survey API establishes API-first survey authoring; Workflows build on that same v3 style to automate actions around survey responses through workspace-scoped JSON definitions. Scope 1 models the existing Follow-ups capability as workflows: one `response.completed` trigger with an optional `endingCardIds` filter, and `send_email` actions with Follow-up email field parity. The definition and run shapes mirror the shared Zod schemas in `packages/workflows` (ENG-1100), which are the implementation source of truth for this contract.
@@ -72,7 +72,7 @@ info:
     workflow-shared-schemas: packages/workflows/src/types (feat/workflows-types)
     workflow-prisma-schema: packages/database/schema/workflows.prisma (feat/workflows-prisma-schema)
     openapi-generated: false
-    spec-source: docs/api-v3-reference/src (regenerate bundle with `pnpm api:v3:bundle`)
+    spec-source: apps/docs/api-v3-reference/src (regenerate bundle with `pnpm api:v3:bundle`)
     responses-contract-ticket: ENG-2868
     responses-rfc: v3 Responses API RFC sections 2b (resource) and 2c (endpoints)
     responses-stored-shape: packages/types/responses.ts (ZResponse, ZResponseData, ZResponseInput)

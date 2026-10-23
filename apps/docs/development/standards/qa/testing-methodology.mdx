@@ -10,10 +10,10 @@ Test behaviour and outcomes at the cheapest level that can fail on them. A modul
 
 | Level | Where | Runs with |
 | --- | --- | --- |
-| Go unit and integration tests | `*_test.go` next to the code in `server/` | `cd server && go test -race ./...` |
+| Go unit and integration tests | `*_test.go` next to the code in `apps/server/` | `cd apps/server && go test -race ./...` |
 | TypeScript unit tests | `*.test.ts(x)` next to the code in each workspace | `pnpm test` (`vp run -r test`) |
-| v3 API contract | `docs/api-v3-reference/contract-tests/` and `server/internal/app/v3_routes_test.go` | Schemathesis against a running server |
-| Browser suite | `e2e/*.spec.ts` | `make e2e` (Playwright) against a running server |
+| v3 API contract | `apps/docs/api-v3-reference/contract-tests/` and `apps/server/internal/app/v3_routes_test.go` | Schemathesis against a running server |
+| Browser suite | `apps/e2e/*.spec.ts` | `make e2e` (Playwright) against a running server |
 
 ## Go tests
 
@@ -25,10 +25,10 @@ Test behaviour and outcomes at the cheapest level that can fail on them. A modul
    - `v3api/v3apitest` mounts a feature module's handlers with the production middleware around a real database, authorization and API keys.
    - `go test -short` skips everything that needs Docker.
 3. **Determinism**: CI runs the suite under the race detector on four-core runners. Wait on observable conditions rather than on time, never depend on real time staying inside a window or TTL, and seed a counter instead of looping requests up to a rate limit.
-4. **Coverage**: measured, not targeted, with one gate: `server/internal/auth`, `server/internal/authz` and `server/internal/apikey` must stay at 80% statement coverage or above (the `Go coverage` job in `pr.yml`), as forma2 held its authentication and authorization code.
+4. **Coverage**: measured, not targeted, with one gate: `apps/server/internal/auth`, `apps/server/internal/authz` and `apps/server/internal/apikey` must stay at 80% statement coverage or above (the `Go coverage` job in `pr.yml`), as forma2 held its authentication and authorization code.
 
 ```bash
-cd server
+cd apps/server
 go test ./internal/health -run TestReady     # one test
 go test -race ./internal/seed/...             # one package, as CI runs it
 go test -short ./...                          # everything that needs no Docker
@@ -53,7 +53,7 @@ go test -short ./...                          # everything that needs no Docker
 
 3. **Mocking**: mock what crosses the boundary of the unit (the network, timers, a sibling module's side effects), never the unit itself.
 4. **Builds first**: packages are consumed through their builds, so run `pnpm build` before believing a failure in a file you never touched after a branch switch.
-5. **Every test runs somewhere**: `pnpm tests:run-check` (`scripts/check-tests-run.mjs`) fails when a committed test file sits outside every workspace with a `test` script, where nothing would ever run it. The Playwright specs under `e2e/` are the one exception.
+5. **Every test runs somewhere**: `pnpm tests:run-check` (`tooling/scripts/check-tests-run.mjs`) fails when a committed test file sits outside every workspace with a `test` script, where nothing would ever run it. The Playwright specs under `apps/e2e/` are the one exception.
 
 ```bash
 pnpm exec vp run --filter @forma/surveys test -- src/lib/logic.test.ts   # one file
@@ -62,19 +62,19 @@ pnpm test                                                               # every 
 
 ## The v3 API contract
 
-- `TestV3RouteParity` builds the production router and fails when an `/api/v3` operation is served but not documented in `docs/api-v3-reference/openapi.yml`, or documented but not served.
-- The `API v3 Contract Tests` workflow seeds a server (`forma seed --contract`) and runs [Schemathesis](https://schemathesis.readthedocs.io/) against the bundle: every documented operation, with seeded identifiers, checked for its status codes, content type and response schema. [The contract-tests README](https://github.com/yldm-tech/forma/blob/main/docs/api-v3-reference/contract-tests/README.md) has the local invocation.
+- `TestV3RouteParity` builds the production router and fails when an `/api/v3` operation is served but not documented in `apps/docs/api-v3-reference/openapi.yml`, or documented but not served.
+- The `API v3 Contract Tests` workflow seeds a server (`forma seed --contract`) and runs [Schemathesis](https://schemathesis.readthedocs.io/) against the bundle: every documented operation, with seeded identifiers, checked for its status codes, content type and response schema. [The contract-tests README](https://github.com/yldm-tech/forma/blob/main/apps/docs/api-v3-reference/contract-tests/README.md) has the local invocation.
 
 ## The browser suite
 
-[Playwright](https://playwright.dev/) specs live in `e2e/` (configuration in `playwright.config.ts`) and drive a running server: sign-up and onboarding, a link survey published, answered on its public page and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, and [axe](https://github.com/dequelabs/axe-core) WCAG 2.2 AA checks on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Every spec creates the account it works in, so specs run in parallel against one instance.
+[Playwright](https://playwright.dev/) specs live in `apps/e2e/` (configuration in `apps/e2e/playwright.config.ts`) and drive a running server: sign-up and onboarding, a link survey published, answered on its public page and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, and [axe](https://github.com/dequelabs/axe-core) WCAG 2.2 AA checks on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Every spec creates the account it works in, so specs run in parallel against one instance.
 
 ```bash
-make build                          # the SPA and SDK bundles embedded in bin/forma
-bash scripts/ci-stack.sh up         # dependencies in Docker, then `forma start` on :3000
-pnpm exec playwright install chromium
-make e2e                            # or: pnpm exec playwright test e2e/link-survey.spec.ts
-bash scripts/ci-stack.sh down
+make build                                                # the SPA and SDK bundles embedded in bin/forma
+bash tooling/scripts/ci-stack.sh up                       # dependencies in Docker, then `forma start` on :3000
+pnpm --filter @forma/e2e exec playwright install chromium
+make e2e                                                  # or: pnpm --filter @forma/e2e exec playwright test link-survey.spec.ts
+bash tooling/scripts/ci-stack.sh down
 ```
 
 The `E2E Tests` workflow runs the suite on pull requests that change the UI, the survey runtime or the SDK. It is not a required check.
@@ -92,5 +92,5 @@ What earns a spec:
 ## Other checks on every pull request
 
 - **Translations**: `pnpm scan-translations` checks the admin UI's and the survey runtime's catalogues against the code that reads them, the Go mailer and survey template catalogue included.
-- **Bundle budgets**: `pnpm bundle:check` fails when the gzipped `surveys.umd.cjs` or `forma.umd.cjs`, which every respondent downloads, outgrows its budget in `scripts/check-bundle-budget.mjs`.
-- **Migrations**: new and changed goose migrations are linted with Squawk (`scripts/lint-migrations.sh`).
+- **Bundle budgets**: `pnpm bundle:check` fails when the gzipped `surveys.umd.cjs` or `forma.umd.cjs`, which every respondent downloads, outgrows its budget in `tooling/scripts/check-bundle-budget.mjs`.
+- **Migrations**: new and changed goose migrations are linted with Squawk (`tooling/scripts/lint-migrations.sh`).

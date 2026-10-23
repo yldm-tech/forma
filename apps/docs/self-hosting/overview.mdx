@@ -16,8 +16,8 @@ host for the whole stack rather than for the app alone.
 | Single server, low load   | 4 vCPU    | 8 GB      | 50 GB SSD |
 | Kubernetes, production    | see below | see below | managed   |
 
-Chart defaults request 1.9 vCPU and 2.9 GiB across those services — see `charts/forma/values.yaml`,
-plus `charts/spicedb-operator/values.yaml` for the operator. On Kubernetes, add whatever your provider
+Chart defaults request 1.9 vCPU and 2.9 GiB across those services — see `deploy/helm/forma/values.yaml`,
+plus `deploy/helm/spicedb-operator/values.yaml` for the operator. On Kubernetes, add whatever your provider
 reserves per node on top, typically around 0.5 vCPU and 1 GB. The single-server rows are derived from those
 totals rather than load-tested.
 

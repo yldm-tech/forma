@@ -10,21 +10,22 @@ The repository holds a Go module and a pnpm workspace side by side. Everything r
 
 | Path | What it is |
 | --- | --- |
-| `server/` | The Go module `github.com/yldm-tech/forma/server`: one binary, `forma`, whose subcommands are the processes. |
-| `web/` | The admin single-page app, and the public survey page bundle the server fills for `/s`, `/c` and `/p`. |
+| `apps/server/` | The Go module `github.com/yldm-tech/forma/apps/server`: one binary, `forma`, whose subcommands are the processes. |
+| `apps/web/` | The admin single-page app, and the public survey page bundle the server fills for `/s`, `/c` and `/p`. |
 | `packages/` | Shared TypeScript: the survey runtime, the SDK, UI components, types and i18n helpers. |
 | `apps/storybook/` | Storybook for `packages/survey-ui`. |
-| `e2e/`, `playwright.config.ts` | The Playwright browser suite. |
-| `scripts/` | Repository checks and CI helpers; a workspace of its own so its tests run. |
-| `authzed/` | The SpiceDB schema (`schema.zed`) and its assertion suite. |
-| `docs/` | Product and API documentation (Mintlify); `docs/api-v3-reference` is the source of the v3 OpenAPI contract. |
-| `Dockerfile`, `docker/`, `charts/forma/` | The production image, the production compose stack and the Helm chart. |
+| `apps/e2e/` | The Playwright browser suite and its `playwright.config.ts`. |
+| `tooling/typescript/`, `tooling/vite-plugins/` | Shared `tsconfig` bases and build plugins. |
+| `tooling/scripts/` | Repository checks and CI helpers; a workspace of its own so its tests run. |
+| `apps/server/authzed/` | The SpiceDB schema (`schema.zed`) and its assertion suite; the server embeds the schema from here. |
+| `apps/docs/` | Product and API documentation (Mintlify); `apps/docs/api-v3-reference` is the source of the v3 OpenAPI contract. |
+| `deploy/docker/`, `deploy/helm/forma/` | The production image (`deploy/docker/Dockerfile`, built with the repository root as context), the production compose stack and the Helm chart. |
 | `docker-compose.dev.yml` | The local dependencies: PostgreSQL, Valkey, SpiceDB, RustFS and Mailpit. |
 
 ## The Server
 
 ```
-server/
+apps/server/
 ├── cmd/forma/          # main: the subcommands (start, serve, worker, migrate, seed, authz, ...)
 ├── migrations/         # goose SQL migrations, embedded into the binary
 └── internal/
@@ -51,7 +52,7 @@ Each feature package is layered **handler → service → repository**: the hand
 ## The Admin UI
 
 ```
-web/
+apps/web/
 ├── locales/            # i18next catalogues (en-US, ja-JP, zh-Hans-CN, zh-Hant-TW)
 ├── index.html          # the SPA entry
 ├── survey.html         # the public survey page entry
@@ -84,36 +85,36 @@ Route files stay thin: they declare the route, its loader (which prefetches thro
 ### packages/types/
 
 - zod schemas and TypeScript types for the survey document and other shared shapes.
-- `json-schema-registry.ts` lists the schemas exported to `server/internal/jsonschema/schemas/`, which the Go server validates JSON documents against.
+- `json-schema-registry.ts` lists the schemas exported to `apps/server/internal/jsonschema/schemas/`, which the Go server validates JSON documents against.
 
 ### packages/i18n-utils/
 
 - Language helpers, and the translation scanner (`pnpm scan-translations`).
 
-### packages/config-typescript/, packages/vite-plugins/
+### tooling/typescript/, tooling/vite-plugins/
 
-- Shared `tsconfig` bases and build plugins (the one that copies the SDK bundles into `web/public/js/`).
+- Shared `tsconfig` bases and build plugins (the one that copies the SDK bundles into `apps/web/public/js/`).
 
 ## Adding New Code
 
 ### A new server feature
 
-1. Create `server/internal/<feature>/` with its handler, service and repository.
+1. Create `apps/server/internal/<feature>/` with its handler, service and repository.
 2. Add the constructors to a provider set in `internal/app/wire.go`, run `make generate`, and mount the handler in `NewRouter`.
-3. A schema change is a new numbered migration in `server/migrations/`; a table that carries authorization data also needs its projection trigger.
-4. A new `/api/v3` operation is documented in `docs/api-v3-reference` first; the route parity test fails until both sides agree.
+3. A schema change is a new numbered migration in `apps/server/migrations/`; a table that carries authorization data also needs its projection trigger.
+4. A new `/api/v3` operation is documented in `apps/docs/api-v3-reference` first; the route parity test fails until both sides agree.
 
 ### A new screen
 
-1. Add a route file under `web/src/routes/` and the feature's components under `web/src/features/<feature>/`.
-2. Server state goes through TanStack Query with a `queryOptions` factory in `web/src/lib/queries/`, and calls go through `api` in `web/src/lib/api.ts`.
-3. User-facing text goes into `web/locales/*.json` for every locale; the translation scan fails on a key one locale lacks.
+1. Add a route file under `apps/web/src/routes/` and the feature's components under `apps/web/src/features/<feature>/`.
+2. Server state goes through TanStack Query with a `queryOptions` factory in `apps/web/src/lib/queries/`, and calls go through `api` in `apps/web/src/lib/api.ts`.
+3. User-facing text goes into `apps/web/locales/*.json` for every locale; the translation scan fails on a key one locale lacks.
 
 ## Testing Organization
 
 - Go tests are `*_test.go` files next to the code they test.
 - TypeScript tests are `*.test.ts(x)` files next to the code they test, inside a workspace with a `test` script.
-- Browser specs are `e2e/*.spec.ts`.
+- Browser specs are `apps/e2e/*.spec.ts`.
 - Test fixtures a Go test reads live in a `testdata/` directory beside it.
 
 See [Testing Methodology](/development/standards/qa/testing-methodology).
@@ -126,16 +127,16 @@ See [Testing Methodology](/development/standards/qa/testing-methodology).
 - `vite.config.ts`: the only formatting and lint configuration.
 - `Makefile`: the entry points for both halves (`make deps-up`, `make migrate`, `make seed`, `make dev-server`, `make dev-web`, `make build`, `make check`).
 - `.env.example`: every variable the server reads, with what it does.
-- `playwright.config.ts`: the browser suite.
+- `go.work`: the Go workspace, which uses `apps/server`.
 
 ### Package level
 
 - `package.json` with the package's own scripts and dependencies (shared ones as `catalog:`).
 - `vite.config.ts` (or `.mts`) with the package's build and test settings.
-- `tsconfig.json` extending a base from `packages/config-typescript`.
+- `tsconfig.json` extending a base from `tooling/typescript`.
 
 ### Server
 
-- `server/go.mod`: the Go version and dependencies.
-- `server/.golangci.yml`: the linters.
-- `server/.squawk.toml`: the migration linter.
+- `apps/server/go.mod`: the Go version and dependencies.
+- `apps/server/.golangci.yml`: the linters.
+- `apps/server/.squawk.toml`: the migration linter.

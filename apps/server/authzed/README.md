@@ -9,6 +9,7 @@ assertion-based validation suite.
   blocks that pin down the schema's semantics.
 - `validate.sh` — offline validation runner (local `zed` binary or the pinned
   `authzed/zed` container image; no SpiceDB server needed).
+- `schema.go` — the `authzed` Go package, which embeds `schema.zed` for the server (`internal/authz` reads it from there), so this directory holds the schema's only copy.
 - [Direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) — the approved direct-authority, fail-closed,
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /* Single entry point for the v3 OpenAPI spec tooling (pins @redocly/cli in exactly one place).
  *
- *   node docs/api-v3-reference/scripts/bundle.mjs          # regenerate docs/api-v3-reference/openapi.yml
- *   node docs/api-v3-reference/scripts/bundle.mjs --check  # fail if the committed artifact is stale
- *   node docs/api-v3-reference/scripts/bundle.mjs --lint   # lint the multi-file source tree
+ *   node apps/docs/api-v3-reference/scripts/bundle.mjs          # regenerate apps/docs/api-v3-reference/openapi.yml
+ *   node apps/docs/api-v3-reference/scripts/bundle.mjs --check  # fail if the committed artifact is stale
+ *   node apps/docs/api-v3-reference/scripts/bundle.mjs --lint   # lint the multi-file source tree
  *
  * Mintlify only resolves $refs inside a single document, so the committed openapi.yml must stay a
  * self-contained bundle. The --check mode compares canonical JSON (sorted keys) so comments and
- * YAML formatting never cause false positives. Lint runs with docs/api-v3-reference as cwd so
+ * YAML formatting never cause false positives. Lint runs with apps/docs/api-v3-reference as cwd so
  * redocly.yaml and .redocly.lint-ignore.yaml are picked up. Stdlib only — safe to run in CI
  * without installing workspace dependencies.
  */
@@ -36,7 +36,7 @@ const localRedoclyBin = (() => {
   }
 })();
 
-const HEADER = `# GENERATED FILE — do not edit. Source of truth: docs/api-v3-reference/src/ (one file per path/schema).
+const HEADER = `# GENERATED FILE — do not edit. Source of truth: apps/docs/api-v3-reference/src/ (one file per path/schema).
 # Regenerate with \`pnpm api:v3:bundle\`; CI verifies freshness with \`pnpm api:v3:check\`.
 # V3 API — surveys, workflows, action classes, contact attribute keys and tags (hand-maintained source; not produced by generate-api-specs).
 `;
@@ -93,7 +93,7 @@ if (process.argv.includes("--lint")) {
     redocly(["bundle", artifact, "-o", join(tmp, "from-artifact.json"), "--ext", "json"]);
     if (canonical(join(tmp, "from-src.json")) !== canonical(join(tmp, "from-artifact.json"))) {
       console.error(
-        "✗ docs/api-v3-reference/openapi.yml is out of sync with docs/api-v3-reference/src/.\n" +
+        "✗ apps/docs/api-v3-reference/openapi.yml is out of sync with apps/docs/api-v3-reference/src/.\n" +
           "  Run `pnpm api:v3:bundle` and commit the result."
       );
       process.exit(1);

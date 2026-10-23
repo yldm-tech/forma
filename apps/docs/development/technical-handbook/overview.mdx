@@ -64,19 +64,19 @@ graph TD
 
 ### Server modules
 
-The server lives in `server/` (Go module `github.com/yldm-tech/forma/server`). Each feature is one package under `server/internal/<feature>/`, layered handler → service → repository, and wired together in `server/internal/app` with [wire](https://github.com/google/wire). Cross-cutting infrastructure (configuration, logging, the database, rate limits, mail, audit events, the job queue) is in `server/internal/platform/`.
+The server lives in `apps/server/` (Go module `github.com/yldm-tech/forma/apps/server`). Each feature is one package under `apps/server/internal/<feature>/`, layered handler → service → repository, and wired together in `apps/server/internal/app` with [wire](https://github.com/google/wire). Cross-cutting infrastructure (configuration, logging, the database, rate limits, mail, audit events, the job queue) is in `apps/server/internal/platform/`.
 
 Authorization is decided in the service layer: PostgreSQL decides existence and tenancy, then SpiceDB decides the permission. Services never write SpiceDB directly. Every table that carries authorization data has a trigger that enqueues a row in `authz_projection_outbox` in the same transaction, and the worker delivers those rows to SpiceDB. See [Tenant Separation](/development/technical-handbook/tenant-separation).
 
 ### Browser code
 
-- **Admin SPA** (`web/`): React 19, TanStack Router (file-based routes in `web/src/routes/`) and TanStack Query, Tailwind CSS 4, i18next. Built by Vite, copied into `server/internal/webui/dist` and embedded with `go:embed`. Its second entry, `survey.html`, is the public survey page the server fills for `/s`, `/c` and `/p`.
+- **Admin SPA** (`apps/web/`): React 19, TanStack Router (file-based routes in `apps/web/src/routes/`) and TanStack Query, Tailwind CSS 4, i18next. Built by Vite, copied into `apps/server/internal/webui/dist` and embedded with `go:embed`. Its second entry, `survey.html`, is the public survey page the server fills for `/s`, `/c` and `/p`.
 - **Survey runtime** (`packages/surveys`): the Preact runtime that renders a survey, on the public survey pages and inside the SDK.
 - **SDK** (`packages/js-core`): what a customer embeds on their website or app. It loads the runtime and talks to the client API.
 
 ### Data
 
-- **PostgreSQL 18** holds everything durable, including the job queue. The schema is defined only by the goose migrations in `server/migrations/`. See [Database Model](/development/technical-handbook/database-model).
+- **PostgreSQL 18** holds everything durable, including the job queue. The schema is defined only by the goose migrations in `apps/server/migrations/`. See [Database Model](/development/technical-handbook/database-model).
 - **SpiceDB** answers permission questions over the relationships projected from PostgreSQL.
 - **Valkey** holds rate-limit counters and short-lived caches. When it is unreachable, rate limits let requests through.
 - **S3-compatible storage** (RustFS in development) holds uploaded files; browsers upload to it with presigned requests.
@@ -88,5 +88,5 @@ Authorization is decided in the service layer: PostgreSQL decides existence and 
 - **Admin UI**: React, TanStack Router and Query, Tailwind CSS, Radix UI, i18next
 - **Survey runtime and SDK**: Preact, TypeScript
 - **Toolchain**: Vite+ (`vp`: Vite, Vitest, Oxlint, Oxfmt, tsgolint), pnpm workspaces, golangci-lint
-- **API**: REST, with the v3 API specified first in OpenAPI (`docs/api-v3-reference`)
+- **API**: REST, with the v3 API specified first in OpenAPI (`apps/docs/api-v3-reference`)
 - **Testing**: Go tests with testcontainers, Vitest, Playwright for the browser suite, Schemathesis for the v3 contract

@@ -4,7 +4,7 @@ description: "Overview of the Forma database schema and relationships"
 icon: "database"
 ---
 
-Forma keeps everything durable in PostgreSQL 18 or newer. The schema is defined only by the [goose](https://github.com/pressly/goose) SQL migrations in [`server/migrations/`](https://github.com/yldm-tech/forma/tree/main/server/migrations); the Go server reads and writes it through [GORM](https://gorm.io/) with the pgx driver and never lets GORM migrate anything. The schema supports multi-tenancy, survey management and response collection while keeping organizations apart.
+Forma keeps everything durable in PostgreSQL 18 or newer. The schema is defined only by the [goose](https://github.com/pressly/goose) SQL migrations in [`apps/server/migrations/`](https://github.com/yldm-tech/forma/tree/main/apps/server/migrations); the Go server reads and writes it through [GORM](https://gorm.io/) with the pgx driver and never lets GORM migrate anything. The schema supports multi-tenancy, survey management and response collection while keeping organizations apart.
 
 ## Entity Relationship Diagram
 
@@ -63,9 +63,9 @@ erDiagram
 The header of `00001_baseline.sql` states them; in short:
 
 - **Names**: snake_case plural tables, `timestamptz` everywhere.
-- **Primary keys**: `uuid` defaulting to `uuidv7()`, which is why PostgreSQL 18 is the minimum. Rows migrated from forma2 get `uuidv5(<forma legacy namespace>, <old id>)` instead, so an old id that arrives from outside (a survey link, an SDK snippet) resolves by computing the same function. `server/internal/platform/legacyid` holds the namespace and the resolver; use it rather than a copy.
+- **Primary keys**: `uuid` defaulting to `uuidv7()`, which is why PostgreSQL 18 is the minimum. Rows migrated from forma2 get `uuidv5(<forma legacy namespace>, <old id>)` instead, so an old id that arrives from outside (a survey link, an SDK snippet) resolves by computing the same function. `apps/server/internal/platform/legacyid` holds the namespace and the resolver; use it rather than a copy.
 - **Closed value sets** are `text` with a `CHECK`, never PostgreSQL enums, so adding a value is a one-line migration and removing one is possible at all.
-- **Documents** (survey blocks, endings, styling, workflow definitions, response data) are `jsonb`. They are validated in Go, in the service that owns them, against JSON Schemas exported from the zod definitions in `packages/types` (`server/internal/jsonschema/schemas/`), plus the refinements a JSON Schema cannot express.
+- **Documents** (survey blocks, endings, styling, workflow definitions, response data) are `jsonb`. They are validated in Go, in the service that owns them, against JSON Schemas exported from the zod definitions in `packages/types` (`apps/server/internal/jsonschema/schemas/`), plus the refinements a JSON Schema cannot express.
 
 ## Core Tables
 
@@ -91,17 +91,17 @@ The header of `00001_baseline.sql` states them; in short:
 
 ### Authorization projection
 
-- Triggers on every table that carries authorization data (organizations, memberships, users, teams, team members, workspaces, workspace teams, API keys and their workspace grants) enqueue a row in **authz_projection_outbox** in the same transaction as the change. The worker delivers those rows to SpiceDB, retrying with backoff. A table of that kind added later needs a trigger too, plus its projector and reconciliation in `server/internal/authz`.
+- Triggers on every table that carries authorization data (organizations, memberships, users, teams, team members, workspaces, workspace teams, API keys and their workspace grants) enqueue a row in **authz_projection_outbox** in the same transaction as the change. The worker delivers those rows to SpiceDB, retrying with backoff. A table of that kind added later needs a trigger too, plus its projector and reconciliation in `apps/server/internal/authz`.
 
 ### Job queue
 
-River's tables (`river_job`, `river_queue`, ...) are versioned by River itself. `forma migrate` applies them after the goose migrations, and they never appear in `server/migrations/`.
+River's tables (`river_job`, `river_queue`, ...) are versioned by River itself. `forma migrate` applies them after the goose migrations, and they never appear in `apps/server/migrations/`.
 
 ## Schema Management
 
-- A schema change is a new numbered goose file in `server/migrations/` with both an `-- +goose Up` and a `-- +goose Down` section. A migration that has shipped is never edited.
+- A schema change is a new numbered goose file in `apps/server/migrations/` with both an `-- +goose Up` and a `-- +goose Down` section. A migration that has shipped is never edited.
 - `make migrate` (or `forma migrate`, which needs `DATABASE_URL` alone, or `MIGRATE_DATABASE_URL` when the schema owner is a different role) applies pending migrations under a lock, so concurrent migrators take turns. `forma start` runs it before serving unless `SKIP_STARTUP_MIGRATION` is set.
-- New and changed migrations are linted with [Squawk](https://squawkhq.com/) on every pull request (`scripts/lint-migrations.sh`, `server/.squawk.toml`): the Up section only, in a transaction unless the file says `-- +goose NO TRANSACTION`. Set a `lock_timeout` before statements that take strong locks on existing tables, and build indexes on existing tables `CONCURRENTLY` in a migration without a transaction.
-- `server/internal/platform/database/migrate_test.go` applies every migration to a real PostgreSQL and checks the constraints and triggers; `server/internal/platform/pgtest` gives each Go test a fresh migrated database.
+- New and changed migrations are linted with [Squawk](https://squawkhq.com/) on every pull request (`tooling/scripts/lint-migrations.sh`, `apps/server/.squawk.toml`): the Up section only, in a transaction unless the file says `-- +goose NO TRANSACTION`. Set a `lock_timeout` before statements that take strong locks on existing tables, and build indexes on existing tables `CONCURRENTLY` in a migration without a transaction.
+- `apps/server/internal/platform/database/migrate_test.go` applies every migration to a real PostgreSQL and checks the constraints and triggers; `apps/server/internal/platform/pgtest` gives each Go test a fresh migrated database.
 
 For the exact columns, constraints and indexes, read the migrations: they carry a comment on every choice that is not obvious.

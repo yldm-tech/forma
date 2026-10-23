@@ -30,7 +30,7 @@ fmt: {
 }
 ```
 
-In practice: 110 characters, double quotes, ES5 trailing commas, parentheses around every arrow function's parameters, imports grouped (mocks, third-party, `@forma/*`, aliases, relative) and sorted, JSON keys sorted, and Tailwind classes in canonical order. Generated files (`web/src/routeTree.gen.ts`, the bundled `openapi.yml`, the lockfile), `server/**` and MDX pages are not formatted by Oxfmt.
+In practice: 110 characters, double quotes, ES5 trailing commas, parentheses around every arrow function's parameters, imports grouped (mocks, third-party, `@forma/*`, aliases, relative) and sorted, JSON keys sorted, and Tailwind classes in canonical order. Generated files (`apps/web/src/routeTree.gen.ts`, the bundled `openapi.yml`, the lockfile), `apps/server/**` and MDX pages are not formatted by Oxfmt.
 
 ### Lint rules
 
@@ -54,10 +54,10 @@ Type-aware rules resolve sibling packages through their `dist/` declarations, so
 
 ## Go
 
-Go code is formatted by `gofmt` and `goimports` with `github.com/yldm-tech/forma/server` as the local import prefix, so imports fall into three groups: the standard library, third-party modules, and the server's own packages. [golangci-lint](https://golangci-lint.run/) (`server/.golangci.yml`, the same version CI pins) runs the standard linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`, `nilerr`, `noctx`, `revive`, `rowserrcheck`, `sqlclosecheck`, `unconvert` and `unparam`.
+Go code is formatted by `gofmt` and `goimports` with `github.com/yldm-tech/forma/apps/server` as the local import prefix, so imports fall into three groups: the standard library, third-party modules, and the server's own packages. [golangci-lint](https://golangci-lint.run/) (`apps/server/.golangci.yml`, the same version CI pins) runs the standard linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`, `nilerr`, `noctx`, `revive`, `rowserrcheck`, `sqlclosecheck`, `unconvert` and `unparam`.
 
 ```bash
-cd server
+cd apps/server
 golangci-lint fmt ./...   # gofmt and goimports
 golangci-lint run ./...   # 0 issues is the bar
 ```
@@ -76,7 +76,7 @@ golangci-lint run ./...   # 0 issues is the bar
 ```ts
 staged: {
   "*.{js,mjs,cjs,ts,mts,cts,tsx,json,md,yml,yaml,css}": "vp check --fix",
-  "server/**/*.go": "gofmt -w",
+  "apps/server/**/*.go": "gofmt -w",
 }
 ```
 
