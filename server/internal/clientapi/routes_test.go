@@ -1,7 +1,9 @@
 package clientapi
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"slices"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 )
 
 // forma2's display creates: v1 attaches the display to the contact with the userId, created when there is none; v2 only to an existing contact of the workspace.
@@ -222,5 +225,44 @@ func TestRateLimits(t *testing.T) {
 	// The storage route is not charged to api:client.
 	if r := e.do("POST", "/api/v1/client/"+ws.String()+"/storage", map[string]any{}); r.Status != 400 {
 		t.Fatalf("storage under an exhausted api:client window: %d %s", r.Status, r.Body)
+	}
+}
+
+// spend uses up rule's current window for the client address ip, as that many earlier requests would have.
+func (e *env) spend(rule ratelimit.Rule, ip string) {
+	e.t.Helper()
+	sum := sha256.Sum256([]byte(ip))
+	if res, err := e.h.limiter.Check(e.t.Context(), rule, hex.EncodeToString(sum[:]), rule.Limit); err != nil || !res.Allowed {
+		e.t.Fatalf("spend %s: %+v, %v", rule.Namespace, res, err)
+	}
+}
+
+// GATEWAY_RATE_LIMITING=1 declares a gateway enforcing forma2's policy set: the client API routes it covers are no longer charged here, the others still are. Without it the server limits them itself.
+func TestGatewayRateLimiting(t *testing.T) {
+	const ip = "203.0.113.9"
+	for _, gateway := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no gateway", true: "gateway"}[gateway], func(t *testing.T) {
+			e := newEnv(t, func(cfg *config.Config) { cfg.GatewayRateLimiting = gateway })
+			ws := e.workspace().String()
+			e.clock.nextWindow()
+			e.spend(ratelimit.APIClient, ip)
+			e.spend(ratelimit.StorageUpload, ip)
+
+			covered := e.do("GET", "/api/v1/client/"+ws+"/environment", nil, "X-Forwarded-For", ip)
+			upload := e.do("POST", "/api/v1/client/"+ws+"/storage", map[string]any{}, "X-Forwarded-For", ip)
+			uncovered := e.do("GET", "/api/v2/client/"+ws+"/environment", nil, "X-Forwarded-For", ip)
+			if !gateway {
+				covered.expectError(t, 429, "too_many_requests", "Maximum number of requests reached. Please try again later.")
+				upload.expectError(t, 429, "too_many_requests", "Maximum number of requests reached. Please try again later.")
+			} else {
+				if covered.Status != 200 {
+					t.Fatalf("covered route behind a gateway: %d %s", covered.Status, covered.Body)
+				}
+				if upload.Status != 400 {
+					t.Fatalf("covered upload behind a gateway: %d %s, want the body refused rather than the rate limit", upload.Status, upload.Body)
+				}
+			}
+			uncovered.expectError(t, 429, "too_many_requests", "Maximum number of requests reached. Please try again later.")
+		})
 	}
 }

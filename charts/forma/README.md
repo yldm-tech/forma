@@ -10,7 +10,7 @@ The chart is installed from this repository (`helm install forma ./charts/forma`
 
 ## Forma on the Go server: what changed in this chart
 
-The chart keeps forma2's values, Secrets and resource names; these are the differences.
+The chart keeps forma2's values, Secrets and resource names; these are the differences. The whole move from forma2, including the job queue and the database, is in the [upgrade guide](https://forma.ylam.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server).
 
 - One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
 - The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
@@ -21,6 +21,7 @@ The chart keeps forma2's values, Secrets and resource names; these are the diffe
 - Valkey no longer holds the job queue (River keeps it in PostgreSQL), only rate limits and short-lived state. Its sizing is unchanged.
 - With a ServiceMonitor, the worker exports metrics too, through a headless `<name>-worker-metrics` Service the ServiceMonitor also selects.
 - Removed values, which nothing reads any more: `enterprise.enabled`, `enterprise.licenseKey` (every feature is available without a license) and `authzed.systemKey`. The generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
+- With the chart's Envoy gateway (`envoy.enabled`), set `GATEWAY_RATE_LIMITING: "1"` in `deployment.env` so the server leaves the routes the gateway limits to it, as forma2 did; the chart does not set it.
 - `forma.mcpOauthJwksUrl` still renders `MCP_OAUTH_JWKS_URL`; leave it empty to verify MCP tokens against the keys in this release's database.
 
 ## Upgrading the bundled PostgreSQL from 17 to 18

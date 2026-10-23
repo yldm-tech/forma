@@ -3,6 +3,7 @@ package config
 import (
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ShutdownTimeout != 20*time.Second {
 		t.Errorf("ShutdownTimeout = %v, want 20s", cfg.ShutdownTimeout)
 	}
-	if cfg.LogLevel != slog.LevelInfo {
+	if cfg.LogLevel.Level() != slog.LevelInfo {
 		t.Errorf("LogLevel = %v, want info", cfg.LogLevel)
 	}
 	if cfg.WebAppURL.Host != "localhost:3000" {
@@ -51,8 +52,11 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.TrustedProxyHopCount != 1 {
 		t.Errorf("TrustedProxyHopCount = %d, want 1", cfg.TrustedProxyHopCount)
 	}
-	if cfg.RateLimitingDisabled {
-		t.Error("RateLimitingDisabled defaults to true, want false")
+	if cfg.RateLimitingDisabled || cfg.GatewayRateLimiting {
+		t.Errorf("RateLimitingDisabled %v, GatewayRateLimiting %v; want both off by default", cfg.RateLimitingDisabled, cfg.GatewayRateLimiting)
+	}
+	if cfg.WorkerConcurrency != 0 || len(cfg.Warnings) != 0 {
+		t.Errorf("WorkerConcurrency %d, warnings %q; want 0 and none", cfg.WorkerConcurrency, cfg.Warnings)
 	}
 	if !cfg.AuditLogEnabled || cfg.AuditLogGetUserIP {
 		t.Errorf("audit flags = %v/%v, want enabled without the user IP", cfg.AuditLogEnabled, cfg.AuditLogGetUserIP)
@@ -142,13 +146,14 @@ func TestLoadFlags(t *testing.T) {
 	t.Setenv("INVITE_DISABLED", "1")
 	t.Setenv("INVITE_RATE_LIMIT_PER_24_HOURS", "7")
 	t.Setenv("SIGNUP_DOMAIN_CHECK_ON_INVITES", "1")
+	t.Setenv("GATEWAY_RATE_LIMITING", "1")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if !cfg.RateLimitingDisabled || cfg.SMTPAuthenticated || !cfg.SMTPConfigured() {
-		t.Fatalf("cfg = %+v, want rate limiting disabled, SMTP unauthenticated and configured", cfg)
+	if !cfg.RateLimitingDisabled || cfg.SMTPAuthenticated || !cfg.SMTPConfigured() || !cfg.GatewayRateLimiting {
+		t.Fatalf("cfg = %+v, want rate limiting disabled, a gateway declared, SMTP unauthenticated and configured", cfg)
 	}
 	if !cfg.InviteDisabled || cfg.InviteRateLimitPer24Hours != 7 || !cfg.SignupDomainCheckOnInvites {
 		t.Fatalf("invites disabled %v, limit %d, domain check on invites %v; want true, 7, true", cfg.InviteDisabled, cfg.InviteRateLimitPer24Hours, cfg.SignupDomainCheckOnInvites)
@@ -173,6 +178,12 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"zero pool size":           {"DATABASE_MAX_OPEN_CONNS", "0"},
 		"unparseable duration":     {"SHUTDOWN_TIMEOUT", "soon"},
 		"unparseable level":        {"LOG_LEVEL", "loud"},
+		"level with offset":        {"LOG_LEVEL", "info+2"},
+		"pino trace level":         {"LOG_LEVEL", "trace"},
+		"gateway flag spelled":     {"GATEWAY_RATE_LIMITING", "true"},
+		"zero bullmq concurrency":  {"BULLMQ_WORKER_CONCURRENCY", "0"},
+		"bullmq count text":        {"BULLMQ_WORKER_COUNT", "two"},
+		"prisma schema":            {"DATABASE_URL", "postgres://forma@db/forma?schema=forma"},
 		"hop count too high":       {"TRUSTED_PROXY_HOP_COUNT", "11"},
 		"negative hop count":       {"TRUSTED_PROXY_HOP_COUNT", "-1"},
 		"flag spelled true":        {"RATE_LIMITING_DISABLED", "true"},
@@ -546,5 +557,133 @@ func TestTelemetryConfig(t *testing.T) {
 				t.Errorf("%s=%q was accepted", name, value)
 			}
 		})
+	}
+}
+
+// LOG_LEVEL takes forma2's level names: fatal keeps only what is above error, which is audit events alone, and audit keeps audit events only.
+func TestLoadLogLevels(t *testing.T) {
+	cases := map[string]slog.Level{
+		"debug": slog.LevelDebug,
+		"info":  slog.LevelInfo,
+		"warn":  slog.LevelWarn,
+		"error": slog.LevelError,
+		"fatal": LevelFatal,
+		"audit": LevelAudit,
+		"WARN":  slog.LevelWarn,
+	}
+	for value, want := range cases {
+		t.Run(value, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv("LOG_LEVEL", value)
+			for name, load := range map[string]func() (Config, error){"Load": Load, "LoadForMigrate": LoadForMigrate, "LoadForAuthz": LoadForAuthz} {
+				cfg, err := load()
+				if err != nil {
+					t.Fatalf("%s: %v", name, err)
+				}
+				if cfg.LogLevel.Level() != want {
+					t.Fatalf("%s: LogLevel = %v, want %v", name, cfg.LogLevel.Level(), want)
+				}
+			}
+		})
+	}
+	if LevelFatal <= slog.LevelError || LevelAudit <= LevelFatal {
+		t.Fatalf("levels out of order: error %d, fatal %d, audit %d", slog.LevelError, LevelFatal, LevelAudit)
+	}
+	setRequired(t)
+	t.Setenv("LOG_LEVEL", "verbose")
+	for name, load := range map[string]func() (Config, error){"LoadForMigrate": LoadForMigrate, "LoadForAuthz": LoadForAuthz} {
+		if _, err := load(); err == nil {
+			t.Errorf("%s accepted LOG_LEVEL=verbose", name)
+		}
+	}
+}
+
+// forma2 ran BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each; an instance that still sets them gets the same parallelism and a deprecation warning, unless WORKER_CONCURRENCY says otherwise.
+func TestLoadWorkerConcurrencyFromBullMQ(t *testing.T) {
+	cases := []struct {
+		name        string
+		env         map[string]string
+		want        int
+		wantWarning string
+	}{
+		{"neither style", map[string]string{}, 0, ""},
+		{"worker concurrency", map[string]string{"WORKER_CONCURRENCY": "6"}, 6, ""},
+		{"both bullmq variables", map[string]string{"BULLMQ_WORKER_CONCURRENCY": "3", "BULLMQ_WORKER_COUNT": "2"}, 6, "set WORKER_CONCURRENCY=6 instead"},
+		{"bullmq concurrency alone", map[string]string{"BULLMQ_WORKER_CONCURRENCY": "5"}, 5, "set WORKER_CONCURRENCY=5 instead"},
+		{"bullmq count alone", map[string]string{"BULLMQ_WORKER_COUNT": "3"}, 3 * DefaultWorkerConcurrency(), "deprecated"},
+		{"worker concurrency wins", map[string]string{"WORKER_CONCURRENCY": "2", "BULLMQ_WORKER_CONCURRENCY": "8", "BULLMQ_WORKER_COUNT": "4"}, 2, "ignored because WORKER_CONCURRENCY is set"},
+		{"empty bullmq values are unset", map[string]string{"BULLMQ_WORKER_CONCURRENCY": "", "BULLMQ_WORKER_COUNT": ""}, 0, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			setRequired(t)
+			for _, k := range []string{"WORKER_CONCURRENCY", "BULLMQ_WORKER_CONCURRENCY", "BULLMQ_WORKER_COUNT"} {
+				unsetEnv(t, k)
+			}
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if cfg.WorkerConcurrency != tc.want {
+				t.Errorf("WorkerConcurrency = %d, want %d", cfg.WorkerConcurrency, tc.want)
+			}
+			switch {
+			case tc.wantWarning == "" && len(cfg.Warnings) != 0:
+				t.Errorf("warnings %q, want none", cfg.Warnings)
+			case tc.wantWarning != "" && (len(cfg.Warnings) != 1 || !strings.Contains(cfg.Warnings[0], tc.wantWarning)):
+				t.Errorf("warnings %q, want one containing %q", cfg.Warnings, tc.wantWarning)
+			}
+		})
+	}
+}
+
+// forma2's connection URLs carried Prisma's ?schema=public, which PostgreSQL would reject as a run-time parameter.
+func TestDatabaseURLDropsPrismaSchemaPublic(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"postgresql://postgres:secret@postgres:5432/forma?schema=public", "postgresql://postgres:secret@postgres:5432/forma"},
+		{"postgres://u:p%40ss@db/forma?sslmode=require&schema=public&connect_timeout=5", "postgres://u:p%40ss@db/forma?sslmode=require&connect_timeout=5"},
+		{"postgres://db/forma?SCHEMA=public&sslmode=disable", "postgres://db/forma?sslmode=disable"},
+		{"POSTGRESQL://db/forma?Schema=public", "POSTGRESQL://db/forma"},
+		{"postgres://db/forma?sslmode=disable", "postgres://db/forma?sslmode=disable"},
+		{"postgres://db/forma", "postgres://db/forma"},
+		{"postgres://db/forma?search_path=public&application_name=forma", "postgres://db/forma?search_path=public&application_name=forma"},
+		{"host=db dbname=forma schema=other", "host=db dbname=forma schema=other"},
+	}
+	for _, tc := range cases {
+		got, err := databaseURL("DATABASE_URL", tc.in)
+		if err != nil || got != tc.want {
+			t.Errorf("databaseURL(%q) = %q, %v; want %q", tc.in, got, err, tc.want)
+		}
+	}
+	for _, in := range []string{"postgres://db/forma?schema=forma", "postgres://db/forma?schema=Public", "postgres://db/forma?sslmode=disable&schema="} {
+		_, err := databaseURL("MIGRATE_DATABASE_URL", in)
+		if err == nil || !strings.Contains(err.Error(), "MIGRATE_DATABASE_URL") || !strings.Contains(err.Error(), "Prisma's schema parameter") {
+			t.Errorf("databaseURL(%q) error = %v, want one naming the variable and Prisma's schema parameter", in, err)
+		}
+	}
+}
+
+func TestLoadersDropPrismaSchemaPublic(t *testing.T) {
+	setRequired(t)
+	t.Setenv("DATABASE_URL", "postgresql://postgres:secret@postgres:5432/forma?schema=public")
+	t.Setenv("AUTHZED_ENDPOINT", "spicedb:50051")
+	want := "postgresql://postgres:secret@postgres:5432/forma"
+	for name, load := range map[string]func() (Config, error){"Load": Load, "LoadForMigrate": LoadForMigrate, "LoadForAuthz": LoadForAuthz} {
+		cfg, err := load()
+		if err != nil || cfg.DatabaseURL != want {
+			t.Errorf("%s: DatabaseURL %q, err %v; want %q", name, cfg.DatabaseURL, err, want)
+		}
+	}
+
+	t.Setenv("MIGRATE_DATABASE_URL", "postgresql://owner@postgres/forma?sslmode=disable&schema=public")
+	if cfg, err := LoadForMigrate(); err != nil || cfg.DatabaseURL != "postgresql://owner@postgres/forma?sslmode=disable" {
+		t.Errorf("LoadForMigrate: DatabaseURL %q, err %v", cfg.DatabaseURL, err)
+	}
+	t.Setenv("MIGRATE_DATABASE_URL", "postgresql://owner@postgres/forma?schema=tenant")
+	if _, err := LoadForMigrate(); err == nil || !strings.Contains(err.Error(), "MIGRATE_DATABASE_URL") {
+		t.Errorf("LoadForMigrate accepted another schema: %v", err)
 	}
 }

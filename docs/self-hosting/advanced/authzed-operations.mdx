@@ -9,10 +9,7 @@ authorization. PostgreSQL remains the source of truth. Forma projects membership
 API-key changes into SpiceDB after their PostgreSQL transaction commits.
 
 <Note>
-  Forma v6 makes SpiceDB the sole authorization decision engine and has no runtime legacy fallback.
-  PostgreSQL remains the relationship source of truth, with durable outbox delivery into SpiceDB. Existing
-  installations must complete the release-matched preparation and read-only gate before upgrading; a healthy
-  connection alone is not sufficient.
+  SpiceDB is the sole authorization decision engine and there is no runtime fallback. PostgreSQL remains the relationship source of truth, with durable outbox delivery into SpiceDB. The operator commands are `forma authz ...`, part of the server binary; forma2's `forma-authzed` executable and its `health` and `upgrade prepare|check` commands no longer exist (see [Move from forma2's AuthZed tooling](#move-from-forma2s-authzed-tooling)).
 </Note>
 
 <Warning>
@@ -30,8 +27,7 @@ API-key changes into SpiceDB after their PostgreSQL transaction commits.
 | Forma projection layer  | Copies committed PostgreSQL authorization changes into SpiceDB                  |
 | AuthZed operator commands    | Check health and schema state, then audit or repair relationship drift          |
 
-Forma writes projection intent in the same PostgreSQL transaction as the source mutation. BullMQ wakes the
-delivery worker, but PostgreSQL is the durable queue. A failed delivery is retried idempotently and a stale or
+Forma writes projection intent in the same PostgreSQL transaction as the source mutation, through database triggers; `forma worker` delivers it to SpiceDB every five seconds. PostgreSQL is the durable queue. A failed delivery is retried idempotently and a stale or
 dead-lettered revocation makes protected operations fail closed. A six-hour audit repairs attributable missing
 or mismatched edges; operators must investigate state that cannot be repaired safely.
 
@@ -45,11 +41,10 @@ There is no browser health or administration page. Use the release-matched opera
 
 | Variable                    | Purpose                                                             | Default                                             |
 | --------------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
-| `AUTHZED_ENABLED`           | Enables the required AuthZed authorization engine                    | `true` in bundled Docker and Helm                    |
+| `AUTHZED_ENABLED`           | Enables the required AuthZed authorization engine                    | `1` in bundled Docker and Helm                       |
 | `AUTHZED_ENDPOINT`          | Bare gRPC `host:port` endpoint                                      | `spicedb:50051` in Docker                           |
 | `AUTHZED_TOKEN`             | SpiceDB preshared authentication token                              | No default                                          |
-| `AUTHZED_SYSTEM_KEY`        | Stable Forma authorization namespace identifier                | `forma`                                        |
-| `AUTHZED_INSECURE`          | Uses plaintext gRPC when enabled                                    | `true` for bundled Docker and chart-managed SpiceDB |
+| `AUTHZED_INSECURE`          | Uses plaintext gRPC when enabled                                    | `1` for bundled Docker and chart-managed SpiceDB    |
 | `AUTHZED_CONSISTENCY`       | Authorization read consistency                                      | `fully_consistent`                                  |
 | `AUTHZED_DATABASE_PASSWORD` | Password for Docker's dedicated `spicedb` PostgreSQL role           | No default                                          |
 | `SPICEDB_IMAGE_REF`         | Reviewed override used by both Docker migration and server services | `authzed/spicedb:v1.52.0`                           |
@@ -69,8 +64,7 @@ openssl rand -hex 32 # AUTHZED_TOKEN
 openssl rand -hex 32 # AUTHZED_DATABASE_PASSWORD for bundled Docker
 ```
 
-Store them in a mode-`0600` `.env`, Docker secret, Kubernetes Secret, or external secret manager. Never put
-the token in a `NEXT_PUBLIC_*` variable, command output, documentation, or source control.
+Store them in a mode-`0600` `.env`, Docker secret, Kubernetes Secret, or external secret manager. Never put the token in command output, documentation, or source control. forma2's `AUTHZED_SYSTEM_KEY` is no longer read.
 
 See [Environment Variables](/self-hosting/configuration/environment-variables#authzed--spicedb-authorization)
 for the complete validation contract.
@@ -89,22 +83,15 @@ spicedb + forma-migrate → authzed-initialize
 Database bootstrap and datastore migration are idempotent. Migration and serving always use the same
 `SPICEDB_IMAGE_REF`. SpiceDB is reachable only as `spicedb:50051` inside the Compose network.
 
-`authzed-initialize` is an idempotent, one-shot service that prepares fresh installations. Forma does not
-depend on it, so application startup and `/health` remain independent from SpiceDB. The `authzed-ops` profile is
-a short-lived operator container using the same release image and never starts during a normal Compose run.
+`authzed-initialize` is an idempotent, one-shot service that runs `forma authz schema apply` after the migrations: it writes the release's schema into an empty SpiceDB, does nothing when the schema is already there, and leaves a SpiceDB holding a different schema alone (apply it yourself with the digest `schema check` prints). Forma does not depend on it, so application startup and `/health` remain independent from SpiceDB. The `authzed-ops` profile is a short-lived operator container running `forma authz` from the same release image; it never starts during a normal Compose run.
 
 ```bash
-docker compose --profile authzed-ops run --rm authzed-ops health
 docker compose --profile authzed-ops run --rm authzed-ops schema check
 docker compose --profile authzed-ops run --rm authzed-ops backfill
-docker compose --profile authzed-ops run --rm authzed-ops upgrade check
+docker compose --profile authzed-ops run --rm authzed-ops outbox status
 ```
 
-Fresh one-click installations generate `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD`, prepare the graph, and
-run the read-only gate before reporting success. The update command preserves customized Compose files. An older
-installation must merge the released AuthZed services and environment manually, then explicitly acknowledge the
-v6 migration. The updater refuses to stop the existing application until `upgrade prepare` and `upgrade check`
-succeed.
+Every command prints one JSON object; exit `0` is clean, `2` drift, `1` failed. Fresh one-click installations generate `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD`. `./forma.sh update` keeps both, and on a forma2 installation moves its settings to the Go stack (see the [upgrade guide](/self-hosting/advanced/migration#forma2-to-the-go-server)).
 
 <Warning>
   `docker compose down` preserves PostgreSQL data. `docker compose down -v` deletes the volume containing both
@@ -201,55 +188,32 @@ authzed:
     existingSecret: forma-authzed
 ```
 
-AuthZed and `fully_consistent` authorization are enabled by default. The operator runs SpiceDB datastore
-migrations. A fresh Helm installation runs a release-matched, aggregate-only initialization Job after the
-datastore and Forma migrations become available. Application startup and probes do not depend on this Job.
-Existing releases never run it as an upgrade hook; they must use the explicit upgrade commands below.
+AuthZed and `fully_consistent` authorization are enabled by default. The operator runs SpiceDB datastore migrations. The chart's AuthZed initialization Job runs `forma authz` steps after the datastore and Forma migrations become available. Application startup and probes do not depend on this Job.
 
-The release notes print the exact deployment command. With the default release:
+With the default release, run the operator commands in the application pod. The image is distroless, with no shell, so call the binary directly:
 
 ```bash
-kubectl exec -n forma deployment/forma -- forma-authzed health
-kubectl exec -n forma deployment/forma -- forma-authzed schema check
-kubectl exec -n forma deployment/forma -- forma-authzed backfill
-kubectl exec -n forma deployment/forma -- forma-authzed upgrade check
+kubectl exec -n forma deployment/forma -- /usr/local/bin/forma authz schema check
+kubectl exec -n forma deployment/forma -- /usr/local/bin/forma authz backfill
+kubectl exec -n forma deployment/forma -- /usr/local/bin/forma authz outbox status
 ```
 
-Replace the namespace and deployment name if you override them. These commands execute inside the existing
-application pod and do not require exposing PostgreSQL or SpiceDB.
+Replace the namespace and deployment name if you override them. These commands execute inside the existing application pod and do not require exposing PostgreSQL or SpiceDB.
 
-## Upgrade an existing installation to v6
+## Move from forma2's AuthZed tooling
 
-Forma v6 has no legacy authorization fallback. Do not deploy it over an installation whose graph has not
-been proven complete. First upgrade to the bridge-compatible v5 release named in the v6 release notes, enable
-durable projection, and take coordinated Forma and SpiceDB backups.
+forma2 shipped a separate `forma-authzed` executable. Its commands map to `forma authz` as follows; `forma authz help` lists them.
 
-Run the release-matched v6 image as the operator container or executable while the bridge release still serves
-traffic:
+| forma2 | Go server |
+| --- | --- |
+| `forma-authzed health` | `forma authz schema check`: it authenticates and reads the schema, so it fails the same way on a wrong token or an unreachable SpiceDB. |
+| `forma-authzed schema check`, `schema apply [--expected-current-digest ...]` | `forma authz schema check`, `schema apply [--expected-current-digest=sha256:...]` |
+| `forma-authzed backfill [...]` | `forma authz backfill [...]`, same flags |
+| `forma-authzed outbox status`, `drain`, `replay` | `forma authz outbox status`, `drain`, `replay` |
+| `forma-authzed upgrade prepare` | `forma authz schema apply`, then `forma authz outbox drain` and `forma authz backfill --apply` |
+| `forma-authzed upgrade check` | `forma authz schema check`, `forma authz outbox status` and a dry-run `forma authz backfill`, each exiting `0` |
 
-```bash
-forma-authzed upgrade prepare
-forma-authzed upgrade check
-```
-
-`prepare` verifies configuration and datastore readiness, applies an empty or already-matching canonical schema,
-drains the outbox, reconciles attributable relationships, and runs a final audit. If the remote schema is
-non-empty and differs, first run `schema check`, review the diff and backup, then pass its exact `remoteDigest`:
-
-```bash
-forma-authzed upgrade prepare \
-  --expected-current-digest sha256:<reviewed-remote-digest>
-```
-
-`check` is read-only. It exits `0` only when AuthZed is enabled with `fully_consistent`, authenticated health is
-good, the canonical schema matches, the outbox has no pending or dead-lettered work, no revocation has crossed a
-warning threshold, and a complete dry-run relationship audit is clean. Exit `2` means the release remains
-blocked; exit `1` means configuration or an operation failed. Output contains only aggregate counters and stable
-error codes.
-
-For one-click, set `FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED=true` in `.env` only after those commands pass.
-For Helm, set `authzed.migrationAcknowledged=true` only in the v6 upgrade values. The chart refuses an upgrade
-without it and refuses `authzed.enabled=false` or consistency weaker than `fully_consistent`.
+`FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED` is no longer read: `./forma.sh update` checks the installation itself. The Helm chart still refuses an upgrade until `authzed.migrationAcknowledged=true` says that preparation is done.
 
 ## Activate or upgrade SpiceDB
 
@@ -264,32 +228,23 @@ Use the following sequence for a new deployment, schema change, SpiceDB version 
     Deploy the reviewed SpiceDB version and wait for `spicedb datastore migrate head` to complete before the
     new SpiceDB server starts. Never run migration and serving from different image references.
   </Step>
-  <Step title="Check connectivity">
+  <Step title="Check connectivity and the schema">
 
     ```bash
-    forma-authzed health
+    forma authz schema check
     ```
 
-    A healthy command exits `0`. Disabled or unhealthy results exit `1`.
-
-  </Step>
-  <Step title="Check and apply the schema">
+    A match exits `0`, drift exits `2`, and an operational failure (SpiceDB unreachable, the token rejected) exits `1`. Initialize an empty SpiceDB with:
 
     ```bash
-    forma-authzed schema check
-    ```
-
-    A match exits `0`, drift exits `2`, and an operational failure exits `1`. Initialize an empty SpiceDB with:
-
-    ```bash
-    forma-authzed schema apply
+    forma authz schema apply
     ```
 
     Replacing a non-empty schema requires the `remoteDigest` returned by the immediately preceding check:
 
     ```bash
-    forma-authzed schema apply \
-      --expected-current-digest sha256:<remote-digest>
+    forma authz schema apply \
+      --expected-current-digest=sha256:<remote-digest>
     ```
 
     Ensure no other schema writer runs between check and apply. SpiceDB does not provide an atomic schema
@@ -299,41 +254,28 @@ Use the following sequence for a new deployment, schema change, SpiceDB version 
   <Step title="Audit and reconcile relationships">
 
     ```bash
-    forma-authzed backfill
-    forma-authzed backfill --apply
+    forma authz backfill
+    forma authz backfill --apply
     ```
 
     Require a clean result before relying on SpiceDB authorization decisions.
 
   </Step>
-  <Step title="Run the release gate">
+  <Step title="Check delivery">
 
     ```bash
-    forma-authzed upgrade check
+    forma authz outbox status
     ```
 
-    Do not start a direct-authority release unless this exits `0`.
+    Exit `0` means nothing is pending past its threshold and nothing is dead-lettered.
 
   </Step>
   <Step title="Restart and observe">
-    Restart Forma after environment changes. Recheck AuthZed health, schema status, projection metrics,
-    retry metrics, and SpiceDB logs.
+    Restart Forma after environment changes. Recheck the schema, outbox status, projection metrics, retry metrics, and SpiceDB logs.
   </Step>
 </Steps>
 
-The Docker examples use the `docker compose --profile authzed-ops run --rm authzed-ops` prefix. Kubernetes
-examples use `kubectl exec ... --`. The command names and arguments after those prefixes are identical.
-
-### Roll back a v6 upgrade
-
-Keep the exact bridge-compatible v5 image, Compose or Helm values, application database backup, SpiceDB backup,
-and schema digest until v6 acceptance is complete. Rollback means restoring that bridge image and its matching
-configuration; do not disable AuthZed inside a v6 image. Verify outbox delivery and a clean audit before resuming
-mutations. If either datastore was restored, use coordinated restore points or rebuild SpiceDB from PostgreSQL.
-
-The moving `latest` tag remains on the bridge-compatible v5 release for at least 30 days after v6 stable is
-published. Existing installations must select v6 explicitly during that window; this prevents an unattended
-image pull from bypassing the migration gate.
+The commands are written as `forma authz ...`. With Docker Compose, run them as `docker compose --profile authzed-ops run --rm authzed-ops <arguments>` (the service's entrypoint is `forma authz`); in Kubernetes, as `kubectl exec -n forma deployment/forma -- /usr/local/bin/forma authz <arguments>`. The arguments are identical.
 
 ## Back up and restore
 
@@ -363,7 +305,7 @@ There are two supported recovery approaches:
 2. Restore Forma PostgreSQL, initialize an empty compatible SpiceDB datastore, apply the release-matched
    schema, and rebuild the relationship graph with a full applying backfill.
 
-After either restore, complete datastore migrations, check health, check the schema, and run a full
+After either restore, complete datastore migrations, check the schema, and run a full
 relationship audit. Do not rely on SpiceDB-backed authorization until the audit is clean. An older SpiceDB backup
 can be repaired from PostgreSQL; a SpiceDB database restored without its matching Forma source must never
 be assumed current.
@@ -374,16 +316,15 @@ procedure.
 
 ## Inspect and drain durable delivery
 
-The v6 bridge writes projection intent in the same PostgreSQL transaction as an authorization source change.
-BullMQ wakes the delivery worker, but PostgreSQL remains the durable queue. Deletes, and updates that are not
+Forma writes projection intent in the same PostgreSQL transaction as an authorization source change, and `forma worker` delivers it every five seconds; PostgreSQL is the durable queue. Deletes, and updates that are not
 provably grants, are treated as revocations; direct authority fails closed when a revocation remains unresolved
 for 60 seconds or enters dead letter.
 
 ```bash
-forma-authzed outbox status
-forma-authzed outbox drain
-forma-authzed outbox drain --max-batches=500
-forma-authzed outbox replay
+forma authz outbox status
+forma authz outbox drain
+forma authz outbox drain --max-batches=500
+forma authz outbox replay
 ```
 
 `status` prints aggregate queue counts and ages only. It exits `0` when healthy, `2` at the 15-second warning or
@@ -424,7 +365,7 @@ record at all. Treat the result as sensitive operational data.
   none.
 
 The cursor is an intentional operational identifier, not an oversight. An interrupted sweep resumes with
-`--after-organization-id=<cuid>` taken straight from it, so an opaque token would have to be stored and mapped
+`--after-organization-id=<id>` taken straight from it, so an opaque token would have to be stored and mapped
 back somewhere to stay useful. It is also the one field that can name an organization with nothing wrong: every
 other identifier here comes from a record or relationship that drifted or failed, while the cursor is simply
 wherever the sweep stopped. Redact it on the same terms as the rest.
@@ -444,12 +385,12 @@ it while leaving its existing mode untouched:
 ```bash
 umask 077
 rm -f backfill.json
-forma-authzed backfill > backfill.json
+forma authz backfill > backfill.json
 ```
 
 Redirection does not keep identifiers out of your shell history, which records the command rather than its
 output — and the resume invocation is the one to watch there, because the cursor is an argument:
-`--after-organization-id=<cuid>` is recorded verbatim. On a shared or session-recorded host, read the cursor
+`--after-organization-id=<id>` is recorded verbatim. On a shared or session-recorded host, read the cursor
 from the saved result instead of retyping it.
 
 ### Interpret exit codes
@@ -463,9 +404,9 @@ from the saved result instead of retyping it.
 ### Start with a dry run
 
 ```bash
-forma-authzed backfill
-forma-authzed backfill --organization-id=<organization-id>
-forma-authzed backfill --workspace-id=<workspace-id>
+forma authz backfill
+forma authz backfill --organization-id=<organization-id>
+forma authz backfill --workspace-id=<workspace-id>
 ```
 
 An organization or workspace run limits the repair blast radius, but reports
@@ -475,9 +416,9 @@ no longer exist in PostgreSQL or parent edges pointing from another tenant's res
 ### Reconcile PostgreSQL state
 
 ```bash
-forma-authzed backfill --apply
-forma-authzed backfill --apply --organization-id=<organization-id>
-forma-authzed backfill --apply --workspace-id=<workspace-id>
+forma authz backfill --apply
+forma authz backfill --apply --organization-id=<organization-id>
+forma authz backfill --apply --workspace-id=<workspace-id>
 ```
 
 Applying fixes missing and incorrect current-state relationships. It does not remove relationships with no
@@ -487,7 +428,7 @@ If a sweep is interrupted, resume after the reported `lastOrganizationId`. A `nu
 reached no organization, so there is nothing to resume after — rerun the sweep from the start instead:
 
 ```bash
-forma-authzed backfill --apply --after-organization-id=<last-organization-id>
+forma authz backfill --apply --after-organization-id=<last-organization-id>
 ```
 
 The cursor advances past every organization the sweep reached, and an organization-specific failure does not
@@ -495,7 +436,7 @@ stop the sweep — so each failure carrying a non-empty `organizationId` sits be
 will not retry it. Rerun those explicitly, in addition to resuming from the cursor:
 
 ```bash
-forma-authzed backfill --apply --organization-id=<failed-organization-id>
+forma authz backfill --apply --organization-id=<failed-organization-id>
 ```
 
 A failure with an **empty** `organizationId` is not one of those: the read that would have identified the
@@ -507,14 +448,13 @@ rerun the sweep rather than a single organization.
 Pruning is the only mode that removes relationships observed only in SpiceDB. It requires every safeguard:
 
 ```bash
-forma-authzed backfill --apply --prune --confirm-prune \
+forma authz backfill --apply --prune --confirm-prune \
   --scope=all \
   --expected-endpoint=<configured-host:port>
 ```
 
 Use `--organization-id` or `--workspace-id` instead of `--scope=all` when the known problem permits a narrower
-repair. A complete prune requires a SpiceDB datastore dedicated to one Forma deployment because object
-IDs are not currently namespaced by `AUTHZED_SYSTEM_KEY`.
+repair. A complete prune requires a SpiceDB datastore dedicated to one Forma deployment, because object IDs are not namespaced per deployment.
 
 The default destructive cap is 500 orphaned resources. `--max-prune=<number>` may lower but never raise it. If
 the run observes more than the cap, it deletes nothing. Investigate a wrong endpoint, wrong database, partial
@@ -544,13 +484,13 @@ restore, or shared SpiceDB before proceeding.
 | Result or symptom                                                                        | Meaning                                               | Operator response                                                                           |
 | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `authzed_disabled`                                                                       | The client is intentionally disabled                  | Confirm whether this deployment should project relationships, then configure and restart it |
-| `authzed_unauthenticated` or `authzed_permission_denied` during health/schema operations | Token rejected or lacks the required API capability   | Verify the secret reference and coordinated token configuration without printing the token  |
+| `authzed_unauthenticated` or `authzed_permission_denied` during schema operations        | Token rejected or lacks the required API capability   | Verify the secret reference and coordinated token configuration without printing the token  |
 | `authzed_timeout`                                                                        | An attempt exceeded its deadline                      | Check network latency, datastore saturation, and SpiceDB load                               |
 | `authzed_overloaded`                                                                     | SpiceDB reported resource exhaustion                  | Inspect datastore connections, dispatch, cache, CPU, and memory                             |
-| `authzed_unavailable`                                                                    | SpiceDB or its network path is unavailable            | Restore the service, verify health, then run a full relationship audit                      |
+| `authzed_unavailable`                                                                    | SpiceDB or its network path is unavailable            | Restore the service, check the schema, then run a full relationship audit                   |
 | `authzed_internal`                                                                       | Unexpected client or runtime failure                  | Check sanitized Forma and SpiceDB logs and the deployed version                        |
 | Schema status `drifted`                                                                  | Connected schema differs from this Forma release | Back up first, review the diff counts and digest, then perform a guarded schema apply       |
-| Projection status `failed`                                                               | A fast-path or outbox reconciliation attempt failed   | Restore connectivity, inspect outbox status, and drain or replay durable delivery             |
+| Projection status `failed`                                                               | An outbox delivery or reconciliation attempt failed   | Restore connectivity, inspect outbox status, and drain or replay durable delivery             |
 | `authzed_projection_stale`                                                               | A revocation exceeded 60 seconds or entered dead letter | Investigate immediately, restore delivery, replay, drain, and require a clean audit          |
 
 Forma AuthZed logs use `component="authzed"`, stable `errorCode` values, and bounded fields such as
@@ -564,10 +504,9 @@ signals are:
 
 | Metric                                               | What it measures                                                            |
 | ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| `forma_authzed_projection_total`                | Projected, failed, and disabled projection outcomes                         |
-| `forma_authzed_projection_duration_seconds`     | Request-path projection latency                                             |
 | `forma_authzed_request_failures_total`          | AuthZed requests that exhausted their retry budget                          |
 | `forma_authzed_request_retries_total`           | Retry attempts caused by transient failures                                 |
+| `forma_authzed_request_circuit_state`, `forma_authzed_request_short_circuits_total` | The client's circuit breaker state, and requests it refused while open |
 | `forma_authzed_authorization_decisions_total`   | Authoritative allow, deny, and operational-error outcomes                    |
 | `forma_authzed_authorization_decision_duration_seconds` | End-to-end authoritative authorization latency                      |
 | `forma_authzed_authorization_checks_per_request` | Central authorization operations per authenticated request                  |
@@ -576,23 +515,23 @@ signals are:
 | `forma_authzed_projection_revocation_delivery_duration_seconds` | Commit-to-SpiceDB revocation propagation time                     |
 | `forma_authzed_projection_outbox_status`        | Point-in-time pending, dead-letter, warning, and critical counts             |
 | `forma_authzed_projection_outbox_oldest_pending_age_seconds` | Age of the oldest pending event                                  |
-| `forma_authzed_reconciliation_audit_total`      | Scheduled audit outcomes                                                     |
+| `forma_authzed_reconciliation_audit_total`, `forma_authzed_reconciliation_duration_seconds`, `forma_authzed_reconciliation_failure_total` | Scheduled audit outcomes, duration and failures |
 | `forma_authzed_reconciliation_drift_total`      | Attributable drift and failures observed by scheduled audits                 |
 | `forma_authzed_reconciliation_repair_total`     | Repaired and failed attributable relationship repair results                 |
 
 Starting PromQL checks:
 
 ```promql
-# Projection failures introduce possible drift.
-sum(rate(forma_authzed_projection_total{status="failed"}[5m]))
+# Failed outbox deliveries introduce possible drift.
+sum(rate(forma_authzed_projection_outbox_delivery_total{status="failed"}[5m]))
 
 # Terminal unavailability errors.
 sum(rate(forma_authzed_request_failures_total{code="authzed_unavailable"}[5m]))
 
-# Projection latency p95.
+# Outbox delivery latency p95.
 histogram_quantile(
   0.95,
-  sum by (le) (rate(forma_authzed_projection_duration_seconds_bucket[5m]))
+  sum by (le) (rate(forma_authzed_projection_outbox_delivery_duration_seconds_bucket[5m]))
 )
 
 # Direct-authority operational-error rate. Product denials remain a separate outcome.
@@ -628,7 +567,7 @@ connection budget across replicas and their read/write pools.
 ## Use the incident checklist
 
 1. Confirm Forma `/health` independently.
-2. Run `forma-authzed health`.
+2. Run `forma authz schema check`.
 3. Check SpiceDB pods or containers and the last datastore migration.
 4. Check Forma projection failures, AuthZed terminal errors, retries, and latency.
 5. Restore SpiceDB or its datastore without changing authorization data manually.

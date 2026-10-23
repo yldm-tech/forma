@@ -6,51 +6,29 @@ icon: "user"
 
 ## Overview
 
-In self-hosted Forma, user management and authentication can be customized using environment variables. By default, self-hosted instances have user signup disabled, and only organization owners or admins can invite new users. The behavior of the authentication and invitation flow can be further controlled using the following environment variables:
+A self-hosted instance has no public sign-up. With email and password, it admits its first user, who owns the instance, and afterwards only people with an invitation from an organization owner or manager (or the roles `USER_MANAGEMENT_MINIMUM_ROLE` allows).
 
-- `AUTH_SKIP_INVITE_FOR_SSO`
-- `AUTH_SSO_DEFAULT_TEAM_ID`
+Single sign-on is different: whoever the identity provider lets through gets an account on their first sign-in, without an invitation, because the identity provider decides who may sign in. Configure only providers whose users should reach the instance.
 
-## License Requirement for Role Management and SSO Behavior
+## Where new SSO users land
 
-<Note>
-  To control advanced role management features and environment-based SSO behavior, your self-hosted Forma
-  instance must have a valid enterprise license.
-</Note>
+| Variable | Effect |
+| --- | --- |
+| `AUTH_SSO_DEFAULT_ORGANIZATION_ID` | Every new SSO user joins this organization. It is created on the first such sign-up, whose user becomes its owner. An organization UUID, or the cuid2 id forma2 knew it by. |
+| `AUTH_SSO_DEFAULT_ORGANIZATION_ROLE` | The role of the later SSO sign-ups in it: `owner`, `manager` (the default), `member` or `billing`. |
 
-## Environment Variables
-
-### `AUTH_SKIP_INVITE_FOR_SSO`
-
-- **Type:** Boolean (0 or 1)
-- **Default:** 0 (invite required)
-- **Description:**
-  - When set to `1`, users who sign up via SSO (Single Sign-On) providers (such as Google, Azure AD, SAML, or OIDC) can create an account without requiring an invitation.
-  - When set to `0` (default), all users—including those signing up via SSO—must be invited by an organization owner or admin before they can create an account.
-- **Use case:**
-  - Set this to `1` if you want to allow anyone with access to your SSO provider to join your Forma instance without a manual invite.
-  - Keep it at `0` for stricter access control, where only invited users can join, regardless of SSO.
-
-### `AUTH_SSO_DEFAULT_TEAM_ID`
-
-- **Type:** String (Team ID, a valid cuid)
-- **Default:** None (must be set if you want to use default team assignment)
-- **Description:**
-  - When a new user is invited or signs up (if allowed), they will automatically be added to the team with the ID specified in this variable.
-  - This is useful for onboarding users into a default team, ensuring they have access to relevant Workspaces and resources immediately after joining.
-- **Use case:**
-  - Set this to the ID of your default team to streamline onboarding for new users.
-  - If not set, users will not be automatically assigned to any team upon signup or invite acceptance.
-
-## Example `.env` Configuration
+Without `AUTH_SSO_DEFAULT_ORGANIZATION_ID`, a new SSO user starts without an organization, as in forma2. A user following an invitation link joins the inviting organization either way.
 
 ```env
-# Allow SSO users to join without invite
-AUTH_SKIP_INVITE_FOR_SSO=1
-
-# Automatically assign new users to this team
-AUTH_SSO_DEFAULT_TEAM_ID=team-123
+AUTH_SSO_DEFAULT_ORGANIZATION_ID=0197446e-5b20-7f31-a6c4-3e8d2b7f9a01
+AUTH_SSO_DEFAULT_ORGANIZATION_ROLE=member
 ```
+
+No licence is needed for any of this.
+
+<Note>
+  forma2's `AUTH_SKIP_INVITE_FOR_SSO` and `AUTH_SSO_DEFAULT_TEAM_ID` are not read. forma2 already let SSO users in without an invitation whatever the first said, and the second had no effect; to give new users access to workspaces, add them to a team after they join, or use the default organization above.
+</Note>
 
 Refer to the [Environment Variables documentation](./configuration/environment-variables) for a full list and details.
 
@@ -65,5 +43,5 @@ For more information on SSO setup, see:
 - [SAML SSO](./configuration/auth-sso/saml-sso)
 
 <Note>
-  Forma does not support special characters, such as Cyrillic, in account email addresses to avoid technical, compatibility, and security issues. Additionally, universal support for such addresses is still limited. 
+  Forma does not support special characters, such as Cyrillic, in account email addresses to avoid technical, compatibility, and security issues. Additionally, universal support for such addresses is still limited.
 </Note>

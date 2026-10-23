@@ -10,6 +10,104 @@ icon: "arrow-right"
   not apply to a database created from this fork.
 </Warning>
 
+## forma2 to the Go server
+
+Forma now runs as a Go server instead of forma2's Next.js application. The image keeps its name, `ghcr.io/yldm-tech/forma`, and its versions continue at `0.2.<n>`; `latest` moves to the Go server only after this guide is published. An installation that pulls `latest` (forma2's compose file and one-click installer do) must follow the steps below before it pulls again: forma2's compose file starts its containers with `sh`, `node` and `forma-authzed` entrypoints the new image does not have.
+
+### What changes
+
+- **One distroless image, several processes.** The image holds a single binary, `/usr/local/bin/forma`, on a distroless base running as uid 1001, with no shell, no Node.js and no `forma-authzed`. Its subcommands are the processes: `forma serve` (HTTP on `:3000`), `forma worker` (background jobs), `forma migrate` (schema, then the job queue's tables), `forma start` (the default command: forma2's entrypoint, validating the configuration, migrating unless `SKIP_STARTUP_MIGRATION=true`, then serving with the worker in the same process unless `BULLMQ_WORKER_ENABLED=0`), `forma authz` (SpiceDB operations), `forma wait-for-database`, `forma healthcheck` and `forma version`. Replace `docker exec ... sh -c '...'` and `kubectl exec ... -- node ...` with `forma <command>` or the `postgres` container.
+- **A separate job worker.** The Compose stack runs `forma worker` as the `forma-worker` service and the chart as the `worker` Deployment. See [Job Runner](/self-hosting/configuration/job-runner).
+- **River on PostgreSQL instead of BullMQ on Redis.** Background jobs are queued in PostgreSQL in the transaction of the change that causes them. Valkey keeps rate-limit counters, caches and locks only; jobs still queued in Redis when forma2 stops (webhook and integration deliveries, follow-up emails, workflow runs) are not run by the Go server, so switch in a quiet window.
+- **Sessions live in PostgreSQL** and forma2's sessions are not carried over: everyone signs in again once.
+- **`forma authz` instead of `forma-authzed`**, with the same `schema`, `backfill` and `outbox` commands; `health` and `upgrade prepare|check` map to them as listed in [AuthZed Operations](/self-hosting/advanced/authzed-operations#move-from-forma2s-authzed-tooling).
+- **Configuration** keeps forma2's variable names, with these differences (`./forma.sh update` handles each of them):
+  - `DATABASE_URL` and `MIGRATE_DATABASE_URL` may keep Prisma's `?schema=public`, which is dropped; any other `schema` value fails the start. Remove it when you edit the URL anyway.
+  - `BULLMQ_WORKER_CONCURRENCY` x `BULLMQ_WORKER_COUNT` becomes `WORKER_CONCURRENCY` (they are still honoured, with a deprecation warning, while `WORKER_CONCURRENCY` is unset).
+  - `CRON_SECRET`, `AUTHZED_SYSTEM_KEY`, `ENTERPRISE_LICENSE_KEY`, `OIDC_SIGNING_ALGORITHM`, `AUTH_SKIP_INVITE_FOR_SSO`, `AUTH_SSO_DEFAULT_TEAM_ID`, `BULLMQ_EXTERNAL_WORKER_ENABLED`, `DEBUG` and the other [ignored variables](/self-hosting/configuration/environment-variables#variables-forma2-read-that-the-go-server-ignores) are not read.
+  - A missing required variable or a malformed value stops the process at start-up instead of being ignored. Switches are `1` or `0` (`AUTHZED_ENABLED` and `AUTHZED_INSECURE` also take `true`/`false`).
+  - Keep `ENCRYPTION_KEY` (it opens the two-factor secrets) and `NEXTAUTH_SECRET` / `BETTER_AUTH_SECRET` (they verify the link survey tokens forma2 sent) exactly as they are.
+- **Logs** keep the lowercase `level` labels, `audit` included, but `time` is an RFC 3339 string and `pid`, `hostname` and `name` are gone; `LOG_LEVEL` defaults to `info` where forma2 defaulted to `warn`. See [Monitoring](/self-hosting/setup/monitoring) and [Audit Logging](/self-hosting/advanced/enterprise-features/audit-logging).
+- **Static assets** are under `/assets/*` (fingerprinted) instead of `/_next/static/*`; adjust CDN rules as described in [CDN](/self-hosting/configuration/cdn).
+- **No custom subpath**: `BASE_PATH` has no counterpart; see [Custom Subpath](/self-hosting/configuration/custom-subpath).
+- **PostgreSQL 18 or newer** is required. forma2's compose file already ran PostgreSQL 18; its Helm chart ran 17 (see the chart's [PostgreSQL upgrade](https://github.com/yldm-tech/forma/blob/main/charts/forma/README.md#upgrading-the-bundled-postgresql-from-17-to-18)).
+
+### The database
+
+The Go server keeps its data in a schema of its own, next to forma2's tables in the same database: `forma migrate` creates it, and forma2's data is copied into it by the data migration of the release `latest` moves to. Started on a database where only forma2's tables hold data, the Go server would serve an empty instance whose first sign-up becomes its owner. `./forma.sh update` therefore refuses to start the new stack while forma2's `User` table has rows and the Go server's `users` table has none; with Docker Compose or Helm, make sure the data migration has run before the server starts.
+
+Before anything else, back up the database (both `forma` and SpiceDB's `spicedb`), `.env` and your compose file or Helm values, and note the image your forma2 containers run, so you can return to it: `latest` will no longer name it.
+
+```bash
+umask 077
+docker compose exec -T postgres pg_dump -U postgres -d forma > forma2-forma.sql
+docker compose exec -T postgres pg_dump -U postgres -d spicedb > forma2-spicedb.sql
+docker image inspect --format '{{index .RepoDigests 0}}' "$(docker inspect --format '{{.Image}}' "$(docker compose ps -q forma)")"   # the forma2 image, by digest
+```
+
+### One-click installations
+
+Download the current installer, replacing forma2's `forma.sh`, and run the update from the directory that contains `forma/`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh
+chmod +x forma.sh
+./forma.sh update
+```
+
+It recognises forma2's compose file and, before touching the running stack:
+
+1. keeps `docker-compose.yml.forma2-<timestamp>` and `.env.<timestamp>`;
+2. moves the settings forma2's installer wrote into the compose file (`WEBAPP_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY`, SMTP, the S3 settings, the auth switches) into `.env`, and its Traefik service and labels into `docker-compose.override.yml`;
+3. updates `.env` as listed above, and maps the bundled RustFS credentials (`FORMA_RUSTFS_*`) to the compose file's storage profile (`COMPOSE_PROFILES=storage`, `RUSTFS_ADMIN_*`, `S3_*`);
+4. writes the release's `docker-compose.yml`, `authzed-postgres-bootstrap.sh` and `rustfs-init.sh`, and checks the result with `docker compose config`.
+
+Then it pulls the images, checks the database as described above, and runs `docker compose up -d`: `forma-migrate` runs `forma migrate`, `authzed-initialize` runs `forma authz schema apply`, and `forma` and `forma-worker` start. Run it again after the data migration if it stopped at the database check; every step is idempotent.
+
+### Docker Compose installations
+
+`forma.sh update` works on any Compose directory: run `FORMA_DIR=. ./forma.sh update` inside it. To do the same by hand:
+
+1. Download the release's files next to the old ones:
+
+   ```bash
+   for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
+     curl -fsSL -o "$file.new" "https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/$file"
+   done
+   ```
+
+2. Move every setting your old `docker-compose.yml` sets under `environment:` for the `forma` service (forma2's file kept `WEBAPP_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY` and the commented SMTP and S3 blocks there) into `.env`. The new file reads everything from `.env` and sets only `DATABASE_URL`, `REDIS_URL`, `TRUSTED_PROXY_HOP_COUNT` and the SpiceDB connection itself.
+3. Edit `.env`: remove `?schema=public` from any database URL, replace `BULLMQ_WORKER_CONCURRENCY`/`BULLMQ_WORKER_COUNT` with `WORKER_CONCURRENCY`, and remove the ignored variables. Keep `POSTGRES_PASSWORD`, `POSTGRES_PASSWORD_URL_ENCODED`, `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD`.
+4. Move your own additions (a reverse proxy, labels, extra volumes) into `docker-compose.override.yml`, which Docker Compose merges on its own, so later updates can replace `docker-compose.yml` without losing them. If you used forma2's `minio`/`rustfs` services for uploads, the new file has RustFS under the `storage` profile; see [Docker Setup](/self-hosting/setup/docker#enable-rustfs-for-file-storage).
+5. Replace the files and check the result: `mv docker-compose.yml.new docker-compose.yml` (and the two scripts, `chmod 700` them), then `docker compose config >/dev/null`.
+6. Run the data migration, then `docker compose pull && docker compose up -d --remove-orphans`.
+
+### Helm installations
+
+The chart in this repository (`charts/forma`) replaces forma2's and keeps its values, Secrets and resource names; its [README](https://github.com/yldm-tech/forma/blob/main/charts/forma/README.md#forma-on-the-go-server-what-changed-in-this-chart) lists the differences. In short:
+
+- Set `deployment.image.tag` to the release you deploy. The server runs `forma start` with `BULLMQ_WORKER_ENABLED=0`, and the new `worker` Deployment runs `forma worker` (`worker.enabled=false` returns to one Deployment).
+- The migration Job runs `forma wait-for-database` and `forma migrate`; the AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare`. An upgrade still needs `authzed.migrationAcknowledged=true` once `forma authz schema apply`, `outbox drain` and `backfill --apply` have succeeded.
+- Remove `enterprise.enabled`, `enterprise.licenseKey` and `authzed.systemKey`; the generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
+- The bundled PostgreSQL is 18; a release whose bundled database still runs forma2's 17 is refused until its data has been moved, as the README describes.
+- With the chart's Envoy gateway in front, add `GATEWAY_RATE_LIMITING: "1"` to `deployment.env` so the server does not limit the covered routes a second time.
+- Run the data migration before the new server pods serve traffic.
+
+```bash
+helm upgrade forma ./charts/forma -n forma -f values.yaml --set deployment.image.tag=0.2.<n>
+```
+
+### Verify
+
+1. `docker compose ps -a` (or `kubectl get pods`): `forma-migrate` and `authzed-initialize` exited with code 0, `forma` and `forma-worker` are running.
+2. `curl -fsS https://<your domain>/health` answers, and `/health/ready` answers 200.
+3. Sign in, open a survey and its responses, and submit a test response through a link survey; the worker's log shows the pipeline job.
+4. `docker compose --profile authzed-ops run --rm authzed-ops schema check` and `outbox status` exit 0.
+
+### Roll back
+
+Stop the new stack, restore `docker-compose.yml.forma2-<timestamp>` and `.env.<timestamp>` (or your previous Helm values), set the forma2 image to the digest you noted (`image: ghcr.io/yldm-tech/forma@sha256:...`), and start it again. forma2's tables are not modified by `forma migrate`, so forma2 starts on them as they were; anything written through the Go server since the switch is not in them.
+
 ## v6
 
 Forma v6 replaces the legacy authorization evaluator with AuthZed SpiceDB. PostgreSQL remains the source
@@ -30,7 +128,7 @@ Before selecting a v6 image:
 
 The update scripts and chart fail before replacing the running release when the deployment contract,
 acknowledgement, schema, outbox, or relationship graph is not ready. Do not bypass the acknowledgement to silence
-a failed gate. See [AuthZed Operations](/self-hosting/advanced/authzed-operations#upgrade-an-existing-installation-to-v6)
+a failed gate. See [AuthZed Operations](/self-hosting/advanced/authzed-operations#move-from-forma2s-authzed-tooling)
 for Docker and Kubernetes commands, guarded schema replacement, backups, repair, and rollback.
 
 The moving `latest` image tag remains on the bridge-compatible v5 release for at least 30 days after v6 stable
@@ -151,7 +249,7 @@ security fixes that are not present in 8.1.1.
     and restores the backup if validation fails. Custom Valkey images are left unchanged.
 
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh \
+    curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/3db326f1470754a4287f74e5e8fd3498350c15fb/docker/forma.sh \
       -o forma.sh
     chmod +x forma.sh
     ./forma.sh update
@@ -583,7 +681,7 @@ enterprise functionality.
     `forma/docker-compose.yml`, so you must merge the v5 stack changes before the first v5 restart.
 
     ```bash
-    curl -fsSL -o forma/docker-compose.v5.yml https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/docker-compose.yml
+    curl -fsSL -o forma/docker-compose.v5.yml https://raw.githubusercontent.com/yldm-tech/forma/3db326f1470754a4287f74e5e8fd3498350c15fb/docker/docker-compose.yml
     ```
 
     Then compare `forma/docker-compose.v5.yml` with your existing `forma/docker-compose.yml` and merge
@@ -608,7 +706,7 @@ enterprise functionality.
     only updating images:
 
     ```bash
-    curl -fsSL -o docker-compose.v5.yml https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/docker-compose.yml
+    curl -fsSL -o docker-compose.v5.yml https://raw.githubusercontent.com/yldm-tech/forma/3db326f1470754a4287f74e5e8fd3498350c15fb/docker/docker-compose.yml
     ```
 
     At minimum, confirm:
@@ -921,7 +1019,7 @@ For historical v4.0 upgrades, our original one-click migration script is still a
 ```bash
 # Download the latest script
 curl -fsSL -o migrate-to-v4.sh \
-  https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/migrate-to-v4.sh
+  https://raw.githubusercontent.com/yldm-tech/forma/3db326f1470754a4287f74e5e8fd3498350c15fb/docker/migrate-to-v4.sh
 
 # Make it executable
 chmod +x migrate-to-v4.sh
@@ -1324,7 +1422,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.7" \
   ghcr.io/yldm-tech/data-migrations:v2.7.0
 
@@ -1392,7 +1490,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.6" \
   ghcr.io/yldm-tech/data-migrations:v2.6.0
 ```
@@ -1459,7 +1557,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:latest && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.5" \
   ghcr.io/yldm-tech/data-migrations:v2.5.3
 ```
@@ -1526,7 +1624,7 @@ To find your Docker Network name for your Postgres Database, find it using `dock
 docker pull ghcr.io/yldm-tech/data-migrations:v2.4.3 && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.4" \
   ghcr.io/yldm-tech/data-migrations:v2.4.3
 ```
@@ -1596,7 +1694,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:v2.3.0 && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.3" \
   ghcr.io/yldm-tech/data-migrations:v2.3.0
 
@@ -1662,7 +1760,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:v2.2 && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.2" \
   ghcr.io/yldm-tech/data-migrations:v2.2
 ```
@@ -1734,7 +1832,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:v2.1.0 && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.1" \
   ghcr.io/yldm-tech/data-migrations:v2.1.0
 ```
@@ -1820,7 +1918,7 @@ docker compose up -d
 docker pull ghcr.io/yldm-tech/data-migrations:v2.0.3 && \
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v2.0" \
   ghcr.io/yldm-tech/data-migrations:v2.0.3
 ```
@@ -1921,7 +2019,7 @@ docker compose up -d
 ```bash
 docker run --rm \
   --network=forma_default \
-  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@postgres:5432/forma" \
   -e UPGRADE_TO_VERSION="v1.6" \
   ghcr.io/yldm-tech/data-migrations:v1.6.1
 
@@ -2040,7 +2138,7 @@ x-environment: &environment
     NEXTAUTH_URL:
 
     # PostgreSQL DB for Forma to connect to
-    DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/forma?schema=public"
+    DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/forma"
 
     # NextJS Auth
     # @see: https://next-auth.js.org/configuration/options#nextauth_secret

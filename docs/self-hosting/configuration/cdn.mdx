@@ -11,7 +11,7 @@ A CDN is recommended for production self-hosting when you expose Forma surveys p
 - reduce latency for survey respondents in different regions
 - absorb traffic spikes on public survey links and embedded surveys
 - terminate TLS and use provider features such as DDoS protection, WAF rules, and bot filtering
-- serve static assets such as `/_next/*`, `/css/*`, and `/js/surveys.umd.cjs` closer to end users
+- serve static assets such as `/assets/*` and `/js/surveys.umd.cjs` closer to end users
 
 You can run Forma without a CDN, but it is usually the better production setup once surveys are reachable from
 the public internet.
@@ -23,7 +23,6 @@ The cleanest setup is to put the **public survey domain** behind the CDN and kee
 ```bash
 # Private admin domain
 WEBAPP_URL=https://admin.forma.example.com
-NEXTAUTH_URL=https://admin.forma.example.com
 
 # Public survey domain
 PUBLIC_URL=https://surveys.example.com
@@ -56,14 +55,13 @@ scheme. As a baseline, the CDN should:
 
 In most setups, you should only cache static public assets aggressively:
 
-- `/_next/*`
-- `/js/*`
-- `/css/*`
-- `/images/*`
-- `/fonts/*`
-- `/icons/*`
+- `/assets/*`: the admin app's and the survey page's fingerprinted bundles (forma2's `/_next/static/*`), `Cache-Control: public, max-age=31536000, immutable`. A new release changes their names, so they never need a purge.
+- `/js/*`: the SDK (`/js/forma.umd.cjs`) and the survey runtime (`/js/surveys.umd.cjs`), whose names never change because customer sites embed them: `max-age=3600, s-maxage=2592000`, so a CDN may keep them for 30 days. Purge them on every upgrade.
+- `/animated-bgs/*` and `/image-backgrounds/*`: the animated and still survey backgrounds. The server sends them with `no-cache`; they do not change between releases, so a CDN rule may cache them for a long time.
 - `/favicon.ico`
 - `/storage/{workspaceId}/public/*`
+
+Everything else the server answers with `Cache-Control: no-cache`, the SPA's `index.html` included.
 
 If you place the full public domain behind a CDN, keep HTML and API traffic proxied but not force-cached unless you
 have a very deliberate invalidation strategy.
@@ -105,8 +103,7 @@ Every time you update Forma, include CDN cache handling in your rollout:
     deployment process.
   </Step>
   <Step title="Purge or revalidate public assets">
-    Purge the CDN cache for at least `/js/*`, `/_next/*`, and `/css/*`. If your CDN
-    supports targeted purges, make sure `/js/surveys.umd.cjs` is included every time.
+    Purge the CDN cache for `/js/*`; `/assets/*` changes names with every release and needs no purge. If your CDN supports targeted purges, make sure `/js/surveys.umd.cjs` and `/js/forma.umd.cjs` are included every time.
   </Step>
   <Step title="Check the public domain after the purge">
     Open a survey or embedded survey through the public domain and verify in the browser network tab that the

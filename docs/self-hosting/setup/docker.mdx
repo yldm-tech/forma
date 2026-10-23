@@ -4,10 +4,9 @@ description: "Set up Forma quickly using our ready-to-use Docker image."
 icon: "docker"
 ---
 
-Use this guide for a manual Docker Compose setup. It downloads the production Compose file and starts the
-baseline Forma stack: Forma Web, PostgreSQL and Redis/Valkey. Optional services such as Qwen/vLLM and
-RustFS are documented after the baseline stack is running. The
-baseline also runs a single SpiceDB instance for Forma authorization data.
+Use this guide for a manual Docker Compose setup. It downloads the production Compose file and starts the baseline stack: the Forma server (`forma serve`), its job worker (`forma worker`), the one-shot migration (`forma migrate`), PostgreSQL 18, Valkey and SpiceDB. Optional services, S3-compatible storage with RustFS and a local Qwen model with vLLM, are documented after the baseline stack is running.
+
+Every Forma container runs the same image, `ghcr.io/yldm-tech/forma`: a single `forma` binary on a distroless base, running as uid 1001, with no shell. Its default command is `forma start`; the Compose file gives each service its own subcommand instead.
 
 ### Requirements
 
@@ -20,24 +19,15 @@ Make sure the following tools are installed:
 
 Docker and Docker Compose are usually included in tools like Docker Desktop and Rancher Desktop.
 
-<Note>
-  `docker compose` without the hyphen is now the primary method of using docker-compose, according to the
-  Docker documentation.
-</Note>
-
 ## Choose Your Setup Path
 
 - Use this manual Docker Compose guide for local installs, custom servers, or custom reverse-proxy setups.
-- Use the [one-click setup script](/self-hosting/setup/one-click) for production Ubuntu servers where you want
-  Traefik, HTTPS certificates, and optional RustFS automation.
-- Use the [migration guide](/self-hosting/advanced/migration#v5) before updating an existing Forma 4.x
-  install or an older v5 compose file.
+- Use the [one-click setup script](/self-hosting/setup/one-click) for production Ubuntu servers where you want Traefik, HTTPS certificates, and optional RustFS automation.
+- Moving an existing forma2 installation? Follow [forma2 to the Go server](/self-hosting/advanced/migration#forma2-to-the-go-server) instead: its Compose file cannot run the Go image.
 
 ## Start
 
 1. **Create a New Directory for Forma**
-
-   Open a terminal and run the following commands to create and enter a new directory for Forma:
 
    ```bash
    mkdir forma-quickstart && cd forma-quickstart
@@ -45,160 +35,95 @@ Docker and Docker Compose are usually included in tools like Docker Desktop and 
 
 1. **Download the Docker Files**
 
-   Get the Docker Compose file and the AuthZed database bootstrap helper shipped with the baseline
-   stack:
+   Get the Compose file and the two helper scripts it mounts. `stable` is the branch the release that `ghcr.io/yldm-tech/forma:latest` names was built from; to pin a release, replace it with that release's tag (`v0.2.<n>`) and set `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `.env`.
 
    ```bash
-   curl -fsSL \
-     -o docker-compose.yml \
-     https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/docker-compose.yml
-   curl -fsSL \
-     -o authzed-postgres-bootstrap.sh \
-     https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/authzed-postgres-bootstrap.sh
-   chmod 700 authzed-postgres-bootstrap.sh
+   for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
+     curl -fsSL -o "$file" "https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/$file"
+   done
+   chmod 700 authzed-postgres-bootstrap.sh rustfs-init.sh
    ```
 
 1. **Create the Environment File**
 
-   Store your configuration in `.env`. Docker Compose reads this file for variable interpolation, and the
-   Forma container also loads it at startup. For a local install, use `http://localhost:3000`. For a server
-   install, replace both URL values with your public HTTPS URL before starting the stack.
+   Every Forma service reads `.env`, and Docker Compose reads it for variable interpolation. For a local install, use `http://localhost:3000`; for a server, your public HTTPS URL.
 
    ```bash
    POSTGRES_PASSWORD=$(openssl rand -hex 32)
    cat <<EOF > .env
    WEBAPP_URL=http://localhost:3000
-   NEXTAUTH_URL=http://localhost:3000
    POSTGRES_PASSWORD=$POSTGRES_PASSWORD
    POSTGRES_PASSWORD_URL_ENCODED=$POSTGRES_PASSWORD
-   NEXTAUTH_SECRET=$(openssl rand -hex 32)
    ENCRYPTION_KEY=$(openssl rand -hex 32)
-   CRON_SECRET=$(openssl rand -hex 32)
    AUTHZED_TOKEN=$(openssl rand -hex 32)
    AUTHZED_DATABASE_PASSWORD=$(openssl rand -hex 32)
+   EMAIL_VERIFICATION_DISABLED=1
+   PASSWORD_RESET_DISABLED=1
    EOF
    chmod 600 .env
    ```
 
-   Keep `POSTGRES_PASSWORD` unchanged after PostgreSQL initializes the `postgres` volume. The generated
-   hexadecimal value is already URL-safe, so `POSTGRES_PASSWORD_URL_ENCODED` uses the same value. If you replace
-   an existing `docker-compose.yml`, copy the exact password from that deployment instead of generating a new
-   one. If it contains URI-reserved characters, set `POSTGRES_PASSWORD_URL_ENCODED` to its percent-encoded form;
-   otherwise you can use the same value or omit the encoded variable. The PostgreSQL image only applies the raw
-   password when it creates a new database volume.
+   `EMAIL_VERIFICATION_DISABLED` and `PASSWORD_RESET_DISABLED` are for an instance without email; remove them once [SMTP](/self-hosting/configuration/smtp) is configured. Keep `POSTGRES_PASSWORD` unchanged after PostgreSQL initializes its volume: the image applies it only when it creates the database. The generated hexadecimal value is URL-safe, so `POSTGRES_PASSWORD_URL_ENCODED` is the same value; a password with URI-reserved characters needs its percent-encoded form there. `ENCRYPTION_KEY` seals two-factor secrets; losing it locks those users out.
+
+   The Compose file sets `DATABASE_URL`, `REDIS_URL`, the `AUTHZED_*` connection and `TRUSTED_PROXY_HOP_COUNT=1` itself. Set `TRUSTED_PROXY_HOP_COUNT=0` when clients reach port 3000 directly, without a reverse proxy in front. See [Environment Variables](/self-hosting/configuration/environment-variables) for everything else.
 
 1. **Validate the Docker Compose Configuration**
-
-   Validate the Compose file after `.env` contains the required values:
 
    ```bash
    docker compose config >/dev/null
    ```
 
-   If validation fails, check that `.env` contains the required values and that `docker-compose.yml` has valid
-   syntax.
+   If validation fails, the message names the variable `.env` is missing.
 
 1. **Start the Docker Setup**
-
-   Now, you're ready to run Forma with Docker. Use the command below to start Forma together with
-   PostgreSQL, Redis and SpiceDB.
 
    ```bash
    docker compose up -d
    ```
 
-   The `-d` flag runs the containers in the background, so they keep running even after you close the terminal.
+   PostgreSQL starts first; `forma-migrate` applies the schema and the job queue's tables, and SpiceDB's own bootstrap and migration run beside it; then `authzed-initialize` writes the authorization schema, and `forma` and `forma-worker` start.
 
 1. **Verify the Stack**
-
-   Confirm the baseline services started and the Forma health endpoint responds:
 
    ```bash
    docker compose ps -a
    curl -fsS http://localhost:3000/health
-   docker compose logs --tail=100 forma-migrate authzed-db-bootstrap spicedb-migrate
-   docker compose logs --tail=100 forma spicedb
+   docker compose logs --tail=100 forma-migrate authzed-db-bootstrap spicedb-migrate authzed-initialize
+   docker compose logs --tail=100 forma forma-worker
    ```
 
-   `forma-migrate`, `authzed-db-bootstrap`, and `spicedb-migrate` should complete successfully.
-   `postgres`, `redis`, `spicedb`, and `forma` should be running or healthy.
+   `forma-migrate`, `authzed-db-bootstrap`, `spicedb-migrate` and `authzed-initialize` should have exited with code 0. `postgres`, `redis`, `spicedb`, `forma` and `forma-worker` should be running, and `forma-worker`'s log should show `job worker started`.
 
 1. **Open Forma in Your Browser**
 
-   Once the setup is running, open [**http://localhost:3000**](http://localhost:3000) in your browser to access
-   Forma. The first time you visit, you'll see a setup wizard. Follow the steps to create your first user
-   and start using Forma.
+   Open [**http://localhost:3000**](http://localhost:3000) and sign up: a self-hosted instance admits its first user, who owns it, and afterwards only people with an invitation.
 
 ## AuthZed and SpiceDB
 
-The bundled SpiceDB service stores its data in a dedicated `spicedb` database and login inside the existing
-PostgreSQL container. Database bootstrap, datastore migration, and the release-matched `authzed-initialize`
-service are idempotent. Fresh installs apply the canonical schema and verify an empty or reconciled graph
-without making Forma startup or `/health` depend on SpiceDB. SpiceDB is reachable only inside the Compose
-network at `spicedb:50051`; it is not published on the host or routed through Traefik.
+The bundled SpiceDB service stores its data in a dedicated `spicedb` database and login inside the PostgreSQL container. Database bootstrap, datastore migration and `authzed-initialize` (`forma authz schema apply`) are idempotent, and Forma's start-up and `/health` do not depend on SpiceDB. SpiceDB is reachable only inside the Compose network at `spicedb:50051`; it is not published on the host.
 
-The Forma container receives the supported AuthZed variables automatically. Keep `AUTHZED_TOKEN` and
-`AUTHZED_DATABASE_PASSWORD` private and include `.env` and the PostgreSQL volume in your backup plan. Running
-`docker compose down` preserves the volume; `docker compose down -v` deletes both Forma and SpiceDB data.
+Keep `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD` private and include `.env` and the PostgreSQL volume in your backups. `docker compose down` preserves the volume; `docker compose down -v` deletes both the Forma and the SpiceDB data.
 
-The release image includes an opt-in operations CLI. It does not start during normal installation:
+The `authzed-ops` profile runs `forma authz` from the same image. It does not start during a normal `docker compose up`:
 
 ```bash
-docker compose --profile authzed-ops run --rm authzed-ops health
 docker compose --profile authzed-ops run --rm authzed-ops schema check
+docker compose --profile authzed-ops run --rm authzed-ops schema apply --expected-current-digest=sha256:<digest from check>
 docker compose --profile authzed-ops run --rm authzed-ops backfill
-docker compose --profile authzed-ops run --rm authzed-ops upgrade check
+docker compose --profile authzed-ops run --rm authzed-ops outbox status
 ```
 
-See [AuthZed Operations](/self-hosting/advanced/authzed-operations) before applying a schema, repairing
-relationships, upgrading SpiceDB, or restoring a backup.
+Every command prints one JSON line; exit `0` is clean, `2` drift, `1` failed. See [AuthZed Operations](/self-hosting/advanced/authzed-operations) before applying a schema, repairing relationships, upgrading SpiceDB, or restoring a backup.
 
-The bundled PostgreSQL service leaves `track_commit_timestamp` at its default `off` value, so SpiceDB reports
-that its Watch API is disabled. This does not affect schema writes, relationship writes, or permission checks.
-If a future integration consumes the Watch API, enable that PostgreSQL setting separately and plan for the
-required database restart.
-
-Repository development exposes SpiceDB on `127.0.0.1:50051`. To start the optional authenticated browser UI:
-
-```bash
-docker compose -f docker-compose.dev.yml --profile authzed-ui up -d authzed-ui
-```
-
-Then open [http://127.0.0.1:50052](http://127.0.0.1:50052). Run `pnpm authzed:smoke` for an isolated
-application-health, authentication-failure, bounded-outage, schema, permission, migration-idempotency, and
-persistence check. The smoke command uses its own Compose project and random host port, then removes its test
-data afterward.
-
-To check the developer stack through the Forma AuthZed client without writing data, run:
-
-```bash
-pnpm authzed:health
-```
-
-It reads the repository `.env`, prints one JSON result, and returns exit code `0` only when healthy. An empty
-SpiceDB schema is still a healthy connection. There is no AuthZed browser health page, and the normal
-Forma `/health` endpoint deliberately remains independent of SpiceDB. Restart Forma after changing
-any `AUTHZED_*` value.
+The bundled PostgreSQL leaves `track_commit_timestamp` at its default `off`, so SpiceDB reports that its Watch API is disabled. This does not affect schema writes, relationship writes or permission checks.
 
 ## Optional Services
 
-Start and verify the baseline stack before enabling optional services.
-
-<Note>
-  If `.env` already contains a `COMPOSE_PROFILES` line, update that line instead of adding a second one.
-</Note>
+Start and verify the baseline stack before enabling optional services. Both are Compose profiles: list the ones you use in `COMPOSE_PROFILES` in `.env` (comma-separated, one line), and `docker compose up -d` starts them.
 
 ### Enable Bundled Qwen/vLLM For AI
 
-The Docker stack can optionally run Qwen through vLLM as an OpenAI-compatible `/v1` endpoint. Baseline
-installs do not start vLLM and can still use Google Vertex, Azure, AWS Bedrock, or another OpenAI-compatible
-endpoint.
-
-The bundled Qwen/vLLM service requires a GPU-capable Docker host with the NVIDIA Container Toolkit installed.
-Model files are stored in the `qwen-model-cache` Docker volume. Startup can take several minutes while vLLM
-downloads and loads the model.
-
-To use the bundled Qwen runtime, add these values to `.env`:
+The Docker stack can optionally run Qwen through vLLM as an OpenAI-compatible `/v1` endpoint. It needs a GPU-capable Docker host with the NVIDIA Container Toolkit. Model files are kept in the `qwen-model-cache` volume, and the first start can take several minutes while vLLM downloads and loads the model.
 
 ```bash
 cat <<EOF >> .env
@@ -209,408 +134,74 @@ AI_OPENAI_COMPATIBLE_BASE_URL=http://vllm:8000/v1
 AI_OPENAI_COMPATIBLE_PROVIDER_NAME=vllm
 AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS=1
 EOF
-```
-
-Then start the stack with the profile and check vLLM:
-
-```bash
-docker compose --profile qwen up -d
-docker compose --profile qwen ps
-docker compose logs --tail=100 vllm forma
+docker compose up -d
+docker compose logs --tail=100 vllm
 curl -fsS http://127.0.0.1:8000/health
 ```
 
-The vLLM endpoint is available inside the Compose network at `http://vllm:8000/v1` and is bound to
-`127.0.0.1:8000` by default for local checks.
+The endpoint is `http://vllm:8000/v1` inside the Compose network and is bound to `127.0.0.1:8000` on the host for local checks. To use your own Qwen/vLLM service instead, leave the profile off and point `AI_OPENAI_COMPATIBLE_BASE_URL` at it.
 
-If you run your own Qwen/vLLM service, do not enable the `qwen` profile. Set `AI_PROVIDER`, `AI_MODEL`, and
-`AI_OPENAI_COMPATIBLE_BASE_URL` to your external endpoint instead.
+### Enable RustFS for File Storage
+
+RustFS provides S3-compatible object storage for uploads: images in surveys, the File Upload and Picture Selection questions, and logos. See [File Uploads](/self-hosting/configuration/file-uploads) for external S3 instead.
+
+Browsers upload straight to the bucket, so RustFS must be published under an address both browsers and the Forma containers resolve: a domain your reverse proxy routes to port 9000 (`RUSTFS_PORT` changes the host port). Add to `.env`:
+
+```bash
+cat <<EOF >> .env
+COMPOSE_PROFILES=storage
+RUSTFS_ADMIN_USER=$(openssl rand -hex 16)
+RUSTFS_ADMIN_PASSWORD=$(openssl rand -hex 16)
+S3_ACCESS_KEY=forma-$(openssl rand -hex 4)
+S3_SECRET_KEY=$(openssl rand -hex 20)
+S3_BUCKET_NAME=forma
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=1
+S3_ENDPOINT_URL=https://files.example.com
+EOF
+docker compose up -d
+docker compose logs rustfs-init
+```
+
+`rustfs-init` creates the bucket, its CORS rule for `WEBAPP_URL` (and `PUBLIC_URL`) and the service account `S3_ACCESS_KEY` with access to that bucket only; it is idempotent and runs again, harmlessly, on every `docker compose up`. The [one-click setup script](/self-hosting/setup/one-click) does all of this behind Traefik with a `files.` subdomain and certificates.
+
+<Warning>
+  Bundled RustFS is a convenience-oriented single-server deployment. For high availability or larger storage footprints, use external object storage or a dedicated RustFS deployment. Back up the `rustfs-data` volume, keep it on local SSD or NVMe storage rather than a network filesystem, and do not publish the RustFS console.
+</Warning>
 
 ## Update
 
-See our [migration guide](/self-hosting/advanced/migration) for version-specific steps to update Forma.
-
-### Add SpiceDB to an Existing Docker Installation
-
-The normal image update commands do not add new services to an existing customized Compose file. Before the
-first release that requires the AuthZed runtime:
-
-1. Back up `.env`, `docker-compose.yml`, and the PostgreSQL volume.
-2. Download `authzed-postgres-bootstrap.sh` from the same Forma release as the Compose file.
-3. Generate `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD` with `openssl rand -hex 32` and add them to `.env`.
-4. Merge `authzed-db-bootstrap`, `spicedb-migrate`, `spicedb`, `authzed-initialize`, and the profiled
-   `authzed-ops` service, plus the six `AUTHZED_*` Forma variables, from the released Compose file into your
-   customized file. Use `AUTHZED_CONSISTENCY=fully_consistent`. Preserve proxy, storage, and SMTP settings.
-5. Run `docker compose config` and `docker compose pull`. Apply the release's Forma database migrations
-   while the old application remains available: `docker compose run --rm forma-migrate`.
-6. Start PostgreSQL and SpiceDB, then run the guarded preparation and read-only gate:
-
-   ```bash
-   docker compose up -d postgres authzed-db-bootstrap spicedb-migrate spicedb
-   docker compose --profile authzed-ops run --rm authzed-ops upgrade prepare
-   docker compose --profile authzed-ops run --rm authzed-ops upgrade check
-   ```
-
-   A non-empty mismatched schema requires the reviewed `remoteDigest` as described in
-   [AuthZed Operations](/self-hosting/advanced/authzed-operations#upgrade-an-existing-installation-to-v6).
-7. Only after `upgrade check` exits `0`, set `FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED=true` in `.env` and
-   run `docker compose up -d`. The one-click updater performs the same preparation before it stops the old app.
-8. Confirm `authzed-db-bootstrap`, `spicedb-migrate`, and `authzed-initialize` completed and `spicedb` is healthy
-   with `docker compose ps -a`.
-9. Back up the new authorization database with
-   `docker compose exec -T postgres pg_dump -U postgres -d spicedb > spicedb-backup.sql` after validation and
-   include it in future database backup procedures.
-
-To roll back v6, restore the exact bridge-compatible v5 image and configuration kept for the migration. Keep
-outbox delivery enabled, require a clean audit, and do not delete or replace either PostgreSQL database. See the
-rollback procedure in [AuthZed Operations](/self-hosting/advanced/authzed-operations#roll-back-a-v6-upgrade).
-
-<Info>
-  For a major migration such as Forma 4.x to 5.0, update your compose structure and configuration first.
-  Pulling images alone is not enough if your stack does not yet include the new edge rate-limiting setup.
-</Info>
-
-1. Pull the latest Forma image
-
-   ```bash
-   docker compose pull
-   ```
-
-1. Stop the Forma stack
-
-   ```bash
-   docker compose down
-   ```
-
-1. Re-start the Forma stack with the updated image
-
-   ```bash
-   docker compose up -d
-   ```
-
-<Warning>
-  **Security (existing installs):** these steps — and the [one-click setup script](/self-hosting/setup/one-click)
-  updater, which runs the same `pull` / `down` / `up -d` — do **not** rewrite your existing
-  `docker-compose.yml`. If your bundled `redis` (Valkey) service still publishes `ports: - "6379:6379"`, it
-  stays exposed to the host after updating. See [Debug](#debug) for how to remove the mapping and, if the port
-  was reachable from an untrusted network, invalidate existing sessions.
-</Warning>
-
-## Optional: Add RustFS for File Storage
-
-RustFS provides S3-compatible object storage for file uploads in Forma. It is not required for the
-baseline Docker setup. Add it only when you want features like image uploads, survey file uploads, or custom
-logos.
-
-<Note>
-  For a broader overview of file storage options and required environment variables, see our [File Uploads
-  Configuration](/self-hosting/configuration/file-uploads) guide.
-</Note>
-
-<Warning>
-  **For production deployments with HTTPS**, use the [one-click setup script](/self-hosting/setup/one-click)
-  which automatically configures RustFS with Traefik, SSL certificates, a dedicated `files.` subdomain, and
-  least-privilege service credentials. The examples below are best suited for development, testing, or custom
-  local setups.
-</Warning>
-
-<Warning>
-  The bundled RustFS examples on this page are convenience-oriented single-server setups. They work well for
-  development, evaluation, and smaller self-hosted deployments, but they are not the ideal RustFS architecture
-  for high-availability or larger-scale production storage. For stricter production requirements, use external
-  object storage or run a dedicated RustFS deployment separately.
-</Warning>
-
-### Quick Start: Repository Development Stack
-
-If you cloned the Forma repository, the fastest way to test file uploads locally is to use the included
-`docker-compose.dev.yml`, which already starts RustFS and auto-creates the `forma` bucket.
-
-<Note>
-  This development compose file is not downloaded by the manual production quickstart above. If you only
-  downloaded `docker-compose.yml`, use the manual RustFS setup below or the one-click production setup.
-</Note>
-
-1. **Start the local stack**
-
-   From the repository root:
-
-   ```bash
-   docker compose -f docker-compose.dev.yml up -d
-   ```
-
-   This starts PostgreSQL, Valkey (Redis), Mailhog, RustFS, a permissions helper and a one-time bucket
-   bootstrap job.
-
-2. **Access the RustFS console**
-
-   Open http://localhost:9001 in your browser and sign in with:
-   - Username: `devrustfs`
-   - Password: `devrustfs123`
-
-3. **Configure Forma**
-
-   Update your `.env` file or environment variables:
-
-   ```bash
-   S3_ACCESS_KEY="devrustfs"
-   S3_SECRET_KEY="devrustfs123"
-   S3_REGION="us-east-1"
-   S3_BUCKET_NAME="forma"
-   S3_ENDPOINT_URL="http://localhost:9000"
-   S3_FORCE_PATH_STYLE="1"
-   ```
-
-4. **Verify uploads**
-
-   After uploading a file in Forma, open http://localhost:9001 and navigate to **Buckets → forma**
-   to confirm the object was stored successfully.
-
-<Note>
-  The development compose file also runs a `rustfs-init` job so you do not need to create the bucket manually.
-</Note>
-
-### Manual RustFS Setup (Custom Configuration)
-
-<Note>
-  <strong>Recommended:</strong> Prefer <code>docker-compose.dev.yml</code> for local development unless you
-  need to fold RustFS into an existing custom Compose stack.
-</Note>
-
-If you want to add RustFS to your own `docker-compose.yml`, use a pinned RustFS image plus two helper
-services:
-
-```yaml
-services:
-  rustfs-perms:
-    image: busybox:1.36.1
-    user: "0:0"
-    command: ["sh", "-c", "mkdir -p /data && chown -R 10001:10001 /data"]
-    volumes:
-      - rustfs-data:/data
-
-  rustfs:
-    image: rustfs/rustfs:1.0.0-rc.2@sha256:7d6d361c49c08d427250fb59aae5d78df83d644c3405d9ccf4b21cda0b0692d0
-    restart: always
-    depends_on:
-      rustfs-perms:
-        condition: service_completed_successfully
-    command: /data
-    environment:
-      RUSTFS_ACCESS_KEY: "${FORMA_RUSTFS_ADMIN_USER}"
-      RUSTFS_SECRET_KEY: "${FORMA_RUSTFS_ADMIN_PASSWORD}"
-      RUSTFS_ADDRESS: ":9000"
-      RUSTFS_CONSOLE_ENABLE: "true"
-      RUSTFS_CONSOLE_ADDRESS: ":9001"
-      # CORS for browser uploads: set to your Forma origin(s), comma-separated.
-      # Unset = no CORS headers are emitted, so browser uploads fail; a value is treated as an allow-list.
-      # See the File Uploads guide.
-      RUSTFS_CORS_ALLOWED_ORIGINS: "https://app.yourdomain.com"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - rustfs-data:/data
-
-  rustfs-init:
-    image: quay.io/minio/mc@sha256:95b5f3f7969a5c5a9f3a700ba72d5c84172819e13385aaf916e237cf111ab868
-    depends_on:
-      - rustfs
-    environment:
-      RUSTFS_ADMIN_USER: "${FORMA_RUSTFS_ADMIN_USER}"
-      RUSTFS_ADMIN_PASSWORD: "${FORMA_RUSTFS_ADMIN_PASSWORD}"
-      RUSTFS_SERVICE_USER: "${FORMA_RUSTFS_SERVICE_USER}"
-      RUSTFS_SERVICE_PASSWORD: "${FORMA_RUSTFS_SERVICE_PASSWORD}"
-      RUSTFS_BUCKET_NAME: "${FORMA_RUSTFS_BUCKET_NAME}"
-      RUSTFS_POLICY_NAME: "${FORMA_RUSTFS_POLICY_NAME}"
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        until mc alias set rustfs http://rustfs:9000 "$RUSTFS_ADMIN_USER" "$RUSTFS_ADMIN_PASSWORD" >/dev/null 2>&1 \
-          && mc ls rustfs >/dev/null 2>&1; do
-          sleep 2
-        done
-        mc mb rustfs/"$RUSTFS_BUCKET_NAME" --ignore-existing
-        cat > /tmp/forma-policy.json << EOF
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"],
-              "Resource": ["arn:aws:s3:::$RUSTFS_BUCKET_NAME/*"]
-            },
-            {
-              "Effect": "Allow",
-              "Action": ["s3:ListBucket"],
-              "Resource": ["arn:aws:s3:::$RUSTFS_BUCKET_NAME"]
-            }
-          ]
-        }
-        EOF
-        if ! mc admin policy info rustfs "$RUSTFS_POLICY_NAME" >/dev/null 2>&1; then
-          mc admin policy create rustfs "$RUSTFS_POLICY_NAME" /tmp/forma-policy.json || \
-            mc admin policy add rustfs "$RUSTFS_POLICY_NAME" /tmp/forma-policy.json
-        fi
-        if ! mc admin user info rustfs "$RUSTFS_SERVICE_USER" >/dev/null 2>&1; then
-          mc admin user add rustfs "$RUSTFS_SERVICE_USER" "$RUSTFS_SERVICE_PASSWORD"
-        fi
-        mc admin policy attach rustfs "$RUSTFS_POLICY_NAME" --user "$RUSTFS_SERVICE_USER"
-```
-
-Declare the corresponding volume:
-
-```yaml
-volumes:
-  rustfs-data:
-    driver: local
-```
-
-Store the generated RustFS credentials in a local `.env` file next to your `docker-compose.yml` instead of
-hardcoding them in Compose:
+Download the release's `docker-compose.yml` and helper scripts again (step 2 above), then:
 
 ```bash
-FORMA_RUSTFS_ADMIN_USER=forma-root
-FORMA_RUSTFS_ADMIN_PASSWORD=change-this-secure-password
-FORMA_RUSTFS_SERVICE_USER=forma-service
-FORMA_RUSTFS_SERVICE_PASSWORD=change-this-service-password
-FORMA_RUSTFS_BUCKET_NAME=forma
-FORMA_RUSTFS_POLICY_NAME=forma-policy
-FORMA_RUSTFS_REGION=us-east-1
-```
-
-Then configure Forma to use the RustFS service credentials:
-
-```bash
-S3_ACCESS_KEY="${FORMA_RUSTFS_SERVICE_USER}"
-S3_SECRET_KEY="${FORMA_RUSTFS_SERVICE_PASSWORD}"
-S3_REGION="${FORMA_RUSTFS_REGION}"
-S3_BUCKET_NAME="${FORMA_RUSTFS_BUCKET_NAME}"
-S3_ENDPOINT_URL="http://rustfs:9000"
-S3_FORCE_PATH_STYLE="1"
-```
-
-Start the stack:
-
-```bash
+docker compose pull
 docker compose up -d
 ```
 
-The bucket and service account are created automatically by the `rustfs-init` job defined above, so no manual
-RustFS console step is required.
+`forma-migrate` applies the new release's migrations before the server and the worker restart. Keep local changes (a reverse proxy, extra services) in `docker-compose.override.yml`, which Docker Compose merges on its own, so replacing `docker-compose.yml` never loses them. The [one-click script](/self-hosting/setup/one-click)'s `./forma.sh update` does all of this, with backups.
 
-<Note>
-  Restrict the `.env` file to `0600` and do not commit it to source control. For production, prefer the
-  [one-click setup script](/self-hosting/setup/one-click), which creates a separate least-privilege service
-  account automatically.
-</Note>
-
-#### Tips & Common Gotchas
-
-- **Permission denied on `/data`**: Ensure the mounted directory or volume is owned by UID `10001`. The
-  `rustfs-perms` helper handles this for Compose-managed volumes.
-- **Storage medium matters**: Prefer local SSD or NVMe storage for `rustfs-data`, use XFS on dedicated
-  host-managed disks where possible, and avoid NFS or other network filesystems for RustFS data.
-- **Connection refused**: Ensure the `rustfs` container is running and port `9000` is reachable from the
-  Forma container.
-- **Bucket not found**: Confirm that `rustfs-init` completed successfully or create the bucket manually with
-  `mc`.
-- **Auth failed**: Confirm that `S3_ACCESS_KEY` and `S3_SECRET_KEY` match the RustFS credentials configured on
-  the server.
-- **Backups**: Back up the `rustfs-data` volume regularly, especially for single-server deployments.
-- **Console exposure**: Do not expose the RustFS console port publicly in production. Keep it on a private
-  network or behind admin-only controls.
-- **Health check**: From the Forma container:
-
-  ```bash
-  docker compose exec forma sh -c 'wget -O- http://rustfs:9000/health'
-  ```
-
-### Production Setup with Traefik
-
-For production deployments, use the [one-click setup script](/self-hosting/setup/one-click), which
-automatically configures:
-
-- RustFS behind Traefik on a dedicated `files.yourdomain.com` subdomain
-- Automatic SSL certificate generation via Let's Encrypt
-- CORS configuration scoped to your Forma domain
-- Rate limiting middleware
-- Separate RustFS admin and Forma service credentials
-- A `rustfs-init` job that creates the bucket and access policy
-
-The production setup from [forma.sh](https://github.com/yldm-tech/forma/blob/main/docker/forma.sh)
-adds the reverse proxy wiring and bootstrap automation needed for long-lived deployments.
-
-<Note>
-  Even in the one-click flow, bundled RustFS remains a convenience-oriented single-server deployment. For
-  higher availability, stricter operational requirements, or larger storage footprints, prefer external object
-  storage or a dedicated RustFS deployment managed separately from Forma.
-</Note>
+An installation set up for forma2 needs the [forma2 to the Go server](/self-hosting/advanced/migration#forma2-to-the-go-server) steps: its Compose file runs `sh`, `node` and `forma-authzed` entrypoints the Go image does not have.
 
 ## Debug
 
-If startup fails, first check the resolved configuration and container state:
+If start-up fails, check the resolved configuration and container state, then the logs of the services that explain most failures:
 
 ```bash
 docker compose config >/dev/null
 docker compose ps -a
+docker compose logs --tail=200 forma-migrate forma forma-worker
+docker compose logs --tail=200 postgres redis spicedb
 ```
 
-Then inspect the services that commonly explain startup issues:
-
-```bash
-docker compose logs --tail=200 forma-migrate forma
-docker compose logs --tail=200 postgres redis
-```
-
-Common checks:
-
-- **Missing or empty secrets**: Confirm `.env` contains `NEXTAUTH_SECRET`, `ENCRYPTION_KEY` and
-  `CRON_SECRET`.
-- **Migration failures**: Check `forma-migrate` and `postgres` logs. Do not remove Docker volumes on an
-  existing install unless you intend to delete its data.
-- **Port conflicts**: Confirm port `3000` and any optional service ports you enabled are not already in use on
-  the host. The current template does not publish the bundled Valkey (`redis` service) to the host — it is
-  reachable only on the internal compose network — so a fresh install does not need port `6379` free on the
-  host.
-- **Optional Qwen/vLLM issues**: Check GPU availability, NVIDIA Container Toolkit installation, and
-  `docker compose --profile qwen logs --tail=200 vllm`.
+- **The server exits at start-up**: its last log line names the variable that is missing or malformed (`load config: ...`). Switches are `1` or `0`.
+- **`load config: DATABASE_URL sets schema=...`**: remove the Prisma `schema` parameter from the database URL; `schema=public` is accepted.
+- **Migration failures**: check `forma-migrate` and `postgres`. PostgreSQL 18 or newer is required. Do not remove Docker volumes on an existing install unless you intend to delete its data.
+- **The image has no shell**: `docker compose exec forma sh` fails by design. Run the binary instead, for example `docker compose exec forma /usr/local/bin/forma version`, and use the `postgres` container for SQL.
+- **Port conflicts**: port `3000`, and `9000` or `8000` when the storage or qwen profiles are on, must be free on the host. Valkey is not published.
+- **Optional Qwen/vLLM issues**: check GPU availability, the NVIDIA Container Toolkit, and `docker compose logs --tail=200 vllm`.
 
 <Warning>
-  **Existing installs: remove the bundled Valkey host port.** Older templates published the `redis`
-  (Valkey) service on `0.0.0.0:6379` with no password. That instance stores Better Auth sessions and
-  verification tokens, so an exposed port lets anyone who can reach it read live sessions and take over
-  accounts. Updating Forma (`docker compose pull` / `up -d`) does **not** rewrite your existing
-  `docker-compose.yml`, so the mapping stays until you remove it. Open your `docker-compose.yml`, delete the
-  ```yaml
-  ports:
-    - "6379:6379"
-  ```
-  lines from the `redis:` service, then run `docker compose up -d`. The app reaches Valkey over the internal
-  compose network, so no other configuration change is needed. Only keep a publish if an external tool
-  genuinely needs it, and then bind it to loopback (`127.0.0.1:6379:6379`) rather than all interfaces.
-
-  **If the port was reachable from an untrusted network, also invalidate existing sessions.** Valkey persists
-  to its `redis` volume, so removing the port does not clear session or token state an attacker may already
-  have written — a forged session can remain valid afterward. After closing the port, set a new
-  `NEXTAUTH_SECRET` in your `.env`, then recreate the app container so it picks up the change:
-  ```bash
-  docker compose up -d --force-recreate forma
-  ```
-  A plain `docker compose restart` keeps the container's original environment, so the rotated secret would not
-  take effect. Recreating invalidates every session cookie, so all users must sign in again, while stored
-  data, the job queue, and the cache stay intact. (If you added `BETTER_AUTH_SECRET` to the `forma`
-  service environment yourself, rotate that instead — Better Auth prefers it over `NEXTAUTH_SECRET`; the
-  bundled compose ships only `NEXTAUTH_SECRET`.) Leave `ENCRYPTION_KEY` unchanged, and do **not** run a blanket
-  `FLUSHDB` — the same Valkey also holds BullMQ job queues and the application cache.
+  **Older Compose files published Valkey on `0.0.0.0:6379` without a password.** Remove the `ports:` mapping from the `redis:` service and run `docker compose up -d`; the app reaches Valkey over the Compose network. With the Go server, sessions live in PostgreSQL, and Valkey holds only rate-limit counters, caches and locks that are rebuilt on demand. If the port was reachable from an untrusted network, flush it so no entry an attacker wrote survives: `docker compose exec redis valkey-cli FLUSHALL`. To also sign every user out, delete the sessions: `docker compose exec -T postgres psql -U postgres -d forma -c 'DELETE FROM sessions'`.
 </Warning>
 
-<Note>
-  To edit any of the available environment variables, check out our
-  [Configuration](/self-hosting/configuration/environment-variables) section.
-</Note>
-
-If you have any questions or require help, reach out on
-[**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions).
+If you have any questions or require help, reach out on [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions).
