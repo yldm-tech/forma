@@ -1,7 +1,6 @@
 name: Feature request
 description: "Suggest an idea for this project \U0001F680"
 type: feature
-projects: "forma/21"
 body:
   - type: textarea
     id: problem-description

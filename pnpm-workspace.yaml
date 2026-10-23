@@ -53,7 +53,7 @@ catalog:
   storybook: 10.6.0
   "@storybook/react": 10.6.0
   "@storybook/react-vite": 10.6.0
-  # --- ui runtime shared by apps/web, survey-ui, surveys and email ---
+  # --- ui runtime shared by web, survey-ui and surveys ---
   react: 19.3.0
   react-dom: 19.3.0
   preact: 10.29.8
@@ -90,14 +90,6 @@ catalog:
 # The `load-bearing:` notes record the consumer that keeps the vulnerable version in the
 # tree, so the next cleanup can check that single upstream instead of re-deriving it.
 overrides:
-  # OpenTelemetry / protobuf chains.
-  # ENG-1962 / GHSA-j3f2-48v5-ccww (CVE-2026-59877): protobufjs .proto option-parsing infinite-loop DoS,
-  # patched in 8.6.6. ENG-1963 / GHSA-jfj6-75fj-8934 (CVE-2026-59876): text-format map prototype
-  # mutation, patched in 8.6.5. The 8.x line is pinned to the lowest release covering both advisories.
-  # The 7.x line no longer needs a pin: @grpc/proto-loader and the older otlp-transformer lines resolve
-  # 7.6.5 on their own.
-  # load-bearing: @opentelemetry/otlp-transformer pins 8.0.0 / 8.0.1.
-  protobufjs@8: 8.6.6
   lodash: 4.18.1 # GHSA-r5fr-rjxr-66jc + GHSA-f23m-r3pf-42rh: <=4.17.23 vulnerable, patched in 4.17.24. load-bearing: @boxyhq/saml-jackson and @microsoft/api-extractor resolve 4.17.23.
   # Webpack / linting / schema validation chains.
   minimatch@10: 10.2.5 # GHSA-7r86-cg39-jmmj + GHSA-23c5-xmqv-rm74: 10.0.0–10.2.2 vulnerable, patched in 10.2.3. load-bearing: @microsoft/api-extractor pins 10.2.1.
@@ -110,20 +102,10 @@ overrides:
   # load-bearing: isomorphic-dompurify, posthog-js and redoc resolve vulnerable 3.x versions.
   dompurify: 3.4.15
   fast-xml-parser: 5.7.0 # load-bearing: @aws-sdk/xml-builder pins 5.4.1 / 5.5.8, both <5.7.0 and vulnerable (GHSA-gh4j-gqv2-49f6 + GHSA-jp2q-39xq-3w4g)
-  # GHSA-22jq-vg5j-6vgg, GHSA-4xrf-jv44-h6hh and GHSA-mwp4-54f8-5fhr: ip-address parsing
-  # vulnerabilities are all patched in 10.3.1.
-  # load-bearing: socks and express-rate-limit resolve vulnerable 10.x versions.
-  ip-address@10: 10.3.1
   # ENG-2403 / GHSA-2v37-7h3g-55p8 (CVE-2026-67213): nanoid <3.3.18 customAlphabet/customRandom loop
   # indefinitely when called with size 0 (DoS). Raises the 3.x pin from 3.3.17 to 3.3.18 (still <4).
   # load-bearing: postcss resolves 3.3.17.
   nanoid@3: 3.3.18
-  # uuid: load-bearing security pins that are also MAJOR coercions on transitive consumers
-  # (@azure/msal-node uuid v8 and @sentry/webpack-plugin uuid v9 -> v11). Natural versions are
-  # vulnerable (GHSA-w5hq-g745-h8pq), so the pins stay; runtime verified in build+tests.
-  # The 11.x line no longer needs a pin — it resolves to the patched 11.1.1 on its own.
-  uuid@8: 11.1.1
-  uuid@9: 11.1.1
   # ENG-1111 / GHSA-58qx-3vcg-4xpx: ws is patched in 8.20.1+. GHSA-96hv-2xvq-fx4p raises that to 8.21.0.
   # load-bearing: socket.io-adapter resolves 8.17.1 and engine.io resolves 8.18.3.
   ws@8: 8.21.0
@@ -156,12 +138,7 @@ overrides:
   # 1.26.0 line up to 2.9.0 (core is already pinned to 2.x above).
   # load-bearing: @opentelemetry/sdk-node resolves 2.7.1 and @redocly/cli's sdk-trace-node pins 1.26.0.
   "@opentelemetry/propagator-jaeger": 2.9.0
-  # === Dependabot high-risk batch (ENG-2205, ENG-2206) ===
-  # ip-address@10 (ENG-2196), undici@6/@7 (ENG-2204/ENG-2215) were already pinned on main at the same
-  # versions (see the earlier overrides), so only socket.io-parser and fast-uri remain net-new here.
-  # ENG-2206 / GHSA-2m8v-j782-fhvr (CVE-2026-69185): socket.io-parser <4.2.7 memory exhaustion on a
-  # zero-attachment packet; patched in 4.2.7. load-bearing: socket.io resolves 4.2.6 (runtime).
-  socket.io-parser@4: 4.2.7
+  # === Dependabot high-risk batch (ENG-2205) ===
   # ENG-2205 / GHSA-7p8r-x3mc-p8w7 (CVE-2026-18446): fast-uri >=3.0.0 <3.1.5 host confusion via a
   # backslash authority introducer; patched in 3.1.5. Previously self-resolved, reopened by the new
   # advisory. load-bearing: @redocly/ajv and ajv pull 3.1.4 (dev-only, API-docs tooling).
@@ -178,23 +155,6 @@ overrides:
   # base emits the host verbatim, letting it re-parse to a different host than resolve() returned.
   # All four patched in 3.1.6.
   fast-uri@3: 3.1.6
-  # ENG-2433 / ENG-2430 / GHSA-ggr8-5vv4-36mx (CVE-2026-40345): deepmerge-ts <8.0.0 has no cycle
-  # detection in its recursive record-merge routine, so two recursive object graphs sharing a
-  # property path exhaust the call stack (DoS); patched in 8.0.0. Pinned to 8.0.1 (lowest patched
-  # release, past the `minimumReleaseAge` cooldown as of 2026-08-19). This is a cross-major coercion
-  # of two consumers, both of which declare a 7.x dependency — verified safe: @prisma/config only
-  # merges developer-authored prisma.config.ts contents at CLI time, and next-safe-action merges
-  # middleware context (plain objects, 2-3 levels, no Map/Set) via `deepmerge`, so none of 8.0.0's
-  # breaking changes apply: the deepmergeInto mutation fix and the renamed mergeInfo/
-  # DeepMergeIntoUtils types are out of scope, the mergeMaps collision change needs a Map, and the
-  # new maxDepth defaults to 1000. `prisma generate` / `prisma migrate` still resolve config
-  # correctly under 8.0.1.
-  # load-bearing (runtime): apps/web > next-safe-action (direct, ^7.1.5) merges server-action
-  # middleware ctx (ActionClientCtx — ipAddress/oldObject/newObject can carry request-derived data)
-  # on every invocation.
-  # load-bearing (dev-only, Prisma CLI): apps/web > @better-auth/oauth-provider > better-auth >
-  # @better-auth/prisma-adapter > @prisma/client > prisma > @prisma/config resolves 7.1.5.
-  deepmerge-ts@7: 8.0.1
   # === Dependabot security batch (ENG-2821/ENG-2822, ENG-2823/ENG-2824, ENG-2839..ENG-2845) ===
   # ENG-2823 / GHSA-c83g-rgw3-j3cx (CVE-2026-73089): browserslist's query-result and AST caches grow
   # without eviction, so a stream of distinct queries (e.g. `since <year>-<month>-<day>`) accumulates
