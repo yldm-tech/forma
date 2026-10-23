@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
 )
 
 // Open connects and verifies the connection with a ping, so a wrong DATABASE_URL fails at startup rather than on the first request. The returned cleanup closes the pool.
@@ -48,7 +49,13 @@ func Open(ctx context.Context, cfg config.Config, log *slog.Logger) (*gorm.DB, f
 		return nil, nil, fmt.Errorf("ping database: %w", err)
 	}
 
+	stopObserving, err := telemetry.ObserveSQLPool("main", sqlDB)
+	if err != nil {
+		_ = sqlDB.Close()
+		return nil, nil, err
+	}
 	cleanup := func() {
+		stopObserving()
 		if err := sqlDB.Close(); err != nil {
 			log.Error("close database", "err", err)
 		}
