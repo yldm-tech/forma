@@ -324,7 +324,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 		}
 	}
 	var is issues
-	update := response.UpdateInput{}
+	update := response.UpdateInput{Management: true}
 	update.Finished = is.boolean("finished", o.get("finished"), optional)
 	endingID := o.get("endingId")
 	update.EndingIDSet = !isAbsent(endingID)

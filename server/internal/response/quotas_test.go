@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -218,5 +219,94 @@ func TestAFailingQuotaStatementIsRolledBackToItsSavepoint(t *testing.T) {
 	}
 	if !contains(e.logs.String(), "quota link refused") {
 		t.Fatal("the quota failure was not logged")
+	}
+}
+
+// forma2's management writes (v1 POST and PUT, v2 POST and PUT) sent the pipeline the response as the quota left it: an endSurvey quota that finished it fires responseFinished, and every payload carries finished and the quota's ending. The client API's update keeps sending the row as written.
+func TestManagementWritesSendTheResponseAQuotaEnded(t *testing.T) {
+	e := newEnv(t)
+	_, ws := e.organization(e.user())
+	svID := e.survey(ws, surveyOpts{})
+	e.quotaOn(svID, "Q", "yes", 1, actionEndSurvey, ptr("end1"), false)
+	ctx := context.Background()
+	sv, err := e.svc.Survey(ctx, svID.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.CreateManaged(ctx, sv, ManagedInput{Finished: true, Data: map[string]any{"q1": "yes"}}); err != nil {
+		t.Fatal(err)
+	}
+	payloads := func(id uuid.UUID) (events []string, finished []bool, endings []any) {
+		t.Helper()
+		var rows []struct {
+			Event    string
+			Finished bool
+			EndingID *string
+		}
+		if err := e.db.Raw(`SELECT args->>'event' AS event, (args->'response'->>'finished')::boolean AS finished, args->'response'->>'endingId' AS ending_id
+			FROM river_job WHERE kind = 'response-pipeline.process' AND args->'response'->>'id' = ? ORDER BY id`, id.String()).Scan(&rows).Error; err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range rows {
+			events, finished = append(events, r.Event), append(finished, r.Finished)
+			if r.EndingID != nil {
+				endings = append(endings, *r.EndingID)
+			} else {
+				endings = append(endings, nil)
+			}
+		}
+		return events, finished, endings
+	}
+	// expect checks the events of id and that the payloads from the from-th on carry the quota's ending.
+	expect := func(name string, id uuid.UUID, wantEvents []string, from int) {
+		t.Helper()
+		events, finished, endings := payloads(id)
+		if !reflect.DeepEqual(events, wantEvents) {
+			t.Errorf("%s: events %v, want %v", name, events, wantEvents)
+		}
+		for i := from; i < len(finished); i++ {
+			if !finished[i] || endings[i] != "end1" {
+				t.Errorf("%s: %s payload finished=%v endingId=%v, want the quota's ending", name, events[i], finished[i], endings[i])
+			}
+		}
+	}
+
+	created, err := e.svc.CreateManaged(ctx, sv, ManagedInput{Finished: false, Data: map[string]any{"q1": "yes"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created.Finished {
+		t.Fatalf("the quota did not end the created response: %+v", created)
+	}
+	expect("create", created.ID, []string{EventResponseCreated, EventResponseFinished}, 0)
+
+	replaced, err := e.svc.CreateManaged(ctx, sv, ManagedInput{Finished: false, Data: map[string]any{"q1": "no"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if _, err := e.svc.ReplaceManaged(ctx, sv, replaced.ID, ReplaceInput{CreatedAt: now, UpdatedAt: now, Data: map[string]any{"q1": "yes"}}); err != nil {
+		t.Fatal(err)
+	}
+	expect("replace", replaced.ID, []string{EventResponseCreated, EventResponseUpdated, EventResponseFinished}, 1)
+
+	updated, err := e.svc.CreateManaged(ctx, sv, ManagedInput{Finished: false, Data: map[string]any{"q1": "no"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Update(ctx, sv, updated.ID.String(), UpdateInput{Data: map[string]any{"q1": "yes"}, Management: true}); err != nil {
+		t.Fatal(err)
+	}
+	expect("management update", updated.ID, []string{EventResponseCreated, EventResponseUpdated, EventResponseFinished}, 1)
+
+	client, err := e.svc.CreateManaged(ctx, sv, ManagedInput{Finished: false, Data: map[string]any{"q1": "no"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Update(ctx, sv, client.ID.String(), UpdateInput{Data: map[string]any{"q1": "yes"}}); err != nil {
+		t.Fatal(err)
+	}
+	if events, finished, _ := payloads(client.ID); !reflect.DeepEqual(events, []string{EventResponseCreated, EventResponseUpdated}) || finished[1] {
+		t.Errorf("client update: events %v finished %v, want responseUpdated with the row as written", events, finished)
 	}
 }

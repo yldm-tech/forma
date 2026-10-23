@@ -149,12 +149,20 @@ func (s *Service) CreateManaged(ctx context.Context, sv *Survey, in ManagedInput
 		if language != nil {
 			quotaLanguage = *language
 		}
-		s.evaluateQuotas(ctx, tx.DB, sv, screening{
+		full := s.evaluateQuotas(ctx, tx.DB, sv, screening{
 			ResponseID: row.ID, Finished: row.Finished, Data: data, Variables: variables, Language: quotaLanguage,
 			Row: valueResponse(row, data, variables, ttc, meta),
 		})
+		// forma2's management routes sent the pipeline the response as the quota left it.
+		if full.endedResponse() {
+			refreshed, _, err := loadResponse(ctx, tx.DB, row.ID)
+			if err != nil {
+				return err
+			}
+			row = *refreshed
+		}
 		events := []string{EventResponseCreated}
-		if in.Finished {
+		if row.Finished {
 			events = append(events, EventResponseFinished)
 		}
 		for _, event := range events {
@@ -263,12 +271,18 @@ func (s *Service) ReplaceManaged(ctx context.Context, sv *Survey, id uuid.UUID, 
 		if language != nil && *language != "" {
 			quotaLanguage = *language
 		}
-		s.evaluateQuotas(ctx, tx.DB, sv, screening{
+		full := s.evaluateQuotas(ctx, tx.DB, sv, screening{
 			ResponseID: id, Finished: in.Finished, Data: data, Variables: variables, Language: quotaLanguage,
 			Row: valueResponse(*row, data, variables, ttc, meta),
 		})
+		// forma2's v2 PUT sent the pipeline the response as the quota left it.
+		if full.endedResponse() {
+			if row, _, err = loadResponse(ctx, tx.DB, id); err != nil {
+				return err
+			}
+		}
 		events := []string{EventResponseUpdated}
-		if in.Finished {
+		if row.Finished {
 			events = append(events, EventResponseFinished)
 		}
 		for _, event := range events {

@@ -69,6 +69,8 @@ type UpdateInput struct {
 	TTC      map[string]float64
 	Language *string
 	Locale   string
+	// Management is set by the v1 management API's PUT, which sent the pipeline the response as a quota's endSurvey action left it (finished, on the quota's ending); the client API's update sent the row as written.
+	Management bool
 }
 
 // Update is the write of forma2's client response update (updateResponseWithQuotaEvaluation, then sendToPipeline), in one transaction: data and variables are merged over what is stored, ttc too with its total recomputed when the update finishes the response, the ingest flags are merged by key, the survey's quotas are evaluated against the merged response and the pipeline events enqueued. Meta and contact never change on update. A response that disappeared meanwhile is 404 Response.
@@ -103,6 +105,13 @@ func (s *Service) Update(ctx context.Context, sv *Survey, rawID string, in Updat
 			ResponseID: row.ID, Finished: row.Finished, Data: data, Variables: variables, Language: quotaLanguage,
 			Row: valueResponse(row, data, variables, ttc, meta),
 		})
+		if in.Management && full.endedResponse() {
+			refreshed, _, err := loadResponse(ctx, tx.DB, row.ID)
+			if err != nil {
+				return err
+			}
+			row = *refreshed
+		}
 
 		events := []string{EventResponseUpdated}
 		if row.Finished {

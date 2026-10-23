@@ -30,6 +30,9 @@ type quota struct {
 	CountPartialSubmissions bool
 }
 
+// endedResponse reports whether the quota's endSurvey action finished the response it screened.
+func (q *quota) endedResponse() bool { return q != nil && q.Action == actionEndSurvey }
+
 func (q *quota) full() QuotaFull {
 	if q == nil {
 		return QuotaFull{}
