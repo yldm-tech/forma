@@ -112,6 +112,19 @@ func SealTOTP(c *secret.Cipher, userID uuid.UUID, m TOTPMaterial) (secretCiphert
 	return secretCiphertext, backupCodesCiphertext, nil
 }
 
+// OpenTOTP is the inverse of SealTOTP: the material a user_totp row holds. The data migration compares it with what it would write, so a re-run leaves a row whose material has not changed as it is.
+func OpenTOTP(c *secret.Cipher, userID uuid.UUID, secretCiphertext, backupCodesCiphertext []byte) (TOTPMaterial, error) {
+	key, err := openTOTPKey(c, userID, secretCiphertext)
+	if err != nil {
+		return TOTPMaterial{}, err
+	}
+	codes, err := openBackupCodes(c, userID, backupCodesCiphertext)
+	if err != nil {
+		return TOTPMaterial{}, err
+	}
+	return TOTPMaterial{Key: key, BackupCodes: codes}, nil
+}
+
 func sealBackupCodes(c *secret.Cipher, userID uuid.UUID, codes []string) ([]byte, error) {
 	if codes == nil {
 		codes = []string{}
