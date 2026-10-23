@@ -29,7 +29,7 @@ For other operating systems or a more customized installation, see the [Docker](
 Download the script from the `stable` branch, the release that `ghcr.io/yldm-tech/forma:latest` names, and run it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh && chmod +x forma.sh && ./forma.sh install
+curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/forma.sh -o forma.sh && chmod +x forma.sh && ./forma.sh install
 ```
 
 The script downloads `docker-compose.yml` and its helper scripts from the same branch. To install a specific release, set `FORMA_REF=v0.2.<n>` (the release's tag) when running it, and pin the image with `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `forma/.env`.
@@ -54,7 +54,7 @@ When it finishes, open `https://<your domain>` and sign up: the instance admits 
 Run the update from the directory that contains the `forma/` folder, with the current script (replace an older `forma.sh`, in particular forma2's):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh
+curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/forma.sh -o forma.sh
 chmod +x forma.sh
 ./forma.sh update
 ```

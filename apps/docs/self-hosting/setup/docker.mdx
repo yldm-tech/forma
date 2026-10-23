@@ -39,7 +39,7 @@ Docker and Docker Compose are usually included in tools like Docker Desktop and 
 
    ```bash
    for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
-     curl -fsSL -o "$file" "https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/$file"
+     curl -fsSL -o "$file" "https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/$file"
    done
    chmod 700 authzed-postgres-bootstrap.sh rustfs-init.sh
    ```

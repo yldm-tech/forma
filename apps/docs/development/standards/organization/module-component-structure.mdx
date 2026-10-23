@@ -6,10 +6,10 @@ icon: boxes-stacked
 
 ## Introduction
 
-The admin UI (`web/src/`) has two primary organizational units, and the Go server mirrors the first:
+The admin UI (`apps/web/src/`) has two primary organizational units, and the Go server mirrors the first:
 
-1. **Feature modules**: domain-specific screens, logic and API calls, one directory per feature in `web/src/features/` (and one package per feature in `server/internal/`)
-2. **UI components**: reusable building blocks in `web/src/components/` (the generic ones in `web/src/components/ui/`)
+1. **Feature modules**: domain-specific screens, logic and API calls, one directory per feature in `apps/web/src/features/` (and one package per feature in `apps/server/internal/`)
+2. **UI components**: reusable building blocks in `apps/web/src/components/` (the generic ones in `apps/web/src/components/ui/`)
 
 ## Module Organization
 
@@ -18,27 +18,27 @@ The admin UI (`web/src/`) has two primary organizational units, and the Go serve
 A feature module typically includes:
 
 ```
-web/src/features/
+apps/web/src/features/
 └── feature-name/
    ├── components/    # the feature's own components
    ├── lib/           # business logic and utilities, with their tests
-   ├── api.ts         # the feature's calls through `api` (web/src/lib/api.ts)
+   ├── api.ts         # the feature's calls through `api` (apps/web/src/lib/api.ts)
    ├── api.test.ts
    └── types.ts       # types the feature does not share
 ```
 
-The route that shows a feature lives in `web/src/routes/` and stays thin: it declares the path, prefetches the page's queries in its loader and renders a page component from the feature. Query factories shared by several features live in `web/src/lib/queries/`.
+The route that shows a feature lives in `apps/web/src/routes/` and stays thin: it declares the path, prefetches the page's queries in its loader and renders a page component from the feature. Query factories shared by several features live in `apps/web/src/lib/queries/`.
 
-On the server, the matching unit is a package, `server/internal/<feature>/`, layered handler → service → repository; see [File and Directory Organization](/development/standards/organization/file-and-directory-organization).
+On the server, the matching unit is a package, `apps/server/internal/<feature>/`, layered handler → service → repository; see [File and Directory Organization](/development/standards/organization/file-and-directory-organization).
 
 ## Component Organization
 
 ### UI Component Structure
 
-Generic components live in `web/src/components/ui/`, one file per component, or a directory when a component has parts of its own:
+Generic components live in `apps/web/src/components/ui/`, one file per component, or a directory when a component has parts of its own:
 
 ```
-web/src/components/ui/
+apps/web/src/components/ui/
 ├── button.tsx
 ├── dialog.tsx
 ├── dialog.test.ts
@@ -52,7 +52,7 @@ The survey runtime's components are in `packages/survey-ui`, with their Storyboo
 
 ### Component Types
 
-1. **Base Components**: fundamental UI elements like Button, Input, Dialog, in `web/src/components/ui/`
+1. **Base Components**: fundamental UI elements like Button, Input, Dialog, in `apps/web/src/components/ui/`
 
 2. **Composite Components**: components that combine base components, such as the data table or the date picker
 
@@ -61,7 +61,7 @@ The survey runtime's components are in `packages/survey-ui`, with their Storyboo
 ### Feature Module Example
 
 ```
-web/src/features/surveys/
+apps/web/src/features/surveys/
 ├── ai-create/
 ├── list/
 ├── templates/
@@ -84,6 +84,6 @@ web/src/features/surveys/
    - Keep server data in TanStack Query, not in component state
 
 3. **Code Sharing**
-   - Share generic components through `web/src/components/ui/` and helpers through `web/src/lib/`
+   - Share generic components through `apps/web/src/components/ui/` and helpers through `apps/web/src/lib/`
    - A feature does not reach into another feature's internals; move what both need to `components/` or `lib/`
    - Import with relative paths; shared packages by their `@forma/*` names

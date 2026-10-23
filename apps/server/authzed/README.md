@@ -9,11 +9,12 @@ assertion-based validation suite.
   blocks that pin down the schema's semantics.
 - `validate.sh` — offline validation runner (local `zed` binary or the pinned
   `authzed/zed` container image; no SpiceDB server needed).
+- `schema.go` — the `authzed` Go package, which embeds `schema.zed` for the server (`internal/authz` reads it from there), so this directory holds the schema's only copy.
 - [Direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) — the approved direct-authority, fail-closed,
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than
   being duplicated in this repository.
-- [`AuthZed Operations`](../docs/self-hosting/advanced/authzed-operations.mdx) —
+- [`AuthZed Operations`](../../docs/self-hosting/advanced/authzed-operations.mdx) —
   the public self-hosting contract for Docker and Kubernetes operators.
 
 ## Running the validation
@@ -164,7 +165,7 @@ relationships).
 
 The permission ladder is deliberately not encoded in the trigger. It is rankable,
 but a rank table in SQL has no compile-time backstop the way
-`relationship-map.ts` does, so a change to `authzed/schema.zed` would silently
+`relationship-map.ts` does, so a change to `apps/server/authzed/schema.zed` would silently
 make it wrong in the fail-open direction — the one direction this guard must
 never be wrong in. Role changes are one-at-a-time admin actions rather than the
 bulk operations the classifier exists to keep off the guard. Revisit only if a
@@ -552,7 +553,7 @@ dead-letter rows are never removed by retention cleanup.
 
 ## Self-hosted initialization and upgrades
 
-There is no separate upgrade command; deployments run the `forma authz` steps above in order. The Helm chart's `authzed-initialize` Job (`charts/forma/templates/authzed-initialize-job.yaml`) runs on a fresh install, and before an upgrade once `authzed.migrationAcknowledged=true`:
+There is no separate upgrade command; deployments run the `forma authz` steps above in order. The Helm chart's `authzed-initialize` Job (`deploy/helm/forma/templates/authzed-initialize-job.yaml`) runs on a fresh install, and before an upgrade once `authzed.migrationAcknowledged=true`:
 
 ```bash
 forma authz schema apply

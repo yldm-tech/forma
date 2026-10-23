@@ -31,7 +31,7 @@ Forma now runs as a Go server instead of forma2's Next.js application. The image
 - **Logs** keep the lowercase `level` labels, `audit` included, but `time` is an RFC 3339 string and `pid`, `hostname` and `name` are gone; `LOG_LEVEL` defaults to `info` where forma2 defaulted to `warn`. See [Monitoring](/self-hosting/setup/monitoring) and [Audit Logging](/self-hosting/advanced/enterprise-features/audit-logging).
 - **Static assets** are under `/assets/*` (fingerprinted) instead of `/_next/static/*`; adjust CDN rules as described in [CDN](/self-hosting/configuration/cdn).
 - **No custom subpath**: `BASE_PATH` has no counterpart; see [Custom Subpath](/self-hosting/configuration/custom-subpath).
-- **PostgreSQL 18 or newer** is required. forma2's compose file already ran PostgreSQL 18; its Helm chart ran 17 (see the chart's [PostgreSQL upgrade](https://github.com/yldm-tech/forma/blob/main/charts/forma/README.md#upgrading-the-bundled-postgresql-from-17-to-18)).
+- **PostgreSQL 18 or newer** is required. forma2's compose file already ran PostgreSQL 18; its Helm chart ran 17 (see the chart's [PostgreSQL upgrade](https://github.com/yldm-tech/forma/blob/main/deploy/helm/forma/README.md#upgrading-the-bundled-postgresql-from-17-to-18)).
 
 ### The database
 
@@ -78,7 +78,7 @@ What is not carried over, and what users notice:
 Download the current installer, replacing forma2's `forma.sh`, and run the update from the directory that contains `forma/`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh
+curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/forma.sh -o forma.sh
 chmod +x forma.sh
 ./forma.sh update
 ```
@@ -110,7 +110,7 @@ Every step is idempotent. After the stack is up, `docker compose --profile authz
 
    ```bash
    for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
-     curl -fsSL -o "$file.new" "https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/$file"
+     curl -fsSL -o "$file.new" "https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/$file"
    done
    ```
 
@@ -122,7 +122,7 @@ Every step is idempotent. After the stack is up, `docker compose --profile authz
 
 ### Helm installations
 
-The chart in this repository (`charts/forma`) replaces forma2's and keeps its values, Secrets and resource names; its [README](https://github.com/yldm-tech/forma/blob/main/charts/forma/README.md#forma-on-the-go-server-what-changed-in-this-chart) lists the differences. In short:
+The chart in this repository (`deploy/helm/forma`) replaces forma2's and keeps its values, Secrets and resource names; its [README](https://github.com/yldm-tech/forma/blob/main/deploy/helm/forma/README.md#forma-on-the-go-server-what-changed-in-this-chart) lists the differences. In short:
 
 - Set `deployment.image.tag` to the release you deploy. The server runs `forma start` with `BULLMQ_WORKER_ENABLED=0`, and the new `worker` Deployment runs `forma worker` (`worker.enabled=false` returns to one Deployment).
 - The migration Job runs `forma wait-for-database` and `forma migrate`; the AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare`. An upgrade still needs `authzed.migrationAcknowledged=true` once `forma authz schema apply`, `outbox drain` and `backfill --apply` have succeeded.
@@ -132,7 +132,7 @@ The chart in this repository (`charts/forma`) replaces forma2's and keeps its va
 - Import forma2's data once the migration Job has run, from a one-off pod with the release's image and the server's Secret: `forma import-forma2` with `MIGRATE_DATABASE_URL` set to a direct (not pooled) connection. The server pods refuse to start until it has run, and start on their next restart after it.
 
 ```bash
-helm upgrade forma ./charts/forma -n forma -f values.yaml --set deployment.image.tag=0.2.<n>
+helm upgrade forma ./deploy/helm/forma -n forma -f values.yaml --set deployment.image.tag=0.2.<n>
 ```
 
 ### Verify

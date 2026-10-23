@@ -35,7 +35,7 @@ For local development:
 http://localhost:3000/api/mcp
 ```
 
-The route supports `POST` requests (a `GET` answers 405), is served by the Go server (`server/internal/mcp`), and sets private no-store response headers. Browser-origin MCP requests must come from the configured Forma app origin.
+The route supports `POST` requests (a `GET` answers 405), is served by the Go server (`apps/server/internal/mcp`), and sets private no-store response headers. Browser-origin MCP requests must come from the configured Forma app origin.
 
 ### Protocol revisions
 
@@ -90,7 +90,7 @@ Supported scopes:
 | `email` | User email claim |
 | `offline_access` | Refresh tokens for MCP clients |
 
-**The rule:** every MCP tool has a `toolSpec{scopes, anyOf}` entry in `toolSpecs` (`server/internal/mcp/tools.go`), and the handler refuses to start when an advertised tool has none. `toolHandler` runs the scope gate before the tool's handler, so a new tool inherits enforcement from its entry: the gate returns a `403` before the handler touches a v3 operation. Read tools declare `<resource>:read`; every mutating tool declares `<resource>:write`. By default the token must hold every listed scope; tools that more than one scope group legitimately reaches set `anyOf: true`, which requires any one of them and keeps them on the same gate rather than a hand-rolled one.
+**The rule:** every MCP tool has a `toolSpec{scopes, anyOf}` entry in `toolSpecs` (`apps/server/internal/mcp/tools.go`), and the handler refuses to start when an advertised tool has none. `toolHandler` runs the scope gate before the tool's handler, so a new tool inherits enforcement from its entry: the gate returns a `403` before the handler touches a v3 operation. Read tools declare `<resource>:read`; every mutating tool declares `<resource>:write`. By default the token must hold every listed scope; tools that more than one scope group legitimately reaches set `anyOf: true`, which requires any one of them and keeps them on the same gate rather than a hand-rolled one.
 
 **There is no single mandatory baseline scope.** Authentication requires *at least one* resource scope
 (`oauthserver.ResourceScopes`), so a workflows-only grant is a legitimate MCP
@@ -940,7 +940,7 @@ The MCP server does not run custom survey database queries. Each tool runs the v
 | `restore_survey`  | `POST /api/v3/surveys/{surveyId}/restore` |
 
 When the v3 OpenAPI contract changes, update the MCP schemas and this page together. The hand-maintained
-v3 OpenAPI spec lives at `docs/api-v3-reference/openapi.yml`.
+v3 OpenAPI spec lives at `apps/docs/api-v3-reference/openapi.yml`.
 
 
 ## Limitations
@@ -977,9 +977,9 @@ v3 OpenAPI spec lives at `docs/api-v3-reference/openapi.yml`.
 
 ## Implementation Files
 
-- `server/internal/mcp/handler.go`: the route, the body limit, the protected resource metadata and the SDK server
-- `server/internal/mcp/auth.go`: authentication by API key or OAuth access token, and the audience check
-- `server/internal/mcp/tools.go` and `tools.json`: the tools and their input schemas
-- `server/internal/mcp/workspaces.go`: the workspace tools
-- `server/internal/mcp/operations.go`: the v3 survey and workflow operations the tools run in-process
-- `server/internal/oauthserver/`: the OAuth authorization server MCP clients sign in through
+- `apps/server/internal/mcp/handler.go`: the route, the body limit, the protected resource metadata and the SDK server
+- `apps/server/internal/mcp/auth.go`: authentication by API key or OAuth access token, and the audience check
+- `apps/server/internal/mcp/tools.go` and `tools.json`: the tools and their input schemas
+- `apps/server/internal/mcp/workspaces.go`: the workspace tools
+- `apps/server/internal/mcp/operations.go`: the v3 survey and workflow operations the tools run in-process
+- `apps/server/internal/oauthserver/`: the OAuth authorization server MCP clients sign in through

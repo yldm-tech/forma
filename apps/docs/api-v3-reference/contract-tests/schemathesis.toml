@@ -4,7 +4,7 @@
 # second copy of the spec to keep in sync. Pass this file explicitly, since Schemathesis only
 # discovers `schemathesis.toml` in the working directory and its parents:
 #
-#   schemathesis --config-file docs/api-v3-reference/contract-tests/schemathesis.toml run ...
+#   schemathesis --config-file apps/docs/api-v3-reference/contract-tests/schemathesis.toml run ...
 #
 # See README.md in this directory for the full local invocation.
 

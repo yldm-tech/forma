@@ -20,7 +20,7 @@ At Forma, we follow consistent error handling patterns to ensure reliability, de
 
 ## Server (Go)
 
-Services return an expected failure as an `*apperr.Error` (`server/internal/platform/apperr`): forma2's error classes, each with an HTTP status, a stable code and a message, built with `apperr.BadRequest`, `apperr.Forbidden`, `apperr.NotFound`, `apperr.Conflict` and their siblings. Anything else is an unexpected error: it is logged once, with the request id, and reaches the client as a generic 500 that reveals nothing.
+Services return an expected failure as an `*apperr.Error` (`apps/server/internal/platform/apperr`): forma2's error classes, each with an HTTP status, a stable code and a message, built with `apperr.BadRequest`, `apperr.Forbidden`, `apperr.NotFound`, `apperr.Conflict` and their siblings. Anything else is an unexpected error: it is logged once, with the request id, and reaches the client as a generic 500 that reveals nothing.
 
 ```go
 func (s *Service) Rename(ctx context.Context, actor authz.Actor, id uuid.UUID, name string) (*Tag, error) {
@@ -48,7 +48,7 @@ Wrap errors with context (`fmt.Errorf("open database: %w", err)`) and log them o
 
 ## Admin UI
 
-Every call goes through `api` in `web/src/lib/api.ts`, which throws an `ApiError` carrying the server's status, code, message, details and, for a v3 problem, its `invalid_params`. Queries surface it through TanStack Query's error state; mutations show the user a translated message in a toast:
+Every call goes through `api` in `apps/web/src/lib/api.ts`, which throws an `ApiError` carrying the server's status, code, message, details and, for a v3 problem, its `invalid_params`. Queries surface it through TanStack Query's error state; mutations show the user a translated message in a toast:
 
 ```typescript
 const createTag = useMutation({
