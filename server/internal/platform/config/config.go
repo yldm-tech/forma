@@ -123,7 +123,7 @@ type Config struct {
 	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
 	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
 
-	// SSO is single sign-on through Google, GitHub, Azure AD and a generic OpenID Connect provider.
+	// SSO is single sign-on through Google, GitHub, Azure AD, a generic OpenID Connect provider and SAML.
 	SSO SSOConfig
 
 	// MCPOAuthJWKSURL is where /api/mcp fetches the keys OAuth access tokens are signed with, forma2's MCP_OAUTH_JWKS_URL, for deployments that verify against another instance's authorization server. It changes no public URL: the issuer, the redirects and the token audience stay derived from WEBAPP_URL and BETTER_AUTH_URL. Unset, the keys are read from the database the authorization server writes them to.
@@ -203,6 +203,8 @@ type SSOConfig struct {
 	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
+	// SAMLDatabaseURL is forma2's switch for SAML SSO: set, the SAML button is offered and the connection is read from saml-connection/*.xml at start-up. forma2 kept its SAML state in that separate database; here the connection lives in the main one, so only whether it is set matters.
+	SAMLDatabaseURL Secret `env:"SAML_DATABASE_URL"`
 }
 
 // StripeConfig is forma2's STRIPE_* variables, all optional.
@@ -256,6 +258,9 @@ func (s SSOConfig) AzureADEnabled() bool {
 func (s SSOConfig) OIDCEnabled() bool {
 	return s.OIDCClientID != "" && s.OIDCClientSecret != "" && s.OIDCIssuer != ""
 }
+
+// SAMLEnabled is forma2's SAML_OAUTH_ENABLED. Its licence check always granted SAML, so the variable is the only gate.
+func (s SSOConfig) SAMLEnabled() bool { return s.SAMLDatabaseURL != "" }
 
 func (s SSOConfig) validate() error {
 	if s.DefaultOrganizationID != "" {

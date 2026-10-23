@@ -87,7 +87,7 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
 	// forma2's internal routes outside /api/v3 that follow its conventions without its contract: the attachment ZIP export.
 	mountInternalAPI(r, p, sessions, attachmentsHandler)
-	// The identity providers' redirect URIs: browser navigations that end in a redirect, outside /api/app and its JSON envelope.
+	// The identity providers' redirect URIs and SAML's assertion consumer service: browser navigations that end in a redirect, outside /api/app, its JSON envelope and its CSRF check.
 	ssoHandler.RegisterCallbacks(r)
 	// The MCP server at forma2's /api/mcp, and the OAuth authorization server MCP clients discover through /.well-known and sign in through under /api/auth/oauth2: forma2's paths and answers, outside /api/app.
 	mcpHandler.Register(r)

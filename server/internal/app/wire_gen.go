@@ -126,7 +126,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	twoFactor := auth.NewTwoFactor(cfg, authService, cipher)
 	authHandler := auth.NewHandler(cfg, authService, sessions, twoFactor)
-	sso := auth.NewSSO(cfg, authService, log)
+	sso := newSSO(ctx, cfg, authService, log)
 	ssoHandler := auth.NewSSOHandler(cfg, sso)
 	orgRepository := org.NewRepository(db)
 	workspaceRepository := workspace.NewRepository(db, log)
@@ -347,8 +347,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks. Its sessions are the SessionAuth every other module's routes authenticate with.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
