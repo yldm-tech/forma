@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
 import { toast } from "../../../lib/toast";
 import { SurveyBgSelectorTab } from "./survey-bg-selector-tab";
+import { unsplashStatusQuery } from "./unsplash";
 
 let i18n: I18n;
 
@@ -55,13 +56,19 @@ const renderTab = (bgType: string, bg: string) => {
   return { handleBgChange, queryClient };
 };
 
-const statusLoaded = (fetchMock: ReturnType<typeof stubServer>) =>
-  waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/app/unsplash/status", expect.anything()));
+/** Waits until the component has rendered with the server's answer, so an assertion made afterwards sees its reaction to it rather than the loading state, where the image tab is hidden whatever the answer. */
+const statusLoaded = async (queryClient: QueryClient, configured: boolean) => {
+  await waitFor(() =>
+    expect(queryClient.getQueryData(unsplashStatusQuery().queryKey)).toEqual({ configured })
+  );
+  // React Query tells its observers about the new data on a zero-delay timer queued when the data landed; a zero-delay timer queued now runs after it, by which point the component has re-rendered.
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+};
 
 test("the image tab is hidden when Unsplash is not configured", async () => {
-  const fetchMock = stubServer(false);
-  renderTab("color", "#ffffff");
-  await statusLoaded(fetchMock);
+  stubServer(false);
+  const { queryClient } = renderTab("color", "#ffffff");
+  await statusLoaded(queryClient, false);
   expect(screen.getByRole("button", { name: "Upload" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Image" })).toBeNull();
 });
@@ -108,9 +115,9 @@ test("a survey with an image background opens on the image tab with it selected"
 });
 
 test("without Unsplash an image background still shows on its tab", async () => {
-  const fetchMock = stubServer(false);
-  renderTab("image", photo.url);
-  await statusLoaded(fetchMock);
+  stubServer(false);
+  const { queryClient } = renderTab("image", photo.url);
+  await statusLoaded(queryClient, false);
   expect(screen.getByRole("button", { name: "Image" })).toBeTruthy();
   expect(screen.getByRole("img", { name: "Image" }).getAttribute("src")).toBe(photo.url);
   expect(screen.queryByRole("textbox", { name: "Search for images" })).toBeNull();
