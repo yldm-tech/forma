@@ -10,6 +10,8 @@ export interface Organization {
   isAISmartToolsEnabled: boolean;
   /** An IANA zone; null means UTC. */
   displayTimeZone: string | null;
+  /** The email logo and survey favicon that replace Forma's, forma2's TOrganizationWhitelabel. */
+  whitelabel?: { logoUrl?: string | null; faviconUrl?: string | null } | null;
 }
 
 /** An organization in the caller's list, with the caller's role in it. */

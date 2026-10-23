@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   BlocksIcon,
@@ -5,6 +6,7 @@ import {
   MousePointerClickIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  RocketIcon,
   SettingsIcon,
   TagIcon,
   UserIcon,
@@ -15,13 +17,45 @@ import { useTranslation } from "react-i18next";
 import { TrialAlert } from "../../features/billing/components/trial-alert";
 import { cn } from "../../lib/cn";
 import { organizationSettingsPath, workspaceHomePath, workspaceSettingsPath } from "../../lib/navigation";
+import { billingSummaryQuery } from "../../lib/queries/billing";
+import {
+  DEVELOPMENT_VERSION,
+  instanceQuery,
+  isNewerVersion,
+  latestReleaseQuery,
+} from "../../lib/queries/instance";
 import { NAV_COLLAPSED_KEY, readStorage, writeStorage } from "../../lib/storage";
 import { Button } from "../ui/button";
 import { Wordmark } from "../ui/logo";
 import { NavigationLink } from "./navigation-link";
 
+/** forma2's self-hosted update notice (MainNavigationNotices): a released, self-hosted instance whose latest stable Forma release is ahead of the running one links to the releases. Neither Forma Cloud nor a development build shows it. */
+const UpdateNotice = ({ organizationId }: { organizationId: string }) => {
+  const { t } = useTranslation();
+  const { data: instance } = useQuery(instanceQuery);
+  const { data: billing } = useQuery(billingSummaryQuery(organizationId));
+  const isReleasedSelfHosted =
+    billing?.isFormaCloud === false && instance !== undefined && instance.version !== DEVELOPMENT_VERSION;
+  const { data: latestVersion } = useQuery({ ...latestReleaseQuery, enabled: isReleasedSelfHosted });
+  if (!isReleasedSelfHosted || !latestVersion || !isNewerVersion(`v${instance.version}`, latestVersion)) {
+    return null;
+  }
+  return (
+    <a
+      href="https://github.com/yldm-tech/forma/releases"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="m-2 flex items-center gap-x-4 rounded-lg border border-slate-200 bg-slate-100 p-2 text-sm text-slate-800 hover:border-slate-300 hover:bg-slate-200">
+      <p className="flex items-center justify-center gap-x-2 text-xs">
+        <RocketIcon strokeWidth={1.5} className="mx-1 size-6 text-slate-900" />
+        {t("common.new_version_available", { version: latestVersion })}
+      </p>
+    </a>
+  );
+};
+
 /**
- * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land. On Forma Cloud an owner or manager sees the trial's countdown above Settings, linking to billing (forma2's MainNavigationNotices).
+ * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land. Above Settings an owner or manager sees forma2's MainNavigationNotices: self-hosted, the new-release notice; on Forma Cloud, the trial's countdown linking to billing.
  */
 export const MainNavigation = ({
   workspaceId,
@@ -138,6 +172,7 @@ export const MainNavigation = ({
         </nav>
       </div>
       <div>
+        {!isCollapsed && isOwnerOrManager && <UpdateNotice organizationId={organizationId} />}
         {!isCollapsed && isOwnerOrManager && trialDaysRemaining !== null && (
           <Link to={organizationSettingsPath(organizationId, "billing")} className="m-2 block">
             <TrialAlert trialDaysRemaining={trialDaysRemaining} size="small" />

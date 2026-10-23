@@ -1,6 +1,7 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
+import { useParams } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
-import type React from "react";
+import { type ChangeEvent, type Dispatch, type SetStateAction, useRef, useState } from "react";
 import { UseFormReturn, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { TSurveyStyling } from "@forma/types/surveys/types";
@@ -9,20 +10,26 @@ import { cn } from "../../../lib/cn";
 import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-toggle";
 import { Button } from "../../../components/ui/button";
 import { ColorPicker } from "../../../components/ui/color-picker/index";
+import { useIsStorageConfigured } from "../../../components/ui/file-input/components/uploader";
 import { FileInput } from "../../../components/ui/file-input/index";
 import { FormControl, FormDescription, FormField, FormItem, FormLabel } from "../../../components/ui/form";
 import { showStorageNotConfiguredToast } from "../../../components/ui/storage-not-configured-toast";
 import { Switch } from "../../../components/ui/switch";
+import { handleFileUpload, showFileUploadErrorToast } from "../../../lib/upload";
 
 type LogoSettingsCardProps = {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<TWorkspaceStyling | TSurveyStyling>;
   disabled?: boolean;
 };
 
 export const LogoSettingsCard = ({ open, setOpen, form, disabled = false }: LogoSettingsCardProps) => {
   const { t } = useTranslation();
+  const { workspaceId = "" }: { workspaceId?: string } = useParams({ strict: false });
+  const isStorageConfigured = useIsStorageConfigured();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const logo = useWatch({ control: form.control, name: "logo" });
   const logoUrl = logo?.url;
@@ -48,6 +55,29 @@ export const LogoSettingsCard = ({ open, setOpen, form, disabled = false }: Logo
     const [file] = files ?? [];
     if (file) {
       setLogoUrl(file);
+    }
+  };
+
+  // forma2's replace: a new file picked for the logo already shown is uploaded straight away.
+  const handleHiddenFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!isStorageConfigured) {
+      showStorageNotConfiguredToast(t);
+      return;
+    }
+    if (!file) return;
+    setIsLoading(true);
+    try {
+      const uploadResult = await handleFileUpload(file, workspaceId);
+      if (uploadResult.error) {
+        showFileUploadErrorToast(uploadResult.error, t);
+        return;
+      }
+      setLogoUrl(uploadResult.url);
+    } finally {
+      setIsLoading(false);
+      // Reset the input so the same file can be selected again.
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -125,6 +155,16 @@ export const LogoSettingsCard = ({ open, setOpen, form, disabled = false }: Logo
                 {t("workspace.surveys.edit.overwrite_survey_logo")}
               </div>
 
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg, image/png, image/webp, image/heic"
+                className="hidden"
+                disabled={disabled}
+                onChange={(e) => void handleHiddenFileChange(e)}
+                data-testid="survey-logo-replace-input"
+              />
+
               {logoUrl ? (
                 <>
                   <div className="flex items-center gap-4">
@@ -141,11 +181,16 @@ export const LogoSettingsCard = ({ open, setOpen, form, disabled = false }: Logo
                   <div className="flex gap-2">
                     <Button
                       type="button"
-                      // The Go server has no file storage, so a new logo cannot be uploaded; forma2 answered the same way without storage configured.
-                      onClick={() => showStorageNotConfiguredToast(t)}
+                      onClick={() => {
+                        if (!isStorageConfigured) {
+                          showStorageNotConfiguredToast(t);
+                          return;
+                        }
+                        fileInputRef.current?.click();
+                      }}
                       variant="secondary"
                       size="sm"
-                      disabled={disabled}>
+                      disabled={disabled || isLoading}>
                       {t("workspace.look.replace_logo")}
                     </Button>
                     <Button
@@ -180,7 +225,13 @@ export const LogoSettingsCard = ({ open, setOpen, form, disabled = false }: Logo
                   </AdvancedOptionToggle>
                 </>
               ) : (
-                <FileInput id="survey-logo-input" onFileUpload={handleFileInputChange} disabled={disabled} />
+                <FileInput
+                  id="survey-logo-input"
+                  onFileUpload={handleFileInputChange}
+                  disabled={disabled}
+                  workspaceId={workspaceId}
+                  maxSizeInMB={5}
+                />
               )}
             </div>
           )}

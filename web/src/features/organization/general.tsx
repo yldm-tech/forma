@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { PlusCircleIcon } from "lucide-react";
+import { PlusCircleIcon, ShieldCheckIcon } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -23,6 +23,8 @@ import { Select } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
+import { billingSummaryQuery } from "../../lib/queries/billing";
+import { instanceQuery } from "../../lib/queries/instance";
 import {
   type OrganizationDetail,
   organizationKeys,
@@ -37,14 +39,47 @@ import { UTC_DEFAULT, ianaTimeZones, organizationSettingsChanges } from "../../l
 import { toast } from "../../lib/toast";
 import { aiKeys, organizationAIQuery } from "../ai/availability";
 import { organizationNameError } from "../../lib/validation";
+import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 
-/** forma2's organization general settings page. */
+/** forma2's SecurityListTip, shown self-hosted: an invitation to the security announcements list. */
+const SecurityListTip = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="max-w-4xl">
+      <div className="flex items-center gap-x-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs">
+        <ShieldCheckIcon className="size-5 shrink-0 text-blue-400" />
+        <p className="text-sm">
+          {t("workspace.settings.general.security_list_tip")}{" "}
+          <a
+            href="https://forma.ylam.ai/security?utm_source=forma-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-forma-security-updates"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-blue-700">
+            {t("workspace.settings.general.security_list_tip_link")}
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/** forma2's organization general settings page: on top a warning without file storage and, self-hosted, the security list tip; at the foot the organization's id and the Forma version. */
 export const OrganizationGeneralPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const role = organization.membership.role;
+  const { data: instance } = useQuery(instanceQuery);
+  const { data: billing } = useQuery(billingSummaryQuery(organization.id));
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
+      {instance?.storageConfigured === false && (
+        <div className="max-w-4xl">
+          <Alert variant="warning" role="status">
+            <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+      {billing?.isFormaCloud === false && <SecurityListTip />}
       <SettingsCard
         width="full"
         title={t("workspace.settings.general.organization_settings")}
@@ -57,6 +92,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
         description={t("workspace.settings.general.ai_enabled_description")}>
         <AISettingsToggle organization={organization} />
       </SettingsCard>
+      <EmailCustomizationCard key={organization.updatedAt} organization={organization} />
       <SettingsCard
         width="full"
         title={t("workspace.settings.general.delete_organization")}
@@ -66,6 +102,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
       <CreateOrganizationCard />
       <div className="space-y-2">
         <IdBadge id={organization.id} label={t("common.organization_id")} />
+        {instance && <IdBadge id={instance.version} label={t("common.forma_version")} />}
       </div>
     </PageContentWrapper>
   );

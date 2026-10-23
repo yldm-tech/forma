@@ -1,7 +1,8 @@
 import type { TAppSurveyCardArrangementOptions, TCardArrangementOptions } from "@forma/types/styling";
 import type { TWorkspaceStyling } from "@forma/types/workspace";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, RotateCcwIcon, SparklesIcon } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
@@ -9,10 +10,13 @@ import { Button } from "../../components/ui/button";
 import { ColorPicker } from "../../components/ui/color-picker";
 import { ConfirmationModal } from "../../components/ui/confirmation-modal";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
+import { FileInput } from "../../components/ui/file-input";
+import { useIsStorageConfigured } from "../../components/ui/file-input/components/uploader";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
+import { showStorageNotConfiguredToast } from "../../components/ui/storage-not-configured-toast";
 import { Switch } from "../../components/ui/switch";
 import { cn } from "../../lib/cn";
 import { errorMessage } from "../../lib/errors";
@@ -26,6 +30,8 @@ import {
   themeFormValues,
 } from "../../lib/styling";
 import { toast } from "../../lib/toast";
+import { handleFileUpload, showFileUploadErrorToast } from "../../lib/upload";
+import { instanceQuery } from "../../lib/queries/instance";
 import { ThemePreview } from "./theme-preview";
 
 const ReadOnlyNotice = () => {
@@ -40,17 +46,20 @@ const ReadOnlyNotice = () => {
 };
 
 /**
- * forma2's appearance page: the theme with its live preview, the logo, the app survey placement and the Forma branding switches. This server stores no uploaded files yet, so the storage warning shows and a logo can be kept or removed but not uploaded.
+ * forma2's appearance page: the theme with its live preview, the logo, the app survey placement and the Forma branding switches. Without file storage a warning says that uploads will fail.
  */
 export const WorkspaceLookPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
   const { t } = useTranslation();
   const { isReadOnly } = workspace.access;
+  const { data: instance } = useQuery(instanceQuery);
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.appearance")} />
-      <Alert variant="warning" role="status">
-        <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
-      </Alert>
+      {instance?.storageConfigured === false && (
+        <Alert variant="warning" role="status">
+          <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
+        </Alert>
+      )}
       <SettingsCard
         width="full"
         title={t("workspace.look.theme")}
@@ -928,14 +937,34 @@ const ToggleRow = ({
   </div>
 );
 
-/** forma2's EditLogo without the upload, which needs the file storage this server does not have yet: the saved logo, its background color, and removing it. */
+/** forma2's EditLogo: a logo is uploaded to the workspace's storage, or replaced, given a background color, saved, and removed. */
 const EditLogo = ({ workspace, isReadOnly }: { workspace: Workspace; isReadOnly: boolean }) => {
   const { t } = useTranslation();
   const update = useUpdateWorkspace(workspace.id);
-  const url = workspace.logo?.url;
+  const isStorageConfigured = useIsStorageConfigured();
+  const [url, setUrl] = useState(workspace.logo?.url || undefined);
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [bgColor, setBgColor] = useState(workspace.logo?.bgColor);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const replace = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!isStorageConfigured) {
+      showStorageNotConfiguredToast(t);
+      return;
+    }
+    if (file) {
+      setIsUploading(true);
+      const result = await handleFileUpload(file, workspace.id);
+      setIsUploading(false);
+      if (result.error) showFileUploadErrorToast(result.error, t);
+      else setUrl(result.url);
+    }
+    setIsEditing(true);
+  };
 
   const save = async () => {
     if (!isEditing) {
@@ -953,6 +982,7 @@ const EditLogo = ({ workspace, isReadOnly }: { workspace: Workspace; isReadOnly:
   };
 
   const remove = async () => {
+    setUrl(undefined);
     try {
       await update.mutateAsync({ logo: {} });
       toast.success(t("workspace.look.logo_removed_successfully"));
@@ -974,13 +1004,48 @@ const EditLogo = ({ workspace, isReadOnly }: { workspace: Workspace; isReadOnly:
           className="h-20 w-auto max-w-64 rounded-lg border object-contain p-1"
         />
       ) : (
-        <p className="text-sm text-slate-500">{t("common.storage_not_configured")}</p>
+        <FileInput
+          id="logo-input"
+          workspaceId={workspace.id}
+          onFileUpload={(files) => {
+            if (files?.[0]) {
+              setUrl(files[0]);
+              setIsEditing(true);
+            }
+          }}
+          disabled={isReadOnly}
+          maxSizeInMB={5}
+        />
       )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg, image/png, image/webp, image/heic"
+        className="hidden"
+        disabled={isReadOnly}
+        data-testid="logo-replace-input"
+        onChange={(e) => void replace(e)}
+      />
       {isEditing && url && (
         <>
-          <Button variant="destructive" size="sm" onClick={() => setConfirmRemove(true)}>
-            {t("workspace.look.remove_logo")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={isUploading}
+              onClick={() => {
+                if (!isStorageConfigured) {
+                  showStorageNotConfiguredToast(t);
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}>
+              {t("workspace.look.replace_logo")}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setConfirmRemove(true)}>
+              {t("workspace.look.remove_logo")}
+            </Button>
+          </div>
           <ToggleRow
             id="addBackgroundColor"
             title={t("workspace.look.add_background_color")}
@@ -998,7 +1063,10 @@ const EditLogo = ({ workspace, isReadOnly }: { workspace: Workspace; isReadOnly:
         </>
       )}
       {url && (
-        <Button onClick={() => void save()} disabled={update.isPending || isReadOnly} size="sm">
+        <Button
+          onClick={() => void save()}
+          disabled={update.isPending || isUploading || isReadOnly}
+          size="sm">
           {isEditing ? t("common.save") : t("common.edit")}
         </Button>
       )}

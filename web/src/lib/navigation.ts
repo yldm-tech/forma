@@ -4,7 +4,7 @@ export const loginHref = (path: string, origin: string = globalThis.location.ori
 
 export const organizationSettingsPath = (
   organizationId: string,
-  slug: "general" | "teams" | "api-keys" | "billing"
+  slug: "general" | "teams" | "api-keys" | "domain" | "billing"
 ): string => `/organizations/${organizationId}/settings/${slug}`;
 
 export const workspaceHomePath = (workspaceId: string): string => `/workspaces/${workspaceId}/`;
