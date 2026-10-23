@@ -56,7 +56,7 @@ extract_bootstrap_script() {
 }
 
 bootstrap_script="$(helm template runtime "${chart_dir}" \
-  --set forma.webappUrl=https://qa.example.com \
+  --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
   --set authzed.enabled=true \
   --set authzed.mode=selfHosted \
   --show-only templates/authzed-postgresql-bootstrap.yaml | extract_bootstrap_script)"

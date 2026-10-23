@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly CHART_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com --set authzed.migrationAcknowledged=true)
+readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 --set authzed.migrationAcknowledged=true)
 # The PostgreSQL subchart refuses to render an upgrade without the current passwords, which it would otherwise look up.
 readonly UPGRADE=(--is-upgrade --set postgresql.auth.password=placeholder --set postgresql.auth.postgresPassword=placeholder)
 

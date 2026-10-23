@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly CHART_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com)
+readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0)
 
 temp_dir="$(mktemp -d)"
 trap 'rm -rf "${temp_dir}"' EXIT

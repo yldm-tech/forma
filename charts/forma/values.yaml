@@ -144,7 +144,7 @@ deployment:
   # Application container image
   image:
     repository: "ghcr.io/yldm-tech/forma"
-    tag: "" # Defaults to appVersion if not set; pin the release you deploy
+    tag: "" # Required unless digest is set: the release you deploy, as the release workflow publishes it (0.2.<run>, sha-<commit>)
     digest: "" # If set, digest takes precedence over the tag
     pullPolicy: IfNotPresent
 

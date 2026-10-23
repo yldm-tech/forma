@@ -46,7 +46,7 @@ jobs:
             fi
           }
 
-          helm lint "$chart" --set forma.webappUrl=https://qa.example.com
+          helm lint "$chart" --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0
           bash charts/forma/tests/authzed-operations.sh
           bash charts/forma/tests/deployment-hardening.sh
           bash charts/forma/tests/worker.sh
@@ -54,7 +54,7 @@ jobs:
           bash charts/forma/tests/postgresql-major-upgrade.sh
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --show-only templates/deployment.yaml > "$render_dir/deployment-default.yaml"
           grep -q 'terminationGracePeriodSeconds: 30' "$render_dir/deployment-default.yaml"
           if grep -q '^          lifecycle:$' "$render_dir/deployment-default.yaml"; then
@@ -66,7 +66,7 @@ jobs:
 
           # Extra volumes (custom CA bundles and the like) reach the worker too, since it makes the same outbound calls.
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set 'deployment.extraVolumes[0].name=custom-ca' \
             --set 'deployment.extraVolumes[0].configMap.name=custom-ca' \
             --set 'deployment.extraVolumeMounts[0].name=custom-ca' \
@@ -78,7 +78,7 @@ jobs:
           test "$(grep -c 'readOnly: true' "$render_dir/deployment-volumes.yaml")" -eq 2
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set deployment.terminationGracePeriodSeconds=60 \
             --set-json 'deployment.lifecycle={"preStop":{"sleep":{"seconds":30}}}' \
             --show-only templates/deployment.yaml > "$render_dir/deployment-lifecycle.yaml"
@@ -88,7 +88,7 @@ jobs:
           grep -q 'seconds: 30' "$render_dir/deployment-lifecycle.yaml"
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --show-only templates/deployment.yaml > "$render_dir/forma-default.yaml"
           if grep -q 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-default.yaml"; then
             echo "MCP_OAUTH_JWKS_URL must remain opt-in"
@@ -96,14 +96,14 @@ jobs:
           fi
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set forma.mcpOauthJwksUrl=http://auth-internal:3000/custom/api/auth/jwks \
             --show-only templates/deployment.yaml > "$render_dir/forma-jwks-value.yaml"
           grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-value.yaml" \
             | grep -q 'value: "http://auth-internal:3000/custom/api/auth/jwks"'
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set-string deployment.env.MCP_OAUTH_JWKS_URL=http://explicit:3000/api/auth/jwks \
             --show-only templates/deployment.yaml > "$render_dir/forma-jwks-env.yaml"
           test "$(grep -c 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-env.yaml")" -eq 1
@@ -111,7 +111,7 @@ jobs:
             | grep -q 'value: "http://explicit:3000/api/auth/jwks"'
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --show-only templates/migration-job.yaml > "$render_dir/default.yaml"
 
           grep -q -- '- wait-for-database' "$render_dir/default.yaml"
@@ -125,14 +125,14 @@ jobs:
           test "$(grep -c '^          env:$' "$render_dir/default.yaml")" -eq 2
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set migration.waitForDatabase.enabled=false \
             --show-only templates/migration-job.yaml > "$render_dir/disabled.yaml"
           refute grep -q 'wait-for-database' "$render_dir/disabled.yaml"
           grep -q -- '- migrate' "$render_dir/disabled.yaml"
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set postgresql.enabled=false \
             --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/forma \
             --set authzed.mode=external \
@@ -143,7 +143,7 @@ jobs:
           grep -q -- '- wait-for-database' "$render_dir/external.yaml"
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set postgresql.enabled=false \
             --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/forma \
             --set authzed.mode=external \
@@ -154,21 +154,21 @@ jobs:
           grep -A1 'name: AUTHZED_INSECURE' "$render_dir/external-deployment.yaml" | grep -q 'value: "0"'
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set-string deployment.env.MIGRATE_DATABASE_URL=postgresql://user:password@migrate-postgresql:5432/forma \
             --show-only templates/migration-job.yaml > "$render_dir/migrate-url.yaml"
           test "$(grep -c 'name: MIGRATE_DATABASE_URL' "$render_dir/migrate-url.yaml")" -eq 2
           test "$(grep -c '^          env:' "$render_dir/migrate-url.yaml")" -eq 2
 
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --show-only charts/postgresql/templates/primary/statefulset.yaml > "$render_dir/postgresql.yaml"
           grep -q 'argocd.argoproj.io/sync-wave: "-2"' "$render_dir/postgresql.yaml"
           grep -q 'image: docker.io/pgvector/pgvector:pg18' "$render_dir/postgresql.yaml"
 
           # The optional bundles still render against the new templates.
           helm template qa "$chart" \
-            --set forma.webappUrl=https://qa.example.com \
+            --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
             --set llm.enabled=true \
             --set envoy.enabled=true \
             --set envoy.controller.enabled=true \

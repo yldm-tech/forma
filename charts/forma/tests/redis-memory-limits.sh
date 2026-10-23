@@ -10,7 +10,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly CHART_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com)
+readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0)
 
 # `appendonly yes` means an AOF rewrite forks the server, and copy-on-write during the rewrite can add most
 # of the dataset again on top of the baseline RSS. Anything above this share of the limit makes the fork,

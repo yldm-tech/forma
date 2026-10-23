@@ -378,7 +378,7 @@ externalSecret:
 | deployment.image.digest                                            | string | `""`                                                                        | When set, takes precedence over tag.                      |
 | deployment.image.pullPolicy                                        | string | `"IfNotPresent"`                                                            |                                                           |
 | deployment.image.repository                                        | string | `"ghcr.io/yldm-tech/forma"`                                           |                                                           |
-| deployment.image.tag                                               | string | `""`                                                                        |                                                           |
+| deployment.image.tag | string | `""` | Required unless `deployment.image.digest` is set: the release to deploy, `0.2.<run>` or `sha-<commit>` as the release workflow publishes it. |
 | deployment.imagePullSecrets                                        | string | `""`                                                                        |                                                           |
 | deployment.lifecycle                                               | object | `{}`                                                                        | Optional app container lifecycle hooks.                   |
 | deployment.nodeSelector                                            | object | `{}`                                                                        |                                                           |

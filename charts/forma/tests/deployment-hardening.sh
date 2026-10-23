@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly CHART_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com)
+readonly COMMON_ARGS=(--set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0)
 
 render_deployment() {
   local release_name="$1"
@@ -126,5 +126,20 @@ if [[ "$(prometheus_env_count "${opted_out_deployment}")" != "1" ]]; then
 fi
 assert_contains "${opted_out_deployment}" '              value: "0"' \
   "An explicit deployment.env.PROMETHEUS_ENABLED must win over the ServiceMonitor default."
+
+# The image has no usable default: the release workflow publishes 0.2.<run>, sha-<commit> and latest, never the chart's appVersion, so a render without a tag or digest fails instead of deploying an image that does not exist.
+if untagged="$(helm template hardening-untagged "${CHART_DIR}" --set forma.webappUrl=https://qa.example.com --show-only templates/deployment.yaml 2>&1)"; then
+  printf '%s\n' "A render without deployment.image.tag or deployment.image.digest must fail." "${untagged}" >&2
+  exit 1
+fi
+if ! grep --quiet 'deployment.image.tag' <<<"${untagged}"; then
+  printf '%s\n' "The refusal must name deployment.image.tag." "${untagged}" >&2
+  exit 1
+fi
+assert_contains "$(render_deployment hardening-tagged)" '          image: ghcr.io/yldm-tech/forma:0.2.0' \
+  "deployment.image.tag must name the image."
+assert_contains "$(render_deployment hardening-digest --set deployment.image.digest=sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef)" \
+  '          image: ghcr.io/yldm-tech/forma@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
+  "deployment.image.digest must take precedence over the tag."
 
 printf '%s\n' "Forma app container hardening contracts are valid."
