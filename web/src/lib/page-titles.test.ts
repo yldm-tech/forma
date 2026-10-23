@@ -1,0 +1,62 @@
+import { QueryClient } from "@tanstack/react-query";
+import { createRouter } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
+import { describe, expect, test } from "vite-plus/test";
+import enUS from "../../locales/en-US.json";
+import jaJP from "../../locales/ja-JP.json";
+import zhHansCN from "../../locales/zh-Hans-CN.json";
+import zhHantTW from "../../locales/zh-Hant-TW.json";
+import { analysisSurveyQuery } from "../features/survey-analysis/api";
+import { routeTree } from "../routeTree.gen";
+import { PAGE_TITLES, documentTitle } from "./page-titles";
+
+// forma2's page titles under its "%s | Forma" template.
+
+const t = ((key: string, values?: Record<string, string>) =>
+  values ? `${key}:${JSON.stringify(values)}` : key) as unknown as TFunction;
+const WS = "/_authenticated/workspaces/$workspaceId";
+
+const title = (routeIds: string[], params: Record<string, string> = {}, queryClient = new QueryClient()) =>
+  documentTitle(
+    routeIds.map((routeId) => ({ routeId, params })),
+    { t, queryClient }
+  );
+
+describe("documentTitle", () => {
+  test("is the page's literal title in the template", () => {
+    expect(title(["__root__", "/auth", "/auth/login"])).toBe("Login | Forma");
+    expect(title(["__root__", "/_authenticated", WS, `${WS}/surveys/`])).toBe("Your Surveys | Forma");
+  });
+
+  test("translates a settings page's heading", () => {
+    expect(title(["__root__", "/_authenticated", WS, `${WS}/settings/workspace/look`])).toBe("common.appearance | Forma");
+  });
+
+  test("is Forma for a page without a title", () => {
+    expect(title(["__root__", "/_authenticated", "/_authenticated/account/settings/profile"])).toBe("Forma");
+  });
+
+  test("names a survey's results from its loaded survey, under every analysis view", () => {
+    const routes = ["__root__", "/_authenticated", WS, `${WS}/surveys/$surveyId`, `${WS}/surveys/$surveyId/summary`];
+    expect(title(routes, { surveyId: "s1" })).toBe("common.survey | Forma");
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(analysisSurveyQuery("s1").queryKey, { name: "NPS" } as never);
+    expect(title(routes, { surveyId: "s1" }, queryClient)).toBe(
+      'workspace.surveys.summary.survey_results:{"surveyName":"NPS"} | Forma'
+    );
+  });
+});
+
+test("every titled route exists", () => {
+  const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+  for (const routeId of Object.keys(PAGE_TITLES)) expect(routeId in router.routesById, routeId).toBe(true);
+});
+
+test("every translated title exists in all four catalogues", () => {
+  const lookup = (catalogue: unknown, key: string) =>
+    key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], catalogue);
+  for (const source of Object.values(PAGE_TITLES)) {
+    if (typeof source === "function" || !("key" in source)) continue;
+    for (const catalogue of [enUS, jaJP, zhHansCN, zhHantTW]) expect(typeof lookup(catalogue, source.key), source.key).toBe("string");
+  }
+});
