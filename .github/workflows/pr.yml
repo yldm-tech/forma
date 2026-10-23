@@ -16,8 +16,7 @@ jobs:
   server:
     name: Go server
     runs-on: ubuntu-latest
-    # A change to a shared package invalidates the whole Go test cache, and the full `go test -race` run (bcrypt at production cost, testcontainers per package) takes longer than 15 minutes on a hosted runner.
-    timeout-minutes: 30
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: server
@@ -49,11 +48,53 @@ jobs:
           version: v2.14.0
           working-directory: server
 
-      - name: Test
-        run: go test -race ./...
-
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/forma
+
+  # The race-detector suite runs in parallel shards. auth and apikey each get one: their tests hash at bcrypt's production cost, which the race detector slows to several minutes per package, and run alongside the rest they outgrew go test's 10-minute default. The other packages alternate between two shards.
+  server-test:
+    name: Go tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [auth, apikey, rest-1, rest-2]
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go (version from go.mod)
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: Test
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          module=$(go list -m)
+          case "$SHARD" in
+            auth) packages=("$module/internal/auth") ;;
+            apikey) packages=("$module/internal/apikey") ;;
+            rest-*)
+              half=${SHARD#rest-}
+              mapfile -t packages < <(go list ./... | grep -vxF -e "$module/internal/auth" -e "$module/internal/apikey" | awk -v half="$half" 'NR % 2 == half % 2')
+              ;;
+          esac
+          go test -race -timeout 20m "${packages[@]}"
 
   workspace:
     name: TypeScript workspace
@@ -124,7 +165,7 @@ jobs:
 
   required:
     name: PR Check Summary
-    needs: [server, workspace, validate-authzed-schema, helm-chart-validation, coderabbit-config-validation]
+    needs: [server, server-test, workspace, validate-authzed-schema, helm-chart-validation, coderabbit-config-validation]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

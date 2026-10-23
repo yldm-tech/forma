@@ -320,13 +320,13 @@ jobs:
           compose=(docker compose -f docker/docker-compose.ci.yml -p formaci)
           trap 'docker compose -f docker/docker-compose.ci.yml -p formaci down -v >/dev/null 2>&1 || true; rm -f docker/.env docker/docker-compose.ci.yml' EXIT
 
-          # `up --wait` counts a one-shot container that exits as a failure once it has a restart policy, which authzed-initialize has (it retries while SpiceDB comes up), so that one is awaited separately.
-          if ! timeout 600 "${compose[@]}" up -d --wait forma forma-worker spicedb; then
+          # `up --wait` counts a one-shot container that exits as a failure once it has a restart policy, which authzed-initialize has (it retries while SpiceDB comes up), so that one is awaited separately. It also refuses a service without a healthcheck, and the worker serves no HTTP to probe, so the worker is started next and checked for still running below.
+          if ! timeout 600 "${compose[@]}" up -d --wait forma spicedb; then
             "${compose[@]}" ps -a
             "${compose[@]}" logs
             exit 1
           fi
-          "${compose[@]}" up -d authzed-initialize
+          "${compose[@]}" up -d forma-worker authzed-initialize
           for _ in $(seq 1 60); do
             [ "$("${compose[@]}" ps -a --format '{{.State}}' authzed-initialize)" = "exited" ] && break
             sleep 2
