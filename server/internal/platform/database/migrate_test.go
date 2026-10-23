@@ -312,3 +312,69 @@ func TestAuthzProjectionTriggers(t *testing.T) {
 		})
 	}
 }
+
+func TestWithMigrationLockSerializesMigrators(t *testing.T) {
+	dsn := startPostgres(t)
+	ctx := context.Background()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	release := make(chan struct{})
+	firstHolds := make(chan struct{})
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- WithMigrationLock(ctx, dsn, log, func(context.Context) error {
+			close(firstHolds)
+			<-release
+			return nil
+		})
+	}()
+	<-firstHolds
+
+	var secondRan bool
+	secondDone := make(chan error, 1)
+	go func() {
+		secondDone <- WithMigrationLock(ctx, dsn, log, func(context.Context) error {
+			secondRan = true
+			return nil
+		})
+	}()
+
+	// The second migrator is observably blocked on the advisory lock before the first lets go.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		var waiting int
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND wait_event = 'advisory'`).Scan(&waiting); err != nil {
+			t.Fatalf("pg_stat_activity: %v", err)
+		}
+		if waiting == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the second migrator never waited for the lock")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	select {
+	case err := <-secondDone:
+		t.Fatalf("the second migrator finished (%v) while the first held the lock", err)
+	default:
+	}
+
+	close(release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first: %v", err)
+	}
+	if err := <-secondDone; err != nil || !secondRan {
+		t.Fatalf("second: ran %v, err %v", secondRan, err)
+	}
+
+	var free bool
+	if err := db.QueryRowContext(ctx, `SELECT pg_try_advisory_lock($1)`, migrationLockKey).Scan(&free); err != nil || !free {
+		t.Fatalf("lock still held after both migrators returned (free %v, err %v)", free, err)
+	}
+}

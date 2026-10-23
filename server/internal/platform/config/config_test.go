@@ -2,9 +2,19 @@ package config
 
 import (
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 )
+
+// unsetEnv removes a variable for the duration of the test; t.Setenv first records the value to restore.
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "")
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("unset %s: %v", key, err)
+	}
+}
 
 func setRequired(t *testing.T) {
 	t.Helper()
@@ -219,6 +229,79 @@ func TestLoadForMigrateNeedsOnlyTheDatabase(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	if _, err := LoadForMigrate(); err == nil {
 		t.Fatal("LoadForMigrate succeeded without DATABASE_URL")
+	}
+}
+
+func TestLoadForMigratePrefersMigrateDatabaseURL(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://app@db/forma")
+	t.Setenv("MIGRATE_DATABASE_URL", " postgres://owner@db/forma ")
+	cfg, err := LoadForMigrate()
+	if err != nil {
+		t.Fatalf("LoadForMigrate: %v", err)
+	}
+	if cfg.DatabaseURL != "postgres://owner@db/forma" {
+		t.Fatalf("DatabaseURL = %q, want the trimmed MIGRATE_DATABASE_URL", cfg.DatabaseURL)
+	}
+
+	t.Setenv("MIGRATE_DATABASE_URL", " ")
+	if cfg, err = LoadForMigrate(); err != nil || cfg.DatabaseURL != "postgres://app@db/forma" {
+		t.Fatalf("blank MIGRATE_DATABASE_URL: cfg %q, err %v; want DATABASE_URL", cfg.DatabaseURL, err)
+	}
+
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("MIGRATE_DATABASE_URL", "postgres://owner@db/forma")
+	if cfg, err = LoadForMigrate(); err != nil || cfg.DatabaseURL != "postgres://owner@db/forma" {
+		t.Fatalf("MIGRATE_DATABASE_URL alone: cfg %q, err %v", cfg.DatabaseURL, err)
+	}
+}
+
+func TestLoadStartup(t *testing.T) {
+	cases := []struct {
+		skip, worker      string
+		wantSkip, wantRun bool
+		wantErr           bool
+	}{
+		{"", "", false, true, false},
+		{"true", "", true, true, false},
+		{"1", "0", true, false, false},
+		{"false", "1", false, true, false},
+		{"0", "", false, true, false},
+		{"yes", "", false, false, true},
+		{"TRUE", "", false, false, true},
+		{"", "true", false, false, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.skip+"/"+tc.worker, func(t *testing.T) {
+			t.Setenv("SKIP_STARTUP_MIGRATION", tc.skip)
+			t.Setenv("BULLMQ_WORKER_ENABLED", tc.worker)
+			if tc.worker == "" {
+				unsetEnv(t, "BULLMQ_WORKER_ENABLED")
+			}
+			s, err := LoadStartup()
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("LoadStartup accepted SKIP_STARTUP_MIGRATION=%q BULLMQ_WORKER_ENABLED=%q", tc.skip, tc.worker)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadStartup: %v", err)
+			}
+			if s.SkipMigration != tc.wantSkip || s.WorkerEnabled != tc.wantRun {
+				t.Fatalf("startup = %+v, want skip %v worker %v", s, tc.wantSkip, tc.wantRun)
+			}
+		})
+	}
+}
+
+func TestLoadForHealthcheck(t *testing.T) {
+	unsetEnv(t, "HTTP_ADDR")
+	if cfg, err := LoadForHealthcheck(); err != nil || cfg.HTTPAddr != ":3000" {
+		t.Fatalf("default: %q, %v", cfg.HTTPAddr, err)
+	}
+	t.Setenv("HTTP_ADDR", "127.0.0.1:8080")
+	if cfg, err := LoadForHealthcheck(); err != nil || cfg.HTTPAddr != "127.0.0.1:8080" {
+		t.Fatalf("HTTP_ADDR: %q, %v", cfg.HTTPAddr, err)
 	}
 }
 
