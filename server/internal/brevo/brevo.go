@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,10 +37,11 @@ type CreateContactArgs struct {
 
 func (CreateContactArgs) Kind() string { return "brevo.create-contact" }
 
-// UpdateContactArgs is the brevo.update-contact job: forma2's updateBrevoCustomer, the contact found by the user id it was created with.
+// UpdateContactArgs is the brevo.update-contact job: forma2's updateBrevoCustomer, the contact found by the user id it was created with or, for a contact forma2 created under the user's old cuid, by the address it had before the change.
 type UpdateContactArgs struct {
-	UserID uuid.UUID `json:"userId"`
-	Email  string    `json:"email"`
+	UserID   uuid.UUID `json:"userId"`
+	OldEmail string    `json:"oldEmail,omitempty"`
+	Email    string    `json:"email"`
 }
 
 func (UpdateContactArgs) Kind() string { return "brevo.update-contact" }
@@ -65,9 +67,9 @@ func (c *Contacts) Verified(ctx context.Context, tx *jobs.Tx, userID uuid.UUID, 
 	return c.enqueue(ctx, tx, CreateContactArgs{UserID: userID, Email: email})
 }
 
-// EmailChanged moves the user's contact to their new address.
-func (c *Contacts) EmailChanged(ctx context.Context, tx *jobs.Tx, userID uuid.UUID, email string) error {
-	return c.enqueue(ctx, tx, UpdateContactArgs{UserID: userID, Email: email})
+// EmailChanged moves the user's contact from oldEmail to their new address.
+func (c *Contacts) EmailChanged(ctx context.Context, tx *jobs.Tx, userID uuid.UUID, oldEmail, email string) error {
+	return c.enqueue(ctx, tx, UpdateContactArgs{UserID: userID, OldEmail: oldEmail, Email: email})
 }
 
 // Deleted removes the contact of a deleted account, found by its address.
@@ -115,14 +117,31 @@ func (c *Client) createContact(ctx context.Context, userID uuid.UUID, email stri
 	return c.do(ctx, http.MethodPost, "/contacts", body, http.StatusCreated)
 }
 
-func (c *Client) updateContact(ctx context.Context, userID uuid.UUID, email string) error {
+// updateContact finds the contact by the user id it was created with, as forma2 did. A contact forma2 created carries forma2's cuid as its ext_id, which the migrated user's id (a one-way uuidv5 of it) cannot match, so when Brevo knows no such ext_id the contact is found by the address it had before the change.
+func (c *Client) updateContact(ctx context.Context, userID uuid.UUID, oldEmail, email string) error {
 	body := updateContactRequest{Attributes: map[string]string{"EMAIL": email}}
-	return c.do(ctx, http.MethodPut, "/contacts/"+userID.String()+"?identifierType=ext_id", body, http.StatusNoContent)
+	err := c.do(ctx, http.MethodPut, "/contacts/"+userID.String()+"?identifierType=ext_id", body, http.StatusNoContent)
+	var answer *answerError
+	if oldEmail == "" || !errors.As(err, &answer) || answer.status != http.StatusNotFound {
+		return err
+	}
+	return c.do(ctx, http.MethodPut, "/contacts/"+url.QueryEscape(strings.ToLower(oldEmail))+"?identifierType=email_id", body, http.StatusNoContent)
 }
 
 func (c *Client) deleteContact(ctx context.Context, email string) error {
 	// QueryEscape encodes an address as forma2's encodeURIComponent did ("@" as %40).
 	return c.do(ctx, http.MethodDelete, "/contacts/"+url.QueryEscape(strings.ToLower(email))+"?identifierType=email_id", nil, http.StatusNoContent)
+}
+
+// answerError is Brevo answering a request with a status other than the one forma2 treated as success, with Brevo's error code.
+type answerError struct {
+	method string
+	status int
+	code   string
+}
+
+func (e *answerError) Error() string {
+	return fmt.Sprintf("brevo %s contacts answered %d %s", e.method, e.status, e.code)
 }
 
 // do sends one request and checks for the status forma2 treated as success. Brevo being unavailable (a network error, 429 or 5xx) is an error the job retries; any other answer means the request itself was refused (an existing contact, an unknown one, a bad key), which no retry changes, so the job is cancelled with Brevo's error code.
@@ -156,7 +175,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, want int
 		Code string `json:"code"`
 	}
 	_ = json.NewDecoder(io.LimitReader(res.Body, 64<<10)).Decode(&answer)
-	err = fmt.Errorf("brevo %s contacts answered %d %s", method, res.StatusCode, answer.Code)
+	err = &answerError{method: method, status: res.StatusCode, code: answer.Code}
 	if res.StatusCode == http.StatusTooManyRequests || res.StatusCode >= http.StatusInternalServerError {
 		return err
 	}
@@ -188,7 +207,7 @@ func (w *updateWorker) Work(ctx context.Context, job *river.Job[UpdateContactArg
 	if w.client.apiKey == "" {
 		return nil
 	}
-	return w.client.updateContact(ctx, job.Args.UserID, job.Args.Email)
+	return w.client.updateContact(ctx, job.Args.UserID, job.Args.OldEmail, job.Args.Email)
 }
 
 type deleteWorker struct {

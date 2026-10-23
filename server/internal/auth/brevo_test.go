@@ -7,11 +7,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
-// brevoJobs lists the Brevo syncs queued so far, as "<kind> <email>".
+// brevoJobs lists the Brevo syncs queued so far, as "<kind> <email>", or "<kind> <old email> -> <email>" for an address change.
 func (e *env) brevoJobs() []string {
 	e.t.Helper()
 	var jobs []string
-	if err := e.db.Raw(`SELECT kind || ' ' || (args->>'email') FROM river_job WHERE kind LIKE 'brevo.%' ORDER BY id`).Scan(&jobs).Error; err != nil {
+	if err := e.db.Raw(`SELECT kind || ' ' || coalesce((args->>'oldEmail') || ' -> ', '') || (args->>'email') FROM river_job WHERE kind LIKE 'brevo.%' ORDER BY id`).Scan(&jobs).Error; err != nil {
 		e.t.Fatal(err)
 	}
 	return jobs
@@ -39,7 +39,7 @@ func TestBrevoContactLifecycle(t *testing.T) {
 	expectStatus(t, e.browser().post("/auth/email/verify", map[string]string{"token": e.lastToken("new@example.com", subjectEmailChange)}), http.StatusOK, "")
 
 	expectStatus(t, sess.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusOK, "")
-	want := []string{"brevo.create-contact ada@example.com", "brevo.update-contact new@example.com", "brevo.delete-contact new@example.com"}
+	want := []string{"brevo.create-contact ada@example.com", "brevo.update-contact ada@example.com -> new@example.com", "brevo.delete-contact new@example.com"}
 	if got := e.brevoJobs(); len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
 		t.Fatalf("queued %v, want %v", got, want)
 	}
@@ -52,7 +52,7 @@ func TestBrevoImmediateEmailChange(t *testing.T) {
 		configure func(*config.Config)
 		want      []string
 	}{
-		"configured":     {withBrevo, []string{"brevo.update-contact new@example.com"}},
+		"configured":     {withBrevo, []string{"brevo.update-contact ada@example.com -> new@example.com"}},
 		"not configured": {func(*config.Config) {}, nil},
 	} {
 		e := newEnv(t, func(c *config.Config) { c.EmailVerificationDisabled = true }, tc.configure)

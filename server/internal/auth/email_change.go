@@ -101,7 +101,7 @@ func (s *Service) redeemEmailChange(ctx context.Context, token string) (string, 
 			return errInvalidToken()
 		}
 		userID, oldEmail, newEmail = acc.ID, acc.Email, v.Email
-		return s.moveEmail(ctx, tx, jtx, acc.ID, v.Email, true)
+		return s.moveEmail(ctx, tx, jtx, acc.ID, acc.Email, v.Email, true)
 	})
 	if err != nil {
 		return "", err
@@ -125,7 +125,7 @@ func (s *Service) applyEmailChange(ctx context.Context, userID uuid.UUID, email 
 			return apperr.NotAuthenticated("Not authenticated")
 		}
 		oldEmail = acc.Email
-		return s.moveEmail(ctx, tx, jtx, userID, email, verified)
+		return s.moveEmail(ctx, tx, jtx, userID, oldEmail, email, verified)
 	})
 	if err != nil {
 		return err
@@ -137,8 +137,8 @@ func (s *Service) applyEmailChange(ctx context.Context, userID uuid.UUID, email 
 	return nil
 }
 
-// moveEmail writes the new address, revokes the links that were sent to the old one or bound to it (outstanding email change and password reset links) and moves the user's Brevo contact to the new address, as forma2's updateBrevoCustomer did after both kinds of change.
-func (s *Service) moveEmail(ctx context.Context, tx *Repository, jtx *jobs.Tx, userID uuid.UUID, email string, verified bool) error {
+// moveEmail writes the new address, revokes the links that were sent to the old one or bound to it (outstanding email change and password reset links) and moves the user's Brevo contact from oldEmail to the new address, as forma2's updateBrevoCustomer did after both kinds of change.
+func (s *Service) moveEmail(ctx context.Context, tx *Repository, jtx *jobs.Tx, userID uuid.UUID, oldEmail, email string, verified bool) error {
 	taken, err := tx.updateEmail(ctx, userID, email, verified, s.now())
 	if err != nil {
 		return err
@@ -149,5 +149,5 @@ func (s *Service) moveEmail(ctx context.Context, tx *Repository, jtx *jobs.Tx, u
 	if err := tx.deleteVerifications(ctx, userID, purposeEmailChange, purposePasswordReset); err != nil {
 		return err
 	}
-	return s.contacts.EmailChanged(ctx, jtx, userID, email)
+	return s.contacts.EmailChanged(ctx, jtx, userID, oldEmail, email)
 }
