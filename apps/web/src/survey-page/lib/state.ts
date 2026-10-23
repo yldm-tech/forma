@@ -7,7 +7,7 @@ import type {
 import type { TWorkspace, TWorkspaceStyling } from "@forma/types/workspace";
 
 /**
- * The page state the Go server embeds in every survey page (server/internal/linksurvey): which screen to show and everything that screen needs. The server has already applied every gate it can decide; the bundle only renders.
+ * The page state the Go server embeds in every survey page (apps/server/internal/linksurvey): which screen to show and everything that screen needs. The server has already applied every gate it can decide; the bundle only renders.
  */
 
 /** The survey as it reaches the browser: forma2's TSurvey without its PIN, follow-ups or targeting rules, its segment reduced to what the runtime reads. */
@@ -81,7 +81,7 @@ export type TSurveyPageState =
   | { view: "verifyEmail"; locale: string; verifyEmail: TVerifyEmailState }
   | { view: "pin" | "survey"; locale: string; survey: TSurveyProps };
 
-/** The id of the script element that carries the state (stateElementID in server/internal/linksurvey/shell.go). */
+/** The id of the script element that carries the state (stateElementID in apps/server/internal/linksurvey/shell.go). */
 export const SURVEY_PAGE_STATE_ID = "forma-survey-page";
 
 /** Reads the state the server embedded; a page without one (the bundle opened on its own) is the not-found screen. */

@@ -1,7 +1,7 @@
 import type { InvalidParam } from "../../../lib/api";
 
 /**
- * A snapshot of a draft mid-generation (server/internal/survey/v3generate_stream.go): whole rather than a delta, and unvalidated, so a headline can be half-written and a field can hold a value of the wrong type. Display only; saving uses the done event's payload.
+ * A snapshot of a draft mid-generation (apps/server/internal/survey/v3generate_stream.go): whole rather than a delta, and unvalidated, so a headline can be half-written and a field can hold a value of the wrong type. Display only; saving uses the done event's payload.
  */
 export interface GenerationDraftSnapshot {
   name?: unknown;

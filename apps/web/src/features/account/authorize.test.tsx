@@ -8,7 +8,7 @@ import type { AuthorizationRequest } from "../../lib/queries/oauth";
 import { toast } from "../../lib/toast";
 import { AuthorizePage } from "./authorize";
 
-// forma2's /account/authorize page and its OAuthConsentActions, against the Go server's /api/app/oauth endpoints (server/internal/oauthserver/app.go).
+// forma2's /account/authorize page and its OAuthConsentActions, against the Go server's /api/app/oauth endpoints (apps/server/internal/oauthserver/app.go).
 
 const REQUEST_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
 const PATH = `/api/app/oauth/authorization-requests/${REQUEST_ID}`;

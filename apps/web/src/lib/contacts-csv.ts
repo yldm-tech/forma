@@ -9,7 +9,7 @@ import {
   isStringMatch,
 } from "./attribute-keys";
 
-// The contacts CSV import as forma2's upload dialog ran it (modules/contacts/components/upload-contacts-button.tsx, types/contact.ts), reading the file the way the Go server reads it again on upload (server/internal/contact/csvimport.go).
+// The contacts CSV import as forma2's upload dialog ran it (modules/contacts/components/upload-contacts-button.tsx, types/contact.ts), reading the file the way the Go server reads it again on upload (apps/server/internal/contact/csvimport.go).
 
 /** The largest file the import takes, forma2's 800 KB. */
 export const MAX_CSV_BYTES = 800 * 1024;

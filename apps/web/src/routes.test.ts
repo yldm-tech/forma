@@ -23,12 +23,12 @@ const SERVER_PAGES = [
   "/organizations/0190a000-0000-7000-8000-000000000001/landing",
   "/organizations/0190a000-0000-7000-8000-000000000001/workspaces/new/plan",
   "/organizations/0190a000-0000-7000-8000-000000000001/workspaces/new/survey",
-  // Billing: the billing role's home on Forma Cloud and Stripe's return URLs (server/internal/billing/plans.go).
+  // Billing: the billing role's home on Forma Cloud and Stripe's return URLs (apps/server/internal/billing/plans.go).
   "/organizations/0190a000-0000-7000-8000-000000000001/settings/billing",
   "/organizations/0190a000-0000-7000-8000-000000000001/settings/billing?checkout_success=1&upgrade_pending=1&session_id=cs_1",
   "/billing-confirmation?organizationId=0190a000-0000-7000-8000-000000000001&checkout_success=1&plan=pro",
   "/workspaces/0190a000-0000-7000-8000-000000000002/",
-  // The integrations' OAuth callbacks (server/internal/integration/connect.go callbackPaths).
+  // The integrations' OAuth callbacks (apps/server/internal/integration/connect.go callbackPaths).
   "/workspaces/0190a000-0000-7000-8000-000000000002/integrations/google-sheets?error=access_denied",
   "/workspaces/0190a000-0000-7000-8000-000000000002/settings/workspace/integrations/airtable",
   "/workspaces/0190a000-0000-7000-8000-000000000002/settings/workspace/integrations/notion?error=oauth_error",

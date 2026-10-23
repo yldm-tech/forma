@@ -52,13 +52,13 @@ describe("web scan target", () => {
   function target(overrides: Partial<ScanTarget> = {}): ScanTarget {
     return {
       name: "fixture",
-      sourceDirs: [path.join(root, "web", "src")],
+      sourceDirs: [path.join(root, "apps", "web", "src")],
       referenceSources: [
-        { dir: path.join(root, "server"), pattern: "**/*.go" },
-        { dir: path.join(root, "server", "mailer", "templates"), pattern: "**/*.html" },
-        { dir: path.join(root, "server", "catalog"), pattern: "templates.json" },
+        { dir: path.join(root, "apps", "server"), pattern: "**/*.go" },
+        { dir: path.join(root, "apps", "server", "mailer", "templates"), pattern: "**/*.html" },
+        { dir: path.join(root, "apps", "server", "catalog"), pattern: "templates.json" },
       ],
-      localesDir: path.join(root, "web", "locales"),
+      localesDir: path.join(root, "apps", "web", "locales"),
       defaultLocale: "en-US",
       knownUnusedKeys: ["common.recorded"],
       ...overrides,
@@ -75,13 +75,13 @@ describe("web scan target", () => {
       "common/recorded": "Recorded as unused",
     };
     root = fixture({
-      "web/src/login.tsx": `export const Login = () => <p>{t("auth.login")}</p>;\nexport const s = t("auth.stale");\nexport const u = t("common.unused");`,
-      "server/mailer/render.go": `func (Invite) subjectKey() string { return "emails.invite_subject" }\nvar host = "forma.yldm.ai"`,
-      "server/mailer/templates/invite.html": `{{template "heading" (.T "emails.invite_subject")}}`,
-      "server/catalog/templates.json": `[{"name": "{{templates.nps_name}}"}]`,
-      "web/locales/en-US.json": JSON.stringify(enUS),
-      "web/locales/ja-JP.json": JSON.stringify(enUS),
-      "web/i18n.lock": lockfile(values),
+      "apps/web/src/login.tsx": `export const Login = () => <p>{t("auth.login")}</p>;\nexport const s = t("auth.stale");\nexport const u = t("common.unused");`,
+      "apps/server/mailer/render.go": `func (Invite) subjectKey() string { return "emails.invite_subject" }\nvar host = "forma.yldm.ai"`,
+      "apps/server/mailer/templates/invite.html": `{{template "heading" (.T "emails.invite_subject")}}`,
+      "apps/server/catalog/templates.json": `[{"name": "{{templates.nps_name}}"}]`,
+      "apps/web/locales/en-US.json": JSON.stringify(enUS),
+      "apps/web/locales/ja-JP.json": JSON.stringify(enUS),
+      "apps/web/i18n.lock": lockfile(values),
     });
 
     const results = await validateTarget(target());
@@ -99,12 +99,12 @@ describe("web scan target", () => {
   test("reports unused, missing, stale, extra and untranslated keys", async () => {
     const jaJP = { ...enUS, auth: { login: "ログイン" }, legacy: { gone: "古い" } };
     root = fixture({
-      "web/src/login.tsx": `export const a = t("auth.login");\nexport const b = t("auth.missing");\nexport const c = t("common.recorded");`,
-      "server/mailer/render.go": `const key = "emails.invite_subject"`,
-      "web/locales/en-US.json": JSON.stringify(enUS),
-      "web/locales/ja-JP.json": JSON.stringify(jaJP),
+      "apps/web/src/login.tsx": `export const a = t("auth.login");\nexport const b = t("auth.missing");\nexport const c = t("common.recorded");`,
+      "apps/server/mailer/render.go": `const key = "emails.invite_subject"`,
+      "apps/web/locales/en-US.json": JSON.stringify(enUS),
+      "apps/web/locales/ja-JP.json": JSON.stringify(jaJP),
       // auth/login changed since the last translation run.
-      "web/i18n.lock": lockfile({
+      "apps/web/i18n.lock": lockfile({
         "auth/login": "Sign in",
         "auth/stale": "Stale",
         "emails/invite_subject": "You are invited",
@@ -127,8 +127,8 @@ describe("web scan target", () => {
 
   test("fails without a lockfile", async () => {
     root = fixture({
-      "web/src/a.ts": `export const a = t("auth.login");`,
-      "web/locales/en-US.json": JSON.stringify({ auth: { login: "Log in" } }),
+      "apps/web/src/a.ts": `export const a = t("auth.login");`,
+      "apps/web/locales/en-US.json": JSON.stringify({ auth: { login: "Log in" } }),
     });
 
     const results = await validateTarget(target({ referenceSources: [], knownUnusedKeys: [] }));

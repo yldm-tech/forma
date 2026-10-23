@@ -78,22 +78,22 @@ export default defineConfig({
       {
         // forma2's survey editor moves focus to the field the author has just created or opened (a new choice, an added card, a popover's search box), in answer to their own action and never on page load, which is what the rule guards against.
         files: [
-          "web/src/features/survey-editor/**",
-          "web/src/features/segments/**",
-          "web/src/components/ui/date-picker/**",
-          "web/src/components/ui/editor/**",
-          "web/src/components/ui/input-combo-box.tsx",
+          "apps/web/src/features/survey-editor/**",
+          "apps/web/src/features/segments/**",
+          "apps/web/src/components/ui/date-picker/**",
+          "apps/web/src/components/ui/editor/**",
+          "apps/web/src/components/ui/input-combo-box.tsx",
         ],
         rules: { "jsx-a11y/no-autofocus": "off" },
       },
       {
         // The AI draft preview's list scrolls on its own, and a scroll container that cannot take focus cannot be scrolled from the keyboard (WCAG 2.1.1, forma2's AiDraftPreview); the container is a named region, not a control.
-        files: ["web/src/features/surveys/ai-create/ai-draft-preview.tsx"],
+        files: ["apps/web/src/features/surveys/ai-create/ai-draft-preview.tsx"],
         rules: { "jsx-a11y/no-noninteractive-tabindex": "off" },
       },
       {
         // The link survey page hands the respondent runtime its autoFocus option, as forma2 did: the survey is the whole page, and the option is off whenever the page is framed by another site.
-        files: ["web/src/survey-page/components/survey-client-wrapper.tsx"],
+        files: ["apps/web/src/survey-page/components/survey-client-wrapper.tsx"],
         rules: { "jsx-a11y/no-autofocus": "off" },
       },
       {
@@ -122,10 +122,10 @@ export default defineConfig({
       "packages/survey-ui/src/**/story-helpers.tsx",
       "**/coverage/**",
       "**/storybook-static/**",
-      "docs/forma.js",
-      "server/**",
-      "web/public/js/**",
-      "web/src/routeTree.gen.ts",
+      "apps/docs/forma.js",
+      "apps/server/**",
+      "apps/web/public/js/**",
+      "apps/web/src/routeTree.gen.ts",
     ],
     options: {
       typeAware: true,
@@ -156,16 +156,16 @@ export default defineConfig({
     sortTailwindcss: {},
     ignorePatterns: [
       "pnpm-lock.yaml",
-      "server/**",
-      "web/public/js/**",
-      "web/src/routeTree.gen.ts",
-      "docs/api-v3-reference/openapi.yml",
-      "docs/api-v3-reference/.redocly.lint-ignore.yaml",
+      "apps/server/**",
+      "apps/web/public/js/**",
+      "apps/web/src/routeTree.gen.ts",
+      "apps/docs/api-v3-reference/openapi.yml",
+      "apps/docs/api-v3-reference/.redocly.lint-ignore.yaml",
       // Helm templates are Go templates that only look like YAML, and the vendored operator chart's CRD and update graph are generated upstream. The chart READMEs carry a generated values table.
-      "charts/**/templates/**",
-      "charts/**/README.md",
-      "charts/spicedb-operator/crds/**",
-      "charts/spicedb-operator/files/**",
+      "deploy/helm/**/templates/**",
+      "deploy/helm/**/README.md",
+      "deploy/helm/spicedb-operator/crds/**",
+      "deploy/helm/spicedb-operator/files/**",
       // Oxfmt treats Markdown inside MDX JSX children as one text block and would collapse Mintlify lists and steps.
       "*.mdx",
       // The template's intentionally empty list items would be folded into the label above them.
@@ -174,6 +174,6 @@ export default defineConfig({
   },
   staged: {
     "*.{js,mjs,cjs,ts,mts,cts,tsx,json,md,yml,yaml,css}": "vp check --fix",
-    "server/**/*.go": "gofmt -w",
+    "apps/server/**/*.go": "gofmt -w",
   },
 });

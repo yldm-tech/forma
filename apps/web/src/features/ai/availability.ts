@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
-/** Why AI is unavailable on a surface, forma2's TAIUnavailableReason (server/internal/ai/service.go). */
+/** Why AI is unavailable on a surface, forma2's TAIUnavailableReason (apps/server/internal/ai/service.go). */
 export type AIUnavailableReason = "not_in_plan" | "not_enabled" | "instance_not_configured" | "read_only";
 
 /** Whether a surface may offer AI, and if not why. */

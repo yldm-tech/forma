@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { type SurveyFilters, type SurveyStatus, normalizeSurveyFilters } from "./list/filters";
 
-// The survey endpoints the list, the templates page and the onboarding flow call: /api/v3/surveys (docs/api-v3-reference, server/internal/survey/v3ops.go) and the /api/app survey routes (server/internal/survey/handler.go).
+// The survey endpoints the list, the templates page and the onboarding flow call: /api/v3/surveys (apps/docs/api-v3-reference, apps/server/internal/survey/v3ops.go) and the /api/app survey routes (apps/server/internal/survey/handler.go).
 
 /** One row of GET /api/v3/surveys. Timestamps are ISO strings. */
 export interface SurveyListItem {

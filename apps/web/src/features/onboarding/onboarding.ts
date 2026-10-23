@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
 import { api } from "../../lib/api";
 
-/** GET /api/app/organizations/{id}/onboarding (server/internal/workspace/service.go Onboarding): the workspace the new-workspace flow creates the first survey in, and where to go instead once it has one. Owners and managers only; anyone else gets a not-found, as forma2's workspaces/new layout answered. */
+/** GET /api/app/organizations/{id}/onboarding (apps/server/internal/workspace/service.go Onboarding): the workspace the new-workspace flow creates the first survey in, and where to go instead once it has one. Owners and managers only; anyone else gets a not-found, as forma2's workspaces/new layout answered. */
 export interface Onboarding {
   workspaceId: string;
   completedPath: string | null;

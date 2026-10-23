@@ -1,4 +1,4 @@
-// Runs the release workflow's final step, the one that moves `stable` and `latest`, under bash with stand-ins for gh, git and docker on PATH, and checks the order of what it does. The invariant is the one release.yml states: `latest` never names an image whose docker/ files the `stable` branch does not carry, so a refused `stable` update must leave `latest` where it was.
+// Runs the release workflow's final step, the one that moves `stable` and `latest`, under bash with stand-ins for gh, git and docker on PATH, and checks the order of what it does. The invariant is the one release.yml states: `latest` never names an image whose deploy/docker/ files the `stable` branch does not carry, so a refused `stable` update must leave `latest` where it was.
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

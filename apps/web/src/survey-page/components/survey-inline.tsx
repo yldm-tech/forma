@@ -21,7 +21,7 @@ const runtime = (): SurveysRuntime | undefined =>
 let isLoadingScript = false;
 
 /**
- * Waits for the runtime bundle. The server writes its script tag into the document (server/internal/linksurvey), so the browser fetches and runs it alongside this bundle; only a page served without one (the Vite dev server) adds it here.
+ * Waits for the runtime bundle. The server writes its script tag into the document (apps/server/internal/linksurvey), so the browser fetches and runs it alongside this bundle; only a page served without one (the Vite dev server) adds it here.
  */
 const awaitSurveyScript = (scriptUrl: string): Promise<void> =>
   new Promise((resolve, reject) => {

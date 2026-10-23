@@ -1,7 +1,7 @@
 /**
  * Translation Key Scanner
  *
- * This script scans the admin UI (web/) and the survey runtime (packages/surveys) for translation keys and validates them against
+ * This script scans the admin UI (apps/web/) and the survey runtime (packages/surveys) for translation keys and validates them against
  * their catalogues: keys used but missing, keys present but unused, keys with spaces, keys a locale lacks or has beyond en-US, and
  * en-US values that changed since the last translation run (the Lingo.dev lockfile, i18n.lock).
  *
@@ -44,21 +44,24 @@ export interface ScanTarget {
   knownUnusedKeys?: string[];
 }
 
-const WEB_DIR = path.join(REPO_ROOT, "web");
+const WEB_DIR = path.join(REPO_ROOT, "apps", "web");
 
 /**
- * The admin UI's catalogue, web/locales, is read by the SPA and by the Go server: the mailer renders the `emails` namespace (server/internal/platform/mailer, from an embedded copy a Go test keeps identical) and the survey template catalogue resolves `{{templates.*}}` markers (server/internal/survey/catalog). forma2 scanned apps/web and packages/email together for the same reason.
+ * The admin UI's catalogue, apps/web/locales, is read by the SPA and by the Go server: the mailer renders the `emails` namespace (apps/server/internal/platform/mailer, from an embedded copy a Go test keeps identical) and the survey template catalogue resolves `{{templates.*}}` markers (apps/server/internal/survey/catalog). forma2 scanned apps/web and packages/email together for the same reason.
  */
 export const WEB_TARGET: ScanTarget = {
   name: "Admin UI (web)",
   sourceDirs: [path.join(WEB_DIR, "src")],
   referenceSources: [
-    { dir: path.join(REPO_ROOT, "server", "internal"), pattern: "**/*.go" },
+    { dir: path.join(REPO_ROOT, "apps", "server", "internal"), pattern: "**/*.go" },
     {
-      dir: path.join(REPO_ROOT, "server", "internal", "platform", "mailer", "templates"),
+      dir: path.join(REPO_ROOT, "apps", "server", "internal", "platform", "mailer", "templates"),
       pattern: "**/*.html",
     },
-    { dir: path.join(REPO_ROOT, "server", "internal", "survey", "catalog"), pattern: "templates.json" },
+    {
+      dir: path.join(REPO_ROOT, "apps", "server", "internal", "survey", "catalog"),
+      pattern: "templates.json",
+    },
   ],
   localesDir: path.join(WEB_DIR, "locales"),
   defaultLocale: "en-US",

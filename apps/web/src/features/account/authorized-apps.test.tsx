@@ -8,7 +8,7 @@ import type { OAuthConsent } from "../../lib/queries/oauth";
 import { toast } from "../../lib/toast";
 import { AuthorizedAppsCard } from "./authorized-apps";
 
-// forma2's AuthorizedAppsCard and RevokeOAuthConsentButton on the profile page, against GET and DELETE /api/app/oauth/consents (server/internal/oauthserver/app.go).
+// forma2's AuthorizedAppsCard and RevokeOAuthConsentButton on the profile page, against GET and DELETE /api/app/oauth/consents (apps/server/internal/oauthserver/app.go).
 
 let i18n: I18n;
 

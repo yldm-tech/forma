@@ -1,7 +1,7 @@
 import { type QueryClient, hashKey, queryOptions } from "@tanstack/react-query";
 import { ApiError, api } from "../../lib/api";
 
-// The /api/app/auth and invite endpoints the signed-out screens call (server/internal/auth/handler.go, sso_handler.go, twofactor_handler.go and server/internal/invite/handler.go).
+// The /api/app/auth and invite endpoints the signed-out screens call (apps/server/internal/auth/handler.go, sso_handler.go, twofactor_handler.go and apps/server/internal/invite/handler.go).
 
 export type SSOProvider = "google" | "github" | "azuread" | "openid" | "saml";
 

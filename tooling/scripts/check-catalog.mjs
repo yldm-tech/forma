@@ -87,7 +87,7 @@ function resolveWorkspaceDirs(globs) {
       throw new Error(
         `pnpm-workspace.yaml lists the workspace glob "${pattern}", which this check cannot expand.\n` +
           `Only "dir/*" and literal directories are supported. Teach resolveWorkspaceDirs in\n` +
-          `scripts/check-catalog.mjs about the new shape — do not leave it unhandled, or the check\n` +
+          `tooling/scripts/check-catalog.mjs about the new shape — do not leave it unhandled, or the check\n` +
           `silently stops covering those packages while still reporting success.`
       );
     }

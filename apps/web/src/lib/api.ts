@@ -1,4 +1,4 @@
-// The SPA's client for the Go server. Every call is same-origin with the session cookie, and carries the header the server's CSRF check requires on mutations (server/internal/platform/httpapi/csrf.go).
+// The SPA's client for the Go server. Every call is same-origin with the session cookie, and carries the header the server's CSRF check requires on mutations (apps/server/internal/platform/httpapi/csrf.go).
 export const CSRF_HEADER = "X-Requested-With";
 
 /** One failed constraint on one input field, as /api/app reports validation errors. */

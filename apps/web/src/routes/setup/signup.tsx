@@ -5,7 +5,7 @@ import { authOptionsQuery } from "../../features/auth/api";
 import { SignupForm } from "../../features/auth/components/signup-form";
 import { homeQuery } from "../../lib/queries/organizations";
 
-// forma2's fresh-instance sign-up, where the intro leads: the first account, framed as the instance's administrator. It is open while the instance has no user whatever SIGNUP_ENABLED says, because the server lets the first user in uninvited (server/internal/auth/signup.go); once the instance has a user, or for a signed-in visitor, the root page decides instead, as the intro does.
+// forma2's fresh-instance sign-up, where the intro leads: the first account, framed as the instance's administrator. It is open while the instance has no user whatever SIGNUP_ENABLED says, because the server lets the first user in uninvited (apps/server/internal/auth/signup.go); once the instance has a user, or for a signed-in visitor, the root page decides instead, as the intro does.
 export const Route = createFileRoute("/setup/signup")({
   beforeLoad: async ({ context }) => {
     const home = await context.queryClient.fetchQuery(homeQuery);

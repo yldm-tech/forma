@@ -94,7 +94,7 @@ const main = () => {
     for (const result of missing) console.error(`  ${result.path} — \`${result.builtBy}\``);
     console.error(`\n  This check measures build output, so an absent file means it measured nothing rather`);
     console.error(`  than that nothing grew. Build the bundle before running it, or — if the artifact has`);
-    console.error(`  genuinely moved — update BUDGETS in scripts/check-bundle-budget.mjs.`);
+    console.error(`  genuinely moved — update BUDGETS in tooling/scripts/check-bundle-budget.mjs.`);
   }
 
   if (over.length > 0) {
@@ -114,7 +114,7 @@ const main = () => {
     console.error(`  packages/surveys/stats.html. A new top-level import of a locale table, a validation`);
     console.error(`  library or a Node-only parser is the usual cause.`);
     console.error(
-      `\n  If the growth is intended, re-baseline BUDGETS in scripts/check-bundle-budget.mjs and`
+      `\n  If the growth is intended, re-baseline BUDGETS in tooling/scripts/check-bundle-budget.mjs and`
     );
     console.error(`  say so in the PR description.`);
   }

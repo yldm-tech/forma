@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { type Plugin, defineConfig, lazyPlugins } from "vite-plus";
 
-// The public survey page loads only the namespaces of a catalogue it reads; the admin app's would be most of the download. "virtual:survey-page-locale/<locale>" is those namespaces of web/locales/<locale>.json.
+// The public survey page loads only the namespaces of a catalogue it reads; the admin app's would be most of the download. "virtual:survey-page-locale/<locale>" is those namespaces of apps/web/locales/<locale>.json.
 const SURVEY_PAGE_LOCALE = "virtual:survey-page-locale/";
 const SURVEY_PAGE_NAMESPACES = ["c", "common", "s"];
 
@@ -48,7 +48,7 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     rollupOptions: {
-      // The admin SPA, and the public survey page as a bundle of its own: respondents never download the admin app. The Go server fills survey.html's markers (server/internal/linksurvey).
+      // The admin SPA, and the public survey page as a bundle of its own: respondents never download the admin app. The Go server fills survey.html's markers (apps/server/internal/linksurvey).
       input: {
         main: fileURLToPath(new URL("index.html", import.meta.url)),
         survey: fileURLToPath(new URL("survey.html", import.meta.url)),

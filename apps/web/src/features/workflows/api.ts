@@ -10,7 +10,7 @@ import type {
   TWorkflowTriggerType,
 } from "./definition";
 
-// The /api/v3/workflows client (server/internal/workflow/handler.go), forma2's modules/workflows/lib/api-client.ts and lib/query.ts. Timestamps are ISO strings.
+// The /api/v3/workflows client (apps/server/internal/workflow/handler.go), forma2's modules/workflows/lib/api-client.ts and lib/query.ts. Timestamps are ISO strings.
 
 /** forma2's ZWorkflowRunSummary, the run shape a workflow embeds as its lastRun. */
 export interface TWorkflowRunSummary {

@@ -25,12 +25,12 @@ describe("the refused-name enumeration in the docs matches the two reserved sets
   const refusedNames = [...RESERVED_DECLARED_FIELD_NAMES, ...RESERVED_FIELD_NAMES];
 
   const surfaces = [
-    "docs/api-v3-reference/src/components/schemas/SurveyHiddenFields.yml",
-    "docs/surveys/general-features/hidden-fields.mdx",
+    "apps/docs/api-v3-reference/src/components/schemas/SurveyHiddenFields.yml",
+    "apps/docs/surveys/general-features/hidden-fields.mdx",
     // Create-only variable schemas carry the same rule: `collectDeclaredFieldNames` maps variables
     // too, so a new variable named `country` or `1foo` gets the identical 400.
-    "docs/api-v3-reference/src/components/schemas/CreateSurveyTextVariable.yml",
-    "docs/api-v3-reference/src/components/schemas/CreateSurveyNumberVariable.yml",
+    "apps/docs/api-v3-reference/src/components/schemas/CreateSurveyTextVariable.yml",
+    "apps/docs/api-v3-reference/src/components/schemas/CreateSurveyNumberVariable.yml",
   ];
 
   test.each(surfaces)("%s names every refused id from both sets", (surface) => {

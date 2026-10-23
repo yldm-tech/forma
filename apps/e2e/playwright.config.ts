@@ -2,7 +2,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * The browser suite in e2e/, forma2's playwright.config.ts. It drives a running server rather than starting one: scripts/ci-stack.sh brings up `forma start` with its dependencies (see .github/workflows/e2e.yml), and E2E_BASE_URL points elsewhere when the server runs somewhere else. Every spec creates the account it works in, so specs run in parallel and in any order against one instance.
+ * The browser suite in apps/e2e/, forma2's playwright.config.ts. It drives a running server rather than starting one: tooling/scripts/ci-stack.sh brings up `forma start` with its dependencies (see .github/workflows/e2e.yml), and E2E_BASE_URL points elsewhere when the server runs somewhere else. Every spec creates the account it works in, so specs run in parallel and in any order against one instance.
  */
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 

@@ -8,7 +8,7 @@ export const SURVEY_PAGE_NAMESPACES = ["common", "s", "c"] as const;
 
 type Namespaces = Record<(typeof SURVEY_PAGE_NAMESPACES)[number], Record<string, unknown>>;
 
-/** One small chunk per shipped locale, each carrying only the public namespaces (see the survey page locale plugin in web/vite.config.ts). */
+/** One small chunk per shipped locale, each carrying only the public namespaces (see the survey page locale plugin in apps/web/vite.config.ts). */
 export const surveyPageCatalogues: Record<Locale, () => Promise<Namespaces>> = {
   "en-US": () => import("virtual:survey-page-locale/en-US"),
   "ja-JP": () => import("virtual:survey-page-locale/ja-JP"),

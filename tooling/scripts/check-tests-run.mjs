@@ -2,7 +2,7 @@
 // Fails when a committed test file sits outside every workspace, which means nothing runs it.
 // Runs as part of `pnpm check` (root package.json), alongside `catalog:check`, and in the TypeScript workspace job of `.github/workflows/pr.yml`.
 //
-// `vp run -r test` only invokes `test` in workspaces that define it, so a spec outside every workspace is not skipped loudly — it never runs, and reads as coverage to anyone grepping for one. forma2's `scripts/setup-dev-env.test.ts` sat that way for as long as it existed, which is why `scripts/` is a workspace.
+// `vp run -r test` only invokes `test` in workspaces that define it, so a spec outside every workspace is not skipped loudly — it never runs, and reads as coverage to anyone grepping for one. forma2's `scripts/setup-dev-env.test.ts` sat that way for as long as it existed, which is why `tooling/scripts/` is a workspace.
 //
 // One kind of file is expected to be absent from a workspace's own `test` run and is not a failure: the Playwright specs under `apps/e2e/`, which `apps/e2e/playwright.config.ts` runs against a running server (`.github/workflows/e2e.yml`). Go tests are `_test.go` files and never match.
 //
@@ -93,7 +93,7 @@ const main = () => {
   console.error(`
 A test file outside every workspace is never executed, and nothing says so — it reads as coverage that does not exist.
 
-Move it into a workspace that runs tests, or make its directory one (\`scripts/\` is the worked example). If it is meant to run elsewhere, add that case to RUN_ELSEWHERE here so the exception is written down.
+Move it into a workspace that runs tests, or make its directory one (\`tooling/scripts/\` is the worked example). If it is meant to run elsewhere, add that case to RUN_ELSEWHERE here so the exception is written down.
 `);
   return 1;
 };

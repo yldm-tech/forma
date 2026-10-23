@@ -2,7 +2,7 @@
 /**
  * Post-build guard for the standalone stylesheet (dist/survey-ui.css).
  *
- * The scoping PostCSS plugins (packages/vite-plugins/postcss-scope-fbjs.cjs) match
+ * The scoping PostCSS plugins (tooling/vite-plugins/postcss-scope-fbjs.cjs) match
  * Tailwind's CURRENT emission shapes exactly (`@layer properties`, bare `:root` /
  * `:host` selectors). Their unit tests feed a frozen fixture, so a future Tailwind
  * upgrade that changes the emitted shape (e.g. `:root:where(...)`) would slip past
@@ -58,7 +58,7 @@ if (violations.length > 0) {
   console.error("[assert-scoped-css] dist/survey-ui.css leaks global styles to the host page:");
   for (const violation of violations) console.error(`  - ${violation}`);
   console.error(
-    "[assert-scoped-css] The postcss-scope-fbjs plugins no longer match Tailwind's output shape — update packages/vite-plugins/postcss-scope-fbjs.cjs."
+    "[assert-scoped-css] The postcss-scope-fbjs plugins no longer match Tailwind's output shape — update tooling/vite-plugins/postcss-scope-fbjs.cjs."
   );
   process.exit(1);
 }

@@ -3,7 +3,7 @@ import type { TI18nString } from "@forma/types/i18n";
 import { api } from "../../lib/api";
 import { surveysApi } from "../surveys/api";
 
-// The integrations pages' endpoints: /api/app/workspaces/{id}/integrations/* and /api/app/integrations/{id} (server/internal/integration/handler.go), and the webhooks page's /api/app/workspaces/{id}/webhooks and /api/app/webhooks/{id} (server/internal/webhook/handler.go).
+// The integrations pages' endpoints: /api/app/workspaces/{id}/integrations/* and /api/app/integrations/{id} (apps/server/internal/integration/handler.go), and the webhooks page's /api/app/workspaces/{id}/webhooks and /api/app/webhooks/{id} (apps/server/internal/webhook/handler.go).
 
 export type IntegrationType = "googleSheets" | "airtable" | "notion" | "slack";
 

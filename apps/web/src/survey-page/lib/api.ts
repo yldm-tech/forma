@@ -1,7 +1,7 @@
 import { api } from "../../lib/api";
 import type { TPublicSurvey } from "./state";
 
-// The gates' endpoints live under the survey's own path, where forma2 posted their server actions (server/internal/linksurvey/handler.go).
+// The gates' endpoints live under the survey's own path, where forma2 posted their server actions (apps/server/internal/linksurvey/handler.go).
 
 export interface TPinResult {
   survey: TPublicSurvey;
