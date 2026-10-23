@@ -198,6 +198,10 @@ jobs:
     name: Validate Translations
     uses: ./.github/workflows/translation-check.yml
 
+  contract-tests:
+    name: API v3 Contract Tests
+    uses: ./.github/workflows/api-v3-contract-tests.yml
+
   validate-authzed-schema:
     name: Validate AuthZed Schema
     runs-on: ubuntu-latest
@@ -232,6 +236,7 @@ jobs:
       - server-coverage
       - workspace
       - translations
+      - contract-tests
       - validate-authzed-schema
       - helm-chart-validation
       - coderabbit-config-validation
