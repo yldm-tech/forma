@@ -135,7 +135,7 @@ describe("useFocusTrap", () => {
   test("allows links to receive initial focus", async () => {
     render(
       <FocusTrapFixture>
-        <a href="https://forma.ylam.ai">Forma link</a>
+        <a href="https://forma.yldm.ai">Forma link</a>
         <button>Survey action</button>
       </FocusTrapFixture>
     );

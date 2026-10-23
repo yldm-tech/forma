@@ -170,7 +170,7 @@ func TestClearRemovesOnlySeededRows(t *testing.T) {
 	if n := count(t, db, `SELECT count(*) FROM organizations WHERE id = ?`, OrganizationID); n != 0 {
 		t.Error("the seeded organization survived Clear")
 	}
-	if n := count(t, db, `SELECT count(*) FROM users WHERE email LIKE '%@forma.ylam.ai'`); n != 0 {
+	if n := count(t, db, `SELECT count(*) FROM users WHERE email LIKE '%@forma.yldm.ai'`); n != 0 {
 		t.Errorf("%d seeded users survived Clear", n)
 	}
 	if n := count(t, db, `SELECT count(*) FROM surveys`); n != 0 {

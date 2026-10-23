@@ -605,7 +605,7 @@ ingress:
   enabled: false # Enable/disable Ingress
   ingressClassName: alb # Specify the Ingress class
   hosts:
-    - host: k8s.forma.ylam.ai
+    - host: k8s.forma.yldm.ai
       paths:
         - path: /
           pathType: "Prefix"

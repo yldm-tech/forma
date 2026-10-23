@@ -7,5 +7,5 @@
   "additionalProperties": {
     "type": "number"
   },
-  "$id": "https://forma.ylam.ai/schemas/response.ttc.json"
+  "$id": "https://forma.yldm.ai/schemas/response.ttc.json"
 }

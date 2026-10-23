@@ -1,5 +1,5 @@
 !(function () {
-  var appUrl = "https://app.forma.ylam.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
+  var appUrl = "https://forma.yldm.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
   var workspaceId = "clgwcwp4z000lpf0hur7pzbuv";
 
   var t = document.createElement("script");

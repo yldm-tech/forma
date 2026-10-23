@@ -25,7 +25,7 @@ export const validWebHookURL = (
     return { valid: true };
   }
   if (url.protocol !== "https:") return { valid: false, error: "URL must start with https://" };
-  const domainError = "Please enter a complete URL with a valid domain (e.g., https://forma.ylam.ai)";
+  const domainError = "Please enter a complete URL with a valid domain (e.g., https://forma.yldm.ai)";
   if (/(?<!:)\/\/+/.test(trimmedInput)) return { valid: false, error: domainError };
   if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(url.hostname)) return { valid: false, error: domainError };
   return { valid: true };

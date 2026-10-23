@@ -70,7 +70,7 @@ All you need to do is copy a `<script>` tag to your HTML head:
 <!-- START Forma Surveys -->
 <script type="text/javascript">
 !function(){
-    var appUrl = "https://app.forma.ylam.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
+    var appUrl = "https://forma.yldm.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
     var workspaceId = "<your-workspace-id>";
 var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";t.onload=function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
 </script>
@@ -677,8 +677,8 @@ If your app serves a strict `Content-Security-Policy` header, the browser can bl
 The SDK loads two scripts from your Forma instance: `forma.umd.cjs` (the SDK) and `surveys.umd.cjs` (the survey renderer, fetched the first time a survey is shown). It then talks to the client API on the same host. Both directives need to point at your `appUrl`:
 
 ```text
-script-src 'self' https://app.forma.ylam.ai;
-connect-src 'self' https://app.forma.ylam.ai;
+script-src 'self' https://forma.yldm.ai;
+connect-src 'self' https://forma.yldm.ai;
 ```
 
 The SDK does not put a nonce on the script tags it creates, so allowlisting the host is what makes them load. `'strict-dynamic'` works instead of a host allowlist, but only if the script that loads the SDK carries a matching nonce or hash of its own — both bundles are inserted programmatically, so they inherit trust from that root. Without a trusted root, `'strict-dynamic'` blocks the SDK before it ever reaches `surveys.umd.cjs`.

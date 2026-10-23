@@ -22,5 +22,5 @@
   "required": [
     "accessControl"
   ],
-  "$id": "https://forma.ylam.ai/schemas/api_key.organization_access.json"
+  "$id": "https://forma.yldm.ai/schemas/api_key.organization_access.json"
 }

@@ -92,8 +92,8 @@ The following environment variables have been configured:
 {{- end }}
 - `NEXTAUTH_SECRET`: A random 32-character string (auto-generated)
 - `ENCRYPTION_KEY`: A random 32-character string (auto-generated)
-- `EMAIL_VERIFICATION_DISABLED`: 1 # By Default email verification is disabled, configure SMTP settings to enable(https://forma.ylam.ai/docs/self-hosting/configuration/smtp)
-- `PASSWORD_RESET_DISABLED`: 1 # By Default password reset is disabled, configure SMTP settings to enable(https://forma.ylam.ai/docs/self-hosting/configuration/smtp)
+- `EMAIL_VERIFICATION_DISABLED`: 1 # By Default email verification is disabled, configure SMTP settings to enable(https://forma.yldm.ai/docs/self-hosting/configuration/smtp)
+- `PASSWORD_RESET_DISABLED`: 1 # By Default password reset is disabled, configure SMTP settings to enable(https://forma.yldm.ai/docs/self-hosting/configuration/smtp)
 
 Retrieve them using:
 ```sh
@@ -210,7 +210,7 @@ AuthZed / SpiceDB Operations:
 
    Outside the release's initialization Job, schema replacement and relationship repair are explicit
    operator actions. Read the safeguards and backup requirements before changing authorization state:
-   https://forma.ylam.ai/docs/self-hosting/advanced/authzed-operations
+   https://forma.yldm.ai/docs/self-hosting/advanced/authzed-operations
 
 ---
 {{- end }}
@@ -229,8 +229,8 @@ Persistence:
 Forma Documentation and Support:
 
 For more information, advanced configurations, and support, visit:
-- **Official Website**: https://forma.ylam.ai
-- **Documentation**: https://forma.ylam.ai/docs
+- **Official Website**: https://forma.yldm.ai
+- **Documentation**: https://forma.yldm.ai/docs
 
 For troubleshooting, refer to the documentation or community support.
 

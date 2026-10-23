@@ -60,7 +60,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	t.Parallel()
 	u, _ := url.Parse("http://localhost:3999")
 	cfg := config.Config{
-		WebAppURL: u, RateLimitingDisabled: true, TrustedProxyHopCount: 1, MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma",
+		WebAppURL: u, RateLimitingDisabled: true, TrustedProxyHopCount: 1, MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma",
 		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
 		NextAuthSecret: testNextAuthSecret, BetterAuthSecret: testBetterAuthSecret, SurveySchedulingTimeZone: "Europe/Berlin",
 	}

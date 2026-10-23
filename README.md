@@ -53,7 +53,7 @@ make dev-web      # Vite dev server on :5173, proxying the API to :3000
 
 ## Security
 
-Report vulnerabilities to security@ylam.ai rather than opening a public issue. See
+Report vulnerabilities to security@yldm.ai rather than opening a public issue. See
 [`SECURITY.md`](./SECURITY.md).
 
 ## License

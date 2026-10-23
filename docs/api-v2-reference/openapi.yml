@@ -4,7 +4,7 @@ info:
   description: Manage Forma resources programmatically.
   version: 2.0.0
 servers:
-  - url: https://app.forma.ylam.ai/api/v2
+  - url: https://forma.yldm.ai/api/v2
     description: Forma Cloud
 tags:
   - name: Health
@@ -87,7 +87,7 @@ paths:
       tags:
         - Client API - Response
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma Client
   /client/{workspaceId}/responses:
     post:
@@ -123,7 +123,7 @@ paths:
       tags:
         - Client API - Response
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma Client
   /client/{workspaceId}/displays:
     post:
@@ -159,7 +159,7 @@ paths:
       tags:
         - Client API - Display
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma Client
   /client/{workspaceId}/environment:
     get:
@@ -193,7 +193,7 @@ paths:
       tags:
         - Client API - Workspace
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma Client
   /client/{workspaceId}/user:
     post:
@@ -232,7 +232,7 @@ paths:
       tags:
         - Client API - User
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma Client
   /client/{workspaceId}/storage:
     post:
@@ -311,7 +311,7 @@ paths:
                       policy: <base64-policy>
                       x-amz-algorithm: AWS4-HMAC-SHA256
                     updatedFileName: file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
-                    fileUrl: https://app.forma.ylam.ai/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
+                    fileUrl: https://forma.yldm.ai/storage/cm1ubebtj000614kqe4hs3c67/private/file--fid--b153ba3e-6602-4bb3-bed9-211b5b1ae463.jpg
         "400":
           description: Bad Request - One or more required fields are missing.
           content:
@@ -337,7 +337,7 @@ paths:
                 example:
                   error: Survey survey123 not found
       servers:
-        - url: https://app.forma.ylam.ai/api/v2
+        - url: https://forma.yldm.ai/api/v2
           description: Forma API Server
   /health:
     get:

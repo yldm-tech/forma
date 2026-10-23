@@ -107,7 +107,7 @@ func baseConfig() config.Config {
 		TrustedProxyHopCount:              1,
 		AuditLogEnabled:                   true,
 		AuditLogGetUserIP:                 true,
-		MailFrom:                          "noreply@forma.ylam.ai",
+		MailFrom:                          "noreply@forma.yldm.ai",
 		MailFromName:                      "Forma",
 		SMTPHost:                          "smtp.example.com",
 		SMTPPort:                          "587",

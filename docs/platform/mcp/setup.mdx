@@ -4,7 +4,7 @@ description: "Connect Claude Code, the Claude apps, or Codex to the Forma MCP se
 icon: "plug"
 ---
 
-These guides connect your MCP client to Forma using OAuth (no API keys). They use the Forma Cloud URL `https://app.forma.ylam.ai/api/mcp`; if you self-host, swap in your own `https://<your-forma-domain>/api/mcp`. For how the flow works and prerequisites, see [Connect AI agents (MCP)](/platform/mcp/overview).
+These guides connect your MCP client to Forma using OAuth (no API keys). They use the Forma Cloud URL `https://forma.yldm.ai/api/mcp`; if you self-host, swap in your own `https://<your-forma-domain>/api/mcp`. For how the flow works and prerequisites, see [Connect AI agents (MCP)](/platform/mcp/overview).
 
 ## Claude Code
 
@@ -13,7 +13,7 @@ Claude Code runs on your machine and performs the OAuth handshake itself.
 <Steps>
   <Step title="Add the server">
     ```bash
-    claude mcp add --transport http forma https://app.forma.ylam.ai/api/mcp
+    claude mcp add --transport http forma https://forma.yldm.ai/api/mcp
     ```
   </Step>
   <Step title="Authenticate">
@@ -38,7 +38,7 @@ To share the server definition with a project (no credentials committed), add it
   "mcpServers": {
     "forma": {
       "type": "http",
-      "url": "https://app.forma.ylam.ai/api/mcp"
+      "url": "https://forma.yldm.ai/api/mcp"
     }
   }
 }
@@ -53,7 +53,7 @@ Use this for **claude.ai** and **Claude Desktop**, where Forma is added as a cus
     Go to **Settings → Connectors** (**Customize → Connectors**) and click **Add custom connector**.
   </Step>
   <Step title="Add the server URL">
-    Enter `https://app.forma.ylam.ai/api/mcp` and confirm. Leave the optional OAuth client fields
+    Enter `https://forma.yldm.ai/api/mcp` and confirm. Leave the optional OAuth client fields
     blank — Forma registers the connector automatically.
   </Step>
   <Step title="Approve access">
@@ -83,8 +83,8 @@ Use this for **claude.ai** and **Claude Desktop**, where Forma is added as a cus
     Include `--oauth-resource` so the access token is audience-bound to the MCP resource:
     ```bash
     codex mcp add forma \
-      --url https://app.forma.ylam.ai/api/mcp \
-      --oauth-resource https://app.forma.ylam.ai/api/mcp
+      --url https://forma.yldm.ai/api/mcp \
+      --oauth-resource https://forma.yldm.ai/api/mcp
     ```
   </Step>
   <Step title="Authenticate">
@@ -109,8 +109,8 @@ The equivalent `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.forma]
-url = "https://app.forma.ylam.ai/api/mcp"
-oauth_resource = "https://app.forma.ylam.ai/api/mcp"
+url = "https://forma.yldm.ai/api/mcp"
+oauth_resource = "https://forma.yldm.ai/api/mcp"
 ```
 
 ## Manage and revoke access

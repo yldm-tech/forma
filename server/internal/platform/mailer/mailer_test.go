@@ -31,7 +31,7 @@ var update = flag.Bool("update", false, "rewrite locales/*.json from web/locales
 var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func baseConfig() config.Config {
-	return config.Config{MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma"}
+	return config.Config{MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma"}
 }
 
 func newMailer(t *testing.T, cfg config.Config, tr mailer.Transport) *mailer.Mailer {
@@ -262,7 +262,7 @@ func TestSendThroughTransport(t *testing.T) {
 	if len(msgs) != 2 {
 		t.Fatalf("%d messages", len(msgs))
 	}
-	if msgs[0].To != "grace@example.com" || msgs[0].From != `"Forma" <noreply@forma.ylam.ai>` || msgs[0].Subject != "You are invited to collaborate on Forma!" || !strings.Contains(msgs[0].HTML, "Hey Grace") {
+	if msgs[0].To != "grace@example.com" || msgs[0].From != `"Forma" <noreply@forma.yldm.ai>` || msgs[0].Subject != "You are invited to collaborate on Forma!" || !strings.Contains(msgs[0].HTML, "Hey Grace") {
 		t.Fatalf("message = %+v", msgs[0])
 	}
 	if msgs[1].From != "Other <other@example.com>" {
@@ -384,7 +384,7 @@ func TestSMTPDelivery(t *testing.T) {
 	}
 	got := list.Messages[0]
 	want, _, _ := m.Render("ja-JP", everyTemplate[4])
-	if got.Subject != want || got.From.Name != "Forma" || got.From.Address != "noreply@forma.ylam.ai" || got.To[0].Address != "grace@example.com" {
+	if got.Subject != want || got.From.Name != "Forma" || got.From.Address != "noreply@forma.yldm.ai" || got.To[0].Address != "grace@example.com" {
 		t.Fatalf("delivered %+v", got)
 	}
 }
@@ -399,7 +399,7 @@ func TestRenderOrganizationLogo(t *testing.T) {
 	if !strings.Contains(html, `src="https://cdn.example.com/acme.png"`) || strings.Contains(html, "logo-transparent.png") || strings.Contains(html, "utm_campaign=email_logo") {
 		t.Fatalf("organization logo not used:\n%s", html)
 	}
-	_, html, err = m.Render("en-US", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://app.forma.ylam.ai/logo-transparent.png"})
+	_, html, err = m.Render("en-US", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://forma.yldm.ai/logo-transparent.png"})
 	if err != nil {
 		t.Fatal(err)
 	}

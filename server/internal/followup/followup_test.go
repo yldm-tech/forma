@@ -33,7 +33,7 @@ type env struct {
 func newEnv(t *testing.T, smtp bool) *env {
 	t.Helper()
 	app, _ := url.Parse("https://app.example.com")
-	cfg := config.Config{WebAppURL: app, MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma"}
+	cfg := config.Config{WebAppURL: app, MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma"}
 	db := pgtest.GORM(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	e := &env{t: t, db: db}
@@ -126,7 +126,7 @@ func TestSend(t *testing.T) {
 		t.Fatalf("sent to %v", sent)
 	}
 	m := sent["jane@example.com"]
-	if m.Subject != "Hello #recall:email/fallback:x#" || m.ReplyTo != "a@example.com, b@example.com" || m.From != `"Forma" <noreply@forma.ylam.ai>` {
+	if m.Subject != "Hello #recall:email/fallback:x#" || m.ReplyTo != "a@example.com, b@example.com" || m.From != `"Forma" <noreply@forma.yldm.ai>` {
 		t.Errorf("message = %+v", m)
 	}
 	if !strings.Contains(m.HTML, "<p>Thanks jane@example.com!</p>") || strings.Contains(m.HTML, "<script>") || !strings.Contains(m.HTML, "Response data") || strings.Contains(m.HTML, "author@example.com") {

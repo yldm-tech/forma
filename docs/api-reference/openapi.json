@@ -1,6 +1,6 @@
 {
   "info": {
-    "description": "Forma offers two types of APIs: the **Public Client API** and the **Management API**. Each API serves a different purpose, has different authentication requirements, and provides access to different data and settings.\n\nCheckout the [API Key Setup](https://forma.ylam.ai/docs/api/management/api-key-setup) - to access the Management APIs wit an API Key.\n\n> If you have forked the collection & running it, we recommend you to atleast update `apiKey` & `workspaceId` the Collection variables as per your values! We also have a lot of post-run scripts written to help you navigate through auto-assigning variables when running scripts. \n  \n\nNeed more help, visit our: [Website](https://forma.ylam.ai) or join our [Discord](https://forma.ylam.ai/discord)!",
+    "description": "Forma offers two types of APIs: the **Public Client API** and the **Management API**. Each API serves a different purpose, has different authentication requirements, and provides access to different data and settings.\n\nCheckout the [API Key Setup](https://forma.yldm.ai/docs/api/management/api-key-setup) - to access the Management APIs wit an API Key.\n\n> If you have forked the collection & running it, we recommend you to atleast update `apiKey` & `workspaceId` the Collection variables as per your values! We also have a lot of post-run scripts written to help you navigate through auto-assigning variables when running scripts. \n  \n\nNeed more help, visit our: [Website](https://forma.yldm.ai) or join our [Discord](https://forma.yldm.ai/discord)!",
     "title": "API Documentation",
     "version": "1.0.0"
   },
@@ -352,7 +352,7 @@
                                       "type": "string"
                                     },
                                     "buttonLink": {
-                                      "example": "https://forma.ylam.ai",
+                                      "example": "https://forma.yldm.ai",
                                       "type": "string"
                                     },
                                     "headline": {
@@ -1757,7 +1757,7 @@
         "tags": ["Management API - Action Class"]
       },
       "post": {
-        "description": "Create Action Class from the UI or from the API! You can read more about them [here](https://forma.ylam.ai/docs/in-app-surveys/actions).",
+        "description": "Create Action Class from the UI or from the API! You can read more about them [here](https://forma.yldm.ai/docs/in-app-surveys/actions).",
         "parameters": [
           {
             "example": "{{apiKey}}",
@@ -4562,7 +4562,7 @@
                           "buttonLabel": {
                             "default": "Create your own Survey"
                           },
-                          "buttonLink": "https://forma.ylam.ai/signup",
+                          "buttonLink": "https://forma.yldm.ai/signup",
                           "headline": {
                             "default": "Thank you!"
                           },
@@ -4745,7 +4745,7 @@
                         "buttonLabel": {
                           "default": "Create your own Survey"
                         },
-                        "buttonLink": "https://forma.ylam.ai/signup",
+                        "buttonLink": "https://forma.yldm.ai/signup",
                         "headline": {
                           "default": "Thank you!"
                         },
@@ -5024,7 +5024,7 @@
                         "buttonLabel": {
                           "default": "Create your own Survey"
                         },
-                        "buttonLink": "https://forma.ylam.ai/signup",
+                        "buttonLink": "https://forma.yldm.ai/signup",
                         "headline": {
                           "default": "Thank you!"
                         },
@@ -5348,7 +5348,7 @@
                         "buttonLabel": {
                           "default": "Create your own Survey"
                         },
-                        "buttonLink": "https://forma.ylam.ai/signup",
+                        "buttonLink": "https://forma.yldm.ai/signup",
                         "headline": {
                           "default": "Thank you!"
                         },
@@ -5659,7 +5659,7 @@
                         "buttonLabel": {
                           "default": "Create your own Survey"
                         },
-                        "buttonLink": "https://forma.ylam.ai/signup",
+                        "buttonLink": "https://forma.yldm.ai/signup",
                         "headline": {
                           "default": "Thank you!"
                         },
@@ -5920,7 +5920,7 @@
                         "buttonLabel": {
                           "default": "Create your own Survey"
                         },
-                        "buttonLink": "https://forma.ylam.ai/signup",
+                        "buttonLink": "https://forma.yldm.ai/signup",
                         "headline": {
                           "default": "Thank you!"
                         },
@@ -6168,16 +6168,16 @@
               "application/json": {
                 "example": {
                   "data": [
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=ohkj3qx6d0wdo9r3nfpm3bgj",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=ci6la2lzj63pvsp6x3eqbhff",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=ge8xc013ad5elmt144h2gpl4",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=zqh6x0judrawhasr4pmywbkb",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=mpqm14y2ub8utokxci6phr1y",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=g5ej7f8w9tc87xkvefeajoxa",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=av7swj3jlld97ejbw7lymbau",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=sub2yfok3sdsje2dddzf0l5d",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=hbiee77q8qunti3lxmtoq7w9",
-                    "https://app.forma.ylam.ai/s/clzqym2l300015ycm88weliq0?suId=eo5kb2suapyks59j84egijso"
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=ohkj3qx6d0wdo9r3nfpm3bgj",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=ci6la2lzj63pvsp6x3eqbhff",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=ge8xc013ad5elmt144h2gpl4",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=zqh6x0judrawhasr4pmywbkb",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=mpqm14y2ub8utokxci6phr1y",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=g5ej7f8w9tc87xkvefeajoxa",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=av7swj3jlld97ejbw7lymbau",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=sub2yfok3sdsje2dddzf0l5d",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=hbiee77q8qunti3lxmtoq7w9",
+                    "https://forma.yldm.ai/s/clzqym2l300015ycm88weliq0?suId=eo5kb2suapyks59j84egijso"
                   ]
                 },
                 "schema": {
@@ -6939,7 +6939,7 @@
       "url": "https://{baseurl}",
       "variables": {
         "baseurl": {
-          "default": "app.forma.ylam.ai"
+          "default": "forma.yldm.ai"
         }
       }
     }
@@ -6970,7 +6970,7 @@
       "name": "Client API - User"
     },
     {
-      "description": "The Management API provides access to all data and settings that are visible in the Forma App. This API requires a personal API Key for authentication, which can be generated in the Settings section of the Forma App. With the Management API, you can manage your Forma account programmatically, accessing and modifying data and settings as needed.\n\n> **For Auth:** we use the `x-api-key` header \n  \n\nAPI requests made to the Management API are authorized using a personal API key. This key grants the same rights and access as if you were logged in at app.forma.ylam.ai. It's essential to keep your API key secure and not share it with others.\n\nTo generate, store, or delete an API key, follow the instructions provided on the following page [API Key](https://forma.ylam.ai/docs/api/management/api-key-setup).",
+      "description": "The Management API provides access to all data and settings that are visible in the Forma App. This API requires a personal API Key for authentication, which can be generated in the Settings section of the Forma App. With the Management API, you can manage your Forma account programmatically, accessing and modifying data and settings as needed.\n\n> **For Auth:** we use the `x-api-key` header \n  \n\nAPI requests made to the Management API are authorized using a personal API key. This key grants the same rights and access as if you were logged in at forma.yldm.ai. It's essential to keep your API key secure and not share it with others.\n\nTo generate, store, or delete an API key, follow the instructions provided on the following page [API Key](https://forma.yldm.ai/docs/api/management/api-key-setup).",
       "name": "Management API"
     },
     {
@@ -6978,7 +6978,7 @@
       "name": "Management API - Action Class"
     },
     {
-      "description": "Attribute Classes help you categorize attributes so that you can target users based on specific values of their attributes. They are associated with a Person. Read more [here](https://forma.ylam.ai/docs/in-app-surveys/attributes)",
+      "description": "Attribute Classes help you categorize attributes so that you can target users based on specific values of their attributes. They are associated with a Person. Read more [here](https://forma.yldm.ai/docs/in-app-surveys/attributes)",
       "name": "Management API - Attribute Class"
     },
     {

@@ -45,7 +45,7 @@ const (
 )
 
 // cloudAccountDeletionSurveyURL is where Forma Cloud sends a user after deleting their account.
-const cloudAccountDeletionSurveyURL = "https://app.forma.ylam.ai/s/clri52y3z8f221225wjdhsoo2"
+const cloudAccountDeletionSurveyURL = "https://forma.yldm.ai/s/clri52y3z8f221225wjdhsoo2"
 
 // InviteRedeemer is the invite module's part in sign-up: whether a token is a live invite for the address signing up, and granting it to the account the sign-up creates, inside the sign-up's transaction. The invite module implements it; this package does not import that module.
 type InviteRedeemer interface {

@@ -38,7 +38,7 @@ When contributing UI changes:
 
 ## Reporting Accessibility Issues
 
-If you encounter an accessibility barrier, please [open an issue](https://github.com/yldm-tech/forma/issues/new?labels=accessibility&template=accessibility.yml) using the accessibility template. For blocking issues in a procurement or compliance context, email **[hola@forma.ylam.ai](mailto:hola@forma.ylam.ai)**.
+If you encounter an accessibility barrier, please [open an issue](https://github.com/yldm-tech/forma/issues/new?labels=accessibility&template=accessibility.yml) using the accessibility template. For blocking issues in a procurement or compliance context, email **[hola@forma.yldm.ai](mailto:hola@forma.yldm.ai)**.
 
 ## Resources
 

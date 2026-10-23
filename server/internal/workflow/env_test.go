@@ -120,7 +120,7 @@ func newEnv(t *testing.T) *env {
 		WebAppURL: u, PublicURL: public, DatabaseURL: dsn, DatabaseMaxOpenConns: 10, ShutdownTimeout: 5 * time.Second, WorkerConcurrency: 2,
 		RateLimitingDisabled: true, AuditLogEnabled: true, UserManagementMinimumRole: "manager", TrustedProxyHopCount: 1,
 		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
-		MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma",
+		MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma",
 	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Discard})
 	if err != nil {

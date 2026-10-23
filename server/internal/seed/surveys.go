@@ -21,7 +21,7 @@ var kitchenSink = []map[string]any{
 	{"id": "frequency", "type": "multipleChoiceSingle", "headline": text("How often do you use Forma?"), "required": true, "choices": []any{choice("daily", "Daily"), choice("weekly", "Weekly"), choice("monthly", "Monthly"), choice("rarely", "Rarely")}},
 	{"id": "features", "type": "multipleChoiceMulti", "headline": text("Which features do you use?"), "required": false, "choices": []any{choice("surveys", "Surveys"), choice("analytics", "Analytics"), choice("integrations", "Integrations"), choice("actions", "Action Tracking")}},
 	{"id": "recommend", "type": "nps", "headline": text("How likely are you to recommend Forma?"), "required": true, "lowerLabel": text("Not likely"), "upperLabel": text("Very likely")},
-	{"id": "docs", "type": "cta", "headline": text("Check out our documentation!"), "required": false, "buttonExternal": true, "buttonUrl": "https://forma.ylam.ai/docs", "ctaButtonLabel": text("Go to Docs")},
+	{"id": "docs", "type": "cta", "headline": text("Check out our documentation!"), "required": false, "buttonExternal": true, "buttonUrl": "https://forma.yldm.ai/docs", "ctaButtonLabel": text("Go to Docs")},
 	{"id": "experience", "type": "rating", "headline": text("Rate your overall experience"), "required": true, "scale": "star", "range": 5, "lowerLabel": text("Poor"), "upperLabel": text("Excellent")},
 	{"id": "satisfaction", "type": "csat", "headline": text("How satisfied are you with Forma?"), "required": false, "scale": "smiley", "range": 5},
 	{"id": "effort", "type": "ces", "headline": text("Forma made it easy to collect feedback."), "required": false, "scale": "number", "range": 5},

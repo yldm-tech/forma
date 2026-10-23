@@ -26,7 +26,7 @@ rate limiting, response handling, and audit logging paths as the REST routes.
 Use the streamable HTTP MCP endpoint on the Forma app:
 
 ```text
-https://app.forma.ylam.ai/api/mcp
+https://forma.yldm.ai/api/mcp
 ```
 
 For local development:
@@ -44,7 +44,7 @@ The server is built on the official MCP Go SDK (`github.com/modelcontextprotocol
 OAuth clients discover the protected resource metadata here:
 
 ```text
-https://app.forma.ylam.ai/.well-known/oauth-protected-resource/api/mcp
+https://forma.yldm.ai/.well-known/oauth-protected-resource/api/mcp
 ```
 
 The metadata advertises `/api/mcp` as the protected resource and points clients to the Better Auth
@@ -58,13 +58,13 @@ OAuth clients use Authorization Code + PKCE with Dynamic Client Registration. Th
 resource is:
 
 ```text
-https://app.forma.ylam.ai/api/mcp
+https://forma.yldm.ai/api/mcp
 ```
 
 The authorization server issuer is:
 
 ```text
-https://app.forma.ylam.ai/api/auth
+https://forma.yldm.ai/api/auth
 ```
 
 Discovery endpoints:

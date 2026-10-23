@@ -33,7 +33,7 @@ describe("validWebHookURL", () => {
       valid: false,
       error: "URL must start with https://",
     });
-    const domainError = "Please enter a complete URL with a valid domain (e.g., https://forma.ylam.ai)";
+    const domainError = "Please enter a complete URL with a valid domain (e.g., https://forma.yldm.ai)";
     expect(validWebHookURL("https://example.com//hook")).toEqual({ valid: false, error: domainError });
     expect(validWebHookURL("https://10.0.0.1/hook")).toEqual({ valid: false, error: domainError });
     expect(validWebHookURL("https://intranet/hook")).toEqual({ valid: false, error: domainError });

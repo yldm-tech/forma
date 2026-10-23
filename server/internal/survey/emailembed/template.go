@@ -27,7 +27,7 @@ const (
 const emailRatingSmileySize = 40
 
 // poweredByURL is the footer's link.
-const poweredByURL = "https://forma.ylam.ai?utm_source=forma-app&utm_medium=email&utm_campaign=powered_by_badge"
+const poweredByURL = "https://forma.yldm.ai?utm_source=forma-app&utm_medium=email&utm_campaign=powered_by_badge"
 
 // i18n is a TI18nString. getLocalizedValue reads only an object with a "default" key, and only its string values.
 type i18n map[string]any

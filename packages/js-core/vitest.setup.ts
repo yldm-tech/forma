@@ -26,7 +26,7 @@ const windowMock = {
   location: {
     search: "formaDebug=true",
     protocol: "https:",
-    host: "forma.ylam.ai",
+    host: "forma.yldm.ai",
     pathname: "/",
   },
   setInterval: vi.fn(),
