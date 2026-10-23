@@ -10,12 +10,12 @@
 #
 # then `docker compose up -d`. Every image runs the same binary: `forma serve` answers on :3000, `forma worker` runs the background jobs, `forma migrate` applies the schema before either starts, and `forma authz schema apply` writes the authorization schema into SpiceDB. Booleans are 1 or 0 (forma2 also accepted true and false for some of them; this server does not).
 
+# Pin a release (FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:<version>) for reproducible upgrades.
 x-forma-image: &forma-image
-  # Pin a release (ghcr.io/yldm-tech/forma:<version>) for reproducible upgrades.
   image: ${FORMA_IMAGE_REF:-ghcr.io/yldm-tech/forma:latest}
 
+# The password goes into a URL: set POSTGRES_PASSWORD_URL_ENCODED as well when it contains characters that need escaping. forma2's `?schema=public` suffix is a Prisma option PostgreSQL rejects; leave it off.
 x-forma-database: &forma-database
-  # The password goes into a URL: set POSTGRES_PASSWORD_URL_ENCODED as well when it contains characters that need escaping. forma2's `?schema=public` suffix is a Prisma option PostgreSQL rejects; leave it off.
   DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable"
 
 x-forma-authzed: &forma-authzed
