@@ -13,9 +13,19 @@ if (($# > 0)); then
   files=("$@")
 else
   base_ref="${BASE_REF:-HEAD^1}"
-  while IFS= read -r -d '' file; do
+  # The pre-monorepo path is in the pathspec so git can pair a migration moved from server/migrations with its new location as a rename; an unedited move (R100) is not a new migration and is skipped, while a move that also edits the file (R<100) is still linted. With -z, renames and copies list the old and the new path, every other status lists one path.
+  while IFS= read -r -d '' status_code; do
+    IFS= read -r -d '' file
+    case "${status_code}" in
+      R* | C*)
+        IFS= read -r -d '' file
+        ;;
+    esac
+    if [[ "${status_code}" == "R100" ]]; then
+      continue
+    fi
     files+=("${repo_root}/${file}")
-  done < <(git -C "${repo_root}" diff --diff-filter=ACMR --name-only -z "${base_ref}" HEAD -- 'apps/server/migrations/*.sql')
+  done < <(git -C "${repo_root}" diff -M --diff-filter=ACMR --name-status -z "${base_ref}" HEAD -- 'apps/server/migrations/*.sql' 'server/migrations/*.sql')
   if ((${#files[@]} == 0)); then
     echo "No added or changed migrations to lint."
     exit 0
