@@ -23,9 +23,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mcp"
 	"github.com/yldm-tech/forma/server/internal/mgmtapi"
 	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/notification"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -213,7 +215,24 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	workflowRepository := workflow.NewRepository(db)
 	workflowService := workflow.NewService(workflowRepository, db, authorizer, log)
 	workflowHandler := workflow.NewHandler(cfg, workflowService, guard, sessions, emitter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
+	keys := oauthserver.NewKeys(db, cipher)
+	oauthserverHandler, err := oauthserver.NewHandler(cfg, db, keys, sessions, limiter, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	appHandler := oauthserver.NewAppHandler(oauthserverHandler, sessions)
+	tokenVerifier := oauthserver.NewTokenVerifier(cfg, keys)
+	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, authenticator, tokenVerifier, limiter, surveyHandler, workflowHandler, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, webuiHandler)
 	server := httpserver.New(cfg, engine, log)
 	return server, func() {
 		cleanup3()
@@ -369,6 +388,9 @@ var integrationSet = wire.NewSet(integration.NewRepository, integration.NewServi
 
 // workflowSet is workflows: the /api/v3/workflows management API and the builder's authoring context under /api/app.
 var workflowSet = wire.NewSet(workflow.NewRepository, workflow.NewService, workflow.NewHandler)
+
+// mcpSet is the MCP server at /api/mcp and the OAuth authorization server MCP clients sign in through, under /api/auth/oauth2 with its consent page's routes under /api/app.
+var mcpSet = wire.NewSet(oauthserver.NewKeys, oauthserver.NewHandler, oauthserver.NewAppHandler, oauthserver.NewTokenVerifier, mcp.NewHandler)
 
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, newPipelineHandoffs, pipeline.NewWorker)

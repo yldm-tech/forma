@@ -33,10 +33,11 @@ import {
 } from "../../lib/queries/auth";
 import { toast } from "../../lib/toast";
 import { emailError, userNameError } from "../../lib/validation";
+import { AuthorizedAppsCard } from "./authorized-apps";
 import { DeleteAccount } from "./delete-account";
 import { AccountSecurity } from "./two-factor";
 
-/** forma2's profile page: personal information, two-factor authentication for password users, and deleting the account. */
+/** forma2's profile page: personal information, two-factor authentication for password users, the connected MCP clients, and deleting the account. */
 export const ProfilePage = () => {
   const { t } = useTranslation();
   const { data: me } = useSuspenseQuery(meQuery);
@@ -57,6 +58,7 @@ export const ProfilePage = () => {
           <AccountSecurity user={me} />
         </SettingsCard>
       )}
+      <AuthorizedAppsCard locale={me.locale} />
       <SettingsCard
         width="full"
         title={t("workspace.settings.profile.delete_account")}

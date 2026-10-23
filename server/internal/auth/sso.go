@@ -101,10 +101,10 @@ func validatedCallbackURL(webApp *url.URL, raw string) string {
 		return ""
 	}
 	if !u.IsAbs() {
-		base, _ := url.Parse(urlOrigin(webApp))
+		base, _ := url.Parse(URLOrigin(webApp))
 		u = base.ResolveReference(u)
 	}
-	if (u.Scheme != "http" && u.Scheme != "https") || urlOrigin(u) != urlOrigin(webApp) || u.User != nil || strings.HasPrefix(u.Path, "//") {
+	if (u.Scheme != "http" && u.Scheme != "https") || URLOrigin(u) != URLOrigin(webApp) || u.User != nil || strings.HasPrefix(u.Path, "//") {
 		return ""
 	}
 	return u.String()

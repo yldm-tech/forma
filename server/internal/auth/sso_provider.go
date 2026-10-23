@@ -96,8 +96,8 @@ type discoveredProvider struct {
 	verifier *oidc.IDTokenVerifier
 }
 
-// authIssuerURL is forma2's getAuthIssuerUrl: BETTER_AUTH_URL, else NEXTAUTH_URL, else WEBAPP_URL, without query, fragment or trailing slashes, with /api/auth appended unless the path already ends with it.
-func authIssuerURL(cfg config.Config) string {
+// IssuerURL is forma2's getAuthIssuerUrl: BETTER_AUTH_URL, else NEXTAUTH_URL, else WEBAPP_URL, without query, fragment or trailing slashes, with /api/auth appended unless the path already ends with it.
+func IssuerURL(cfg config.Config) string {
 	base := cfg.WebAppURL
 	switch {
 	case cfg.SSO.BetterAuthURL != nil:
@@ -109,11 +109,11 @@ func authIssuerURL(cfg config.Config) string {
 	if !strings.HasSuffix(path, "/api/auth") {
 		path += "/api/auth"
 	}
-	return urlOrigin(base) + path
+	return URLOrigin(base) + path
 }
 
-// urlOrigin is a URL's origin as a browser serializes it: lowercase scheme and host, default port omitted, no credentials.
-func urlOrigin(u *url.URL) string {
+// URLOrigin is a URL's origin as a browser serializes it: lowercase scheme and host, default port omitted, no credentials.
+func URLOrigin(u *url.URL) string {
 	scheme := strings.ToLower(u.Scheme)
 	host := strings.ToLower(u.Hostname())
 	if strings.Contains(host, ":") {
@@ -159,7 +159,7 @@ func (p *ssoProvider) useMicrosoftGraph(authority string) {
 
 // newSSOProviders builds the providers whose credentials are configured. Like forma2 it warns at start-up when Azure AD or the generic provider is pointed at a placeholder-issuer authority, since id_tokens cannot be verified there.
 func newSSOProviders(cfg config.Config, log *slog.Logger) map[string]*ssoProvider {
-	issuer := authIssuerURL(cfg)
+	issuer := IssuerURL(cfg)
 	sso := cfg.SSO
 	oidcScopes := []string{"openid", "email", "profile"}
 	providers := map[string]*ssoProvider{}

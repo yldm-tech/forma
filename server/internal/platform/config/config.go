@@ -126,6 +126,9 @@ type Config struct {
 	// SSO is single sign-on through Google, GitHub, Azure AD and a generic OpenID Connect provider.
 	SSO SSOConfig
 
+	// MCPOAuthJWKSURL is where /api/mcp fetches the keys OAuth access tokens are signed with, forma2's MCP_OAUTH_JWKS_URL, for deployments that verify against another instance's authorization server. It changes no public URL: the issuer, the redirects and the token audience stay derived from WEBAPP_URL and BETTER_AUTH_URL. Unset, the keys are read from the database the authorization server writes them to.
+	MCPOAuthJWKSURL *url.URL `env:"MCP_OAUTH_JWKS_URL"`
+
 	// S3 is the object store uploaded files live in.
 	S3 S3Config
 
@@ -369,6 +372,9 @@ func (c Config) validate() error {
 	}
 	if err := c.SSO.validate(); err != nil {
 		return err
+	}
+	if u := c.MCPOAuthJWKSURL; u != nil && ((u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
+		return fmt.Errorf("MCP_OAUTH_JWKS_URL must be an absolute http(s) URL, got %q", u.String())
 	}
 	if err := c.S3.validate(); err != nil {
 		return err
