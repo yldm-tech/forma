@@ -125,7 +125,7 @@ func newEnv(t *testing.T) *env {
 	e.surveys = survey.NewService(cfg, survey.NewRepository(db), e.authz.Authorizer, e.limiter, emitter, surveydoc.NewValidator(schemas), cipher, catalog, nil, log)
 	e.svc = NewService(cfg, db, e.surveys, e.authz.Authorizer, e.limiter, emitter, log)
 	e.svc.now = func() time.Time { return e.now }
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
 	return e

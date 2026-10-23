@@ -179,7 +179,7 @@ func newEnv(t *testing.T, opts ...envOptions) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	engine := httpserver.NewEngine(log)
+	engine := httpserver.NewEngine(cfg, log)
 	oauthserver.NewAppHandler(oauth, headerSessions{}).Register(engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo()))
 	mcp.Register(engine)
 	oauth.Register(engine)

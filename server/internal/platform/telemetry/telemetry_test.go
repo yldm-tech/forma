@@ -261,7 +261,7 @@ func collectHTTPDurations(t *testing.T, register func(*gin.Engine), requests ...
 	otel.SetMeterProvider(provider)
 	t.Cleanup(func() { otel.SetMeterProvider(previous) })
 
-	r := httpserver.NewEngine(discardLog(), Middleware("forma"))
+	r := httpserver.NewEngine(config.Config{}, discardLog(), Middleware("forma"))
 	register(r)
 	for _, req := range requests {
 		r.ServeHTTP(httptest.NewRecorder(), req)

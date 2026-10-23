@@ -104,7 +104,7 @@ func newHandlerEnv(t *testing.T, configure ...func(*config.Config)) *handlerEnv 
 	frozen := time.Now()
 	limiter := ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
 	h := NewHandler(cfg, NewService(bucket), workspace.NewRepository(db, log), headerSessions{}, apikey.NewAuthenticator(db, log), e.authz.Authorizer, limiter, audit.New(cfg, log), log)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	e.engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	h.Register(e.engine)
 	return e

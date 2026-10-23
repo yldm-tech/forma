@@ -108,7 +108,7 @@ func newEnv(t *testing.T) *env {
 	}
 	e.svc = NewService(cfg, db, enqueuer, cipher, e.authz.Authorizer, ratelimit.New(cfg, nil, log), audit.New(cfg, log), log)
 	e.resolver = httpapi.NewClientIPResolver(cfg, log)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
 	return e

@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,8 +29,8 @@ type Server struct {
 	log             *slog.Logger
 }
 
-// NewEngine builds the engine with the middleware stack; outer runs right after the request id, outside everything else. Feature handlers are mounted by the caller.
-func NewEngine(log *slog.Logger, outer ...gin.HandlerFunc) *gin.Engine {
+// NewEngine builds the engine with the middleware stack; outer runs right after the request id, outside everything else. cfg decides the Content-Security-Policy (see contentSecurityPolicy). Feature handlers are mounted by the caller.
+func NewEngine(cfg config.Config, log *slog.Logger, outer ...gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	// gin's own ClientIP is never consulted: httpapi.ClientIPResolver derives the address from TRUSTED_PROXY_HOP_COUNT, and trusting no proxy here keeps the two from disagreeing.
@@ -39,7 +41,7 @@ func NewEngine(log *slog.Logger, outer ...gin.HandlerFunc) *gin.Engine {
 	r.Use(requestID())
 	// outer middleware (the telemetry) wraps the panic recovery, so it sees a request that panicked with the 500 the recovery answered.
 	r.Use(outer...)
-	r.Use(securityHeaders(), accessLog(log), recovery(log), reportServerErrors())
+	r.Use(securityHeaders(cfg), accessLog(log), recovery(log), reportServerErrors())
 	return r
 }
 
@@ -107,24 +109,94 @@ func requestID() gin.HandlerFunc {
 	}
 }
 
-// contentSecurityPolicy is forma2's production policy (apps/web/next.config.mjs), without the frame-ancestors directive, which depends on the path.
-const contentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+// loopbackHosts are forma2's LOOPBACK_HOSTS (apps/web/lib/optimizable-image-hosts.mjs).
+var loopbackHosts = []string{"localhost", "127.0.0.1"}
+
+// contentSecurityPolicy is forma2's policy (apps/web/next.config.mjs headers()), without the frame-ancestors directive, which depends on the path. forma2 added the loopback origins to img-src and connect-src outside production and under E2E_TESTING, so a browser could load from and upload to a local http S3 service such as RustFS; production allows only https and wss beside its own origin. forma2's development policy also added 'unsafe-eval' to script-src for Next.js's development bundles; the Go server never serves a development bundle (in development the SPA comes from the Vite dev server, under its own headers), so that source is not carried over. wasm adds 'wasm-unsafe-eval' to script-src (see AllowWebAssembly).
+func contentSecurityPolicy(cfg config.Config, wasm bool) string {
+	scriptSrc := "'self' 'unsafe-inline'"
+	if wasm {
+		scriptSrc += " 'wasm-unsafe-eval'"
+	}
+	loopback := ""
+	if sources := loopbackSources(cfg); len(sources) > 0 {
+		loopback = " " + strings.Join(sources, " ")
+	}
+	return "default-src 'self'; script-src " + scriptSrc + " https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data:" + loopback + " https:; font-src 'self' data: https:; connect-src 'self'" + loopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+}
+
+// loopbackSources is forma2's devLoopbackSources: outside production (NODE_ENV set to anything but production; unset is production, as it was for forma2's production build) or under E2E_TESTING, any port of an http loopback host, then each of WEBAPP_URL, NEXTAUTH_URL and S3_ENDPOINT_URL that is on a loopback host, under both loopback spellings, each source once.
+func loopbackSources(cfg config.Config) []string {
+	production := cfg.Telemetry.NodeEnv == "" || cfg.Telemetry.NodeEnv == "production"
+	if production && !cfg.E2ETesting {
+		return nil
+	}
+	sources := make([]string, 0, len(loopbackHosts)+6)
+	for _, host := range loopbackHosts {
+		sources = append(sources, "http://"+host+":*")
+	}
+	for _, u := range []*url.URL{cfg.WebAppURL, cfg.SSO.NextAuthURL, cfg.S3.EndpointURL} {
+		for _, origin := range loopbackOriginVariants(u) {
+			if !slices.Contains(sources, origin) {
+				sources = append(sources, origin)
+			}
+		}
+	}
+	return sources
+}
+
+// loopbackOriginVariants is forma2's getLoopbackOriginVariants: an http(s) URL on a loopback host as an origin under its own host and under the other loopback spelling, with the port as a WHATWG URL reports it (none for the scheme's default port); nothing for any other URL.
+func loopbackOriginVariants(u *url.URL) []string {
+	if u == nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return nil
+	}
+	host := strings.ToLower(u.Hostname())
+	if !slices.Contains(loopbackHosts, host) {
+		return nil
+	}
+	port := u.Port()
+	if (u.Scheme == "http" && port == "80") || (u.Scheme == "https" && port == "443") {
+		port = ""
+	}
+	if port != "" {
+		port = ":" + port
+	}
+	alternate := "localhost"
+	if host == "localhost" {
+		alternate = "127.0.0.1"
+	}
+	return []string{u.Scheme + "://" + host + port, u.Scheme + "://" + alternate + port}
+}
+
+// webAssemblyPolicyKey holds, on the request context, the Content-Security-Policy AllowWebAssembly answers with.
+const webAssemblyPolicyKey = "httpserver.webAssemblyPolicy"
 
 // securityHeaders sets the headers forma2 sent on every response. Only the public survey pages (/s/..., /c/...) may be framed by any site, since customers embed them; everything else, the admin SPA first, may be framed only by itself, so another site cannot overlay it to steer a click (clickjacking). The referrer policy keeps a token-bearing URL such as /invite?token= from leaving the origin in a Referer header.
-func securityHeaders() gin.HandlerFunc {
+func securityHeaders(cfg config.Config) gin.HandlerFunc {
+	policy := contentSecurityPolicy(cfg, false)
+	webAssemblyPolicy := contentSecurityPolicy(cfg, true)
 	return func(c *gin.Context) {
 		h := c.Writer.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		frameAncestors := "; frame-ancestors 'self'"
 		if p := c.Request.URL.Path; strings.HasPrefix(p, "/s/") || strings.HasPrefix(p, "/c/") {
-			h.Set("Content-Security-Policy", contentSecurityPolicy+"; frame-ancestors *")
+			frameAncestors = "; frame-ancestors *"
 		} else {
 			h.Set("X-Frame-Options", "SAMEORIGIN")
-			h.Set("Content-Security-Policy", contentSecurityPolicy+"; frame-ancestors 'self'")
 		}
+		h.Set("Content-Security-Policy", policy+frameAncestors)
+		c.Set(webAssemblyPolicyKey, webAssemblyPolicy+frameAncestors)
 		c.Next()
+	}
+}
+
+// AllowWebAssembly adds 'wasm-unsafe-eval' to the response's script-src, for the admin SPA's document alone: the SPA converts HEIC images in the browser with heic-convert, whose decoder is WebAssembly, where forma2 converted them on its server. Every other response, the frozen APIs, the SDK bundles and the public survey pages among them, keeps forma2's policy byte for byte.
+func AllowWebAssembly(c *gin.Context) {
+	if p := c.GetString(webAssemblyPolicyKey); p != "" {
+		c.Header("Content-Security-Policy", p)
 	}
 }
 

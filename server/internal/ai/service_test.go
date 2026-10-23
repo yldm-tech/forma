@@ -162,7 +162,7 @@ func newServiceEnv(t *testing.T, configure func(*config.AIConfig)) *serviceEnv {
 	client.endpoints = endpoints{retries: &zero}
 	e.svc = NewService(client, NewRepository(db), e.authz.Authorizer, log)
 	e.examples = NewExampleResponses(e.svc, db, NewQuotaScreener(db, log), ratelimit.New(cfg, nil, log), audit.New(cfg, log), log)
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, e.examples, headerSessions{}).Register(group)
 	return e

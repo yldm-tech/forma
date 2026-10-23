@@ -1,6 +1,8 @@
 package webui
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 )
 
 const indexHTML = "<!doctype html><title>Forma</title>"
@@ -173,6 +176,29 @@ func TestServePublicAssets(t *testing.T) {
 			t.Fatalf("code = %d, want 404", rec.Code)
 		}
 	})
+}
+
+// The SPA's document may compile WebAssembly, which its HEIC conversion needs; the files beside it, the SDK bundles first, keep forma2's policy.
+func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
+	h, err := NewFromFS(fstest.MapFS{
+		"index.html":         {Data: []byte(indexHTML)},
+		"assets/app-1a2b.js": {Data: []byte("console.log(1)")},
+		"js/surveys.umd.cjs": {Data: []byte("window.formaSurveys={}")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httpserver.NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	h.Register(r)
+	for path, want := range map[string]bool{"/": true, "/workspaces/1/surveys/2/edit": true, "/assets/app-1a2b.js": false, "/js/surveys.umd.cjs": false, "/api/v3/nope": false} {
+		csp := get(r, http.MethodGet, path).Header().Get("Content-Security-Policy")
+		if !strings.HasPrefix(csp, "default-src 'self'; ") {
+			t.Fatalf("%s: Content-Security-Policy = %q, want forma2's policy", path, csp)
+		}
+		if got := strings.Contains(csp, "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:;"); got != want {
+			t.Errorf("%s: Content-Security-Policy = %q, allows WebAssembly: %v, want %v", path, csp, got, want)
+		}
+	}
 }
 
 func TestServeWithoutBuild(t *testing.T) {
