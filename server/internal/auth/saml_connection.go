@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -58,7 +58,8 @@ func (s *SSO) PreloadSAMLConnection(ctx context.Context, dir string) {
 }
 
 func (s *SSO) preloadSAMLConnection(ctx context.Context, dir string) error {
-	entries, err := os.ReadDir(dir)
+	fsys := os.DirFS(dir)
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return fmt.Errorf("read SAML connection directory: %w", err)
 	}
@@ -72,7 +73,7 @@ func (s *SSO) preloadSAMLConnection(ctx context.Context, dir string) error {
 	if file == "" {
 		return errors.New("no preloaded connection file found")
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, file))
+	raw, err := fs.ReadFile(fsys, file)
 	if err != nil {
 		return fmt.Errorf("read SAML connection file: %w", err)
 	}

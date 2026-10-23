@@ -113,9 +113,9 @@ func idpMetadata(t *testing.T, bindings ...string) string {
 }
 
 // samlEnv is an env with SAML enabled and the test identity provider as its connection.
-func samlEnv(t *testing.T, configure ...func(*config.Config)) *env {
+func samlEnv(t *testing.T) *env {
 	t.Helper()
-	e := newEnv(t, append([]func(*config.Config){withSAML}, configure...)...)
+	e := newEnv(t, withSAML)
 	if err := e.svc.repo.saveSAMLConnection(context.Background(), samlTenant, samlProduct, samlConnectionName, testIdPEntityID, idpMetadata(t)); err != nil {
 		t.Fatal(err)
 	}
@@ -451,17 +451,19 @@ func TestSAMLSignUp(t *testing.T) {
 func TestSAMLRecovery(t *testing.T) {
 	t.Parallel()
 	e := samlEnv(t)
-	e.seedUser("ada@example.com", strongPassword, userOpts{})
+	e.seedUser("grace@example.com", strongPassword, userOpts{})
 	b := e.browser()
 	f := b.samlStart("")
-	expectRedirect(t, f.complete(f.spec().signedResponse(t)), webApp+"/auth/verification-requested?purpose=sso_recovery")
+	spec := f.spec()
+	spec.nameID, spec.attributes = "u-42", [][2]string{{samlAttributeEmailURI, "Grace@example.com"}}
+	expectRedirect(t, f.complete(spec.signedResponse(t)), webApp+"/auth/verification-requested?purpose=sso_recovery")
 	if b.has("forma.session_token") || e.count(`SELECT count(*) FROM user_identities WHERE provider = 'saml'`) != 0 {
 		t.Fatal("the identity was linked before the mailbox was proven")
 	}
-	token := e.recoveryToken("ada@example.com")
+	token := e.recoveryToken("grace@example.com")
 	done := e.browser().post("/auth/sso/recovery/complete", map[string]string{"token": token})
 	expectStatus(t, done, http.StatusOK, "")
-	if n := e.count(`SELECT count(*) FROM user_identities WHERE provider = 'saml' AND subject = 'ada@example.com'`); n != 1 {
+	if n := e.count(`SELECT count(*) FROM user_identities WHERE provider = 'saml' AND subject = 'u-42'`); n != 1 {
 		t.Fatalf("%d saml identities after recovery", n)
 	}
 }

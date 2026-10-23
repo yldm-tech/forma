@@ -54,8 +54,10 @@ const (
 	samlAttributeEmailURI     = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
 	samlAttributeGivenNameURI = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"
 	samlAttributeSurnameURI   = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname"
-	samlBearerMethod          = "urn:oasis:names:tc:SAML:2.0:cm:bearer"
 )
+
+// samlBearerMethod is the subject confirmation method of Web Browser SSO.
+const samlBearerMethod = "urn:oasis:names:tc:SAML:2.0:cm:bearer" //nolint:gosec // a SAML URI, not a credential
 
 // CodeSAMLConnection is the error a SAML sign-in starts with when no usable connection is configured; the sign-in page shows forma2's saml_connection_error for it.
 const CodeSAMLConnection = "saml_connection_error"
