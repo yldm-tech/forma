@@ -1,6 +1,6 @@
 name: API v3 Contract Tests
 
-# Drives a running server against the committed v3 OpenAPI bundle with Schemathesis and fails when a response violates the documented status codes, content type or schema, or answers 5xx. api-v3-spec.yml proves the document is well-formed and the bundle fresh, and the route parity test (server/internal/app/v3_routes_test.go) that every served operation is documented and every documented one served; this proves the running API matches the document. Harness and local instructions: docs/api-v3-reference/contract-tests/.
+# Drives a running server against the committed v3 OpenAPI bundle with Schemathesis and fails when a response violates the documented status codes, content type or schema, or answers 5xx. api-v3-spec.yml proves the document is well-formed and the bundle fresh, and the route parity test (apps/server/internal/app/v3_routes_test.go) that every served operation is documented and every documented one served; this proves the running API matches the document. Harness and local instructions: apps/docs/api-v3-reference/contract-tests/.
 #
 # Fast profile on purpose, as in forma2: the `examples` phase only, a sampled case per documented operation. Deep fuzzing, the coverage phase and stateful suites stay out of the PR gate.
 
@@ -32,8 +32,8 @@ jobs:
       - name: Setup Go (version from go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: server/go.mod
-          cache-dependency-path: server/go.sum
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
 
       # The API alone: without a web build the binary serves 404 for pages and every API route as usual.
       - name: Build forma
@@ -48,12 +48,12 @@ jobs:
           SEED_API_KEY="$(openssl rand -hex 32)"
           echo "::add-mask::${SEED_API_KEY}"
           echo "SEED_API_KEY=${SEED_API_KEY}" >> "$GITHUB_ENV"
-          SEED_API_KEY="${SEED_API_KEY}" bash scripts/ci-stack.sh up
+          SEED_API_KEY="${SEED_API_KEY}" bash tooling/scripts/ci-stack.sh up
 
       # Guards the failure this job is most likely to die of quietly: with the seed or the key broken every operation would answer a documented 401 or 403, and Schemathesis would report a green run that proved nothing.
       - name: Verify the seeded API key reaches real data
         run: |
-          fixtures=docs/api-v3-reference/contract-tests/fixtures.json
+          fixtures=apps/docs/api-v3-reference/contract-tests/fixtures.json
           workspace_id=$(jq -r .workspaceId "${fixtures}")
           survey_id=$(jq -r .read.surveyId "${fixtures}")
           probe() {
@@ -81,11 +81,11 @@ jobs:
       # `--exclude-path-regex '^/api/v3/responses'` skips the eight response operations: forma2 agreed their contract before building them (ENG-2868) and never routed them, so each would answer 404 against a spec documenting 200/400/401/403/429/500. The route parity test records the same eight in documentedWithoutRoute; remove both together when the routes land.
       - name: Run v3 contract tests
         env:
-          SCHEMATHESIS_HOOKS: docs/api-v3-reference/contract-tests/hooks.py
+          SCHEMATHESIS_HOOKS: apps/docs/api-v3-reference/contract-tests/hooks.py
         run: |
           schemathesis \
-            --config-file docs/api-v3-reference/contract-tests/schemathesis.toml \
-            run docs/api-v3-reference/openapi.yml \
+            --config-file apps/docs/api-v3-reference/contract-tests/schemathesis.toml \
+            run apps/docs/api-v3-reference/openapi.yml \
             --url http://localhost:3000 \
             --phases examples \
             --checks not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance \

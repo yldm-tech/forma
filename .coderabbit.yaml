@@ -77,10 +77,10 @@ reviews:
     # allowlist. The fix then is to enumerate the generated locales explicitly.
     - "!packages/surveys/locales/!(en-US).json"
     - "!**/i18n.lock"
-    # Generated artefacts. docs/api-*-reference/openapi*.{yml,json} are deliberately NOT
+    # Generated artefacts. apps/docs/api-*-reference/openapi*.{yml,json} are deliberately NOT
     # excluded — oasdiff reviews them for breaking API changes.
-    - "!server/internal/jsonschema/schemas/**"
-    - "!web/src/routeTree.gen.ts"
+    - "!apps/server/internal/jsonschema/schemas/**"
+    - "!apps/web/src/routeTree.gen.ts"
 
   path_instructions:
     - path: "**/*.tsx"
@@ -108,7 +108,7 @@ reviews:
         - Network and storage boundaries should be mocked via helpers from `@forma/*` and
           mocks placed in a `__mocks__` directory.
 
-    - path: "server/**/*.go"
+    - path: "apps/server/**/*.go"
       instructions: |
         Go server (AGENTS.md "Go conventions" and "API contracts").
         - Multi-tenant product: every query is scoped by the caller's organization or workspace. An
@@ -118,13 +118,13 @@ reviews:
         - The client API (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, v3, MCP and webhook or
           OAuth callback paths are frozen external contracts: flag any change to a path, status code,
           field or default that is not mirrored in a contract test and the PR's breaking-change table.
-        - v3 handlers follow the hand-authored spec in `docs/api-v3-reference/src/**/*.yml` and return
+        - v3 handlers follow the hand-authored spec in `apps/docs/api-v3-reference/src/**/*.yml` and return
           RFC 9457 problems. Return 403, not 404, for a resource the caller may not see.
         - Errors are wrapped with context and logged once, where handled. Never log secrets, tokens,
           request bodies, or raw URL paths that can carry a token.
         - Flag defensive error handling around internal calls; validation belongs at the boundary.
 
-    - path: "server/migrations/*.sql"
+    - path: "apps/server/migrations/*.sql"
       instructions: |
         Goose migrations, applied in order against a live multi-tenant PostgreSQL 18.
         - A shipped migration is never edited; changes come as a new numbered file with `Up` and `Down`.
@@ -145,11 +145,11 @@ reviews:
         - Flag anything that interpolates untrusted input (PR title, body, branch name) directly
           into a `run:` block, and any workflow that exposes secrets to `pull_request_target`.
 
-    - path: "docs/**/*.mdx"
+    - path: "apps/docs/**/*.mdx"
       instructions: |
         Mintlify docs. Frontmatter needs `title`, `description`, and `icon`; the body must not start
         with an H1; headings are Camel Case with only the feature name capitalized. Enterprise-only
-        features need the Enterprise note block. New pages must be added to `docs/docs.json` nav.
+        features need the Enterprise note block. New pages must be added to `apps/docs/docs.json` nav.
 
     - path: "packages/{surveys,js-core,survey-ui}/**"
       instructions: |
@@ -241,7 +241,7 @@ reviews:
           - Removes or renames an endpoint or route, changes a webhook payload, or changes the
             HTTP status code returned for an existing request/response case.
           - Changes a default value, or removes or renames an environment variable or config key —
-            including the variables in `.env.example` read by `server/internal/platform/config`. Adding one counts
+            including the variables in `.env.example` read by `apps/server/internal/platform/config`. Adding one counts
             only when it is required, or has no default that keeps existing installs working.
           - Adds a database migration that needs manual action, drops or renames a column or
             table, or adds a NOT NULL column with no default and no backfill.

@@ -1,6 +1,6 @@
 "❗️ migrations":
   - changed-files:
-      - any-glob-to-any-file: server/migrations/**
+      - any-glob-to-any-file: apps/server/migrations/**
 
 "❗️ .env changes":
   - changed-files:

@@ -3,7 +3,7 @@ name: API v3 Spec
 on:
   pull_request:
     paths:
-      - "docs/api-v3-reference/**"
+      - "apps/docs/api-v3-reference/**"
       - ".github/workflows/api-v3-spec.yml"
 
 concurrency:
@@ -44,7 +44,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts --filter forma
 
       - name: Lint OpenAPI v3 source tree
-        run: node docs/api-v3-reference/scripts/bundle.mjs --lint
+        run: node apps/docs/api-v3-reference/scripts/bundle.mjs --lint
 
       - name: Verify committed bundle is in sync with src/
-        run: node docs/api-v3-reference/scripts/bundle.mjs --check
+        run: node apps/docs/api-v3-reference/scripts/bundle.mjs --check
