@@ -50,9 +50,7 @@ managed-service settings.
 
 ### AI services are much heavier
 
-Self-hosted AI is off by default and is a different order of magnitude: Hub embeddings alone request 4 vCPU
-and 8 Gi for the foreground runtime, and 8 vCPU for the worker pool. Prefer an external endpoint unless you
-need them constantly.
+Self-hosted AI is off by default. A self-hosted model is far heavier than the rest of the stack, so prefer an external endpoint unless you need it constantly.
 
 <Note>
   AI features are an Enterprise feature. Configure your
