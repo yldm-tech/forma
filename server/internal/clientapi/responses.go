@@ -11,6 +11,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -243,6 +244,8 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 		Finished: in.Finished, EndingID: in.EndingID, Language: in.Language, Data: data, IngestFlags: flags,
 		Variables: in.Variables, TTC: in.TTC, Meta: in.clientMeta(),
 		Request: response.RequestInfo{UserAgent: parseUserAgent(c.GetHeader("User-Agent")), Country: response.CountryFrom(c.Request.Header)},
+		// forma2's sendToPipeline resolved the locale in request scope (findMatchingLocale) so the worker can localize follow-up emails.
+		Locale: mailer.MatchLocale(c.GetHeader("Accept-Language")),
 	}
 	if in.ContactID != nil {
 		id, _ := legacyid.Resolve(*in.ContactID)
@@ -333,7 +336,7 @@ func (h *Handler) updateResponse(c *gin.Context) {
 	}
 	in := asObject(body)
 	var is issues
-	update := response.UpdateInput{}
+	update := response.UpdateInput{Locale: mailer.MatchLocale(c.GetHeader("Accept-Language"))}
 	update.Finished = is.boolean("finished", in.get("finished"), optional)
 	endingID := in.get("endingId")
 	update.EndingIDSet = !isAbsent(endingID)

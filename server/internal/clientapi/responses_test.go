@@ -393,3 +393,43 @@ func TestUpdateResponse(t *testing.T) {
 	e.clock.nextWindow()
 	e.do("PUT", "/api/v2/client/"+ws.String()+"/responses/"+pid.String(), map[string]any{"finished": true}).expectError(t, 403, "forbidden", "Survey is protected by a PIN")
 }
+
+// forma2's sendToPipeline resolved the respondent's locale from Accept-Language (findMatchingLocale, the best of the shipped locales) and queued it with the job, so follow-up emails are localized; without the header it is the default locale.
+func TestResponsePipelineLocale(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws)
+	localeOf := func(id any, event string) string {
+		t.Helper()
+		var locale string
+		if err := e.db.Raw(`SELECT args->>'locale' FROM river_job WHERE kind = 'response-pipeline.process' AND args->'response'->>'id' = ? AND args->>'event' = ?`, id, event).Row().Scan(&locale); err != nil {
+			t.Fatalf("%s job: %v", event, err)
+		}
+		return locale
+	}
+
+	e.clock.nextWindow()
+	r := e.do("POST", respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}}, "Accept-Language", "fr-FR,ja-JP;q=0.9")
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	id := r.data(t)["id"].(string)
+	if got := localeOf(id, "responseCreated"); got != "ja-JP" {
+		t.Fatalf("create locale %q", got)
+	}
+	e.clock.nextWindow()
+	if r := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, map[string]any{"finished": true}, "Accept-Language", "zh-TW"); r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if got := localeOf(id, "responseUpdated"); got != "zh-Hant-TW" {
+		t.Fatalf("update locale %q", got)
+	}
+
+	r = e.post(t, respond(ws, "v1"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}})
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if got := localeOf(r.data(t)["id"], "responseCreated"); got != "en-US" {
+		t.Fatalf("default locale %q", got)
+	}
+}
