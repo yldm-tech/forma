@@ -118,7 +118,7 @@ func TestV1StorageAcceptsASession(t *testing.T) {
 }
 
 // Without x-api-key, GET /api/v1/management/me is the signed-in user, unwrapped; Authorization is never read there.
-// With GATEWAY_RATE_LIMITING=1 forma2 left an API key's requests on the routes its gateway policy covers to the gateway, so a spent api:v1 window does not refuse them here. The webhook collection is outside the policy's /api/v1/webhooks/ prefix and is still charged.
+// With GATEWAY_RATE_LIMITING=1 forma2 left an API key's requests on the routes its gateway policy covers to the gateway, so a spent api:v1 window does not refuse them here. The webhook collection is outside the policy's /api/v1/webhooks/ prefix and is still charged. The gateway counts a key only by its x-api-key header, so one sent as a Bearer token is charged here too.
 func TestV1GatewayRateLimiting(t *testing.T) {
 	e := newEnv(t, func(cfg *config.Config) { cfg.GatewayRateLimiting = true })
 	s := e.seedRecording()
@@ -129,6 +129,8 @@ func TestV1GatewayRateLimiting(t *testing.T) {
 		t.Fatalf("me: %d %s, want it left to the gateway", res.Status, res.Body)
 	}
 	expectStatus(t, "webhook collection", e.do("GET", "/api/v1/webhooks", nil, "x-api-key", key), 429)
+	expectStatus(t, "management route, Bearer key", e.do("GET", "/api/v1/management/action-classes", nil, "Authorization", "Bearer "+key), 429)
+	expectStatus(t, "webhook route, Bearer key", e.do("GET", "/api/v1/webhooks/"+uuid.NewString(), nil, "Authorization", "Bearer "+key), 429)
 }
 
 func TestV1MeSession(t *testing.T) {
