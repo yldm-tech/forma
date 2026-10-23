@@ -12,29 +12,36 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TrialAlert } from "../../features/billing/components/trial-alert";
 import { cn } from "../../lib/cn";
-import { workspaceHomePath, workspaceSettingsPath } from "../../lib/navigation";
+import { organizationSettingsPath, workspaceHomePath, workspaceSettingsPath } from "../../lib/navigation";
 import { NAV_COLLAPSED_KEY, readStorage, writeStorage } from "../../lib/storage";
 import { Button } from "../ui/button";
 import { Wordmark } from "../ui/logo";
 import { NavigationLink } from "./navigation-link";
 
 /**
- * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land.
+ * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land. On Forma Cloud an owner or manager sees the trial's countdown above Settings, linking to billing (forma2's MainNavigationNotices).
  */
 export const MainNavigation = ({
   workspaceId,
+  organizationId,
   membershipRole,
   pathname,
+  trialDaysRemaining = null,
 }: {
   workspaceId: string;
+  organizationId: string;
   membershipRole?: string;
   pathname: string;
+  /** Whole days left in the organization's Forma Cloud trial, null without one. */
+  trialDaysRemaining?: number | null;
 }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(() => readStorage(NAV_COLLAPSED_KEY) === "true");
   const isPending = membershipRole === undefined;
   const isBilling = membershipRole === "billing";
+  const isOwnerOrManager = membershipRole === "owner" || membershipRole === "manager";
   const disabledReason = isPending
     ? t("common.loading")
     : isBilling
@@ -130,16 +137,23 @@ export const MainNavigation = ({
           </ul>
         </nav>
       </div>
-      <ul className="flex flex-col border-t border-slate-100 pt-2">
-        <NavigationLink
-          href={workspaceSettingsPath(workspaceId, "general")}
-          isActive={pathname.includes("/settings")}
-          isCollapsed={isCollapsed}
-          label={t("common.settings")}
-          icon={<SettingsIcon className={iconClassName} strokeWidth={1.5} />}
-          disabledReason={disabledReason}
-        />
-      </ul>
+      <div>
+        {!isCollapsed && isOwnerOrManager && trialDaysRemaining !== null && (
+          <Link to={organizationSettingsPath(organizationId, "billing")} className="m-2 block">
+            <TrialAlert trialDaysRemaining={trialDaysRemaining} size="small" />
+          </Link>
+        )}
+        <ul className="flex flex-col border-t border-slate-100 pt-2">
+          <NavigationLink
+            href={workspaceSettingsPath(workspaceId, "general")}
+            isActive={pathname.includes("/settings")}
+            isCollapsed={isCollapsed}
+            label={t("common.settings")}
+            icon={<SettingsIcon className={iconClassName} strokeWidth={1.5} />}
+            disabledReason={disabledReason}
+          />
+        </ul>
+      </div>
     </aside>
   );
 };

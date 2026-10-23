@@ -1,16 +1,23 @@
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { useQuery } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
-import type { JSX } from "react";
+import { type JSX, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { TSurveyElement, TSurveyFileUploadElement } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
+import { organizationSettingsPath } from "../../../lib/navigation";
+import { billingSummaryQuery } from "../../../lib/queries/billing";
+import { workspaceQuery } from "../../../lib/queries/workspaces";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
+import { toast } from "../../../lib/toast";
+import { UNCAPPED_UPLOAD_SIZE_MB, maxUploadSizeMB } from "../../billing/lib/limits";
 import { ElementFormInput } from "./element-form-input/index";
 import { ValidationRulesEditor } from "./validation-rules-editor";
 import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-toggle";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
+import { TransLink } from "../../../components/ui/trans-link";
 
 interface FileUploadFormProps {
   localSurvey: TSurvey;
@@ -31,12 +38,20 @@ export const FileUploadElementForm = ({
 }: FileUploadFormProps): JSX.Element => {
   const { t } = useTranslation();
   const surveyLanguageCodes = extractLanguageCodes(localSurvey.languages);
+  const [isMaxSizeError, setIsMaxSizeError] = useState(false);
+  const { data: workspace } = useQuery(workspaceQuery(localSurvey.workspaceId));
+  const organizationId = workspace?.organizationId;
+  const { data: billing } = useQuery({
+    ...billingSummaryQuery(organizationId ?? ""),
+    enabled: !!organizationId,
+  });
+  // The Forma Cloud plan caps the size a question may allow; null where nothing caps it.
+  const maxSizeInMBLimit = maxUploadSizeMB(billing);
 
   const handleMaxSizeInMBToggle = (checked: boolean) => {
-    // forma2 capped uploads by billing plan on Forma Cloud; without billing every instance gets the self-hosted default of 1 GB.
-    const defaultMaxSizeInMB = 1024;
-
-    updateElement(elementIdx, { maxSizeInMB: checked ? defaultMaxSizeInMB : undefined });
+    updateElement(elementIdx, {
+      maxSizeInMB: checked ? (maxSizeInMBLimit ?? UNCAPPED_UPLOAD_SIZE_MB) : undefined,
+    });
   };
 
   const [parent] = useAutoAnimate();
@@ -118,7 +133,18 @@ export const FileUploadElementForm = ({
                       id="fileSizeLimit"
                       value={element.maxSizeInMB}
                       onChange={(e) => {
-                        updateElement(elementIdx, { maxSizeInMB: Number.parseInt(e.target.value, 10) });
+                        const parsedValue = Number.parseInt(e.target.value, 10);
+                        if (maxSizeInMBLimit !== null && parsedValue > maxSizeInMBLimit) {
+                          toast.error(
+                            t("workspace.surveys.edit.max_file_size_limit_is_mb", {
+                              maxSize: maxSizeInMBLimit,
+                            })
+                          );
+                          setIsMaxSizeError(true);
+                          updateElement(elementIdx, { maxSizeInMB: maxSizeInMBLimit });
+                          return;
+                        }
+                        updateElement(elementIdx, { maxSizeInMB: parsedValue });
                       }}
                       className="mr-2 ml-2 inline w-20 bg-white text-center text-sm"
                     />
@@ -126,6 +152,24 @@ export const FileUploadElementForm = ({
                 }}
               />
             </p>
+            {isMaxSizeError && organizationId && (
+              <p className="text-xs text-red-500">
+                <Trans
+                  i18nKey="workspace.surveys.edit.max_file_size_limit_is_mb_upgrade"
+                  values={{ maxSize: maxSizeInMBLimit }}
+                  components={{
+                    upgradeLink: (
+                      <TransLink
+                        className="underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href={organizationSettingsPath(organizationId, "billing")}
+                      />
+                    ),
+                  }}
+                />
+              </p>
+            )}
           </label>
         </AdvancedOptionToggle>
       </div>
