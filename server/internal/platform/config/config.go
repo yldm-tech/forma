@@ -150,13 +150,13 @@ type Config struct {
 
 // AuthzConfig is forma2's AUTHZED_* configuration. SpiceDB is the only authorization evaluator: while it is disabled every check fails closed with authzed_disabled and the projection outbox is left undelivered.
 type AuthzConfig struct {
-	Enabled bool `env:"AUTHZED_ENABLED" envDefault:"0"`
+	Enabled AuthzedFlag `env:"AUTHZED_ENABLED" envDefault:"0"`
 	// Endpoint is SpiceDB's gRPC address as host:port, without a scheme or path.
 	Endpoint string `env:"AUTHZED_ENDPOINT"`
 	// Token is the gRPC preshared key.
 	Token string `env:"AUTHZED_TOKEN"`
 	// Insecure talks plaintext gRPC instead of TLS.
-	Insecure bool `env:"AUTHZED_INSECURE" envDefault:"0"`
+	Insecure AuthzedFlag `env:"AUTHZED_INSECURE" envDefault:"0"`
 	// Consistency is what permission checks and resource lookups ask SpiceDB for: fully_consistent (the default, and what forma2 always used) evaluates at the newest revision; minimize_latency lets SpiceDB answer from its quantized cache, so a delivered revocation can take effect a few seconds later. Operational reads always use fully_consistent.
 	Consistency string `env:"AUTHZED_CONSISTENCY" envDefault:"fully_consistent"`
 }
@@ -292,7 +292,7 @@ func (s SSOConfig) validate() error {
 	return nil
 }
 
-// parseFlag reads every bool as a "1"/"0" switch. forma2 accepted exactly those two values, so anything else fails the start instead of being read as one or the other.
+// parseFlag reads every bool as a "1"/"0" switch. forma2 accepted exactly those two values for its switches, so anything else fails the start instead of being read as one or the other.
 func parseFlag(v string) (any, error) {
 	switch v {
 	case "1":
@@ -304,7 +304,24 @@ func parseFlag(v string) (any, error) {
 	}
 }
 
-var parseOptions = env.Options{FuncMap: map[reflect.Type]env.ParserFunc{reflect.TypeFor[bool](): parseFlag}}
+// AuthzedFlag is a switch that also takes "true" and "false": forma2 read AUTHZED_ENABLED and AUTHZED_INSECURE with z.enum(["true", "false", "1", "0"]), its installer writes AUTHZED_ENABLED=true into .env and its compose file and README used true/false, so those deployments keep starting.
+type AuthzedFlag bool
+
+func parseAuthzedFlag(v string) (any, error) {
+	switch v {
+	case "1", "true":
+		return AuthzedFlag(true), nil
+	case "0", "false":
+		return AuthzedFlag(false), nil
+	default:
+		return nil, fmt.Errorf("must be true, false, 1 or 0, got %q", v)
+	}
+}
+
+var parseOptions = env.Options{FuncMap: map[reflect.Type]env.ParserFunc{
+	reflect.TypeFor[bool]():        parseFlag,
+	reflect.TypeFor[AuthzedFlag](): parseAuthzedFlag,
+}}
 
 // SMTPConfigured reports whether mail can be sent at all.
 func (c Config) SMTPConfigured() bool {

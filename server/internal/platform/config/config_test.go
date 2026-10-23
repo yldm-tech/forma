@@ -330,11 +330,41 @@ func TestLoadAuthz(t *testing.T) {
 	}
 }
 
+// forma2 read AUTHZED_ENABLED and AUTHZED_INSECURE with z.enum(["true","false","1","0"]), and its installer writes AUTHZED_ENABLED=true into .env, so both spellings keep working; every other switch stays 1/0.
+func TestLoadAcceptsForma2AuthzedBooleans(t *testing.T) {
+	for _, tc := range []struct {
+		enabled, insecure string
+		want              bool
+	}{{"true", "true", true}, {"false", "false", false}, {"1", "1", true}, {"0", "0", false}} {
+		setRequired(t)
+		t.Setenv("AUTHZED_ENABLED", tc.enabled)
+		t.Setenv("AUTHZED_INSECURE", tc.insecure)
+		t.Setenv("AUTHZED_ENDPOINT", "localhost:50051")
+		t.Setenv("AUTHZED_TOKEN", "secret")
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load with %q/%q: %v", tc.enabled, tc.insecure, err)
+		}
+		if bool(cfg.Authz.Enabled) != tc.want || bool(cfg.Authz.Insecure) != tc.want {
+			t.Errorf("%q/%q read as %v/%v, want %v", tc.enabled, tc.insecure, cfg.Authz.Enabled, cfg.Authz.Insecure, tc.want)
+		}
+		if cfg, err := LoadForAuthz(); err != nil || bool(cfg.Authz.Enabled) != tc.want {
+			t.Errorf("LoadForAuthz with %q: %+v, %v", tc.enabled, cfg.Authz, err)
+		}
+	}
+	setRequired(t)
+	t.Setenv("S3_FORCE_PATH_STYLE", "true")
+	if _, err := Load(); err == nil {
+		t.Error("S3_FORCE_PATH_STYLE=true accepted; only the AUTHZED_* switches take true/false")
+	}
+}
+
 func TestLoadRejectsInvalidAuthz(t *testing.T) {
 	cases := map[string]map[string]string{
 		"enabled without endpoint":  {"AUTHZED_ENABLED": "1", "AUTHZED_TOKEN": "secret"},
 		"enabled without token":     {"AUTHZED_ENABLED": "1", "AUTHZED_ENDPOINT": "localhost:50051"},
-		"enabled spelled true":      {"AUTHZED_ENABLED": "true"},
+		"enabled spelled yes":       {"AUTHZED_ENABLED": "yes"},
+		"insecure spelled TRUE":     {"AUTHZED_INSECURE": "TRUE"},
 		"blank token":               {"AUTHZED_TOKEN": "   "},
 		"endpoint with scheme":      {"AUTHZED_ENDPOINT": "http://localhost:50051"},
 		"endpoint with path":        {"AUTHZED_ENDPOINT": "localhost:50051/v1"},

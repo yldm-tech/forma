@@ -8,7 +8,7 @@
 #   AUTHZED_TOKEN=<openssl rand -hex 32>
 #   AUTHZED_DATABASE_PASSWORD=<openssl rand -hex 32>
 #
-# then `docker compose up -d`. Every image runs the same binary: `forma serve` answers on :3000, `forma worker` runs the background jobs, `forma migrate` applies the schema before either starts, and `forma authz schema apply` writes the authorization schema into SpiceDB. Booleans are 1 or 0 (forma2 also accepted true and false for some of them; this server does not).
+# then `docker compose up -d`. Every image runs the same binary: `forma serve` answers on :3000, `forma worker` runs the background jobs, `forma migrate` applies the schema before either starts, and `forma authz schema apply` writes the authorization schema into SpiceDB. Booleans are 1 or 0; AUTHZED_ENABLED and AUTHZED_INSECURE also take true and false, as forma2's installer and compose file wrote them.
 
 # Pin a release (FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:<version>) for reproducible upgrades.
 x-forma-image: &forma-image

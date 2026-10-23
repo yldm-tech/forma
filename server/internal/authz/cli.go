@@ -211,7 +211,7 @@ func RunCLI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	log := logger.New(cfg, stderr)
 
 	needsSpiceDB := cmd.group != "outbox" || cmd.action == "drain"
-	if needsSpiceDB && !cfg.Authz.Enabled {
+	if needsSpiceDB && !bool(cfg.Authz.Enabled) {
 		write(failureOf(newError(CodeDisabled, "cli", false, 0)))
 		return 1
 	}
