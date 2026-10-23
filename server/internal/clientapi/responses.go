@@ -11,9 +11,9 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/response/answers"
 )
