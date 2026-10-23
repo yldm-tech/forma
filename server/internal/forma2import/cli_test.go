@@ -18,3 +18,15 @@ func TestParseFlagsAcceptsForma2SourceURL(t *testing.T) {
 		t.Fatalf("parseFlags without --source = %+v, %v", f, err)
 	}
 }
+
+// --overwrite-changes is a refresh's, and a discard takes nothing but its reason.
+func TestParseFlagsOverwriteChanges(t *testing.T) {
+	if f, err := parseFlags([]string{"--refresh", "--overwrite-changes"}); err != nil || !f.refresh || !f.overwrite {
+		t.Fatalf("parseFlags = %+v, %v", f, err)
+	}
+	for _, args := range [][]string{{"--overwrite-changes"}, {"--discard-forma2-data", "--reason=x", "--refresh", "--overwrite-changes"}} {
+		if _, err := parseFlags(args); err == nil {
+			t.Errorf("parseFlags(%v) accepted", args)
+		}
+	}
+}

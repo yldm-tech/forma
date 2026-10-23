@@ -35,6 +35,8 @@ type sourceSchema struct {
 	columns    map[string]map[string]bool
 	counts     map[string]int
 	migrations []string
+	// marks are forma2_marks() of the snapshot, recorded so the startup guard notices when forma2 runs again after the import; nil when the source database lacks the function (it is another database than this schema's, so the guard does not see its tables either).
+	marks *string
 }
 
 func readSourceSchema(ctx context.Context, src pgx.Tx) (*sourceSchema, error) {
@@ -75,6 +77,17 @@ func readSourceSchema(ctx context.Context, src pgx.Tx) (*sourceSchema, error) {
 			return nil, fmt.Errorf("count %s: %w", table, err)
 		}
 		s.counts[table] = n
+	}
+	var hasMarks bool
+	if err := src.QueryRow(ctx, `SELECT to_regprocedure('forma2_marks()') IS NOT NULL`).Scan(&hasMarks); err != nil {
+		return nil, fmt.Errorf("inspect the forma2 database: %w", err)
+	}
+	if hasMarks {
+		var marks string
+		if err := src.QueryRow(ctx, `SELECT forma2_marks()::text`).Scan(&marks); err != nil {
+			return nil, fmt.Errorf("mark forma2's tables: %w", err)
+		}
+		s.marks = &marks
 	}
 	if s.columns["_prisma_migrations"] != nil {
 		rows, err := src.Query(ctx, `SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name`)

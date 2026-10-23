@@ -15,17 +15,17 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
-// kind says how a column read from forma2 is written and checked.
+// kind says how a column read from forma2 is written. Verification does not go by it: it reads each sampled row again from forma2 and checks every written column against what it computes on its own (expect.go).
 type kind int
 
 const (
-	// plain is written as read and compared with forma2's value in the samples.
+	// plain is written as read.
 	plain kind = iota
-	// jsonDoc is JSON read as text, written as read and compared as JSON.
+	// jsonDoc is JSON read as text and written as read.
 	jsonDoc
 	// id is a forma2 id read as text and written as legacyid.Resolve of it; NULL stays NULL.
 	id
-	// derived is computed by the query or the row hook from what forma2 holds; it is not compared.
+	// derived is computed by the query or the row hook from what forma2 holds.
 	derived
 	// extra is read for the row hook and not written.
 	extra
@@ -108,40 +108,47 @@ func (r *row) newID(name string) uuid.UUID {
 // key is a written row's primary key, its uuid columns in order.
 type key []uuid.UUID
 
-// writtenTable is what verification needs of a written table.
+// writtenTable is one table spec on its way through a run: staged, written, then verified.
 type writtenTable struct {
 	spec *tableSpec
 	// report indexes Report.Tables.
 	report int
-	keys   []key
-	// samples are the first rows written, as forma2 held them.
+	// stage is the temporary table the spec's rows wait in until they are written.
+	stage string
+	keys  []key
+	// skipped are the keys of the rows the spec's hook dropped on purpose.
+	skipped []key
+	// samples are the rows verification reads again from forma2 and compares column by column.
 	samples []sample
 }
 
+// sample is a written row: its key here, and the forma2 values that key was derived from, which find the row in forma2 again.
 type sample struct {
-	key key
-	raw []any
+	key    key
+	forma2 []string
 }
 
-const samplesPerTable = 3
+// samplesPerTable is how many rows of each table spec verification compares with forma2, spread over the table when its row count is known.
+const samplesPerTable = 20
 
-// copyTable streams the spec's source rows into a staging table on the import transaction, chunk by chunk, and upserts each chunk into the target table.
-func (im *importer) copyTable(ctx context.Context, spec *tableSpec) error {
+// stageTable streams the spec's source rows through its hook into a staging table on the import transaction. The target table is not touched yet: every spec is staged before anything is written, so a refresh knows the whole of what it writes before it deletes what it no longer does.
+func (im *importer) stageTable(ctx context.Context, n int, spec *tableSpec) error {
 	if err := assertTargetTable(spec.target); err != nil {
 		return err
 	}
 	rep := TableReport{Table: spec.target, From: spec.label(), Forma2Rows: -1, SkipReason: spec.skipReason}
+	stride := 1
 	if spec.oneToOne {
 		rep.Forma2Rows = im.schema.counts[spec.from]
+		stride = max(1, (rep.Forma2Rows+samplesPerTable-1)/samplesPerTable)
 	}
-	w := &writtenTable{spec: spec}
 	if spec.prepare != nil {
 		if err := spec.prepare(ctx); err != nil {
 			return err
 		}
 	}
-	stage := pgx.Identifier{"forma2_stage_" + spec.target}.Sanitize()
-	if _, err := im.tx.Exec(ctx, fmt.Sprintf(`CREATE TEMP TABLE %s (LIKE %s INCLUDING DEFAULTS) ON COMMIT DROP`, stage, pgx.Identifier{spec.target}.Sanitize())); err != nil {
+	w := &writtenTable{spec: spec, stage: fmt.Sprintf("forma2_stage_%d", n)}
+	if _, err := im.tx.Exec(ctx, fmt.Sprintf(`CREATE TEMP TABLE %s (LIKE %s INCLUDING DEFAULTS) ON COMMIT DROP`, pgx.Identifier{w.stage}.Sanitize(), pgx.Identifier{spec.target}.Sanitize())); err != nil {
 		return fmt.Errorf("create staging table: %w", err)
 	}
 	rows, err := im.src.Query(ctx, spec.sql())
@@ -151,85 +158,142 @@ func (im *importer) copyTable(ctx context.Context, spec *tableSpec) error {
 	defer rows.Close()
 	cols := spec.written()
 	keyIdx := make([]int, len(spec.key))
+	keySrc := make([]int, len(spec.key))
 	for i, k := range spec.key {
 		keyIdx[i] = slices.Index(cols, k)
+		keySrc[i] = slices.IndexFunc(spec.cols, func(c column) bool { return c.name == k })
 	}
-	upsert := upsertSQL(spec.target, stage, cols, spec.key)
-	for done := false; !done; {
-		n := 0
-		_, err := im.tx.CopyFrom(ctx, pgx.Identifier{"forma2_stage_" + spec.target}, cols, pgx.CopyFromFunc(func() ([]any, error) {
-			for n < chunkSize {
-				if !rows.Next() {
-					done = true
-					return nil, rows.Err()
-				}
-				vals, err := rows.Values()
-				if err != nil {
-					return nil, err
-				}
-				rep.Read++
-				raw := slices.Clone(vals)
-				r := &row{spec: spec, vals: vals}
-				if spec.hook != nil {
-					keep, err := spec.hook(r)
-					if err != nil {
-						return nil, err
-					}
-					if !keep {
-						rep.Skipped++
-						continue
-					}
-				}
-				out, err := toTarget(spec, r)
-				if err != nil {
-					return nil, err
-				}
-				k := make(key, len(keyIdx))
-				for i, idx := range keyIdx {
-					u, ok := out[idx].(pgtype.UUID)
-					if !ok || !u.Valid {
-						return nil, fmt.Errorf("key column %s is not a uuid", spec.key[i])
-					}
-					k[i] = u.Bytes
-				}
-				w.keys = append(w.keys, k)
-				if len(w.samples) < samplesPerTable {
-					w.samples = append(w.samples, sample{key: k, raw: raw})
-				}
-				n++
-				return out, nil
+	if _, err := im.tx.CopyFrom(ctx, pgx.Identifier{w.stage}, cols, pgx.CopyFromFunc(func() ([]any, error) {
+		for rows.Next() {
+			vals, err := rows.Values()
+			if err != nil {
+				return nil, err
 			}
-			return nil, nil
-		}))
-		if err != nil {
-			return err
+			rep.Read++
+			forma2Key := make([]string, len(keySrc))
+			for i, ci := range keySrc {
+				forma2Key[i] = idText(vals[ci])
+			}
+			r := &row{spec: spec, vals: vals}
+			if spec.hook != nil {
+				keep, err := spec.hook(r)
+				if err != nil {
+					return nil, err
+				}
+				if !keep {
+					rep.Skipped++
+					if k, ok := resolveKey(forma2Key); ok {
+						w.skipped = append(w.skipped, k)
+					}
+					continue
+				}
+			}
+			out, err := toTarget(spec, r)
+			if err != nil {
+				return nil, err
+			}
+			k := make(key, len(keyIdx))
+			for i, idx := range keyIdx {
+				u, ok := out[idx].(pgtype.UUID)
+				if !ok || !u.Valid {
+					return nil, fmt.Errorf("key column %s is not a uuid", spec.key[i])
+				}
+				k[i] = u.Bytes
+			}
+			if len(w.keys)%stride == 0 && len(w.samples) < samplesPerTable {
+				w.samples = append(w.samples, sample{key: k, forma2: forma2Key})
+			}
+			w.keys = append(w.keys, k)
+			return out, nil
 		}
-		if n == 0 {
-			continue
-		}
-		var inserted, updated int
-		if err := im.tx.QueryRow(ctx, upsert).Scan(&inserted, &updated); err != nil {
-			return fmt.Errorf("write: %w", err)
-		}
-		rep.Written += n
-		rep.Inserted += inserted
-		rep.Updated += updated
-		rep.Unchanged += n - inserted - updated
-		if _, err := im.tx.Exec(ctx, "TRUNCATE "+stage); err != nil {
-			return err
-		}
-	}
-	if _, err := im.tx.Exec(ctx, "DROP TABLE "+stage); err != nil {
+		return nil, rows.Err()
+	})); err != nil {
 		return err
 	}
-	im.opts.Log.InfoContext(ctx, "imported a table", "table", spec.target, "from", spec.label(), "read", rep.Read, "skipped", rep.Skipped,
-		"inserted", rep.Inserted, "updated", rep.Updated, "unchanged", rep.Unchanged)
 	im.report.Tables = append(im.report.Tables, rep)
 	w.report = len(im.report.Tables) - 1
 	im.written = append(im.written, w)
 	if spec.oneToOne && rep.Read != rep.Forma2Rows {
 		im.fail("%s: read %d rows of forma2's %s, which holds %d", spec.target, rep.Read, spec.from, rep.Forma2Rows)
 	}
+	return nil
+}
+
+// idText is a forma2 id as read, as text.
+func idText(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case uuid.UUID:
+		return x.String()
+	}
+	return ""
+}
+
+// resolveKey is the key legacyid derives from forma2's key values; false when one is empty.
+func resolveKey(forma2Key []string) (key, bool) {
+	k := make(key, len(forma2Key))
+	for i, s := range forma2Key {
+		u, ok := legacyid.Resolve(s)
+		if !ok {
+			return nil, false
+		}
+		k[i] = u
+	}
+	return k, true
+}
+
+// prune is a refresh's first write: it deletes, from every table the run writes, the rows the run does not write. Those are rows forma2 no longer holds, or no longer imports (an older invite to an address that has a newer one), and with --overwrite-changes the rows created through this server. Deleting them first lets a row forma2 recreated under a new id take the unique values of the one it replaces. Children go before their parents; the authorization triggers queue the revocations.
+func (im *importer) prune(ctx context.Context) error {
+	var tables []string
+	for _, w := range im.written {
+		if !slices.Contains(tables, w.spec.target) {
+			tables = append(tables, w.spec.target)
+		}
+	}
+	slices.Reverse(tables)
+	for _, table := range tables {
+		var kept []string
+		first := -1
+		for _, w := range im.written {
+			if w.spec.target != table {
+				continue
+			}
+			if first < 0 {
+				first = w.report
+			}
+			match := make([]string, len(w.spec.key))
+			for i, k := range w.spec.key {
+				col := pgx.Identifier{k}.Sanitize()
+				match[i] = fmt.Sprintf("s.%s = t.%s", col, col)
+			}
+			kept = append(kept, fmt.Sprintf("NOT EXISTS (SELECT 1 FROM %s s WHERE %s)", pgx.Identifier{w.stage}.Sanitize(), strings.Join(match, " AND ")))
+		}
+		var deleted int
+		if err := im.tx.QueryRow(ctx, fmt.Sprintf(`WITH gone AS (DELETE FROM %s t WHERE %s RETURNING 1) SELECT count(*) FROM gone`,
+			pgx.Identifier{table}.Sanitize(), strings.Join(kept, " AND "))).Scan(&deleted); err != nil {
+			return fmt.Errorf("%s: delete the rows forma2 does not hold: %w", table, err)
+		}
+		im.report.Tables[first].Deleted = deleted
+	}
+	return nil
+}
+
+// writeTable upserts a staged table spec into its target table.
+func (im *importer) writeTable(ctx context.Context, w *writtenTable) error {
+	rep := &im.report.Tables[w.report]
+	var inserted, updated int
+	if err := im.tx.QueryRow(ctx, upsertSQL(w.spec.target, pgx.Identifier{w.stage}.Sanitize(), w.spec.written(), w.spec.key)).Scan(&inserted, &updated); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+	rep.Written = len(w.keys)
+	rep.Inserted, rep.Updated = inserted, updated
+	rep.Unchanged = rep.Written - inserted - updated
+	if _, err := im.tx.Exec(ctx, "DROP TABLE "+pgx.Identifier{w.stage}.Sanitize()); err != nil {
+		return err
+	}
+	im.opts.Log.InfoContext(ctx, "imported a table", "table", w.spec.target, "from", w.spec.label(), "read", rep.Read, "skipped", rep.Skipped,
+		"inserted", rep.Inserted, "updated", rep.Updated, "unchanged", rep.Unchanged, "deleted", rep.Deleted)
 	return nil
 }
 

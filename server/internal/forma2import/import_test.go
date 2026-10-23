@@ -438,7 +438,7 @@ func checkRows(t *testing.T, db *gorm.DB) {
 	if n := count(t, db, `SELECT count(*) FROM workflow_run_logs WHERE status = 'skipped'`); n != 1 {
 		t.Errorf("%d skipped run logs", n)
 	}
-	if n := count(t, db, `SELECT count(*) FROM organizations WHERE workflow_run_retention_days = 90 AND created_at = '2026-09-20 10:00:00.123+00'`); n != 1 {
+	if n := count(t, db, `SELECT count(*) FROM organizations WHERE workflow_run_retention_days = 90 AND display_retention_days = 30 AND created_at = '2026-09-20 10:00:00.123+00'`); n != 1 {
 		t.Error("organization retention or creation time not carried over")
 	}
 	// Every imported organization, membership, user, team, workspace, grant and key queued its SpiceDB projection.

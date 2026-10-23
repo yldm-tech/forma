@@ -361,9 +361,9 @@ psql_forma() {
   compose exec -T postgres psql -U postgres -d forma -tA -c "$1" | tr -d '[:space:]'
 }
 
-# check_database refuses to start the Go server on a database whose forma2 data has not been imported. The Go server keeps its data in tables of its own next to forma2's, and started without forma2's data it would serve an empty instance whose first sign-up becomes its owner. This is the server's own startup check, run before anything is started: forma2's "User" table has rows and forma2_imports, which `forma import-forma2` (or its --discard-forma2-data) writes, has none.
+# check_database refuses to start the Go server on a database whose forma2 data has not been imported. The Go server keeps its data in tables of its own next to forma2's, and started without forma2's data it would serve an empty instance whose first sign-up becomes its owner. This is the server's own startup check, run before anything is started: forma2's "User" table has rows and forma2_imports, which `forma import-forma2` (or its --discard-forma2-data) writes, has none; or forma2's tables changed after the latest record, as when forma2 ran again after a rollback (forma2_import_drift(), which a schema older than it lacks).
 check_database() {
-  local tables forma2_users=f recorded=f
+  local tables forma2_users=f recorded=f drift=
   compose up -d --wait postgres >/dev/null
   tables=$(psql_forma "SELECT (to_regclass('public.\"User\"') IS NOT NULL)::text || ',' || (to_regclass('public.forma2_imports') IS NOT NULL)::text")
   case "$tables" in
@@ -382,6 +382,22 @@ Nothing else was started, and the configuration has been migrated (the previous 
   docker compose run --rm forma-migrate import-forma2 --dry-run
   docker compose run --rm forma-migrate import-forma2
 The upgrade guide explains each step: $FORMA_UPGRADE_GUIDE
+EOF
+    exit 1
+  fi
+  if [ "$recorded" = t ] && [ "$(psql_forma "SELECT to_regprocedure('forma2_import_drift()') IS NOT NULL")" = t ]; then
+    drift=$(psql_forma "SELECT array_to_string(forma2_import_drift(), ',')")
+  fi
+  if [ -n "$drift" ]; then
+    cat >&2 <<EOF
+forma2's tables changed after its data was imported (changed: $drift): forma2 ran again, as after a rollback, and the Go server's tables lack what it wrote since.
+Nothing else was started. Stop forma2, then either import its data again or keep the Go server's data and leave forma2's later writes behind:
+  cd $PWD
+  docker compose stop forma
+  docker compose run --rm forma-migrate import-forma2 --refresh --dry-run
+  docker compose run --rm forma-migrate import-forma2 --refresh
+  docker compose run --rm forma-migrate import-forma2 --discard-forma2-data --reason="<why>"
+A refresh refuses when the Go server changed its tables too; the upgrade guide explains the choice: $FORMA_UPGRADE_GUIDE
 EOF
     exit 1
   fi

@@ -169,7 +169,7 @@ func forma2DB(t *testing.T, migrations int) string {
 	exec(t, conn, seed.String())
 	if migrations == len(dirs) {
 		// The columns and table forma2's later migrations added.
-		exec(t, conn, `UPDATE "Organization" SET "workflowRunRetentionDays" = 90;
+		exec(t, conn, `UPDATE "Organization" SET "workflowRunRetentionDays" = 90, "displayRetentionDays" = 30;
 			UPDATE "Integration" SET "lastErrorAt" = '2026-10-01 00:00:00', "lastErrorMessage" = 'Sheet not found', "consecutiveFailures" = 3 WHERE id = 'clintsheets0000000000000001';
 			UPDATE "Workflow" SET "triggerSurveyId" = 'clsurvey000000000000000001';
 			INSERT INTO "ResponsePipelineOutbox" (id, updated_at, "jobId", event, "responseId", "surveyId", "workspaceId", payload)

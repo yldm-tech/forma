@@ -2,7 +2,7 @@
 //
 // forma2's tables and this schema's live side by side in one PostgreSQL database (or the source is another database, --source). The import reads forma2's tables in one read-only, repeatable-read transaction and writes this schema's tables in one transaction of its own, so a run is all or nothing and forma2's tables are never written: its rows stay as they were and forma2 can be started on them again. Every forma2 id becomes legacyid.Resolve of itself, so foreign keys need no mapping table and an old id that arrives from outside resolves to the migrated row.
 //
-// A run is idempotent. Rows are upserted by their derived primary key: a row that already holds what forma2 has is left alone, a changed one is updated, nothing is duplicated, and nothing is deleted. Before the transaction commits, a verification reads back what was written (every expected row present, sample fields equal to forma2's, every survey document accepted by this server's validators) and a failure rolls the whole run back. The last write of a run records it in forma2_imports, which the server's startup guard and docker/forma.sh wait for.
+// A run is idempotent. Rows are upserted by their derived primary key: a row that already holds what forma2 has is left alone, a changed one is updated, and nothing is duplicated. Before the transaction commits, a verification checks what was written against forma2 read again on its own terms (every forma2 row is in the table under the id legacyid derives from its own key, sampled rows hold what verification computes from forma2's stored columns apart from the mapping, every survey document is accepted by this server's validators) and a failure rolls the whole run back. The last write of a run records it in forma2_imports, with a digest of the tables written and marks of forma2's tables: the server's startup guard and docker/forma.sh wait for the record and refuse when forma2 ran again after it, and a refresh refuses when this server changed the tables since.
 package forma2import
 
 import (
@@ -11,6 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,8 +34,10 @@ type Options struct {
 	SourceDSN string
 	// DryRun does everything a run does, the verification included, and then rolls the transaction back.
 	DryRun bool
-	// Refresh runs again over a database a previous run (or a discard) already recorded. Migrated rows are then updated to what forma2 holds, which overwrites any change made to them through this server since.
+	// Refresh runs again over a database a previous run (or a discard) already recorded, and makes the imported tables what forma2 holds now: changed rows are updated, and rows forma2 no longer holds are deleted. It refuses (ErrChangedSinceImport) when this server has changed those tables since the record, unless OverwriteChanges is set.
 	Refresh bool
+	// OverwriteChanges lets a refresh run over changes made through this server since the record, and makes forma2's rows win: rows created through this server are deleted, rows deleted through it (a revoked API key, a removed member) come back, and changed rows take forma2's values.
+	OverwriteChanges bool
 	// Cipher seals the two-factor secrets and integration credentials this server stores, under ENCRYPTION_KEY.
 	Cipher *secret.Cipher
 	// Forma2Key is forma2's ENCRYPTION_KEY, which encrypted its legacy two-factor columns and its integration credentials.
@@ -57,7 +62,9 @@ type TableReport struct {
 	Inserted   int    `json:"inserted"`
 	Updated    int    `json:"updated"`
 	Unchanged  int    `json:"unchanged"`
-	// Present is how many of the written rows the verification found in the table.
+	// Deleted is how many rows of the table a refresh deleted because the run did not write them, on the table's first report.
+	Deleted int `json:"deleted"`
+	// Present is how many rows the verification found in the table: for a table read row by row, of forma2's rows read again by their own keys; for derived rows, of the rows written.
 	Present int `json:"present"`
 }
 
@@ -89,14 +96,19 @@ type Report struct {
 // ErrVerification is returned, with the report, when the verification failed; the transaction was rolled back.
 var ErrVerification = errors.New("verification failed; nothing was written")
 
-// ErrAlreadyRecorded is returned when a previous run or a discard is recorded and Options.Refresh is not set.
-var ErrAlreadyRecorded = errors.New("forma2's data has already been imported or discarded here; pass --refresh to import again, which overwrites the migrated rows with forma2's current values")
+// ErrAlreadyRecorded is returned when a previous run or a discard is recorded and Options.Refresh is not set, and by a discard with nothing to decide.
+var ErrAlreadyRecorded = errors.New("forma2's data has already been imported or discarded here; --refresh imports it again while this server has not changed the imported tables since")
 
-// chunkSize is how many rows are staged and upserted at a time.
-const chunkSize = 2000
+// ErrChangedSinceImport is returned by a refresh when this server changed the imported tables since the latest record, and Options.OverwriteChanges is not set.
+var ErrChangedSinceImport = errors.New("this server changed the imported tables since forma2's data was last imported or discarded here, and a refresh cannot tell those changes from forma2's: it would bring back rows deleted here (a revoked API key, a removed member), delete rows created here and overwrite what was changed. Pass --overwrite-changes as well to make forma2's rows win anyway; to keep this server's data instead, do not refresh (if forma2 ran again since, record that with --discard-forma2-data --reason=<why>)")
 
 // Run imports forma2's database. The report is returned whenever the run got as far as reading forma2, a failed verification included.
 func Run(ctx context.Context, opts Options) (*Report, error) {
+	return run(ctx, opts, nil)
+}
+
+// run is Run; adjust, when set, sees the table specs before they are read.
+func run(ctx context.Context, opts Options, adjust func([]*tableSpec)) (*Report, error) {
 	if opts.Log == nil {
 		opts.Log = slog.New(slog.DiscardHandler)
 	}
@@ -135,7 +147,7 @@ func Run(ctx context.Context, opts Options) (*Report, error) {
 		return nil, fmt.Errorf("open the import transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
-	if err := checkTarget(ctx, tx, opts.Refresh); err != nil {
+	if err := checkTarget(ctx, tx, opts); err != nil {
 		return nil, err
 	}
 
@@ -150,9 +162,23 @@ func Run(ctx context.Context, opts Options) (*Report, error) {
 	if err := im.precheck(ctx); err != nil {
 		return im.report, err
 	}
-	for _, spec := range im.tables() {
-		if err := im.copyTable(ctx, spec); err != nil {
+	specs := im.tables()
+	if adjust != nil {
+		adjust(specs)
+	}
+	for i, spec := range specs {
+		if err := im.stageTable(ctx, i, spec); err != nil {
 			return im.report, fmt.Errorf("%s from %s: %w", spec.target, spec.label(), err)
+		}
+	}
+	if opts.Refresh {
+		if err := im.prune(ctx); err != nil {
+			return im.report, err
+		}
+	}
+	for _, w := range im.written {
+		if err := im.writeTable(ctx, w); err != nil {
+			return im.report, fmt.Errorf("%s from %s: %w", w.spec.target, w.spec.label(), err)
 		}
 	}
 	im.notMigrated()
@@ -215,20 +241,80 @@ func (im *importer) warn(format string, args ...any) {
 	im.report.Warnings = append(im.report.Warnings, fmt.Sprintf(format, args...))
 }
 
-// checkTarget refuses a second run unless it was asked for.
-func checkTarget(ctx context.Context, tx pgx.Tx, refresh bool) error {
-	// Serializes concurrent imports: the second waits for the first to commit or roll back, then sees its record.
+// record is the latest row of forma2_imports.
+type record struct {
+	completedAt time.Time
+	// digests are its target_digests; nil when it has none.
+	digests map[string]string
+}
+
+// latestRecord locks forma2_imports and reads its latest row; nil when it is empty. The lock serializes imports and discards: the second waits for the first to commit or roll back, then sees its record.
+func latestRecord(ctx context.Context, tx pgx.Tx) (*record, error) {
 	if _, err := tx.Exec(ctx, `LOCK TABLE forma2_imports IN EXCLUSIVE MODE`); err != nil {
-		return fmt.Errorf("lock forma2_imports: %w", err)
+		return nil, fmt.Errorf("lock forma2_imports: %w", err)
 	}
-	var recorded bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM forma2_imports)`).Scan(&recorded); err != nil {
-		return fmt.Errorf("read forma2_imports: %w", err)
+	var r record
+	var digests []byte
+	err := tx.QueryRow(ctx, `SELECT completed_at, target_digests FROM forma2_imports ORDER BY completed_at DESC, id DESC LIMIT 1`).Scan(&r.completedAt, &digests)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
 	}
-	if recorded && !refresh {
+	if err != nil {
+		return nil, fmt.Errorf("read forma2_imports: %w", err)
+	}
+	if digests != nil {
+		if err := json.Unmarshal(digests, &r.digests); err != nil {
+			return nil, fmt.Errorf("read forma2_imports: %w", err)
+		}
+	}
+	return &r, nil
+}
+
+// checkTarget refuses a second run unless it was asked for, and a refresh over changes this server made since the latest record unless those are to be overwritten.
+func checkTarget(ctx context.Context, tx pgx.Tx, opts Options) error {
+	latest, err := latestRecord(ctx, tx)
+	if err != nil || latest == nil {
+		return err
+	}
+	if !opts.Refresh {
 		return ErrAlreadyRecorded
 	}
+	if opts.OverwriteChanges {
+		return nil
+	}
+	if latest.digests == nil {
+		return fmt.Errorf("%w (the record of %s predates the digests a refresh compares)", ErrChangedSinceImport, latest.completedAt.UTC().Format(time.RFC3339))
+	}
+	current, err := targetDigests(ctx, tx)
+	if err != nil {
+		return err
+	}
+	var changed []string
+	for _, table := range slices.Sorted(maps.Keys(targetTables)) {
+		if current[table] != latest.digests[table] {
+			changed = append(changed, table)
+		}
+	}
+	if len(changed) > 0 {
+		return fmt.Errorf("%w (changed since the record of %s: %s)", ErrChangedSinceImport, latest.completedAt.UTC().Format(time.RFC3339), strings.Join(changed, ", "))
+	}
 	return nil
+}
+
+// targetDigests fingerprints every table the import writes: its row count and the sum of a 64-bit hash of each row's text, which changes when a row is inserted, deleted or updated. The settings that shape a row's text are fixed for the transaction, so a digest does not depend on the session that takes it.
+func targetDigests(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
+	if _, err := tx.Exec(ctx, `SET LOCAL TimeZone = 'UTC'; SET LOCAL DateStyle = 'ISO, YMD'; SET LOCAL IntervalStyle = 'postgres'; SET LOCAL extra_float_digits = 1; SET LOCAL bytea_output = 'hex'`); err != nil {
+		return nil, fmt.Errorf("digest the imported tables: %w", err)
+	}
+	out := map[string]string{}
+	for _, table := range slices.Sorted(maps.Keys(targetTables)) {
+		var digest string
+		if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT count(*)::text || ':' || COALESCE(sum(hashtextextended(t::text, 0)), 0)::text FROM %s t`, pgx.Identifier{table}.Sanitize())).Scan(&digest); err != nil {
+			return nil, fmt.Errorf("digest %s: %w", table, err)
+		}
+		out[table] = digest
+	}
+	return out, nil
 }
 
 // record writes the run into forma2_imports, the last write of the transaction.
@@ -245,8 +331,16 @@ func (im *importer) record(ctx context.Context, started time.Time) error {
 	if err != nil {
 		return err
 	}
-	if _, err := im.tx.Exec(ctx, `INSERT INTO forma2_imports (started_at, outcome, legacy_namespace, source_counts, target_counts) VALUES ($1, 'imported', $2, $3, $4)`,
-		started, legacyid.Namespace, string(sourceCounts), string(written)); err != nil {
+	digests, err := targetDigests(ctx, im.tx)
+	if err != nil {
+		return err
+	}
+	digestsJSON, err := json.Marshal(digests)
+	if err != nil {
+		return err
+	}
+	if _, err := im.tx.Exec(ctx, `INSERT INTO forma2_imports (started_at, outcome, legacy_namespace, source_counts, target_counts, target_digests, source_marks) VALUES ($1, 'imported', $2, $3, $4, $5, $6)`,
+		started, legacyid.Namespace, string(sourceCounts), string(written), string(digestsJSON), im.schema.marks); err != nil {
 		return fmt.Errorf("record the import: %w", err)
 	}
 	return nil

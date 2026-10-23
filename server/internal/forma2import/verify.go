@@ -4,16 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
@@ -50,9 +47,10 @@ func (im *importer) notMigrated() {
 	}
 }
 
-// verify reads back what the run wrote, in the import transaction: every written row is present under the id legacyid derives from its forma2 id, sample rows hold forma2's values, and the documents pass this server's validators.
+// verify checks what the run wrote against forma2 read again on its own terms, in the import transaction: every forma2 row is in the table under the id legacyid derives from its own key, sampled rows hold what expect.go computes from forma2's stored columns, and the documents pass this server's validators.
 func (im *importer) verify(ctx context.Context) error {
-	if _, err := im.tx.Exec(ctx, `CREATE TEMP TABLE forma2_verify_keys (k0 uuid, k1 uuid) ON COMMIT DROP`); err != nil {
+	if _, err := im.tx.Exec(ctx, `CREATE TEMP TABLE forma2_verify_keys (k0 uuid, k1 uuid, skipped boolean) ON COMMIT DROP;
+		CREATE TEMP TABLE forma2_verify_expected (k0 uuid, k1 uuid) ON COMMIT DROP`); err != nil {
 		return err
 	}
 	for _, w := range im.written {
@@ -69,52 +67,116 @@ func (im *importer) verify(ctx context.Context) error {
 	return im.verifyDocuments(ctx)
 }
 
-// verifyPresent checks that every row written is in the table, and that no two forma2 rows were written onto one.
+func keyRow(k key, extra ...any) []any {
+	out := []any{pgtype.UUID{Bytes: k[0], Valid: true}, pgtype.UUID{}}
+	if len(k) > 1 {
+		out[1] = pgtype.UUID{Bytes: k[1], Valid: true}
+	}
+	return append(out, extra...)
+}
+
+// verifyPresent checks the keys written. For a table read row by row, forma2's table is read again by its own key columns, apart from the mapping's query: the keys legacyid derives from them must be exactly the rows written and the rows skipped on purpose, and every one written must be in the table. Rows derived from other columns have no forma2 table of their own; they must be in the table under distinct keys, and their values are checked in the samples. Either way, no two rows may be written onto one key.
 func (im *importer) verifyPresent(ctx context.Context, w *writtenTable) error {
-	if _, err := im.tx.Exec(ctx, `TRUNCATE forma2_verify_keys`); err != nil {
+	if _, err := im.tx.Exec(ctx, `TRUNCATE forma2_verify_keys, forma2_verify_expected`); err != nil {
 		return err
 	}
-	if _, err := im.tx.CopyFrom(ctx, pgx.Identifier{"forma2_verify_keys"}, []string{"k0", "k1"}, pgx.CopyFromSlice(len(w.keys), func(i int) ([]any, error) {
-		k := w.keys[i]
-		out := []any{pgtype.UUID{Bytes: k[0], Valid: true}, pgtype.UUID{}}
-		if len(k) > 1 {
-			out[1] = pgtype.UUID{Bytes: k[1], Valid: true}
+	all := len(w.keys) + len(w.skipped)
+	if _, err := im.tx.CopyFrom(ctx, pgx.Identifier{"forma2_verify_keys"}, []string{"k0", "k1", "skipped"}, pgx.CopyFromSlice(all, func(i int) ([]any, error) {
+		if i < len(w.keys) {
+			return keyRow(w.keys[i], false), nil
 		}
-		return out, nil
+		return keyRow(w.skipped[i-len(w.keys)], true), nil
 	})); err != nil {
 		return err
 	}
-	match := make([]string, len(w.spec.key))
-	for i, k := range w.spec.key {
-		match[i] = fmt.Sprintf("t.%s = v.k%d", pgx.Identifier{k}.Sanitize(), i)
+	match := func(a, b string) string {
+		return fmt.Sprintf("%s.k0 = %s.k0 AND %s.k1 IS NOT DISTINCT FROM %s.k1", a, b, a, b)
 	}
-	var distinct, present int
-	if err := im.tx.QueryRow(ctx, fmt.Sprintf(`SELECT count(DISTINCT (v.k0, COALESCE(v.k1, v.k0))), count(*) FILTER (WHERE EXISTS (SELECT 1 FROM %s t WHERE %s)) FROM forma2_verify_keys v`,
-		pgx.Identifier{w.spec.target}.Sanitize(), strings.Join(match, " AND "))).Scan(&distinct, &present); err != nil {
+	inTarget := make([]string, len(w.spec.key))
+	for i, k := range w.spec.key {
+		inTarget[i] = fmt.Sprintf("t.%s = x.k%d", pgx.Identifier{k}.Sanitize(), i)
+	}
+	present := fmt.Sprintf("EXISTS (SELECT 1 FROM %s t WHERE %s)", pgx.Identifier{w.spec.target}.Sanitize(), strings.Join(inTarget, " AND "))
+	var distinct int
+	if err := im.tx.QueryRow(ctx, `SELECT count(DISTINCT (k0, COALESCE(k1, k0))) FROM forma2_verify_keys WHERE NOT skipped`).Scan(&distinct); err != nil {
 		return err
 	}
-	rep := &im.report.Tables[w.report]
-	rep.Present = present
 	if distinct != len(w.keys) {
 		im.fail("%s from %s: %d rows were written onto %d keys", w.spec.target, w.spec.label(), len(w.keys), distinct)
 	}
-	if present != len(w.keys) {
-		im.fail("%s from %s: %d of the %d rows written are not in the table", w.spec.target, w.spec.label(), len(w.keys)-present, len(w.keys))
+	rep := &im.report.Tables[w.report]
+	if !w.spec.oneToOne {
+		if err := im.tx.QueryRow(ctx, `SELECT count(*) FROM forma2_verify_keys x WHERE NOT skipped AND `+present).Scan(&rep.Present); err != nil {
+			return err
+		}
+		if rep.Present != len(w.keys) {
+			im.fail("%s from %s: %d of the %d rows written are not in the table", w.spec.target, w.spec.label(), len(w.keys)-rep.Present, len(w.keys))
+		}
+		return nil
+	}
+
+	exp := expectations[specName(w.spec)]
+	cols := make([]string, len(w.spec.key))
+	for i, k := range w.spec.key {
+		c, ok := im.forma2Column(w.spec.from, k, exp.rename)
+		if !ok {
+			im.fail("%s: no column of forma2's %s holds its key %s", specName(w.spec), w.spec.from, k)
+			return nil
+		}
+		cols[i] = "t." + pgx.Identifier{c}.Sanitize() + "::text"
+	}
+	rows, err := im.src.Query(ctx, fmt.Sprintf(`SELECT %s FROM public.%s t`, strings.Join(cols, ", "), pgx.Identifier{w.spec.from}.Sanitize()))
+	if err != nil {
+		return fmt.Errorf("read forma2's keys again: %w", err)
+	}
+	defer rows.Close()
+	if _, err := im.tx.CopyFrom(ctx, pgx.Identifier{"forma2_verify_expected"}, []string{"k0", "k1"}, pgx.CopyFromFunc(func() ([]any, error) {
+		if !rows.Next() {
+			return nil, rows.Err()
+		}
+		values := make([]string, len(cols))
+		targets := make([]any, len(cols))
+		for i := range values {
+			targets[i] = &values[i]
+		}
+		if err := rows.Scan(targets...); err != nil {
+			return nil, err
+		}
+		k, ok := resolveKey(values)
+		if !ok {
+			return nil, fmt.Errorf("forma2's %s has a row with an empty key", w.spec.from)
+		}
+		return keyRow(k), nil
+	})); err != nil {
+		return err
+	}
+	var unwritten, foreign, wanted int
+	if err := im.tx.QueryRow(ctx, fmt.Sprintf(`SELECT
+		(SELECT count(*) FROM forma2_verify_expected e WHERE NOT EXISTS (SELECT 1 FROM forma2_verify_keys v WHERE %[1]s)),
+		(SELECT count(*) FROM forma2_verify_keys v WHERE NOT v.skipped AND NOT EXISTS (SELECT 1 FROM forma2_verify_expected e WHERE %[1]s)),
+		(SELECT count(*) FROM forma2_verify_expected e WHERE NOT EXISTS (SELECT 1 FROM forma2_verify_keys v WHERE v.skipped AND %[1]s)),
+		(SELECT count(*) FROM forma2_verify_expected x WHERE NOT EXISTS (SELECT 1 FROM forma2_verify_keys v WHERE v.skipped AND %[2]s) AND %[3]s)`,
+		match("v", "e"), match("v", "x"), present)).Scan(&unwritten, &foreign, &wanted, &rep.Present); err != nil {
+		return err
+	}
+	if unwritten > 0 {
+		im.fail("%s from %s: %d of forma2's rows were neither written nor skipped", w.spec.target, w.spec.label(), unwritten)
+	}
+	if foreign > 0 {
+		im.fail("%s from %s: %d rows written have a key no row of forma2's %s derives", w.spec.target, w.spec.label(), foreign, w.spec.from)
+	}
+	if rep.Present != wanted {
+		im.fail("%s from %s: %d of forma2's %d rows are not in the table", w.spec.target, w.spec.label(), wanted-rep.Present, wanted)
 	}
 	return nil
 }
 
-// verifySamples compares the first rows written with what forma2 holds, column by column: a plain column holds forma2's value, a JSON column the same document, and an id column legacyid's id of forma2's.
+// verifySamples compares the sampled rows with their forma2 rows, read again, column by column (checkSample).
 func (im *importer) verifySamples(ctx context.Context, w *writtenTable) error {
-	var compared []int
-	for i, c := range w.spec.cols {
-		if c.kind == plain || c.kind == jsonDoc || c.kind == id {
-			compared = append(compared, i)
-		}
-	}
-	names := make([]string, len(compared))
-	for i, ci := range compared {
-		names[i] = pgx.Identifier{w.spec.cols[ci].name}.Sanitize()
+	cols := w.spec.written()
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = pgx.Identifier{c}.Sanitize()
 	}
 	match := make([]string, len(w.spec.key))
 	for i, k := range w.spec.key {
@@ -146,11 +208,12 @@ func (im *importer) verifySamples(ctx context.Context, w *writtenTable) error {
 			im.fail("%s: sample row %s is missing", w.spec.target, s.key)
 			continue
 		}
-		for i, ci := range compared {
-			col := w.spec.cols[ci]
-			if !sameValue(col.kind, s.raw[ci], got[i]) {
-				im.fail("%s: row %s holds a %s that differs from forma2's", w.spec.target, s.key, col.name)
-			}
+		tgt := make(map[string]any, len(cols))
+		for i, c := range cols {
+			tgt[c] = got[i]
+		}
+		if err := im.checkSample(ctx, w, s, tgt); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -162,44 +225,6 @@ func (k key) String() string {
 		parts[i] = u.String()
 	}
 	return strings.Join(parts, "/")
-}
-
-// sameValue compares a value read from forma2 with the value read back from the target.
-func sameValue(k kind, src, tgt any) bool {
-	if src == nil || tgt == nil {
-		return src == nil && tgt == nil
-	}
-	switch k {
-	case id:
-		s, ok := src.(string)
-		if !ok {
-			return false
-		}
-		want, _ := legacyid.Resolve(s)
-		got, ok := tgt.([16]byte)
-		return ok && uuid.UUID(got) == want
-	case jsonDoc:
-		s, ok := src.(string)
-		if !ok {
-			return false
-		}
-		b, err := json.Marshal(tgt)
-		return err == nil && sameJSON([]byte(s), b)
-	}
-	switch s := src.(type) {
-	case time.Time:
-		t, ok := tgt.(time.Time)
-		return ok && s.Equal(t)
-	case pgtype.Numeric:
-		t, ok := tgt.(pgtype.Numeric)
-		if !ok {
-			return false
-		}
-		a, err1 := s.Float64Value()
-		b, err2 := t.Float64Value()
-		return err1 == nil && err2 == nil && a == b
-	}
-	return reflect.DeepEqual(src, tgt)
 }
 
 // surveyBatch is how many surveys are read back for validation at a time.

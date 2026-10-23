@@ -32,7 +32,7 @@ commands:
   wait-for-database  wait until the migration database accepts connections [--timeout-seconds 900] [--interval-seconds 5] [--connection-timeout-seconds 5]
   healthcheck        exit 0 when the server on HTTP_ADDR answers /health (the image's HEALTHCHECK)
   authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
-  import-forma2      copy a forma2 database into this schema, verified, in one transaction [--dry-run] [--source url] [--refresh] (forma import-forma2 --help)
+  import-forma2      copy a forma2 database into this schema, verified, in one transaction [--dry-run] [--source url] [--refresh [--overwrite-changes]] (forma import-forma2 --help)
   seed               write the demo organization, users, surveys and responses; needs ALLOW_SEED=1 [--clear] [--contract [--out path]]
   version            print the release version the binary was built as (0.0.0 for a development build)
 `
