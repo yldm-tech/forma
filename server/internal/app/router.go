@@ -25,6 +25,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/notification"
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -95,6 +96,10 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	oauthHandler.Register(r)
 	// The integrations' OAuth authorize routes and the callbacks registered with Google, Airtable, Notion and Slack: forma2's paths and v1 envelope, outside /api/app.
 	integrationOAuthHandler.Register(r)
+	// The browser's PostHog requests, proxied first-party at forma2's /ingest when POSTHOG_KEY is set.
+	if p.Config.Telemetry.PostHogKey != "" {
+		r.Any(analytics.IngestPath+"/*path", analytics.IngestProxy())
+	}
 	// Stored files, at the URLs surveys, responses and emails embed: forma2's paths and answers, outside /api/app.
 	storageHandler.Register(r)
 	// The unsubscribe and view-responses links of the response-finished email, which emails already sent carry.

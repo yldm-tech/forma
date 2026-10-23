@@ -192,7 +192,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
-	webuiHandler, err := webui.New()
+	webuiHandler, err := webui.New(cfg)
 	if err != nil {
 		cleanup3()
 		cleanup2()
