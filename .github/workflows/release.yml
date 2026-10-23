@@ -30,7 +30,7 @@ jobs:
       IMAGE: ghcr.io/yldm-tech/forma
       DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs
       RELEASE_SHA: ${{ github.sha }}
-      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover.
+      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, and only once the upgrade guide (docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: docker/forma.sh and the self-hosting guides download docker/ from it, so it always describes the image `latest` names.
       MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -127,6 +127,8 @@ jobs:
           current=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
           if [ "$MOVE_LATEST" = "true" ] && [ "$current" = "$RELEASE_SHA" ]; then
             docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
+            # Not forced: main only moves forward, so a push that is not a fast-forward means something else moved stable, and it should fail loudly rather than be overwritten.
+            git push origin "$RELEASE_SHA:refs/heads/stable"
             moved_latest=true
           fi
 
@@ -141,7 +143,7 @@ jobs:
             echo "- \`$DOCS_IMAGE:$VERSION\`"
             echo "- \`$IMAGE:sha-$RELEASE_SHA\`"
             if [ "$moved_latest" = "true" ]; then
-              echo "- \`$IMAGE:latest\` now points here"
+              echo "- \`$IMAGE:latest\` and the \`stable\` branch now point here"
             else
               echo "- \`$IMAGE:latest\` was left alone (RELEASE_MOVE_LATEST is not true, or main has moved on)"
             fi
