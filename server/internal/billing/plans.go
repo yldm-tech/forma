@@ -28,6 +28,11 @@ func trialDays(organizationID uuid.UUID) int64 {
 	return proTrialDays
 }
 
+// isPlanComparison is forma2's billing page flag: the users PostHog puts in the a-b_billing_plan-comparison-table experiment's "test" variant see the plan comparison table. forma2 evaluated it for the user alone, without groups.
+func isPlanComparison(userID uuid.UUID) bool {
+	return analytics.FeatureFlag(userID.String(), "a-b_billing_plan-comparison-table", analytics.Groups{}) == "test"
+}
+
 func errNotFound(resource string, organizationID uuid.UUID) *apperr.Error {
 	return apperr.NotFound(resource, organizationID.String())
 }

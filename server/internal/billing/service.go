@@ -143,7 +143,7 @@ func (s *Service) Page(ctx context.Context, userID, organizationID uuid.UUID) (*
 	p := &Page{
 		Billing: rec, CurrentCloudPlan: rec.plan(), TrialDaysRemaining: trialDaysRemaining(rec, now), UsageCycleStart: cycle.Start, UsageCycleEnd: cycle.End,
 		Catalog: catalog.Display(), ResponseCount: usage.Responses, WorkspaceCount: usage.Workspaces, WorkflowRunCount: usage.WorkflowRuns,
-		HasBillingRights: role != "member", IsStripeSetupIncomplete: rec.StripeCustomerID == nil, StripePublishableKey: optional(s.engine.stripe.publishableKey),
+		IsPlanComparison: isPlanComparison(userID), HasBillingRights: role != "member", IsStripeSetupIncomplete: rec.StripeCustomerID == nil, StripePublishableKey: optional(s.engine.stripe.publishableKey),
 	}
 	if rec.Stripe != nil {
 		p.CurrentBillingInterval, p.CurrentSubscriptionStatus, p.PendingChange = rec.Stripe.Interval, rec.Stripe.SubscriptionStatus, rec.Stripe.PendingChange
