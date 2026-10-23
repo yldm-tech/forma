@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 )
 
 func discardLog() *slog.Logger { return slog.New(slog.DiscardHandler) }
@@ -247,5 +248,64 @@ func TestSentryEventsAreScrubbed(t *testing.T) {
 	}
 	if e.Environment != "staging" {
 		t.Errorf("environment = %q, want SENTRY_ENVIRONMENT", e.Environment)
+	}
+}
+
+// collectHTTPDurations runs requests through an engine built as the server builds it, with the middleware recording into a manual reader, and returns the data points of http.server.request.duration.
+func collectHTTPDurations(t *testing.T, register func(*gin.Engine), requests ...*http.Request) []metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	reader := sdkmetric.NewManualReader()
+	provider := newMeterProvider(sdkmetric.WithReader(reader))
+	t.Cleanup(func() { _ = provider.Shutdown(context.Background()) })
+	previous := otel.GetMeterProvider()
+	otel.SetMeterProvider(provider)
+	t.Cleanup(func() { otel.SetMeterProvider(previous) })
+
+	r := httpserver.NewEngine(discardLog(), Middleware("forma"))
+	register(r)
+	for _, req := range requests {
+		r.ServeHTTP(httptest.NewRecorder(), req)
+	}
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(t.Context(), &rm); err != nil {
+		t.Fatal(err)
+	}
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "http.server.request.duration" {
+				return m.Data.(metricdata.Histogram[float64]).DataPoints
+			}
+		}
+	}
+	return nil
+}
+
+// The port otelgin reads from the Host header never becomes a label, so a client cannot mint a series per port and push the real ones into the overflow set.
+func TestHTTPMetricsIgnoreTheHostPort(t *testing.T) {
+	var requests []*http.Request
+	for _, host := range []string{"x:1", "x:2", "x:3", "forma.example.com"} {
+		req := httptest.NewRequest(http.MethodGet, "/ok", nil)
+		req.Host = host
+		requests = append(requests, req)
+	}
+	points := collectHTTPDurations(t, func(r *gin.Engine) { r.GET("/ok", func(c *gin.Context) { c.Status(http.StatusOK) }) }, requests...)
+	if len(points) != 1 || points[0].Count != 4 {
+		t.Fatalf("data points = %+v, want one series for the route", points)
+	}
+	for _, key := range []attribute.Key{"server.port", "server.address"} {
+		if _, found := points[0].Attributes.Value(key); found {
+			t.Errorf("%s is a label: %v", key, points[0].Attributes)
+		}
+	}
+}
+
+// A request whose handler panicked is recorded with the 500 the recovery answered, since the middleware runs outside it.
+func TestHTTPMetricsRecordPanics(t *testing.T) {
+	points := collectHTTPDurations(t, func(r *gin.Engine) { r.GET("/boom", func(*gin.Context) { panic("boom") }) }, httptest.NewRequest(http.MethodGet, "/boom", nil))
+	if len(points) != 1 {
+		t.Fatalf("data points = %+v, want the panicked request", points)
+	}
+	if status, _ := points[0].Attributes.Value("http.response.status_code"); status.AsInt64() != http.StatusInternalServerError {
+		t.Errorf("status = %v, want 500", points[0].Attributes)
 	}
 }

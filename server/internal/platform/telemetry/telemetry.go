@@ -98,7 +98,7 @@ func setup(ctx context.Context, cfg config.TelemetryConfig, log *slog.Logger, pr
 		}
 	}
 	if len(readers) > 0 {
-		t.meterProvider = sdkmetric.NewMeterProvider(append(readers, sdkmetric.WithResource(res))...)
+		t.meterProvider = newMeterProvider(append(readers, sdkmetric.WithResource(res))...)
 		otel.SetMeterProvider(t.meterProvider)
 	}
 	if t.tracerProvider != nil {
@@ -120,6 +120,17 @@ func setup(ctx context.Context, cfg config.TelemetryConfig, log *slog.Logger, pr
 	log.InfoContext(ctx, fmt.Sprintf("OpenTelemetry initialized: service=%s, version=%s, environment=%s, exporters=%s, sampler=%s%s", cfg.ServiceName, buildinfo.Version, cfg.DeploymentEnvironment(), strings.Join(exporters, "+"), cfg.TracesSampler, samplerArg))
 	return t
 }
+
+// newMeterProvider is the meter provider with the views every reader shares.
+func newMeterProvider(opts ...sdkmetric.Option) *sdkmetric.MeterProvider {
+	return sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithView(httpServerView))...)
+}
+
+// httpServerView drops server.address and server.port from the HTTP server instruments. otelgin takes the port from the request's Host header, so without it any client could mint a series per port until the cardinality limit pushes every real route into the overflow set; both name this one service anyway.
+var httpServerView = sdkmetric.NewView(
+	sdkmetric.Instrument{Name: "http.server.*"},
+	sdkmetric.Stream{AttributeFilter: attribute.NewDenyKeysFilter("server.address", "server.port")},
+)
 
 // newResource is forma2's resource: service.name, service.version and deployment.environment, over whatever OTEL_RESOURCE_ATTRIBUTES adds.
 func newResource(ctx context.Context, cfg config.TelemetryConfig, log *slog.Logger) *resource.Resource {

@@ -27,8 +27,8 @@ type Server struct {
 	log             *slog.Logger
 }
 
-// NewEngine builds the engine with the middleware stack. Feature handlers are mounted by the caller.
-func NewEngine(log *slog.Logger) *gin.Engine {
+// NewEngine builds the engine with the middleware stack; outer runs right after the request id, outside everything else. Feature handlers are mounted by the caller.
+func NewEngine(log *slog.Logger, outer ...gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	// gin's own ClientIP is never consulted: httpapi.ClientIPResolver derives the address from TRUSTED_PROXY_HOP_COUNT, and trusting no proxy here keeps the two from disagreeing.
@@ -36,7 +36,10 @@ func NewEngine(log *slog.Logger) *gin.Engine {
 		panic(fmt.Sprintf("disable trusted proxies: %v", err))
 	}
 	r.HandleMethodNotAllowed = true
-	r.Use(requestID(), securityHeaders(), accessLog(log), recovery(log), reportServerErrors())
+	r.Use(requestID())
+	// outer middleware (the telemetry) wraps the panic recovery, so it sees a request that panicked with the 500 the recovery answered.
+	r.Use(outer...)
+	r.Use(securityHeaders(), accessLog(log), recovery(log), reportServerErrors())
 	return r
 }
 
