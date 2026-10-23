@@ -82,6 +82,11 @@ func RequestID(c *gin.Context) string {
 	return c.GetString(requestIDHeader)
 }
 
+// SetRequestID makes id the request id of a request served in-process on behalf of another one, as MCP runs the v3 operations its tools call, so problems and logs carry the outer request's id.
+func SetRequestID(c *gin.Context, id string) {
+	c.Set(requestIDHeader, id)
+}
+
 // requestID keeps an inbound X-Request-Id (a gateway may already have set one) or mints one, and echoes it back.
 func requestID() gin.HandlerFunc {
 	return func(c *gin.Context) {

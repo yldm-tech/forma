@@ -9,6 +9,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/integration"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -24,6 +25,7 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	reg := jobs.NewRegistry(log)
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
+	oauthserver.RegisterJobs(reg, pool, log)
 	survey.RegisterJobs(reg, cfg, db, emitter, log)
 	pipeline.RegisterJobs(reg, responsePipeline)
 	workflow.RegisterJobs(reg, workflowRunner, workflowReconciler)

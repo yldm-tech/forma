@@ -150,8 +150,18 @@ func New(cfg config.Config, log *slog.Logger) *Emitter {
 	return &Emitter{log: log, enabled: cfg.AuditLogEnabled, recordIP: cfg.AuditLogGetUserIP, now: time.Now}
 }
 
-// FromRequest fills the actor and client address from the request context: the session's user (as a "user" actor) and the address httpapi resolved. Fields already set are kept.
+type apiURLKey struct{}
+
+// WithAPIURL is ctx with the URL that events caused by the work under it record as their apiUrl, in place of the one the event names. MCP sets its resource URL, so a mutation a tool runs is attributed to /api/mcp, as forma2's runMcpMutation did, and not to the v3 route the tool calls in-process.
+func WithAPIURL(ctx context.Context, apiURL string) context.Context {
+	return context.WithValue(ctx, apiURLKey{}, apiURL)
+}
+
+// FromRequest fills the actor and client address from the request context: the session's user (as a "user" actor) and the address httpapi resolved. Fields already set are kept, except the apiUrl, which WithAPIURL overrides.
 func FromRequest(ctx context.Context, e Event) Event {
+	if apiURL, ok := ctx.Value(apiURLKey{}).(string); ok {
+		e.APIURL = apiURL
+	}
 	if e.ActorID == "" {
 		if a, ok := httpapi.ActorFrom(ctx); ok {
 			e.ActorID = a.UserID.String()

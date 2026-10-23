@@ -22,7 +22,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mcp"
 	"github.com/yldm-tech/forma/server/internal/notification"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -204,6 +206,15 @@ var workflowSet = wire.NewSet(
 	workflow.NewHandler,
 )
 
+// mcpSet is the MCP server at /api/mcp and the OAuth authorization server MCP clients sign in through, under /api/auth/oauth2 with its consent page's routes under /api/app.
+var mcpSet = wire.NewSet(
+	oauthserver.NewKeys,
+	oauthserver.NewHandler,
+	oauthserver.NewAppHandler,
+	oauthserver.NewTokenVerifier,
+	mcp.NewHandler,
+)
+
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
@@ -250,6 +261,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		webhookSet,
 		integrationSet,
 		workflowSet,
+		mcpSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
