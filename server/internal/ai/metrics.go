@@ -3,7 +3,6 @@ package ai
 import (
 	"context"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -15,7 +14,7 @@ type usageMeters struct {
 	generations     metric.Int64Counter
 }
 
-// Creating an instrument fails only on an invalid name or option, which these constants are not; a failure still yields a usable no-op instrument.
+// newUsageMeters builds the counters on mp; the service uses the global meter provider, which telemetry.Setup installs when an exporter is configured. Creating an instrument fails only on an invalid name or option, which these constants are not; a failure still yields a usable no-op instrument.
 func newUsageMeters(mp metric.MeterProvider) *usageMeters {
 	meter := mp.Meter("forma.ai")
 	m := &usageMeters{}
@@ -24,9 +23,6 @@ func newUsageMeters(mp metric.MeterProvider) *usageMeters {
 	m.generations, _ = meter.Int64Counter("forma_ai_generations_total", metric.WithDescription("AI generations that reached the provider and completed"))
 	return m
 }
-
-// usageInstruments record through the global meter provider, which telemetry.Setup installs when an exporter is configured.
-var usageInstruments = newUsageMeters(otel.GetMeterProvider())
 
 func (m *usageMeters) record(ctx context.Context, feature, model string, u Usage) {
 	attrs := []attribute.KeyValue{attribute.String("feature", feature), attribute.String("model", model)}

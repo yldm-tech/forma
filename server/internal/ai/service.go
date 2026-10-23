@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"go.opentelemetry.io/otel"
+
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 )
@@ -70,10 +72,11 @@ type Service struct {
 	authz  *authz.Authorizer
 	log    *slog.Logger
 	now    func() time.Time
+	usage  *usageMeters
 }
 
 func NewService(client *Client, repo *Repository, authorizer *authz.Authorizer, log *slog.Logger) *Service {
-	return &Service{client: client, repo: repo, authz: authorizer, log: log, now: time.Now}
+	return &Service{client: client, repo: repo, authz: authorizer, log: log, now: time.Now, usage: newUsageMeters(otel.GetMeterProvider())}
 }
 
 // Client is the instance's AI client.
@@ -198,7 +201,7 @@ func (s *Service) recordUsage(ctx context.Context, organizationID uuid.UUID, fea
 	}
 	s.log.InfoContext(ctx, "AI generation usage", "organizationId", organizationID.String(), "feature", name, "model", model,
 		"inputTokens", tokenCount(u.InputTokens), "outputTokens", tokenCount(u.OutputTokens), "reasoningTokens", tokenCount(u.ReasoningTokens))
-	usageInstruments.record(ctx, name, model, u)
+	s.usage.record(ctx, name, model, u)
 }
 
 // tokenCount logs a count the provider did not report as null rather than as a pointer.

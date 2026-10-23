@@ -297,11 +297,9 @@ func TestServiceAssertOnUnconfiguredInstance(t *testing.T) {
 
 // Usage is recorded once per completed generation, under the feature and the model it actually ran on; a translation runs on AI_MODEL_TRANSLATION.
 func TestServiceRecordsUsageAndRoutesFeatures(t *testing.T) {
-	reader := sdkmetric.NewManualReader()
-	previous := usageInstruments
-	usageInstruments = newUsageMeters(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
-	t.Cleanup(func() { usageInstruments = previous })
 	e := newServiceEnv(t, nil)
+	reader := sdkmetric.NewManualReader()
+	e.svc.usage = newUsageMeters(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
 	org, _ := e.organization(e.user(), true)
 	e.provider.answer = func(map[string]any) (int, string) { return http.StatusOK, `{"name": "Onboarding", "range": null}` }
 	if _, err := e.svc.GenerateObject(t.Context(), org, FeatureSurveyGeneration, testObjectRequest()); err != nil {

@@ -65,8 +65,9 @@ func TestSummarizeOptions(t *testing.T) {
 
 // TestLifecycleAndRunFailureEvents: the builder's mutations send forma2's lifecycle events with the definition's shape and never its content, and a run that fails on its last attempt sends one workflow_run_failed with a coarse failure class.
 func TestLifecycleAndRunFailureEvents(t *testing.T) {
-	rec := analyticstest.Start(t)
+	// After newEnv, which makes the test parallel: a client installed earlier would stay installed while the package's sequential tests run.
 	e := newEnv(t)
+	rec := analyticstest.Start(t)
 	f := e.fixture()
 	w := e.create(f.owner, f.ws, "Notify", definition(f.survey, "q1"))
 	e.ok(e.lifecycle(f.owner, w.ID, "enable"), http.StatusOK, nil)

@@ -511,9 +511,10 @@ func (u *usageReports) Send(context.Context) { u.sent.Add(1) }
 
 // TestResponseCreatedAnalytics: a created response sends survey_response_received at forma2's milestones (the first, every tenth to a hundred) with both groups, and asks for the usage update; a finished one does neither.
 func TestResponseCreatedAnalytics(t *testing.T) {
-	rec := analyticstest.Start(t)
 	reports := &usageReports{}
+	// After newEnv, which makes the test parallel: a client installed earlier would stay installed while the package's sequential tests run.
 	e := newEnv(t, Handoffs{UsageReport: reports})
+	rec := analyticstest.Start(t)
 	f := e.fixture()
 	created := func() {
 		t.Helper()
