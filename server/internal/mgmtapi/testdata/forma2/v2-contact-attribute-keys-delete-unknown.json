@@ -1,0 +1,36 @@
+{
+  "case": "v2-contact-attribute-keys-delete-unknown",
+  "description": "DELETE /api/v2/management/contact-attribute-keys/<id:contactAttributeKey:temporary_v2> with the `manage` key (manage on the workspace, organization access read and write). For an id that does not exist (or no longer exists).",
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v2/management/contact-attribute-keys/<id:contactAttributeKey:temporary_v2>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 404,
+        "message": "Not Found",
+        "details": [
+          {
+            "field": "contactAttributeKey",
+            "issue": "not found"
+          }
+        ]
+      }
+    }
+  }
+}

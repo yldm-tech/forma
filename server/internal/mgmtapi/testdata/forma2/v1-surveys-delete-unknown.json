@@ -1,0 +1,32 @@
+{
+  "case": "v1-surveys-delete-unknown",
+  "description": "DELETE /api/v1/management/surveys/<id:survey:temporary> with the `manage` key (manage on the workspace, organization access read and write). For an id that does not exist (or no longer exists).",
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/management/surveys/<id:survey:temporary>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "not_found",
+      "message": "Survey not found",
+      "details": {
+        "resource_id": "<id:survey:temporary>",
+        "resource_type": "Survey"
+      }
+    }
+  }
+}

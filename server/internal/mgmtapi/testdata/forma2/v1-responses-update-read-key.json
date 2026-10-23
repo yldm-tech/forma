@@ -1,0 +1,32 @@
+{
+  "case": "v1-responses-update-read-key",
+  "description": "PUT /api/v1/management/responses/<id:response:v1> with the `read` key (read on the workspace, organization access read only).",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/management/responses/<id:response:v1>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:read>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": true
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "unauthorized",
+      "message": "You are not authorized to access this resource",
+      "details": {}
+    }
+  }
+}

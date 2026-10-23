@@ -1,0 +1,27 @@
+{
+  "case": "v1-contact-attributes-list-other-workspace-key",
+  "description": "GET /api/v1/management/contact-attributes with the `other` key (manage on the second workspace only).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/contact-attributes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:other>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": []
+    }
+  }
+}

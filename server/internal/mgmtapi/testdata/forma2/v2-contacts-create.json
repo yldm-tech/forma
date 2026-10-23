@@ -1,0 +1,46 @@
+{
+  "case": "v2-contacts-create",
+  "description": "POST /api/v2/management/contacts with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/contacts",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "attributes": {
+        "email": "jane@example.com",
+        "firstName": "Jane",
+        "company": "Acme",
+        "userId": "contract-user-4"
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:contact:jane>",
+        "createdAt": "<timestamp>",
+        "workspaceId": "<id:workspace>",
+        "attributes": {
+          "email": "jane@example.com",
+          "firstName": "Jane",
+          "company": "Acme",
+          "userId": "contract-user-4"
+        }
+      }
+    }
+  }
+}

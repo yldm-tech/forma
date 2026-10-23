@@ -1,0 +1,40 @@
+{
+  "case": "well-known-oauth-protected-resource",
+  "description": "RFC 9728 protected resource metadata for the MCP endpoint, at the root well-known path.",
+  "request": {
+    "method": "GET",
+    "path": "/.well-known/oauth-protected-resource",
+    "query": {},
+    "headers": {
+      "accept": "application/json"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=15, stale-while-revalidate=15, stale-if-error=86400",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "resource": "<webapp-url>/api/mcp",
+      "authorization_servers": [
+        "<webapp-url>/api/auth"
+      ],
+      "scopes_supported": [
+        "surveys:read",
+        "surveys:write",
+        "workflows:read",
+        "workflows:write",
+        "offline_access"
+      ],
+      "bearer_methods_supported": [
+        "header"
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "case": "v1-action-classes-list-organization-only-key",
+  "description": "GET /api/v1/management/action-classes with the `orgonly` key (no workspace permissions, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/action-classes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:orgonly>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "not_authenticated",
+      "message": "Not authenticated",
+      "details": {
+        "x-Api-Key": "Header not provided or API Key invalid"
+      }
+    }
+  }
+}

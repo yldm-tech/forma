@@ -1,0 +1,76 @@
+{
+  "case": "v1-responses-create",
+  "description": "POST /api/v1/management/responses with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/management/responses",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "surveyId": "<id:survey:link>",
+      "finished": true,
+      "language": "default",
+      "data": {
+        "feedback": "Imported from the CRM",
+        "score": 4
+      },
+      "ttc": {
+        "feedback": 2000,
+        "score": 900
+      },
+      "meta": {
+        "source": "api",
+        "url": "https://customer.example/import"
+      },
+      "endingId": "clendscreenokaaaaaaaaaaa1"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:v1>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "surveyId": "<id:survey:link>",
+        "finished": true,
+        "endingId": "clendscreenokaaaaaaaaaaa1",
+        "data": {
+          "score": 4,
+          "feedback": "Imported from the CRM"
+        },
+        "meta": {
+          "url": "https://customer.example/import",
+          "source": "api"
+        },
+        "ttc": {
+          "score": 900,
+          "_total": 2900,
+          "feedback": 2000
+        },
+        "variables": {},
+        "contactAttributes": null,
+        "singleUseId": null,
+        "language": "default",
+        "displayId": null,
+        "contact": null,
+        "tags": []
+      }
+    }
+  }
+}

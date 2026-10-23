@@ -1,0 +1,65 @@
+{
+  "case": "v1-responses-update",
+  "description": "PUT /api/v1/management/responses/<id:response:v1-userid> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/management/responses/<id:response:v1-userid>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": true,
+      "data": {
+        "checkout_feedback": "Finished checkout"
+      },
+      "ttc": {
+        "checkout_feedback": 4100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:v1-userid>",
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "<timestamp>",
+        "surveyId": "<id:survey:app>",
+        "finished": true,
+        "endingId": null,
+        "data": {
+          "checkout_feedback": "Finished checkout"
+        },
+        "meta": {},
+        "ttc": {
+          "_total": 4100,
+          "checkout_feedback": 4100
+        },
+        "variables": {},
+        "contactAttributes": {
+          "plan": "free",
+          "email": "user2@example.com",
+          "userId": "contract-user-2"
+        },
+        "singleUseId": null,
+        "language": null,
+        "displayId": null,
+        "contact": {
+          "id": "<id:contact:user2>",
+          "userId": "contract-user-2"
+        },
+        "tags": []
+      }
+    }
+  }
+}

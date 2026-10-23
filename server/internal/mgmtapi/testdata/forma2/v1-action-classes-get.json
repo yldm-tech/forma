@@ -1,0 +1,37 @@
+{
+  "case": "v1-action-classes-get",
+  "description": "GET /api/v1/management/action-classes/<id:actionClass:checkout> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/action-classes/<id:actionClass:checkout>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:actionClass:checkout>",
+        "createdAt": "2026-10-22T23:28:39.933Z",
+        "updatedAt": "2026-10-22T23:28:39.933Z",
+        "name": "Checkout",
+        "description": "Checkout completed",
+        "type": "code",
+        "key": "checkout",
+        "noCodeConfig": null,
+        "workspaceId": "<id:workspace>"
+      }
+    }
+  }
+}

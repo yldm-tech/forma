@@ -1,0 +1,79 @@
+{
+  "case": "v1-storage-upload-legacy-environment-id",
+  "description": "POST /api/v1/management/storage with the `manage` key (manage on the workspace, organization access read and write). Addressing the workspace through its legacy environment id.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/management/storage",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "environmentId": "clegacyenvaaaaaaaaaaaaaa1",
+      "fileName": "brand guide.pdf",
+      "fileType": "application/pdf"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "signedUrl": "<s3-endpoint>/forma-uploads",
+        "presignedFields": {
+          "Content-Type": "application/pdf",
+          "success_action_status": "201",
+          "bucket": "forma-uploads",
+          "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+          "X-Amz-Credential": "contractfixtureaccess/<yyyymmdd>/us-east-1/s3/aws4_request",
+          "X-Amz-Date": "<s3:amz-date>",
+          "key": "<id:workspace>/public/brand guide--fid--<uuid>.pdf",
+          "Policy": "<s3:policy>",
+          "X-Amz-Signature": "<s3:signature>"
+        },
+        "fileUrl": "/storage/<id:workspace>/public/brand%20guide--fid--<uuid>.pdf"
+      }
+    }
+  },
+  "notes": {
+    "decodedPolicy": {
+      "expiration": "<timestamp>",
+      "conditions": [
+        [
+          "content-length-range",
+          0,
+          5242880
+        ],
+        {
+          "Content-Type": "application/pdf"
+        },
+        {
+          "success_action_status": "201"
+        },
+        {
+          "bucket": "forma-uploads"
+        },
+        {
+          "X-Amz-Algorithm": "AWS4-HMAC-SHA256"
+        },
+        {
+          "X-Amz-Credential": "contractfixtureaccess/<yyyymmdd>/us-east-1/s3/aws4_request"
+        },
+        {
+          "X-Amz-Date": "<s3:amz-date>"
+        },
+        {
+          "key": "<id:workspace>/public/brand guide--fid--<uuid>.pdf"
+        }
+      ]
+    }
+  }
+}

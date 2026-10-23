@@ -1,0 +1,38 @@
+{
+  "case": "v2-contact-links-segment-too-many-keys",
+  "description": "GET /api/v2/management/surveys/<id:survey:link>/contact-links/segments/<id:segment:pro> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/surveys/<id:survey:link>/contact-links/segments/<id:segment:pro>",
+    "query": {
+      "attributeKeys": "k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20"
+    },
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 422,
+        "message": "Unprocessable Entity",
+        "details": [
+          {
+            "field": "attributeKeys",
+            "issue": "You can have max 20 keys."
+          }
+        ]
+      }
+    }
+  }
+}

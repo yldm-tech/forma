@@ -1,0 +1,34 @@
+{
+  "case": "v1-responses-update-invalid-body",
+  "description": "PUT /api/v1/management/responses/<id:response:v1> with the `manage` key (manage on the workspace, organization access read and write). With a body that fails schema validation.",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/management/responses/<id:response:v1>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": "maybe"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "bad_request",
+      "message": "Fields are missing or incorrectly formatted",
+      "details": {
+        "finished": "Invalid input: expected boolean, received string"
+      }
+    }
+  }
+}

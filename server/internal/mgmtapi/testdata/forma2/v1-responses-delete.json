@@ -1,0 +1,46 @@
+{
+  "case": "v1-responses-delete",
+  "description": "DELETE /api/v1/management/responses/<id:response:temporary> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/management/responses/<id:response:temporary>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:temporary>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "surveyId": "<id:survey:link>",
+        "finished": false,
+        "endingId": null,
+        "data": {
+          "feedback": "to delete"
+        },
+        "meta": {},
+        "ttc": {},
+        "variables": {},
+        "contactAttributes": null,
+        "singleUseId": null,
+        "language": null,
+        "displayId": null,
+        "contact": null,
+        "tags": []
+      }
+    }
+  }
+}

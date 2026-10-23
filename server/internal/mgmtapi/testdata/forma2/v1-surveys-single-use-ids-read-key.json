@@ -1,0 +1,29 @@
+{
+  "case": "v1-surveys-single-use-ids-read-key",
+  "description": "GET /api/v1/management/surveys/<id:survey:singleUse>/singleUseIds with the `read` key (read on the workspace, organization access read only). Generating links requires write access (the POST action).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/surveys/<id:survey:singleUse>/singleUseIds",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:read>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "unauthorized",
+      "message": "You are not authorized to access this resource",
+      "details": {}
+    }
+  }
+}
