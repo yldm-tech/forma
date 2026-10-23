@@ -30,7 +30,7 @@ jobs:
       IMAGE: ghcr.io/yldm-tech/forma
       DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs
       RELEASE_SHA: ${{ github.sha }}
-      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, and only once the upgrade guide (apps/docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: deploy/docker/forma.sh and the self-hosting guides download deploy/docker/ from it, so it always describes the image `latest` names.
+      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, and only once the upgrade guide (apps/docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: deploy/docker/forma.sh and the self-hosting guides download deploy/docker/ from it, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so it always describes the image `latest` names.
       MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -150,15 +150,47 @@ jobs:
           fi
 
           # `stable` before `latest`: if either fails the step stops, and a `stable` ahead of `latest` only means the next `docker compose pull` is still to come, while a `latest` ahead of `stable` hands new images the previous release's deploy/docker/ files. A rerun repeats both, and both are idempotent.
-          # Not forced: main only moves forward, so an update that is not a fast-forward means something else moved stable, and it should fail loudly rather than be overwritten.
-          if gh api "repos/$GH_REPO/git/ref/heads/stable" >/dev/null 2>&1; then
-            update=(api -X PATCH "repos/$GH_REPO/git/refs/heads/stable" -f sha="$RELEASE_SHA" -F force=false)
-          else
-            update=(api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/heads/stable -f sha="$RELEASE_SHA")
-          fi
-          if ! GH_TOKEN="$STABLE_TOKEN" gh "${update[@]}" >/dev/null; then
-            echo "::error::Could not move stable to $RELEASE_SHA, so latest was left alone. If GitHub refused it for want of the workflows permission, set the RELEASE_STABLE_TOKEN secret and rerun."
+          # `stable` is not the release commit itself but a commit on top of it whose tree is the release's plus deploy/docker/'s files (the image's Dockerfile aside) under docker/ as well, the same blobs. forma2's one-click installer and its self-hosting guides, already on users' machines, download docker-compose.yml, forma.sh and authzed-postgres-bootstrap.sh from stable/docker/, which is where those files lived until the repository moved them to deploy/docker/; without the copy every one of those URLs would turn into a 404 at the cutover instead of handing over the new stack.
+          # The trees, the commit and the ref are all written with the stable token, since GitHub may refuse any of them for want of the workflows permission.
+          stable_failed() {
+            echo "::error::$1, so latest was left alone. If GitHub refused it for want of the workflows permission, set the RELEASE_STABLE_TOKEN secret and rerun."
             exit 1
+          }
+
+          if stable=$(gh api "repos/$GH_REPO/git/ref/heads/stable" --jq .object.sha 2>/dev/null); then
+            git cat-file -e "$stable^{commit}" 2>/dev/null || git fetch --quiet --no-tags origin "$stable"
+          else
+            stable=""
+          fi
+
+          tree_request=$(git ls-tree "$RELEASE_SHA" deploy/docker/ | jq -R -s --arg base "$(git rev-parse "$RELEASE_SHA^{tree}")" '{base_tree: $base, tree: [splits("\n") | select(. != "") | split("\t") as [$meta, $path] | ($meta | split(" ")) as [$mode, $type, $sha] | select($type == "blob" and $path != "deploy/docker/Dockerfile") | {path: ("docker/" + ($path | ltrimstr("deploy/docker/"))), mode: $mode, type: $type, sha: $sha}]}')
+          if ! jq -e '(["docker/docker-compose.yml", "docker/forma.sh", "docker/authzed-postgres-bootstrap.sh"] - [.tree[].path]) == []' <<<"$tree_request" >/dev/null; then
+            echo "::error::$RELEASE_SHA has no deploy/docker/docker-compose.yml, forma.sh or authzed-postgres-bootstrap.sh to publish under docker/ on stable, so latest was left alone."
+            exit 1
+          fi
+          tree=$(GH_TOKEN="$STABLE_TOKEN" gh api -X POST "repos/$GH_REPO/git/trees" --input - --jq .sha <<<"$tree_request") || stable_failed "Could not create the tree for stable"
+
+          if [ -n "$stable" ] && [ "$(git rev-parse "$stable^{tree}")" = "$tree" ]; then
+            echo "- \`stable\` already carries this release" >> "$GITHUB_STEP_SUMMARY"
+          else
+            # Not forced: main only moves forward, so the update must be a fast-forward. A stable on main is one; the commit this step made for the previous release is made one by being the new commit's second parent. Anything else means something else moved stable, and it should fail loudly rather than be overwritten.
+            parents=(-f "parents[]=$RELEASE_SHA")
+            if [ -n "$stable" ] && ! git merge-base --is-ancestor "$stable" "$RELEASE_SHA"; then
+              if git merge-base --is-ancestor "$stable^1" "$RELEASE_SHA" 2>/dev/null && git diff --quiet "$stable^1" "$stable" -- ':(exclude)docker'; then
+                parents+=(-f "parents[]=$stable")
+              else
+                echo "::error::stable ($stable) is neither on main nor a release commit this workflow made on top of main, so something else moved it; latest was left alone."
+                exit 1
+              fi
+            fi
+            commit=$(GH_TOKEN="$STABLE_TOKEN" gh api -X POST "repos/$GH_REPO/git/commits" -f message="Release v$VERSION: $RELEASE_SHA with deploy/docker/ also under docker/" -f tree="$tree" "${parents[@]}" --jq .sha) || stable_failed "Could not create the stable commit for $RELEASE_SHA"
+
+            if [ -n "$stable" ]; then
+              update=(api -X PATCH "repos/$GH_REPO/git/refs/heads/stable" -f sha="$commit" -F force=false)
+            else
+              update=(api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/heads/stable -f sha="$commit")
+            fi
+            GH_TOKEN="$STABLE_TOKEN" gh "${update[@]}" >/dev/null || stable_failed "Could not move stable to $commit ($RELEASE_SHA with deploy/docker/ also under docker/)"
           fi
           docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
           echo "- \`$IMAGE:latest\` and the \`stable\` branch now point here" >> "$GITHUB_STEP_SUMMARY"
