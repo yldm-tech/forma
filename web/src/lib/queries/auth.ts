@@ -27,6 +27,9 @@ export interface AuthOptions {
   turnstileSiteKey?: string;
   ssoProviders: string[];
   oidcDisplayName?: string;
+  termsUrl?: string;
+  privacyUrl?: string;
+  isFormaCloud: boolean;
 }
 
 export interface NotificationSurvey {
