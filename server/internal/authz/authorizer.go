@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,6 +30,7 @@ func NewAuthorizer(cfg config.Config, db *gorm.DB, client *Client) *Authorizer {
 
 // Can reports whether actor may perform action on resource. Within a request carrying a decision memo (WithDecisionMemo), the same question is evaluated once; denials are memoized like grants, failures never.
 func (a *Authorizer) Can(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
+	checkIssued(ctx)
 	if memo := memoFrom(ctx); memo != nil {
 		key := fmt.Sprintf("%s:%s|%s|%s:%s", actor.Type, actor.ID, action, resource.Type, resource.ID)
 		return memo.do(key, func() (bool, error) { return a.evaluate(ctx, actor, action, resource) })
@@ -49,11 +51,13 @@ func (a *Authorizer) Require(ctx context.Context, actor Actor, action Action, re
 }
 
 func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
+	started := time.Now()
 	allowed, err := a.check(ctx, actor, action, resource)
 	if err != nil {
-		return false, normalize(err, "authorization")
+		err = normalize(err, "authorization")
 	}
-	return allowed, nil
+	recordDecision(ctx, string(action), actor.Type, string(resource.Type), started, allowed, err)
+	return allowed && err == nil, err
 }
 
 func (a *Authorizer) check(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
@@ -105,11 +109,7 @@ func (a *Authorizer) permission(actor Actor, action Action, resourceType Resourc
 
 // LookupOrganizationIDs lists the organizations actor may read.
 func (a *Authorizer) LookupOrganizationIDs(ctx context.Context, actor Actor) ([]uuid.UUID, error) {
-	ids, err := a.lookup(ctx, actor, typeOrganization, "read")
-	if err != nil {
-		return nil, normalize(err, "authorization_list")
-	}
-	return ids, nil
+	return a.observedLookup(ctx, actor, typeOrganization, "read")
 }
 
 // LookupWorkspaceIDs lists the workspaces actor may read, or write when write is set.
@@ -118,9 +118,20 @@ func (a *Authorizer) LookupWorkspaceIDs(ctx context.Context, actor Actor, write 
 	if write {
 		permission = "write"
 	}
-	ids, err := a.lookup(ctx, actor, typeWorkspace, permission)
+	return a.observedLookup(ctx, actor, typeWorkspace, permission)
+}
+
+// observedLookup is a list operation counted and recorded as one decision, forma2's lookupAuthorizationResourceIds: an empty authorized set is the aggregate equivalent of a denial.
+func (a *Authorizer) observedLookup(ctx context.Context, actor Actor, resourceType, permission string) ([]uuid.UUID, error) {
+	checkIssued(ctx)
+	started := time.Now()
+	ids, err := a.lookup(ctx, actor, resourceType, permission)
 	if err != nil {
-		return nil, normalize(err, "authorization_list")
+		err = normalize(err, "authorization_list")
+	}
+	recordDecision(ctx, resourceType+"."+permission, actor.Type, resourceType, started, len(ids) > 0, err)
+	if err != nil {
+		return nil, err
 	}
 	return ids, nil
 }

@@ -198,6 +198,7 @@ func (s *Service) recordUsage(ctx context.Context, organizationID uuid.UUID, fea
 	}
 	s.log.InfoContext(ctx, "AI generation usage", "organizationId", organizationID.String(), "feature", name, "model", model,
 		"inputTokens", tokenCount(u.InputTokens), "outputTokens", tokenCount(u.OutputTokens), "reasoningTokens", tokenCount(u.ReasoningTokens))
+	usageInstruments.record(ctx, name, model, u)
 }
 
 // tokenCount logs a count the provider did not report as null rather than as a pointer.
