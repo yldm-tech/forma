@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // Workflow statuses, forma2's ZWorkflowStatus.

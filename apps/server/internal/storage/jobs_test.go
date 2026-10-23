@@ -10,11 +10,11 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/workspace"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
 // The cleanup a response delete or a survey reset enqueues is worked by `forma worker`: the files of the survey's workspace go, whichever of its ids they are stored under, and a URL naming anything else is left alone, since respondents write response data.

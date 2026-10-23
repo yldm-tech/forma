@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // profileChange is a validated edit of the signed-in user's own name and language; a nil field is left as it is.

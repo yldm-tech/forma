@@ -18,12 +18,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/server/internal/platform/database"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
-	"github.com/yldm-tech/forma/server/migrations"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/migrations"
 )
 
 // Options configure one run.

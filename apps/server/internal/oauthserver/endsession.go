@@ -15,9 +15,9 @@ import (
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // endSessionPath is RP-initiated logout (OpenID Connect RP-Initiated Logout 1.0), forma2's Better Auth /oauth2/end-session, which the discovery document advertises.

@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // DefaultLocale is the fallback for an unknown locale and for a key a locale lacks.

@@ -14,8 +14,8 @@ import (
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // WebhookPath is where Stripe posts events, the endpoint registered in Stripe's dashboard for forma2.

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 func testKey(fill byte) config.EncryptionKey {

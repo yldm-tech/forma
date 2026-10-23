@@ -10,10 +10,10 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // sessionUpdateAge is Better Auth's updateAge as forma2 configured it: a session is extended once it is this old relative to a full lifetime. forma2 set it to one day, equal to the default SESSION_MAX_AGE, so with defaults a session is never extended before it ends; a longer SESSION_MAX_AGE makes it slide.

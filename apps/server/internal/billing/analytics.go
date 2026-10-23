@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 func isPaidPlan(plan string) bool { return plan == PlanPro || plan == PlanScale }

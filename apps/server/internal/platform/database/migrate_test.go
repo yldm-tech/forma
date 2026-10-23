@@ -15,7 +15,7 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/yldm-tech/forma/server/migrations"
+	"github.com/yldm-tech/forma/apps/server/migrations"
 )
 
 // startPostgres runs a throwaway PostgreSQL 18, the minimum version the schema supports (uuidv7()).

@@ -10,7 +10,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 )
 
 // latestReleaseURL is the GitHub release of this repository that release.yml publishes.

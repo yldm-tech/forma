@@ -14,8 +14,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/telemetry"
 )
 
 // Open connects and verifies the connection with a ping, so a wrong DATABASE_URL fails at startup rather than on the first request. The returned cleanup closes the pool.

@@ -17,9 +17,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/platform/valkey/valkeytest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
 )
 
 // licenseServer is the usage update endpoint, answering with status.

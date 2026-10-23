@@ -10,9 +10,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/logger"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
 )
 
 // Unknown stands in for a value the event could not be attributed with, as forma2's UNKNOWN_DATA did.

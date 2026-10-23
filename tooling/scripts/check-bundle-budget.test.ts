@@ -4,7 +4,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { BUDGETS, evaluateBudgets, formatResult, measureGzipBytes } from "./check-bundle-budget.mjs";
 
 const budget = {
-  path: "web/public/js/surveys.umd.cjs",
+  path: "apps/web/public/js/surveys.umd.cjs",
   maxGzipBytes: 300_000,
   measuredBytes: 286_993,
   builtBy: "pnpm --filter @forma/surveys build",
@@ -52,13 +52,13 @@ describe("formatResult", () => {
 
 describe("measureGzipBytes", () => {
   test("returns null for a file that does not exist", () => {
-    expect(measureGzipBytes("web/public/js/does-not-exist.cjs")).toBeNull();
+    expect(measureGzipBytes("apps/web/public/js/does-not-exist.cjs")).toBeNull();
   });
 
   test("measures gzip at the pinned level, not the raw size", () => {
     // package.json is committed, so this asserts the compression actually runs without depending on a
     // build artifact that may not be present in the checkout running the suite.
-    const source = readFileSync(new URL("../package.json", import.meta.url));
+    const source = readFileSync(new URL("../../package.json", import.meta.url));
     expect(measureGzipBytes("package.json")).toBe(gzipSync(source, { level: 9 }).length);
   });
 });

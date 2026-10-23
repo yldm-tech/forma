@@ -7,12 +7,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // TwoFactor is TOTP two-factor authentication with backup codes: enrolment and removal from the account settings (forma2's modules/two-factor-auth), and the second step of a password sign-in (Better Auth's twoFactor plugin as forma2 configured it).

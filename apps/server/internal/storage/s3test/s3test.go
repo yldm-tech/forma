@@ -17,7 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Image is the RustFS release the tests and docker-compose.dev.yml run, forma2's.

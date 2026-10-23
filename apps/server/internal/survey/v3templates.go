@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // TemplateCreateInput is forma2's ZV3TrustedTemplateCreateBody.

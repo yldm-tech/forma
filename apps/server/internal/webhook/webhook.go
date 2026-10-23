@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // Sources of a webhook, forma2's WebhookSource: who created it. Delivery ignores it.

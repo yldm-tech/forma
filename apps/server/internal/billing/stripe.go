@@ -8,7 +8,7 @@ import (
 
 	"github.com/stripe/stripe-go/v84"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Stripe is the instance's Stripe account: the API client, pinned to forma2's STRIPE_API_VERSION (2026-02-25.clover, the version stripe-go v84 is generated for), its price catalog, and the secrets of the webhook and of Stripe.js. The client is nil when STRIPE_SECRET_KEY is unset.

@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/actionclass"
-	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/actionclass"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
 // parseActionClassInput is ZActionClassInput (packages/types/action-classes.ts), a union on type: anything but "code" or "noCode" fails on type alone; otherwise the branch's fields are checked in its declared order.

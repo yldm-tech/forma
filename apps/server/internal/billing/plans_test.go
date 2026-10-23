@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // proSubscription is an active Pro monthly subscription whose period runs from 1739923200 to 1742515200, forma2's plan-change fixture.

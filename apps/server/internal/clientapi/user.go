@@ -13,9 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
-	"github.com/yldm-tech/forma/server/internal/langcode"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/langcode"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 const (

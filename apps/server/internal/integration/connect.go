@@ -9,10 +9,10 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // CodeNotConfigured is an integration whose OAuth app this instance has no credentials for; the message names the missing one, as forma2's did.

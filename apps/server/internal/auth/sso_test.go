@@ -15,10 +15,10 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // withProvider enables one provider with the fake's client credentials. The provider is pointed at the fake once the env exists (see ssoEnv).

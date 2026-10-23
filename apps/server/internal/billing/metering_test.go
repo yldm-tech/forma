@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // forma2's metering tests: one event per response or workflow run, identified by it and timestamped with its creation; nothing without a customer or off Forma Cloud; a Stripe failure logged and swallowed.

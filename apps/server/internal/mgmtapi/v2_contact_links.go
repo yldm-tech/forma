@@ -10,8 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/contact/contactsurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // maxLinkAttributeKeys is how many attribute keys a segment's links may carry.

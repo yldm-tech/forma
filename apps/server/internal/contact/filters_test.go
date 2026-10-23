@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Ported from forma2's segment-schema.test.ts and the ZSegmentFilter refinements in packages/types/segment.ts.

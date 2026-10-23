@@ -11,7 +11,7 @@ import (
 	"cloud.google.com/go/auth/credentials"
 	"google.golang.org/genai"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // vertex is forma2's google provider, the AI SDK's createVertex: Gemini on Vertex AI in AI_GOOGLE_CLOUD_PROJECT and AI_GOOGLE_CLOUD_LOCATION, authenticated with AI_GOOGLE_CLOUD_CREDENTIALS_JSON, else the credentials file at AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS, else Application Default Credentials.

@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Ported from forma2's prisma-query.test.ts, survey-interaction.test.ts and survey-interaction.parity.test.ts, evaluated by PostgreSQL instead of compared as Prisma objects.

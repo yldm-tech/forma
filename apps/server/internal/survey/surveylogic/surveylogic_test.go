@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // testdata/parity.json is forma2's logic parity corpus (packages/types/surveys/logic-parity-fixtures.ts), the table both of forma2's engines were held to, exported as JSON. Every case runs here against this engine with the same expectation.

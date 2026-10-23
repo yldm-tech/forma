@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Availability is whether a surface may offer AI, and if not why, forma2's TSurveyAIAvailability and checkAITranslationAvailableAction's answer. It drives the SPA's AI unavailable alert.

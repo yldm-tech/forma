@@ -24,15 +24,15 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/authz/authztest"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/authz/authztest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
 func TestMain(m *testing.M) {

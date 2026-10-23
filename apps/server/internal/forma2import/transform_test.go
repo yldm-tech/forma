@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 func TestRewriteNotificationSettings(t *testing.T) {

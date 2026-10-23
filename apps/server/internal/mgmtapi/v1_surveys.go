@@ -8,12 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
-	"github.com/yldm-tech/forma/server/internal/storage"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // v1SurveyObject is forma2's v1 survey answer: the survey with derived questions, projectOverwrites, its stored relative storage URLs made absolute, and environmentId.

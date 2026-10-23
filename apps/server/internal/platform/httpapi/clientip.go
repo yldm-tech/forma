@@ -15,7 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // UntrustedClientIP is the shared identity of every request whose address could not be established. All such requests share one rate-limit bucket, which is the price of never believing an address the proxy chain did not vouch for.

@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
 // goldenCase is a dataset of testdata/forma2-summary: a survey, its responses newest first, the display count and quotas, and what forma2's getSurveySummaryMeta, getSurveySummaryDropOff and getElementSummary computed for them.

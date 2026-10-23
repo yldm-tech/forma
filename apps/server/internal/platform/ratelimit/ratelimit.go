@@ -15,9 +15,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Rule is one limit: at most Limit units per Window for each identifier, counted in Namespace. Window must be a whole number of seconds; windows are aligned to the Unix epoch, so every replica agrees on where one ends.

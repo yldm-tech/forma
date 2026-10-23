@@ -10,11 +10,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/database"
-	"github.com/yldm-tech/forma/server/internal/platform/logger"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // CLIUsage documents `forma import-forma2`.

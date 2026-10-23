@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/langcode"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/langcode"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // The template catalog is forma2's apps/web/lib/templates.ts (customSurveyTemplate followed by templates(t)), rendered once to JSON with every translation replaced by a {{namespace.key}} marker and every generated id by a tplidNNNNNN placeholder. Rendering a template resolves the markers in the requested locale and gives the placeholders fresh ids, consistently, so logic that names a block or element keeps pointing at it.

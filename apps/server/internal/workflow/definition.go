@@ -12,10 +12,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/userinput"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // SchemaVersion is WORKFLOW_SCHEMA_VERSION, the newest definition schema this server understands.

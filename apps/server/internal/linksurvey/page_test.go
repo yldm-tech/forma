@@ -14,10 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // forma2's renderSurvey gates and metadata 404s: a survey the page cannot serve is the not-found page.

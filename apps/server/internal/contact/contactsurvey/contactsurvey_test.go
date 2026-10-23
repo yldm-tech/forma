@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 func contactPath(id uuid.UUID, rest string) string { return "/api/app/contacts/" + id.String() + rest }

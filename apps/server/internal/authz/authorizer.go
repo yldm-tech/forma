@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Authorizer answers authorization questions. PostgreSQL is consulted first, as the tenant boundary: the resource must exist (a survey or response is resolved to its workspace), a user must be active, and an API key must belong to the resource's organization. Only then does SpiceDB decide, behind the projection freshness guard. Failures are returned as *Error and never turned into a denial.

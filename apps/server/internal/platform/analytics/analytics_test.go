@@ -3,8 +3,8 @@ package analytics_test
 import (
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 )
 
 func TestNothingIsSentWithoutAClient(t *testing.T) {

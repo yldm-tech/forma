@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 )
 
 // Repository reads and writes the rows the management APIs serve as forma2's raw Prisma rows: contacts, attribute values and keys, workspaces, teams, memberships and workspace grants. Every query names the rows it is scoped to; the handlers authorize first.

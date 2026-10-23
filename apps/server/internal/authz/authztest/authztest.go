@@ -14,9 +14,9 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/authz/spicedbtest"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/authz/spicedbtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Env is authorization for one test.
@@ -50,11 +50,11 @@ func (e *Env) Deliver(t testing.TB) {
 	}
 }
 
-// schema reads authzed/schema.zed, the canonical schema the authz package embeds a copy of.
+// schema reads authzed/schema.zed, the canonical schema the authz package embeds.
 func schema(t testing.TB) string {
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
-	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "..", "..", "authzed", "schema.zed"))
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "..", "authzed", "schema.zed"))
 	if err != nil {
 		t.Fatalf("authztest: read schema: %v", err)
 	}

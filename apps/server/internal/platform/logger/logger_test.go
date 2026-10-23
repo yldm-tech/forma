@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 func decode(t *testing.T, buf *bytes.Buffer) []map[string]any {

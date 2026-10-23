@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // AppHandler serves the SPA's side of the authorization server under /api/app: the consent page at /account/authorize, which forma2 rendered on the server and answered through Better Auth's /oauth2/consent, and the profile page's connected MCP clients, forma2's getOAuthConsents and deleteOAuthConsent.

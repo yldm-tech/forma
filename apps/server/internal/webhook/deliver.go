@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 )
 
 // payload is the body of a delivery, forma2's JSON.stringify({webhookId, event, data}).

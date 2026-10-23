@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // The surveys of forma2's v1 management API (apps/web/app/api/v1/management/surveys): its survey object, which still carries the legacy `questions` beside `blocks`, and its create, update and delete. The API module authorizes the API key before it calls these, with v1's statuses; they re-check through authz and record the audit events themselves only where noted.

@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // InteractionRefresh is forma2's TSurveyInteractionRefresh, the per-survey gate of the SDK's segment refresh after an interaction: whether a display of the survey, a response to it, or finishing that response can change some live survey's segment membership.

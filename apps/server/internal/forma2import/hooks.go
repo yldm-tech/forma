@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/integration"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/integration"
 )
 
 // identityProviders maps forma2's Account.provider (and User.identityProvider) onto user_identities.provider.

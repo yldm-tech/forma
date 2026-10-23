@@ -18,7 +18,7 @@ import (
 	"github.com/pquerna/otp/hotp"
 	"github.com/pquerna/otp/totp"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // TOTP and backup codes as forma2 issued them (apps/web/modules/two-factor-auth/lib/two-factor-auth.ts, and the Better Auth twoFactor plugin options in modules/auth/lib/auth.ts): RFC 6238 with HMAC-SHA1, six digits and a 30-second step under the issuer "Forma"; a 20-byte key, shown as 32 base32 characters; ten backup codes of ten lowercase hex characters each.

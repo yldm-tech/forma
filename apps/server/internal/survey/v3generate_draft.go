@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // generateDraftSchema is forma2's ZGeneratedSurveyDraftForAI exported the way the AI SDK sends it (zod's toJSONSchema, draft 7, input, inlined, every object closed): the structured output every provider is asked for.

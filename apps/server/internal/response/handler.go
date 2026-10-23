@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Handler serves the response views' routes under /api/app: listing, counting and reading a survey's responses, deleting one, and tagging. The client API's routes belong to the client API module, which drives Service's collection steps.

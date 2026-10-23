@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // The writes and reads of forma2's /api/v2/management/webhooks. The management API module validates the input and authorizes the API key with v2's rules before it calls these; they authorize nothing.

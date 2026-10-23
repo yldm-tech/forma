@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/linksurvey"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/response/answers"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
 )
 
 // responseInput is ZResponseInput (v1) or ZResponseInputV2 as validated: v1 names the respondent by userId, v2 by contactId. createdAt and updatedAt are validated but never stored.

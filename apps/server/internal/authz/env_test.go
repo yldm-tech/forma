@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/yldm-tech/forma/server/internal/authz/spicedbtest"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/authz/spicedbtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 )
 
 // testEnv is a fresh migrated database and an emptied SpiceDB with the canonical schema.

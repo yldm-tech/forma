@@ -12,7 +12,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
-	"github.com/yldm-tech/forma/server/migrations"
+	"github.com/yldm-tech/forma/apps/server/migrations"
 )
 
 // NewMigrator opens a dedicated connection for schema changes, separate from the request pool. The returned cleanup closes it.

@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
-	"github.com/yldm-tech/forma/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
 
 // maxBulkContacts is ZContactBulkUploadRequest's ceiling on one upload.

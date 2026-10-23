@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/yldm-tech/forma/server/internal/forma2import"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 func withOverwrite(o forma2import.Options) forma2import.Options {

@@ -3,6 +3,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "extends": "../packages/config-typescript/js-library.json",
+  "extends": "@forma/config-typescript/js-library.json",
   "include": ["**/*.ts"]
 }

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // tokens is forma2's PreviewEmailStyleTokens: every color, size and radius the preview reads, resolved from the styling over forma2's STYLE_DEFAULTS.

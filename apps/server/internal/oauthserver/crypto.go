@@ -7,7 +7,7 @@ import (
 
 	"github.com/zitadel/oidc/v3/pkg/op"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // tokenFormat is op's Crypto, the one place op turns an id into what the client receives. op asks it for two things: an authorization code for a request id, and a bearer access token for "<token id>:<subject>".

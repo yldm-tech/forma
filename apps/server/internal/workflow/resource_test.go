@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 var marker = regexp.MustCompile(`^\[redacted:[0-9a-f]{12}\]$`)

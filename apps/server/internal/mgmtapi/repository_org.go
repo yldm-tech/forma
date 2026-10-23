@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 )
 
 // ---- teams ----

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // The routes of forma2's public domain (apps/web/lib/middleware/route-config.ts): the survey pages and the client API live only there, health and public storage on both domains.

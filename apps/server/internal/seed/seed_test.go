@@ -13,10 +13,10 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
-	"github.com/yldm-tech/forma/server/internal/response/answers"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
 )
 
 var discard = slog.New(slog.NewTextHandler(io.Discard, nil))

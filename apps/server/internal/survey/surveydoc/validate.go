@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
 )
 
 // Document is a survey document as stored JSON, one value per column. A nil or JSON-null optional part is absent.

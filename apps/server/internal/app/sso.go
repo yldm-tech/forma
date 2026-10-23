@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // newSSO is single sign-on as `forma serve` runs it: like forma2 at start-up, it loads the SAML connection from the saml-connection directory in the working directory before serving.

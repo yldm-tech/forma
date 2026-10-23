@@ -12,14 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/oauthserver"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // queryCredentialParams are query parameters that would carry a credential in the URL, where proxies and logs keep it; forma2 refused them case-insensitively.

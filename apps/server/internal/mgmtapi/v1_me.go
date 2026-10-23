@@ -11,12 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
 // rawJSON writes a body as forma2's bare Response.json did: no envelope, no Cache-Control.

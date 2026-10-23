@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // LevelAudit is the level audit events are written at. It sits above every other level, so no LOG_LEVEL but audit's own filters audit events out, and it is labelled "audit" so a log pipeline can route them apart from application logs, as forma2's dedicated pino level did.

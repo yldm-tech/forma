@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 const (

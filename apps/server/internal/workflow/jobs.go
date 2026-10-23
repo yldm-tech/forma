@@ -12,7 +12,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // RunArgs is forma2's workflow-run.process job (TWorkflowRunJobData): one queued run to execute. Its uniqueness by run id is BullMQ's deterministic jobId, so dispatching a run twice queues it once.

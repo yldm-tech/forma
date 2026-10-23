@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 )
 
 // tokenExpiryBuffer is how long before its expiry a stored access token is refreshed, forma2's TOKEN_EXPIRY_BUFFER_MS.

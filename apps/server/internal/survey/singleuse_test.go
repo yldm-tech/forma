@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // Vectors made with forma2's algorithms on Node (lib/crypto.ts symmetricEncrypt, lib/utils/single-use-surveys.ts generateSurveySingleUseSignature) under the hex key of 32 bytes of 7.

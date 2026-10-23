@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/ai"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // generatedDraftJSON is a model answer of forma2's ForAI schema: an open text, an NPS and a choice question in one block, then a CES block.

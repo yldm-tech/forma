@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // Num is a number of the summary as forma2 computed it in JavaScript: NaN, which a bucket opened by an out-of-range answer holds, is serialized as JSON.stringify writes it, null.

@@ -19,11 +19,11 @@ import (
 
 	"sync/atomic"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/webhook"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 )
 
 func TestJobKey(t *testing.T) {

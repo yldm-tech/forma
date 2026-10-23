@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Sort orders of the survey list, forma2's ZSurveyFilters sortBy.

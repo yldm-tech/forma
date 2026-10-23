@@ -5,8 +5,8 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
-	"github.com/yldm-tech/forma/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
 
 // bodyPolicy is forma2's send-time sanitize-html allowlist for an email body an author wrote: paragraphs, inline emphasis, links, line breaks and lists, the dir and class attributes everywhere, a link's href, rel and target, an ordered list's start and an item's value, and only http and https links. Disallowed tags are dropped with their text kept, except script and style, whose text goes too. Relative links are kept, as sanitize-html kept them.

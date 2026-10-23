@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // The cases of forma2's put-response-handler.test.ts, V1R/[responseId]/lib/response.test.ts and lib/response/service.test.ts (updateResponse), against a real database.

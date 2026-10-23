@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/survey"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // The document head forma2's Next.js metadata produced for the survey pages: the root layout's title template and description, the link layout's viewport, and the page's own metadata.

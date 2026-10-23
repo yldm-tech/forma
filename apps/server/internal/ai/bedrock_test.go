@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/smithy-go/eventstream"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 const bedrockModel = "anthropic.claude-3-5-haiku-20241022-v1:0"

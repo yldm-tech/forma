@@ -13,7 +13,7 @@ import (
 
 	"github.com/stripe/stripe-go/v84"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // decodePrices reads catalog fixtures the way the client decodes Stripe's JSON.

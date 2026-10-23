@@ -11,8 +11,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Error codes, forma2's AI_ERROR_CODES. The first three say AI is unavailable to the organization, the last that its provider is rate limiting it.

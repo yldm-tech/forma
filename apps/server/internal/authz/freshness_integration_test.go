@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 func TestAnOverdueRevocationStopsEveryCheckUntilItIsDelivered(t *testing.T) {

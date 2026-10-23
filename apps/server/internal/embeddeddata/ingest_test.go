@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // The cases of forma2's packages/types/embedded-data-ingest.test.ts. JSON carries no Date instances, NaN or Infinity, so the cases built on those are left out: nothing at this boundary can receive them.

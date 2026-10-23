@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v84"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // Trial lengths, forma2's DEFAULT_PRO_TRIAL_DAYS. forma2 shortened it to seven days for a PostHog experiment's test variant; without the experiment every trial is the default.

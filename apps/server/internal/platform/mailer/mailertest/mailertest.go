@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 )
 
 // Transport records every message it is given. Set Err to make deliveries fail.

@@ -12,9 +12,9 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 func TestJavaScriptNumberRules(t *testing.T) {

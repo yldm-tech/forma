@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/survey"
-	"github.com/yldm-tech/forma/server/internal/workflow"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/workflow"
 )
 
 // The operations engine is built during wiring, before the HTTP server's engine; gin must already be in release mode then, or its debug route listing lands in the JSON log stream. Not parallel: gin's mode and writer are process-wide.

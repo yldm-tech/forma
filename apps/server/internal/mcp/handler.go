@@ -17,15 +17,15 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/oauthserver"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
-	"github.com/yldm-tech/forma/server/internal/survey"
-	"github.com/yldm-tech/forma/server/internal/workflow"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/workflow"
 )
 
 // The server's identity, forma2's MCP_SERVER_NAME and MCP_SERVER_VERSION.

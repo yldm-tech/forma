@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Segment membership is forma2's segmentFilterToPrismaQuery (apps/web/modules/contacts/segments/lib/filter/prisma-query.ts) as SQL: the filter tree becomes a condition on a contact row `c`, evaluated by PostgreSQL. The client API asks it which of a workspace's segments a contact is in.

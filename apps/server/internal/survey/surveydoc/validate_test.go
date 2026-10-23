@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
 )
 
 func newValidator(t *testing.T) *Validator {

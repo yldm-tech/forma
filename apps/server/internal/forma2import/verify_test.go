@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/forma2import"
+	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
 )
 
 // Verification reads every sampled row again from forma2, by forma2's own columns and apart from the mapping's query, and computes what each column of this schema must hold on its own: a mapping mistake fails the run instead of being checked against itself.

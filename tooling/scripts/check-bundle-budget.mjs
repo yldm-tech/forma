@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fails when a browser bundle every respondent downloads grows past its committed gzip budget.
 //
-// Two files are in scope, and only two: `surveys.umd.cjs` (the survey runtime) and `forma.umd.cjs` (the embed SDK). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys and packages/js-core copy them into `web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so. The SPA's own chunks are out of scope: their names are Rolldown's, so a budget on them would break on a bundler upgrade rather than on a regression.
+// Two files are in scope, and only two: `surveys.umd.cjs` (the survey runtime) and `forma.umd.cjs` (the embed SDK). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys and packages/js-core copy them into `apps/web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so. The SPA's own chunks are out of scope: their names are Rolldown's, so a budget on them would break on a bundler upgrade rather than on a regression.
 //
 // Runs in CI after the build (the TypeScript workspace job in `.github/workflows/pr.yml`), not as part of `pnpm check`: the artifacts exist only after `pnpm build`, and a check on a clean checkout would report both as missing.
 //
@@ -11,7 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 // Pinned rather than left at zlib's default (6), so a budget means the same number on every machine and across Node upgrades. It is not a claim about what a CDN serves — Cloudflare and friends recompress with their own settings — only a stable yardstick for "did this grow".
 export const GZIP_LEVEL = 9;
@@ -27,13 +27,13 @@ export const GZIP_LEVEL = 9;
  */
 export const BUDGETS = [
   {
-    path: "web/public/js/surveys.umd.cjs",
+    path: "apps/web/public/js/surveys.umd.cjs",
     maxGzipBytes: 296_000,
     measuredBytes: 283_287, // 2026-10-23
     builtBy: "pnpm --filter @forma/surveys build",
   },
   {
-    path: "web/public/js/forma.umd.cjs",
+    path: "apps/web/public/js/forma.umd.cjs",
     maxGzipBytes: 11_600,
     measuredBytes: 10_474, // 2026-10-23
     builtBy: "pnpm --filter @forma/js-core build",

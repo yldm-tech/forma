@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Handler serves the billing routes of /api/app: the billing settings page, the confirmation page after Checkout, the onboarding plan step, and the summary the layouts' banners read. Each route is one of forma2's billing server actions.

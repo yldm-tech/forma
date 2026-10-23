@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // fieldLanguageMarker is the editor-only delimiter forma2's label rules put before a language list; v3 reasons drop it.

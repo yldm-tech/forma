@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
 // forma2 serialized every Date with toISOString: UTC with exactly three fractional digits. The rows the management APIs return carry time.Time values that encoding/json would print with up to nine digits, so every answer passes through jsView.

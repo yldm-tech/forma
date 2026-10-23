@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // The catalog cases of forma2's packages/types/embedded-data-resolver.test.ts.

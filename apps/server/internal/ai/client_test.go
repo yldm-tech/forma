@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // testClient is a client for cfg whose providers send to the given endpoints and never retry, so a refused call fails at once.

@@ -14,10 +14,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/yldm-tech/forma/server/internal/forma2import"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/database"
-	"github.com/yldm-tech/forma/server/internal/platform/logger"
+	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
 )
 
 // startupMigrationTimeout bounds the migrations `forma start` runs before serving, the timeout forma2's entrypoint gave them.

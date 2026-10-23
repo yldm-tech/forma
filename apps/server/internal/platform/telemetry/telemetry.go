@@ -27,8 +27,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 
-	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/buildinfo"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // forma2's exporter settings: the OTLP metric reader exports every minute, and the batch span processor's queue, batch size, delay and export timeout.

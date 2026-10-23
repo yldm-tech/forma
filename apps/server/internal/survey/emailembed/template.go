@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/responsemail"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // previewLinkTarget is forma2's PREVIEW_LINK_TARGET.

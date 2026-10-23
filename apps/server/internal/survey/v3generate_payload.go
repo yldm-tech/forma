@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/ai"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // forma2's generation call: 45 seconds, and an output budget that leaves room for a reasoning model's thinking before the JSON.

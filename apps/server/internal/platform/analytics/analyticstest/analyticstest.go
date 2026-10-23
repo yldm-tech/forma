@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 // Message is one message as PostHog received it: a captured event, a $identify or a $groupidentify.

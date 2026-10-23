@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // notionVersion is the Notion API version forma2 spoke.

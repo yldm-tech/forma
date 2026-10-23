@@ -11,7 +11,7 @@ import (
 
 	gomail "github.com/wneessen/go-mail"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // timeouts bound one delivery. Without them a relay that accepts the connection and then stalls holds the request, or a worker slot, indefinitely.

@@ -3,7 +3,7 @@
 // scoping logic stays identical across both CSS bundles that ship together in
 // the injected <style>. See packages/vite-plugins/postcss-scope-fbjs.cjs and
 // https://github.com/yldm-tech/js/issues/46.
-const { scopeFbjsPlugins } = require("../vite-plugins/postcss-scope-fbjs.cjs");
+const { scopeFbjsPlugins } = require("../../tooling/vite-plugins/postcss-scope-fbjs.cjs");
 
 // Matches a CSS numeric value followed by "rem" — e.g. "1rem", "1.5rem", "16rem".
 // Single character-class + single quantifier: no nested quantifiers, no backtracking risk.

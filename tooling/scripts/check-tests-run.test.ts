@@ -57,8 +57,8 @@ describe("findOrphans", () => {
     ]);
   });
 
-  test("leaves the Playwright specs under e2e/ alone", () => {
-    expect(findOrphans(["e2e/survey.spec.ts", "e2e/accessibility.spec.ts"], dirs)).toEqual([]);
+  test("leaves the Playwright specs under apps/e2e/ alone", () => {
+    expect(findOrphans(["apps/e2e/survey.spec.ts", "apps/e2e/accessibility.spec.ts"], dirs)).toEqual([]);
   });
 
   test("does not exempt a spec that merely mentions e2e deeper in its path", () => {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // forma2's v1 API responses (apps/web/lib/api/response.ts): a body is {"data": ...} or {"code", "message", "details"}, sent as application/json and, unless the route says otherwise, with Cache-Control "private, no-store".

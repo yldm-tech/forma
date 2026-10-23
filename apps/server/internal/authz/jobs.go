@@ -9,7 +9,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // Schedules, forma2's recurring registrations.

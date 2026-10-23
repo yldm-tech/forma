@@ -9,7 +9,7 @@ import (
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // azureOpenAI is forma2's azure provider, the AI SDK's createAzure: the Responses API at <base>/v1/responses?api-version=<version>, where the base is AI_AZURE_BASE_URL (ending at /openai) or https://<resource>.openai.azure.com/openai, authenticated with the api-key header. AI_MODEL is the deployment name.

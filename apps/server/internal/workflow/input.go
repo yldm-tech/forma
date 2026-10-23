@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // maxBodyBytes is the v3 API's request body limit, which the workflow routes enforced themselves.

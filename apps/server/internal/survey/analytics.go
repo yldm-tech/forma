@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 // The survey module's product events, forma2's (apps/web/app/api/v3/surveys, apps/web/modules/survey/editor). They describe a survey's shape (counts, types, ids), never its text.

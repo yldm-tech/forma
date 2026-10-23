@@ -3,14 +3,13 @@ package authz
 import (
 	"context"
 	"crypto/sha256"
-	_ "embed"
 	"encoding/hex"
+
+	"github.com/yldm-tech/forma/apps/server/authzed"
 )
 
-// canonicalSchema is authzed/schema.zed, embedded because go:embed cannot reach outside the Go module. TestEmbeddedSchemaMatchesRepository keeps the copy identical.
-//
-//go:embed schema.zed
-var canonicalSchema string
+// canonicalSchema is authzed/schema.zed, the schema's only copy, embedded by the authzed package.
+var canonicalSchema = authzed.Schema
 
 // Schema check statuses.
 const (

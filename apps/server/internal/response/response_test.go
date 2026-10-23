@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // The client API's answers keep forma2's shapes (the recorded v1/v2 responses and displays fixtures): a quota is reported only when one is full, its ending only when it has one.

@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/tag"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/tag"
 )
 
 // Unique constraints of responses the create path maps to forma2's errors.

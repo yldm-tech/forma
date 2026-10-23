@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // pendingSignInMaxAttempts is Better Auth's per-challenge budget: after five refused codes the pending sign-in is spent and the password must be entered again.

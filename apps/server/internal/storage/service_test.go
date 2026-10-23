@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 var fixedID = uuid.MustParse("6f1a3c1e-8a63-4b8e-9a35-5d3c1d1f2a10")

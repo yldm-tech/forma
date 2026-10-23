@@ -11,10 +11,10 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/database"
-	"github.com/yldm-tech/forma/server/internal/platform/logger"
-	"github.com/yldm-tech/forma/server/internal/seed"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
+	"github.com/yldm-tech/forma/apps/server/internal/seed"
 )
 
 // defaultFixturesPath is where `forma seed --contract` writes the contract tests' id map when run from the repository root, the directory docs/api-v3-reference/contract-tests/hooks.py reads it from.

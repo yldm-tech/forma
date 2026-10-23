@@ -3,9 +3,9 @@ package contact
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/apiv3"
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/apiv3"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // V3Handler serves /api/v3/contact-attribute-keys (docs/api-v3-reference/src/paths/api_v3_contact-attribute-keys.yml).

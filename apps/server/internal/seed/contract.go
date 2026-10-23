@@ -3,7 +3,7 @@ package seed
 import (
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // Fixtures is the id map docs/api-v3-reference/contract-tests/hooks.py reads. Read is keyed by parameter name and applies to every operation without a more specific entry; Operations is keyed by operationId and wins over it. An identifier in neither keeps the value Schemathesis generated and gets the documented 403.

@@ -18,15 +18,15 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/followup"
-	"github.com/yldm-tech/forma/server/internal/notification"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/responsemail"
-	"github.com/yldm-tech/forma/server/internal/webhook"
+	"github.com/yldm-tech/forma/apps/server/internal/followup"
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 )
 
 // jobTimeout bounds one attempt. River's default minute is too short for a survey whose members' notification emails go out five at a time, each with SMTP timeouts of their own.

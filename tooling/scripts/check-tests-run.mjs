@@ -4,7 +4,7 @@
 //
 // `vp run -r test` only invokes `test` in workspaces that define it, so a spec outside every workspace is not skipped loudly — it never runs, and reads as coverage to anyone grepping for one. forma2's `scripts/setup-dev-env.test.ts` sat that way for as long as it existed, which is why `scripts/` is a workspace.
 //
-// One kind of file is expected to be absent from a workspace's own `test` run and is not a failure: the Playwright specs under `e2e/`, which `playwright.config.ts` runs against a running server (`.github/workflows/e2e.yml`). Go tests are `_test.go` files and never match.
+// One kind of file is expected to be absent from a workspace's own `test` run and is not a failure: the Playwright specs under `apps/e2e/`, which `apps/e2e/playwright.config.ts` runs against a running server (`.github/workflows/e2e.yml`). Go tests are `_test.go` files and never match.
 //
 // The check is structural: it asks whether a file lives under a workspace that has a `test` script, not whether that workspace's include globs match it. Asking the stronger question means running `vitest list` in every workspace, a tax on every check run to catch a case that does not currently exist. The blind spot is a test placed inside a workspace but excluded by its globs; `pnpm test` reporting a suddenly smaller file count is what would surface that.
 import { execFileSync } from "node:child_process";
@@ -12,14 +12,17 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
 const TEST_SUFFIXES = [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"];
 const isTestFile = (path) => TEST_SUFFIXES.some((suffix) => path.endsWith(suffix));
 
 /** Absent from a workspace's `test` run by design rather than by accident. */
 const RUN_ELSEWHERE = [
-  { matches: (path) => path.startsWith("e2e/"), why: "the Playwright suite (playwright.config.ts)" },
+  {
+    matches: (path) => path.startsWith("apps/e2e/"),
+    why: "the Playwright suite (apps/e2e/playwright.config.ts)",
+  },
 ];
 
 /** Workspace directories, expanded from the same globs pnpm resolves. */

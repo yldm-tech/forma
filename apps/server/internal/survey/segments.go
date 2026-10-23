@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // Bounds on a segment filter tree, forma2's MAX_SEGMENT_FILTERS_PER_TREE, MAX_SEGMENT_FILTER_DEPTH and MAX_SEGMENT_SURVEY_INTERACTION_IDS_PER_TREE.

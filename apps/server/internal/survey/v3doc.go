@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // The v3 survey document is the public form of a survey: translatable text keyed by locale codes instead of the internal "default" key, strict about unknown fields, with app-survey distribution and targeting as their own objects. This file is forma2's apps/web/app/api/v3/surveys/schemas.ts: the strictness pre-check, the locale normalization and the document schema.

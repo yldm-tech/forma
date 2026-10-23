@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // The client API's input schemas are forma2's zod schemas (packages/types), checked here in their declared key order so that a failure reports the same paths and zod 4 messages forma2 did. transformErrorToDetails keyed each issue by its path joined with "."; a later issue on the same path replaced the earlier message.

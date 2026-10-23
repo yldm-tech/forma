@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // The checks on the file URLs a response's answers carry (forma2's validateClientFileUploads, apps/web/modules/storage/utils.ts) and on its "Other" texts, shared by the client API and the management APIs.

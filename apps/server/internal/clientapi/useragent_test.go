@@ -3,7 +3,7 @@ package clientapi
 import (
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
 // What ua-parser-js 2.0.10's rules give for the common browsers, read from its regexes.

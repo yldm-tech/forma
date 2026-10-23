@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 )
 
 // forma2's getAttributionPropertiesFromCookies: whitelisted, non-blank string values, trimmed and capped at 256 characters; anything malformed is no attribution.

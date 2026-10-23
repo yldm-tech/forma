@@ -13,8 +13,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 // DefinitionSummary is forma2's shape summary of a definition for product analytics (packages/workflows/src/analytics/definition-summary.ts). It never names a node type of its own: each node reports its concrete type, so a new trigger or step kind shows up in analytics the day someone uses it. A malformed definition summarizes to zeros.

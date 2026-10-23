@@ -10,9 +10,9 @@ import (
 	"github.com/riverqueue/river/rivertype"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 )
 
 func insertID(t *testing.T, db *gorm.DB, query string, args ...any) string {

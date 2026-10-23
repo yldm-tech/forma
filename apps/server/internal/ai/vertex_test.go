@@ -18,7 +18,7 @@ import (
 
 	"google.golang.org/genai"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // vertexServer is Google's OAuth token endpoint and Vertex AI's generateContent, so the service account credentials are exchanged for a token as they would be against Google.

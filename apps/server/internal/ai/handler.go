@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Handler serves the admin SPA's AI routes under /api/app: whether AI is available to an organization, a workspace's survey list and a survey's translations, the editor's AI translation, and a survey summary's example responses.

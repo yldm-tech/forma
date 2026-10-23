@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // CSRFHeader must be present, with any value, on every state-changing /api/app request. A cross-site form cannot set a custom header, and a cross-site fetch that sets one needs a CORS preflight the server never grants, so the header alone proves the request came from script on an allowed origin. The SPA's API client always sends it.

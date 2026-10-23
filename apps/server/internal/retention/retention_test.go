@@ -13,7 +13,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 )
 
 type env struct {

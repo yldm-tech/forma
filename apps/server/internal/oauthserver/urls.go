@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Scopes is everything the authorization server grants, forma2's MCP_OAUTH_SCOPES. Every registered client may request all of them.

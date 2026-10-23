@@ -9,10 +9,10 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/yldm-tech/forma/server/internal/pipeline"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/pipeline"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
 
 // Deliverer writes finished responses to the workspace's integrations, forma2's handleIntegrations. It runs in `forma worker` as the response pipeline's integration hand-off, on behalf of no caller.

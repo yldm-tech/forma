@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // personPrefix marks a mapping of a contact attribute, forma2's NOTION_PERSON_ATTRIBUTE_PREFIX.

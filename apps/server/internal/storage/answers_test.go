@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // forma2's validateClientFileUploads (apps/web/modules/storage/utils.test.ts): a file upload answer lists files uploaded for exactly that workspace, survey and element, on the app's own origins; a management caller may also replay files stored under a prefix its workspace owns from before uploads were scoped.

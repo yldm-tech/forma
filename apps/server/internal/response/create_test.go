@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // The cases of forma2's client create tests: V1R/lib/response.test.ts, V2R/lib/response.test.ts, V1R/route.test.ts and V2R/route.test.ts, CR/response-error tests, and anonymize.test.ts, against a real database.

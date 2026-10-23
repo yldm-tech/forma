@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // kind says how a column read from forma2 is written. Verification does not go by it: it reads each sampled row again from forma2 and checks every written column against what it computes on its own (expect.go).

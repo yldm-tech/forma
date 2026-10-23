@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // recallToken is forma2's RECALL_TOKEN_PATTERN.

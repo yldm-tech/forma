@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // Prefix marks a current-format key. forma2 named the format v2; everything else is a legacy key.

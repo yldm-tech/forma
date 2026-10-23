@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v84"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Meter events, forma2's metering: Stripe aggregates them per customer and billing period against the plan's meters and bills what exceeds the included volume. There is no cap; nothing is refused for being over a limit.

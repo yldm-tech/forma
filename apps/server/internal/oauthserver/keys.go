@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // keyCacheTTL is how long the keys are cached before the table is read again. A key another instance added becomes known sooner: a token signed with an unknown key id reloads them, at most once per keyRefreshInterval, so forged key ids cannot turn every request into a query.

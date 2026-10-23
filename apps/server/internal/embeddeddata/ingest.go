@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // This file is the write side of Embedded Data, forma2's packages/types/embedded-data-ingest.ts (ENG-1845): which keys of an incoming response.data are stored, under which key and in which form. Every server boundary that writes response data runs it, because the renderer's own filtering is never trusted.

@@ -3,7 +3,7 @@ package linksurvey
 import (
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 func lang(code string, alias string, isDefault, enabled bool) survey.SurveyLanguage {

@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v84/webhook"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // post sends a webhook delivery: the payload signed with secret now, or with the given header when it is set.

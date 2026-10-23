@@ -3,8 +3,8 @@ package linksurvey
 import (
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/langcode"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/langcode"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // defaultLanguage is forma2's "default": the survey's own default language.

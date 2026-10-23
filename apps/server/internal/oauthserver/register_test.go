@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
 // Registration follows forma2's rules: every client gets every scope and the MCP resource, whatever it asked for; a loopback redirect without application_type makes a native client; a web client may not use loopback and a native one may not use plain http elsewhere.

@@ -18,7 +18,7 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // Lifetimes, forma2's mcp-oauth-provider-options.ts: access tokens live 15 minutes (the write scopes' step-up expiry is the same 15 minutes), refresh tokens 30 days from their last use. An authorization request, and the code issued for it, lives 10 minutes.

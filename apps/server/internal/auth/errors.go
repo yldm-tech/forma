@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Stable codes the SPA maps to localized messages. The sign-up and reset codes are forma2's (packages/types/errors.ts); the sign-in codes are Better Auth's error codes, lowercased.

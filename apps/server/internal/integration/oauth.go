@@ -14,7 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
-	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 )
 
 // stateTTL is how long an OAuth flow may take from authorize to callback, forma2's INTEGRATION_OAUTH_STATE_TTL_MS.

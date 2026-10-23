@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/langcode"
+	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 )
 
 // defaultV3Language is forma2's DEFAULT_V3_SURVEY_LANGUAGE: a survey without languages is in en-US.

@@ -7,8 +7,8 @@ import (
 
 	"github.com/getsentry/sentry-go"
 
-	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/buildinfo"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // sentryFlushTimeout bounds how long shutdown waits for queued error reports.

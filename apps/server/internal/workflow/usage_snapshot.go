@@ -12,10 +12,10 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/billing"
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/billing"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // forma2's snapshot events and window (apps/web/modules/workflows/lib/analytics).

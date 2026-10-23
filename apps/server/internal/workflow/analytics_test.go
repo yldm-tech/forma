@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 )
 
 func TestSummarizeDefinition(t *testing.T) {

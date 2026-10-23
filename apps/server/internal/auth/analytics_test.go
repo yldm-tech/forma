@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 )
 
 // TestSignUpAndSignInEvents: a password sign-up identifies the person by id and email domain, reports the organization it created and the sign-up itself, and a later sign-in reports how many organizations the user is in. No event carries the address or the name.

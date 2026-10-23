@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 // The marketing attribution the sign-in and sign-up pages record, forma2's modules/auth/lib/attribution.ts: the SPA writes the first-touch fb_attribution cookie from the page's whitelisted query parameters, and the server reads it into user_signed_up and user_signed_in, then clears it so it cannot bleed onto a later user's events on a shared browser.

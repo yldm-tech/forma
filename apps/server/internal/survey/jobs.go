@@ -10,9 +10,9 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // Archive retention, forma2's ARCHIVED_SURVEY_RETENTION_DAYS and purge batching.

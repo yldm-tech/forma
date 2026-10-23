@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // unreachableClient fails any call that gets past validation with authzed_unavailable, so a validation failure is recognisable by its code and zero attempts.

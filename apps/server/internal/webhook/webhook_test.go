@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 )
 
 // The signature is forma2's generateStandardWebhookSignature: v1, and the base64 HMAC-SHA256 of id.timestamp.body under the decoded secret; a Standard Webhooks receiver verifies it.

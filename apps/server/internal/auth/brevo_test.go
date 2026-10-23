@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // brevoJobs lists the Brevo syncs queued so far, as "<kind> <email>", or "<kind> <old email> -> <email>" for an address change.

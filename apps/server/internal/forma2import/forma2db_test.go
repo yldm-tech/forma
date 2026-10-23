@@ -20,8 +20,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/chacha20poly1305"
 
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // The secrets forma2 ran with in these tests: a 32-character ENCRYPTION_KEY (forma2 took it as Latin-1 bytes) and the NEXTAUTH_SECRET Better Auth fell back to.

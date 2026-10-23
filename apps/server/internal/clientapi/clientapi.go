@@ -16,13 +16,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/valkey"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/storage"
-	"github.com/yldm-tech/forma/server/internal/workspace"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
+	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
 // The CORS headers next.config.mjs set on every /api/(v1|v2)/client response. Next.js never overwrote a header that was already set, and these were set first, so they masked the narrower ones forma2's handlers added: every client API response carries exactly these. Vary is what Next.js added to every route handler's response.

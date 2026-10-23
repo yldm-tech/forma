@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // cleanupInterval is how often expired sessions and tokens are deleted. Nothing depends on the deletion: every read checks expiry itself, so this only keeps the tables small.

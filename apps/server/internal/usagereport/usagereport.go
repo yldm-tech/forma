@@ -20,9 +20,9 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/buildinfo"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // forma2's timing and Valkey keys.

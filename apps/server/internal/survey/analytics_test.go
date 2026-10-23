@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 )
 
 // TestEditorSaveEvents ports forma2's captureSurveyEditDiffEvents cases: what a save added is reported once per addition, the first added language makes a single-language survey multilingual, and only a survey that is not a draft reports survey_updated, with survey_published when it just went live.

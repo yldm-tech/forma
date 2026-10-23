@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // ResponseForUpdate is the lookup of forma2's client response update (putResponseHandler): the response by the id in the path, 404 Response naming it when there is none; its survey, 404 Survey when that is gone; and 404 Response again when the survey belongs to another workspace than the route's, so a response id cannot be probed across workspaces. An id that is neither a UUID nor a cuid is 400.

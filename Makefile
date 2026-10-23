@@ -1,8 +1,8 @@
 # Orchestrates the Go server and the TypeScript workspace. Every target runs from the repo root.
-# The TypeScript side runs through Vite+ (`vp`, installed by `pnpm install`); Go comes from server/go.mod.
+# The TypeScript side runs through Vite+ (`vp`, installed by `pnpm install`); Go comes from apps/server/go.mod.
 
-SERVER := server
-WEB_DIST := web/dist
+SERVER := apps/server
+WEB_DIST := apps/web/dist
 EMBED_DIR := $(SERVER)/internal/webui/dist
 BIN := bin/forma
 
@@ -11,7 +11,7 @@ BIN := bin/forma
 help:
 	@echo "deps-up      start local dependencies (docker compose), write the SpiceDB schema and create the storage bucket"
 	@echo "deps-down    stop local dependencies"
-	@echo "authz-schema write authzed/schema.zed into SpiceDB (reads .env, else .env.example)"
+	@echo "authz-schema write apps/server/authzed/schema.zed into SpiceDB (reads .env, else .env.example)"
 	@echo "migrate      apply pending database and job queue migrations (reads .env)"
 	@echo "seed         write the demo organization, users, surveys and responses into the .env database (forma seed)"
 	@echo "seed-clear   remove what an earlier seed wrote, then seed again"
@@ -39,7 +39,7 @@ AUTHZ_SCHEMA_ATTEMPTS ?= 10
 AUTHZ_SCHEMA_RETRY_DELAY ?= 3
 
 authz-schema:
-	cd $(SERVER) && go build -o ../$(BIN) ./cmd/forma
+	cd $(SERVER) && go build -o ../../$(BIN) ./cmd/forma
 	set -a && . ./$$([ -f .env ] && echo .env || echo .env.example) && set +a && \
 	for attempt in $$(seq 1 $(AUTHZ_SCHEMA_ATTEMPTS)); do \
 		if ./$(BIN) authz schema apply; then exit 0; fi; \
@@ -79,7 +79,7 @@ embed:
 	cp -R $(WEB_DIST)/. $(EMBED_DIR)/
 
 server:
-	cd $(SERVER) && CGO_ENABLED=0 go build -trimpath -o ../$(BIN) ./cmd/forma
+	cd $(SERVER) && CGO_ENABLED=0 go build -trimpath -o ../../$(BIN) ./cmd/forma
 
 generate:
 	cd $(SERVER) && go tool wire ./internal/app
@@ -89,10 +89,10 @@ lint: web
 	pnpm exec vp check
 
 lint-migrations:
-	BASE_REF=$$(git merge-base HEAD origin/main) bash scripts/lint-migrations.sh
+	BASE_REF=$$(git merge-base HEAD origin/main) bash tooling/scripts/lint-migrations.sh
 
 e2e:
-	pnpm exec playwright test
+	pnpm exec vp run --filter @forma/e2e e2e
 
 test: web
 	cd $(SERVER) && go test -race ./...

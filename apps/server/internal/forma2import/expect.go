@@ -15,9 +15,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/integration"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/integration"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // The sample check does not trust the mapping in tables.go. It reads a sampled row's forma2 row again, whole (to_jsonb of the row, every stored column under forma2's own name), in a query of its own, and works out from it what every written column must hold:

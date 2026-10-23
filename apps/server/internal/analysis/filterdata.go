@@ -8,11 +8,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/survey"
-	"github.com/yldm-tech/forma/server/internal/tag"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/tag"
 )
 
 // filterSampleSize is forma2's RESPONSE_FILTER_SAMPLE_SIZE: the filter's options come from the newest responses only.

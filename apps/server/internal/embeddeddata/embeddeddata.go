@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // Sources of a stored field. "reserved" fields are a static catalog in code and never stored.

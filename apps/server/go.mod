@@ -1,4 +1,4 @@
-module github.com/yldm-tech/forma/server
+module github.com/yldm-tech/forma/apps/server
 
 go 1.26.0
 

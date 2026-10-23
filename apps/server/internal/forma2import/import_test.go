@@ -31,29 +31,29 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/authz/spicedbtest"
-	"github.com/yldm-tech/forma/server/internal/billing"
-	"github.com/yldm-tech/forma/server/internal/brevo"
-	"github.com/yldm-tech/forma/server/internal/forma2import"
-	"github.com/yldm-tech/forma/server/internal/integration"
-	"github.com/yldm-tech/forma/server/internal/invite"
-	"github.com/yldm-tech/forma/server/internal/linksurvey"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/mailer"
-	"github.com/yldm-tech/forma/server/internal/platform/mailer/mailertest"
-	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
-	"github.com/yldm-tech/forma/server/internal/platform/valkey/valkeytest"
-	"github.com/yldm-tech/forma/server/internal/survey"
-	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/authz/spicedbtest"
+	"github.com/yldm-tech/forma/apps/server/internal/billing"
+	"github.com/yldm-tech/forma/apps/server/internal/brevo"
+	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
+	"github.com/yldm-tech/forma/apps/server/internal/integration"
+	"github.com/yldm-tech/forma/apps/server/internal/invite"
+	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer/mailertest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
 func TestMain(m *testing.M) {
@@ -231,7 +231,7 @@ func reportText(r *forma2import.Report) string {
 func readSchema(t *testing.T) string {
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
-	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "..", "authzed", "schema.zed"))
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "authzed", "schema.zed"))
 	if err != nil {
 		t.Fatal(err)
 	}

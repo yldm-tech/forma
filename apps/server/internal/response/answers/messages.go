@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/langcode"
+	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 )
 
 // messagesJSON is the errors namespace of every packages/surveys/locales bundle, reduced to the keys the checks use; TestMessagesMatchSurveyLocales keeps it identical.

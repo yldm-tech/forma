@@ -14,8 +14,8 @@ import (
 	"github.com/stripe/stripe-go/v84"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // The read-through sync of a stale snapshot, forma2's BILLING_SYNC_* constants: a snapshot older than syncStaleAfter is refreshed by the one caller that takes the lock, which expires by itself after syncLockTTL, and that caller waits at most syncDeadline before serving what it has.

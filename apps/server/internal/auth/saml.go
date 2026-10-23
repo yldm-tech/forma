@@ -17,8 +17,8 @@ import (
 	"github.com/crewjam/saml"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // SAML single sign-on replaces forma2's BoxyHQ SAML Jackson bridge (apps/web/modules/auth/saml and the "saml" generic OAuth provider). forma2 sent the browser through Jackson's OAuth facade; here the AuthnRequest, the assertion consumer service and the sign-in are one flow:

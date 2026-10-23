@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/apikey"
-	"github.com/yldm-tech/forma/server/internal/apiv3"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/apiv3"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Ported from forma2's api/v3/contact-attribute-keys/lib/operations.test.ts and lib/auth.ts, against docs/api-v3-reference/src/paths/api_v3_contact-attribute-keys.yml.

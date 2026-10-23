@@ -15,7 +15,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. One change: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept the rewrite's UUIDs as well as the cuid2 ids forma2 issued, which resolve to the rows migrated from them.

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
 // WriteStorageError is forma2's getErrorResponseFromStorageError, with its CORS headers: a missing file is 404, invalid input 400 with the file name, a storage configuration error 500 with the code clients read to tell an unconfigured instance from a failed upload, and anything else 500. fileName is the name the request asked for. An unknown failure is logged here.

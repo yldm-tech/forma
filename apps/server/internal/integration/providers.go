@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // requestTimeout bounds one request to a provider. forma2 set none, so a provider that stopped answering held the pipeline job until its own timeout.

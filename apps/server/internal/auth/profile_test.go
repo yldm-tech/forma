@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 )
 
 func (b *browser) patch(path string, body any) response {

@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
-	"github.com/yldm-tech/forma/server/internal/tag"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/tag"
 )
 
 // The writes of the management APIs (forma2's /api/v1/management/responses and /api/v2/management/responses): an API caller replays or edits responses, so its meta, timestamps and contact are taken as sent instead of being captured from a respondent's request. The API module validates the input and authorizes the API key first; these authorize nothing.

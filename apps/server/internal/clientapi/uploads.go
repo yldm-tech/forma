@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/storage"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
 )
 
 // fileUploadElement is a survey's element as the upload rules read it.

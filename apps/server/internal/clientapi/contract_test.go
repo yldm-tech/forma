@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // The contract test replays the exchanges recorded against forma2 (testdata/forma2, see its README) in an order their scenarios need, against data equivalent to what the recorder created, and requires the same status, the recorded headers and a body equal to the recorded one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again; ids are the rewrite's UUIDs where forma2 had cuids.

@@ -20,11 +20,11 @@ import (
 	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/response"
-	"github.com/yldm-tech/forma/server/internal/storage"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
-	"github.com/yldm-tech/forma/server/internal/workspace"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
 // Limits of an attachment export, forma2's: above MaxAttachmentFiles the export is refused (narrowing the filter is the remedy), and the archive stops before crossing MaxAttachmentBytes, saying so in _TRUNCATED.txt. Object sizes are not in the database, so the byte cap is enforced while streaming.

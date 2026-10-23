@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 )
 
 // The product events of the identity module, forma2's (apps/web/modules/auth, sso, account). They carry the email domain but never the address or the name: the person is identified by their user id alone.

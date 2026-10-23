@@ -15,8 +15,8 @@ import (
 	"github.com/riverqueue/river/rivermigrate"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/telemetry"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/telemetry"
 )
 
 // Retry and retention follow forma2's BullMQ defaults: three attempts with exponential backoff from five seconds, completed jobs kept for a day and failed ones for a week.

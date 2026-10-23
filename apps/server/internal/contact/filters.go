@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
 // A segment's filters are forma2's TBaseFilters (packages/types/segment.ts): a list of nodes, each a filter or a nested group, joined by "and"/"or" connectors.

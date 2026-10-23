@@ -13,7 +13,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	jose "github.com/go-jose/go-jose/v4"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // TokenVerifier checks access tokens for /api/mcp, the resource server half of forma2's oauthProviderResourceClient.verifyBearerToken: the signature against the authorization server's keys, the at+jwt type, the issuer, the expiry, and an audience naming the MCP resource. It never reads the token tables, so a revoked token stays valid until it expires.

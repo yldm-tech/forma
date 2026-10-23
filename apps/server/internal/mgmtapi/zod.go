@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
 // The management APIs' input schemas are forma2's zod schemas, checked here in their declared key order so that a failure reports the paths and zod 4 messages forma2 did. v1 keyed each issue by its path joined with "." (a later issue on a path replacing an earlier one, transformErrorToDetails); v2 lists every issue in order with the custom ones' params as meta (formatZodError).

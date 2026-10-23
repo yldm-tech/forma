@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/platform/valkey"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 )
 
 // sharedForma2Keys lists every "fb:" key literal in the server, by file under internal/, with why sharing the name with forma2 is safe. forma2 and this server share one Valkey during the cutover and after a rollback, so a key that keeps forma2's name must keep forma2's meaning and value format, or be built from ids forma2 never uses. Any other key goes under valkey.KeyPrefix.

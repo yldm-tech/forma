@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 )
 
 // Repository reads and writes contacts, attribute keys, attribute values and segments. Every query names the workspace, contact or key it is scoped to.

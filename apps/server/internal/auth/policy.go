@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
 
 // Input rules from forma2's packages/types/user.ts (ZUserName, ZUserEmail, ZUserPassword, ZUserLocale). Lengths are counted in UTF-16 code units, as zod counts them.

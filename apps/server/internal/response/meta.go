@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // ClientMeta is the meta a client sends with a new response (ZResponseMeta, validated by the client API). Only the keys a browser can observe are read from it: the auto-captured page context, plus source, url and action. A client's country, userAgent or ipAddress is never kept; the server derives those from the request.

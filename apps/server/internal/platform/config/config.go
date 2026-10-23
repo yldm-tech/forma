@@ -24,7 +24,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 type Config struct {

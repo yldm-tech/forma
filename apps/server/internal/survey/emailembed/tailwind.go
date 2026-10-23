@@ -3,7 +3,7 @@ package emailembed
 import (
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // staticClasses are the Tailwind utilities forma2's template uses that do not depend on the styling, as react-email's Tailwind component (Tailwind 4.3) inlined them.

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
 // A response's meta records the respondent's browser, operating system and device type as forma2 read them with ua-parser-js 2.0.10 (new UAParser(userAgent), no client hints). These are its rules for the browsers, systems and devices that make up nearly all survey traffic, in its order of precedence and with its names; a user agent outside them records no browser or system, and a device without a recognised type is a desktop.

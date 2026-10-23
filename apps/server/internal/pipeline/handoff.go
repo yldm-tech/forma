@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
 // Event is one response pipeline event as its consumers see it: the job's payload, the key that identifies the job across its attempts, and what the pipeline loaded for it.

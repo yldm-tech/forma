@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // This file is the read side of Embedded Data, forma2's packages/types/embedded-data-resolver.ts: the catalog of reserved fields every response carries, the coercion every stored value is read back through, and the projections logic, quotas and filters see. Values are JSON as encoding/json decodes it, with jsvalue.Undefined for an absent key.

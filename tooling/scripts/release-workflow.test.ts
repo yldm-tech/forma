@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 
-const WORKFLOW = new URL("../.github/workflows/release.yml", import.meta.url);
+const WORKFLOW = new URL("../../.github/workflows/release.yml", import.meta.url);
 const STEP = "Publish the release and move stable and latest";
 
 /** The `run: |` block of the named step, dedented, as the runner hands it to bash. */

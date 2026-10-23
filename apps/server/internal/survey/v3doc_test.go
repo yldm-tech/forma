@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
-	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 func mustDecode(t *testing.T, raw string) any {

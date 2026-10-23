@@ -9,8 +9,8 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
 
 // SetupArgs is the billing.setup-organization job: forma2's ensureCloudStripeSetupForOrganization, which it ran fire-and-forget after every organization it created. As a job it is retried when Stripe fails.

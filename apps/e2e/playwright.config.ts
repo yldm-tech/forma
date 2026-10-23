@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: ".",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   // One retry on CI, with a trace of it, so a failure that only happens once is still visible in the report.

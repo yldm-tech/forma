@@ -16,7 +16,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Code is forma2's StorageErrorCode. Clients read the two configuration codes from storage_error_code to tell an unconfigured instance from a failed upload.

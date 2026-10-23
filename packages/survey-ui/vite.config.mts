@@ -2,7 +2,7 @@
 import { defineConfig, lazyPlugins } from "vite-plus";
 import dts from "vite-plugin-dts";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { rewriteNodeNextDtsSpecifiers } from "../vite-plugins/node-next-dts";
+import { rewriteNodeNextDtsSpecifiers } from "../../tooling/vite-plugins/node-next-dts";
 
 // NOTE: Tailwind is compiled via PostCSS (postcss.config.mjs), NOT the
 // @tailwindcss/vite plugin. The #fbjs-scoping plugins must run after Tailwind

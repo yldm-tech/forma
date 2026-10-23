@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/ai"
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
 // This file is forma2's POST /api/internal/surveys/generate/stream: the create-with-AI dialog's generation, streamed as NDJSON so questions appear while the model writes them. Every guard runs before the body opens, because once a 200 has begun there is no way back to an error response; only failures during the generation become in-band error events.

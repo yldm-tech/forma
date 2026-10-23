@@ -8,10 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/v1api"
-	"github.com/yldm-tech/forma/server/internal/webhook"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
+	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 )
 
 // v2ListWebhooks is forma2's GET /api/v2/management/webhooks: the common filter over the webhooks of the workspaces the key may read, never with their secrets. surveyIds is declared an array, which a query string never is, so naming it always fails.

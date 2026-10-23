@@ -47,8 +47,8 @@ export function copyCompiledAssetsPlugin(options: CopyCompiledAssetsPluginOption
 
     async writeBundle() {
       try {
-        // web/public is copied into the SPA build, which the Go binary embeds and serves at /js/*.
-        const outputDir = path.resolve(config.root, "../../web/public/js");
+        // apps/web/public is copied into the SPA build, which the Go binary embeds and serves at /js/*.
+        const outputDir = path.resolve(config.root, "../../apps/web/public/js");
         const distDir = path.resolve(config.root, options.distDir);
 
         // Create the output directory if it doesn't exist

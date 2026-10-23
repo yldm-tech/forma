@@ -12,8 +12,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/embeddeddata"
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // cacheTTL is how long a link survey may serve a workspace's branding, or a welcome card its response count, after it changed: forma2's WORKSPACE_CONTEXT_CACHE_TTL_MS and RESPONSE_COUNT_CACHE_TTL_MS. Nothing invalidates either key, so the bound is the whole guarantee.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 // The cases of forma2's V1D/lib/display.test.ts, V2D/lib/display.test.ts and V1D/[displayId]/response/lib/response.test.ts, against a real database.

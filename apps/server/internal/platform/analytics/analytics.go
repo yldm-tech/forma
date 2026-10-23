@@ -10,7 +10,7 @@ import (
 
 	"github.com/posthog/posthog-go"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Host is forma2's PostHog host, its EU cloud.

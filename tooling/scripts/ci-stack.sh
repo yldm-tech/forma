@@ -7,7 +7,7 @@
 # Configuration is .env.example's, under the overrides below; any variable already set wins over both, so a local run can move the ports (POSTGRES_PORT, VALKEY_PORT, SPICEDB_GRPC_PORT, RUSTFS_PORT, with DATABASE_URL, REDIS_URL, AUTHZED_ENDPOINT and S3_ENDPOINT_URL to match) or the compose project (COMPOSE_PROJECT_NAME). The server's output goes to FORMA_LOG (default forma.log in a temporary directory, printed at start).
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${repo_root}"
 compose=(docker compose -f docker-compose.dev.yml)
 forma="${FORMA_BIN:-${repo_root}/bin/forma}"

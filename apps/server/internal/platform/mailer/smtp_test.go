@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // A relay that accepts the connection and never greets must fail the send within the socket timeout instead of holding the caller (forma2 bounded nodemailer for the same reason).

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/mail"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list. MessageID, in its <id@domain> form, replaces the random Message-ID a send otherwise gets, so a message sent again for the same reason carries the same id.

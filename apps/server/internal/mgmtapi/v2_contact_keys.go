@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 )
 
 // v2ListKeys is forma2's GET /api/v2/management/contact-attribute-keys: the common filter over the keys of the workspaces the key may read.

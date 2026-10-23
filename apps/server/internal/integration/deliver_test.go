@@ -14,8 +14,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
 
 const metadataText = "Source: web\nURL: http://example.com\nBrowser: Chrome\nOS: Mac OS\nDevice: Desktop\nCountry: USA\nAction: Action Name\nIP Address: 203.0.113.7"

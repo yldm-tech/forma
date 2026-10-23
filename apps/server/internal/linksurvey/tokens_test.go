@@ -11,9 +11,9 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 // Tokens shaped exactly like jsonwebtoken's ({"alg":"HS256","typ":"JWT"}, base64url, HMAC-SHA256), made on Node with forma2's claims, secrets and its AES-GCM cipher under the hex key of 32 bytes of 7.

@@ -3,8 +3,8 @@ package ratelimit
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/yldm-tech/forma/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Identify picks the identifier a route is limited by. It returns an error when the request cannot be attributed, and that error is the response.

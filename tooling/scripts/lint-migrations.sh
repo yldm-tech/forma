@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Lints goose migrations with Squawk (server/.squawk.toml), forma2's `lint:migrations`. Pass the migration files to lint; with none, it lints the migrations added or changed since the git revision in BASE_REF (default: the first parent of HEAD, which on a pull request's merge commit is the base branch).
+# Lints goose migrations with Squawk (apps/server/.squawk.toml), forma2's `lint:migrations`. Pass the migration files to lint; with none, it lints the migrations added or changed since the git revision in BASE_REF (default: the first parent of HEAD, which on a pull request's merge commit is the base branch).
 #
 # Only the Up section is linted: it is what runs against a live database. The Down section undoes it and is destructive by design (DROP TABLE, DROP COLUMN), so linting it would flag every migration. Goose runs a migration in a transaction unless the file says `-- +goose NO TRANSACTION`, and Squawk is told which, since a statement such as CREATE INDEX CONCURRENTLY is only valid outside one.
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-config="${repo_root}/server/.squawk.toml"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+config="${repo_root}/apps/server/.squawk.toml"
 squawk="${repo_root}/node_modules/.bin/squawk"
 
 files=()
@@ -15,7 +15,7 @@ else
   base_ref="${BASE_REF:-HEAD^1}"
   while IFS= read -r -d '' file; do
     files+=("${repo_root}/${file}")
-  done < <(git -C "${repo_root}" diff --diff-filter=ACMR --name-only -z "${base_ref}" HEAD -- 'server/migrations/*.sql')
+  done < <(git -C "${repo_root}" diff --diff-filter=ACMR --name-only -z "${base_ref}" HEAD -- 'apps/server/migrations/*.sql')
   if ((${#files[@]} == 0)); then
     echo "No added or changed migrations to lint."
     exit 0

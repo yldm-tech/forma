@@ -18,15 +18,15 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/server/internal/auth"
-	"github.com/yldm-tech/forma/server/internal/authz"
-	"github.com/yldm-tech/forma/server/internal/authz/spicedbtest"
-	"github.com/yldm-tech/forma/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/server/internal/platform/config"
-	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
-	"github.com/yldm-tech/forma/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/authz/spicedbtest"
+	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
 const webApp = "http://app.example.com"
@@ -195,7 +195,7 @@ func newAppEnv(t *testing.T) *appEnv {
 	webURL, _ := url.Parse(webApp)
 	e.cfg = config.Config{WebAppURL: webURL, TrustedProxyHopCount: 1, AuditLogEnabled: true, UserManagementMinimumRole: "manager", SessionMaxAge: 86400}
 
-	schema, err := os.ReadFile("../../../authzed/schema.zed")
+	schema, err := os.ReadFile("../../authzed/schema.zed")
 	if err != nil {
 		t.Fatal(err)
 	}

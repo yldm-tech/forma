@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
 // Plans are forma2's TCloudBillingPlan: the three standard plans, a custom contract, and a subscription whose product carries no recognised forma_plan.
