@@ -59,7 +59,8 @@ type AIConfig struct {
 func (a AIConfig) validate() error {
 	if a.AzureBaseURL != "" {
 		if u, err := url.Parse(a.AzureBaseURL); err != nil || u.Scheme == "" || u.Host == "" {
-			return fmt.Errorf("AI_AZURE_BASE_URL must be a URL, got %q", a.AzureBaseURL)
+			// The value is not echoed: forma2's startup check never printed an AI setting, which can carry a credential.
+			return errors.New("AI_AZURE_BASE_URL must be a URL")
 		}
 	}
 	if a.OpenAICompatibleBaseURL != "" && !IsHTTPURL(a.OpenAICompatibleBaseURL) {
@@ -73,7 +74,7 @@ func (a AIConfig) validate() error {
 		known = known || p == a.Provider
 	}
 	if !known {
-		return fmt.Errorf("AI_PROVIDER must be one of %s, got %q", strings.Join(AIProviders, ", "), a.Provider)
+		return fmt.Errorf("AI_PROVIDER must be one of %s", strings.Join(AIProviders, ", "))
 	}
 	if a.Model == "" {
 		return errors.New("AI_MODEL is required when AI_PROVIDER is set")

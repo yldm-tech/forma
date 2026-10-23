@@ -23,10 +23,13 @@ import (
 const usage = `usage: forma <command>
 
 commands:
-  serve    run the HTTP server (API, public survey pages and the admin UI)
-  worker   run background jobs and periodic tasks
-  migrate  apply pending database migrations (schema, then the job queue), then exit
-  authz    operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
+  start              the container's default: validate the configuration, migrate unless SKIP_STARTUP_MIGRATION=true, then serve, with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0
+  serve              run the HTTP server (API, public survey pages and the admin UI)
+  worker             run background jobs and periodic tasks
+  migrate            apply pending database migrations (schema, then the job queue), then exit
+  wait-for-database  wait until the migration database accepts connections [--timeout-seconds 900] [--interval-seconds 5] [--connection-timeout-seconds 5]
+  healthcheck        exit 0 when the server on HTTP_ADDR answers /health (the image's HEALTHCHECK)
+  authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
 `
 
 func main() {
@@ -44,12 +47,18 @@ func run(args []string) int {
 
 	var err error
 	switch args[0] {
+	case "start":
+		err = start(ctx)
 	case "serve":
 		err = serve(ctx)
 	case "worker":
 		err = worker(ctx)
 	case "migrate":
 		err = migrate(ctx)
+	case "wait-for-database":
+		err = waitForDatabase(ctx, args[1:])
+	case "healthcheck":
+		err = healthcheck(ctx)
 	case "authz":
 		if len(args) == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
 			fmt.Print(authz.CLIUsage)
@@ -75,11 +84,17 @@ func migrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log := logger.New(cfg, os.Stdout)
-	if err := database.MigrateUp(ctx, cfg.DatabaseURL, log); err != nil {
-		return err
-	}
-	return jobs.Migrate(ctx, cfg.DatabaseURL, log)
+	return applyMigrations(ctx, cfg, logger.New(cfg, os.Stdout))
+}
+
+// applyMigrations runs the goose schema migrations, then River's, holding the migration lock so concurrent migrators take turns.
+func applyMigrations(ctx context.Context, cfg config.Config, log *slog.Logger) error {
+	return database.WithMigrationLock(ctx, cfg.DatabaseURL, log, func(ctx context.Context) error {
+		if err := database.MigrateUp(ctx, cfg.DatabaseURL, log); err != nil {
+			return err
+		}
+		return jobs.Migrate(ctx, cfg.DatabaseURL, log)
+	})
 }
 
 func serve(ctx context.Context) error {
@@ -89,14 +104,7 @@ func serve(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
-
-	srv, cleanup, err := app.InitializeServer(ctx, cfg, log)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	return srv.Run(ctx)
+	return runServer(ctx, cfg, log)
 }
 
 func worker(ctx context.Context) error {
@@ -106,7 +114,20 @@ func worker(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
+	return runWorker(ctx, cfg, log)
+}
 
+func runServer(ctx context.Context, cfg config.Config, log *slog.Logger) error {
+	srv, cleanup, err := app.InitializeServer(ctx, cfg, log)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	return srv.Run(ctx)
+}
+
+func runWorker(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	w, cleanup, err := app.InitializeWorker(ctx, cfg, log)
 	if err != nil {
 		return err

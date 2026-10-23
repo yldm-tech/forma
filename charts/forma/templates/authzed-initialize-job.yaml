@@ -1,0 +1,57 @@
+{{- if and .Values.authzed.enabled .Values.authzed.initialization.enabled (or .Release.IsInstall (and .Release.IsUpgrade .Values.authzed.migrationAcknowledged)) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "forma.name" . }}-authzed-initialize
+  labels:
+    {{- include "forma.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "1"
+    helm.sh/hook: {{ ternary "post-install" "pre-upgrade" .Release.IsInstall }}
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  activeDeadlineSeconds: 900
+  # Every step is retried in place (restartPolicy OnFailure) while SpiceDB comes up, within the 15-minute deadline: forma2's loop of 120 attempts, without a shell in the image.
+  backoffLimit: 20
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "forma.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: authzed-initialize
+    spec:
+      restartPolicy: OnFailure
+      {{- if .Values.deployment.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.deployment.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.deployment.tolerations }}
+      tolerations:
+        {{- toYaml .Values.deployment.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.deployment.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.deployment.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      {{- if .Values.rbac.serviceAccount.enabled }}
+      serviceAccountName: {{ .Values.rbac.serviceAccount.name | default (include "forma.name" .) }}
+      {{- end }}
+      {{- if .Values.deployment.securityContext }}
+      securityContext:
+        {{- toYaml .Values.deployment.securityContext | nindent 8 }}
+      {{- end }}
+      # forma2's `forma-authzed upgrade prepare`, step by step: write the release's schema (a no-op when it is already there; a different schema is refused unless its digest is supplied, see the README), deliver what the projection outbox holds, then rebuild every relationship from PostgreSQL. The last step exits 0 only when nothing is left unreconciled.
+      initContainers:
+        - name: schema
+          {{- include "forma.authzedJobContainer" (dict "context" . "args" (list "authz" "schema" "apply")) | nindent 10 }}
+        - name: outbox
+          {{- include "forma.authzedJobContainer" (dict "context" . "args" (list "authz" "outbox" "drain")) | nindent 10 }}
+      containers:
+        - name: initialize
+          {{- include "forma.authzedJobContainer" (dict "context" . "args" (list "authz" "backfill" "--apply")) | nindent 10 }}
+{{- end }}

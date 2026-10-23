@@ -114,13 +114,17 @@ jobs:
       - name: Validate schema assertions
         run: bash authzed/validate.sh
 
+  helm-chart-validation:
+    name: Validate Helm Chart
+    uses: ./.github/workflows/helm-chart-validation.yml
+
   coderabbit-config-validation:
     name: Validate CodeRabbit Config
     uses: ./.github/workflows/coderabbit-config-validation.yml
 
   required:
     name: PR Check Summary
-    needs: [server, workspace, validate-authzed-schema, coderabbit-config-validation]
+    needs: [server, workspace, validate-authzed-schema, helm-chart-validation, coderabbit-config-validation]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Prepares the local RustFS for `forma serve` (docker-compose.dev.yml, run by `make deps-up`): the bucket, its CORS rule for browser uploads, and a service account limited to that bucket. Every step is idempotent. forma2's docker/rustfs-init.sh, on RustFS's own client (rc), since the MinIO client image it pinned is no longer published.
+# Prepares RustFS for `forma serve` (docker-compose.dev.yml, run by `make deps-up`, and the `storage` profile of docker/docker-compose.yml): the bucket, its CORS rule for browser uploads, and a service account limited to that bucket. Every step is idempotent. forma2's docker/rustfs-init.sh, on RustFS's own client (rc), since the MinIO client image it pinned is no longer published.
 set -e
 
 rustfs_endpoint_url="${RUSTFS_ENDPOINT_URL:-http://rustfs:9000}"

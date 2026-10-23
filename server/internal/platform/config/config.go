@@ -496,12 +496,14 @@ func validAuthzEndpoint(value string) bool {
 }
 
 type migrateEnv struct {
-	DatabaseURL string     `env:"DATABASE_URL,required,notEmpty"`
-	LogLevel    slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	LogFormat   string     `env:"LOG_FORMAT" envDefault:"json"`
+	DatabaseURL string `env:"DATABASE_URL"`
+	// MigrateDatabaseURL is forma2's MIGRATE_DATABASE_URL: a connection with the privileges schema changes need, used for migrations only while the processes keep DATABASE_URL.
+	MigrateDatabaseURL string     `env:"MIGRATE_DATABASE_URL"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat          string     `env:"LOG_FORMAT" envDefault:"json"`
 }
 
-// LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone.
+// LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone. Its DatabaseURL is MIGRATE_DATABASE_URL when that is set (ignoring surrounding whitespace, as forma2 did), else DATABASE_URL.
 func LoadForMigrate() (Config, error) {
 	e, err := env.ParseAs[migrateEnv]()
 	if err != nil {
@@ -510,7 +512,57 @@ func LoadForMigrate() (Config, error) {
 	if e.LogFormat != "json" && e.LogFormat != "text" {
 		return Config{}, fmt.Errorf("load config: LOG_FORMAT must be json or text, got %q", e.LogFormat)
 	}
-	return Config{DatabaseURL: e.DatabaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+	databaseURL := strings.TrimSpace(e.MigrateDatabaseURL)
+	if databaseURL == "" {
+		databaseURL = strings.TrimSpace(e.DatabaseURL)
+	}
+	if databaseURL == "" {
+		return Config{}, errors.New("load config: MIGRATE_DATABASE_URL or DATABASE_URL is required")
+	}
+	return Config{DatabaseURL: databaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+}
+
+// Startup is what `forma start`, the container's default command, decides before it serves: forma2's entrypoint switches, under their names.
+type Startup struct {
+	// SkipMigration leaves the schema to a separate migration job (Helm, docker compose) instead of migrating before serving, forma2's SKIP_STARTUP_MIGRATION.
+	SkipMigration bool
+	// WorkerEnabled runs the background job worker in the same process as the HTTP server, as forma2's web container did unless BULLMQ_WORKER_ENABLED was 0. Deployments that run `forma worker` separately turn it off.
+	WorkerEnabled bool
+}
+
+type startupEnv struct {
+	SkipStartupMigration string `env:"SKIP_STARTUP_MIGRATION"`
+	WorkerEnabled        bool   `env:"BULLMQ_WORKER_ENABLED" envDefault:"1"`
+}
+
+// LoadStartup reads the switches of `forma start`. SKIP_STARTUP_MIGRATION keeps forma2's spelling, "true", which its chart and compose file set; 1 and 0 are accepted too, and anything else fails the start.
+func LoadStartup() (Startup, error) {
+	e, err := env.ParseAsWithOptions[startupEnv](parseOptions)
+	if err != nil {
+		return Startup{}, fmt.Errorf("load config: %w", err)
+	}
+	s := Startup{WorkerEnabled: e.WorkerEnabled}
+	switch e.SkipStartupMigration {
+	case "true", "1":
+		s.SkipMigration = true
+	case "", "false", "0":
+	default:
+		return Startup{}, fmt.Errorf("load config: SKIP_STARTUP_MIGRATION must be true or false, got %q", e.SkipStartupMigration)
+	}
+	return s, nil
+}
+
+type healthcheckEnv struct {
+	HTTPAddr string `env:"HTTP_ADDR" envDefault:":3000"`
+}
+
+// LoadForHealthcheck reads only the listen address, which `forma healthcheck` probes.
+func LoadForHealthcheck() (Config, error) {
+	e, err := env.ParseAs[healthcheckEnv]()
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	return Config{HTTPAddr: e.HTTPAddr}, nil
 }
 
 type authzEnv struct {
