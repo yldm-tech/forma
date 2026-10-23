@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
@@ -653,13 +655,13 @@ func TestDatabaseURLDropsPrismaSchemaPublic(t *testing.T) {
 		{"host=db dbname=forma schema=other", "host=db dbname=forma schema=other"},
 	}
 	for _, tc := range cases {
-		got, err := databaseURL("DATABASE_URL", tc.in)
+		got, err := databaseURL("DATABASE_URL", tc.in, true)
 		if err != nil || got != tc.want {
 			t.Errorf("databaseURL(%q) = %q, %v; want %q", tc.in, got, err, tc.want)
 		}
 	}
 	for _, in := range []string{"postgres://db/forma?schema=forma", "postgres://db/forma?schema=Public", "postgres://db/forma?sslmode=disable&schema="} {
-		_, err := databaseURL("MIGRATE_DATABASE_URL", in)
+		_, err := databaseURL("MIGRATE_DATABASE_URL", in, false)
 		if err == nil || !strings.Contains(err.Error(), "MIGRATE_DATABASE_URL") || !strings.Contains(err.Error(), "Prisma's schema parameter") {
 			t.Errorf("databaseURL(%q) error = %v, want one naming the variable and Prisma's schema parameter", in, err)
 		}
@@ -685,5 +687,105 @@ func TestLoadersDropPrismaSchemaPublic(t *testing.T) {
 	t.Setenv("MIGRATE_DATABASE_URL", "postgresql://owner@postgres/forma?schema=tenant")
 	if _, err := LoadForMigrate(); err == nil || !strings.Contains(err.Error(), "MIGRATE_DATABASE_URL") {
 		t.Errorf("LoadForMigrate accepted another schema: %v", err)
+	}
+}
+
+// Production's forma2 URLs, credentials replaced: the app's pooled URL through PgBouncer and the migration hook's direct one, each with the pool settings forma2's Prisma adapter read.
+const (
+	prodPooledURL = "postgresql://forma:pw@pgbouncer.postgres.svc.cluster.local:5432/forma?schema=public&pgbouncer=true&connection_limit=10"
+	prodDirectURL = "postgresql://forma:pw@pg-rw.postgres.svc.cluster.local:5432/forma?schema=public&connection_limit=4"
+)
+
+// forma2's Prisma adapter consumed these keys itself; pgx would send them to the server as run-time settings, which PostgreSQL and PgBouncer reject.
+func TestDatabaseURLDropsPrismaConnectionParameters(t *testing.T) {
+	pooled := "postgresql://forma:pw@pgbouncer.postgres.svc.cluster.local:5432/forma"
+	direct := "postgresql://forma:pw@pg-rw.postgres.svc.cluster.local:5432/forma"
+	cases := []struct {
+		in, app, migration string
+	}{
+		{prodPooledURL, pooled, pooled},
+		{prodDirectURL, direct, direct},
+		{pooled + "?pgbouncer=true&connection_limit=10&pool_timeout=20&schema=public", pooled, pooled},
+		{pooled + "?connection_limit=10&pgbouncer=true&pool_timeout=0", pooled, pooled},
+		{direct + "?connection_limit=4&pool_timeout=10", direct, direct},
+		{direct + "?Connection_Limit=4&PGBOUNCER=true", direct, direct},
+		{direct + "?max_connection_lifetime=0&max_idle_connection_lifetime=300&socket_timeout=30&statement_cache_size=0&query_timeout=15", direct, direct},
+		// libpq's and pgx's own parameters stay, in their order and spelling; connect_timeout means seconds to both.
+		{direct + "?sslmode=require&connection_limit=4&connect_timeout=5&application_name=forma&pool_max_conns=8", direct + "?sslmode=require&connect_timeout=5&application_name=forma&pool_max_conns=8", direct + "?sslmode=require&connect_timeout=5&application_name=forma&pool_max_conns=8"},
+		{direct + "?target_session_attrs=read-write&connection_limit=4", direct + "?target_session_attrs=read-write", direct + "?target_session_attrs=read-write"},
+		// forma2 read these two in seconds, PostgreSQL reads a bare number in milliseconds; migrations ran without them.
+		{direct + "?statement_timeout=30&connection_limit=4&idle_in_transaction_session_timeout=60", direct + "?statement_timeout=30s&idle_in_transaction_session_timeout=60s", direct},
+		{direct + "?statement_timeout=500ms&idle_in_transaction_session_timeout=0", direct + "?statement_timeout=500ms&idle_in_transaction_session_timeout=0s", direct},
+	}
+	for _, tc := range cases {
+		for _, c := range []struct {
+			appTimeouts bool
+			want        string
+		}{{true, tc.app}, {false, tc.migration}} {
+			got, err := databaseURL("DATABASE_URL", tc.in, c.appTimeouts)
+			if err != nil || got != c.want {
+				t.Errorf("databaseURL(%q, appTimeouts=%v) = %q, %v; want %q", tc.in, c.appTimeouts, got, err, c.want)
+				continue
+			}
+			cfg, err := pgx.ParseConfig(got)
+			if err != nil {
+				t.Errorf("pgx.ParseConfig(%q): %v", got, err)
+				continue
+			}
+			for k := range cfg.RuntimeParams {
+				if prismaOnlyParams[strings.ToLower(k)] || strings.EqualFold(k, "schema") {
+					t.Errorf("pgx would send %s from %q to the server", k, got)
+				}
+			}
+		}
+	}
+	if cfg, err := pgx.ParseConfig(cases[len(cases)-2].app); err != nil || cfg.RuntimeParams["statement_timeout"] != "30s" || cfg.RuntimeParams["idle_in_transaction_session_timeout"] != "60s" {
+		t.Errorf("statement timeouts reach the server as %v, %v", cfg.RuntimeParams, err)
+	}
+
+	for in, want := range map[string]string{
+		direct + "?sslaccept=accept_invalid_certs":       "sslaccept",
+		direct + "?sslmode=require&sslaccept=strict":     "sslaccept",
+		direct + "?sslidentity=client.p12&sslpassword=x": "sslidentity",
+	} {
+		_, err := databaseURL("MIGRATE_DATABASE_URL", in, false)
+		if err == nil || !strings.Contains(err.Error(), "MIGRATE_DATABASE_URL") || !strings.Contains(err.Error(), want) {
+			t.Errorf("databaseURL(%q) error = %v, want one naming the variable and %s", in, err, want)
+		}
+	}
+}
+
+// Every process that reads forma2's DATABASE_URL (serve, worker and start through Load; migrate, wait-for-database and import-forma2 through LoadForMigrate and LoadForImport; the authz commands through LoadForAuthz) gets it without Prisma's parameters.
+func TestLoadersAcceptProductionForma2URLs(t *testing.T) {
+	setRequired(t)
+	t.Setenv("DATABASE_URL", prodPooledURL)
+	t.Setenv("AUTHZED_ENDPOINT", "spicedb:50051")
+	want := "postgresql://forma:pw@pgbouncer.postgres.svc.cluster.local:5432/forma"
+	for name, load := range map[string]func() (Config, error){"Load": Load, "LoadForMigrate": LoadForMigrate, "LoadForImport": LoadForImport, "LoadForAuthz": LoadForAuthz} {
+		cfg, err := load()
+		if err != nil || cfg.DatabaseURL != want {
+			t.Errorf("%s: DatabaseURL %q, err %v; want %q", name, cfg.DatabaseURL, err, want)
+		}
+	}
+
+	// The migration hook overrides DATABASE_URL with the direct URL.
+	t.Setenv("DATABASE_URL", prodDirectURL+"&statement_timeout=30")
+	want = "postgresql://forma:pw@pg-rw.postgres.svc.cluster.local:5432/forma"
+	for name, load := range map[string]func() (Config, error){"LoadForMigrate": LoadForMigrate, "LoadForImport": LoadForImport} {
+		cfg, err := load()
+		if err != nil || cfg.DatabaseURL != want {
+			t.Errorf("%s: DatabaseURL %q, err %v; want %q", name, cfg.DatabaseURL, err, want)
+		}
+	}
+	t.Setenv("MIGRATE_DATABASE_URL", prodDirectURL)
+	if cfg, err := LoadForMigrate(); err != nil || cfg.DatabaseURL != want {
+		t.Errorf("LoadForMigrate: DatabaseURL %q, err %v; want %q", cfg.DatabaseURL, err, want)
+	}
+
+	if got, err := SourceDatabaseURL(" " + prodDirectURL + " "); err != nil || got != want {
+		t.Errorf("SourceDatabaseURL = %q, %v; want %q", got, err, want)
+	}
+	if _, err := SourceDatabaseURL(prodDirectURL + "&schema=tenant"); err == nil || !strings.Contains(err.Error(), "--source") {
+		t.Errorf("SourceDatabaseURL accepted another schema: %v", err)
 	}
 }

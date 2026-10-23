@@ -24,7 +24,7 @@ const CLIUsage = `usage: forma import-forma2 [--dry-run] [--source=<postgres url
 Copies forma2's data (the Next.js release's tables) into this server's schema in one transaction, verifies it and records the import; forma2's tables are only read. Run ` + "`forma migrate`" + ` first.
 
   --dry-run    import, verify and print the counts, then roll everything back
-  --source     forma2's database when it is not the one MIGRATE_DATABASE_URL (or DATABASE_URL) names
+  --source     forma2's database when it is not the one MIGRATE_DATABASE_URL (or DATABASE_URL) names; forma2's own DATABASE_URL is accepted as it is
   --refresh    import again over an earlier import: migrated rows are updated to forma2's values
   --discard-forma2-data --reason=<why>
                record that this database starts without forma2's data, so the server starts anyway
@@ -58,6 +58,12 @@ func parseFlags(args []string) (cliFlags, error) {
 	}
 	if !f.discard && f.reason != "" {
 		return f, errors.New("--reason goes with --discard-forma2-data")
+	}
+	if f.source != "" {
+		var err error
+		if f.source, err = config.SourceDatabaseURL(f.source); err != nil {
+			return f, err
+		}
 	}
 	return f, nil
 }
