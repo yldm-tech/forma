@@ -1,4 +1,4 @@
-# Docker builds use the repository root as context (docs/deploy/Dockerfile today, the server image later). Keep secrets, dependencies and build output out of it.
+# Docker builds use the repository root as context (the Forma image in Dockerfile and the documentation in docs/deploy/Dockerfile). Keep secrets, dependencies and build output out of it.
 
 # dependencies and build output; images install and build their own
 **/node_modules
