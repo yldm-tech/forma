@@ -24,14 +24,16 @@ export const signUpAndSignIn = async (page: Page, baseURL: string, prefix: strin
   return email;
 };
 
-const post = async (
+/** POSTs to /api/app as the signed-in browser does and returns the answer's JSON. */
+export const post = async <T = unknown>(
   request: APIRequestContext,
   baseURL: string,
   path: string,
   data: unknown
-): Promise<void> => {
+): Promise<T> => {
   const response = await request.post(path, { data, headers: appHeaders(baseURL) });
   expect(response.ok()).toBe(true);
+  return (await response.json()) as T;
 };
 
 export interface OnboardedSurvey {
@@ -39,17 +41,22 @@ export interface OnboardedSurvey {
   surveyId: string;
 }
 
+export interface Onboarded extends OnboardedSurvey {
+  organizationId: string;
+}
+
 /**
  * Finishes a new account's onboarding the way forma2's finishOnboarding did: the first-survey page, "Start from scratch", then "Save & Close", which publishes that survey as a link survey. Returns where it landed.
  */
-export const finishOnboarding = async (page: Page): Promise<OnboardedSurvey> => {
+export const finishOnboarding = async (page: Page): Promise<Onboarded> => {
   await page.goto("/");
-  await page.waitForURL(/\/workspaces\/new\/survey/);
+  await page.waitForURL(/\/organizations\/[^/]+\/workspaces\/new\/survey/);
+  const organizationId = /\/organizations\/([^/]+)/.exec(page.url())![1];
   await page.getByRole("button", { name: /Start from scratch/ }).click();
   await page.waitForURL(/\/surveys\/[^/]+\/edit/);
   await page.getByRole("button", { name: "Save & Close" }).click();
   await page.waitForURL(/\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
-  return surveyFromURL(page.url());
+  return { organizationId, ...surveyFromURL(page.url()) };
 };
 
 /** The workspace and survey of a /workspaces/{workspaceId}/surveys/{surveyId}/... URL. */
