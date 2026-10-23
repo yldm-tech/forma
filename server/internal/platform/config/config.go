@@ -147,6 +147,9 @@ type Config struct {
 	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
 	Telemetry TelemetryConfig
 
+	// Plain is the in-product support chat, off unless PLAIN_APP_ID is set.
+	Plain PlainConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }

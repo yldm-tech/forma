@@ -31,6 +31,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -241,7 +242,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	billingService := billing.NewService(engine, authorizer, limiter, emitter)
 	billingHandler := billing.NewHandler(billingService, sessions)
 	billingWebhookHandler := billing.NewWebhookHandler(engine, log)
-	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, webuiHandler)
+	plainHandler := plain.NewHandler(cfg, db, sessions)
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, plainHandler, webuiHandler)
 	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()

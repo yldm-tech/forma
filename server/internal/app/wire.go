@@ -30,6 +30,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -291,6 +292,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		mcpSet,
 		billingSet,
 		notification.NewHandler,
+		plain.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
