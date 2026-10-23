@@ -10,7 +10,7 @@
   "editor.formatOnSave": true,
   "editor.formatOnSaveMode": "file",
   "gopls": {
-    "formatting.local": "github.com/yldm-tech/forma/server"
+    "formatting.local": "github.com/yldm-tech/forma/apps/server"
   },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "npm.scriptRunner": "vp",

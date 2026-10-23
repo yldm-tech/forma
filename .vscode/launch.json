@@ -5,7 +5,7 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/server/cmd/forma",
+      "program": "${workspaceFolder}/apps/server/cmd/forma",
       "args": ["serve"],
       "envFile": "${workspaceFolder}/.env"
     },
@@ -14,7 +14,7 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173/",
-      "webRoot": "${workspaceFolder}/web"
+      "webRoot": "${workspaceFolder}/apps/web"
     }
   ],
   "version": "0.2.0"
