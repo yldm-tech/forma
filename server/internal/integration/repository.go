@@ -39,6 +39,19 @@ func SealCredentials(c *secret.Cipher, integrationID uuid.UUID, creds Credential
 	return c.Seal(plaintext, credentialsContext(integrationID))
 }
 
+// OpenCredentials is the inverse of SealCredentials. The data migration compares what a row holds with what it would write, so a re-run leaves unchanged credentials as they are.
+func OpenCredentials(c *secret.Cipher, integrationID uuid.UUID, ciphertext []byte) (Credentials, error) {
+	plaintext, err := c.Open(ciphertext, credentialsContext(integrationID))
+	if err != nil {
+		return Credentials{}, err
+	}
+	var creds Credentials
+	if err := json.Unmarshal(plaintext, &creds); err != nil {
+		return Credentials{}, fmt.Errorf("decode integration credentials: %w", err)
+	}
+	return creds, nil
+}
+
 const selectIntegration = `SELECT i.id, i.workspace_id, i.type, i.config, i.created_at, i.updated_at, i.last_error_at, i.last_error_message, i.consecutive_failures, c.ciphertext
 	FROM integrations i LEFT JOIN integration_credentials c ON c.integration_id = i.id`
 

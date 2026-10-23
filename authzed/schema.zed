@@ -12,11 +12,11 @@ use typechecking
  * asserted by `authzed/schema-validation.yaml`; run `pnpm authzed:validate`.
  */
 
-/** A human principal, identified by `users.id`. */
+/** A human principal, identified by the Prisma `User.id`. */
 definition user {}
 
 /**
- * An API key principal, identified by `api_keys.id`.
+ * An API key principal, identified by the Prisma `ApiKey.id`.
  *
  * API keys are organization-owned machine principals. They receive product
  * access exclusively through explicit per-workspace grants (`ApiKeyWorkspace`)
@@ -34,8 +34,8 @@ definition api_key {
 }
 
 /**
- * The billing and membership boundary, identified by `organizations.id`.
- * Roles mirror `memberships.role` (exactly one per user).
+ * The billing and membership boundary, identified by the Prisma
+ * `Organization.id`. Roles mirror `Membership.role` (exactly one per user).
  */
 definition organization {
     /** Organization owner (`Membership.role = owner`). Full control, including organization update/delete. */
@@ -114,7 +114,7 @@ definition organization {
 }
 
 /**
- * A group of users inside one organization, identified by `teams.id`.
+ * A group of users inside one organization, identified by the Prisma `Team.id`.
  * Teams are the only mechanism that grants users access to workspaces.
  */
 definition team {
@@ -161,7 +161,7 @@ definition team {
 
 /**
  * The product container (surveys, responses, dashboards, contacts …),
- * identified by `workspaces.id`.
+ * identified by the Prisma `Workspace.id`.
  *
  * Users are never granted workspace access directly — only via teams
  * (`WorkspaceTeam`) or their organization role (owner/manager). API keys are
@@ -210,7 +210,7 @@ definition workspace {
 }
 
 /**
- * A survey, identified by `surveys.id`. Surveys carry no access
+ * A survey, identified by the Prisma `Survey.id`. Surveys carry no access
  * control of their own today (`resultShareKey` was removed): every permission
  * derives from the owning workspace.
  *
@@ -253,9 +253,7 @@ definition survey {
 }
 
 /**
- * An analysis dashboard. The dashboards feature and its table were removed in
- * forma2, so nothing writes these today; the definition stays until the
- * authorization port decides its fate. Dashboards
+ * An analysis dashboard, identified by the Prisma `Dashboard.id`. Dashboards
  * carry no access control of their own today: access derives from the owning
  * workspace (`checkWorkspaceAccess`).
  */
@@ -274,7 +272,7 @@ definition dashboard {
 }
 
 /**
- * A survey response, identified by `responses.id`. Responses belong
+ * A survey response, identified by the Prisma `Response.id`. Responses belong
  * to a survey and inherit all access from it.
  */
 definition response {

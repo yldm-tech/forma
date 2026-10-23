@@ -78,7 +78,7 @@ func TestOAuthState(t *testing.T) {
 	if !stateToken.MatchString(state) || len(state) != 43 || strings.Contains(state, ws.String()) {
 		t.Fatalf("state = %q", state)
 	}
-	ttl, err := e.rdb.TTL(ctx, "oauth:state:"+sha256Hex(state)).Result()
+	ttl, err := e.rdb.TTL(ctx, "forma:oauth:state:"+sha256Hex(state)).Result()
 	if err != nil || ttl <= 9*time.Minute || ttl > 10*time.Minute {
 		t.Fatalf("stored ttl = %v, %v", ttl, err)
 	}
@@ -113,7 +113,7 @@ func TestOAuthState(t *testing.T) {
 			t.Errorf("malformed %q: %v", malformed, err)
 		}
 	}
-	if err := e.rdb.Set(ctx, "oauth:state:"+sha256Hex(strings.Repeat("b", 43)), "not json", time.Minute).Err(); err != nil {
+	if err := e.rdb.Set(ctx, "forma:oauth:state:"+sha256Hex(strings.Repeat("b", 43)), "not json", time.Minute).Err(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := st.consume(ctx, TypeSlack, user, session, strings.Repeat("b", 43)); !errors.Is(err, errInvalidState) {

@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 )
 
 // tokenExpiryBuffer is how long before its expiry a stored access token is refreshed, forma2's TOKEN_EXPIRY_BUFFER_MS.
@@ -83,6 +84,11 @@ func (t *tokens) fresh(k *AirtableKey) bool {
 	return ok && at.After(t.now().Add(tokenExpiryBuffer))
 }
 
+// airtableRefreshLockKey elects the one caller that refreshes a workspace's Airtable token.
+func airtableRefreshLockKey(workspaceID uuid.UUID) string {
+	return valkey.KeyPrefix + "oauth:airtable-token-refresh:" + workspaceID.String()
+}
+
 // airtable is forma2's resolveAirtableCredential: the stored token while it is fresh, otherwise a refreshed one. Airtable rotates the refresh token on every use, so the refresh of one workspace is elected through a Valkey lock: a caller that does not win it waits for the winner's rotation to be stored and uses that, and refreshes on its own only when none appears. The new token set is stored before it is returned, and the lock is left to expire, since a refresh that overran it could otherwise release another caller's.
 func (t *tokens) airtable(ctx context.Context, in *Integration) (*AirtableKey, error) {
 	k, ok := key[AirtableKey](in)
@@ -92,7 +98,7 @@ func (t *tokens) airtable(ctx context.Context, in *Integration) (*AirtableKey, e
 	if t.fresh(k) {
 		return k, nil
 	}
-	won, err := t.rdb.SetNX(ctx, "oauth:airtable-token-refresh:"+in.WorkspaceID.String(), "1", t.refresh.lockTTL).Result()
+	won, err := t.rdb.SetNX(ctx, airtableRefreshLockKey(in.WorkspaceID), "1", t.refresh.lockTTL).Result()
 	if err == nil && !won {
 		rotated, err := t.awaitRotation(ctx, in.WorkspaceID)
 		if err != nil {

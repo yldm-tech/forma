@@ -436,7 +436,7 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
-	if cfg.DatabaseURL, err = databaseURL("DATABASE_URL", cfg.DatabaseURL); err != nil {
+	if cfg.DatabaseURL, err = databaseURL("DATABASE_URL", cfg.DatabaseURL, true); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 	if err := cfg.resolveWorkerConcurrency(); err != nil {
@@ -448,8 +448,20 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
-// databaseURL accepts a connection URL written for forma2, whose Prisma client took the schema to use as a schema query parameter (its .env.example, compose file and guides all appended ?schema=public). PostgreSQL knows no such parameter, so pgx would send it as a run-time setting and the connection would fail: schema=public, where every table lives, is dropped, and any other schema fails the start. The rest of the URL is kept byte for byte. A key=value connection string is returned as it is.
-func databaseURL(name, raw string) (string, error) {
+// prismaOnlyParams are the connection URL keys forma2's Prisma adapter (packages/database/src/prisma-adapter.ts) consumed itself and removed before node-postgres saw the URL: pool sizing and waits (connection_limit, pool_timeout, max_connection_lifetime, max_idle_connection_lifetime), Prisma engine settings (socket_timeout, statement_cache_size), node-postgres's client-side query_timeout, and pgbouncer=true, with which Prisma avoided named prepared statements. None of them means anything to pgx, which would send each one to the server as a run-time setting that PostgreSQL and PgBouncer reject, so they are dropped. Named prepared statements need no switch here: PgBouncer 1.21 and later tracks them in transaction pooling (max_prepared_statements, 200 by default).
+var prismaOnlyParams = map[string]bool{
+	"connection_limit":             true,
+	"pool_timeout":                 true,
+	"max_connection_lifetime":      true,
+	"max_idle_connection_lifetime": true,
+	"socket_timeout":               true,
+	"statement_cache_size":         true,
+	"query_timeout":                true,
+	"pgbouncer":                    true,
+}
+
+// databaseURL accepts a connection URL written for forma2 and returns one pgx connects with. Prisma took the schema to use as a schema query parameter (forma2's .env.example, compose file and guides all appended ?schema=public): schema=public, where every table lives, is dropped, and any other schema fails the start. The keys in prismaOnlyParams are dropped. forma2 read statement_timeout and idle_in_transaction_session_timeout in seconds where PostgreSQL reads a bare number as milliseconds, so for the application's connections (appTimeouts) a bare number gets PostgreSQL's unit s and keeps forma2's meaning; for migrations and other operator runs they are dropped, as forma2's migration runner and backfill ignored them. Prisma's TLS keys sslaccept and sslidentity have no pgx counterpart and fail the start rather than change how the server's certificate is checked. Everything else, libpq's and pgx's own parameters included, is kept byte for byte. A key=value connection string is returned as it is.
+func databaseURL(name, raw string, appTimeouts bool) (string, error) {
 	lower := strings.ToLower(raw)
 	if !strings.HasPrefix(lower, "postgres://") && !strings.HasPrefix(lower, "postgresql://") {
 		return raw, nil
@@ -464,16 +476,31 @@ func databaseURL(name, raw string) (string, error) {
 	for _, p := range params {
 		k, v, _ := strings.Cut(p, "=")
 		key, err := url.QueryUnescape(k)
-		if err != nil || !strings.EqualFold(key, "schema") {
+		if err != nil {
 			kept = append(kept, p)
 			continue
 		}
-		if value, err := url.QueryUnescape(v); err != nil || value != "public" {
-			return "", fmt.Errorf("%s sets schema=%s, Prisma's schema parameter: the Forma server keeps its tables in the public schema and takes no schema parameter. Remove it (schema=public is ignored)", name, v)
+		switch key = strings.ToLower(key); {
+		case key == "schema":
+			if value, err := url.QueryUnescape(v); err != nil || value != "public" {
+				return "", fmt.Errorf("%s sets schema=%s, Prisma's schema parameter: the Forma server keeps its tables in the public schema and takes no schema parameter. Remove it (schema=public is ignored)", name, v)
+			}
+		case prismaOnlyParams[key]:
+		case key == "sslaccept":
+			return "", fmt.Errorf("%s sets sslaccept, Prisma's certificate check, which the Forma server does not read: say it with sslmode instead (sslmode=require for accept_invalid_certs, sslmode=verify-full with sslrootcert for strict)", name)
+		case key == "sslidentity":
+			return "", fmt.Errorf("%s sets sslidentity, Prisma's PKCS#12 client certificate, which the Forma server does not read: give the certificate and key in PEM files as sslcert and sslkey instead", name)
+		case key == "statement_timeout" || key == "idle_in_transaction_session_timeout":
+			if !appTimeouts {
+				continue
+			}
+			if v != "" && strings.Trim(v, "0123456789") == "" {
+				p += "s"
+			}
+			kept = append(kept, p)
+		default:
+			kept = append(kept, p)
 		}
-	}
-	if len(kept) == len(params) {
-		return raw, nil
 	}
 	out := base
 	if len(kept) > 0 {
@@ -483,6 +510,11 @@ func databaseURL(name, raw string) (string, error) {
 		out += "#" + fragment
 	}
 	return out, nil
+}
+
+// SourceDatabaseURL accepts the forma2 database URL given to `forma import-forma2 --source` as LoadForMigrate accepts MIGRATE_DATABASE_URL, so forma2's DATABASE_URL can be passed as it is.
+func SourceDatabaseURL(raw string) (string, error) {
+	return databaseURL("--source", strings.TrimSpace(raw), false)
 }
 
 // forma2's BullMQ worker settings. Its parallelism was BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each.
@@ -680,7 +712,7 @@ func LoadForMigrate() (Config, error) {
 	if raw == "" {
 		return Config{}, errors.New("load config: MIGRATE_DATABASE_URL or DATABASE_URL is required")
 	}
-	dsn, err := databaseURL(name, raw)
+	dsn, err := databaseURL(name, raw, false)
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
@@ -730,6 +762,41 @@ func LoadForHealthcheck() (Config, error) {
 	return Config{HTTPAddr: e.HTTPAddr}, nil
 }
 
+type importEnv struct {
+	EncryptionKey          EncryptionKey     `env:"ENCRYPTION_KEY,required,notEmpty"`
+	EncryptionKeyVersion   int               `env:"ENCRYPTION_KEY_VERSION" envDefault:"1"`
+	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
+	NextAuthSecret         Secret            `env:"NEXTAUTH_SECRET"`
+	BetterAuthSecret       Secret            `env:"BETTER_AUTH_SECRET"`
+	Authz                  AuthzConfig
+}
+
+// LoadForImport reads what `forma import-forma2` needs: the migration connection (MIGRATE_DATABASE_URL, else DATABASE_URL, as LoadForMigrate reads it), ENCRYPTION_KEY, which both opens what forma2 encrypted with it and seals what the import stores, forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET, which Better Auth encrypted the two-factor secrets with, and the SpiceDB connection, for the authorization backfill after the import when AuthZed is enabled.
+func LoadForImport() (Config, error) {
+	cfg, err := LoadForMigrate()
+	if err != nil {
+		return Config{}, err
+	}
+	e, err := env.ParseAsWithOptions[importEnv](parseOptions)
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	if e.EncryptionKeyVersion < 1 || e.EncryptionKeyVersion > MaxEncryptionKeyVersion {
+		return Config{}, fmt.Errorf("load config: ENCRYPTION_KEY_VERSION must be between 1 and %d, got %d", MaxEncryptionKeyVersion, e.EncryptionKeyVersion)
+	}
+	if _, ok := e.EncryptionPreviousKeys[e.EncryptionKeyVersion]; ok {
+		return Config{}, fmt.Errorf("load config: ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", e.EncryptionKeyVersion)
+	}
+	if err := e.Authz.validate(); err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	cfg.EncryptionKey, cfg.EncryptionKeyVersion, cfg.EncryptionPreviousKeys = e.EncryptionKey, e.EncryptionKeyVersion, e.EncryptionPreviousKeys
+	cfg.NextAuthSecret, cfg.BetterAuthSecret = e.NextAuthSecret, e.BetterAuthSecret
+	cfg.Authz = e.Authz
+	cfg.DatabaseMaxOpenConns = 4
+	return cfg, nil
+}
+
 type authzEnv struct {
 	DatabaseURL string `env:"DATABASE_URL,required,notEmpty"`
 	Authz       AuthzConfig
@@ -749,7 +816,7 @@ func LoadForAuthz() (Config, error) {
 	if err := e.Authz.validate(); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
-	if e.DatabaseURL, err = databaseURL("DATABASE_URL", e.DatabaseURL); err != nil {
+	if e.DatabaseURL, err = databaseURL("DATABASE_URL", e.DatabaseURL, false); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 	return Config{DatabaseURL: e.DatabaseURL, DatabaseMaxOpenConns: 4, Authz: e.Authz, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil

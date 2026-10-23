@@ -94,8 +94,10 @@ func newInstall(t *testing.T) *installEnv {
 printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
 case "$*" in
   *to_regclass*) echo "$FAKE_DB_TABLES" ;;
+  *to_regprocedure*) echo "${FAKE_DB_DRIFT_CHECK:-f}" ;;
+  *forma2_import_drift*) echo "$FAKE_DB_DRIFT" ;;
   *'FROM "User"'*) echo "$FAKE_DB_FORMA2_USERS" ;;
-  *'FROM users'*) echo "$FAKE_DB_GO_USERS" ;;
+  *'FROM forma2_imports'*) echo "$FAKE_DB_IMPORTED" ;;
 esac
 exit 0
 `
@@ -184,7 +186,7 @@ func dotenvValues(t *testing.T, content string) map[string]string {
 
 func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	e := newInstall(t)
-	e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_GO_USERS=t"}
+	e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t"}
 	out, err := e.run("update")
 	if err != nil {
 		t.Fatalf("update: %v\n%s", err, out)
@@ -292,18 +294,18 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	}
 }
 
-// The Go server keeps its data in its own schema: started on a database where only forma2's tables hold users, it would serve an empty instance whose first sign-up becomes its owner, so the update stops before starting anything.
+// The Go server keeps its data in tables of its own: started on a database where only forma2's tables hold users, it would serve an empty instance whose first sign-up becomes its owner, so the update stops before starting anything until forma2_imports records an import (or a discard), and again when forma2 ran after the record, as after a rollback.
 func TestFormaShUpdateRefusesADatabaseWithoutTheMigratedData(t *testing.T) {
 	requireBash(t)
 	for name, db := range map[string][]string{
 		"go schema absent": {"FAKE_DB_TABLES=true,false", "FAKE_DB_FORMA2_USERS=t"},
-		"go schema empty":  {"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_GO_USERS=f"},
+		"not imported":     {"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=f"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := newInstall(t)
 			e.dbVars = db
 			out, err := e.run("update")
-			if err == nil || !strings.Contains(out, "still holds forma2's data") {
+			if err == nil || !strings.Contains(out, "still holds forma2's data") || !strings.Contains(out, "docker compose run --rm forma-migrate import-forma2") {
 				t.Fatalf("update: %v\n%s", err, out)
 			}
 			if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "--remove-orphans") {
@@ -311,6 +313,24 @@ func TestFormaShUpdateRefusesADatabaseWithoutTheMigratedData(t *testing.T) {
 			}
 		})
 	}
+	t.Run("forma2 changed since the import", func(t *testing.T) {
+		e := newInstall(t)
+		e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t", "FAKE_DB_DRIFT_CHECK=t", "FAKE_DB_DRIFT=Response,User"}
+		out, err := e.run("update")
+		if err == nil || !strings.Contains(out, "changed: Response,User") || !strings.Contains(out, "import-forma2 --refresh") || !strings.Contains(out, "--discard-forma2-data") {
+			t.Fatalf("update: %v\n%s", err, out)
+		}
+		if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "--remove-orphans") {
+			t.Errorf("the stack was started:\n%s", calls)
+		}
+	})
+	t.Run("imported and unchanged", func(t *testing.T) {
+		e := newInstall(t)
+		e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t", "FAKE_DB_DRIFT_CHECK=t", "FAKE_DB_DRIFT="}
+		if out, err := e.run("update"); err != nil {
+			t.Fatalf("update after the import: %v\n%s", err, out)
+		}
+	})
 	// A fresh database has nothing to lose.
 	t.Run("fresh database", func(t *testing.T) {
 		e := newInstall(t)
@@ -341,7 +361,7 @@ func TestFormaShStripsSchemaPublic(t *testing.T) {
 			t.Errorf("strip_schema_public(%q) = %q, %v; want %q", in, got, err, want)
 		}
 		// The server agrees, except that it refuses another schema where the script leaves it for the server to report.
-		if server, err := databaseURL("DATABASE_URL", in); err == nil && server != want {
+		if server, err := databaseURL("DATABASE_URL", in, true); err == nil && server != want {
 			t.Errorf("databaseURL(%q) = %q, forma.sh %q", in, server, want)
 		}
 	}

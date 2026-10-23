@@ -9,13 +9,15 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 )
 
 // latestReleaseURL is the GitHub release of this repository that release.yml publishes.
 const latestReleaseURL = "https://api.github.com/repos/yldm-tech/forma/releases/latest"
 
-// cacheKey is forma2's createCacheKey.custom("github", "latest_release").
-const cacheKey = "fb:github:latest_release"
+// cacheKey holds the latest release of this repository. forma2 caches the same shape under "fb:github:latest_release" but for another repository (forma/forma), so sharing its key would show either server the other's release.
+const cacheKey = valkey.KeyPrefix + "github:latest_release"
 
 // forma2's timings: GitHub gets five seconds, a found release is cached for an hour and a failed lookup for five minutes, so the notice comes back soon after GitHub recovers while the deployment stays under GitHub's unauthenticated rate limit.
 const (

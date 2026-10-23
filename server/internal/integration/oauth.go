@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
+
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 )
 
 // stateTTL is how long an OAuth flow may take from authorize to callback, forma2's INTEGRATION_OAUTH_STATE_TTL_MS.
@@ -58,7 +60,7 @@ type stateStore struct {
 
 func stateKey(state string) string {
 	sum := sha256.Sum256([]byte(state))
-	return "oauth:state:" + hex.EncodeToString(sum[:])
+	return valkey.KeyPrefix + "oauth:state:" + hex.EncodeToString(sum[:])
 }
 
 // create stores s and returns the state to send to the provider: 32 random bytes, base64url.
