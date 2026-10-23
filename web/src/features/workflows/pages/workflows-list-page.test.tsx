@@ -12,9 +12,14 @@ import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
+import { initPostHogClient } from "../../../lib/telemetry/posthog";
 import type { TWorkflowListItem } from "../api";
 import { WORKFLOW_FILTERS_KEY } from "../lib/list-filters";
 import { WorkflowsListPage } from "./workflows-list-page";
+
+const posthog = vi.hoisted(() => ({ __loaded: false, capture: vi.fn(), init: vi.fn() }));
+
+vi.mock("posthog-js", () => ({ default: posthog }));
 
 const WORKSPACE_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
 
@@ -155,5 +160,61 @@ describe("WorkflowsListPage", () => {
     expect(row?.getAttribute("href")).toBe(`/workspaces/${WORKSPACE_ID}/workflows/wf-1`);
     expect(row?.textContent).toContain("3");
     expect(screen.queryByRole("button", { name: i18n.t("common.open_options") })).toBeNull();
+  });
+});
+
+describe("WorkflowsListPage analytics", () => {
+  beforeAll(async () => {
+    await initPostHogClient("phc_test", {});
+  });
+
+  test("reports the list once, and not the filters it started with", async () => {
+    posthog.capture.mockClear();
+    stubList([item("wf-1", "Welcome flow")]);
+    renderList();
+
+    await waitFor(() =>
+      expect(posthog.capture).toHaveBeenCalledWith("workflow_surface_viewed", {
+        surface: "list",
+        workflow_id: undefined,
+        workflow_status: undefined,
+        is_read_only: undefined,
+      })
+    );
+    expect(posthog.capture).toHaveBeenCalledTimes(1);
+  });
+
+  test("an emptied filter is its own surface, and clearing it is one settled filter change", async () => {
+    posthog.capture.mockClear();
+    localStorage.setItem(
+      WORKFLOW_FILTERS_KEY,
+      JSON.stringify({ searchValue: "nothing", selectedStatuses: ["archived", "enabled"], sortBy: "name" })
+    );
+    stubList([]);
+    renderList();
+
+    await waitFor(() =>
+      expect(posthog.capture).toHaveBeenCalledWith(
+        "workflow_surface_viewed",
+        expect.objectContaining({ surface: "list_empty_filtered" })
+      )
+    );
+    expect(posthog.capture.mock.calls.some(([event]) => event === "workflow_list_filtered")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.clear_filters") }));
+
+    // The status clears at once, the search after its debounce; only the settled state is reported.
+    await waitFor(() =>
+      expect(posthog.capture).toHaveBeenCalledWith("workflow_list_filtered", {
+        has_search: false,
+        status_filter: [],
+        sort_by: "name",
+        includes_archived: false,
+      })
+    );
+    expect(posthog.capture.mock.calls.filter(([event]) => event === "workflow_list_filtered")).toHaveLength(
+      1
+    );
+    expect(JSON.stringify(posthog.capture.mock.calls)).not.toContain("nothing");
   });
 });

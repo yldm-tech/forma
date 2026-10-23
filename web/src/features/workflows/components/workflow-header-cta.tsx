@@ -23,8 +23,14 @@ import {
 import { toast } from "../../../lib/toast";
 import { getWorkflowApiErrorMessage, workflowKeys, workflowsApi } from "../api";
 import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
+import { WORKFLOW_CLIENT_EVENTS, summarizeValidationProblems, trackWorkflowEvent } from "../lib/analytics";
 import { getWorkflowStatusBadge } from "../lib/display";
-import { hasWorkflowSaveFailedAtom, workflowAtom, workflowValidityAtom } from "../state/editor";
+import {
+  hasWorkflowSaveFailedAtom,
+  workflowAtom,
+  workflowValidationProblemsAtom,
+  workflowValidityAtom,
+} from "../state/editor";
 import { WorkflowAutoSaveIndicator } from "./workflow-auto-save-indicator";
 
 /** forma2's WorkflowHeaderCta: the save state and, on the editor tab, the status menu with the transitions the current status allows. */
@@ -38,6 +44,7 @@ export const WorkflowHeaderCta = ({
   const queryClient = useQueryClient();
   const workflow = useAtomValue(workflowAtom);
   const validity = useAtomValue(workflowValidityAtom);
+  const validationProblems = useAtomValue(workflowValidationProblemsAtom);
   const hasSaveFailed = useAtomValue(hasWorkflowSaveFailedAtom);
   const builder = useWorkflowBuilder({ workflowId, isReadOnly, loadOnMount: false });
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
@@ -55,6 +62,16 @@ export const WorkflowHeaderCta = ({
   const handleArchiveConfirm = async () => {
     await builder.archive();
     setIsArchiveModalOpen(false);
+  };
+
+  // Opening the status menu of a draft whose Enable is greyed out is the closest thing to "tried to enable and could not"; the problem codes say what stopped them.
+  const handleStatusMenuOpenChange = (open: boolean) => {
+    if (open && !isArchived && !isActive && !validity.isReady) {
+      trackWorkflowEvent(
+        WORKFLOW_CLIENT_EVENTS.enableBlocked,
+        summarizeValidationProblems(validationProblems)
+      );
+    }
   };
 
   const handleDelete = async () => {
@@ -84,7 +101,7 @@ export const WorkflowHeaderCta = ({
       )}
       {isEditTab && (
         <>
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={handleStatusMenuOpenChange}>
             <DropdownMenuTrigger asChild disabled={isBusy}>
               <Button size="sm" loading={builder.isTransitioning} disabled={isBusy}>
                 {getWorkflowStatusBadge(workflow.status, t).label}

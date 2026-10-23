@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { capturePostHogClientEvent } from "../../lib/telemetry/posthog";
 import { getAIUnavailableMessage, workspaceAIQuery } from "../ai/availability";
 import { CUSTOM_TEMPLATE_ID } from "../surveys/api";
 import { useCreateSurveyFromTemplate } from "../surveys/templates/use-create-survey";
@@ -36,6 +37,12 @@ export const CreateFirstSurvey = ({
   const { create, isPending } = useCreateSurveyFromTemplate("cx");
   const ai = useQuery(workspaceAIQuery(workspaceId));
   const isAIAvailable = ai.data?.available ?? false;
+  const trackPathSelected = (path: "scratch" | "template" | "ai") =>
+    capturePostHogClientEvent("onboarding_survey_path_selected", {
+      path,
+      organization_id: organizationId,
+      workspace_id: workspaceId,
+    });
   return (
     <OnboardingOptions
       title={t("organizations.workspaces.new.survey.title")}
@@ -46,27 +53,35 @@ export const CreateFirstSurvey = ({
           icon: SparklesIcon,
           disabled: !isAIAvailable,
           disabledDescription: ai.isSuccess ? getAIUnavailableMessage(ai.data.reason, t) : undefined,
-          onSelect: () => void navigate({ href: onboardingPath(organizationId, "ai") }),
+          onSelect: () => {
+            trackPathSelected("ai");
+            void navigate({ href: onboardingPath(organizationId, "ai") });
+          },
         },
         {
           title: t("organizations.workspaces.new.survey.use_template"),
           description: t("organizations.workspaces.new.survey.use_template_description"),
           icon: SquareLibraryIcon,
-          onSelect: () => void navigate({ href: onboardingPath(organizationId, "templates") }),
+          onSelect: () => {
+            trackPathSelected("template");
+            void navigate({ href: onboardingPath(organizationId, "templates") });
+          },
         },
         {
           title: t("organizations.workspaces.new.survey.start_from_scratch"),
           description: t("organizations.workspaces.new.survey.start_from_scratch_description"),
           icon: PencilLineIcon,
           isLoading: isPending,
-          onSelect: () =>
+          onSelect: () => {
+            trackPathSelected("scratch");
             void create({
               workspaceId,
               templateId: CUSTOM_TEMPLATE_ID,
               source: "custom",
               surveyType: "link",
               defaultLanguage,
-            }),
+            });
+          },
         },
       ]}
     />
