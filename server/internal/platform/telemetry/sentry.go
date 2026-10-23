@@ -33,14 +33,22 @@ func sentryOptions(cfg config.TelemetryConfig) sentry.ClientOptions {
 	if buildinfo.Released() {
 		release = buildinfo.Version
 	}
+	off := &sentry.KeyValueCollectionBehavior{Mode: sentry.CollectionOff}
 	return sentry.ClientOptions{
 		Dsn:                  cfg.SentryDSN,
 		Release:              release,
 		Environment:          cfg.SentryEnvironment,
 		TracesSampleRate:     0,
-		SendDefaultPII:       false,
 		DisableClientReports: true,
-		BeforeSend:           scrubSentryEvent,
+		// forma2's sendDefaultPii: false, as the SDK now spells it: no user, cookies, headers, bodies or query parameters are collected.
+		DataCollection: &sentry.DataCollection{
+			UserInfo:    sentry.Set(false),
+			Cookies:     off,
+			HTTPHeaders: &sentry.HeaderCollectionConfig{Request: off, Response: off},
+			HTTPBodies:  []sentry.BodyType{},
+			QueryParams: off,
+		},
+		BeforeSend: scrubSentryEvent,
 	}
 }
 

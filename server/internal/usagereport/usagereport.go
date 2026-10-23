@@ -127,11 +127,11 @@ func (r *Reporter) lastSent(ctx context.Context) (time.Time, error) {
 	if json.Unmarshal([]byte(raw), &text) != nil {
 		text = raw
 	}
-	ms, err := strconv.ParseInt(text, 10, 64)
-	if err != nil {
-		return time.Time{}, nil
+	// A value that is not a number reads as never sent, as forma2's NaN comparison did.
+	if ms, perr := strconv.ParseInt(text, 10, 64); perr == nil {
+		return time.UnixMilli(ms), nil
 	}
-	return time.UnixMilli(ms), nil
+	return time.Time{}, nil
 }
 
 // send posts the update; false means there is no organization to report on yet. A rejected update is an error, so it is not recorded as sent.
@@ -155,7 +155,7 @@ func (r *Reporter) send(ctx context.Context, lastSent time.Time) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("send usage update: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		return false, fmt.Errorf("usage update endpoint responded with status %d", res.StatusCode)
 	}
@@ -230,13 +230,13 @@ type Temporal struct {
 }
 
 type counts struct {
-	OrganizationCount, UserCount, TeamCount, WorkspaceCount                        int64
-	SurveyCount, InProgressSurveyCount, CompletedSurveyCount                         int64
-	ResponseCountAllTime, ResponseCountSinceLastUpdate                               int64
-	DisplayCount, ContactCount, SegmentCount                                         int64
-	NewestResponseAt                                                                 *time.Time
-	WorkflowCount, EnabledWorkflowCount                                              int64
-	WorkflowRunCountSinceLastUpdate, WorkflowRunFailedCountSinceLastUpdate           int64
+	OrganizationCount, UserCount, TeamCount, WorkspaceCount                int64
+	SurveyCount, InProgressSurveyCount, CompletedSurveyCount               int64
+	ResponseCountAllTime, ResponseCountSinceLastUpdate                     int64
+	DisplayCount, ContactCount, SegmentCount                               int64
+	NewestResponseAt                                                       *time.Time
+	WorkflowCount, EnabledWorkflowCount                                    int64
+	WorkflowRunCountSinceLastUpdate, WorkflowRunFailedCountSinceLastUpdate int64
 }
 
 // collect reads the update; a nil payload means there is no organization yet. The instance id is the SHA-256 of the oldest organization's id, so it never changes once an instance has one.

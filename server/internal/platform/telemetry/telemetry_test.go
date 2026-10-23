@@ -79,7 +79,7 @@ func TestPrometheusServesForma2SeriesNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scrape: %v", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, _ := io.ReadAll(res.Body)
 	text := string(body)
 	for _, want := range []string{
@@ -137,7 +137,7 @@ func TestHTTPSpansCarryNoTokensOrAddresses(t *testing.T) {
 	}
 	route := false
 	for _, a := range span.Attributes {
-		v := a.Value.Emit()
+		v := a.Value.String()
 		if strings.Contains(v, "secret-token") || strings.Contains(v, "my-private-answer") || strings.Contains(v, "203.0.113.7") || strings.Contains(v, "jane@example.com") {
 			t.Errorf("attribute %s = %q leaks the path, query, client address or error", a.Key, v)
 		}
@@ -157,7 +157,7 @@ func TestPoolMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	db.SetMaxOpenConns(7)
 	stop, err := observePool(provider, "main", func() poolStats {
 		s := db.Stats()
@@ -226,7 +226,7 @@ func TestSentryEventsAreScrubbed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if opts.SendDefaultPII || opts.TracesSampleRate != 0 || !opts.DisableClientReports || opts.Release != "" {
+	if dc := opts.DataCollection; dc == nil || dc.UserInfo.Or(true) || dc.Cookies.Mode != sentry.CollectionOff || len(dc.HTTPBodies) != 0 || opts.TracesSampleRate != 0 || !opts.DisableClientReports || opts.Release != "" {
 		t.Errorf("options = %+v, want no default PII, no tracing, no client reports and no release on a development build", opts)
 	}
 	hub := sentry.NewHub(client, sentry.NewScope())

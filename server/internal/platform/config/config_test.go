@@ -371,3 +371,50 @@ func TestLoadS3(t *testing.T) {
 		t.Fatalf("Load rejected an endpoint with a bare trailing slash: %v", err)
 	}
 }
+
+func TestTelemetryDefaultsAreOff(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tc := cfg.Telemetry
+	if tc.OTelEnabled() || tc.SentryDSN != "" || tc.PostHogKey != "" || tc.UsageReportEnabled {
+		t.Errorf("telemetry = %+v, want everything off by default", tc)
+	}
+	if tc.ServiceName != "forma" || tc.PrometheusPort != 9464 || tc.TracesSampler != "always_on" || tc.DeploymentEnvironment() != "production" {
+		t.Errorf("telemetry defaults = %+v (environment %s)", tc, tc.DeploymentEnvironment())
+	}
+}
+
+func TestTelemetryConfig(t *testing.T) {
+	setRequired(t)
+	t.Setenv("PROMETHEUS_ENABLED", "1")
+	t.Setenv("NODE_ENV", "staging")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Telemetry.OTelEnabled() || cfg.Telemetry.DeploymentEnvironment() != "staging" {
+		t.Errorf("telemetry = %+v", cfg.Telemetry)
+	}
+	t.Setenv("ENVIRONMENT", "eu-prod")
+	if cfg, _ := Load(); cfg.Telemetry.DeploymentEnvironment() != "eu-prod" {
+		t.Errorf("ENVIRONMENT did not win over NODE_ENV: %s", cfg.Telemetry.DeploymentEnvironment())
+	}
+	for name, value := range map[string]string{
+		"PROMETHEUS_ENABLED":          "true",
+		"PROMETHEUS_EXPORTER_PORT":    "0",
+		"OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4318",
+		"SENTRY_DSN":                  "not a dsn",
+		"TELEMETRY_ENABLED":           "yes",
+	} {
+		t.Run(name, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(name, value)
+			if _, err := Load(); err == nil {
+				t.Errorf("%s=%q was accepted", name, value)
+			}
+		})
+	}
+}
