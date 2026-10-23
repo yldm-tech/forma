@@ -138,9 +138,6 @@ catalogs:
     zod:
       specifier: 4.3.6
       version: 4.3.6
-    zod-openapi:
-      specifier: 5.4.6
-      version: 5.4.6
 
 overrides:
   protobufjs@8: 8.6.6
@@ -524,9 +521,6 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
-      zod-openapi:
-        specifier: 'catalog:'
-        version: 5.4.6(zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9))
     devDependencies:
       '@forma/config-typescript':
         specifier: workspace:*
@@ -6855,12 +6849,6 @@ packages:
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
-  zod-openapi@5.4.6:
-    resolution: {integrity: sha512-P2jsOOBAq/6hCwUsMCjUATZ8szkMsV5VAwZENfyxp2Hc/XPJQpVwAgevWZc65xZauCwWB9LAn7zYeiCJFAEL+A==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      zod: ^3.25.74 || ^4.0.0
-
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -12952,10 +12940,6 @@ snapshots:
       '@yuku-parser/binding-win32-x64': 0.9.5
 
   zimmerframe@1.1.4: {}
-
-  zod-openapi@5.4.6(zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)):
-    dependencies:
-      zod: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
 
   zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9): {}
 

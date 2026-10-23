@@ -79,7 +79,6 @@ catalog:
   react-i18next: 16.5.8
   # --- server runtime ---
   zod: 4.3.6
-  zod-openapi: 5.4.6
   # --- toolchain: build, test, lint (Oxlint), format (Oxfmt), type-check, task runner ---
   vite-plus: 1.1.0
 
