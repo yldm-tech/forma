@@ -36,7 +36,7 @@ func TestServe(t *testing.T) {
 	r := newEngine(t, fstest.MapFS{
 		"index.html":         {Data: []byte(indexHTML)},
 		"assets/app-1a2b.js": {Data: []byte("console.log(1)")},
-		"favicon.ico":        {Data: []byte("ico")},
+		"robots.txt":         {Data: []byte("User-agent: *")},
 	})
 
 	cases := []struct {
@@ -48,7 +48,7 @@ func TestServe(t *testing.T) {
 		{"root serves index", http.MethodGet, "/", http.StatusOK, indexHTML, "no-cache"},
 		{"client route falls back to index", http.MethodGet, "/workspaces/abc/surveys", http.StatusOK, indexHTML, "no-cache"},
 		{"fingerprinted asset is immutable", http.MethodGet, "/assets/app-1a2b.js", http.StatusOK, "console.log(1)", "public, max-age=31536000, immutable"},
-		{"other static file revalidates", http.MethodGet, "/favicon.ico", http.StatusOK, "ico", "no-cache"},
+		{"other static file revalidates", http.MethodGet, "/robots.txt", http.StatusOK, "User-agent", "no-cache"},
 		{"missing asset is 404, not index", http.MethodGet, "/assets/app-old.js", http.StatusNotFound, "", ""},
 		{"unknown API route is JSON 404", http.MethodGet, "/api/v3/nope", http.StatusNotFound, `"code":"not_found"`, ""},
 		{"POST to a page is rejected", http.MethodPost, "/workspaces", http.StatusMethodNotAllowed, "", ""},
@@ -103,6 +103,74 @@ func TestServeSDKBundles(t *testing.T) {
 		rec := get(r, http.MethodGet, "/js/forma.d.ts")
 		if strings.HasPrefix(rec.Header().Get("Content-Type"), "application/javascript") {
 			t.Fatalf("Content-Type = %q, want no JavaScript override for .d.ts", rec.Header().Get("Content-Type"))
+		}
+	})
+}
+
+// The files copied from forma2's apps/web/public keep the cache headers forma2's next.config.mjs gave them, and a content type the distroless image cannot look up in a system table.
+func TestServePublicAssets(t *testing.T) {
+	r := newEngine(t, fstest.MapFS{
+		"index.html":                                         {Data: []byte(indexHTML)},
+		"animated-bgs/4K/1_4k.mp4":                           {Data: []byte("\x00\x00\x00\x20ftypisom")},
+		"animated-bgs/Thumbnails/1_Thumb.mp4":                {Data: []byte("\x00\x00\x00\x20ftypisom")},
+		"image-backgrounds/dogs.webp":                        {Data: []byte("RIFF\x00\x00\x00\x00WEBPVP8 ")},
+		"logo-transparent.png":                               {Data: []byte("\x89PNG\r\n\x1a\n")},
+		"favicon.ico":                                        {Data: []byte("\x00\x00\x01\x00")},
+		"favicon/apple-touch-icon.png":                       {Data: []byte("\x89PNG\r\n\x1a\n")},
+		"favicon/safari-pinned-tab.svg":                      {Data: []byte("<svg></svg>")},
+		"favicon/site.webmanifest":                           {Data: []byte("{}")},
+		"sample-csv/forma-organization-members-template.csv": {Data: []byte("Full Name,Email Address,Role")},
+		"star-icons/star.png":                                {Data: []byte("\x89PNG\r\n\x1a\n")},
+	})
+
+	const (
+		favicon    = "public, max-age=2592000, s-maxage=31536000, immutable"
+		animated   = "public, max-age=604800, s-maxage=31536000, immutable"
+		background = "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400"
+		csv        = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600"
+	)
+	cases := []struct {
+		path string
+		want map[string]string
+	}{
+		{"/animated-bgs/4K/1_4k.mp4", map[string]string{"Cache-Control": animated, "Content-Type": "video/mp4", "Access-Control-Allow-Origin": "*", "Accept-Ranges": "bytes"}},
+		{"/animated-bgs/Thumbnails/1_Thumb.mp4", map[string]string{"Cache-Control": animated, "Content-Type": "video/mp4"}},
+		{"/image-backgrounds/dogs.webp", map[string]string{"Cache-Control": background, "Content-Type": "image/webp", "Access-Control-Allow-Origin": "*", "Vary": "Accept-Encoding"}},
+		{"/logo-transparent.png", map[string]string{"Cache-Control": "no-cache", "Content-Type": "image/png"}},
+		{"/star-icons/star.png", map[string]string{"Cache-Control": "no-cache", "Content-Type": "image/png"}},
+		{"/favicon.ico", map[string]string{"Cache-Control": favicon, "Content-Type": "image/x-icon", "Access-Control-Allow-Origin": "*"}},
+		{"/favicon/apple-touch-icon.png", map[string]string{"Cache-Control": favicon, "Content-Type": "image/png", "Access-Control-Allow-Origin": "*"}},
+		{"/favicon/safari-pinned-tab.svg", map[string]string{"Cache-Control": favicon, "Content-Type": "image/svg+xml"}},
+		{"/favicon/site.webmanifest", map[string]string{"Cache-Control": favicon, "Content-Type": "application/manifest+json"}},
+		{"/sample-csv/forma-organization-members-template.csv", map[string]string{"Cache-Control": csv, "Content-Type": "text/csv", "Access-Control-Allow-Origin": "*"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.path, func(t *testing.T) {
+			rec := get(r, http.MethodGet, tc.path)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("code = %d, want 200", rec.Code)
+			}
+			for k, v := range tc.want {
+				if got := rec.Header().Get(k); got != v {
+					t.Errorf("%s = %q, want %q", k, got, v)
+				}
+			}
+		})
+	}
+
+	t.Run("a video is served in ranges", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/animated-bgs/4K/1_4k.mp4", nil)
+		req.Header.Set("Range", "bytes=4-7")
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusPartialContent || rec.Body.String() != "ftyp" {
+			t.Fatalf("code = %d, body = %q, want 206 with the requested bytes", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("a missing background is 404, not the app", func(t *testing.T) {
+		if rec := get(r, http.MethodGet, "/image-backgrounds/missing.webp"); rec.Code != http.StatusNotFound {
+			t.Fatalf("code = %d, want 404", rec.Code)
 		}
 	})
 }
