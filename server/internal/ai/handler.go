@@ -9,14 +9,15 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 )
 
-// Handler serves the admin SPA's AI routes under /api/app: whether AI is available to an organization, a workspace's survey list and a survey's translations, and the editor's AI translation.
+// Handler serves the admin SPA's AI routes under /api/app: whether AI is available to an organization, a workspace's survey list and a survey's translations, the editor's AI translation, and a survey summary's example responses.
 type Handler struct {
 	svc      *Service
+	examples *ExampleResponses
 	sessions httpapi.SessionAuth
 }
 
-func NewHandler(svc *Service, sessions httpapi.SessionAuth) *Handler {
-	return &Handler{svc: svc, sessions: sessions}
+func NewHandler(svc *Service, examples *ExampleResponses, sessions httpapi.SessionAuth) *Handler {
+	return &Handler{svc: svc, examples: examples, sessions: sessions}
 }
 
 // Register mounts the routes on the group that already applies the error envelope and the CSRF check.
@@ -26,6 +27,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/workspaces/:workspaceId/ai", h.workspace)
 	g.POST("/workspaces/:workspaceId/ai/translations", h.translate)
 	g.GET("/surveys/:surveyId/ai/translation-availability", h.translationAvailability)
+	g.POST("/surveys/:surveyId/ai/example-responses", h.generateExampleResponses)
 }
 
 func userID(c *gin.Context) uuid.UUID {
@@ -88,5 +90,14 @@ func (h *Handler) translate(c *gin.Context) {
 		return
 	}
 	out, err := h.svc.TranslateSurveyFields(c.Request.Context(), userID(c), id, in)
+	respond(c, out, err)
+}
+
+func (h *Handler) generateExampleResponses(c *gin.Context) {
+	id, ok := param(c, "surveyId")
+	if !ok {
+		return
+	}
+	out, err := h.examples.Generate(c.Request.Context(), userID(c), id)
 	respond(c, out, err)
 }

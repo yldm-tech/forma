@@ -189,7 +189,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
 	analysisHandler := analysis.NewHandler(analysisService, sessions)
-	aiHandler := ai.NewHandler(aiService, sessions)
+	exampleResponses := ai.NewExampleResponses(aiService, db, limiter, emitter, log)
+	aiHandler := ai.NewHandler(aiService, exampleResponses, sessions)
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
@@ -369,8 +370,8 @@ var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewH
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
 var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
 
-// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
-var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewHandler)
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability, the editor's AI translation and a survey summary's example responses.
+var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewExampleResponses, ai.NewHandler)
 
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)

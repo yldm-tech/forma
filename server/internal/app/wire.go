@@ -122,11 +122,12 @@ var contactSet = wire.NewSet(
 	contact.NewV3Handler,
 )
 
-// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability, the editor's AI translation and a survey summary's example responses.
 var aiSet = wire.NewSet(
 	ai.NewClient,
 	ai.NewRepository,
 	ai.NewService,
+	ai.NewExampleResponses,
 	ai.NewHandler,
 )
 
