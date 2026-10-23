@@ -38,7 +38,6 @@ catalog:
   postcss: 8.5.28
   rimraf: 6.1.3
   tsx: 4.23.13
-  dotenv: 17.4.2
   dotenv-cli: 11.0.0
   cross-env: 10.1.0
   glob: 13.0.6
@@ -54,7 +53,7 @@ catalog:
   storybook: 10.6.0
   "@storybook/react": 10.6.0
   "@storybook/react-vite": 10.6.0
-  # --- ui runtime shared by apps/web, survey-ui, surveys and email ---
+  # --- ui runtime shared by web, survey-ui and surveys ---
   react: 19.3.0
   react-dom: 19.3.0
   preact: 10.29.8
