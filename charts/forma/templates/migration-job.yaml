@@ -50,10 +50,9 @@ spec:
         - name: wait-for-database
           image: {{ include "forma.deploymentImage" . }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
-          command:
-            - node
-            - packages/database/dist/scripts/wait-for-database.js
+          # Opens a TCP connection to MIGRATE_DATABASE_URL, else DATABASE_URL, until it succeeds; no credentials are used or logged.
           args:
+            - wait-for-database
             - --timeout-seconds
             - {{ .Values.migration.waitForDatabase.timeoutSeconds | quote }}
             - --interval-seconds
@@ -70,9 +69,9 @@ spec:
         - name: migration
           image: {{ include "forma.deploymentImage" . }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
-          command:
-            - node
-            - packages/database/dist/scripts/apply-migrations.js
+          # The goose schema migrations, then the job queue's, as MIGRATE_DATABASE_URL when it is set, else DATABASE_URL.
+          args:
+            - migrate
           {{- include "forma.migrationEnvironment" . | nindent 10 }}
           {{- if .Values.migration.resources }}
           resources:

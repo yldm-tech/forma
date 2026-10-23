@@ -38,8 +38,7 @@ if [[ -z "${default_context}" ]]; then
   exit 1
 fi
 
-# The restricted Pod Security Standard rejects a container missing any one of these, and kubelet cannot
-# verify runAsNonRoot without a numeric runAsUser because the image declares the non-numeric `USER nextjs`.
+# The restricted Pod Security Standard rejects a container missing any one of these. runAsUser pins the uid the image is built for (USER 1001:1001), so an image built elsewhere cannot silently run as another user.
 assert_contains "${default_context}" "            allowPrivilegeEscalation: false" \
   "The app container must disable privilege escalation by default."
 assert_contains "${default_context}" "              - ALL" \
@@ -51,10 +50,9 @@ assert_contains "${default_context}" "            runAsUser: 1001" \
 assert_contains "${default_context}" "              type: RuntimeDefault" \
   "The app container must request the RuntimeDefault seccomp profile by default."
 
-# readOnlyRootFilesystem would break file uploads and the Next.js standalone cache, both of which live on
-# the container root filesystem. Enabling it is an opt-in that has to come with emptyDir mounts.
+# readOnlyRootFilesystem would break large multipart uploads, which spill to /tmp. Enabling it is an opt-in that has to come with an emptyDir at /tmp.
 if grep --fixed-strings --line-regexp "            readOnlyRootFilesystem: true" <<<"${default_context}" >/dev/null; then
-  printf '%s\n' "readOnlyRootFilesystem must stay off by default; the app writes to uploads and the Next.js cache." >&2
+  printf '%s\n' "readOnlyRootFilesystem must stay off by default; large uploads spill to /tmp." >&2
   exit 1
 fi
 
@@ -96,8 +94,7 @@ fi
 
 # --- The metrics exporter binds exactly where something scrapes it --------------------------------------
 #
-# apps/web/instrumentation.ts only loads the Prometheus exporter when PROMETHEUS_ENABLED is set, so a
-# ServiceMonitor rendered without it scrapes a closed :9464 and the install exports nothing.
+# The server only starts the Prometheus exporter when PROMETHEUS_ENABLED is set, so a ServiceMonitor rendered without it scrapes a closed :9464 and the install exports nothing.
 prometheus_env_count() {
   grep --fixed-strings --line-regexp --count "            - name: PROMETHEUS_ENABLED" <<<"$1" || true
 }

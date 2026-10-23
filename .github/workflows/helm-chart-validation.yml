@@ -1,0 +1,186 @@
+name: Helm Chart Validation
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Helm Chart
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v3.15.4
+
+      - name: Validate chart renders
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart="charts/forma"
+          render_dir="$(mktemp -d)"
+          trap 'rm -rf "$render_dir"' EXIT
+
+          # `! cmd` never trips `set -e`, so negative assertions go through this.
+          refute() {
+            if "$@"; then
+              echo "Unexpected match: $*" >&2
+              exit 1
+            fi
+          }
+
+          helm lint "$chart" --set forma.webappUrl=https://qa.example.com
+          bash charts/forma/tests/authzed-operations.sh
+          bash charts/forma/tests/deployment-hardening.sh
+          bash charts/forma/tests/worker.sh
+          bash charts/forma/tests/redis-memory-limits.sh
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --show-only templates/deployment.yaml > "$render_dir/deployment-default.yaml"
+          grep -q 'terminationGracePeriodSeconds: 30' "$render_dir/deployment-default.yaml"
+          if grep -q '^          lifecycle:$' "$render_dir/deployment-default.yaml"; then
+            echo "Expected no lifecycle block in the default render" >&2
+            exit 1
+          fi
+          refute grep -q '^          volumeMounts:$' "$render_dir/deployment-default.yaml"
+          refute grep -q '^      volumes:$' "$render_dir/deployment-default.yaml"
+
+          # Extra volumes (custom CA bundles and the like) reach the worker too, since it makes the same outbound calls.
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set 'deployment.extraVolumes[0].name=custom-ca' \
+            --set 'deployment.extraVolumes[0].configMap.name=custom-ca' \
+            --set 'deployment.extraVolumeMounts[0].name=custom-ca' \
+            --set 'deployment.extraVolumeMounts[0].mountPath=/etc/ssl/forma-ca' \
+            --set 'deployment.extraVolumeMounts[0].readOnly=true' \
+            --show-only templates/deployment.yaml --show-only templates/worker-deployment.yaml > "$render_dir/deployment-volumes.yaml"
+          test "$(grep -c 'name: custom-ca' "$render_dir/deployment-volumes.yaml")" -eq 6
+          test "$(grep -c 'mountPath: /etc/ssl/forma-ca' "$render_dir/deployment-volumes.yaml")" -eq 2
+          test "$(grep -c 'readOnly: true' "$render_dir/deployment-volumes.yaml")" -eq 2
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set deployment.terminationGracePeriodSeconds=60 \
+            --set-json 'deployment.lifecycle={"preStop":{"sleep":{"seconds":30}}}' \
+            --show-only templates/deployment.yaml > "$render_dir/deployment-lifecycle.yaml"
+          grep -q 'terminationGracePeriodSeconds: 60' "$render_dir/deployment-lifecycle.yaml"
+          grep -q '^          lifecycle:$' "$render_dir/deployment-lifecycle.yaml"
+          grep -q '^            preStop:$' "$render_dir/deployment-lifecycle.yaml"
+          grep -q 'seconds: 30' "$render_dir/deployment-lifecycle.yaml"
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --show-only templates/deployment.yaml > "$render_dir/forma-default.yaml"
+          if grep -q 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-default.yaml"; then
+            echo "MCP_OAUTH_JWKS_URL must remain opt-in"
+            exit 1
+          fi
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set forma.mcpOauthJwksUrl=http://auth-internal:3000/custom/api/auth/jwks \
+            --show-only templates/deployment.yaml > "$render_dir/forma-jwks-value.yaml"
+          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-value.yaml" \
+            | grep -q 'value: "http://auth-internal:3000/custom/api/auth/jwks"'
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set-string deployment.env.MCP_OAUTH_JWKS_URL=http://explicit:3000/api/auth/jwks \
+            --show-only templates/deployment.yaml > "$render_dir/forma-jwks-env.yaml"
+          test "$(grep -c 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-env.yaml")" -eq 1
+          grep -A1 'name: MCP_OAUTH_JWKS_URL' "$render_dir/forma-jwks-env.yaml" \
+            | grep -q 'value: "http://explicit:3000/api/auth/jwks"'
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --show-only templates/migration-job.yaml > "$render_dir/default.yaml"
+
+          grep -q -- '- wait-for-database' "$render_dir/default.yaml"
+          grep -q -- '- migrate' "$render_dir/default.yaml"
+          refute grep -q 'command:' "$render_dir/default.yaml"
+          grep -q 'argocd.argoproj.io/sync-wave: "-1"' "$render_dir/default.yaml"
+          test "$(grep -c '^          image: ' "$render_dir/default.yaml")" -eq 2
+          test "$(grep '^          image: ' "$render_dir/default.yaml" | sort -u | wc -l | tr -d ' ')" -eq 1
+          test "$(grep -c 'name: forma-app-secrets' "$render_dir/default.yaml")" -eq 2
+          # Both containers get deployment.env (TRUSTED_PROXY_HOP_COUNT by default), the same as the app.
+          test "$(grep -c '^          env:$' "$render_dir/default.yaml")" -eq 2
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set migration.waitForDatabase.enabled=false \
+            --show-only templates/migration-job.yaml > "$render_dir/disabled.yaml"
+          refute grep -q 'wait-for-database' "$render_dir/disabled.yaml"
+          grep -q -- '- migrate' "$render_dir/disabled.yaml"
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set postgresql.enabled=false \
+            --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/forma \
+            --set authzed.mode=external \
+            --set authzed.operator.install=false \
+            --set authzed.endpoint=grpc.authzed.com:443 \
+            --set authzed.auth.existingSecret=forma-authzed \
+            --show-only templates/migration-job.yaml > "$render_dir/external.yaml"
+          grep -q -- '- wait-for-database' "$render_dir/external.yaml"
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set postgresql.enabled=false \
+            --set-string postgresql.externalDatabaseUrl=postgresql://user:password@external-postgresql:5432/forma \
+            --set authzed.mode=external \
+            --set authzed.operator.install=false \
+            --set authzed.endpoint=grpc.authzed.com:443 \
+            --set authzed.auth.existingSecret=forma-authzed \
+            --show-only templates/deployment.yaml > "$render_dir/external-deployment.yaml"
+          grep -A1 'name: AUTHZED_INSECURE' "$render_dir/external-deployment.yaml" | grep -q 'value: "0"'
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set-string deployment.env.MIGRATE_DATABASE_URL=postgresql://user:password@migrate-postgresql:5432/forma \
+            --show-only templates/migration-job.yaml > "$render_dir/migrate-url.yaml"
+          test "$(grep -c 'name: MIGRATE_DATABASE_URL' "$render_dir/migrate-url.yaml")" -eq 2
+          test "$(grep -c '^          env:' "$render_dir/migrate-url.yaml")" -eq 2
+
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --show-only charts/postgresql/templates/primary/statefulset.yaml > "$render_dir/postgresql.yaml"
+          grep -q 'argocd.argoproj.io/sync-wave: "-2"' "$render_dir/postgresql.yaml"
+          grep -q 'image: docker.io/pgvector/pgvector:pg18' "$render_dir/postgresql.yaml"
+
+          # The optional bundles still render against the new templates.
+          helm template qa "$chart" \
+            --set forma.webappUrl=https://qa.example.com \
+            --set llm.enabled=true \
+            --set envoy.enabled=true \
+            --set envoy.controller.enabled=true \
+            --set envoyRedis.enabled=true \
+            --set ingress.enabled=true \
+            --set externalSecret.enabled=true \
+            --set-json 'externalSecret.files={"app-secrets":{"dataFrom":{"key":"forma/app"}}}' \
+            --api-versions monitoring.coreos.com/v1 > "$render_dir/everything.yaml"
+          grep -q 'name: AI_OPENAI_COMPATIBLE_BASE_URL' "$render_dir/everything.yaml"
+
+          echo "Chart renders are valid."
+
+      # The render tests cannot execute the bootstrap SQL, and the SQL is where ENG-2390 actually broke: an administrator holding the documented CREATEROLE and CREATEDB could not run `CREATE DATABASE ... OWNER`. This runs the *rendered* script against real PostgreSQL, on both sides of the 16 CREATEROLE change and on 18. It skips itself when Docker is unavailable, so the suite stays runnable locally.
+      - name: Validate the AuthZed bootstrap against real PostgreSQL
+        shell: bash
+        run: bash charts/forma/tests/authzed-bootstrap-runtime.sh

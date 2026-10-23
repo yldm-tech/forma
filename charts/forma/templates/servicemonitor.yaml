@@ -15,9 +15,19 @@ metadata:
   {{- toYaml .Values.serviceMonitor.annotations | nindent 4 }}
   {{- end }}
 spec:
+  # The server's Service and, with the worker enabled, the worker's metrics Service.
   selector:
     matchLabels:
-{{ include "forma.labels" $ | indent 6 }}
+      app.kubernetes.io/name: {{ include "forma.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - {{ .Values.componentOverride | default (include "forma.name" .) }}
+          {{- if .Values.worker.enabled }}
+          - worker
+          {{- end }}
   namespaceSelector:
     matchNames:
       - {{ include "forma.namespace" . }}

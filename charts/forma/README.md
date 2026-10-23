@@ -1,13 +1,27 @@
 # forma
 
-![Version: 5.3.4](https://img.shields.io/badge/Version-5.3.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.3.4](https://img.shields.io/badge/AppVersion-5.3.4-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
-A Helm chart for Forma with PostgreSQL, Valkey
+A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valkey and SpiceDB
 
 **Homepage:** <https://forma.ylam.ai/docs/self-hosting/setup/kubernetes>
 
-The version badges describe the latest published OCI chart. The source `Chart.yaml` keeps the development chart
-version at `0.0.0-dev`; the release workflow stamps the requested chart version into the packaged artifact.
+The chart is installed from this repository (`helm install forma ./charts/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
+
+## Forma on the Go server: what changed in this chart
+
+The chart keeps forma2's values, Secrets and resource names; these are the differences.
+
+- One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
+- The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
+- The AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare` (see below).
+- Booleans are `1` or `0`. The chart renders `AUTHZED_ENABLED` and `AUTHZED_INSECURE` that way; values in `deployment.env` must follow suit. `SKIP_STARTUP_MIGRATION` keeps forma2's `"true"`.
+- The image runs as uid 1001 on a distroless base, with no shell: `kubectl exec ... -- forma <command>` replaces shell sessions, and there is no `/home/nextjs/...` path, `uploads` or `saml-connection` volume (files live in S3).
+- PostgreSQL 18 or newer is required; the bundled database image is `pgvector/pgvector:pg18`.
+- Valkey no longer holds the job queue (River keeps it in PostgreSQL), only rate limits and short-lived state. Its sizing is unchanged.
+- With a ServiceMonitor, the worker exports metrics too, through a headless `<name>-worker-metrics` Service the ServiceMonitor also selects.
+- Removed values, which nothing reads any more: `enterprise.enabled`, `enterprise.licenseKey` (every feature is available without a license) and `authzed.systemKey`. The generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
+- `forma.mcpOauthJwksUrl` still renders `MCP_OAUTH_JWKS_URL`; leave it empty to verify MCP tokens against the keys in this release's database.
 
 ## Maintainers
 
@@ -199,33 +213,28 @@ authzed:
     existingSecret: forma-authzed
 ```
 
-`authzed.insecure` defaults to `false` in external mode. Set it to `true` only for a trusted plaintext gRPC
-endpoint; plaintext transport sends the preshared token without TLS protection. The chart injects `AUTHZED_ENABLED`,
-`AUTHZED_ENDPOINT`, `AUTHZED_TOKEN`, `AUTHZED_SYSTEM_KEY`, `AUTHZED_INSECURE`, and `AUTHZED_CONSISTENCY` into
-the Forma app. Authorization checks must fail closed once product enforcement is enabled; general
-Forma readiness remains independent from transient SpiceDB availability.
+`authzed.insecure` defaults to `false` in external mode. Set it to `true` only for a trusted plaintext gRPC endpoint; plaintext transport sends the preshared token without TLS protection. The chart injects `AUTHZED_ENABLED`, `AUTHZED_ENDPOINT`, `AUTHZED_TOKEN`, `AUTHZED_INSECURE` (as `1` or `0`) and `AUTHZED_CONSISTENCY` into the server and the worker. Authorization checks fail closed; general Forma readiness remains independent from transient SpiceDB availability.
 
-Fresh installs run a release-matched post-install initialization Job that applies the canonical schema and verifies
-the empty or reconciled graph. An acknowledged existing release runs the same release-matched gate as a pre-upgrade
-hook; unacknowledged upgrades are rejected before rendering. Before the first v6 upgrade, run:
+Fresh installs run a release-matched post-install initialization Job: `forma authz schema apply`, `forma authz outbox drain`, then `forma authz backfill --apply`, each retried by the kubelet while SpiceDB comes up, the last exiting 0 only when nothing is left unreconciled. This is forma2's `forma-authzed upgrade prepare`; the image has no shell and no `forma-authzed` wrapper any more. An acknowledged existing release runs the same Job as a pre-upgrade hook; unacknowledged upgrades are rejected before rendering. To prepare by hand:
 
 ```bash
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed health
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed schema check
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed upgrade prepare
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed upgrade check
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz schema check
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz outbox status
 
-# Empty instances only
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed schema apply
+# Empty instances, or an unchanged schema
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz schema apply
 
-# Non-empty instances: use the remoteDigest returned by the immediately preceding check
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed schema apply \
-  --expected-current-digest sha256:<digest-from-check>
+# A SpiceDB holding a different schema: use the remoteDigest the immediately preceding check printed
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz schema apply \
+  --expected-current-digest=sha256:<digest-from-check>
+
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz outbox drain
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill --apply
+# The read-only audit forma2 called `upgrade check`: exit 0 is reconciled, 2 drifted, 1 failed.
+kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill
 ```
 
-The initial apply to an empty instance needs no digest. A non-empty instance must first be checked and then
-prepared with `--expected-current-digest sha256:<digest-from-check>`. Once `upgrade check` exits `0`, set
-`authzed.migrationAcknowledged=true` in the v6 upgrade values. The chart refuses an unacknowledged upgrade,
+The initial apply to an empty instance needs no digest. A non-empty instance whose schema differs must first be checked and then applied with `--expected-current-digest=sha256:<digest-from-check>`; the initialization Job cannot do that on its own, so a release that changes the schema of an existing instance needs that one manual apply before the upgrade. Once the audit exits `0`, set `authzed.migrationAcknowledged=true` in the v6 upgrade values. The chart refuses an unacknowledged upgrade,
 `authzed.enabled=false`, or consistency other than `fully_consistent`. Back up the current schema and affected
 relationships before replacement; see the repository `authzed/README.md` for exit codes and rollback rules.
 The public [AuthZed operations guide](../../docs/self-hosting/advanced/authzed-operations.mdx) covers backups,
@@ -324,13 +333,13 @@ externalSecret:
 | deployment.additionalPodLabels                                     | object | `{}`                                                                        |                                                           |
 | deployment.affinity                                                | object | `{}`                                                                        |                                                           |
 | deployment.annotations                                             | object | `{}`                                                                        |                                                           |
-| deployment.args                                                    | list   | `[]`                                                                        |                                                           |
+| deployment.args | list | `[]` | Empty runs the image default, `forma start`, steered by `SKIP_STARTUP_MIGRATION` and `BULLMQ_WORKER_ENABLED`. |
 | deployment.command                                                 | list   | `[]`                                                                        |                                                           |
 | deployment.containerSecurityContext.allowPrivilegeEscalation       | bool   | `false`                                                                     |                                                           |
 | deployment.containerSecurityContext.capabilities.drop              | list   | `["ALL"]`                                                                   |                                                           |
-| deployment.containerSecurityContext.readOnlyRootFilesystem         | bool   | `false`                                                                     | Off because the app writes to `apps/web/uploads` and the Next.js cache; enabling it needs emptyDir mounts. |
+| deployment.containerSecurityContext.readOnlyRootFilesystem | bool | `false` | Off because large multipart uploads spill to `/tmp`; enabling it needs an emptyDir at `/tmp` through `deployment.extraVolumes` / `deployment.extraVolumeMounts`. |
 | deployment.containerSecurityContext.runAsNonRoot                   | bool   | `true`                                                                      |                                                           |
-| deployment.containerSecurityContext.runAsUser                      | int    | `1001`                                                                      | The numeric uid the image is built for; kubelet cannot enforce `runAsNonRoot` without it. |
+| deployment.containerSecurityContext.runAsUser | int | `1001` | The uid the image is built for (`USER 1001:1001`); also applied to the worker. |
 | deployment.containerSecurityContext.seccompProfile.type            | string | `"RuntimeDefault"`                                                          |                                                           |
 | deployment.env                                                     | object | `{}`                                                                        | App container environment variables. Supports scalar values and `valueFrom` maps such as `secretKeyRef`. |
 | deployment.envFrom                                                 | string | `nil`                                                                       | Additional app container environment sources from ConfigMaps or Secrets. |
@@ -377,14 +386,12 @@ externalSecret:
 | deployment.terminationGracePeriodSeconds                           | int    | `30`                                                                        | Time allowed for graceful Pod shutdown; must exceed any preStop drain. |
 | deployment.tolerations                                             | list   | `[]`                                                                        |                                                           |
 | deployment.topologySpreadConstraints                               | list   | `[]`                                                                        |                                                           |
-| enterprise.enabled                                                 | bool   | `false`                                                                     | Deprecated compatibility value; it has no template effect. |
-| enterprise.licenseKey                                              | string | `""`                                                                        | Adds the license to the chart-generated app Secret.       |
 | externalSecret.enabled                                             | bool   | `false`                                                                     |                                                           |
 | externalSecret.files                                               | object | `{}`                                                                        |                                                           |
 | externalSecret.refreshInterval                                     | string | `"1h"`                                                                      |                                                           |
 | externalSecret.secretStore.kind                                    | string | `"ClusterSecretStore"`                                                      |                                                           |
 | externalSecret.secretStore.name                                    | string | `"aws-secrets-manager"`                                                     |                                                           |
-| forma.mcpOauthJwksUrl                                         | string | `""`                                                                        | Optional internal JWKS fetch URL for trusted application networks. |
+| forma.mcpOauthJwksUrl | string | `""` | `MCP_OAUTH_JWKS_URL`: verify MCP access tokens against another instance's keys; empty reads them from the database. |
 | forma.publicUrl                                               | string | `""`                                                                        |                                                           |
 | forma.webappUrl                                               | string | `""`                                                                        |                                                           |
 | ingress.annotations                                                | object | `{}`                                                                        |                                                           |
@@ -421,7 +428,7 @@ externalSecret:
 | migration.resources.requests.memory                                | string | `"256Mi"`                                                                   |                                                           |
 | migration.ttlSecondsAfterFinished                                  | int    | `300`                                                                       |                                                           |
 | migration.waitForDatabase.connectionTimeoutSeconds                 | int    | `5`                                                                         | Per-attempt TCP connection timeout.                       |
-| migration.waitForDatabase.enabled                                  | bool   | `true`                                                                      | Wait for PostgreSQL before starting migrations.           |
+| migration.waitForDatabase.enabled | bool | `true` | Wait for PostgreSQL (`forma wait-for-database`) before `forma migrate`. |
 | migration.waitForDatabase.intervalSeconds                          | int    | `5`                                                                         | Delay between readiness attempts.                         |
 | migration.waitForDatabase.timeoutSeconds                           | int    | `900`                                                                       | Overall readiness timeout for each Job attempt.           |
 | nameOverride                                                       | string | `""`                                                                        |                                                           |
@@ -442,7 +449,7 @@ externalSecret:
 | postgresql.fullnameOverride                                        | string | `"forma-postgresql"`                                                   |                                                           |
 | postgresql.global.security.allowInsecureImages                     | bool   | `true`                                                                      |                                                           |
 | postgresql.image.repository                                        | string | `"pgvector/pgvector"`                                                       |                                                           |
-| postgresql.image.tag                                               | string | `"pg17"`                                                                    |                                                           |
+| postgresql.image.tag | string | `"pg18"` | PostgreSQL 18 or newer is required (`uuidv7()`). |
 | postgresql.primary.containerSecurityContext.enabled                | bool   | `true`                                                                      |                                                           |
 | postgresql.primary.containerSecurityContext.readOnlyRootFilesystem | bool   | `false`                                                                     |                                                           |
 | postgresql.primary.containerSecurityContext.runAsUser              | int    | `1001`                                                                      |                                                           |
@@ -503,3 +510,16 @@ externalSecret:
 | serviceMonitor.endpoints[0].interval                               | string | `"30s"`                                                                     |                                                           |
 | serviceMonitor.endpoints[0].path                                   | string | `"/metrics"`                                                                |                                                           |
 | serviceMonitor.endpoints[0].port                                   | string | `"metrics"`                                                                 |                                                           |
+| worker.additionalLabels | object | `{}` |  |
+| worker.affinity | object | `{}` | Not inherited from `deployment.affinity`. |
+| worker.annotations | object | `{}` |  |
+| worker.enabled | bool | `true` | Run `forma worker` in its own Deployment; disabled, the server pods run the jobs in-process. |
+| worker.nodeSelector | object | `{}` | Defaults to `deployment.nodeSelector`. |
+| worker.replicas | int | `1` |  |
+| worker.resources.limits.memory | string | `"1Gi"` |  |
+| worker.resources.requests.cpu | string | `"250m"` |  |
+| worker.resources.requests.memory | string | `"256Mi"` |  |
+| worker.strategy | object | `{}` |  |
+| worker.terminationGracePeriodSeconds | int | `40` | `SHUTDOWN_TIMEOUT` plus the 10 s cancelled jobs get to return, plus margin. |
+| worker.tolerations | list | `[]` | Defaults to `deployment.tolerations`. |
+| worker.topologySpreadConstraints | list | `[]` |  |

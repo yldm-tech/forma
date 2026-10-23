@@ -71,10 +71,10 @@ external_notes="$(render_notes authzed-external \
 
 authzed_notes="$(authzed_operations_notes "${external_notes}")"
 grep --fixed-strings 'SpiceDB is configured in `external` mode.' <<<"${authzed_notes}" >/dev/null
-grep --fixed-strings 'forma-authzed health' <<<"${authzed_notes}" >/dev/null
-grep --fixed-strings 'forma-authzed schema check' <<<"${authzed_notes}" >/dev/null
-grep --fixed-strings 'forma-authzed upgrade prepare' <<<"${authzed_notes}" >/dev/null
-grep --fixed-strings 'forma-authzed upgrade check' <<<"${authzed_notes}" >/dev/null
+grep --fixed-strings 'forma authz schema check' <<<"${authzed_notes}" >/dev/null
+grep --fixed-strings 'forma authz outbox status' <<<"${authzed_notes}" >/dev/null
+grep --fixed-strings 'forma authz schema apply' <<<"${authzed_notes}" >/dev/null
+grep --fixed-strings 'forma authz backfill --apply' <<<"${authzed_notes}" >/dev/null
 grep --fixed-strings 'self-hosting/advanced/authzed-operations' <<<"${authzed_notes}" >/dev/null
 assert_safe_authzed_notes authzed-external "${authzed_notes}"
 
@@ -85,6 +85,23 @@ grep --fixed-strings 'name: forma-authzed-initialize' <<<"${default_install}" >/
 grep --fixed-strings 'helm.sh/hook-weight: "10"' <<<"${default_install}" >/dev/null
 grep --fixed-strings 'helm.sh/hook-weight: "-10"' <<<"${default_install}" >/dev/null
 grep --fixed-strings 'value: fully_consistent' <<<"${default_install}" >/dev/null
+
+# The image has no shell: the initialization runs forma2's `upgrade prepare` as three `forma authz` steps, retried by the kubelet.
+initialize_job="$(helm template authzed-default "${CHART_DIR}" "${COMMON_ARGS[@]}" --show-only templates/authzed-initialize-job.yaml)"
+grep --fixed-strings 'restartPolicy: OnFailure' <<<"${initialize_job}" >/dev/null
+# Flattened, an args list reads `args: - authz - schema - apply`.
+flat_job="$(tr -s ' \n' ' ' <<<"${initialize_job}")"
+for step in '- schema - apply' '- outbox - drain' '- backfill - --apply'; do
+  if ! grep --fixed-strings --quiet -- "args: - authz ${step} " <<<"${flat_job}"; then
+    printf '%s\n' "The AuthZed initialization Job must run forma authz ${step}." >&2
+    exit 1
+  fi
+done
+if grep --invert-match --extended-regexp '^[[:space:]]*#' <<<"${initialize_job}" \
+  | grep --extended-regexp 'command:|sh -ec|forma-authzed (health|schema|upgrade)|value: "?(true|false)"?$' >/dev/null; then
+  printf '%s\n' "The AuthZed initialization Job must run the binary directly with 1/0 switches." >&2
+  exit 1
+fi
 
 if external_initialization_error="$(helm template authzed-external-initialization "${CHART_DIR}" \
   "${COMMON_ARGS[@]}" \

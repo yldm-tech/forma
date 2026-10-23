@@ -36,7 +36,13 @@ helm.sh/chart: {{ include "forma.chart" . }}
 
 # Selector labels
 {{ include "forma.selectorLabels" . }}
+{{ include "forma.commonLabels" . }}
+{{- end }}
 
+{{/*
+The labels every resource shares besides its selector labels: version, manager and part-of.
+*/}}
+{{- define "forma.commonLabels" -}}
 # Application version label
 {{- with include "forma.version" . }}
 app.kubernetes.io/version: {{ . | quote }}
@@ -47,6 +53,25 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 # Part of label, defaults to the chart name if `partOfOverride` is not provided.
 app.kubernetes.io/part-of: {{ .Values.partOfOverride | default (include "forma.name" .) }}
+{{- end }}
+
+{{/*
+The job worker (`forma worker`): its own Deployment, selected apart from the server pods so the Service, HPA and PDB keep addressing the server alone.
+*/}}
+{{- define "forma.workerName" -}}
+{{- printf "%s-worker" (include "forma.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "forma.workerSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "forma.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: worker
+{{- end }}
+
+{{- define "forma.workerLabels" -}}
+helm.sh/chart: {{ include "forma.chart" . }}
+{{ include "forma.workerSelectorLabels" . }}
+{{ include "forma.commonLabels" . }}
 {{- end }}
 
 
@@ -147,12 +172,15 @@ If `namespaceOverride` is provided, it will be used; otherwise, it defaults to `
 {{- end -}}
 {{- end }}
 
+{{/*
+AUTHZED_INSECURE as the server reads it, 1 or 0. Unset (null) means plaintext for the selfHosted cluster's internal Service and TLS for an external endpoint.
+*/}}
 {{- define "forma.authzedInsecure" -}}
-{{- if eq .Values.authzed.insecure nil -}}
-{{- eq .Values.authzed.mode "selfHosted" -}}
-{{- else -}}
-{{- .Values.authzed.insecure -}}
+{{- $insecure := .Values.authzed.insecure -}}
+{{- if eq $insecure nil -}}
+{{- $insecure = eq .Values.authzed.mode "selfHosted" -}}
 {{- end -}}
+{{- ternary "1" "0" $insecure -}}
 {{- end }}
 
 {{- define "forma.authzedPresharedKey" -}}
@@ -264,13 +292,6 @@ Forma application image reference. A configured digest takes precedence over the
 {{- printf "%s:%s" .Values.deployment.image.repository (.Values.deployment.image.tag | default .Chart.AppVersion | default "latest") -}}
 {{- end -}}
 {{- end }}
-{{/* Reject Hugging Face tokens that cannot be written into an externally managed auth secret. */}}
-{{- define "forma.validateHubEmbeddingsHuggingFaceSecret" -}}
-{{- if and .Values.hub.embeddings.auth.existingSecret .Values.hub.embeddings.huggingFace.token (not .Values.hub.embeddings.huggingFace.existingSecret) -}}
-{{- fail "hub.embeddings.huggingFace.token cannot be stored when hub.embeddings.auth.existingSecret is set; put HF_TOKEN in the existing auth secret or set hub.embeddings.huggingFace.existingSecret" -}}
-{{- end -}}
-{{- end }}
-
 {{- define "forma.postgresAdminPassword" -}}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace (include "forma.appSecretName" .)) }}
 {{- $secretData := dig "data" dict $secret }}
@@ -302,18 +323,6 @@ Forma application image reference. A configured digest takes precedence over the
     {{- randAlphaNum 16 -}}
 {{- else }}
     {{- fail (printf "redis.auth.existingSecret %q must already exist in namespace %q and contain %s when secret.enabled=true so REDIS_URL can use the same password as the bundled Valkey server. Disable secret.enabled and provide app-secrets externally, or pre-create the Redis auth secret." $redisSecretName .Release.Namespace $redisSecretKey) -}}
-{{- end -}}
-{{- end }}
-
-{{- define "forma.cronSecret" -}}
-{{- $secret := (lookup "v1" "Secret" .Release.Namespace (include "forma.appSecretName" .)) }}
-{{- $secretData := dig "data" dict $secret }}
-{{- if index $secretData "CRON_SECRET" }}
-    {{- index $secretData "CRON_SECRET" | b64dec -}}
-{{- else if and $secret (hasKey $secret "data") }}
-    {{- fail (printf "Secret %q exists in namespace %q but is missing CRON_SECRET" (include "forma.appSecretName" .) .Release.Namespace) -}}
-{{- else }}
-    {{- randAlphaNum 32 -}}
 {{- end -}}
 {{- end }}
 
@@ -382,4 +391,141 @@ Forma application image reference. A configured digest takes precedence over the
 
 {{- define "forma.envoy.defaultRedisUrl" -}}
 {{- printf "%s-master:6379" .Values.envoyRedis.fullnameOverride -}}
+{{- end }}
+
+{{/*
+The envFrom of the server and the worker: the chart's app Secret (or the ExternalSecret rendering it) and deployment.envFrom.
+*/}}
+{{- define "forma.appEnvFrom" -}}
+{{- if or .Values.deployment.envFrom (or (and .Values.externalSecret.enabled (index .Values.externalSecret.files "app-secrets")) .Values.secret.enabled) }}
+envFrom:
+{{- if or .Values.secret.enabled (and .Values.externalSecret.enabled (index .Values.externalSecret.files "app-secrets")) }}
+  - secretRef:
+      name: {{ template "forma.name" . }}-app-secrets
+{{- end }}
+{{- range $value := .Values.deployment.envFrom }}
+{{- if (eq .type "configmap") }}
+  - configMapRef:
+      {{- if .name }}
+      name: {{ include "forma.tplvalues.render" ( dict "value" $value.name "context" $ ) }}
+      {{- else if .nameSuffix }}
+      name: {{ template "forma.name" $ }}-{{ include "forma.tplvalues.render" ( dict "value" $value.nameSuffix "context" $ ) }}
+      {{- else }}
+      name: {{ template "forma.name" $ }}
+      {{- end }}
+{{- end }}
+{{- if (eq .type "secret") }}
+  - secretRef:
+      {{- if .name }}
+      name: {{ include "forma.tplvalues.render" ( dict "value" $value.name "context" $ ) }}
+      {{- else if .nameSuffix }}
+      name: {{ template "forma.name" $ }}-{{ include "forma.tplvalues.render" ( dict "value" $value.nameSuffix "context" $ ) }}
+      {{- else }}
+      name: {{ template "forma.name" $ }}
+      {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+The env entries the server and the worker share: variables the chart derives from its values (MCP, Prometheus, SpiceDB, the bundled LLM), then deployment.env. A variable deployment.env sets is never derived as well, so the operator's value is the only one.
+*/}}
+{{- define "forma.appEnv" -}}
+{{- if and .Values.forma.mcpOauthJwksUrl (not (hasKey .Values.deployment.env "MCP_OAUTH_JWKS_URL")) }}
+- name: MCP_OAUTH_JWKS_URL
+  value: {{ .Values.forma.mcpOauthJwksUrl | quote }}
+{{- end }}
+{{- if and (.Values.serviceMonitor).enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") (not (hasKey .Values.deployment.env "PROMETHEUS_ENABLED")) }}
+# The Prometheus exporter only listens on :9464 when this is set, so a ServiceMonitor without it scrapes a closed port and the install exports nothing while reading as instrumented. The condition is deliberately identical to templates/servicemonitor.yaml, so the exporter is paid for only where something actually scrapes it. Set PROMETHEUS_ENABLED in deployment.env to override.
+- name: PROMETHEUS_ENABLED
+  value: "1"
+{{- end }}
+{{- if .Values.authzed.enabled }}
+{{- if not (hasKey .Values.deployment.env "AUTHZED_ENABLED") }}
+- name: AUTHZED_ENABLED
+  value: "1"
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AUTHZED_ENDPOINT") }}
+- name: AUTHZED_ENDPOINT
+  value: {{ include "forma.authzedEndpoint" . | quote }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AUTHZED_TOKEN") }}
+- name: AUTHZED_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "forma.authzedAuthSecretName" . }}
+      key: {{ .Values.authzed.auth.tokenKey }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AUTHZED_INSECURE") }}
+- name: AUTHZED_INSECURE
+  value: {{ include "forma.authzedInsecure" . | quote }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AUTHZED_CONSISTENCY") }}
+- name: AUTHZED_CONSISTENCY
+  value: {{ .Values.authzed.consistency | quote }}
+{{- end }}
+{{- end }}
+{{- if and .Values.llm.enabled .Values.llm.autoConfigureApp }}
+{{- if not (hasKey .Values.deployment.env "AI_PROVIDER") }}
+- name: AI_PROVIDER
+  value: "openai-compatible"
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AI_MODEL") }}
+- name: AI_MODEL
+  value: {{ .Values.llm.forma.model | quote }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AI_OPENAI_COMPATIBLE_BASE_URL") }}
+- name: AI_OPENAI_COMPATIBLE_BASE_URL
+  value: {{ include "forma.llmBaseUrl" . | quote }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AI_OPENAI_COMPATIBLE_PROVIDER_NAME") }}
+- name: AI_OPENAI_COMPATIBLE_PROVIDER_NAME
+  value: {{ .Values.llm.forma.providerName | quote }}
+{{- end }}
+{{- if not (hasKey .Values.deployment.env "AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS") }}
+- name: AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS
+  value: {{ .Values.llm.forma.supportsStructuredOutputs | quote }}
+{{- end }}
+{{- end }}
+{{- range $key, $value := .Values.deployment.env }}
+{{ include "forma.envVar" (dict "name" $key "value" $value "context" $) }}
+{{- end }}
+{{- end }}
+
+{{/*
+One step of the AuthZed initialization Job: the release's image running `forma <args>` with the database and the SpiceDB connection, which is all `forma authz` reads.
+*/}}
+{{- define "forma.authzedJobContainer" -}}
+{{- $ := .context -}}
+image: {{ include "forma.deploymentImage" $ }}
+imagePullPolicy: {{ $.Values.deployment.image.pullPolicy }}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+args:
+  {{- toYaml .args | nindent 2 }}
+{{- include "forma.appEnvFrom" $ }}
+env:
+  {{- if hasKey $.Values.deployment.env "DATABASE_URL" }}
+  {{- include "forma.envVar" (dict "name" "DATABASE_URL" "value" (index $.Values.deployment.env "DATABASE_URL") "context" $) | nindent 2 }}
+  {{- end }}
+  - name: LOG_LEVEL
+    value: error
+  - name: AUTHZED_ENABLED
+    value: "1"
+  - name: AUTHZED_ENDPOINT
+    value: {{ include "forma.authzedEndpoint" $ | quote }}
+  - name: AUTHZED_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "forma.authzedAuthSecretName" $ }}
+        key: {{ $.Values.authzed.auth.tokenKey }}
+  - name: AUTHZED_INSECURE
+    value: {{ include "forma.authzedInsecure" $ | quote }}
+  - name: AUTHZED_CONSISTENCY
+    value: fully_consistent
 {{- end }}

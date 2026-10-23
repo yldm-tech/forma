@@ -21,9 +21,8 @@ if ! docker info >/dev/null 2>&1; then
   exit 0
 fi
 
-# PostgreSQL 16 changed how a creator is granted its new role, and the bootstrap has to work either
-# way, so both sides of that change are covered.
-postgres_versions=("15" "17")
+# PostgreSQL 16 changed how a creator is granted its new role, and the bootstrap has to work either way, so both sides of that change are covered, plus 18, the version the bundled server now runs.
+postgres_versions=("15" "17" "18")
 admin_password="admin-pw"
 spicedb_password="spicedb-pw"
 containers=()
