@@ -65,7 +65,7 @@ type UploadScope struct {
 	SurveyID    uuid.UUID
 	// AppOrigins are the origins an absolute file URL may be on: WEBAPP_URL's and the public domain's.
 	AppOrigins []*url.URL
-	// LegacyPrefixes are the storage prefixes the workspace owns for files uploaded before forma2 scoped uploads to a survey and element (its own id and its legacy environment id). Only the management APIs pass them, so a replayed old response validates; the client widget only ever emits the scoped shape.
+	// LegacyPrefixes are the storage prefixes the workspace owns for files uploaded before forma2 scoped uploads to a survey and element (its own id and its legacy environment id; the forma2 id the workspace was migrated from is owned too). Only the management APIs pass them, so a replayed old response validates; the client widget only ever emits the scoped shape.
 	LegacyPrefixes []string
 }
 
@@ -133,7 +133,8 @@ func (s UploadScope) scopedUploadURL(fileURL, elementID string) bool {
 		return segments[0] == "storage" && legacyid.Matches(segments[1], s.WorkspaceID) && segments[2] == "private" &&
 			segments[3] == "surveys" && legacyid.Matches(segments[4], s.SurveyID) && segments[5] == "elements" && segments[6] == elementID && segments[7] != ""
 	case len(segments) == 4 && len(s.LegacyPrefixes) > 0:
-		return segments[0] == "storage" && segments[2] == "private" && slices.Contains(s.LegacyPrefixes, segments[1]) && segments[3] != ""
+		owned := slices.Contains(s.LegacyPrefixes, segments[1]) || legacyid.Matches(segments[1], s.WorkspaceID)
+		return segments[0] == "storage" && segments[2] == "private" && owned && segments[3] != ""
 	}
 	return false
 }
