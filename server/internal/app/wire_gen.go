@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/instance"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -147,7 +148,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	storageService := storage.NewService(bucket)
 	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, storageService, log)
-	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, lifecycle, log)
+	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, lifecycle, mailerMailer, log)
 	orgHandler := org.NewHandler(orgService, sessions)
 	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
 	teamRepository := team.NewRepository(db)
@@ -241,7 +242,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	billingService := billing.NewService(engine, authorizer, limiter, emitter)
 	billingHandler := billing.NewHandler(billingService, sessions)
 	billingWebhookHandler := billing.NewWebhookHandler(engine, log)
-	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, webuiHandler)
+	releases := instance.NewReleases(client, log)
+	instanceHandler := instance.NewHandler(bucket, releases, sessions)
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler)
 	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()
@@ -384,6 +387,9 @@ var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.Ne
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
 var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)
+
+// instanceSet is /api/app/instance: whether file storage is configured, the running release, and the latest stable release for the self-hosted update notice.
+var instanceSet = wire.NewSet(instance.NewReleases, instance.NewHandler)
 
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
 var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService, linksurvey.NewHandler)

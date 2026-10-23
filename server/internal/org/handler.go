@@ -36,6 +36,12 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.PATCH("/:organizationId/members/:userId", h.changeRole)
 	g.DELETE("/:organizationId/members/:userId", h.removeMember)
 	g.POST("/:organizationId/leave", h.leave)
+	g.GET("/:organizationId/pretty-urls", h.prettyURLs)
+	g.PUT("/:organizationId/whitelabel/email-logo", h.setEmailLogo)
+	g.DELETE("/:organizationId/whitelabel/email-logo", h.removeEmailLogo)
+	g.PUT("/:organizationId/whitelabel/favicon", h.setFavicon)
+	g.DELETE("/:organizationId/whitelabel/favicon", h.removeFavicon)
+	g.POST("/:organizationId/whitelabel/test-email", h.sendTestEmail)
 }
 
 // userID is the authenticated caller; the routes that call it are mounted behind SessionAuth.Require.
