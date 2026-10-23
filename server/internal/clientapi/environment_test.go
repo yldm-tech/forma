@@ -244,7 +244,7 @@ func TestStateAndIDResolutionAreCached(t *testing.T) {
 	if ttl := e.cache.TTL(t.Context(), "fb:env:"+ws.String()+":state").Val(); ttl <= 0 || ttl > stateTTL {
 		t.Fatalf("state TTL %v", ttl)
 	}
-	if ttl := e.cache.TTL(t.Context(), "fb:env:clcachedenvaaaaaaaaaaaa1:id-resolution").Val(); ttl <= stateTTL || ttl > idResolutionTTL {
+	if ttl := e.cache.TTL(t.Context(), "forma:env:clcachedenvaaaaaaaaaaaa1:id-resolution").Val(); ttl <= stateTTL || ttl > idResolutionTTL {
 		t.Fatalf("id resolution TTL %v", ttl)
 	}
 	e.flushState(ws)
@@ -254,12 +254,34 @@ func TestStateAndIDResolutionAreCached(t *testing.T) {
 
 	missing := "clmissingworkspaceaaaaa1"
 	e.do("GET", "/api/v1/client/"+missing+"/environment", nil).expectError(t, 404, "not_found", "Workspace not found")
-	if n := e.cache.Exists(t.Context(), "fb:env:"+missing+":id-resolution").Val(); n != 0 {
+	if n := e.cache.Exists(t.Context(), "forma:env:"+missing+":id-resolution").Val(); n != 0 {
 		t.Fatal("a miss was cached")
 	}
 	// A cache that cannot be read is read through.
-	e.cache.Set(t.Context(), "fb:env:"+ws.String()+":id-resolution", "not json", 0)
+	e.cache.Set(t.Context(), "forma:env:"+ws.String()+":id-resolution", "not json", 0)
 	e.state(t, ws.String())
+}
+
+// forma2 caches the same raw id under "fb:env:<id>:id-resolution", holding its own cuids. The two servers share one Valkey during the cutover and after a rollback, so this server neither reads forma2's entry nor overwrites it.
+func TestIDResolutionLeavesForma2sEntryAlone(t *testing.T) {
+	e := newEnv(t)
+	legacy := "clsharedenvaaaaaaaaaaaa1"
+	ws := e.workspace("legacy_environment_id", legacy)
+	e.survey(ws, "type", "app")
+	forma2Key := "fb:env:" + legacy + ":id-resolution"
+	forma2Entry := `{"id":"clforma2workspaceaaaaaa1","organizationId":"clforma2organizationa1"}`
+	e.cache.Set(t.Context(), forma2Key, forma2Entry, 0)
+
+	if n := len(surveysOf(e.state(t, legacy))); n != 1 {
+		t.Fatalf("%d surveys", n)
+	}
+	if got := e.cache.Get(t.Context(), forma2Key).Val(); got != forma2Entry {
+		t.Fatalf("forma2's entry was overwritten with %s", got)
+	}
+	var cached map[string]string
+	if err := json.Unmarshal([]byte(e.cache.Get(t.Context(), "forma:env:"+legacy+":id-resolution").Val()), &cached); err != nil || cached["id"] != ws.String() {
+		t.Fatalf("own entry %v, %v", cached, err)
+	}
 }
 
 // The environment and identify routes check the id's form before resolving it: a cuid or UUID, surrounding spaces ignored.
