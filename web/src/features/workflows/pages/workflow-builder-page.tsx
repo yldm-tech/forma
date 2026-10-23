@@ -53,7 +53,7 @@ export const WorkflowBuilderPage = ({
       survey,
       teamMemberDetails: authoring?.teamMemberDetails ?? [],
       userEmail: me.email,
-      mailFrom: authoring?.mailFrom || "noreply@forma.ylam.ai",
+      mailFrom: authoring?.mailFrom || "noreply@forma.yldm.ai",
       locale: me.locale as TUserLocale,
     }),
     [survey, authoring, me.email, me.locale]

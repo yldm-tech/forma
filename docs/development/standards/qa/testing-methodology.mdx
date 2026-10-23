@@ -87,7 +87,7 @@ What earns a spec:
 
 ## Development data
 
-`make seed` (`forma seed`, which refuses to run without `ALLOW_SEED=1`) writes forma2's demo data: an organization with an owner, a manager and a member (`admin@forma.ylam.ai`, `manager@forma.ylam.ai`, `member@forma.ylam.ai`, all with the password `Password#123`), a workspace with four surveys, one of them carrying every element type, 150 responses and demo workflows with run history. Seeding again rewrites the same rows; `make seed-clear` removes what the seed wrote and seeds again. With `SEED_API_KEY` set it also creates an API key, `fbk_<SEED_API_KEY>`, with manage access to the seeded workspace.
+`make seed` (`forma seed`, which refuses to run without `ALLOW_SEED=1`) writes forma2's demo data: an organization with an owner, a manager and a member (`admin@forma.yldm.ai`, `manager@forma.yldm.ai`, `member@forma.yldm.ai`, all with the password `Password#123`), a workspace with four surveys, one of them carrying every element type, 150 responses and demo workflows with run history. Seeding again rewrites the same rows; `make seed-clear` removes what the seed wrote and seeds again. With `SEED_API_KEY` set it also creates an API key, `fbk_<SEED_API_KEY>`, with manage access to the seeded workspace.
 
 ## Other checks on every pull request
 

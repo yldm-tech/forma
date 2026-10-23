@@ -52,8 +52,8 @@ const UPGRADE_SYNC_POLL_INTERVAL_MS = 1500;
 const UPGRADE_SYNC_POLL_TIMEOUT_MS = 45_000;
 
 const CONTACT_SALES_URL =
-  "https://app.forma.ylam.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=cloud&source=billingView&type=pricingRequest";
-const SUPPORT_EMAIL = "hola@forma.ylam.ai";
+  "https://forma.yldm.ai/s/trvp8tzy5uvsps9rc9qi9l9w?delivery=cloud&source=billingView&type=pricingRequest";
+const SUPPORT_EMAIL = "hola@forma.yldm.ai";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

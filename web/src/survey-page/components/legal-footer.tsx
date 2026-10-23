@@ -57,7 +57,7 @@ export const LegalFooter = ({
           {(imprintUrl || privacyUrl || termsUrl) && isFormaCloud && <span className="px-2">|</span>}
           {isFormaCloud && (
             <a
-              href={`https://app.forma.ylam.ai/s/clxbivtla014iye2vfrn436xd?surveyUrl=${surveyUrl}`}
+              href={`https://forma.yldm.ai/s/clxbivtla014iye2vfrn436xd?surveyUrl=${surveyUrl}`}
               target="_blank"
               rel="noreferrer"
               className="hover:underline">

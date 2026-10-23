@@ -42,14 +42,14 @@ forma.setUserId("<user-id>");
 Use the `setEmail` function to store the user's email address on the contact. Email is one of the built-in contact attributes, so it gets its own column in the Contacts table and is never removed by an attribute update that omits it.
 
 ```javascript Setting User Email
-forma.setEmail("hola@forma.ylam.ai");
+forma.setEmail("hola@forma.yldm.ai");
 ```
 
 `setEmail` is a shorthand, not a separate identity mechanism. It writes the `email` attribute exactly as `setAttributes` would, so these two calls are equivalent:
 
 ```javascript setEmail vs setAttributes
-forma.setEmail("hola@forma.ylam.ai");
-forma.setAttributes({ email: "hola@forma.ylam.ai" });
+forma.setEmail("hola@forma.yldm.ai");
+forma.setAttributes({ email: "hola@forma.yldm.ai" });
 ```
 
 Order matters: call `setUserId` before `setEmail`. Attributes are only stored for identified users, so if no user ID has been set yet, Forma drops the email and logs an error to the console:

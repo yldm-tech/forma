@@ -71,7 +71,7 @@ func baseConfig() config.Config {
 	return config.Config{
 		WebAppURL: webAppURL, UserManagementMinimumRole: "manager", AuditLogEnabled: true, SessionMaxAge: 86400,
 		RateLimitingDisabled: true, InviteRateLimitPer24Hours: 50,
-		SMTPHost: "smtp.example.com", SMTPPort: "587", MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma",
+		SMTPHost: "smtp.example.com", SMTPPort: "587", MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma",
 	}
 }
 

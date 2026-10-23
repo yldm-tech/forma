@@ -459,5 +459,5 @@
       "additionalProperties": false
     }
   },
-  "$id": "https://forma.ylam.ai/schemas/segment.filters.json"
+  "$id": "https://forma.yldm.ai/schemas/segment.filters.json"
 }

@@ -49,9 +49,9 @@ type User struct {
 
 // Users are forma2's three seeded users, one per organization role it seeded.
 var Users = []User{
-	{ID: legacyid.ID("clseedadmin000000000000"), Name: "Admin User", Email: "admin@forma.ylam.ai", Role: "owner"},
-	{ID: legacyid.ID("clseedmanager0000000000"), Name: "Manager User", Email: "manager@forma.ylam.ai", Role: "manager"},
-	{ID: legacyid.ID("clseedmember00000000000"), Name: "Member User", Email: "member@forma.ylam.ai", Role: "member"},
+	{ID: legacyid.ID("clseedadmin000000000000"), Name: "Admin User", Email: "admin@forma.yldm.ai", Role: "owner"},
+	{ID: legacyid.ID("clseedmanager0000000000"), Name: "Manager User", Email: "manager@forma.yldm.ai", Role: "manager"},
+	{ID: legacyid.ID("clseedmember00000000000"), Name: "Member User", Email: "member@forma.yldm.ai", Role: "member"},
 }
 
 // Options selects what a seed writes besides the base data.

@@ -32,7 +32,7 @@ Every single-use link is your normal survey link plus a **single-use ID** (`suId
 on the mode — a **signature** (`suToken`):
 
 ```
-https://app.forma.ylam.ai/s/<surveyId>?suId=<single-use-id>&suToken=<signature>
+https://forma.yldm.ai/s/<surveyId>?suId=<single-use-id>&suToken=<signature>
 ```
 
 When someone opens the link, Forma:
@@ -119,15 +119,15 @@ Management API:
 
 ```bash
 curl -X GET \
-  'https://app.forma.ylam.ai/api/v1/management/surveys/<surveyId>/singleUseIds?limit=100' \
+  'https://forma.yldm.ai/api/v1/management/surveys/<surveyId>/singleUseIds?limit=100' \
   -H 'x-api-key: <your-api-key>'
 ```
 
 ```json
 {
   "data": [
-    "https://app.forma.ylam.ai/s/clzqym2l3...?suId=ohkj3qx6d0wdo9r3nfpm3bgj&suToken=9f2b...",
-    "https://app.forma.ylam.ai/s/clzqym2l3...?suId=ci6la2lzj63pvsp6x3eqbhff&suToken=41ce..."
+    "https://forma.yldm.ai/s/clzqym2l3...?suId=ohkj3qx6d0wdo9r3nfpm3bgj&suToken=9f2b...",
+    "https://forma.yldm.ai/s/clzqym2l3...?suId=ci6la2lzj63pvsp6x3eqbhff&suToken=41ce..."
   ]
 }
 ```

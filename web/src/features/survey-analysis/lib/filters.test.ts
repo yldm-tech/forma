@@ -1279,7 +1279,7 @@ describe("surveys", () => {
         filter: [
           {
             elementType: { type: "Meta", label: "url", id: "url" },
-            filterType: { filterValue: "Contains", filterComboBoxValue: "forma.ylam.ai" },
+            filterType: { filterValue: "Contains", filterComboBoxValue: "forma.yldm.ai" },
           },
           {
             elementType: { type: "Meta", label: "source", id: "source" },
@@ -1290,7 +1290,7 @@ describe("surveys", () => {
 
       const result = getFormattedFilters(survey, selectedFilter, dateRange);
 
-      expect(result.reserved?.url).toEqual({ op: "contains", value: "forma.ylam.ai" });
+      expect(result.reserved?.url).toEqual({ op: "contains", value: "forma.yldm.ai" });
       expect(result.reserved?.source).toEqual({ op: "equals", value: "newsletter" });
     });
 

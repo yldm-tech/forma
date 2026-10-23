@@ -5,7 +5,7 @@ export function FormaBranding() {
   return (
     <span className="flex justify-center">
       <a
-        href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge"
+        href="https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge"
         target="_blank"
         rel="noopener">
         <p className="text-signature text-xs">

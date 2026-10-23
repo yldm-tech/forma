@@ -3,7 +3,7 @@
   "license": "MIT",
   "version": "1.0.4",
   "description": "React UI components for building surveys and forms - includes NPS, rating scales, multi-select, file upload, and more. Built with Radix UI and Tailwind CSS.",
-  "homepage": "https://forma.ylam.ai",
+  "homepage": "https://forma.yldm.ai",
   "type": "module",
   "keywords": [
     "react",
@@ -22,7 +22,7 @@
   ],
   "author": {
     "name": "Forma",
-    "url": "https://forma.ylam.ai"
+    "url": "https://forma.yldm.ai"
   },
   "repository": {
     "type": "git",

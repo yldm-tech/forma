@@ -16,7 +16,7 @@ FORMA_DIR="${FORMA_DIR:-forma}"
 FORMA_REF="${FORMA_REF:-stable}"
 FORMA_SOURCE_DIR="${FORMA_SOURCE_DIR:-}"
 FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/docker"
-FORMA_UPGRADE_GUIDE="https://forma.ylam.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server"
+FORMA_UPGRADE_GUIDE="https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server"
 
 # The files the stack is made of; docker-compose.yml mounts the two scripts.
 FORMA_STACK_FILES="docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh"
@@ -581,7 +581,7 @@ install_forma() {
     if [ "$(ask "Does $domain point at this server, with ports 80 and 443 open? [Y/n]" y)" = y ]; then
       read -r -p "Email address for the certificate: " email
     else
-      echo "Without that a certificate cannot be issued; set up HTTPS yourself (https://forma.ylam.ai/docs/self-hosting/configuration/custom-ssl)."
+      echo "Without that a certificate cannot be issued; set up HTTPS yourself (https://forma.yldm.ai/docs/self-hosting/configuration/custom-ssl)."
       https_setup=n
     fi
   fi

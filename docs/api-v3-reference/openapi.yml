@@ -80,7 +80,7 @@ info:
     pagination-model: cursor
     cursor-pagination: supported
 servers:
-  - url: https://app.forma.ylam.ai
+  - url: https://forma.yldm.ai
     description: Forma Cloud. Paths in this spec already include the `/api/v3` prefix; self-hosted instances substitute their own origin.
 paths:
   /api/v3/surveys:

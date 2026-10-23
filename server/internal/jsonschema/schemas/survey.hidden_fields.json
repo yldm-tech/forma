@@ -15,5 +15,5 @@
   "required": [
     "enabled"
   ],
-  "$id": "https://forma.ylam.ai/schemas/survey.hidden_fields.json"
+  "$id": "https://forma.yldm.ai/schemas/survey.hidden_fields.json"
 }

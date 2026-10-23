@@ -5,7 +5,7 @@
   "license": "MIT",
   "version": "1.0.0",
   "description": "Js core for Forma that contains the logic for executing the @forma/js library and is loaded asynchronously over the Forma API.",
-  "homepage": "https://forma.ylam.ai",
+  "homepage": "https://forma.yldm.ai",
   "repository": {
     "type": "git",
     "url": "https://github.com/yldm-tech/forma"
@@ -36,7 +36,7 @@
     "test": "vp test run",
     "test:coverage": "vp test run --coverage"
   },
-  "author": "Forma <hola@forma.ylam.ai>",
+  "author": "Forma <hola@forma.yldm.ai>",
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
     "@forma/vite-plugins": "workspace:*",

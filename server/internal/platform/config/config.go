@@ -72,7 +72,7 @@ type Config struct {
 	SMTPPassword              string `env:"SMTP_PASSWORD"`
 	SMTPAuthenticated         bool   `env:"SMTP_AUTHENTICATED" envDefault:"1"`
 	SMTPRejectUnauthorizedTLS bool   `env:"SMTP_REJECT_UNAUTHORIZED_TLS" envDefault:"1"`
-	MailFrom                  string `env:"MAIL_FROM" envDefault:"noreply@forma.ylam.ai"`
+	MailFrom                  string `env:"MAIL_FROM" envDefault:"noreply@forma.yldm.ai"`
 	MailFromName              string `env:"MAIL_FROM_NAME" envDefault:"Forma"`
 
 	// Legal links rendered in the footer of every email and of the public survey pages; TermsURL appears on the survey pages only.

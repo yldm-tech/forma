@@ -242,7 +242,7 @@ func (v view) LightOnly() bool {
 }
 
 // formaLogoURL is the default logo of every email.
-const formaLogoURL = "https://app.forma.ylam.ai/logo-transparent.png"
+const formaLogoURL = "https://forma.yldm.ai/logo-transparent.png"
 
 // T translates an "emails." key in the view's locale and interpolates {name} placeholders from name/value pairs. A key missing from the locale falls back to en-US, and one missing there renders as the key, as i18next does.
 func (v view) T(key string, pairs ...any) string {

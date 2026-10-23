@@ -4,13 +4,13 @@
 
 A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valkey and SpiceDB
 
-**Homepage:** <https://forma.ylam.ai/docs/self-hosting/setup/kubernetes>
+**Homepage:** <https://forma.yldm.ai/docs/self-hosting/setup/kubernetes>
 
 The chart is installed from this repository (`helm install forma ./charts/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
 
 ## Forma on the Go server: what changed in this chart
 
-The chart keeps forma2's values, Secrets and resource names; these are the differences. The whole move from forma2, including the job queue and the database, is in the [upgrade guide](https://forma.ylam.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server).
+The chart keeps forma2's values, Secrets and resource names; these are the differences. The whole move from forma2, including the job queue and the database, is in the [upgrade guide](https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server).
 
 - One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
 - The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
@@ -58,7 +58,7 @@ Keep `postgresql.majorUpgradeAcknowledged=true` afterwards or drop it: once the 
 
 | Name       | Email                 | Url |
 | ---------- | --------------------- | --- |
-| Forma | <info@forma.ylam.ai> |     |
+| Forma | <info@forma.yldm.ai> |     |
 
 ## Requirements
 
@@ -427,7 +427,7 @@ externalSecret:
 | forma.webappUrl                                               | string | `""`                                                                        |                                                           |
 | ingress.annotations                                                | object | `{}`                                                                        |                                                           |
 | ingress.enabled                                                    | bool   | `false`                                                                     |                                                           |
-| ingress.hosts[0].host                                              | string | `"k8s.forma.ylam.ai"`                                                      |                                                           |
+| ingress.hosts[0].host                                              | string | `"k8s.forma.yldm.ai"`                                                      |                                                           |
 | ingress.hosts[0].paths[0].path                                     | string | `"/"`                                                                       |                                                           |
 | ingress.hosts[0].paths[0].pathType                                 | string | `"Prefix"`                                                                  |                                                           |
 | ingress.hosts[0].paths[0].serviceName                              | string | `"forma"`                                                              |                                                           |

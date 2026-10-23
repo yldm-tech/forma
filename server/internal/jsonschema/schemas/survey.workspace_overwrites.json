@@ -71,5 +71,5 @@
       "pattern": "^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
     }
   },
-  "$id": "https://forma.ylam.ai/schemas/survey.workspace_overwrites.json"
+  "$id": "https://forma.yldm.ai/schemas/survey.workspace_overwrites.json"
 }

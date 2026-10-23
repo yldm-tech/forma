@@ -92,7 +92,9 @@ func TestRendersAsForma2(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want, have := canonical(t, c.HTML), canonical(t, got)
+			// The one deliberate change: the "Powered by" badge links to forma.yldm.ai, where Forma is served now, instead of forma2's forma.ylam.ai, which no longer resolves. The recording stays as forma2 produced it.
+			recorded := strings.ReplaceAll(c.HTML, "https://forma.ylam.ai?", "https://forma.yldm.ai?")
+			want, have := canonical(t, recorded), canonical(t, got)
 			if want != have {
 				wl, hl := strings.Split(want, "\n"), strings.Split(have, "\n")
 				for i := range max(len(wl), len(hl)) {

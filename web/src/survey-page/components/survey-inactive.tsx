@@ -5,9 +5,9 @@ import footerLogo from "../assets/footerlogo.svg";
 import type { TInactiveState } from "../lib/state";
 
 const CREATE_YOUR_OWN_URL =
-  "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=create_your_own_cta";
+  "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=create_your_own_cta";
 const POWERED_BY_URL =
-  "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge";
+  "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge";
 
 /** forma2's SurveyInactive: a paused, scheduled or closed survey, an invalid or expired link, or a contact who already answered. */
 export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, workspace }: TInactiveState) => {
