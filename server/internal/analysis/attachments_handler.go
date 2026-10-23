@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
@@ -132,6 +133,17 @@ func (h *AttachmentsHandler) export(c *gin.Context, e *audit.Event) error {
 			return &v3api.Problem{Status: http.StatusTooManyRequests, Title: "Too Many Requests", Code: "too_many_requests", Detail: "Too many attachment exports. Try again shortly.", RetryAfter: ae.RetryAfter}
 		}
 		return err
+	}
+	if p := v3api.PrincipalFrom(ctx); p.APIKey == nil {
+		org, ws := sv.OrganizationID.String(), sv.WorkspaceID.String()
+		analytics.Capture(p.UserID.String(), "attachments_exported", analytics.Properties{
+			"survey_id":       sv.ID.String(),
+			"file_count":      collected.FileCount,
+			"response_count":  collected.ResponseCount,
+			"filter_applied":  criteria != nil,
+			"organization_id": org,
+			"workspace_id":    ws,
+		}, analytics.Groups{OrganizationID: org, WorkspaceID: ws})
 	}
 	now := h.now()
 	c.Header("Content-Type", "application/zip")

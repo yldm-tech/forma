@@ -215,7 +215,27 @@ func (s *Service) Update(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		org = old.OrganizationID.String()
 	}
 	s.record(ctx, audit.ActionUpdated, workspaceID.String(), org, err, old, ws)
+	if err == nil {
+		captureBrandingRemoved(userID, org, workspaceID, old, in)
+	}
 	return ws, err
+}
+
+// captureBrandingRemoved is forma2's remove_branding_enabled, once for each kind of survey whose Forma branding the update switched off.
+func captureBrandingRemoved(userID uuid.UUID, org string, workspaceID uuid.UUID, old *Workspace, in UpdateInput) {
+	for _, b := range []struct {
+		kind      string
+		was       bool
+		requested *bool
+	}{{"link", old.LinkSurveyBranding, in.LinkSurveyBranding}, {"in_app", old.InAppSurveyBranding, in.InAppSurveyBranding}} {
+		if b.was && b.requested != nil && !*b.requested {
+			analytics.Capture(userID.String(), "remove_branding_enabled", analytics.Properties{
+				"organization_id": org,
+				"workspace_id":    workspaceID.String(),
+				"branding_type":   b.kind,
+			}, analytics.Groups{OrganizationID: org, WorkspaceID: workspaceID.String()})
+		}
+	}
 }
 
 func (s *Service) update(ctx context.Context, userID, workspaceID uuid.UUID, in UpdateInput) (old, updated *Workspace, err error) {

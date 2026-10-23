@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/embeddeddata"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
@@ -583,6 +585,14 @@ func (s *Service) Export(ctx context.Context, userID, surveyID uuid.UUID, format
 	if err != nil {
 		return "", err
 	}
+	org, ws := sv.OrganizationID.String(), sv.WorkspaceID.String()
+	analytics.Capture(userID.String(), "responses_exported", analytics.Properties{
+		"survey_id":       surveyID.String(),
+		"format":          format,
+		"filter_applied":  filter != nil && !reflect.DeepEqual(*filter, response.Criteria{}),
+		"organization_id": org,
+		"workspace_id":    ws,
+	}, analytics.Groups{OrganizationID: org, WorkspaceID: ws})
 	return exportFileName(sv.Name, format, time.Now()), nil
 }
 
