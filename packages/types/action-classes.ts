@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZId } from "./common";
+import { ZId, ZUuid } from "./common";
 
 export const ZActionClassMatchType = z.union([
   z.literal("exactMatch"),
@@ -151,9 +151,13 @@ const ZActionClassInputBase = z.object({
       error: "Name must be at least 1 character long",
     }),
   description: z.string().nullish(),
-  workspaceId: ZId.min(1, {
-    error: "Workspace ID cannot be empty",
-  }),
+  // Workspace ids are UUIDs in the Go server (v1api.IsID reads z.cuid2() the same way); forma2's cuid2 ids stay valid, since the server resolves them through legacyid.
+  workspaceId: z.union([
+    ZId.min(1, {
+      error: "Workspace ID cannot be empty",
+    }),
+    ZUuid,
+  ]),
   type: ZActionClassType,
 });
 

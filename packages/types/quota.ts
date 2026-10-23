@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ZId } from "./common";
+import { ZId, ZUuid } from "./common";
 import type { TResponse } from "./responses";
 import { ZConnector, ZSingleCondition } from "./surveys/logic";
 
@@ -18,12 +18,15 @@ export type TSurveyQuotaAction = z.infer<typeof ZSurveyQuotaAction>;
 export const ZResponseQuotaLinkStatus = z.enum(["screenedIn", "screenedOut"]);
 export type TResponseQuotaLinkStatus = z.infer<typeof ZResponseQuotaLinkStatus>;
 
+// The ids of the quota and its survey are UUIDs in the Go server where forma2's were cuid2, and both forms are accepted (v1api.IsID reads z.cuid2() the same way). The ending card id names a card inside the survey document and keeps forma2's cuid2 rule.
+const ZQuotaRecordId = z.union([ZId, ZUuid]);
+
 // Survey quota model
 export const ZSurveyQuota = z.object({
-  id: ZId,
+  id: ZQuotaRecordId,
   createdAt: z.date(),
   updatedAt: z.date(),
-  surveyId: ZId,
+  surveyId: ZQuotaRecordId,
   name: z.string().min(1, {
     error: "Quota name is required",
   }),
