@@ -141,6 +141,9 @@ type serviceEnv struct {
 	provider *fakeProvider
 }
 
+// NewQuotaScreener builds the response module's quota screening the example responses write through. The response package imports this one, so the external test package sets it (quota_screener_test.go).
+var NewQuotaScreener func(db *gorm.DB, log *slog.Logger) QuotaScreener
+
 // newServiceEnv is the AI service on a fresh database with real authorization, its routes mounted as the server mounts them, and an AI provider the test answers for. configure edits the AI configuration; nil leaves the provider configured.
 func newServiceEnv(t *testing.T, configure func(*config.AIConfig)) *serviceEnv {
 	t.Helper()
@@ -158,7 +161,7 @@ func newServiceEnv(t *testing.T, configure func(*config.AIConfig)) *serviceEnv {
 	client := NewClient(cfg, log)
 	client.endpoints = endpoints{retries: &zero}
 	e.svc = NewService(client, NewRepository(db), e.authz.Authorizer, log)
-	e.examples = NewExampleResponses(e.svc, db, ratelimit.New(cfg, nil, log), audit.New(cfg, log), log)
+	e.examples = NewExampleResponses(e.svc, db, NewQuotaScreener(db, log), ratelimit.New(cfg, nil, log), audit.New(cfg, log), log)
 	e.engine = httpserver.NewEngine(log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, e.examples, headerSessions{}).Register(group)

@@ -79,6 +79,49 @@ func (s *Service) evaluateQuotas(ctx context.Context, tx *gorm.DB, sv *Survey, i
 	return full
 }
 
+// ScreenQuotas is forma2's createResponseWithQuotaEvaluation on a caller's transaction, for a response another module wrote in it (the AI example responses): the survey's quotas screen the response as it is stored, through evaluateQuotas and its savepoint, so a quota failure is logged and never fails the caller's write.
+func (s *Service) ScreenQuotas(ctx context.Context, tx *gorm.DB, surveyID, responseID uuid.UUID) error {
+	sv, err := LoadSurvey(ctx, tx, surveyID)
+	if err != nil {
+		return err
+	}
+	if sv == nil {
+		return fmt.Errorf("screen quotas: survey %s not found", surveyID)
+	}
+	row, _, err := loadResponse(ctx, tx, responseID)
+	if err != nil {
+		return err
+	}
+	if row == nil {
+		return fmt.Errorf("screen quotas: response %s not found", responseID)
+	}
+	data, err := decodeObject(row.Data)
+	if err != nil {
+		return err
+	}
+	variables, err := decodeObject(row.Variables)
+	if err != nil {
+		return err
+	}
+	meta, err := decodeObject(row.Meta)
+	if err != nil {
+		return err
+	}
+	ttc, err := decodeTTC(row.TTC)
+	if err != nil {
+		return err
+	}
+	language := "default"
+	if row.Language != nil && *row.Language != "" {
+		language = *row.Language
+	}
+	s.evaluateQuotas(ctx, tx, sv, screening{
+		ResponseID: row.ID, Finished: row.Finished, Data: data, Variables: variables, Language: language,
+		Row: valueResponse(*row, data, variables, ttc, meta),
+	})
+	return nil
+}
+
 func screen(ctx context.Context, tx *gorm.DB, sv *Survey, in screening) (*quota, error) {
 	var quotas []quota
 	if err := tx.WithContext(ctx).Raw(`SELECT id, "limit", logic, action, ending_card_id, count_partial_submissions

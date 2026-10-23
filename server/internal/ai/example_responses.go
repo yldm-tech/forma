@@ -905,14 +905,20 @@ type ExampleResponsesResult struct {
 type ExampleResponses struct {
 	svc     *Service
 	db      *gorm.DB
+	quotas  QuotaScreener
 	limiter *ratelimit.Limiter
 	audit   *audit.Emitter
 	log     *slog.Logger
 	now     func() time.Time
 }
 
-func NewExampleResponses(svc *Service, db *gorm.DB, limiter *ratelimit.Limiter, emitter *audit.Emitter, log *slog.Logger) *ExampleResponses {
-	return &ExampleResponses{svc: svc, db: db, limiter: limiter, audit: emitter, log: log, now: time.Now}
+// QuotaScreener screens a response just written into its survey's quotas, inside the transaction that wrote it: response.Service's quota evaluation, an interface because the response package imports this one.
+type QuotaScreener interface {
+	ScreenQuotas(ctx context.Context, tx *gorm.DB, surveyID, responseID uuid.UUID) error
+}
+
+func NewExampleResponses(svc *Service, db *gorm.DB, quotas QuotaScreener, limiter *ratelimit.Limiter, emitter *audit.Emitter, log *slog.Logger) *ExampleResponses {
+	return &ExampleResponses{svc: svc, db: db, quotas: quotas, limiter: limiter, audit: emitter, log: log, now: time.Now}
 }
 
 // Generate is forma2's generateExampleResponsesAction: one generation per user per minute (which also closes the double-click race on the empty-survey check), workspace.write on the survey's workspace, AI available to the organization, a survey neither archived nor already answered, and one all-or-nothing write. Every attempt is audited as an update of the survey, a refused or failed one as a failure.
@@ -974,7 +980,7 @@ func (x *ExampleResponses) generate(ctx context.Context, userID, surveyID uuid.U
 	for i := range impressions {
 		impressions[i] = pickCreatedAt(now)
 	}
-	if err := persistExampleDataset(ctx, x.db, s, rows, impressions); err != nil {
+	if err := persistExampleDataset(ctx, x.db, x.quotas, s, rows, impressions); err != nil {
 		return nil, err
 	}
 	return &ExampleResponsesResult{CreatedCount: len(rows)}, nil
@@ -1061,8 +1067,8 @@ func ttcWithTotal(ttc map[string]float64) map[string]float64 {
 
 var errExampleTagMissing = errors.New("example response tag was not written")
 
-// persistExampleDataset is forma2's persistExampleResponseDataset: one transaction writes the tag (kept when it already exists), a backdated display and response per row with the tag on it, and the displays nobody answered, so a failure part-way leaves nothing behind and the survey stays eligible for another attempt. Generated responses are seeded rather than submitted: no pipeline event is queued for them, as in forma2.
-func persistExampleDataset(ctx context.Context, db *gorm.DB, s *exampleSurvey, rows []*exampleRow, impressions []time.Time) error {
+// persistExampleDataset is forma2's persistExampleResponseDataset: one transaction writes the tag (kept when it already exists), a backdated display and response per row, screened into the survey's quotas as forma2's createResponseWithQuotaEvaluation did and with the tag on it, and the displays nobody answered, so a failure part-way leaves nothing behind and the survey stays eligible for another attempt. Generated responses are seeded rather than submitted: no pipeline event is queued for them, as in forma2.
+func persistExampleDataset(ctx context.Context, db *gorm.DB, quotas QuotaScreener, s *exampleSurvey, rows []*exampleRow, impressions []time.Time) error {
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var tagIDs []uuid.UUID
 		if err := tx.Raw(`INSERT INTO tags (workspace_id, name) VALUES (?, ?) ON CONFLICT (workspace_id, name) DO UPDATE SET name = tags.name RETURNING id`, s.WorkspaceID, ExampleAIGeneratedTagName).Scan(&tagIDs).Error; err != nil {
@@ -1096,6 +1102,9 @@ func persistExampleDataset(ctx context.Context, db *gorm.DB, s *exampleSurvey, r
 			if err := tx.Raw(`INSERT INTO responses (survey_id, display_id, finished, ending_id, data, ttc, meta, language, created_at) VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?) RETURNING id`,
 				s.ID, displayID, row.Finished, row.EndingID, string(data), string(ttcJSON), string(meta), row.Language, row.CreatedAt).Row().Scan(&responseID); err != nil {
 				return fmt.Errorf("create example response: %w", err)
+			}
+			if err := quotas.ScreenQuotas(ctx, tx, s.ID, responseID); err != nil {
+				return fmt.Errorf("screen example response: %w", err)
 			}
 			if err := tx.Exec(`INSERT INTO response_tags (response_id, tag_id) VALUES (?, ?)`, responseID, tagIDs[0]).Error; err != nil {
 				return fmt.Errorf("tag example response: %w", err)
