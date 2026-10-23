@@ -17,6 +17,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/instance"
@@ -46,6 +47,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
@@ -250,6 +252,18 @@ var unsplashSet = wire.NewSet(
 	unsplash.NewHandler,
 )
 
+// contactSurveySet is a contact's activity on the contact page and personal links, one from the contact page or a CSV of a segment's from the share modal, under /api/app.
+var contactSurveySet = wire.NewSet(
+	contactsurvey.NewService,
+	contactsurvey.NewHandler,
+)
+
+// emailEmbedSet is the share modal's Email tab under /api/app: a survey's email embed and the preview mailed to the member.
+var emailEmbedSet = wire.NewSet(
+	emailembed.NewService,
+	emailembed.NewHandler,
+)
+
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
@@ -306,6 +320,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		billingSet,
 		unsplashSet,
 		notification.NewHandler,
+		contactSurveySet,
+		emailEmbedSet,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

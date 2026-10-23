@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
 	"github.com/yldm-tech/forma/server/internal/instance"
@@ -47,6 +48,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
@@ -247,7 +249,17 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	instanceHandler := instance.NewHandler(bucket, releases, sessions)
 	unsplashService := unsplash.NewService(cfg, limiter)
 	unsplashHandler := unsplash.NewHandler(unsplashService, sessions)
-	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler, unsplashHandler)
+	contactsurveyService := contactsurvey.NewService(cfg, db, surveyService, authorizer, limiter, emitter, log)
+	contactsurveyHandler := contactsurvey.NewHandler(contactsurveyService, sessions)
+	emailembedService, err := emailembed.NewService(cfg, db, surveyService, authorizer, mailerMailer)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	emailembedHandler := emailembed.NewHandler(emailembedService, sessions)
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler, unsplashHandler, contactsurveyHandler, emailembedHandler)
 	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()
@@ -420,6 +432,12 @@ var billingSet = wire.NewSet(billing.NewStripe, billing.NewRepository, billing.N
 
 // unsplashSet is the survey editor's Unsplash image search under /api/app/unsplash, offered when UNSPLASH_ACCESS_KEY is set.
 var unsplashSet = wire.NewSet(unsplash.NewService, unsplash.NewHandler)
+
+// contactSurveySet is a contact's activity on the contact page and personal links, one from the contact page or a CSV of a segment's from the share modal, under /api/app.
+var contactSurveySet = wire.NewSet(contactsurvey.NewService, contactsurvey.NewHandler)
+
+// emailEmbedSet is the share modal's Email tab under /api/app: a survey's email embed and the preview mailed to the member.
+var emailEmbedSet = wire.NewSet(emailembed.NewService, emailembed.NewHandler)
 
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, billing.NewStripe, billing.NewMeter, wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)), workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, usagereport.NewReporter, newPipelineHandoffs, pipeline.NewWorker)

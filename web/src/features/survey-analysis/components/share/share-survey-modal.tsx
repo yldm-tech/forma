@@ -1,5 +1,15 @@
 import type { TSurvey } from "@forma/types/surveys/types";
-import { Code2Icon, CodeIcon, Link2Icon, QrCodeIcon, Settings, Share2Icon, SquareStack } from "lucide-react";
+import {
+  Code2Icon,
+  CodeIcon,
+  Link2Icon,
+  MailIcon,
+  QrCodeIcon,
+  Settings,
+  Share2Icon,
+  SquareStack,
+  UserIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogTitle } from "../../../../components/ui/dialog";
@@ -9,7 +19,9 @@ import { AnonymousLinksTab } from "./anonymous-links-tab";
 import { AppTab } from "./app-tab";
 import { CustomHtmlTab } from "./custom-html-tab";
 import { DynamicPopupTab } from "./dynamic-popup-tab";
+import { EmailTab } from "./email-tab";
 import { LinkSettingsTab } from "./link-settings-tab";
+import { PersonalLinksTab } from "./personal-links-tab";
 import { PrettyUrlTab } from "./pretty-url-tab";
 import { QRCodeTab } from "./qr-code-tab";
 import { SocialMediaTab } from "./social-media-tab";
@@ -23,7 +35,7 @@ import { WebsiteEmbedTab } from "./website-embed-tab";
 type ModalView = "start" | "share";
 
 /**
- * forma2's ShareSurveyModal: after publishing it opens on the start view; from the header it opens on the share channels. A link survey offers its links, embed code, social networks, QR code and pop-up, plus its link settings, pretty URL and custom HTML; an app survey explains how it reaches respondents. The channels a single-use survey cannot use are disabled.
+ * forma2's ShareSurveyModal: after publishing it opens on the start view; from the header it opens on the share channels. A link survey offers its anonymous and personal links, embed code, email, social networks, QR code and pop-up, plus its link settings, pretty URL and custom HTML; an app survey explains how it reaches respondents. The channels a single-use survey cannot use are disabled.
  */
 export const ShareSurveyModal = ({
   survey,
@@ -78,6 +90,16 @@ export const ShareSurveyModal = ({
       ),
     },
     {
+      id: ShareViaType.PERSONAL_LINKS,
+      type: LinkTabsType.SHARE_VIA,
+      label: t("workspace.surveys.share.personal_links.nav_title"),
+      icon: UserIcon,
+      title: t("workspace.surveys.share.personal_links.nav_title"),
+      description: t("workspace.surveys.share.personal_links.description"),
+      content: <PersonalLinksTab surveyId={survey.id} workspaceId={workspace.id} />,
+      disabled: isSingleUse,
+    },
+    {
       id: ShareViaType.WEBSITE_EMBED,
       type: LinkTabsType.SHARE_VIA,
       label: t("workspace.surveys.share.embed_on_website.nav_title"),
@@ -85,6 +107,16 @@ export const ShareSurveyModal = ({
       title: t("workspace.surveys.share.embed_on_website.nav_title"),
       description: t("workspace.surveys.share.embed_on_website.description"),
       content: <WebsiteEmbedTab surveyUrl={surveyUrl} />,
+      disabled: isSingleUse,
+    },
+    {
+      id: ShareViaType.EMAIL,
+      type: LinkTabsType.SHARE_VIA,
+      label: t("workspace.surveys.share.send_email.nav_title"),
+      icon: MailIcon,
+      title: t("workspace.surveys.share.send_email.nav_title"),
+      description: t("workspace.surveys.share.send_email.description"),
+      content: <EmailTab surveyId={survey.id} email={user.email} />,
       disabled: isSingleUse,
     },
     {
@@ -174,6 +206,10 @@ export const ShareSurveyModal = ({
           setSurveyUrl={setSurveyUrl}
           locale={user.locale}
           onShare={() => setShowView("share")}
+          onUsePersonalLinks={() => {
+            setShowView("share");
+            setActiveId(ShareViaType.PERSONAL_LINKS);
+          }}
           isReadOnly={isReadOnly}
         />
       );
