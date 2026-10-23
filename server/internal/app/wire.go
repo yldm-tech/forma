@@ -49,6 +49,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/unsplash"
 	"github.com/yldm-tech/forma/server/internal/usagereport"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
@@ -243,6 +244,12 @@ var billingSet = wire.NewSet(
 	billing.NewLifecycle,
 )
 
+// unsplashSet is the survey editor's Unsplash image search under /api/app/unsplash, offered when UNSPLASH_ACCESS_KEY is set.
+var unsplashSet = wire.NewSet(
+	unsplash.NewService,
+	unsplash.NewHandler,
+)
+
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
@@ -297,6 +304,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		workflowSet,
 		mcpSet,
 		billingSet,
+		unsplashSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,

@@ -32,6 +32,15 @@ type Handler struct {
 // surveyShell is the survey page bundle's entry in the build (web/survey.html).
 const surveyShell = "survey.html"
 
+// publicContentTypes are the types of the static files in web/public that Go's built-in table does not know, set explicitly because the distroless image has no system MIME database to fall back on; forma2 sent text/csv for its CSV templates and image/svg+xml for every SVG.
+var publicContentTypes = map[string]string{
+	".mp4":         "video/mp4",
+	".ico":         "image/x-icon",
+	".webmanifest": "application/manifest+json",
+	".csv":         "text/csv",
+	".svg":         "image/svg+xml",
+}
+
 // New uses the build embedded at compile time, with the browser's runtime configuration written into index.html. A binary compiled without a web build still starts; it answers every page with 404 and keeps the API working.
 func New(cfg config.Config) (*Handler, error) {
 	sub, err := fs.Sub(embedded, "dist")
@@ -146,8 +155,26 @@ func (h *Handler) serve(c *gin.Context) {
 				if ext := path.Ext(name); ext == ".js" || ext == ".cjs" {
 					c.Header("Content-Type", "application/javascript; charset=UTF-8")
 				}
+			// The favicons rarely change. Same headers forma2 sent (apps/web/next.config.mjs), as are the folders below.
+			case name == "favicon.ico" || strings.HasPrefix(name, "favicon/"):
+				c.Header("Cache-Control", "public, max-age=2592000, s-maxage=31536000, immutable")
+				c.Header("Access-Control-Allow-Origin", "*")
+			// Surveys and workspaces store these paths as their background; emails and customer pages load them cross-origin.
+			case strings.HasPrefix(name, "image-backgrounds/"):
+				c.Header("Cache-Control", "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400")
+				c.Header("Access-Control-Allow-Origin", "*")
+				c.Header("Vary", "Accept-Encoding")
+			case strings.HasPrefix(name, "animated-bgs/"):
+				c.Header("Cache-Control", "public, max-age=604800, s-maxage=31536000, immutable")
+				c.Header("Access-Control-Allow-Origin", "*")
+			case strings.HasPrefix(name, "sample-csv/"):
+				c.Header("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600")
+				c.Header("Access-Control-Allow-Origin", "*")
 			default:
 				c.Header("Cache-Control", "no-cache")
+			}
+			if ct, ok := publicContentTypes[path.Ext(name)]; ok {
+				c.Header("Content-Type", ct)
 			}
 			c.FileFromFS("/"+name, http.FS(h.files))
 			return

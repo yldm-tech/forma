@@ -147,6 +147,9 @@ type Config struct {
 	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
 	Telemetry TelemetryConfig
 
+	// Unsplash is the survey editor's image background search.
+	Unsplash UnsplashConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }

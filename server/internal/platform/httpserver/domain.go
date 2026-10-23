@@ -22,8 +22,8 @@ var (
 		regexp.MustCompile(`^/health$`),
 		regexp.MustCompile(`^/storage/[^/]+/public/`),
 	}
-	// unroutedPaths are the static paths forma2's proxy matcher never saw, so both domains serve them: Vite's fingerprinted assets (forma2's /_next/static), the SDK bundles and the other public folders, and the root files.
-	unroutedPaths = regexp.MustCompile(`^/(?:(?:assets|_next/static|_next/image|js|css|images|fonts|icons|public|animated-bgs)(?:/|$)|(?:favicon\.ico|sitemap\.xml|robots\.txt)$)`)
+	// unroutedPaths are the static paths both domains serve: those forma2's proxy matcher never saw (Vite's fingerprinted assets in place of forma2's /_next/static, the SDK bundles, the other public folders and the root files), and the rest of forma2's apps/web/public, which survey pages on the public domain (image backgrounds, favicons) and emails (the logo and rating icons) load.
+	unroutedPaths = regexp.MustCompile(`^/(?:(?:assets|_next/static|_next/image|js|css|images|fonts|icons|public|animated-bgs|image-backgrounds|favicon|star-icons|smiley-icons|sample-csv)(?:/|$)|(?:favicon\.ico|sitemap\.xml|robots\.txt|logo-transparent\.png)$)`)
 )
 
 func matchesAny(path string, patterns []*regexp.Regexp) bool {
