@@ -6,7 +6,7 @@ FROM node:22-alpine AS export
 
 RUN apk add --no-cache bash python3 unzip
 WORKDIR /docs
-COPY docs/ ./
+COPY apps/docs/ ./
 RUN bash deploy/build.sh /out
 
 FROM nginx:1.27-alpine
@@ -15,7 +15,7 @@ FROM nginx:1.27-alpine
 # being stripped by the proxy: the exported HTML links to `/docs/...` and a stripped prefix would
 # make every one of those a miss.
 COPY --from=export /out /usr/share/nginx/html/docs
-COPY docs/deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/docs/deploy/nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN addgroup -g 10001 -S docs \
     && adduser -u 10001 -S -G docs docs \

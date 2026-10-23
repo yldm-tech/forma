@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Forma's one-click installer for a single Ubuntu host: the production stack of docker/docker-compose.yml behind Traefik, in ./forma. forma2's docker/forma.sh with the same commands, for the Go server.
+# Forma's one-click installer for a single Ubuntu host: the production stack of deploy/docker/docker-compose.yml behind Traefik, in ./forma. forma2's docker/forma.sh with the same commands, for the Go server.
 #
 #   ./forma.sh install               ask a few questions, write ./forma (compose file, .env with generated secrets, Traefik) and start it
 #   ./forma.sh update                bring ./forma to the current release; an installation made for forma2 is migrated first
@@ -8,14 +8,14 @@
 #   ./forma.sh cleanup-rustfs-init   remove the finished RustFS bootstrap container (cleanup-minio-init is an alias)
 #   ./forma.sh uninstall             stop the stack and delete ./forma
 #
-# Environment: FORMA_DIR (default forma) is the installation directory; FORMA_REF (default stable, the release `latest` points at) is the git ref of this repository the compose file and its helper scripts are downloaded from; FORMA_SOURCE_DIR, when set, is a local docker/ directory to copy them from instead.
+# Environment: FORMA_DIR (default forma) is the installation directory; FORMA_REF (default stable, the release `latest` points at) is the git ref of this repository the compose file and its helper scripts are downloaded from; FORMA_SOURCE_DIR, when set, is a local deploy/docker/ directory to copy them from instead.
 
 set -euo pipefail
 
 FORMA_DIR="${FORMA_DIR:-forma}"
 FORMA_REF="${FORMA_REF:-stable}"
 FORMA_SOURCE_DIR="${FORMA_SOURCE_DIR:-}"
-FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/docker"
+FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/deploy/docker"
 FORMA_UPGRADE_GUIDE="https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server"
 
 # The files the stack is made of; docker-compose.yml mounts the two scripts.

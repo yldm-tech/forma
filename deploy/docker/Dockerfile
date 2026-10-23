@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# The Forma image: one static `forma` binary with the admin SPA, the public survey page and the SDK bundles (/js/*) embedded, on a distroless base with no shell or package manager. Build from the repository root: `docker build -t forma .`.
+# The Forma image: one static `forma` binary with the admin SPA, the public survey page and the SDK bundles (/js/*) embedded, on a distroless base with no shell or package manager. Build from the repository root: `docker build -f deploy/docker/Dockerfile -t forma .`.
 #
-# The container's default command is `forma start`, forma2's entrypoint: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (docker/docker-compose.yml and charts/forma do).
+# The container's default command is `forma start`, forma2's entrypoint: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (deploy/docker/docker-compose.yml and deploy/helm/forma do).
 #
 # Both build stages run on the builder's own platform. The web build is platform independent, and Go cross-compiles, so a multi-platform build needs no emulation.
 
@@ -23,9 +23,11 @@ WORKDIR /src
 # Only the TypeScript workspace: a server change leaves these layers cached. The package store is a cache mount, so a reinstall after a source change downloads nothing. (`pnpm fetch` would let the install layer survive source changes, but it fails on the workspace's patched dependencies.)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml vite.config.ts .node-version ./
 COPY patches ./patches
-COPY apps ./apps
+COPY apps/storybook ./apps/storybook
+COPY apps/web ./apps/web
 COPY packages ./packages
-COPY web ./web
+COPY tooling/typescript ./tooling/typescript
+COPY tooling/vite-plugins ./tooling/vite-plugins
 # VP_GIT_HOOKS=0: the root `prepare` script installs git hooks, and the build context has no repository.
 RUN --mount=type=cache,id=forma-pnpm-store,target=/root/.local/share/pnpm/store \
     VP_GIT_HOOKS=0 pnpm install --frozen-lockfile
@@ -40,12 +42,12 @@ FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS server
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 
 WORKDIR /src/server
-COPY server/go.mod server/go.sum ./
+COPY apps/server/go.mod apps/server/go.sum ./
 RUN --mount=type=cache,id=forma-go-mod,target=/go/pkg/mod \
     go mod download
 
-COPY server ./
-COPY --from=web /src/web/dist ./internal/webui/dist
+COPY apps/server ./
+COPY --from=web /src/apps/web/dist ./internal/webui/dist
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -53,7 +55,7 @@ ARG TARGETARCH
 ARG VERSION=0.0.0
 RUN --mount=type=cache,id=forma-go-mod,target=/go/pkg/mod \
     --mount=type=cache,id=forma-go-build,target=/root/.cache/go-build \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X github.com/yldm-tech/forma/server/internal/platform/buildinfo.Version=${VERSION}" -o /out/forma ./cmd/forma
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X github.com/yldm-tech/forma/apps/server/internal/platform/buildinfo.Version=${VERSION}" -o /out/forma ./cmd/forma
 
 # ---- runtime ----
 FROM ${RUNTIME_IMAGE}
@@ -68,7 +70,7 @@ USER 1001:1001
 
 EXPOSE 3000
 
-# Probes /health, which answers without touching a dependency. Containers running `worker` or `migrate` serve no HTTP and turn this off (docker/docker-compose.yml does).
+# Probes /health, which answers without touching a dependency. Containers running `worker` or `migrate` serve no HTTP and turn this off (deploy/docker/docker-compose.yml does).
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD ["/usr/local/bin/forma", "healthcheck"]
 

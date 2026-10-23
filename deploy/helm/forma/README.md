@@ -6,7 +6,7 @@ A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valke
 
 **Homepage:** <https://forma.yldm.ai/docs/self-hosting/setup/kubernetes>
 
-The chart is installed from this repository (`helm install forma ./charts/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
+The chart is installed from this repository (`helm install forma ./deploy/helm/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
 
 ## Forma on the Go server: what changed in this chart
 
@@ -42,7 +42,7 @@ A release installed with forma2's chart runs the bundled PostgreSQL as `pgvector
 5. Start PostgreSQL 18 on a fresh volume with nothing else running, so nothing writes before the restore:
 
    ```sh
-   helm upgrade forma ./charts/forma -n forma --reuse-values \
+   helm upgrade forma ./deploy/helm/forma -n forma --reuse-values \
      --set postgresql.majorUpgradeAcknowledged=true --set migration.enabled=false \
      --set autoscaling.enabled=false --set deployment.replicas=0 --set worker.replicas=0 \
      --set authzed.initialization.enabled=false
@@ -148,7 +148,7 @@ expected authorization traffic and the other workloads using the bundled databas
 Install only one operator per Kubernetes cluster. When a platform-managed operator already watches the Forma
 namespace, keep `authzed.operator.install=false`; the Forma release still owns its `SpiceDBCluster`.
 Kubernetes does not upgrade CRDs during a normal Helm upgrade. When changing the bundled operator version, apply
-the matching `charts/spicedb-operator/crds/authzed.com_spicedbclusters.yaml` before upgrading the release.
+the matching `deploy/helm/spicedb-operator/crds/authzed.com_spicedbclusters.yaml` before upgrading the release.
 
 For managed PostgreSQL, create a dedicated database and login outside Helm and expose these keys in a Kubernetes
 Secret:
@@ -267,8 +267,8 @@ kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill
 
 The initial apply to an empty instance needs no digest. A non-empty instance whose schema differs must first be checked and then applied with `--expected-current-digest=sha256:<digest-from-check>`; the initialization Job cannot do that on its own, so a release that changes the schema of an existing instance needs that one manual apply before the upgrade. Once the audit exits `0`, set `authzed.migrationAcknowledged=true` in the v6 upgrade values. The chart refuses an unacknowledged upgrade,
 `authzed.enabled=false`, or consistency other than `fully_consistent`. Back up the current schema and affected
-relationships before replacement; see the repository `authzed/README.md` for exit codes and rollback rules.
-The public [AuthZed operations guide](../../docs/self-hosting/advanced/authzed-operations.mdx) covers backups,
+relationships before replacement; see the repository `apps/server/authzed/README.md` for exit codes and rollback rules.
+The public [AuthZed operations guide](../../../apps/docs/self-hosting/advanced/authzed-operations.mdx) covers backups,
 restoration, schema lifecycle, relationship repair, and monitoring.
 
 Cloud operators that run the same guarded schema, outbox drain, reconciliation, and audit sequence outside Helm

@@ -190,7 +190,7 @@ deployment:
       memory: 1Gi
       cpu: "1"
 
-  # Container security context of the server and worker containers. The image runs as uid 1001 (USER 1001:1001 in the repository's Dockerfile), which runAsUser pins so kubelet can enforce runAsNonRoot. readOnlyRootFilesystem stays off because large multipart uploads spill to /tmp; turning it on needs an emptyDir mounted at /tmp through deployment.extraVolumes / deployment.extraVolumeMounts.
+  # Container security context of the server and worker containers. The image runs as uid 1001 (USER 1001:1001 in the repository's deploy/docker/Dockerfile), which runAsUser pins so kubelet can enforce runAsNonRoot. readOnlyRootFilesystem stays off because large multipart uploads spill to /tmp; turning it on needs an emptyDir mounted at /tmp through deployment.extraVolumes / deployment.extraVolumeMounts.
   containerSecurityContext:
     allowPrivilegeEscalation: false
     capabilities:
@@ -853,7 +853,7 @@ redis:
     resources:
       limits:
         cpu: 150m
-        # Sized with the `maxmemory` line in commonConfiguration. Change the two together; charts/forma/tests/redis-memory-limits.sh fails if the ceiling ever stops being comfortably below the limit the kernel enforces.
+        # Sized with the `maxmemory` line in commonConfiguration. Change the two together; deploy/helm/forma/tests/redis-memory-limits.sh fails if the ceiling ever stops being comfortably below the limit the kernel enforces.
         memory: 512Mi
       requests:
         cpu: 100m

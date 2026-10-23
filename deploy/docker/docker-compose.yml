@@ -1,6 +1,6 @@
-# Production stack: the Forma server and its job worker, the one-shot migration, PostgreSQL 18, Valkey and SpiceDB, plus optional S3-compatible storage (profile `storage`) and a local Qwen model (profile `qwen`). docker/forma.sh installs and updates it on a single host; keep local changes in docker-compose.override.yml so this file can be replaced on update.
+# Production stack: the Forma server and its job worker, the one-shot migration, PostgreSQL 18, Valkey and SpiceDB, plus optional S3-compatible storage (profile `storage`) and a local Qwen model (profile `qwen`). deploy/docker/forma.sh installs and updates it on a single host; keep local changes in docker-compose.override.yml so this file can be replaced on update.
 #
-# Put the settings in docker/.env next to this file (mode 0600); every service below reads it, under forma2's variable names. The repository's .env.example documents every variable the server reads. The minimum:
+# Put the settings in deploy/docker/.env next to this file (mode 0600); every service below reads it, under forma2's variable names. The repository's .env.example documents every variable the server reads. The minimum:
 #
 #   WEBAPP_URL=https://forma.example.com
 #   POSTGRES_PASSWORD=<openssl rand -hex 32>
@@ -160,7 +160,7 @@ services:
       postgres:
         condition: service_healthy
 
-  # Writes authzed/schema.zed into SpiceDB; a no-op when it is already there. SpiceDB reports healthy a moment before it accepts a schema write, hence the restarts. A SpiceDB holding a different schema is left alone: apply it with the digest `authz schema check` prints (see authzed-ops below).
+  # Writes apps/server/authzed/schema.zed into SpiceDB; a no-op when it is already there. SpiceDB reports healthy a moment before it accepts a schema write, hence the restarts. A SpiceDB holding a different schema is left alone: apply it with the digest `authz schema check` prints (see authzed-ops below).
   authzed-initialize:
     <<: *forma-image
     restart: on-failure:10
@@ -181,7 +181,7 @@ services:
     command: ["serve"]
     ports:
       - 3000:3000
-    # SAML SSO (SAML_DATABASE_URL set): put the identity provider's metadata XML in docker/saml-connection/, as with forma2.
+    # SAML SSO (SAML_DATABASE_URL set): put the identity provider's metadata XML in deploy/docker/saml-connection/, as with forma2.
     volumes:
       - ./saml-connection:/home/nextjs/apps/web/saml-connection
 
