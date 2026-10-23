@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { ZUserLocale } from "@forma/types/user";
 
-/** forma2's prompt bounds, the generate route's (server/internal/survey/v3generate.go). */
+/** forma2's prompt bounds, the generate route's (apps/server/internal/survey/v3generate.go). */
 export const AI_SURVEY_PROMPT_MIN_LENGTH = 4;
 export const AI_SURVEY_PROMPT_MAX_LENGTH = 1200;
 

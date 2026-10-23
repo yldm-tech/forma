@@ -13,7 +13,7 @@ allowBuilds:
 # literal version, so a shared dependency cannot drift between packages: bumping one
 # means editing the entry here, which changes every consumer at once.
 #
-# `scripts/check-catalog.mjs` (run by `pnpm lint`) enforces both halves of that: it
+# `tooling/scripts/check-catalog.mjs` (run by `pnpm lint`) enforces both halves of that: it
 # fails if a workspace declares a literal version for a name listed here, and if a
 # dependency is declared by 2+ workspaces without being listed here at all.
 #
@@ -40,7 +40,7 @@ catalog:
   dotenv-cli: 11.0.0
   cross-env: 10.1.0
   glob: 13.0.6
-  # Read by scripts/check-catalog.mjs.
+  # Read by tooling/scripts/check-catalog.mjs.
   js-yaml: 4.3.2
   "@playwright/test": 1.63.0
   "@testing-library/react": 16.3.3

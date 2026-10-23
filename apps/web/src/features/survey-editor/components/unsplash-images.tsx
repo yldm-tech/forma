@@ -27,7 +27,7 @@ interface ImageOption {
   authorName?: string;
 }
 
-/** The library forma2 offered before a search: the files in web/public/image-backgrounds. */
+/** The library forma2 offered before a search: the files in apps/web/public/image-backgrounds. */
 export const defaultImages: ImageOption[] = [
   { id: "dog-1", altDescription: "Dog", url: "/image-backgrounds/dogs.webp" },
   { id: "pencil", altDescription: "Pencil", url: "/image-backgrounds/pencil.webp" },

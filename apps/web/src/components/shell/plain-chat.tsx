@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { ApiError, api } from "../../lib/api";
 
-// forma2's PlainChat (apps/web/app/plain): Plain's in-product support chat, loaded only when the server has a Plain app configured. The server resolves who the chat identifies (server/internal/plain), with the email hash Plain verifies the customer by, computed there because it is a bearer credential.
+// forma2's PlainChat (apps/web/app/plain): Plain's in-product support chat, loaded only when the server has a Plain app configured. The server resolves who the chat identifies (apps/server/internal/plain), with the email hash Plain verifies the customer by, computed there because it is a bearer credential.
 
 /** GET /api/app/plain/session: the widget's app id and the signed-in customer. */
 export interface PlainSession {

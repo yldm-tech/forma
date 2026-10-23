@@ -16,12 +16,12 @@ import type { OrganizationRole } from "../../lib/roles";
 import { toast } from "../../lib/toast";
 import { emailError, userNameError } from "../../lib/validation";
 
-// forma2's bulk invite tab (modules/organization/settings/teams/components/invite-member/bulk-invite-tab.tsx) and the bulk half of its handleAddMembers: a CSV of members, previewed, checked against the organization's teams, then invited in one request (POST /api/app/organizations/{id}/invites/bulk, server/internal/invite).
+// forma2's bulk invite tab (modules/organization/settings/teams/components/invite-member/bulk-invite-tab.tsx) and the bulk half of its handleAddMembers: a CSV of members, previewed, checked against the organization's teams, then invited in one request (POST /api/app/organizations/{id}/invites/bulk, apps/server/internal/invite).
 
 /** One CSV row by header. A missing or misnamed column is absent, so a cell is never assumed to be a string (forma2's ENG-1596). */
 export type BulkCsvRow = Record<string, string | undefined>;
 
-/** The template linked from the tab; the file is served from web/public. */
+/** The template linked from the tab; the file is served from apps/web/public. */
 export const BULK_INVITE_TEMPLATE_PATH = "/sample-csv/forma-organization-members-template.csv";
 
 const PREVIEW_ROW_LIMIT = 11;

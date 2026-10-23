@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { api } from "../../../lib/api";
 
-/** One Unsplash search result (server/internal/unsplash). */
+/** One Unsplash search result (apps/server/internal/unsplash). */
 export interface UnsplashImage {
   id: string;
   altDescription: string;

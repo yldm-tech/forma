@@ -1437,7 +1437,7 @@ describe("validation.isMissingRequiredTrigger", () => {
     ).toBe(true);
   });
 
-  // The Go server owns the same rule (appSurveyMissingTriggers in server/internal/survey): an app survey leaving draft needs a trigger. The client must refuse exactly what the server rejects, or the editor promises a save the API then fails.
+  // The Go server owns the same rule (appSurveyMissingTriggers in apps/server/internal/survey): an app survey leaving draft needs a trigger. The client must refuse exactly what the server rejects, or the editor promises a save the API then fails.
   test("agrees with the server-side rule on every type/status/trigger combination", () => {
     for (const type of ["app", "link"] as const) {
       for (const status of ["draft", "inProgress", "paused", "completed"] as const) {

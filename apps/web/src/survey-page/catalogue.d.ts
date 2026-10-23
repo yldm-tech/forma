@@ -1,4 +1,4 @@
-// The public namespaces of one web/locales catalogue, served by the survey page locale plugin in web/vite.config.ts.
+// The public namespaces of one apps/web/locales catalogue, served by the survey page locale plugin in apps/web/vite.config.ts.
 declare module "virtual:survey-page-locale/*" {
   export const c: Record<string, unknown>;
   export const common: Record<string, unknown>;

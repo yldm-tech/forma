@@ -1,4 +1,4 @@
-// The browser's telemetry settings. The Go server writes them into index.html from SENTRY_DSN, SENTRY_ENVIRONMENT and POSTHOG_KEY (server/internal/webui/webui.go, withRuntimeConfig), as forma2's root layout did, so one build serves every deployment. An install without them gets neither global, and neither SDK is downloaded.
+// The browser's telemetry settings. The Go server writes them into index.html from SENTRY_DSN, SENTRY_ENVIRONMENT and POSTHOG_KEY (apps/server/internal/webui/webui.go, withRuntimeConfig), as forma2's root layout did, so one build serves every deployment. An install without them gets neither global, and neither SDK is downloaded.
 
 /** forma2's TSentryClientRuntimeConfig. */
 export interface SentryClientConfig {

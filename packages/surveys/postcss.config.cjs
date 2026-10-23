@@ -1,7 +1,7 @@
 // The three #fbjs-scoping plugins (stripLayerProperties, scopeLayerTheme,
 // replaceAtPropertyWithScoped) are shared with @forma/survey-ui so the
 // scoping logic stays identical across both CSS bundles that ship together in
-// the injected <style>. See packages/vite-plugins/postcss-scope-fbjs.cjs and
+// the injected <style>. See tooling/vite-plugins/postcss-scope-fbjs.cjs and
 // https://github.com/yldm-tech/js/issues/46.
 const { scopeFbjsPlugins } = require("../../tooling/vite-plugins/postcss-scope-fbjs.cjs");
 

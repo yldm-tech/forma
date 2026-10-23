@@ -68,7 +68,7 @@ apps/server/internal/webui/dist/*
 !apps/server/internal/webui/dist/.gitkeep
 /bin/
 
-# SDK bundles copied in by packages/vite-plugins at build time
+# SDK bundles copied in by tooling/vite-plugins at build time
 apps/web/public/js
 
 # Vitest attachments and cache

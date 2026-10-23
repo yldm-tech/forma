@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SurveyContainerProps } from "@forma/types/forma-surveys";
 
-// The survey renderer is packages/surveys, built into /js/surveys.umd.js and served by the Go server (server/internal/webui). The `.umd.js` name rather than the embed snippets' `.umd.cjs`, because a CDN caches the former.
+// The survey renderer is packages/surveys, built into /js/surveys.umd.js and served by the Go server (apps/server/internal/webui). The `.umd.js` name rather than the embed snippets' `.umd.cjs`, because a CDN caches the former.
 const SURVEY_SCRIPT_URL = "/js/surveys.umd.js";
 const CONTAINER_ID = "forma-survey-container";
 

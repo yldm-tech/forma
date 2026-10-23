@@ -41,14 +41,14 @@ describe("workspaceDirs", () => {
 });
 
 describe("findOrphans", () => {
-  const dirs = ["apps/web", "packages/ai", "scripts"];
+  const dirs = ["apps/web", "packages/ai", "tooling/scripts"];
 
   test("reports a test file outside every workspace", () => {
     expect(findOrphans(["tools/thing.test.ts"], dirs)).toEqual(["tools/thing.test.ts"]);
   });
 
   test("accepts a test file inside a workspace", () => {
-    expect(findOrphans(["apps/web/lib/thing.test.ts", "scripts/x.test.ts"], dirs)).toEqual([]);
+    expect(findOrphans(["apps/web/lib/thing.test.ts", "tooling/scripts/x.test.ts"], dirs)).toEqual([]);
   });
 
   test("does not let one workspace claim a sibling with the same prefix", () => {

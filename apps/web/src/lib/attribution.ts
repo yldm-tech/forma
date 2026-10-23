@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-// Marketing attribution captured on the sign-in and sign-up pages, forma2's modules/auth/lib/attribution.ts and AttributionTracker. Only the whitelisted keys are read or stored: non-personal values (source, campaign, landing page), so fb_attribution is a functional cookie rather than user tracking. The server reads it into user_signed_up and user_signed_in and clears it (server/internal/auth/attribution.go).
+// Marketing attribution captured on the sign-in and sign-up pages, forma2's modules/auth/lib/attribution.ts and AttributionTracker. Only the whitelisted keys are read or stored: non-personal values (source, campaign, landing page), so fb_attribution is a functional cookie rather than user tracking. The server reads it into user_signed_up and user_signed_in and clears it (apps/server/internal/auth/attribution.go).
 
 export const ATTRIBUTION_PARAM_KEYS = [
   "page",

@@ -15,7 +15,7 @@ import type { Tag } from "../../lib/queries/tags";
 import { type Stamped, stamped } from "../../lib/wire";
 import { type SurveyWire, parseSurvey } from "../survey-editor/api";
 
-// The analysis views' reads and writes against the Go server: the summary, filter options and displays (server/internal/analysis/handler.go), the responses (server/internal/response/handler.go), tags and the survey's share settings. Timestamps arrive as ISO strings and are revived into Dates here, once, since the views are ported from forma2's components, which read Dates.
+// The analysis views' reads and writes against the Go server: the summary, filter options and displays (apps/server/internal/analysis/handler.go), the responses (apps/server/internal/response/handler.go), tags and the survey's share settings. Timestamps arrive as ISO strings and are revived into Dates here, once, since the views are ported from forma2's components, which read Dates.
 
 /** forma2's RESPONSES_PER_PAGE: the response table loads 25 at a time. */
 export const RESPONSES_PER_PAGE = 25;
@@ -68,7 +68,7 @@ export interface AttachmentCounts {
   maxFiles: number;
 }
 
-/** forma2's attachment export route (server/internal/analysis/attachments_handler.go), outside /api/app: the browser downloads the ZIP by navigating to it, since an archive of several GB cannot be buffered in the tab. Without criteria it exports every response's files; with dryRun it only counts them. */
+/** forma2's attachment export route (apps/server/internal/analysis/attachments_handler.go), outside /api/app: the browser downloads the ZIP by navigating to it, since an archive of several GB cannot be buffered in the tab. Without criteria it exports every response's files; with dryRun it only counts them. */
 export const attachmentsUrl = (surveyId: string, criteria?: TResponseFilterCriteria, dryRun = false) => {
   const params = new URLSearchParams(dryRun ? { dryRun: "true" } : undefined);
   if (criteria) params.set("filters", JSON.stringify(criteria));

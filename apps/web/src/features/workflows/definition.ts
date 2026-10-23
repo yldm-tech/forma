@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// forma2's packages/workflows types: the workflow definition document, the rules that make it persistable (ZWorkflowDefinition) or executable (ZWorkflowExecutableDefinition), and the vocabulary the builder reads. The Go server enforces the same rules (server/internal/workflow/definition.go); the builder runs them locally so it can flag an unready workflow before a round trip. One deliberate difference from forma2: the trigger's surveyId is a UUID, the rewrite's id format, where forma2's was a cuid2; a workflow migrated from forma2 still names its survey by the cuid2 until it is saved, and the server reads that as the id migrated from it and hands the builder the UUID. Ending card ids stay cuid2, the shape survey documents give them.
+// forma2's packages/workflows types: the workflow definition document, the rules that make it persistable (ZWorkflowDefinition) or executable (ZWorkflowExecutableDefinition), and the vocabulary the builder reads. The Go server enforces the same rules (apps/server/internal/workflow/definition.go); the builder runs them locally so it can flag an unready workflow before a round trip. One deliberate difference from forma2: the trigger's surveyId is a UUID, the rewrite's id format, where forma2's was a cuid2; a workflow migrated from forma2 still names its survey by the cuid2 until it is saved, and the server reads that as the id migrated from it and hands the builder the UUID. Ending card ids stay cuid2, the shape survey documents give them.
 
 export const WORKFLOW_SCHEMA_VERSION = 1;
 

@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../api";
 
-// The Forma Cloud billing routes of /api/app (server/internal/billing/handler.go), one per forma2 billing server action.
+// The Forma Cloud billing routes of /api/app (apps/server/internal/billing/handler.go), one per forma2 billing server action.
 
 /** forma2's TCloudBillingPlan: the three standard plans, a custom contract, and a subscription whose product carries no recognised plan. */
 export type CloudPlan = "hobby" | "pro" | "scale" | "custom" | "unknown";
