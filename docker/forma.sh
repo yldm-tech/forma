@@ -361,23 +361,27 @@ psql_forma() {
   compose exec -T postgres psql -U postgres -d forma -tA -c "$1" | tr -d '[:space:]'
 }
 
-# check_database refuses to start the Go server on a database that holds forma2's data but not yet its own: the Go server keeps its data in a schema of its own, and started on an empty one it would admit the first person to sign up as the instance's owner.
+# check_database refuses to start the Go server on a database whose forma2 data has not been imported. The Go server keeps its data in tables of its own next to forma2's, and started without forma2's data it would serve an empty instance whose first sign-up becomes its owner. This is the server's own startup check, run before anything is started: forma2's "User" table has rows and forma2_imports, which `forma import-forma2` (or its --discard-forma2-data) writes, has none.
 check_database() {
-  local tables forma2_users=f go_users=f
+  local tables forma2_users=f recorded=f
   compose up -d --wait postgres >/dev/null
-  tables=$(psql_forma "SELECT (to_regclass('public.\"User\"') IS NOT NULL)::text || ',' || (to_regclass('public.users') IS NOT NULL)::text")
+  tables=$(psql_forma "SELECT (to_regclass('public.\"User\"') IS NOT NULL)::text || ',' || (to_regclass('public.forma2_imports') IS NOT NULL)::text")
   case "$tables" in
     true,*) forma2_users=$(psql_forma 'SELECT EXISTS (SELECT 1 FROM "User")') ;;
   esac
   case "$tables" in
-    *,true) go_users=$(psql_forma 'SELECT EXISTS (SELECT 1 FROM users)') ;;
+    *,true) recorded=$(psql_forma 'SELECT EXISTS (SELECT 1 FROM forma2_imports)') ;;
   esac
-  if [ "$forma2_users" = t ] && [ "$go_users" != t ]; then
+  if [ "$forma2_users" = t ] && [ "$recorded" != t ]; then
     cat >&2 <<EOF
-The database still holds forma2's data, and the Go server's schema has none of it yet. Starting the new stack now would serve an empty instance.
-Nothing else was started: the forma2 server keeps running, and the configuration has been migrated (the previous files are kept next to the new ones). Do not run 'docker compose up' here until the data has moved.
-Run the data migration described in the upgrade guide, then run ./forma.sh update again:
-  $FORMA_UPGRADE_GUIDE
+The database still holds forma2's data, and it has not been imported into the Go server's tables yet. Starting the new stack now would serve an empty instance.
+Nothing else was started, and the configuration has been migrated (the previous files are kept next to the new ones). Stop forma2, import its data, then run ./forma.sh update again:
+  cd $PWD
+  docker compose stop forma
+  docker compose run --rm forma-migrate
+  docker compose run --rm forma-migrate import-forma2 --dry-run
+  docker compose run --rm forma-migrate import-forma2
+The upgrade guide explains each step: $FORMA_UPGRADE_GUIDE
 EOF
     exit 1
   fi
