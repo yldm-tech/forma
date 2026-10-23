@@ -79,23 +79,6 @@ export type TUserNotificationSettings = z.infer<typeof ZUserNotificationSettings
 
 const ZUserIdentityProvider = z.enum(["email", "google", "github", "azuread", "openid", "saml"]);
 
-export const ZUser = z.object({
-  id: z.string(),
-  name: ZUserName,
-  email: ZUserEmail,
-  emailVerified: z.boolean(),
-  twoFactorEnabled: z.boolean(),
-  identityProvider: ZUserIdentityProvider,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  notificationSettings: ZUserNotificationSettings,
-  locale: ZUserLocale,
-  lastLoginAt: z.date().nullable(),
-  isActive: z.boolean().prefault(true),
-});
-
-export type TUser = z.infer<typeof ZUser>;
-
 export const ZUserUpdateInput = z.object({
   name: ZUserName.optional(),
   email: ZUserEmail.optional(),

@@ -7,7 +7,6 @@
       "browser": "./surveys/html-text.browser.ts",
       "default": "./surveys/html-text.ts"
     },
-    "./integration": "./integration/index.ts",
     "./*": "./*.ts"
   },
   "sideEffects": false,
@@ -20,7 +19,6 @@
   },
   "dependencies": {
     "zod": "catalog:",
-    "zod-openapi": "catalog:",
     "node-html-parser": "7.1.0"
   },
   "devDependencies": {

@@ -51,7 +51,7 @@
 /* this is for styling the HtmlBody component */
 #fbjs .htmlbody {
   @apply block text-sm leading-6 font-normal;
-  /* need to use !important because in packages/survey-ui/components/editor/styles-editor-frontend.css the color is defined for some classes */
+  /* need to use !important because editor-frontend.css (injected right after this file by lib/styles.ts) defines the color for some classes */
   color: var(--fb-subheading-color) !important;
 }
 
@@ -103,12 +103,7 @@
   margin: 0.25em 0;
 }
 /*
- * The rules above are the fallback for list markup without the editor's theme classes. Rich text
- * authored in the app carries them, and its geometry (1.5em per level, no item margins, no marker
- * on the .fb-editor-nested-listitem wrapper Lexical puts around a nested list) comes from the
- * editor stylesheet that lib/styles.ts injects right after this file — one definition shared with
- * the editor itself. Source of truth for those class names:
- * apps/web/modules/ui/components/editor/lib/example-theme.ts
+ * The rules above are the fallback for list markup without the editor's theme classes. Rich text authored in the app carries them, and its geometry (1.5em per level, no item margins, no marker on the .fb-editor-nested-listitem wrapper Lexical puts around a nested list) comes from the editor stylesheet that lib/styles.ts injects right after this file — one definition shared with the editor itself. Source of truth for those class names: web/src/components/ui/editor/lib/example-theme.ts
  */
 
 /* without this, it wont override the color */

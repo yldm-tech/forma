@@ -3896,39 +3896,6 @@ const validateBlockLogic = (
   return [...logicIssues.flat(), ...(logicFallbackIssue ?? [])];
 };
 
-// ZSurvey is refined, so update/create inputs start from ZSurveyBase and reapply the same refinement.
-export const ZSurveyUpdateInput = ZSurveyBase.omit({
-  createdAt: true,
-  updatedAt: true,
-  followUps: true,
-  // Read-only projection of the EmbeddedData tables (ENG-1837), omitted for the same reason as on
-  // both create inputs: nothing may reach a Prisma write through this schema. Omitting STRIPS rather
-  // than rejects, so the v1 PUT round-trip — which re-parses the loaded survey merged with the patch
-  // — is unaffected; `updateSurveyInternal` still destructures the key out, because callers that hand
-  // it a raw `TSurvey` (the editor's save actions, the summary's single-use toggle) never go through
-  // this schema at all.
-  embeddedFields: true,
-})
-  .extend({
-    followUps: z
-      .array(
-        ZSurveyFollowUp.omit({ createdAt: true, updatedAt: true }).and(
-          z.object({
-            createdAt: z.coerce.date(),
-            updatedAt: z.coerce.date(),
-          })
-        )
-      )
-      .prefault([]),
-  })
-  .and(
-    z.object({
-      createdAt: z.coerce.date(),
-      updatedAt: z.coerce.date(),
-    })
-  )
-  .superRefine(surveyRefinement);
-
 // Helper function to make all properties of a Zod object schema optional
 const makeSchemaOptional = <T extends z.ZodRawShape>(
   schema: z.ZodObject<T>
@@ -3938,6 +3905,7 @@ const makeSchemaOptional = <T extends z.ZodRawShape>(
   return schema.partial();
 };
 
+// ZSurvey is refined, so the create inputs start from ZSurveyBase and reapply the same refinement.
 export const ZSurveyCreateInput = makeSchemaOptional(ZSurveyBase)
   .omit({
     id: true,

@@ -28,9 +28,7 @@
  * control, so there is no `:disabled` for those utilities to hook onto and the state is painted on
  * the wrapper instead.
  *
- * It lives here rather than in Tailwind classes on the component because `.editor-inner` sets
- * `resize` in this stylesheet, which Next.js emits unlayered — that beats any `resize-none` from
- * `@layer utilities` no matter the specificity, so the grip would survive.
+ * It lives here rather than in Tailwind classes on the component because `.editor-inner` sets `resize` in this stylesheet, which is plain unlayered CSS — that beats any `resize-none` from `@layer utilities` no matter the specificity, so the grip would survive.
  *
  * The toolbar's buttons opt out of the fade: they already carry their own `disabled:opacity-50`,
  * and compounding the two washes the icons out to 25%. At full opacity inside this 50% wrapper they

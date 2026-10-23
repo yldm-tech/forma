@@ -46,7 +46,7 @@
     "dist"
   ],
   "scripts": {
-    "go": "vp build --watch --mode dev",
+    "dev": "vp build --watch --mode dev",
     "clean": "rimraf node_modules coverage dist",
     "build": "rimraf dist && tsc --project tsconfig.build.json && vp build",
     "test": "vp test run",

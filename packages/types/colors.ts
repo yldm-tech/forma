@@ -2,10 +2,7 @@
 // `@forma/types` (a dependency of both) so the WCAG/contrast math lives in one place
 // instead of being duplicated per package.
 //
-// NOTE: runtime color math living in a package named for types is a pragmatic exception, not a
-// pattern — `@forma/types` happens to be the only shared dependency between `apps/web` and
-// `packages/surveys`. If more shared runtime utilities appear, extract them into a dedicated
-// `packages/utils` package (like `i18n-utils`) instead of growing this one.
+// NOTE: runtime color math living in a package named for types is a pragmatic exception, not a pattern — `@forma/types` happens to be the only shared dependency between `web` and `packages/surveys`. If more shared runtime utilities appear, extract them into a dedicated `packages/utils` package (like `i18n-utils`) instead of growing this one.
 
 // Normalizes every hex form `ZColor` accepts (#RGB, #RGBA, #RRGGBB, #RRGGBBAA, with or without
 // the leading "#") to lowercase #rrggbb, dropping any alpha channel. Returns undefined for
