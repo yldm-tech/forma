@@ -27,6 +27,7 @@ type Message struct {
 type Recorder struct {
 	mu       sync.Mutex
 	messages []Message
+	close    func()
 }
 
 // Start installs a client for the test's duration. It replaces the process-wide client, so events captured by tests running in parallel reach it too: assert on what the test itself created, and do not call Start from two tests that run at the same time.
@@ -52,12 +53,18 @@ func Start(t *testing.T) *Recorder {
 		t.Fatal(err)
 	}
 	restore := analytics.Install(client)
+	r.close = sync.OnceFunc(client.Close)
 	t.Cleanup(func() {
 		restore()
-		client.Close()
+		r.close()
 		srv.Close()
 	})
 	return r
+}
+
+// Flush returns once every message captured so far has reached the recorder, so All is complete. The client sends each message on its own goroutine, so arrival order says nothing about what is still in flight; Flush closes the client instead, and messages captured afterwards are dropped. Call it once the test has captured everything it asserts on.
+func (r *Recorder) Flush() {
+	r.close()
 }
 
 // Events waits until the client has delivered n messages named event, and returns every message with that name. It fails the test if they do not arrive within five seconds.

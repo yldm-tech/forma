@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -18,7 +19,6 @@ import (
 
 	"sync/atomic"
 
-	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
@@ -531,10 +531,8 @@ func TestResponseCreatedAnalytics(t *testing.T) {
 	if err := e.work(job(response.EventResponseFinished, f, e.respond(f, true, `{}`), 1)); err != nil {
 		t.Fatal(err)
 	}
-	// Events are delivered in order, so once the sentinel arrives every event of this survey has.
-	sentinel := "sentinel-" + f.survey.String()
-	analytics.Capture(sentinel, "test_sentinel", nil, analytics.Groups{})
-	rec.Events(t, "test_sentinel", 1)
+	// Every event was captured while the jobs ran; once flushed, all of them have arrived, in whatever order their concurrent sends finished.
+	rec.Flush()
 	var milestones []string
 	for _, m := range rec.All() {
 		if m.Event != "survey_response_received" || m.Properties["survey_id"] != f.survey.String() {
@@ -546,7 +544,8 @@ func TestResponseCreatedAnalytics(t *testing.T) {
 			t.Errorf("survey_response_received = %+v", m)
 		}
 	}
-	if fmt.Sprint(milestones) != "[first 10]" {
+	slices.Sort(milestones)
+	if fmt.Sprint(milestones) != "[10 first]" {
 		t.Errorf("milestones = %v, want the first and the tenth response only", milestones)
 	}
 	if n := reports.sent.Load(); n != 3 {

@@ -35,11 +35,13 @@ func TestEditorSaveEvents(t *testing.T) {
 	// An API key's save is not an editor save.
 	captureEditorSave(APIKeyCaller(uuid.New()), &org, old, &updated)
 
+	// Everything was captured above; once flushed, all of it has arrived, whatever order the concurrent sends finished in.
+	rec.Flush()
 	mine := func(event string, n int) []analyticstest.Message {
 		t.Helper()
 		var out []analyticstest.Message
-		for _, m := range rec.Events(t, event, n) {
-			if m.DistinctID == user.String() {
+		for _, m := range rec.All() {
+			if m.Event == event && m.DistinctID == user.String() {
 				out = append(out, m)
 			}
 		}

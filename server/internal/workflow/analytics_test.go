@@ -86,17 +86,18 @@ func TestLifecycleAndRunFailureEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mine := func(event string, n int) []analyticstest.Message {
-		t.Helper()
+	// Every event of this workflow was captured above; once flushed, all of them have arrived, and the events of tests running in parallel are told apart by the workflow.
+	rec.Flush()
+	mine := func(event string) []analyticstest.Message {
 		var out []analyticstest.Message
-		for _, m := range rec.Events(t, event, n) {
-			if m.Properties["workflow_id"] == w.ID.String() {
+		for _, m := range rec.All() {
+			if m.Event == event && m.Properties["workflow_id"] == w.ID.String() {
 				out = append(out, m)
 			}
 		}
 		return out
 	}
-	created := mine("workflow_created", 1)
+	created := mine("workflow_created")
 	if len(created) != 1 {
 		t.Fatalf("workflow_created = %v", created)
 	}
@@ -109,13 +110,13 @@ func TestLifecycleAndRunFailureEvents(t *testing.T) {
 	if _, ok := c.Properties["previous_status"]; ok {
 		t.Error("workflow_created carries a previous status")
 	}
-	if enabled := mine("workflow_enabled", 1); len(enabled) != 1 || enabled[0].Properties["previous_status"] != "draft" || enabled[0].Properties["status"] != "enabled" {
+	if enabled := mine("workflow_enabled"); len(enabled) != 1 || enabled[0].Properties["previous_status"] != "draft" || enabled[0].Properties["status"] != "enabled" {
 		t.Errorf("workflow_enabled = %v", enabled)
 	}
-	if tested := mine("workflow_tested", 1); len(tested) != 1 || tested[0].Properties["test_ok"] != true {
+	if tested := mine("workflow_tested"); len(tested) != 1 || tested[0].Properties["test_ok"] != true {
 		t.Errorf("workflow_tested = %v", tested)
 	}
-	failed := mine("workflow_run_failed", 1)
+	failed := mine("workflow_run_failed")
 	if len(failed) != 1 {
 		t.Fatalf("workflow_run_failed = %v", failed)
 	}
