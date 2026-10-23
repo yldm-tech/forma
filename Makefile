@@ -6,7 +6,7 @@ WEB_DIST := web/dist
 EMBED_DIR := $(SERVER)/internal/webui/dist
 BIN := bin/forma
 
-.PHONY: help deps-up deps-down authz-schema migrate seed seed-clear dev-server dev-worker dev-web build web embed server generate lint test check clean
+.PHONY: help deps-up deps-down authz-schema migrate seed seed-clear lint-migrations e2e dev-server dev-worker dev-web build web embed server generate lint test check clean
 
 help:
 	@echo "deps-up      start local dependencies (docker compose), write the SpiceDB schema and create the storage bucket"
@@ -21,6 +21,8 @@ help:
 	@echo "build        build the SPA, embed it, and compile bin/forma"
 	@echo "generate     regenerate wire_gen.go"
 	@echo "lint         golangci-lint + vp check (format, Oxlint, type-check)"
+	@echo "lint-migrations  Squawk on the migrations this branch adds or changes (against origin/main)"
+	@echo "e2e          the Playwright browser suite against a running server (E2E_BASE_URL, default http://localhost:3000)"
 	@echo "test         go test + workspace tests"
 	@echo "check        everything CI runs"
 
@@ -85,6 +87,12 @@ generate:
 lint: web
 	cd $(SERVER) && golangci-lint run ./...
 	pnpm exec vp check
+
+lint-migrations:
+	BASE_REF=$$(git merge-base HEAD origin/main) bash scripts/lint-migrations.sh
+
+e2e:
+	pnpm exec playwright test
 
 test: web
 	cd $(SERVER) && go test -race ./...
