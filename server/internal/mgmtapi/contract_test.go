@@ -46,12 +46,12 @@ type recorded struct {
 
 // notReplayed are the recorded exchanges the replay skips, with the reason.
 var notReplayed = map[string]string{
-	"mcp-unauthenticated":       mcpCrashed,
-	"mcp-api-key-initialize":    mcpCrashed,
-	"mcp-api-key-tools-list":    mcpCrashed,
-	"mcp-foreign-origin":        mcpCrashed,
-	"mcp-invalid-bearer":        mcpCrashed,
-	"mcp-query-credential":      mcpCrashed,
+	"mcp-unauthenticated":    mcpCrashed,
+	"mcp-api-key-initialize": mcpCrashed,
+	"mcp-api-key-tools-list": mcpCrashed,
+	"mcp-foreign-origin":     mcpCrashed,
+	"mcp-invalid-bearer":     mcpCrashed,
+	"mcp-query-credential":   mcpCrashed,
 }
 
 const mcpCrashed = "forma2 answered every POST /api/mcp with a bare 500 before authenticating (notes.knownDefect), so the recording holds no MCP exchange; the intended answers the notes describe are tested in internal/mcp."
