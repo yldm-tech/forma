@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -104,8 +105,8 @@ func (w *Wrapper) APIKey(opts apikey.Options, rule ratelimit.Rule) gin.HandlerFu
 			return
 		}
 		c.Set(callerKey, Caller{Key: p})
-		// With GATEWAY_RATE_LIMITING=1 the gateway limits API key requests to the routes its policy covers, and forma2's wrapper did not charge them again.
-		if w.cfg.GatewayRateLimiting && ratelimit.CoveredByGateway(c.Request.Method, c.Request.URL.Path, ratelimit.GatewayAuthAPIKey) {
+		// With GATEWAY_RATE_LIMITING=1 the gateway limits API key requests to the routes its policy covers, and forma2's wrapper did not charge them again. The policy counts a key by its x-api-key header only, so a key sent as a Bearer token is charged here, which forma2 did not do.
+		if w.cfg.GatewayRateLimiting && keyInGatewayHeader(c.Request.Header) && ratelimit.CoveredByGateway(c.Request.Method, c.Request.URL.Path, ratelimit.GatewayAuthAPIKey) {
 			c.Next()
 			return
 		}
@@ -114,6 +115,11 @@ func (w *Wrapper) APIKey(opts apikey.Options, rule ratelimit.Rule) gin.HandlerFu
 		}
 		c.Next()
 	}
+}
+
+// keyInGatewayHeader reports whether the request's API key came from x-api-key, the header the gateway policy's descriptor reads; KeyFromHeaders falls back to a Bearer token only when that header is blank.
+func keyInGatewayHeader(h http.Header) bool {
+	return strings.TrimSpace(h.Get(apikey.HeaderAPIKey)) != ""
 }
 
 // APIKeyOrSession is the front of a route that accepts either (forma2's "Both"): a request carrying an API key is authenticated by it alone, an invalid one never falling back to the session; otherwise the session read by sessionOptional before it decides. A session-authenticated mutation must also pass the CSRF check the /api/app routes apply, which forma2 did not: an API key cannot be sent by another site, a cookie can. rule is charged to the key or the user.
