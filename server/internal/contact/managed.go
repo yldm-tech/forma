@@ -27,7 +27,9 @@ type MissingKeysError struct {
 	Keys []string
 }
 
-func (e *MissingKeysError) Error() string { return "attribute keys not found: " + strings.Join(e.Keys, ", ") }
+func (e *MissingKeysError) Error() string {
+	return "attribute keys not found: " + strings.Join(e.Keys, ", ")
+}
 
 // BulkInvalidError is a bulk upload refused before anything was written, with forma2's messages.
 type BulkInvalidError struct {
@@ -296,7 +298,7 @@ func (s *Service) BulkUpsert(ctx context.Context, workspaceID uuid.UUID, contact
 			keyIDs[key] = id
 		}
 		for _, w := range writes {
-			contactID := uuid.Nil
+			var contactID uuid.UUID
 			if w.contactID != nil {
 				contactID = *w.contactID
 			} else {

@@ -139,9 +139,9 @@ func parseV2ResponseInput(body map[string]any) (string, response.ManagedInput, *
 	if id, ok := is.id("endingId", o.get("endingId"), nullish); ok {
 		in.EndingID = &id
 	}
-	in.Data = is.responseData("data", o.get("data"), required)
-	in.Variables = is.variables("variables", o.get("variables"), optional)
-	in.TTC = is.ttc("ttc", o.get("ttc"), optional)
+	in.Data = is.responseData(o.get("data"), required)
+	in.Variables = is.variables(o.get("variables"), optional)
+	in.TTC = is.ttc(o.get("ttc"), optional)
 	in.Meta = is.v2Meta("meta", o.get("meta"), optional)
 	in.SingleUseID = is.optString("singleUseId", o.get("singleUseId"), nullish)
 	in.Language = is.optString("language", o.get("language"), nullish)
@@ -329,9 +329,9 @@ func parseV2ResponseUpdate(body map[string]any) (response.ReplaceInput, *issues)
 	if id, ok := is.id("endingId", o.get("endingId"), nullable); ok {
 		in.EndingID = &id
 	}
-	in.Data = is.responseData("data", o.get("data"), required)
-	in.Variables = is.variables("variables", o.get("variables"), required)
-	in.TTC = is.ttc("ttc", o.get("ttc"), required)
+	in.Data = is.responseData(o.get("data"), required)
+	in.Variables = is.variables(o.get("variables"), required)
+	in.TTC = is.ttc(o.get("ttc"), required)
 	in.Meta = is.v2Meta("meta", o.get("meta"), required)
 	if attrs, ok := is.stringRecord("contactAttributes", o.get("contactAttributes"), nullable); ok {
 		in.ContactAttributes = attrs

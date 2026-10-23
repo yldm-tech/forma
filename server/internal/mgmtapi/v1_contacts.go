@@ -52,7 +52,7 @@ func (h *Handler) v1Contact(c *gin.Context, method string) *contactRow {
 	}
 	found, err := h.repo.contact(c.Request.Context(), id)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil
 	}
 	if found == nil {
@@ -84,7 +84,7 @@ func (h *Handler) v1DeleteContact(c *gin.Context) {
 	rec.OldObject = found
 	deleted, err := h.repo.deleteContact(c.Request.Context(), found.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if !deleted {
@@ -98,7 +98,7 @@ func (h *Handler) v1DeleteContact(c *gin.Context) {
 func (h *Handler) v1ListContactAttributes(c *gin.Context) {
 	found, err := h.repo.contactAttributes(c.Request.Context(), grantedWorkspaces(c))
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	v1OK(c, found)
@@ -108,7 +108,7 @@ func (h *Handler) v1ListContactAttributes(c *gin.Context) {
 func (h *Handler) v1ListKeys(c *gin.Context) {
 	found, err := h.repo.keys(c.Request.Context(), grantedWorkspaces(c))
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	v1OK(c, found)
@@ -155,7 +155,7 @@ func (h *Handler) v1CreateKey(c *gin.Context) {
 	ctx := c.Request.Context()
 	n, err := h.repo.keyCount(ctx, ws.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if n >= contact.MaxAttributeKeys {
@@ -191,7 +191,7 @@ func (h *Handler) v1CreateKey(c *gin.Context) {
 func (h *Handler) v1Key(c *gin.Context, method string) *contact.Key {
 	found, err := h.repo.key(c.Request.Context(), v1LooseID(c, "contactAttributeKeyId"))
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil
 	}
 	if found == nil {
@@ -247,7 +247,7 @@ func (h *Handler) v1UpdateKey(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if updated == nil {
@@ -273,7 +273,7 @@ func (h *Handler) v1DeleteKey(c *gin.Context) {
 	}
 	deleted, err := h.repo.deleteKey(c.Request.Context(), found.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if !deleted {

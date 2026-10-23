@@ -56,7 +56,7 @@ func (h *Handler) v1ListResponses(c *gin.Context) {
 		}
 		sv, err := response.LoadSurvey(ctx, h.db, id)
 		if err != nil {
-			h.v1Fail(c, err, mgmtv1.MessageGeneric)
+			h.v1Fail(c, err)
 			return
 		}
 		if sv == nil {
@@ -70,7 +70,7 @@ func (h *Handler) v1ListResponses(c *gin.Context) {
 	}
 	found, err := response.ListManaged(ctx, h.db, q)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	out := make([]response.Response, len(found))
@@ -89,7 +89,7 @@ func (h *Handler) v1Response(c *gin.Context, method string) (*response.Response,
 	ctx := c.Request.Context()
 	r, err := response.Load(ctx, h.db, id)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil, nil
 	}
 	if r == nil {
@@ -98,7 +98,7 @@ func (h *Handler) v1Response(c *gin.Context, method string) (*response.Response,
 	}
 	sv, err := response.LoadSurvey(ctx, h.db, r.SurveyID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil, nil
 	}
 	if sv == nil {
@@ -130,7 +130,7 @@ func (h *Handler) v1DeleteResponse(c *gin.Context) {
 	rec.OldObject = r
 	deleted, err := h.responses.DeleteManaged(c.Request.Context(), r.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if deleted == nil {
@@ -210,9 +210,9 @@ func parseV1ResponseInput(body map[string]any) (v1ResponseInput, *issues) {
 	}
 	out.in.EndingID = is.optString("endingId", o.get("endingId"), nullish)
 	out.in.Language = is.optString("language", o.get("language"), optional)
-	out.in.Data = is.responseData("data", o.get("data"), required)
-	out.in.Variables = is.variables("variables", o.get("variables"), optional)
-	out.in.TTC = is.ttc("ttc", o.get("ttc"), optional)
+	out.in.Data = is.responseData(o.get("data"), required)
+	out.in.Variables = is.variables(o.get("variables"), optional)
+	out.in.TTC = is.ttc(o.get("ttc"), optional)
 	out.in.Meta = is.meta("meta", o.get("meta"), optional)
 	out.in.CreatedAt, out.in.UpdatedAt, out.in.ClampTTC = out.createdAt, out.updatedAt, true
 	return out, &is
@@ -237,7 +237,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 	surveyID, _ := legacyid.Resolve(input.surveyID)
 	sv, err := response.LoadSurvey(ctx, h.db, surveyID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if sv == nil {
@@ -250,7 +250,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 	}
 	valid, err := h.validUploads(c, sv, input.in.Data)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if !valid {
@@ -259,7 +259,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 	}
 	errs, err := h.answerErrors(sv, input.in.Data, input.in.Language)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if len(errs) > 0 {
@@ -274,7 +274,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 		case errors.Is(err, response.ErrDisplayNotFound):
 			v1api.NotFound(c, "Display", *input.in.DisplayID, false)
 		default:
-			h.v1Fail(c, err, mgmtv1.MessageGeneric)
+			h.v1Fail(c, err)
 		}
 		return
 	}
@@ -306,7 +306,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 	if data != nil {
 		valid, err := h.validUploads(c, sv, data)
 		if err != nil {
-			h.v1Fail(c, err, mgmtv1.MessageGeneric)
+			h.v1Fail(c, err)
 			return
 		}
 		if !valid {
@@ -315,7 +315,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 		}
 		errs, err := h.answerErrors(sv, data, languagePtr)
 		if err != nil {
-			h.v1Fail(c, err, mgmtv1.MessageGeneric)
+			h.v1Fail(c, err)
 			return
 		}
 		if len(errs) > 0 {
@@ -329,9 +329,9 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 	endingID := o.get("endingId")
 	update.EndingIDSet = !isAbsent(endingID)
 	update.EndingID = is.optString("endingId", endingID, nullish)
-	update.Data = is.responseData("data", o.get("data"), optional)
-	update.Variables = is.variables("variables", o.get("variables"), optional)
-	if ttc := is.ttc("ttc", o.get("ttc"), optional); ttc != nil {
+	update.Data = is.responseData(o.get("data"), optional)
+	update.Variables = is.variables(o.get("variables"), optional)
+	if ttc := is.ttc(o.get("ttc"), optional); ttc != nil {
 		update.TTC = ttc
 	}
 	update.Language = is.optString("language", o.get("language"), optional)
@@ -342,7 +342,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	if _, err := h.responses.Update(ctx, sv, current.ID.String(), update); err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	updated, err := response.Load(ctx, h.db, current.ID)
@@ -350,7 +350,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 		if err == nil {
 			err = errNotFound
 		}
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	rec.NewObject = updated

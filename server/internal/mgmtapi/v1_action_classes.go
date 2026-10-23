@@ -89,7 +89,7 @@ func (h *Handler) v1CreateActionClass(c *gin.Context) {
 	}
 	created, err := h.actionClasses.CreateManaged(c.Request.Context(), ws.ID, in)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	rec := mgmtv1.AuditOf(c)
@@ -105,7 +105,7 @@ func (h *Handler) v1ActionClass(c *gin.Context, method string) *actionclass.Acti
 	}
 	found, err := h.actionClasses.ByID(c.Request.Context(), id)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil
 	}
 	if found == nil {
@@ -149,12 +149,12 @@ func (h *Handler) v1UpdateActionClass(c *gin.Context) {
 	ctx := c.Request.Context()
 	updated, err := h.actionClasses.UpdateManaged(ctx, found, in)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	triggers, err := h.actionClasses.SurveyTriggers(ctx, updated.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	rec.NewObject = updated
@@ -175,7 +175,7 @@ func (h *Handler) v1DeleteActionClass(c *gin.Context) {
 	rec.OldObject = found
 	deleted, err := h.actionClasses.DeleteManaged(c.Request.Context(), found)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if !deleted {

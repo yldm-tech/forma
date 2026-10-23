@@ -16,15 +16,8 @@ import (
 // absent is a key the input did not carry: zod's undefined.
 type absent struct{}
 
-// object is a parsed input read as zod reads an object: a key it lacks is absent, and an input that is not an object reads as an empty one.
+// object is a parsed input read as zod reads an object: a key it lacks is absent.
 type object map[string]any
-
-func asObject(v any) object {
-	if m, ok := v.(map[string]any); ok {
-		return object(m)
-	}
-	return object{}
-}
 
 func (o object) get(key string) any {
 	v, ok := o[key]
@@ -53,7 +46,9 @@ type issues struct {
 	aborted bool
 }
 
-func (is *issues) add(path, message string) { is.list = append(is.list, issue{path: path, message: message}) }
+func (is *issues) add(path, message string) {
+	is.list = append(is.list, issue{path: path, message: message})
+}
 
 func (is *issues) addMeta(path, message string, meta map[string]any) {
 	is.list = append(is.list, issue{path: path, message: message, meta: meta})
@@ -258,9 +253,9 @@ func dataValue(v any) bool {
 	return false
 }
 
-// responseData is ZResponseData.
-func (is *issues) responseData(path string, v any, p presence) map[string]any {
-	m, ok := is.record(path, v, p, func(path string, v any) {
+// responseData is ZResponseData under p, the data member.
+func (is *issues) responseData(v any, p presence) map[string]any {
+	m, ok := is.record("data", v, p, func(path string, v any) {
 		if !dataValue(v) {
 			is.add(path, "Invalid input")
 		}
@@ -271,9 +266,9 @@ func (is *issues) responseData(path string, v any, p presence) map[string]any {
 	return m
 }
 
-// variables is ZResponseVariables: strings and numbers.
-func (is *issues) variables(path string, v any, p presence) map[string]any {
-	m, ok := is.record(path, v, p, func(path string, v any) {
+// variables is ZResponseVariables under p, the variables member: strings and numbers.
+func (is *issues) variables(v any, p presence) map[string]any {
+	m, ok := is.record("variables", v, p, func(path string, v any) {
 		if _, isString := v.(string); isString {
 			return
 		}
@@ -287,9 +282,9 @@ func (is *issues) variables(path string, v any, p presence) map[string]any {
 	return m
 }
 
-// ttc is a record of numbers.
-func (is *issues) ttc(path string, v any, p presence) map[string]float64 {
-	m, ok := is.record(path, v, p, func(path string, v any) {
+// ttc is the ttc member under p, a record of numbers.
+func (is *issues) ttc(v any, p presence) map[string]float64 {
+	m, ok := is.record("ttc", v, p, func(path string, v any) {
 		is.number(path, v, required)
 	})
 	if !ok {

@@ -215,7 +215,9 @@ var deviations = map[string]deviation{
 	},
 	"v2-contact-attribute-keys-list": {
 		reason: "forma2 created a workspace's default attribute keys in one statement, with one creation time, and left the order of equal times to PostgreSQL; the rewrite breaks such ties by id, so the default keys list in the order they were created (newest first here).",
-		adjust: func(f *recorded) { reorderData(f, "seats", "plan", "language", "lastName", "firstName", "email", "userId") },
+		adjust: func(f *recorded) {
+			reorderData(f, "seats", "plan", "language", "lastName", "firstName", "email", "userId")
+		},
 	},
 	"v2-contact-attribute-keys-list-paginated": {
 		reason: "As v2-contact-attribute-keys-list: ties of the default keys' equal creation times are broken by id (oldest first here).",
@@ -592,7 +594,7 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 		if d, ok := deviations[name]; ok {
 			d.adjust(&f)
 		}
-		s.prepare(name, r)
+		s.prepare(name)
 		res := r.send(e, f)
 		e.deliver()
 		t.Run(name, func(t *testing.T) {
@@ -667,7 +669,7 @@ func (s *seed) fill(namespace string, keyID uuid.UUID, limit int) {
 }
 
 // prepare puts a recorded case's scenario in place just before it is sent.
-func (s *seed) prepare(name string, r *replay) {
+func (s *seed) prepare(name string) {
 	switch name {
 	case "v1-rate-limited":
 		s.fill("api:v1", s.keys["ratelimit"], 100)
@@ -678,11 +680,11 @@ func (s *seed) prepare(name string, r *replay) {
 	}
 }
 
-// post sends one of the recorder's own requests and returns its data, failing the test unless it succeeded.
-func (s *seed) post(r *replay, method, path string, body any, key string) map[string]any {
-	res := s.e.do(method, path, body, "x-api-key", r.bound["<api-key:"+key+">"])
+// post sends one of the recorder's own requests with the manage key and returns its data, failing the test unless it succeeded.
+func (s *seed) post(r *replay, path string, body any) map[string]any {
+	res := s.e.do("POST", path, body, "x-api-key", r.bound["<api-key:manage>"])
 	if res.Status != 200 && res.Status != 201 {
-		s.e.t.Fatalf("%s %s: %d %s", method, path, res.Status, res.Body)
+		s.e.t.Fatalf("POST %s: %d %s", path, res.Status, res.Body)
 	}
 	data, _ := res.json(s.e.t)["data"].(map[string]any)
 	return data
@@ -712,10 +714,10 @@ func (s *seed) step(name string, r *replay) {
 		// The recorder echoed this creation time in later requests, so the replay gives the action class the time it was recorded with.
 		e.exec(`UPDATE action_classes SET created_at = '2026-10-22T23:28:39.933Z', updated_at = '2026-10-22T23:28:39.933Z' WHERE id = ?`, r.bound["<id:actionClass:checkout>"])
 	case "@temporary-action-class":
-		data := s.post(r, "POST", "/api/v1/management/action-classes", map[string]any{"workspaceId": s.ws.String(), "name": "Temporary", "type": "code", "key": "temporary"}, "manage")
+		data := s.post(r, "/api/v1/management/action-classes", map[string]any{"workspaceId": s.ws.String(), "name": "Temporary", "type": "code", "key": "temporary"})
 		r.bound["<id:actionClass:temporary>"] = data["id"].(string)
 	case "@temporary-attribute-key":
-		data := s.post(r, "POST", "/api/v1/management/contact-attribute-keys", map[string]any{"workspaceId": s.ws.String(), "key": "temporary", "name": "Temporary", "type": "custom"}, "manage")
+		data := s.post(r, "/api/v1/management/contact-attribute-keys", map[string]any{"workspaceId": s.ws.String(), "key": "temporary", "name": "Temporary", "type": "custom"})
 		r.bound["<id:contactAttributeKey:temporary>"] = data["id"].(string)
 	case "@identified-contacts":
 		r.bound["<id:contact:user1>"] = s.contact("userId", "contract-user-1", "email", "user1@example.com", "plan", "pro", "seats", "12").String()
@@ -729,10 +731,10 @@ func (s *seed) step(name string, r *replay) {
 		}
 		r.bound["<id:segment:pro>"] = segment.String()
 	case "@temporary-survey":
-		data := s.post(r, "POST", "/api/v1/management/surveys", map[string]any{
+		data := s.post(r, "/api/v1/management/surveys", map[string]any{
 			"workspaceId": s.ws.String(), "name": "Temporary Survey", "type": "link", "status": "draft",
 			"questions": []any{map[string]any{"id": "q1", "type": "openText", "headline": map[string]any{"default": "Hello from the other workspace"}, "required": false, "inputType": "text", "charLimit": map[string]any{"enabled": false}}},
-		}, "manage")
+		})
 		r.bound["<id:survey:temporary>"] = data["id"].(string)
 	case "@client-responses":
 		link, app := r.bound["<id:survey:link>"], r.bound["<id:survey:app>"]
@@ -747,21 +749,21 @@ func (s *seed) step(name string, r *replay) {
 			`{"plan":"pro","email":"user1@example.com","seats":"12","userId":"contract-user-1"}`)
 		r.bound["<id:response:client-contact>"] = contact.String()
 	case "@temporary-response":
-		data := s.post(r, "POST", "/api/v1/management/responses", map[string]any{"workspaceId": s.ws.String(), "surveyId": r.bound["<id:survey:link>"], "finished": false, "data": map[string]any{"feedback": "to delete"}}, "manage")
+		data := s.post(r, "/api/v1/management/responses", map[string]any{"workspaceId": s.ws.String(), "surveyId": r.bound["<id:survey:link>"], "finished": false, "data": map[string]any{"feedback": "to delete"}})
 		r.bound["<id:response:temporary>"] = data["id"].(string)
 	case "@temporary-attribute-key-v2":
-		data := s.post(r, "POST", "/api/v2/management/contact-attribute-keys", map[string]any{"workspaceId": s.ws.String(), "key": "temporary_v2", "name": "Temporary", "description": nil}, "manage")
+		data := s.post(r, "/api/v2/management/contact-attribute-keys", map[string]any{"workspaceId": s.ws.String(), "key": "temporary_v2", "name": "Temporary", "description": nil})
 		r.bound["<id:contactAttributeKey:temporary_v2>"] = data["id"].(string)
 	case "@temporary-response-v2":
-		data := s.post(r, "POST", "/api/v2/management/responses", map[string]any{"surveyId": r.bound["<id:survey:link>"], "finished": false, "data": map[string]any{"feedback": "to delete"}}, "manage")
+		data := s.post(r, "/api/v2/management/responses", map[string]any{"surveyId": r.bound["<id:survey:link>"], "finished": false, "data": map[string]any{"feedback": "to delete"}})
 		r.bound["<id:response:v2-temporary>"] = data["id"].(string)
 	case "@jane-responds":
-		s.post(r, "POST", "/api/v2/management/responses", map[string]any{"surveyId": r.bound["<id:survey:link>"], "userId": "contract-user-4", "finished": true, "data": map[string]any{"feedback": "From Jane"}}, "manage")
+		s.post(r, "/api/v2/management/responses", map[string]any{"surveyId": r.bound["<id:survey:link>"], "userId": "contract-user-4", "finished": true, "data": map[string]any{"feedback": "From Jane"}})
 	case "@forget-activepieces-webhook":
 		// The recorded image refused this webhook (see the deviation of v2-webhooks-create-activepieces-source); the lists recorded after it do not show it.
 		e.exec(`DELETE FROM webhooks WHERE id = ?`, r.bound["<id:webhook:activepieces>"])
 	case "@temporary-team":
-		data := s.post(r, "POST", "/api/v2/organizations/"+r.bound["<id:organization>"]+"/teams", map[string]any{"name": "Temporary Team"}, "manage")
+		data := s.post(r, "/api/v2/organizations/"+r.bound["<id:organization>"]+"/teams", map[string]any{"name": "Temporary Team"})
 		r.bound["<id:team:temporary>"] = data["id"].(string)
 	default:
 		e.t.Fatalf("unknown step %s", name)

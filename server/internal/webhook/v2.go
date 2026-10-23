@@ -22,7 +22,9 @@ func (w *Webhook) ViewWithSecret() View { return w.viewWithSecret() }
 func (w *Webhook) AuditObject() map[string]any { return w.auditObject() }
 
 // ByID is the webhook with id, or nil.
-func (s *Service) ByID(ctx context.Context, id uuid.UUID) (*Webhook, error) { return s.repo.ByID(ctx, id) }
+func (s *Service) ByID(ctx context.Context, id uuid.UUID) (*Webhook, error) {
+	return s.repo.ByID(ctx, id)
+}
 
 // CreateManaged is forma2's v2 createWebhook in a workspace the caller may write: the input's rules, the URL's SSRF check (400 with forma2's message) and a new secret.
 func (s *Service) CreateManaged(ctx context.Context, workspaceID uuid.UUID, in Input) (*Webhook, error) {

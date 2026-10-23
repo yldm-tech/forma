@@ -100,9 +100,9 @@ func (h *Handler) v2Me(c *gin.Context) {
 		}
 	}
 	v2OK(c, struct {
-		WorkspacePermissions   []workspacePermission   `json:"workspacePermissions"`
-		EnvironmentPermissions []environmentPermission `json:"environmentPermissions"`
-		OrganizationID         uuid.UUID               `json:"organizationId"`
+		WorkspacePermissions   []workspacePermission     `json:"workspacePermissions"`
+		EnvironmentPermissions []environmentPermission   `json:"environmentPermissions"`
+		OrganizationID         uuid.UUID                 `json:"organizationId"`
 		OrganizationAccess     apikey.OrganizationAccess `json:"organizationAccess"`
 	}{workspaces, environments, p.OrganizationID, p.OrganizationAccess}, nil)
 }

@@ -39,19 +39,19 @@ func (h *Handler) v1ListSurveys(c *gin.Context) {
 	ids := grantedWorkspaces(c)
 	found, err := h.surveys.ListV1(ctx, ids, limit, offset)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	envs, err := h.environmentIDs(ctx, ids)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	out := make([]any, len(found))
 	for i, sv := range found {
 		env := envs[sv.WorkspaceID]
 		if out[i], err = h.v1SurveyObject(sv, &env); err != nil {
-			h.v1Fail(c, err, mgmtv1.MessageGeneric)
+			h.v1Fail(c, err)
 			return
 		}
 	}
@@ -66,7 +66,7 @@ func (h *Handler) v1Survey(c *gin.Context, method string) *survey.Survey {
 	}
 	sv, err := h.surveys.Load(c.Request.Context(), id)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return nil
 	}
 	if sv == nil {
@@ -86,12 +86,12 @@ func (h *Handler) v1GetSurvey(c *gin.Context) {
 	}
 	env, err := h.environmentID(c.Request.Context(), sv.WorkspaceID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	obj, err := h.v1SurveyObject(sv, &env)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	v1OK(c, obj)
@@ -128,7 +128,7 @@ func (h *Handler) v1SurveyError(c *gin.Context, err error, cors bool) {
 		v1api.NotFound(c, resource, strings.TrimSuffix(id, " not found"), false)
 		return
 	}
-	h.v1Fail(c, err, mgmtv1.MessageGeneric)
+	h.v1Fail(c, err)
 }
 
 // v1CreateSurvey is forma2's POST /surveys: the body read, the workspace resolved and authorized for write, then the survey created from blocks or legacy questions.
@@ -152,7 +152,7 @@ func (h *Handler) v1CreateSurvey(c *gin.Context) {
 	}
 	obj, err := h.v1SurveyObject(sv, nil)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	h.bestEffortEnvironmentID(c, obj, sv.WorkspaceID)
@@ -174,7 +174,7 @@ func (h *Handler) v1UpdateSurvey(c *gin.Context) {
 			v1api.NotFoundUnnamed(c, "Organization", false)
 			return
 		}
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	body, ok := mgmtv1.ReadBody(c)
@@ -192,7 +192,7 @@ func (h *Handler) v1UpdateSurvey(c *gin.Context) {
 	}
 	obj, err := h.v1SurveyObject(updated, nil)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	h.bestEffortEnvironmentID(c, obj, updated.WorkspaceID)
@@ -211,7 +211,7 @@ func (h *Handler) v1DeleteSurvey(c *gin.Context) {
 	rec.OldObject = sv
 	deleted, err := h.surveys.DeleteV1(c.Request.Context(), sv.ID)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	if deleted == nil {
@@ -220,7 +220,7 @@ func (h *Handler) v1DeleteSurvey(c *gin.Context) {
 	}
 	obj, err := survey.V1DeletedObject(deleted)
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	h.bestEffortEnvironmentID(c, obj, deleted.WorkspaceID)
@@ -261,7 +261,7 @@ func (h *Handler) v1SingleUseIDs(c *gin.Context) {
 	}
 	links, err := h.surveys.SingleUseLinks(c.Request.Context(), survey.APIKeyCaller(mgmtv1.PrincipalOf(c).APIKeyID), sv.ID, survey.SingleUseLinksInput{IsEncrypted: settings.IsEncrypted, Count: &count})
 	if err != nil {
-		h.v1Fail(c, err, mgmtv1.MessageGeneric)
+		h.v1Fail(c, err)
 		return
 	}
 	base := h.surveys.PublicDomain() + "/s/" + sv.ID.String() + "?suId="

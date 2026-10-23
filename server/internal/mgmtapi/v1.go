@@ -124,8 +124,8 @@ func v1LooseID(c *gin.Context, param string) uuid.UUID {
 	return id
 }
 
-// v1Fail answers an error the handler did not expect to answer otherwise, the way forma2's handleApiError mapped its error classes: a missing resource 404, invalid input 400, a refusal 403, a duplicate 409, a rate limit 429, anything else 500 with message.
-func (h *Handler) v1Fail(c *gin.Context, err error, message string) {
+// v1Fail answers an error the handler did not expect to answer otherwise, the way forma2's handleApiError mapped its error classes: invalid input 400, a refusal 403, a duplicate 409, a rate limit 429, anything else 500 "Something went wrong. Please try again.".
+func (h *Handler) v1Fail(c *gin.Context, err error) {
 	if e, ok := apperr.As(err); ok {
 		switch e.Status {
 		case http.StatusBadRequest:
@@ -145,7 +145,7 @@ func (h *Handler) v1Fail(c *gin.Context, err error, message string) {
 			return
 		}
 	}
-	h.v1.Unexpected(c, err, message)
+	h.v1.Unexpected(c, err, mgmtv1.MessageGeneric)
 }
 
 // environmentIDs is forma2's addLegacyEnvironmentIdToList lookup: each workspace's legacy environment id, or its own id when it has none.
