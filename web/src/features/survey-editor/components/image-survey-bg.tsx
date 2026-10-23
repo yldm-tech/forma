@@ -20,6 +20,7 @@ export const UploadImageSurveyBg = ({ handleBgChange, background }: UploadImageS
             }
           }}
           fileUrl={background}
+          maxSizeInMB={5}
         />
       </div>
     </div>

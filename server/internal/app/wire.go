@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/instance"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -173,6 +174,12 @@ var storageSet = wire.NewSet(
 	storage.NewHandler,
 )
 
+// instanceSet is /api/app/instance: whether file storage is configured, the running release, and the latest stable release for the self-hosted update notice.
+var instanceSet = wire.NewSet(
+	instance.NewReleases,
+	instance.NewHandler,
+)
+
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
 var linkSurveySet = wire.NewSet(
 	linksurvey.NewRepository,
@@ -281,6 +288,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		surveyConfigSet,
 		responseSet,
 		storageSet,
+		instanceSet,
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,

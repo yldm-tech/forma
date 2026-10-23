@@ -16,6 +16,7 @@ import type { TSurvey, TSurveyEditorTabs } from "@forma/types/surveys/types";
 import type { TWorkspace } from "@forma/types/workspace";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
+import { instanceKeys } from "../../../lib/queries/instance";
 import { analysisKeys } from "../../survey-analysis/api";
 import { surveyEditorKeys } from "../api";
 import { SurveyMenuBar } from "./survey-menu-bar";
@@ -284,6 +285,21 @@ describe("SurveyMenuBar", () => {
     expect(saves).toHaveLength(0);
     expect(queryClient.getQueryData<TSurvey>(surveyEditorKeys.survey(SURVEY_ID))?.updatedAt).toEqual(
       LOADED_AT
+    );
+  });
+
+  test.each([
+    [false, true],
+    [true, false],
+  ])("with file storage configured %s, the storage warning shows: %s", async (storageConfigured, shown) => {
+    stubSaveEndpoint();
+    const { queryClient } = renderMenuBar(survey());
+    await screen.findByDisplayValue("Feedback");
+    act(() => {
+      queryClient.setQueryData(instanceKeys.info, { storageConfigured, version: "0.2.10" });
+    });
+    await waitFor(() =>
+      expect(screen.queryByText(i18n.t("common.storage_not_configured")) !== null).toBe(shown)
     );
   });
 });

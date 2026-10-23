@@ -47,6 +47,7 @@ import { Route as AuthForgotPasswordResetSuccessRouteImport } from './routes/aut
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/index'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/api-keys'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/billing'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsDomainRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/domain'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
 import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/route'
@@ -300,6 +301,12 @@ const AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute =
   AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport.update({
     id: '/billing',
     path: '/billing',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsDomainRouteImport.update({
+    id: '/domain',
+    path: '/domain',
     getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
   } as any)
 const AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute =
@@ -598,6 +605,7 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceId/workflows/$workflowId': typeof AuthenticatedWorkspacesWorkspaceIdWorkflowsWorkflowIdRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
+  '/organizations/$organizationId/settings/domain': typeof AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -671,6 +679,7 @@ export interface FileRoutesByTo {
   '/organizations/$organizationId/workspaces/new': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
+  '/organizations/$organizationId/settings/domain': typeof AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -750,6 +759,7 @@ export interface FileRoutesById {
   '/_authenticated/workspaces/$workspaceId/workflows/$workflowId': typeof AuthenticatedWorkspacesWorkspaceIdWorkflowsWorkflowIdRouteRouteWithChildren
   '/_authenticated/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   '/_authenticated/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
+  '/_authenticated/organizations/$organizationId/settings/domain': typeof AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute
   '/_authenticated/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -830,6 +840,7 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceId/workflows/$workflowId'
     | '/organizations/$organizationId/settings/api-keys'
     | '/organizations/$organizationId/settings/billing'
+    | '/organizations/$organizationId/settings/domain'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
@@ -903,6 +914,7 @@ export interface FileRouteTypes {
     | '/organizations/$organizationId/workspaces/new'
     | '/organizations/$organizationId/settings/api-keys'
     | '/organizations/$organizationId/settings/billing'
+    | '/organizations/$organizationId/settings/domain'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
@@ -981,6 +993,7 @@ export interface FileRouteTypes {
     | '/_authenticated/workspaces/$workspaceId/workflows/$workflowId'
     | '/_authenticated/organizations/$organizationId/settings/api-keys'
     | '/_authenticated/organizations/$organizationId/settings/billing'
+    | '/_authenticated/organizations/$organizationId/settings/domain'
     | '/_authenticated/organizations/$organizationId/settings/general'
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
@@ -1296,6 +1309,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/organizations/$organizationId/settings/billing'
       preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
+    }
+    '/_authenticated/organizations/$organizationId/settings/domain': {
+      id: '/_authenticated/organizations/$organizationId/settings/domain'
+      path: '/domain'
+      fullPath: '/organizations/$organizationId/settings/domain'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsDomainRouteImport
       parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
     }
     '/_authenticated/organizations/$organizationId/settings/general': {
@@ -1781,6 +1801,7 @@ const AuthenticatedWorkspacesWorkspaceIdRouteWithChildren =
 interface AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren {
   AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
   AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute
   AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
@@ -1792,6 +1813,8 @@ const AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren: Authenticat
       AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute,
     AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute:
       AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute,
+    AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsDomainRoute,
     AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute:
       AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute,
     AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute:

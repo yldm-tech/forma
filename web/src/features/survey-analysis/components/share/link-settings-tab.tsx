@@ -12,6 +12,9 @@ import { createI18nString, extractLanguageCodes, getEnabledLanguages } from "../
 import { toast } from "../../../../lib/toast";
 import { useUpdateSurveySettings } from "./use-survey-settings";
 
+/** forma2's preview image formats: the survey images without HEIC, which link unfurlers do not read. */
+const OG_IMAGE_EXTENSIONS = ["png", "jpeg", "jpg", "webp"];
+
 interface LinkSettings {
   title: TI18nString;
   description: TI18nString;
@@ -145,6 +148,9 @@ export const LinkSettingsTab = ({
             onFileUpload={(urls) => setValues((current) => ({ ...current, ogImage: urls?.[0] ?? "" }))}
             fileUrl={values.ogImage || undefined}
             disabled={isReadOnly}
+            allowedFileExtensions={OG_IMAGE_EXTENSIONS}
+            workspaceId={survey.workspaceId}
+            maxSizeInMB={5}
           />
           <p className="text-sm text-slate-500">
             {t("workspace.surveys.share.link_settings.preview_image_description")}

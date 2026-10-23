@@ -129,6 +129,8 @@ export const PictureSelectionForm = ({
             onFileUpload={handleFileInputChanges}
             fileUrl={element?.choices?.map((choice) => choice.imageUrl)}
             multiple={true}
+            workspaceId={localSurvey.workspaceId}
+            maxSizeInMB={5}
           />
         </div>
       </div>
