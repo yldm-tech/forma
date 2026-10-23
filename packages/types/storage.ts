@@ -105,29 +105,6 @@ export const mimeTypes: Record<TAllowedFileExtension, string> = {
 export const ZAccessType = z.enum(["public", "private"]);
 export type TAccessType = z.infer<typeof ZAccessType>;
 
-export const ZDownloadFileRequest = z.object({
-  fileName: z
-    .string()
-    .trim()
-    .min(1)
-    .refine(
-      (fn) => {
-        const fileExtension = fn.split(".").pop() as TAllowedFileExtension | undefined;
-        if (!fileExtension || fileExtension.toLowerCase() === fn.toLowerCase()) {
-          return false;
-        }
-
-        return true;
-      },
-      {
-        error: "File name must have an extension",
-      }
-    ),
-  accessType: ZAccessType,
-});
-
-export const ZDeleteFileRequest = ZDownloadFileRequest;
-
 export const ZUploadFileConfig = z.object({
   allowedFileExtensions: z.array(z.string()).optional(),
   surveyId: z.string().optional(),
