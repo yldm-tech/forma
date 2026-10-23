@@ -10,7 +10,7 @@ This section is for people working on the Forma codebase itself. It documents **
 
 <CardGroup cols={2}>
   <Card title="Technical Handbook" icon="presentation-screen" href="/development/technical-handbook/overview">
-    The architecture: how the Next.js app, the API gateway, the MCP server and the database fit together, and how tenants are kept apart.
+    The architecture: how the Go server, the admin SPA, the SDKs, the MCP server and the database fit together, and how tenants are kept apart.
   </Card>
 
   <Card title="Standards" icon="shield" href="/development/standards/organization/file-and-directory-organization">
@@ -22,9 +22,21 @@ This section is for people working on the Forma codebase itself. It documents **
 
 Setup instructions live with the code, where they stay in step with it:
 
-- [README](https://github.com/yldm-tech/forma#readme) — prerequisites and the steps to get an instance running.
+- [README](https://github.com/yldm-tech/forma#readme) — prerequisites (Go, Node.js, pnpm, Docker) and the steps to get an instance running.
+- [AGENTS.md](https://github.com/yldm-tech/forma/blob/main/AGENTS.md) — the working reference: layout, commands, conventions, the API contracts that must not change, and the testing policy.
 - [CONTRIBUTING.md](https://github.com/yldm-tech/forma/blob/main/CONTRIBUTING.md) — how to raise an issue, and what a good pull request looks like.
-- [Open in Gitpod](https://gitpod.io/#https://github.com/yldm-tech/forma) — a configured workspace in the browser, if you would rather not install anything.
+
+The short version, from the repository root:
+
+```bash
+pnpm install
+cp .env.example .env
+make deps-up      # PostgreSQL, Valkey, SpiceDB, RustFS and Mailpit in Docker
+make migrate      # the goose schema, then the job queue's tables
+make seed         # optional: a demo organization to sign in to (admin@forma.ylam.ai / Password#123)
+make dev-server   # the Go server on :3000
+make dev-web      # the Vite dev server on :5173, proxying the API to :3000
+```
 
 If something goes wrong, [GitHub Discussions](https://github.com/yldm-tech/forma/discussions) is the fastest way to get help from people who have hit the same thing.
 

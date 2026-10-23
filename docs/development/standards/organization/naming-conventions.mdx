@@ -18,11 +18,11 @@ icon: input-text
 ### Special Files
 
 - Configuration files should follow framework conventions
-  - ✅ `next.config.mjs`, `tailwind.config.js`
-- Test files should mirror source files with `.test` or `.spec` suffix
-  - ✅ `user-service.test.ts` for `user-service.ts`
-- Database migration files should include timestamp and description
-  - ✅ `20241017124431_add_documents_and_insights.sql`
+  - ✅ `vite.config.ts`, `playwright.config.ts`, `.golangci.yml`
+- Test files should mirror source files with `.test` or `.spec` suffix, or Go's `_test` suffix
+  - ✅ `user-service.test.ts` for `user-service.ts`, `service_test.go` for `service.go`
+- Database migration files are goose's: the next five-digit number and a description
+  - ✅ `00008_survey_slugs.sql`
 
 ## Code Symbols
 

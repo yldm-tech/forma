@@ -4,119 +4,89 @@ description: "High-level architecture and technical details of the Forma platfor
 icon: "presentation-screen"
 ---
 
-The Forma platform is designed with a modern, unified architecture that prioritizes developer experience and performance. This overview outlines the system's architecture, key technology choices, and how different components interact.
+Forma is one Go binary, `forma`, that serves the API, the public survey pages and the admin single-page app, runs the background jobs, and migrates its own database. The browser code is a React SPA built with Vite and embedded into that binary; the survey runtime and the customer-site SDK are the two JavaScript bundles it serves under `/js/*`. This page describes how those parts fit together. [AGENTS.md](https://github.com/yldm-tech/forma/blob/main/AGENTS.md) is the working reference for the conventions behind them.
 
 ## System Architecture
-
-Forma uses a unified architecture with Next.js at its core, serving both the frontend and backend capabilities. Here's an interactive overview of the system:
 
 ```mermaid
 graph TD
     subgraph Users
-        MU[Mobile User]
-        WU[Web User]
-        LSU[Link Survey User]
+        WU[Website or app visitor]
+        LSU[Link survey respondent]
         AD[Admin]
+        INT[Integrations and API clients]
     end
 
-    subgraph Client Applications
-        MA[Mobile App\niOS/Android SDK]
-        SW[Survey Widget\nJavaScript SDK]
+    subgraph Browser
+        SDK[SDK\n/js/forma.umd.cjs]
+        RT[Survey runtime\n/js/surveys.umd.cjs]
+        SPA[Admin SPA\nReact + TanStack]
     end
 
-    subgraph Forma Platform
-        NS[Next.js Server\nAPI Routes + SSR\nBusiness Logic]
-
-        subgraph Storage
-            DB[(PostgreSQL\nSurveys & Data)]
-            RC[(Redis\nPerformance Cache)]
-            FS[File Storage\nUploads]
-        end
+    subgraph Forma["forma (Go)"]
+        HTTP[HTTP server\ngin: /api/app, /api/v1-v3,\n/api/mcp, /s, /js]
+        WK[Job worker\nRiver]
     end
 
-    MU --> |Uses| MA
-    WU --> |Interacts| SW
-    LSU --> |Direct Access| NS
-    AD --> |Manages| NS
+    subgraph Dependencies
+        DB[(PostgreSQL 18)]
+        SP[(SpiceDB)]
+        VK[(Valkey)]
+        S3[(S3-compatible storage)]
+        SMTP[SMTP]
+    end
 
-    MA --> |REST API| NS
-    SW --> |REST API| NS
+    WU --> SDK --> RT
+    LSU --> RT
+    AD --> SPA
+    SDK --> |client API| HTTP
+    RT --> |client API| HTTP
+    SPA --> |/api/app| HTTP
+    INT --> |v1, v2, v3, MCP, webhooks| HTTP
 
-    NS --> |Cache Data| RC
-    NS --> |Read/Write| DB
-    NS --> |File Upload| FS
-
-    style DB fill:#00C4B8,color:#ffffff
-    style RC fill:#00C4B8,color:#ffffff
-    style FS fill:#00C4B8,color:#ffffff
-    style NS fill:#0D9373,color:#ffffff
-    style MA fill:#07C983,color:#ffffff
-    style SW fill:#07C983,color:#ffffff
-
-    classDef user fill:#666,color:#fff,stroke:#333
-    class MU,WU,LSU,AD user
+    HTTP --> DB
+    HTTP --> |permission checks| SP
+    HTTP --> |rate limits, caches| VK
+    HTTP --> |presigned uploads, downloads| S3
+    WK --> DB
+    WK --> |authorization projection| SP
+    WK --> SMTP
 ```
 
-### Key Components
+### Processes
 
-#### Users
+`forma` is a single binary whose first argument picks the process:
 
-- **Mobile Users**: Access surveys through native mobile applications
-- **Web Users**: Interact with embedded survey widgets on websites
-- **Link Survey Users**: Access surveys directly through shared URLs
-- **Admins**: Manage surveys and view responses through the web dashboard
+- `forma serve` runs the HTTP server: the admin API under `/api/app`, the public APIs (`/api/v1/client`, `/api/v2/client`, `/api/v1/management`, `/api/v2`, `/api/v3`), the MCP server at `/api/mcp` with its OAuth authorization server, the public survey pages (`/s`, `/c`, `/p`), stored files, the SDK bundles under `/js/*`, and the SPA for every other path.
+- `forma worker` runs the background jobs (River on PostgreSQL): pipeline steps after a response, webhooks, integrations, workflows, follow-up emails, scheduled survey status changes, retention, and the delivery of the SpiceDB projection.
+- `forma start` is the container's default: it validates the configuration, migrates unless `SKIP_STARTUP_MIGRATION` is set, and serves with the worker in the same process unless `BULLMQ_WORKER_ENABLED=0`.
+- `forma migrate` applies the goose schema and then River's tables; `forma authz` operates the SpiceDB schema, backfill and outbox; `forma seed` writes development data.
 
-#### Client Applications
+### Server modules
 
-- **Survey Widget**: A JavaScript component that can be embedded in web applications
-- **Mobile Application**: Native iOS/Android apps that integrate with the Forma SDK
-- **Web Dashboard**: The admin interface for managing surveys and viewing responses
+The server lives in `server/` (Go module `github.com/yldm-tech/forma/server`). Each feature is one package under `server/internal/<feature>/`, layered handler → service → repository, and wired together in `server/internal/app` with [wire](https://github.com/google/wire). Cross-cutting infrastructure (configuration, logging, the database, rate limits, mail, audit events, the job queue) is in `server/internal/platform/`.
 
-#### Core Platform
+Authorization is decided in the service layer: PostgreSQL decides existence and tenancy, then SpiceDB decides the permission. Services never write SpiceDB directly. Every table that carries authorization data has a trigger that enqueues a row in `authz_projection_outbox` in the same transaction, and the worker delivers those rows to SpiceDB. See [Tenant Separation](/development/technical-handbook/tenant-separation).
 
-- **Next.js Server**: The central component that handles:
-  - Frontend rendering and SSR
-  - API routes for client communication
-  - Business logic implementation
-  - Survey display and response collection
+### Browser code
 
-#### Data Storage
+- **Admin SPA** (`web/`): React 19, TanStack Router (file-based routes in `web/src/routes/`) and TanStack Query, Tailwind CSS 4, i18next. Built by Vite, copied into `server/internal/webui/dist` and embedded with `go:embed`. Its second entry, `survey.html`, is the public survey page the server fills for `/s`, `/c` and `/p`.
+- **Survey runtime** (`packages/surveys`): the Preact runtime that renders a survey, on the public survey pages and inside the SDK.
+- **SDK** (`packages/js-core`): what a customer embeds on their website or app. It loads the runtime and talks to the client API.
 
-- **PostgreSQL Database**: Primary data store for:
-  - Survey definitions
-  - Response data
-  - User and organization information
-- **Redis Cache**: Performance optimization through:
-  - Caching frequently accessed data
-  - Reducing database load
-  - Improving response times
+### Data
 
-### Communication Flow
-
-1. **Client Interaction**
-
-   - Web users interact with embedded survey widgets
-   - Mobile users engage with surveys through native apps
-   - Link survey users access surveys directly via URLs
-   - Admins manage the system through the web dashboard
-
-2. **Data Flow**
-
-   - Clients communicate with the Next.js server via REST APIs
-   - Survey data is fetched and responses are submitted over HTTPS
-   - The server processes requests and interacts with the database using Prisma ORM
-   - Frequently accessed data is cached in Redis for performance
-
-3. **Data Storage**
-   - Persistent data is stored in PostgreSQL
-   - Frequently accessed data is cached in Redis
-   - File attachments are handled through the configured storage provider
+- **PostgreSQL 18** holds everything durable, including the job queue. The schema is defined only by the goose migrations in `server/migrations/`. See [Database Model](/development/technical-handbook/database-model).
+- **SpiceDB** answers permission questions over the relationships projected from PostgreSQL.
+- **Valkey** holds rate-limit counters and short-lived caches. When it is unreachable, rate limits let requests through.
+- **S3-compatible storage** (RustFS in development) holds uploaded files; browsers upload to it with presigned requests.
 
 ## Technology Stack
 
-- **Frontend**: React, TailwindCSS, Radix UI
-- **Backend**: Next.js App Router with API Routes
-- **Database**: PostgreSQL with Prisma ORM
-- **Caching**: Redis
-- **API**: REST with OpenAPI specification
-- **Testing**: Playwright for E2E, Vitest for unit tests
+- **Server**: Go, gin, GORM with pgx, wire, River, goose, the official MCP Go SDK
+- **Authorization**: SpiceDB
+- **Admin UI**: React, TanStack Router and Query, Tailwind CSS, Radix UI, i18next
+- **Survey runtime and SDK**: Preact, TypeScript
+- **Toolchain**: Vite+ (`vp`: Vite, Vitest, Oxlint, Oxfmt, tsgolint), pnpm workspaces, golangci-lint
+- **API**: REST, with the v3 API specified first in OpenAPI (`docs/api-v3-reference`)
+- **Testing**: Go tests with testcontainers, Vitest, Playwright for the browser suite, Schemathesis for the v3 contract

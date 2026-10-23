@@ -18,69 +18,66 @@ At Forma, we follow consistent error handling patterns to ensure reliability, de
 
 
 
-## Standard Error Types
+## Server (Go)
 
-We maintain a set of standardized error types for different scenarios:
+Services return an expected failure as an `*apperr.Error` (`server/internal/platform/apperr`): forma2's error classes, each with an HTTP status, a stable code and a message, built with `apperr.BadRequest`, `apperr.Forbidden`, `apperr.NotFound`, `apperr.Conflict` and their siblings. Anything else is an unexpected error: it is logged once, with the request id, and reaches the client as a generic 500 that reveals nothing.
+
+```go
+func (s *Service) Rename(ctx context.Context, actor authz.Actor, id uuid.UUID, name string) (*Tag, error) {
+	tag, err := s.repo.byID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("load tag: %w", err) // unexpected: becomes a 500
+	}
+	if tag == nil {
+		return nil, apperr.NotFound("Tag", id.String()) // expected: a 404 with forma2's message
+	}
+	if err := s.authz.Require(ctx, actor, authz.WorkspaceWrite, authz.Workspace(tag.WorkspaceID)); err != nil {
+		return nil, err // a denial is a 403; SpiceDB being unreachable is a 500, never a denial
+	}
+	// ...
+}
+```
+
+Handlers do not translate errors themselves; they hand every error to the group's renderer:
+
+- `/api/app` answers `{code, message, details}` (`httpapi.Fail`).
+- `/api/v3` answers RFC 9457 problems (`application/problem+json`) with a request id and, for invalid input, `invalid_params`.
+- The public APIs carried over from forma2 (`/api/v1`, `/api/v2`, the client API) answer with forma2's own envelopes, byte for byte.
+
+Wrap errors with context (`fmt.Errorf("open database: %w", err)`) and log them once, where they are handled. Validate at the boundaries (handlers, queue consumers, configuration) and do not wrap internal calls in defensive error handling.
+
+## Admin UI
+
+Every call goes through `api` in `web/src/lib/api.ts`, which throws an `ApiError` carrying the server's status, code, message, details and, for a v3 problem, its `invalid_params`. Queries surface it through TanStack Query's error state; mutations show the user a translated message in a toast:
+
+```typescript
+const createTag = useMutation({
+  mutationFn: (name: string) => api.post<Tag>(`/api/app/workspaces/${workspaceId}/tags`, { name }),
+  onError: (error) => toast.error(errorMessage(t, error)),
+});
+```
+
+## SDK and survey runtime
+
+`packages/js-core` returns typed results (`Result<T, E>`) instead of throwing across its internal boundaries, and describes a failed request with `ApiErrorResponse`:
 
 ```typescript
 export interface ApiErrorResponse {
-code:
-| "not_found"
-| "gone"
-| "bad_request"
-| "internal_server_error"
-| "unauthorized"
-| "method_not_allowed"
-| "not_authenticated"
-| "forbidden"
-| "network_error";
-message: string;
-status: number;
-url: URL;
-details?: Record<string, string | string[] | number | number[] | boolean | boolean[]>;
-responseMessage?: string;
+  code: "not_found" | "gone" | "bad_request" | "internal_server_error" | "unauthorized" | "method_not_allowed" | "not_authenticated" | "forbidden" | "network_error";
+  message: string;
+  status: number;
+  url: URL;
+  details?: Record<string, string | string[] | number | number[] | boolean | boolean[]>;
+  responseMessage?: string;
 }
 ```
 
-
-## Error Handling Patterns
-
-### API Error Handling
-
-For API endpoints:
-
 ```typescript
-export const GET = async (request: Request) => {
-try {
-const authentication = await authenticateRequest(request);
-if (!authentication) return responses.notAuthenticatedResponse();
-const data = await fetchData(authentication.workspaceId!);
-return responses.successResponse(data);
-} catch (error) {
-if (error instanceof DatabaseError) {
-return responses.badRequestResponse(error.message);
-}
-throw error;
-}
-};
-```
-
-
-### Client-Side Error Handling
-
-For client-side operations:
-
-```typescript
-const handleOperation = async () => {
-const result = await performAction();
+const result = await fetchWorkspaceState({ appUrl, workspaceId });
 if (!result.ok) {
-logger.error(`Operation failed: ${result.error.message}`);
-toast.error("Operation failed. Please try again.");
-return;
+  logger.error(`Fetching the workspace state failed: ${result.error.message}`);
+  return;
 }
-// Process successful result
-processResult(result.data);
-};
 ```
 
 ## Best Practices
@@ -88,7 +85,7 @@ processResult(result.data);
 1. **Never Swallow Errors**
    - Always handle or propagate errors
    - Log errors appropriately for debugging
-   - Use error boundaries in React components
+   - Use error boundaries (TanStack Router's `errorComponent`) in the admin UI
 
 2. **Type Safety**
    - Use typed error responses
@@ -106,7 +103,7 @@ processResult(result.data);
    - Provide user feedback for recoverable errors
 
 5. **Documentation**
-   - Document expected errors in function JSDoc
+   - Document expected errors in the function's doc comment
    - Include error handling in code examples
    - Keep error handling documentation up to date
 
@@ -115,14 +112,14 @@ processResult(result.data);
 Always include error case testing:
 
 ```typescript
-describe("fetchEnvironmentState()", () => {
+describe("fetchWorkspaceState()", () => {
 test("returns err(...) on network error", async () => {
 const mockNetworkError = {
 code: "network_error",
 message: "Timeout",
 responseMessage: "Network fail",
 };
-const result = await fetchEnvironmentState();
+const result = await fetchWorkspaceState({ appUrl, workspaceId });
 expect(result.ok).toBe(false);
 if (!result.ok) {
 expect(result.error.code).toBe(mockNetworkError.code);

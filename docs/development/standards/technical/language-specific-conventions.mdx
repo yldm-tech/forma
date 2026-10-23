@@ -1,104 +1,54 @@
 ---
 title: Language-Specific
-description: This document outlines the language-specific conventions for the Forma codebase, providing guidelines for writing code in TypeScript/JavaScript.
+description: This document outlines the language-specific conventions for the Forma codebase, providing guidelines for writing code in TypeScript, Go, Swift and Kotlin.
 icon: code
 ---
 
 ## TypeScript
 
-Our codebase uses the `@vercel/style-guide` ESLint configurations for consistent code quality.
-
-### ESLint Configuration
-
-We maintain three primary ESLint configurations for different package types:
-
-1. **Library Configuration** (for packages):
-
-```javascript
-extends: [
-"@vercel/style-guide/eslint/node",
-"@vercel/style-guide/eslint/typescript"
-]
-```
-
-2. **React Configuration** (for React applications):
-
-```javascript
-extends: [
-"@vercel/style-guide/eslint/node",
-"@vercel/style-guide/eslint/typescript",
-"@vercel/style-guide/eslint/browser",
-"@vercel/style-guide/eslint/react",
-"@vercel/style-guide/eslint/next"
-]
-```
-
-3. **Next.js Configuration** (for Next.js applications):
-
-```javascript
-extends: [
-"@vercel/style-guide/eslint/node",
-"@vercel/style-guide/eslint/typescript",
-"@vercel/style-guide/eslint/browser",
-"@vercel/style-guide/eslint/react",
-"@vercel/style-guide/eslint/next"
-]
-```
+The TypeScript workspace is linted by Oxlint, formatted by Oxfmt and type-checked by tsgolint, all through Vite+ (`vp check`) with the configuration in the root `vite.config.ts`. See [Code Formatting](/development/standards/practices/code-formatting) for the rules and settings.
 
 ### Key Conventions
 
 1. **TypeScript Usage**
 
    - Strict TypeScript checking enabled
-   - Explicit type annotations when necessary
-   - Proper interface and type naming (prefix with T for types, I for interfaces when helpful)
-   - No use of `any` type unless absolutely necessary
+   - Explicit type annotations at module boundaries; inference inside
+   - No `any`: `typescript/no-explicit-any` is an error
+   - Validate data that crosses a boundary (an API answer, a URL parameter, a stored document) with the zod schemas in `@forma/types`
 
 2. **Imports/Exports**
 
-   - Follow strict import ordering:
-     1. Mocks (for testing)
-     2. Server-only imports
-     3. Third-party modules
-     4. Internal `@forma/*` modules
-     5. Local aliases (`~/*`)
-     6. Relative imports
+   - Imports are grouped and sorted by Oxfmt: mocks, third-party modules, `@forma/*` packages, aliases, relative imports
+   - Test utilities come from `vite-plus/test`, not from `vitest`
 
 3. **Error Handling**
 
-   - Use typed error responses
-   - Proper error propagation
-   - Consistent error message formatting
-   - Implement error boundaries in React components
+   - API calls throw `ApiError` (`web/src/lib/api.ts`), which carries the server's code and message
+   - Show the user a translated message, never a raw error
 
 4. **Async/Await**
 
    - Prefer async/await over raw promises
-   - Proper error handling in async functions
-   - Use Promise.all for parallel operations
+   - Use `Promise.all` for independent work
 
 5. **React Specific**
-   - Functional components with TypeScript
-   - Proper use of hooks
-   - Consistent prop typing
-   - Server Components by default in Next.js App Router
+   - Function components with typed props
+   - Server state through TanStack Query, never copied into component state
+   - Accessible by default: labelled controls, keyboard operable, `jsx-a11y` lint rules on
 
-### Code Formatting
+## Go
 
-We use Prettier with specific configurations:
+Go code follows [Effective Go](https://go.dev/doc/effective_go) and the conventions in `AGENTS.md`; `gofmt`, `goimports` and golangci-lint enforce the mechanical part.
 
-```javascript
-{
-bracketSpacing: true,
-bracketSameLine: true,
-singleQuote: false,
-jsxSingleQuote: false,
-trailingComma: "es5",
-semi: true,
-printWidth: 110,
-arrowParens: "always"
-}
-```
+### Key Conventions
+
+1. **Shape**: the simplest that works. A function before an interface; an interface only where there are two implementations or a test seam.
+2. **Errors**: wrapped with context (`fmt.Errorf("open database: %w", err)`) and logged once, where they are handled. Expected failures are `*apperr.Error` values with forma2's status, code and message.
+3. **Validation**: at the system boundaries (HTTP handlers, queue consumers, configuration), not around internal calls.
+4. **Configuration**: read once at startup through `internal/platform/config`; a missing or malformed variable fails the start.
+5. **Logging**: structured, with `log/slog`. Never log secrets, tokens, raw request bodies or URL paths that can carry a token.
+6. **Libraries**: protocols, parsing and serialization come from mature libraries; a new module dependency needs agreement before it is added.
 
 ## Swift (iOS SDK)
 
