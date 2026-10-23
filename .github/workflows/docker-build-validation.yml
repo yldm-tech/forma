@@ -1,0 +1,342 @@
+name: Docker Build Validation
+
+# Builds the image the release publishes, for both platforms it publishes, then boots it: alone (`forma start`, forma2's entrypoint contract) and as the production compose stack in docker/.
+
+on:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-docker-build:
+    name: Validate Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      IMAGE: forma-test:${{ github.sha }}
+      # Placeholders by definition: nothing here protects data.
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+    services:
+      postgres:
+        image: postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: forma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: valkey/valkey@sha256:e0eb7c480958d32bdc4357a74bdd70653ae15f2f9b4c93c4a5a9fad1dc471c84
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Verify Valkey Image Platforms
+        shell: bash
+        env:
+          AUTHZED_DATABASE_PASSWORD: 0000000000000000000000000000000000000000000000000000000000000002
+          AUTHZED_TOKEN: 0000000000000000000000000000000000000000000000000000000000000001
+          POSTGRES_PASSWORD: build-time-placeholder
+        run: |
+          set -euo pipefail
+
+          valkey_image="$(docker compose -f docker/docker-compose.yml config --format json | jq -r '.services.redis.image')"
+          manifest="$(docker buildx imagetools inspect --raw "$valkey_image")"
+
+          jq -e '
+            .mediaType == "application/vnd.oci.image.index.v1+json" and
+            any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
+            any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
+          ' <<<"$manifest"
+
+      # The release publishes linux/amd64 and linux/arm64. Both build stages run natively and Go cross-compiles, so this costs one extra link, and the next step reuses every other layer from the builder's cache.
+      - name: Build for every released platform
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          provenance: false
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.IMAGE }}
+          provenance: false
+
+      - name: Verify the runtime image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = "1001:1001"
+          test "$(docker image inspect --format '{{json .Config.Entrypoint}}' "$IMAGE")" = '["/usr/local/bin/forma"]'
+          test "$(docker image inspect --format '{{json .Config.Cmd}}' "$IMAGE")" = '["start"]'
+          docker image inspect --format '{{json .Config.Healthcheck.Test}}' "$IMAGE" | grep -F '"healthcheck"'
+          docker image inspect --format '{{json .Config.ExposedPorts}}' "$IMAGE" | grep -F '"3000/tcp"'
+
+          # Distroless: no shell and no package manager to abuse.
+          if docker run --rm --entrypoint /bin/sh "$IMAGE" -c true 2>/dev/null; then
+            echo "The runtime image must not contain a shell"
+            exit 1
+          fi
+          docker run --rm "$IMAGE" help | grep -F 'wait-for-database'
+
+      - name: Reject Invalid Environment Before Database Setup
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          COMMON_ENV=(
+            -e WEBAPP_URL="http://localhost:3000"
+            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma"
+            -e ENCRYPTION_KEY="$ENCRYPTION_KEY"
+            -e REDIS_URL="redis://192.0.2.1:6379"
+          )
+
+          run_invalid_case() {
+            local case_name="$1"
+            local expected_field="$2"
+            local secret_value="$3"
+            shift 3
+
+            set +e
+            local output
+            output="$(timeout 60 docker run --rm "${COMMON_ENV[@]}" "$@" "$IMAGE" 2>&1)"
+            local status=$?
+            set -e
+
+            if [ "$status" -eq 0 ]; then
+              echo "Expected $case_name to fail environment validation"
+              exit 1
+            fi
+
+            if ! grep -Fq "$expected_field" <<<"$output"; then
+              echo "Expected $case_name output to name $expected_field"
+              echo "$output"
+              exit 1
+            fi
+
+            if [ -n "$secret_value" ] && grep -Fq "$secret_value" <<<"$output"; then
+              echo "Environment validation leaked the configured value for $case_name"
+              exit 1
+            fi
+
+            if grep -Eq "running database migrations|ping database" <<<"$output"; then
+              echo "Database work started before $case_name environment validation failed"
+              echo "$output"
+              exit 1
+            fi
+          }
+
+          run_invalid_case \
+            "invalid provider" \
+            "AI_PROVIDER" \
+            "unsupported-provider-sentinel" \
+            -e AI_PROVIDER="unsupported-provider-sentinel"
+
+          run_invalid_case \
+            "missing model" \
+            "AI_MODEL" \
+            "" \
+            -e AI_PROVIDER="google" \
+            -e AI_GOOGLE_CLOUD_PROJECT="test-project" \
+            -e AI_GOOGLE_CLOUD_LOCATION="us-central1"
+
+          run_invalid_case \
+            "invalid credentials JSON" \
+            "AI_GOOGLE_CLOUD_CREDENTIALS_JSON" \
+            "credentials-secret-sentinel" \
+            -e AI_PROVIDER="google" \
+            -e AI_MODEL="gemini-2.5-flash" \
+            -e AI_GOOGLE_CLOUD_PROJECT="test-project" \
+            -e AI_GOOGLE_CLOUD_LOCATION="us-central1" \
+            -e AI_GOOGLE_CLOUD_CREDENTIALS_JSON="credentials-secret-sentinel"
+
+          run_invalid_case \
+            "invalid provider base URL" \
+            "AI_OPENAI_COMPATIBLE_BASE_URL" \
+            "base-url-secret-sentinel" \
+            -e AI_PROVIDER="openai-compatible" \
+            -e AI_MODEL="test-model" \
+            -e AI_OPENAI_COMPATIBLE_BASE_URL="base-url-secret-sentinel"
+
+          run_invalid_case \
+            "invalid Azure base URL" \
+            "AI_AZURE_BASE_URL" \
+            "azure-base-url-secret-sentinel" \
+            -e AI_PROVIDER="azure" \
+            -e AI_MODEL="test-model" \
+            -e AI_AZURE_API_KEY="azure-base-url-secret-sentinel" \
+            -e AI_AZURE_BASE_URL="azure-base-url-secret-sentinel"
+
+          run_invalid_case \
+            "an unknown SKIP_STARTUP_MIGRATION" \
+            "SKIP_STARTUP_MIGRATION" \
+            "" \
+            -e SKIP_STARTUP_MIGRATION="yes"
+
+      - name: Preserve Startup Migration Skip Behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Nothing listens at 192.0.2.1 (TEST-NET-1), so the server stops at its database ping: the point is what happens before.
+          set +e
+          logs="$(timeout 60 docker run --rm \
+            -e WEBAPP_URL="http://localhost:3000" \
+            -e DATABASE_URL="postgresql://test:test@192.0.2.1:5432/forma?connect_timeout=2" \
+            -e ENCRYPTION_KEY="$ENCRYPTION_KEY" \
+            -e REDIS_URL="redis://192.0.2.1:6379" \
+            -e SKIP_STARTUP_MIGRATION="true" \
+            "$IMAGE" 2>&1)"
+          set -e
+
+          grep -Fq "environment variables validated" <<<"$logs"
+          grep -Fq "skipping startup migrations" <<<"$logs"
+          if grep -Fq "running database migrations" <<<"$logs"; then
+            echo "Startup migrations ran despite SKIP_STARTUP_MIGRATION=true"
+            echo "$logs"
+            exit 1
+          fi
+
+      - name: Test Docker Image with Health Check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # The image's default command against the service containers: migrate, then serve with the job worker in-process.
+          docker run --name forma-test \
+            --add-host=host.docker.internal:host-gateway \
+            -p 3000:3000 \
+            -e WEBAPP_URL="http://localhost:3000" \
+            -e DATABASE_URL="postgresql://test:test@host.docker.internal:5432/forma?sslmode=disable" \
+            -e ENCRYPTION_KEY="$ENCRYPTION_KEY" \
+            -e REDIS_URL="redis://host.docker.internal:6379" \
+            -d "$IMAGE"
+          trap 'docker rm -f forma-test >/dev/null 2>&1 || true' EXIT
+
+          healthy=false
+          for attempt in $(seq 1 60); do
+            if [ "$(docker inspect -f '{{.State.Running}}' forma-test)" != "true" ]; then
+              echo "Container stopped running after $((attempt * 5)) seconds"
+              docker logs forma-test
+              exit 1
+            fi
+            if curl -fsS -m 10 http://localhost:3000/health >/dev/null; then
+              healthy=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$healthy" != "true" ]; then
+            echo "/health did not answer within 5 minutes"
+            docker logs forma-test
+            exit 1
+          fi
+
+          curl -fsS http://localhost:3000/health/ready | jq -e '.status == "ok" and .main_database == true'
+          # The SPA and the SDK bundles are embedded.
+          curl -fsS http://localhost:3000/ | grep -qi '<!doctype html>'
+          curl -fsS -o /dev/null http://localhost:3000/js/forma.umd.cjs
+          curl -fsS -o /dev/null http://localhost:3000/js/surveys.umd.cjs
+
+          # The image's own HEALTHCHECK turns healthy too.
+          for _ in $(seq 1 30); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' forma-test)" = "healthy" ] && break
+            sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Health.Status}}' forma-test)" = "healthy"
+
+          logs="$(docker logs forma-test 2>&1)"
+          for message in "environment variables validated" "running database migrations" "starting the server and the job worker" "job worker started"; do
+            count="$(grep -Fc "$message" <<<"$logs" || true)"
+            if [ "$count" -ne 1 ]; then
+              echo "Expected '$message' exactly once, found $count"
+              echo "$logs"
+              exit 1
+            fi
+          done
+
+      # The production stack exactly as docker/docker-compose.yml describes it, on the image just built: migrations, the SpiceDB bootstrap and schema, the server and the worker.
+      - name: Run the production compose stack
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          umask 077
+          printf '%s\n' \
+            "FORMA_IMAGE_REF=$IMAGE" \
+            'WEBAPP_URL=http://localhost:3001' \
+            "POSTGRES_PASSWORD=$(openssl rand -hex 16)" \
+            "ENCRYPTION_KEY=$ENCRYPTION_KEY" \
+            "AUTHZED_TOKEN=$(openssl rand -hex 32)" \
+            "AUTHZED_DATABASE_PASSWORD=$(openssl rand -hex 32)" \
+            'TRUSTED_PROXY_HOP_COUNT=0' \
+            > docker/.env
+          # Port 3000 is the job's own container above; the stack publishes on 3001.
+          sed 's/- 3000:3000/- 3001:3000/' docker/docker-compose.yml > docker/docker-compose.ci.yml
+          compose=(docker compose -f docker/docker-compose.ci.yml -p formaci)
+          trap 'docker compose -f docker/docker-compose.ci.yml -p formaci down -v >/dev/null 2>&1 || true; rm -f docker/.env docker/docker-compose.ci.yml' EXIT
+
+          # `up --wait` counts a one-shot container that exits as a failure once it has a restart policy, which authzed-initialize has (it retries while SpiceDB comes up), so that one is awaited separately.
+          if ! timeout 600 "${compose[@]}" up -d --wait forma forma-worker spicedb; then
+            "${compose[@]}" ps -a
+            "${compose[@]}" logs
+            exit 1
+          fi
+          "${compose[@]}" up -d authzed-initialize
+          for _ in $(seq 1 60); do
+            [ "$("${compose[@]}" ps -a --format '{{.State}}' authzed-initialize)" = "exited" ] && break
+            sleep 2
+          done
+
+          "${compose[@]}" ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}'
+          for service in forma-migrate authzed-db-bootstrap spicedb-migrate authzed-initialize; do
+            test "$("${compose[@]}" ps -a --format '{{.ExitCode}}' "$service")" = "0"
+          done
+          test "$("${compose[@]}" ps --format '{{.State}}' forma-worker)" = "running"
+          # The last attempt's one JSON line (earlier ones may have met a SpiceDB not yet accepting writes).
+          "${compose[@]}" logs --no-log-prefix authzed-initialize | tail -n 1 | jq -e '.status == "applied"'
+
+          curl -fsS http://localhost:3001/health/ready | jq -e '.main_database == true'
+          "${compose[@]}" --profile authzed-ops run --rm authzed-ops | jq -e '.status == "matched"'
+          "${compose[@]}" --profile authzed-ops run --rm authzed-ops outbox status | jq -e '.status == "healthy"'

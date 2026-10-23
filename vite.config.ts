@@ -161,6 +161,11 @@ export default defineConfig({
       "web/src/routeTree.gen.ts",
       "docs/api-v3-reference/openapi.yml",
       "docs/api-v3-reference/.redocly.lint-ignore.yaml",
+      // Helm templates are Go templates that only look like YAML, and the vendored operator chart's CRD and update graph are generated upstream. The chart READMEs carry a generated values table.
+      "charts/**/templates/**",
+      "charts/**/README.md",
+      "charts/spicedb-operator/crds/**",
+      "charts/spicedb-operator/files/**",
       // Oxfmt treats Markdown inside MDX JSX children as one text block and would collapse Mintlify lists and steps.
       "*.mdx",
       // The template's intentionally empty list items would be folded into the label above them.
