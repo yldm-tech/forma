@@ -1,6 +1,8 @@
 import type { TContactAttributeDataType } from "@forma/types/contact-attribute-key";
+import type { TResponseWithQuotas } from "@forma/types/responses";
 import type { TBaseFilters } from "@forma/types/segment";
 import { infiniteQueryOptions, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { parseResponse } from "../../features/survey-analysis/api";
 import { api } from "../api";
 import type { AttributeKey } from "../attribute-keys";
 import type { DuplicateContactsAction } from "../contacts-csv";
@@ -78,6 +80,33 @@ export interface SegmentUpdate {
   surveys?: string[];
 }
 
+/** A display of a contact, forma2's Pick<TDisplay, "id" | "createdAt" | "surveyId">. */
+export interface ContactDisplay {
+  id: string;
+  createdAt: Date;
+  surveyId: string;
+}
+
+/** A contact's responses and displays, newest first, the surveys they belong to, and how many there are of each. */
+export interface ContactActivity {
+  responses: TResponseWithQuotas[];
+  displays: ContactDisplay[];
+  surveys: SurveyRef[];
+  responseCount: number;
+  displayCount: number;
+}
+
+type ContactActivityWire = Omit<ContactActivity, "responses" | "displays"> & {
+  responses: Parameters<typeof parseResponse>[0][];
+  displays: (Omit<ContactDisplay, "createdAt"> & { createdAt: string })[];
+};
+
+/** A CSV of personal links, as the share modal downloads it. */
+export interface PersonalLinksFile {
+  fileName: string;
+  csvContent: string;
+}
+
 export const contactKeys = {
   attributeKeys: (workspaceId: string) => ["contact-attribute-keys", workspaceId] as const,
   attributeValues: (keyId: string) => ["contact-attribute-keys", "values", keyId] as const,
@@ -85,6 +114,9 @@ export const contactKeys = {
   lists: (workspaceId: string) => ["contacts", workspaceId, "list"] as const,
   search: (workspaceId: string, search: string) => ["contacts", workspaceId, "list", search] as const,
   detail: (workspaceId: string, contactId: string) => ["contacts", workspaceId, "detail", contactId] as const,
+  activity: (workspaceId: string, contactId: string) =>
+    ["contacts", workspaceId, "detail", contactId, "activity"] as const,
+  publishedLinkSurveys: (workspaceId: string) => ["contacts", workspaceId, "published-link-surveys"] as const,
   segments: (workspaceId: string) => ["segments", workspaceId] as const,
   segmentSurveys: (workspaceId: string) => ["segments", workspaceId, "surveys"] as const,
 };
@@ -126,6 +158,28 @@ export const contactQuery = (workspaceId: string, contactId: string) =>
     queryKey: contactKeys.detail(workspaceId, contactId),
     queryFn: ({ signal }) =>
       api.get<ContactDetail>(`/api/app/workspaces/${workspaceId}/contacts/${contactId}`, { signal }),
+  });
+
+/** forma2's contact activity: what getResponsesByContactId and getDisplaysByContactId loaded for the contact page. */
+export const contactActivityQuery = (workspaceId: string, contactId: string) =>
+  queryOptions({
+    queryKey: contactKeys.activity(workspaceId, contactId),
+    queryFn: ({ signal }) =>
+      api
+        .get<ContactActivityWire>(`/api/app/contacts/${contactId}/activity`, { signal })
+        .then((raw): ContactActivity => ({
+          ...raw,
+          responses: raw.responses.map(parseResponse),
+          displays: raw.displays.map((display) => ({ ...display, createdAt: new Date(display.createdAt) })),
+        })),
+  });
+
+/** forma2's getPublishedLinkSurveys: the link surveys in progress a contact can get a personal link to. */
+export const publishedLinkSurveysQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: contactKeys.publishedLinkSurveys(workspaceId),
+    queryFn: ({ signal }) =>
+      api.get<SurveyRef[]>(`/api/app/workspaces/${workspaceId}/published-link-surveys`, { signal }),
   });
 
 export const segmentsQuery = (workspaceId: string) =>
@@ -256,3 +310,14 @@ export const useUpdateSegment = (workspaceId: string) =>
 
 export const useDeleteSegment = (workspaceId: string) =>
   useSegmentMutation(workspaceId, (id: string) => api.delete<Segment>(`/api/app/segments/${id}`));
+
+/** forma2's generatePersonalSurveyLinkAction: the contact's personal link to a survey, expiring after expirationDays when given. */
+export const generatePersonalLink = (contactId: string, surveyId: string, expirationDays?: number) =>
+  api.post<{ surveyUrl: string }>(`/api/app/contacts/${contactId}/personal-link`, {
+    surveyId,
+    expirationDays,
+  });
+
+/** forma2's generatePersonalLinksAction: a CSV of personal links for the contacts of a segment. */
+export const generatePersonalLinks = (surveyId: string, segmentId: string, expirationDays?: number) =>
+  api.post<PersonalLinksFile>(`/api/app/surveys/${surveyId}/personal-links`, { segmentId, expirationDays });

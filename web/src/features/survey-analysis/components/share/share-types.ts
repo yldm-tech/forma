@@ -2,6 +2,8 @@
 
 export enum ShareViaType {
   ANON_LINKS = "anon-links",
+  PERSONAL_LINKS = "personal-links",
+  EMAIL = "email",
   APP = "app",
   WEBSITE_EMBED = "website-embed",
   DYNAMIC_POPUP = "dynamic-popup",

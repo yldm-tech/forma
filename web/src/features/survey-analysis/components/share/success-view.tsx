@@ -1,6 +1,6 @@
 import type { TSurvey } from "@forma/types/surveys/types";
 import { Link } from "@tanstack/react-router";
-import { BellRing, BlocksIcon, Share2Icon } from "lucide-react";
+import { BellRing, BlocksIcon, Share2Icon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ShareSurveyLink } from "./share-survey-link";
 
@@ -13,6 +13,7 @@ export const SuccessView = ({
   setSurveyUrl,
   locale,
   onShare,
+  onUsePersonalLinks,
   isReadOnly,
 }: {
   survey: TSurvey;
@@ -22,6 +23,7 @@ export const SuccessView = ({
   setSurveyUrl: (url: string) => void;
   locale: string;
   onShare: () => void;
+  onUsePersonalLinks: () => void;
   isReadOnly: boolean;
 }) => {
   const { t } = useTranslation();
@@ -47,10 +49,14 @@ export const SuccessView = ({
       )}
       <div className="flex h-full flex-col items-center justify-center gap-8 rounded-b-lg bg-slate-50 px-8 py-4">
         <p className="text-sm font-medium text-slate-900">{t("workspace.surveys.summary.whats_next")}</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <button type="button" onClick={onShare} className={tileClassName}>
             <Share2Icon className="size-8 stroke-1 text-slate-900" />
             {t("workspace.surveys.summary.share_survey")}
+          </button>
+          <button type="button" onClick={onUsePersonalLinks} className={tileClassName}>
+            <UserIcon className="size-8 stroke-1 text-slate-900" />
+            {t("workspace.surveys.summary.use_personal_links")}
           </button>
           <Link to="/account/settings/notifications" className={tileClassName}>
             <BellRing className="size-8 stroke-1 text-slate-900" />
