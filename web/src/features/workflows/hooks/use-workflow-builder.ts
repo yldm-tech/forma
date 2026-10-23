@@ -14,6 +14,7 @@ import {
   workflowsApi,
 } from "../api";
 import { type TWorkflowDefinition, ZWorkflowDefinition } from "../definition";
+import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../lib/analytics";
 import { workflowDefinitionToFlowNodes } from "../lib/definition-to-flow";
 import {
   hydrateWorkflowEditorAtom,
@@ -208,11 +209,13 @@ export const useWorkflowBuilder = ({
         return true;
       } catch (error) {
         // Persistent state rather than a toast that fades: the header pill reads it and stays failed until a save lands. It is also the autosave's no-retry guard.
+        const errorKind = classifyWorkflowSaveError(error);
         setSaveError({
           draftSignature: attemptedSignature,
-          kind: classifyWorkflowSaveError(error),
+          kind: errorKind,
           detail: describeSaveErrorDetail(error, t),
         });
+        trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.autosaveFailed, { error_kind: errorKind, silent });
         if (!silent) toast.error(getWorkflowApiErrorMessage(error, t("workspace.workflows.save_failed")));
         return false;
       } finally {

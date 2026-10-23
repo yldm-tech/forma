@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -37,6 +38,17 @@ type WorkflowEnqueuer interface {
 	EnqueueResponseCompleted(ctx context.Context, ev *Event) error
 }
 
+// UsageMeter records billable usage, forma2's Stripe metering: one meter event per created response, which the pipeline reports after a responseCreated event's webhooks, and one per new workflow run that is not a dry run, which the workflow runner reports. It never fails its caller; a failure is logged where it happens. stripeCustomerID is the organization's, nil when it has none.
+type UsageMeter interface {
+	ResponseCreated(ctx context.Context, stripeCustomerID *string, responseID uuid.UUID, createdAt time.Time)
+	WorkflowRunCreated(ctx context.Context, stripeCustomerID *string, runID uuid.UUID, createdAt time.Time)
+}
+
+// UsageReporter sends the instance's daily anonymous usage update when its operator opted in, forma2's sendTelemetryEvents. The pipeline calls it after every responseCreated event, so an instance in use reports without waiting for the daily job; it decides itself whether a report is due and never fails its caller.
+type UsageReporter interface {
+	Send(ctx context.Context)
+}
+
 // ErrRetry marks a hand-off failure that should retry the pipeline job.
 var ErrRetry = errors.New("retry the response pipeline job")
 
@@ -44,4 +56,6 @@ var ErrRetry = errors.New("retry the response pipeline job")
 type Handoffs struct {
 	Integrations IntegrationHandler
 	Workflows    WorkflowEnqueuer
+	Meter        UsageMeter
+	UsageReport  UsageReporter
 }

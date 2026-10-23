@@ -15,6 +15,7 @@ import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
+import { Route as AuthenticatedBillingConfirmationRouteImport } from './routes/_authenticated/billing-confirmation'
 import { Route as AuthDeleteAccountRouteImport } from './routes/auth/delete-account'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
@@ -23,6 +24,7 @@ import { Route as AuthSsoRecoveryRouteImport } from './routes/auth/sso-recovery'
 import { Route as AuthVerificationRequestedRouteImport } from './routes/auth/verification-requested'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
 import { Route as SetupIntroRouteImport } from './routes/setup/intro'
+import { Route as AuthenticatedAccountAuthorizeRouteImport } from './routes/_authenticated/account/authorize'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account/settings'
 import { Route as AuthenticatedEnvironmentsEnvironmentIdRouteImport } from './routes/_authenticated/environments/$environmentId'
 import { Route as AuthenticatedWorkspacesWorkspaceIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId'
@@ -44,6 +46,7 @@ import { Route as AuthForgotPasswordResetIndexRouteImport } from './routes/auth/
 import { Route as AuthForgotPasswordResetSuccessRouteImport } from './routes/auth/forgot-password/reset/success'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/index'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/api-keys'
+import { Route as AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/billing'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsGeneralRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/general'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsTeamsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings/teams'
 import { Route as AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteImport } from './routes/_authenticated/organizations/$organizationId/workspaces/new/route'
@@ -114,6 +117,12 @@ const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
   path: '/verify-email-change',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedBillingConfirmationRoute =
+  AuthenticatedBillingConfirmationRouteImport.update({
+    id: '/billing-confirmation',
+    path: '/billing-confirmation',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthDeleteAccountRoute = AuthDeleteAccountRouteImport.update({
   id: '/delete-account',
   path: '/delete-account',
@@ -156,6 +165,12 @@ const SetupIntroRoute = SetupIntroRouteImport.update({
   path: '/setup/intro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccountAuthorizeRoute =
+  AuthenticatedAccountAuthorizeRouteImport.update({
+    id: '/account/authorize',
+    path: '/account/authorize',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAccountSettingsRoute =
   AuthenticatedAccountSettingsRouteImport.update({
     id: '/account/settings',
@@ -279,6 +294,12 @@ const AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute =
   AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport.update({
     id: '/api-keys',
     path: '/api-keys',
+    getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute =
+  AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
     getParentRoute: () => AuthenticatedOrganizationsOrganizationIdSettingsRoute,
   } as any)
 const AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute =
@@ -543,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -551,6 +573,7 @@ export interface FileRoutesByFullPath {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -574,6 +597,7 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceId/surveys/$surveyId': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRouteWithChildren
   '/workspaces/$workspaceId/workflows/$workflowId': typeof AuthenticatedWorkspacesWorkspaceIdWorkflowsWorkflowIdRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -618,6 +642,7 @@ export interface FileRoutesByTo {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -626,6 +651,7 @@ export interface FileRoutesByTo {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
@@ -644,6 +670,7 @@ export interface FileRoutesByTo {
   '/auth/forgot-password/reset': typeof AuthForgotPasswordResetIndexRoute
   '/organizations/$organizationId/workspaces/new': typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
   '/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
   '/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -689,6 +716,7 @@ export interface FileRoutesById {
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
+  '/_authenticated/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -697,6 +725,7 @@ export interface FileRoutesById {
   '/auth/verification-requested': typeof AuthVerificationRequestedRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/setup/intro': typeof SetupIntroRoute
+  '/_authenticated/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
   '/_authenticated/environments/$environmentId': typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   '/_authenticated/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -720,6 +749,7 @@ export interface FileRoutesById {
   '/_authenticated/workspaces/$workspaceId/surveys/$surveyId': typeof AuthenticatedWorkspacesWorkspaceIdSurveysSurveyIdRouteRouteWithChildren
   '/_authenticated/workspaces/$workspaceId/workflows/$workflowId': typeof AuthenticatedWorkspacesWorkspaceIdWorkflowsWorkflowIdRouteRouteWithChildren
   '/_authenticated/organizations/$organizationId/settings/api-keys': typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  '/_authenticated/organizations/$organizationId/settings/billing': typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
   '/_authenticated/organizations/$organizationId/settings/general': typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   '/_authenticated/organizations/$organizationId/settings/teams': typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   '/_authenticated/setup/organization/$organizationId/invite': typeof AuthenticatedSetupOrganizationOrganizationIdInviteRoute
@@ -766,6 +796,7 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/billing-confirmation'
     | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
@@ -774,6 +805,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/account/authorize'
     | '/account/settings'
     | '/environments/$environmentId'
     | '/workspaces/$workspaceId'
@@ -797,6 +829,7 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceId/surveys/$surveyId'
     | '/workspaces/$workspaceId/workflows/$workflowId'
     | '/organizations/$organizationId/settings/api-keys'
+    | '/organizations/$organizationId/settings/billing'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
@@ -841,6 +874,7 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/billing-confirmation'
     | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
@@ -849,6 +883,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/account/authorize'
     | '/environments/$environmentId'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password'
@@ -867,6 +902,7 @@ export interface FileRouteTypes {
     | '/auth/forgot-password/reset'
     | '/organizations/$organizationId/workspaces/new'
     | '/organizations/$organizationId/settings/api-keys'
+    | '/organizations/$organizationId/settings/billing'
     | '/organizations/$organizationId/settings/general'
     | '/organizations/$organizationId/settings/teams'
     | '/setup/organization/$organizationId/invite'
@@ -911,6 +947,7 @@ export interface FileRouteTypes {
     | '/email-change-without-verification-success'
     | '/invite'
     | '/verify-email-change'
+    | '/_authenticated/billing-confirmation'
     | '/auth/delete-account'
     | '/auth/login'
     | '/auth/signup'
@@ -919,6 +956,7 @@ export interface FileRouteTypes {
     | '/auth/verification-requested'
     | '/auth/verify-email'
     | '/setup/intro'
+    | '/_authenticated/account/authorize'
     | '/_authenticated/account/settings'
     | '/_authenticated/environments/$environmentId'
     | '/_authenticated/workspaces/$workspaceId'
@@ -942,6 +980,7 @@ export interface FileRouteTypes {
     | '/_authenticated/workspaces/$workspaceId/surveys/$surveyId'
     | '/_authenticated/workspaces/$workspaceId/workflows/$workflowId'
     | '/_authenticated/organizations/$organizationId/settings/api-keys'
+    | '/_authenticated/organizations/$organizationId/settings/billing'
     | '/_authenticated/organizations/$organizationId/settings/general'
     | '/_authenticated/organizations/$organizationId/settings/teams'
     | '/_authenticated/setup/organization/$organizationId/invite'
@@ -1035,6 +1074,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/billing-confirmation': {
+      id: '/_authenticated/billing-confirmation'
+      path: '/billing-confirmation'
+      fullPath: '/billing-confirmation'
+      preLoaderRoute: typeof AuthenticatedBillingConfirmationRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/auth/delete-account': {
       id: '/auth/delete-account'
       path: '/delete-account'
@@ -1090,6 +1136,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/setup/intro'
       preLoaderRoute: typeof SetupIntroRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/account/authorize': {
+      id: '/_authenticated/account/authorize'
+      path: '/account/authorize'
+      fullPath: '/account/authorize'
+      preLoaderRoute: typeof AuthenticatedAccountAuthorizeRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/account/settings': {
       id: '/_authenticated/account/settings'
@@ -1236,6 +1289,13 @@ declare module '@tanstack/react-router' {
       path: '/api-keys'
       fullPath: '/organizations/$organizationId/settings/api-keys'
       preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRouteImport
+      parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
+    }
+    '/_authenticated/organizations/$organizationId/settings/billing': {
+      id: '/_authenticated/organizations/$organizationId/settings/billing'
+      path: '/billing'
+      fullPath: '/organizations/$organizationId/settings/billing'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRouteImport
       parentRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRoute
     }
     '/_authenticated/organizations/$organizationId/settings/general': {
@@ -1720,6 +1780,7 @@ const AuthenticatedWorkspacesWorkspaceIdRouteWithChildren =
 
 interface AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren {
   AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute
+  AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute
   AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute
   AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute
   AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsIndexRoute
@@ -1729,6 +1790,8 @@ const AuthenticatedOrganizationsOrganizationIdSettingsRouteChildren: Authenticat
   {
     AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute:
       AuthenticatedOrganizationsOrganizationIdSettingsApiKeysRoute,
+    AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute:
+      AuthenticatedOrganizationsOrganizationIdSettingsBillingRoute,
     AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute:
       AuthenticatedOrganizationsOrganizationIdSettingsGeneralRoute,
     AuthenticatedOrganizationsOrganizationIdSettingsTeamsRoute:
@@ -1767,6 +1830,8 @@ const AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildre
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedBillingConfirmationRoute: typeof AuthenticatedBillingConfirmationRoute
+  AuthenticatedAccountAuthorizeRoute: typeof AuthenticatedAccountAuthorizeRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRouteWithChildren
   AuthenticatedEnvironmentsEnvironmentIdRoute: typeof AuthenticatedEnvironmentsEnvironmentIdRoute
   AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
@@ -1781,6 +1846,8 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedBillingConfirmationRoute: AuthenticatedBillingConfirmationRoute,
+  AuthenticatedAccountAuthorizeRoute: AuthenticatedAccountAuthorizeRoute,
   AuthenticatedAccountSettingsRoute:
     AuthenticatedAccountSettingsRouteWithChildren,
   AuthenticatedEnvironmentsEnvironmentIdRoute:

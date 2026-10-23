@@ -1,0 +1,132 @@
+{{- if .Values.worker.enabled }}
+---
+# The background job worker, `forma worker`: the response pipeline, webhooks, emails, integrations, workflows, the SpiceDB projection and the periodic tasks. forma2 ran these inside the web pods; the Go server runs them in a process of its own, with the server's image, configuration and Secrets.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "forma.workerName" . }}
+  labels:
+    {{- include "forma.workerLabels" . | nindent 4 }}
+    {{- with .Values.worker.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.worker.annotations .Values.deployment.reloadOnChange .Values.authzed.enabled }}
+  annotations:
+    {{- with .Values.worker.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.deployment.reloadOnChange }}
+    reloader.stakater.com/auto: "true"
+    {{- end }}
+    {{- if and .Values.authzed.enabled (not (hasKey (default dict .Values.worker.annotations) "argocd.argoproj.io/sync-wave")) }}
+    # Same wave as the server: after the migration Job and the AuthZed preparation.
+    argocd.argoproj.io/sync-wave: "2"
+    {{- end }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "forma.workerSelectorLabels" . | nindent 6 }}
+  {{- with .Values.worker.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if not (kindIs "invalid" .Values.deployment.revisionHistoryLimit) }}
+  revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "forma.workerSelectorLabels" . | nindent 8 }}
+        {{- with .Values.deployment.additionalPodLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.deployment.disableIstioInject }}
+        sidecar.istio.io/inject: "false"
+        {{- end }}
+      {{- with .Values.deployment.additionalPodAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with (.Values.worker.nodeSelector | default .Values.deployment.nodeSelector) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (.Values.worker.tolerations | default .Values.deployment.tolerations) }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.deployment.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.deployment.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      {{- if .Values.rbac.serviceAccount.enabled }}
+      serviceAccountName: {{ .Values.rbac.serviceAccount.name | default (include "forma.name" .) }}
+      {{- end }}
+      {{- with .Values.deployment.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # A stopping worker finishes its running jobs for SHUTDOWN_TIMEOUT (20 s by default), then gives cancelled jobs 10 s more to return.
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "forma.deploymentImage" . }}
+          imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
+          {{- with .Values.deployment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          args: ["worker"]
+          {{- with (.Values.deployment.ports).metrics }}
+          ports:
+            - name: metrics
+              containerPort: {{ .containerPort | default .port }}
+              protocol: {{ .protocol | default "TCP" | quote }}
+          {{- end }}
+          {{- include "forma.appEnvFrom" . | nindent 10 }}
+          env:
+            {{- include "forma.appEnv" . | nindent 12 }}
+          {{- with .Values.worker.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.deployment.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- if and (.Values.serviceMonitor).enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") (.Values.deployment.ports).metrics }}
+---
+# Only for the ServiceMonitor: the job metrics (forma_jobs_*) are recorded where jobs run, in the worker.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "forma.workerName" . }}-metrics
+  labels:
+    {{- include "forma.workerLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "forma.workerSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: {{ .Values.deployment.ports.metrics.containerPort | default .Values.deployment.ports.metrics.port }}
+      targetPort: metrics
+{{- end }}
+{{- end }}

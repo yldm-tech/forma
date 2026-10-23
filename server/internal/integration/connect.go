@@ -10,6 +10,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 )
@@ -111,17 +112,17 @@ func (s *Service) Callback(ctx context.Context, actor httpapi.Actor, typ string,
 	code, safeError := query.Get("code"), safeCallbackError(query.Get("error"))
 	switch typ {
 	case TypeGoogleSheets:
-		return s.googleCallback(ctx, st.WorkspaceID, code, safeError)
+		return s.googleCallback(ctx, actor.UserID, st.WorkspaceID, code, safeError)
 	case TypeAirtable:
-		return s.airtableCallback(ctx, st, code, safeError)
+		return s.airtableCallback(ctx, actor.UserID, st, code, safeError)
 	case TypeNotion:
-		return s.notionCallback(ctx, st.WorkspaceID, code, safeError)
+		return s.notionCallback(ctx, actor.UserID, st.WorkspaceID, code, safeError)
 	}
-	return s.slackCallback(ctx, st.WorkspaceID, code, safeError)
+	return s.slackCallback(ctx, actor.UserID, st.WorkspaceID, code, safeError)
 }
 
 // googleCallback checks the provider's error before the code, as forma2 did, and sends the browser back without one when there is no code.
-func (s *Service) googleCallback(ctx context.Context, workspaceID uuid.UUID, code, safeError string) (string, error) {
+func (s *Service) googleCallback(ctx context.Context, userID, workspaceID uuid.UUID, code, safeError string) (string, error) {
 	if safeError != "" {
 		return s.pageURL(TypeGoogleSheets, workspaceID, safeError), nil
 	}
@@ -142,13 +143,13 @@ func (s *Service) googleCallback(ctx context.Context, workspaceID uuid.UUID, cod
 	if email == "" {
 		return "", internalError("Failed to get user email")
 	}
-	if err := s.connect(ctx, workspaceID, TypeGoogleSheets, k, email); err != nil {
+	if err := s.connect(ctx, userID, workspaceID, TypeGoogleSheets, k, email); err != nil {
 		return "", err
 	}
 	return s.pageURL(TypeGoogleSheets, workspaceID, ""), nil
 }
 
-func (s *Service) airtableCallback(ctx context.Context, st *oauthState, code, safeError string) (string, error) {
+func (s *Service) airtableCallback(ctx context.Context, userID uuid.UUID, st *oauthState, code, safeError string) (string, error) {
 	if code == "" && safeError != "" {
 		return s.pageURL(TypeAirtable, st.WorkspaceID, safeError), nil
 	}
@@ -170,7 +171,7 @@ func (s *Service) airtableCallback(ctx context.Context, st *oauthState, code, sa
 		if err != nil {
 			return err
 		}
-		return s.connect(ctx, st.WorkspaceID, TypeAirtable, k, email)
+		return s.connect(ctx, userID, st.WorkspaceID, TypeAirtable, k, email)
 	}()
 	if err != nil {
 		s.log.ErrorContext(ctx, "Error in GET /api/v1/integrations/airtable/callback", "err", err.Error())
@@ -180,7 +181,7 @@ func (s *Service) airtableCallback(ctx context.Context, st *oauthState, code, sa
 }
 
 // notionCallback reports a refused exchange, or an answer without a usable credential, to the page as oauth_error and keeps the integration's existing credential.
-func (s *Service) notionCallback(ctx context.Context, workspaceID uuid.UUID, code, safeError string) (string, error) {
+func (s *Service) notionCallback(ctx context.Context, userID, workspaceID uuid.UUID, code, safeError string) (string, error) {
 	if code == "" && safeError != "" {
 		return s.pageURL(TypeNotion, workspaceID, safeError), nil
 	}
@@ -198,14 +199,14 @@ func (s *Service) notionCallback(ctx context.Context, workspaceID uuid.UUID, cod
 	if err != nil {
 		return "", err
 	}
-	if err := s.connect(ctx, workspaceID, TypeNotion, k, ""); err != nil {
+	if err := s.connect(ctx, userID, workspaceID, TypeNotion, k, ""); err != nil {
 		return "", err
 	}
 	return s.pageURL(TypeNotion, workspaceID, ""), nil
 }
 
 // slackCallback answers Slack refusing the code with Slack's error code, as forma2 did.
-func (s *Service) slackCallback(ctx context.Context, workspaceID uuid.UUID, code, safeError string) (string, error) {
+func (s *Service) slackCallback(ctx context.Context, userID, workspaceID uuid.UUID, code, safeError string) (string, error) {
 	if code == "" && safeError != "" {
 		return s.pageURL(TypeSlack, workspaceID, safeError), nil
 	}
@@ -223,18 +224,38 @@ func (s *Service) slackCallback(ctx context.Context, workspaceID uuid.UUID, code
 	if err != nil {
 		return "", err
 	}
-	if err := s.connect(ctx, workspaceID, TypeSlack, k, ""); err != nil {
+	if err := s.connect(ctx, userID, workspaceID, TypeSlack, k, ""); err != nil {
 		return "", err
 	}
 	return s.pageURL(TypeSlack, workspaceID, ""), nil
 }
 
 // connect stores what a callback obtained.
-func (s *Service) connect(ctx context.Context, workspaceID uuid.UUID, typ string, k any, email string) error {
+func (s *Service) connect(ctx context.Context, userID, workspaceID uuid.UUID, typ string, k any, email string) error {
 	raw, err := encodeJS(k)
 	if err != nil {
 		return err
 	}
-	_, err = s.repo.Connect(ctx, workspaceID, typ, Credentials{Key: raw, Email: email})
-	return err
+	if _, err = s.repo.Connect(ctx, workspaceID, typ, Credentials{Key: raw, Email: email}); err != nil {
+		return err
+	}
+	s.captureConnected(ctx, userID, workspaceID, typ)
+	return nil
+}
+
+// captureConnected is forma2's integration_connected.
+func (s *Service) captureConnected(ctx context.Context, userID, workspaceID uuid.UUID, typ string) {
+	if !analytics.Enabled() {
+		return
+	}
+	org, err := s.repo.organizationOf(ctx, workspaceID)
+	if err != nil || org == nil {
+		s.log.ErrorContext(ctx, "Failed to capture PostHog integration_connected event", "integrationType", typ, "err", err)
+		return
+	}
+	analytics.Capture(userID.String(), "integration_connected", analytics.Properties{
+		"integration_type": typ,
+		"organization_id":  org.String(),
+		"workspace_id":     workspaceID.String(),
+	}, analytics.Groups{OrganizationID: org.String(), WorkspaceID: workspaceID.String()})
 }

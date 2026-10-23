@@ -12,6 +12,7 @@ import { WorkflowBuilderBodyLoading } from "../components/workflows-loading";
 import { useReconcileTriggerEndingCards } from "../hooks/use-reconcile-trigger-ending-cards";
 import { useWorkflowSurvey, useWorkflowSurveyOptions } from "../hooks/use-trigger-survey-picker";
 import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
+import { useTrackWorkflowSurface } from "../hooks/use-track-workflow-surface";
 import { useWorkflowNodeUrlSync } from "../hooks/use-workflow-node-url-sync";
 import { type TWorkflowEmailAuthoringContext, resolveBoundTriggerSurvey } from "../lib/authoring-context";
 import { hasBoundTriggerSurveyAtom } from "../state/editor";
@@ -71,6 +72,13 @@ export const WorkflowBuilderPage = ({
   useReconcileTriggerEndingCards({ definition, isEditable: builder.canEditDefinition });
 
   useWorkflowNodeUrlSync({ isEnabled: Boolean(builder.workflow), nodeParam, setNodeParam });
+
+  // The builder counts as visited once the workflow is loaded, not while the skeleton shows.
+  useTrackWorkflowSurface(builder.workflow ? "builder" : null, {
+    workflowId,
+    workflowStatus: builder.workflow?.status,
+    isReadOnly,
+  });
 
   if (builder.isLoading) return <WorkflowBuilderBodyLoading />;
 

@@ -1,0 +1,60 @@
+{
+  "case": "v2-contact-links-segment-paginated",
+  "description": "GET /api/v2/management/surveys/<id:survey:link>/contact-links/segments/<id:segment:pro> with the `manage` key (manage on the workspace, organization access read and write). With explicit pagination parameters.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/surveys/<id:survey:link>/contact-links/segments/<id:segment:pro>",
+    "query": {
+      "limit": "1",
+      "skip": "0",
+      "expirationDays": "30"
+    },
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "contactId": "<id:contact:user1>",
+          "surveyUrl": "<webapp-url>/c/<contact-link-token>",
+          "expiresAt": "<timestamp>"
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 1,
+        "offset": 0
+      }
+    }
+  },
+  "notes": {
+    "contactLinkToken": {
+      "header": {
+        "alg": "HS256",
+        "typ": "JWT"
+      },
+      "claims": [
+        "contactId",
+        "exp",
+        "iat",
+        "surveyId"
+      ],
+      "lifetimeSeconds": 2592000
+    }
+  }
+}

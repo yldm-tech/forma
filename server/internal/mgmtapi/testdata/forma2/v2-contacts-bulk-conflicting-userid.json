@@ -1,0 +1,61 @@
+{
+  "case": "v2-contacts-bulk-conflicting-userid",
+  "description": "PUT /api/v2/management/contacts/bulk with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v2/management/contacts/bulk",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "contacts": [
+        {
+          "attributes": [
+            {
+              "attributeKey": {
+                "key": "email",
+                "name": "Email"
+              },
+              "value": "bulk3@example.com"
+            },
+            {
+              "attributeKey": {
+                "key": "userId",
+                "name": "User Id"
+              },
+              "value": "contract-user-1"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 207,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "status": "success",
+        "message": "Contacts bulk upload partially successful. Some contacts were skipped due to conflicting userIds.",
+        "meta": {
+          "skippedContacts": [
+            {
+              "index": 0,
+              "userId": "contract-user-1"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

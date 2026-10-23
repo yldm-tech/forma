@@ -15,6 +15,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
@@ -23,7 +24,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mcp"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/notification"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -44,6 +49,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/usagereport"
 	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
@@ -102,7 +108,16 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	repository := auth.NewRepository(db)
 	inviteRepository := invite.NewRepository(db)
 	service := invite.NewService(cfg, inviteRepository, authorizer, limiter, mailerMailer, emitter, log)
-	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, log)
+	stripe := billing.NewStripe(cfg, log)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	lifecycle := billing.NewLifecycle(cfg, stripe, db, enqueuer, log)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, lifecycle, log)
 	cipher, err := secret.NewCipher(cfg)
 	if err != nil {
 		cleanup3()
@@ -112,7 +127,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	twoFactor := auth.NewTwoFactor(cfg, authService, cipher)
 	authHandler := auth.NewHandler(cfg, authService, sessions, twoFactor)
-	sso := auth.NewSSO(cfg, authService, log)
+	sso := newSSO(ctx, cfg, authService, log)
 	ssoHandler := auth.NewSSOHandler(cfg, sso)
 	orgRepository := org.NewRepository(db)
 	workspaceRepository := workspace.NewRepository(db, log)
@@ -132,7 +147,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	storageService := storage.NewService(bucket)
 	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, storageService, log)
-	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, log)
+	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, lifecycle, log)
 	orgHandler := org.NewHandler(orgService, sessions)
 	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
 	teamRepository := team.NewRepository(db)
@@ -169,13 +184,6 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	tagService := tag.NewService(tagRepository, authorizer, limiter, emitter)
 	auditor := v3api2.NewAuditor(cfg, emitter)
 	tagHandler := tag.NewHandler(tagService, sessions, middleware, auditor)
-	enqueuer, err := jobs.NewEnqueuer(log)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
 	responseService := response.NewService(cfg, db, enqueuer, cipher, authorizer, limiter, emitter, log)
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
@@ -184,7 +192,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
-	webuiHandler, err := webui.New()
+	webuiHandler, err := webui.New(cfg)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -198,7 +206,9 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	ssrfGuard := ssrf.New(cfg)
 	webhookService := webhook.NewService(webhookRepository, authorizer, limiter, emitter, ssrfGuard, log)
 	webhookHandler := webhook.NewHandler(webhookService, sessions)
-	v1Handler := webhook.NewV1Handler(cfg, webhookService, authenticator, workspaceRepository, log)
+	wrapper := mgmtv1.New(cfg, authenticator, limiter, emitter, authorizer, workspaceRepository, log)
+	v1Handler := webhook.NewV1Handler(webhookService, wrapper, log)
+	mgmtapiHandler := mgmtapi.NewHandler(cfg, db, client, wrapper, authenticator, authorizer, limiter, emitter, workspaceRepository, sessions, surveyService, responseService, actionclassService, contactService, webhookService, storageService, log)
 	integrationRepository := integration.NewRepository(db, cipher, log)
 	integrationService := integration.NewService(cfg, integrationRepository, authorizer, limiter, emitter, client, log)
 	integrationHandler := integration.NewHandler(integrationService, sessions)
@@ -209,8 +219,30 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	workflowRepository := workflow.NewRepository(db)
 	workflowService := workflow.NewService(workflowRepository, db, authorizer, log)
 	workflowHandler := workflow.NewHandler(cfg, workflowService, guard, sessions, emitter, log)
-	engine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, webuiHandler)
-	server := httpserver.New(cfg, engine, log)
+	keys := oauthserver.NewKeys(db, cipher)
+	oauthserverHandler, err := oauthserver.NewHandler(cfg, db, keys, sessions, limiter, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	appHandler := oauthserver.NewAppHandler(oauthserverHandler, sessions)
+	tokenVerifier := oauthserver.NewTokenVerifier(cfg, keys)
+	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, authenticator, tokenVerifier, limiter, surveyHandler, workflowHandler, log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	billingRepository := billing.NewRepository(db)
+	engine := billing.NewEngine(cfg, stripe, billingRepository, client, log)
+	billingService := billing.NewService(engine, authorizer, limiter, emitter)
+	billingHandler := billing.NewHandler(billingService, sessions)
+	billingWebhookHandler := billing.NewWebhookHandler(engine, log)
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, webuiHandler)
+	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()
 		cleanup2()
@@ -285,12 +317,17 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		cleanup()
 		return nil, nil, err
 	}
-	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, log)
-	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer)
+	stripe := billing.NewStripe(cfg, log)
+	meter := billing.NewMeter(cfg, stripe, log)
+	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, meter, log)
+	reporter := usagereport.NewReporter(cfg, db, redisClient, log)
+	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer, meter, reporter)
 	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
 	runner := workflow.NewRunner(cfg, db, mailerMailer, log)
 	reconciler := workflow.NewReconciler(db, enqueuer, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler)
+	billingRepository := billing.NewRepository(db)
+	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()
@@ -312,8 +349,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks. Its sessions are the SessionAuth every other module's routes authenticate with.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, auth.NewSSO, auth.NewSSOHandler)
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
@@ -357,11 +394,20 @@ var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler)
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
 var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)
 
+// managementAPISet is forma2's API-key management APIs: the v1 wrapper the /api/v1 routes share (/api/v1/management and /api/v1/webhooks), and /api/v1/management with /api/v2.
+var managementAPISet = wire.NewSet(mgmtv1.New, mgmtapi.NewHandler)
+
 // integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
 var integrationSet = wire.NewSet(integration.NewRepository, integration.NewService, integration.NewHandler, integration.NewOAuthHandler)
 
 // workflowSet is workflows: the /api/v3/workflows management API and the builder's authoring context under /api/app.
 var workflowSet = wire.NewSet(workflow.NewRepository, workflow.NewService, workflow.NewHandler)
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
-var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, newPipelineHandoffs, pipeline.NewWorker)
+// mcpSet is the MCP server at /api/mcp and the OAuth authorization server MCP clients sign in through, under /api/auth/oauth2 with its consent page's routes under /api/app.
+var mcpSet = wire.NewSet(oauthserver.NewKeys, oauthserver.NewHandler, oauthserver.NewAppHandler, oauthserver.NewTokenVerifier, mcp.NewHandler)
+
+// billingSet is Forma Cloud billing: the Stripe account, the billing page's routes under /api/app, the Stripe webhook at forma2's /api/billing/stripe-webhook, and the jobs an organization's creation and deletion queue. It does nothing unless IS_FORMA_CLOUD=1 and STRIPE_SECRET_KEY are set.
+var billingSet = wire.NewSet(billing.NewStripe, billing.NewRepository, billing.NewEngine, billing.NewService, billing.NewHandler, billing.NewWebhookHandler, billing.NewLifecycle)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
+var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, billing.NewStripe, billing.NewMeter, wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)), workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, usagereport.NewReporter, newPipelineHandoffs, pipeline.NewWorker)

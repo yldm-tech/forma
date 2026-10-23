@@ -22,6 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "../../../../components/ui/dropdown-menu";
 import { cn } from "../../../../lib/cn";
+import { WORKFLOW_ACTIONS } from "../../definition";
+import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
 import {
   type TWorkflowNodeData,
   type TWorkflowNodeIcon,
@@ -106,6 +108,7 @@ export const WorkflowCanvasNode = memo(
                   icon={<Trash2Icon className="size-4" />}
                   onClick={(event) => {
                     event.stopPropagation();
+                    trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.nodeDeleted, { node_type: data.nodeType });
                     deleteNode(id);
                   }}>
                   {t("common.delete")}
@@ -137,6 +140,10 @@ export const WorkflowCanvasNode = memo(
                 <DropdownMenuItem
                   onClick={(event) => {
                     event.stopPropagation();
+                    trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.actionAdded, {
+                      action_type: WORKFLOW_ACTIONS.SEND_EMAIL,
+                      after_node_type: data.nodeType,
+                    });
                     appendSendEmail(id);
                   }}>
                   <span

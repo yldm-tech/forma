@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -16,6 +17,9 @@ import (
 	"github.com/riverqueue/river/rivertype"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
+	"sync/atomic"
+
+	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -299,7 +303,20 @@ type recorder struct {
 	order     []string
 	events    []*Event
 	workflowE error
+	metered   []string
 }
+
+func (r *recorder) ResponseCreated(_ context.Context, stripeCustomerID *string, responseID uuid.UUID, createdAt time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	customer := "<nil>"
+	if stripeCustomerID != nil {
+		customer = *stripeCustomerID
+	}
+	r.metered = append(r.metered, fmt.Sprintf("response %s %s %d", customer, responseID, createdAt.Unix()))
+}
+
+func (r *recorder) WorkflowRunCreated(context.Context, *string, uuid.UUID, time.Time) {}
 
 func (r *recorder) HandleResponse(_ context.Context, ev *Event) error {
 	r.mu.Lock()
@@ -320,9 +337,10 @@ func (r *recorder) EnqueueResponseCompleted(_ context.Context, ev *Event) error 
 // The hand-offs run on responseFinished only, workflows first; an integration failure is logged and the job goes on, and a workflow failure that asks for a retry fails the job before follow-ups and emails.
 func TestHandoffs(t *testing.T) {
 	rec := &recorder{}
-	e := newEnv(t, Handoffs{Integrations: rec, Workflows: rec})
+	e := newEnv(t, Handoffs{Integrations: rec, Workflows: rec, Meter: rec})
 	f := e.fixture()
 	e.exec(`UPDATE organizations SET display_time_zone = 'Asia/Tokyo' WHERE id = ?`, f.org)
+	e.exec(`INSERT INTO organization_billing (organization_id, stripe_customer_id, limits) VALUES (?, 'cus_123', '{}')`, f.org)
 	owner := e.user("owner@example.com", f.survey)
 	e.member(f.org, owner, "owner")
 	r := e.respond(f, true, `{}`)
@@ -331,6 +349,10 @@ func TestHandoffs(t *testing.T) {
 	}
 	if len(rec.order) != 0 {
 		t.Fatalf("hand-offs ran on responseCreated: %v", rec.order)
+	}
+	// forma2's runResponseCreatedSideEffects: the created response is metered for the organization's Stripe customer, once per responseCreated event.
+	if want := fmt.Sprintf("[response cus_123 %s %d]", r.ID, r.CreatedAt.Unix()); fmt.Sprint(rec.metered) != want {
+		t.Fatalf("metered %v, want %s", rec.metered, want)
 	}
 	j := job(response.EventResponseFinished, f, r, 1)
 	j.Args.Locale = "ja-JP"
@@ -358,6 +380,9 @@ func TestHandoffs(t *testing.T) {
 	rec.workflowE = errors.New("bad definition")
 	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err != nil {
 		t.Fatalf("any other workflow failure is logged: %v", err)
+	}
+	if len(rec.metered) != 1 {
+		t.Errorf("responseFinished was metered: %v", rec.metered)
 	}
 }
 
@@ -477,5 +502,53 @@ func TestInterruptedAttemptIsRetried(t *testing.T) {
 				t.Errorf("emails were sent on an attempt that will be retried")
 			}
 		})
+	}
+}
+
+type usageReports struct{ sent atomic.Int32 }
+
+func (u *usageReports) Send(context.Context) { u.sent.Add(1) }
+
+// TestResponseCreatedAnalytics: a created response sends survey_response_received at forma2's milestones (the first, every tenth to a hundred) with both groups, and asks for the usage update; a finished one does neither.
+func TestResponseCreatedAnalytics(t *testing.T) {
+	reports := &usageReports{}
+	// After newEnv, which makes the test parallel: a client installed earlier would stay installed while the package's sequential tests run.
+	e := newEnv(t, Handoffs{UsageReport: reports})
+	rec := analyticstest.Start(t)
+	f := e.fixture()
+	created := func() {
+		t.Helper()
+		if err := e.work(job(response.EventResponseCreated, f, e.respond(f, false, `{}`), 1)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	created()
+	for range 8 {
+		e.exec(`INSERT INTO responses (survey_id) VALUES (?)`, f.survey)
+	}
+	created()
+	created()
+	if err := e.work(job(response.EventResponseFinished, f, e.respond(f, true, `{}`), 1)); err != nil {
+		t.Fatal(err)
+	}
+	// Every event was captured while the jobs ran; once flushed, all of them have arrived, in whatever order their concurrent sends finished.
+	rec.Flush()
+	var milestones []string
+	for _, m := range rec.All() {
+		if m.Event != "survey_response_received" || m.Properties["survey_id"] != f.survey.String() {
+			continue
+		}
+		milestones = append(milestones, m.Properties["milestone"].(string))
+		groups, _ := m.Properties["$groups"].(map[string]any)
+		if m.DistinctID != f.org.String() || groups["organization"] != f.org.String() || groups["workspace"] != f.ws.String() || m.Properties["survey_type"] != "app" || m.Properties["workspace_id"] != f.ws.String() {
+			t.Errorf("survey_response_received = %+v", m)
+		}
+	}
+	slices.Sort(milestones)
+	if fmt.Sprint(milestones) != "[10 first]" {
+		t.Errorf("milestones = %v, want the first and the tenth response only", milestones)
+	}
+	if n := reports.sent.Load(); n != 3 {
+		t.Errorf("usage update asked for %d times, want once per created response", n)
 	}
 }

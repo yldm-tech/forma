@@ -208,3 +208,34 @@ func TestContactToken(t *testing.T) {
 		})
 	}
 }
+
+// A personal link the management API issues opens the survey page, and expires after the days it was given.
+func TestNewContactToken(t *testing.T) {
+	cfg := tokenConfig()
+	contact, survey := uuid.New(), uuid.New()
+	token, err := NewContactToken(cfg, contact, survey, testNow, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotContact, gotSurvey, err := verifyContactToken(cfg, token, testNow.Add(1000*24*time.Hour))
+	if err != nil || gotContact != contact.String() || gotSurvey != survey.String() {
+		t.Fatalf("verifyContactToken = %q, %q, %v", gotContact, gotSurvey, err)
+	}
+	expiring, err := NewContactToken(cfg, contact, survey, testNow, 7*24*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := verifyContactToken(cfg, expiring, testNow.Add(7*24*time.Hour-time.Second)); err != nil {
+		t.Fatalf("a link within its days: %v", err)
+	}
+	if _, _, err := verifyContactToken(cfg, expiring, testNow.Add(7*24*time.Hour+time.Second)); !errors.Is(err, errContactTokenExpired) {
+		t.Fatalf("a link after its days: %v", err)
+	}
+	parsed, err := jwt.ParseSigned(expiring, hs256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := parsed.Headers[0]; h.Algorithm != "HS256" || h.ExtraHeaders["typ"] != "JWT" {
+		t.Errorf("header = %+v", h)
+	}
+}

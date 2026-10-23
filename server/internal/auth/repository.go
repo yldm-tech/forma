@@ -337,6 +337,18 @@ func (r *Repository) soleOwnedOrganizations(ctx context.Context, userID uuid.UUI
 	return ids, nil
 }
 
+// stripeCustomers are the Stripe customers of the organizations.
+func (r *Repository) stripeCustomers(ctx context.Context, organizationIDs []uuid.UUID) ([]string, error) {
+	if len(organizationIDs) == 0 {
+		return nil, nil
+	}
+	var ids []string
+	if err := r.db.WithContext(ctx).Raw(`SELECT stripe_customer_id FROM organization_billing WHERE organization_id IN ? AND stripe_customer_id IS NOT NULL`, organizationIDs).Scan(&ids).Error; err != nil {
+		return nil, fmt.Errorf("load Stripe customers: %w", err)
+	}
+	return ids, nil
+}
+
 // deleteAccount removes the organizations only this user owns, the invites they sent (which do not cascade), and the user; memberships, identities, sessions and tokens cascade with the user row.
 func (r *Repository) deleteAccount(ctx context.Context, userID uuid.UUID, soleOwned []uuid.UUID) error {
 	db := r.db.WithContext(ctx)

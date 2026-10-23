@@ -1,0 +1,77 @@
+{
+  "case": "v2-responses-update",
+  "description": "PUT /api/v2/management/responses/<id:response:v2> with the `manage` key (manage on the workspace, organization access read and write). The update schema is the whole response minus id and surveyId.",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v2/management/responses/<id:response:v2>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": true,
+      "data": {
+        "feedback": "Updated through v2",
+        "score": 4
+      },
+      "language": "default",
+      "ttc": {
+        "feedback": 1600
+      },
+      "variables": {},
+      "meta": {
+        "source": "api"
+      },
+      "contactId": null,
+      "contactAttributes": null,
+      "endingId": "clendscreenokaaaaaaaaaaa1",
+      "singleUseId": null,
+      "displayId": null,
+      "createdAt": "2026-10-01T00:00:00.000Z",
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "tags": [],
+      "notes": []
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:v2>",
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "updatedAt": "2026-10-02T00:00:00.000Z",
+        "finished": true,
+        "surveyId": "<id:survey:link>",
+        "contactId": null,
+        "endingId": "clendscreenokaaaaaaaaaaa1",
+        "data": {
+          "score": 4,
+          "feedback": "Updated through v2"
+        },
+        "variables": {},
+        "ttc": {
+          "feedback": 1600
+        },
+        "meta": {
+          "source": "api"
+        },
+        "contactAttributes": null,
+        "singleUseId": null,
+        "language": "default",
+        "displayId": null
+      }
+    }
+  }
+}

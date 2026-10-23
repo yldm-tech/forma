@@ -32,7 +32,11 @@ func NewHandler(cfg config.Config, svc *Service, guard *v3api.Guard, sessions ht
 
 // RegisterV3 mounts /api/v3/workflows on the engine.
 func (h *Handler) RegisterV3(r gin.IRouter) {
-	g := r.Group("/api/v3/workflows", h.guard.Handlers(v3api.SessionOrAPIKey)...)
+	h.MountV3(r.Group("/api/v3/workflows", h.guard.Handlers(v3api.SessionOrAPIKey)...))
+}
+
+// MountV3 mounts the workflow management operations on g, the /api/v3/workflows group. g must authenticate the caller first and put it on the request context (v3api.WithActor): RegisterV3 mounts them behind the v3 guard, MCP behind its own authentication.
+func (h *Handler) MountV3(g gin.IRouter) {
 	g.GET("", h.list)
 	g.POST("", h.create)
 	g.GET("/runs", h.listRuns)

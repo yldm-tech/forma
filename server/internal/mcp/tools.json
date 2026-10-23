@@ -1,0 +1,1851 @@
+[
+  {
+    "name": "list_surveys",
+    "title": "List surveys",
+    "description": "List surveys in a Forma workspace using the v3 Surveys API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workspace ID whose surveys should be listed."
+        },
+        "limit": {
+          "default": 20,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of surveys to return. Defaults to 20."
+        },
+        "cursor": {
+          "description": "Opaque pagination cursor from a previous list_surveys response.",
+          "type": "string",
+          "minLength": 1
+        },
+        "includeTotalCount": {
+          "default": true,
+          "type": "boolean",
+          "description": "Whether to include the total matching survey count in the response metadata. Defaults to true."
+        },
+        "filter": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "object",
+              "properties": {
+                "contains": {
+                  "description": "Case-insensitive survey name substring.",
+                  "type": "string",
+                  "maxLength": 512
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by survey name."
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "in": {
+                  "description": "Survey statuses to include, for example draft or inProgress. Archived surveys are excluded unless archived is listed: on its own it returns only archived surveys, alongside real statuses it widens the result to both.",
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "inProgress",
+                          "paused",
+                          "completed"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "const": "archived"
+                      }
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by survey status."
+            },
+            "type": {
+              "type": "object",
+              "properties": {
+                "in": {
+                  "description": "Survey types to include, for example link.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "link",
+                      "app"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by survey type."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional supported v3 survey filters."
+        },
+        "sortBy": {
+          "description": "Sort field for pagination. Defaults to the v3 API default of updatedAt.",
+          "type": "string",
+          "enum": [
+            "createdAt",
+            "updatedAt",
+            "name",
+            "relevance"
+          ]
+        }
+      },
+      "required": [
+        "workspaceId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_survey",
+    "title": "Get survey",
+    "description": "Get one Forma survey using the v3 Surveys API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to fetch."
+        },
+        "lang": {
+          "description": "Optional language codes or configured aliases used to filter translatable survey fields.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "create_survey",
+    "title": "Create survey",
+    "description": "Create a Forma link survey using the v3 Surveys API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workspace ID where the survey should be created."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Survey name."
+        },
+        "type": {
+          "description": "Survey type. Only link surveys are supported.",
+          "type": "string",
+          "const": "link"
+        },
+        "status": {
+          "description": "Initial survey status. Defaults to draft.",
+          "type": "string",
+          "enum": [
+            "draft",
+            "inProgress",
+            "paused",
+            "completed"
+          ]
+        },
+        "defaultLanguage": {
+          "description": "Default language code or configured language alias. Defaults to en-US.",
+          "type": "string",
+          "minLength": 1
+        },
+        "metadata": {
+          "description": "Survey metadata using the v3 survey document contract.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "languages": {
+          "description": "Configured survey languages using the v3 survey document contract.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Language code or configured language alias."
+              },
+              "default": {
+                "description": "Whether this language is the default language.",
+                "type": "boolean"
+              },
+              "enabled": {
+                "description": "Whether this language is enabled.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "welcomeCard": {
+          "description": "Welcome card using the v3 survey document contract.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "blocks": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "Survey blocks using the v3 survey document contract."
+        },
+        "endings": {
+          "description": "Survey endings using the v3 survey document contract.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "hiddenFields": {
+          "description": "Hidden fields using the v3 survey document contract.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "variables": {
+          "description": "Survey variables using the v3 survey document contract.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        }
+      },
+      "required": [
+        "workspaceId",
+        "name",
+        "blocks"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "validate_survey",
+    "title": "Validate survey",
+    "description": "Validate a v3 survey create or patch payload without writing survey changes.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "create",
+            "patch"
+          ],
+          "description": "Validation operation to run."
+        },
+        "surveyId": {
+          "description": "Survey ID to validate against. Required for patch validation.",
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+        },
+        "data": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {},
+          "description": "Create or patch payload to validate using the v3 survey document contract."
+        }
+      },
+      "required": [
+        "operation",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "patch_survey",
+    "title": "Patch survey",
+    "description": "Update a Forma survey using the v3 Surveys API patch contract. Provided top-level arrays and objects replace that whole subtree.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to update."
+        },
+        "data": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {},
+          "description": "Strict top-level v3 survey patch payload. Omitted top-level fields are preserved; provided objects and arrays replace that whole subtree."
+        }
+      },
+      "required": [
+        "surveyId",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "delete_survey",
+    "title": "Delete survey",
+    "description": "Permanently delete a Forma survey and its responses using the v3 Surveys API contract. This cannot be undone — use archive_survey for the reversible soft delete the product offers beside it.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to delete."
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "archive_survey",
+    "title": "Archive survey",
+    "description": "Archive a Forma survey using the v3 Surveys API contract. Archiving is reversible with restore_survey and excludes the survey from default reads.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to archive."
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "restore_survey",
+    "title": "Restore survey",
+    "description": "Restore an archived Forma survey using the v3 Surveys API contract. Archived surveys are returned by list_surveys only when the status filter includes archived.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to restore from the archive."
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "list_workflows",
+    "title": "List workflows",
+    "description": "List workflows in a Forma workspace using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workspace ID whose workflows should be listed."
+        },
+        "limit": {
+          "default": 20,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of workflows to return. Defaults to 20."
+        },
+        "cursor": {
+          "description": "Opaque pagination cursor from a previous list_workflows response.",
+          "type": "string",
+          "minLength": 1
+        },
+        "filter": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "object",
+              "properties": {
+                "contains": {
+                  "description": "Case-insensitive workflow name substring.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by workflow name."
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "in": {
+                  "description": "Workflow statuses to include. Omitting returns every status except archived.",
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "enabled",
+                      "disabled",
+                      "archived"
+                    ],
+                    "description": "Lifecycle state of a workflow. Archived workflows are soft-deleted and excluded from default reads."
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by workflow status."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional supported v3 workflow filters."
+        },
+        "sortBy": {
+          "description": "Sort field for pagination. Defaults to the v3 API default of updatedAt.",
+          "type": "string",
+          "enum": [
+            "createdAt",
+            "updatedAt",
+            "name"
+          ]
+        }
+      },
+      "required": [
+        "workspaceId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_workflow",
+    "title": "Get workflow",
+    "description": "Get one Forma workflow using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID to fetch."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "list_workflow_runs",
+    "title": "List workflow runs",
+    "description": "List workflow runs for a Forma workspace (newest first) using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workspace ID whose workflow runs should be listed."
+        },
+        "limit": {
+          "default": 20,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of runs to return. Defaults to 20."
+        },
+        "cursor": {
+          "description": "Opaque pagination cursor from a previous list_workflow_runs response.",
+          "type": "string",
+          "minLength": 1
+        },
+        "workflowId": {
+          "description": "Return only runs of this workflow.",
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+        },
+        "responseId": {
+          "description": "Return only runs triggered by this survey response.",
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+        },
+        "filter": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "object",
+              "properties": {
+                "in": {
+                  "description": "Run statuses to include, for example queued or completed.",
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "queued",
+                      "running",
+                      "completed",
+                      "failed",
+                      "canceled"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "description": "Filter by run status."
+            },
+            "isDryRun": {
+              "description": "Filter by dry-run vs real runs. Omit to return both.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional supported v3 workflow run filters."
+        }
+      },
+      "required": [
+        "workspaceId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_workflow_run",
+    "title": "Get workflow run",
+    "description": "Get one Forma workflow run with its ordered step logs using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow run ID to fetch, including its ordered step logs."
+        }
+      },
+      "required": [
+        "runId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "test_workflow",
+    "title": "Test workflow (dry-run)",
+    "description": "Dry-run a Forma workflow using the v3 Workflows API contract: validate its live definition would execute, resolve the trigger's survey + ending cards, and confirm every literal send_email recipient is an organization member. No run is persisted and no side effects occur; the response reports { ok, problems }.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID to dry-run (validate + mock execute, no side effects)."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "create_workflow",
+    "title": "Create workflow",
+    "description": "Create a Forma workflow (always as a draft) using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 500
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "description": "Workflows are always created as drafts; only enable can make them live.",
+          "type": "string",
+          "const": "draft"
+        },
+        "definition": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "default": 1,
+              "description": "Workflow definition schema version understood by this package.",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "trigger": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "trigger"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "ui": {
+                          "type": "object",
+                          "properties": {
+                            "position": {
+                              "type": "object",
+                              "properties": {
+                                "x": {
+                                  "type": "number"
+                                },
+                                "y": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "x",
+                                "y"
+                              ]
+                            },
+                            "collapsed": {
+                              "type": "boolean"
+                            }
+                          },
+                          "additionalProperties": {},
+                          "description": "Builder-only UI metadata that does not affect workflow execution."
+                        },
+                        "triggerType": {
+                          "type": "string",
+                          "const": "response.completed"
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "surveyId": {
+                              "type": "string",
+                              "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+                            },
+                            "endingCardIds": {
+                              "default": [],
+                              "description": "Ending card ids that should trigger the workflow. Empty means all endings.",
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "cuid2",
+                                "pattern": "^[0-9a-z]+$"
+                              }
+                            }
+                          },
+                          "required": [
+                            "surveyId"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "triggerType",
+                        "config"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Null while the draft has no trigger yet; the user adds one from the canvas."
+            },
+            "nodes": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "action"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "ui": {
+                            "type": "object",
+                            "properties": {
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y"
+                                ]
+                              },
+                              "collapsed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": {},
+                            "description": "Builder-only UI metadata that does not affect workflow execution."
+                          },
+                          "actionType": {
+                            "type": "string",
+                            "const": "send_email"
+                          },
+                          "config": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string",
+                                "description": "Recipient: either a literal email address, which must belong to someone who can access this workspace, or the element id of a survey question / hidden field holding the respondent's email (contact-info elements resolve index [2]). Enabling or testing a workflow whose literal recipient cannot access the workspace fails, and the runner will not send to one."
+                              },
+                              "from": {
+                                "type": "string",
+                                "format": "email",
+                                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                              },
+                              "replyTo": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                }
+                              },
+                              "subject": {
+                                "type": "string",
+                                "maxLength": 998
+                              },
+                              "body": {
+                                "type": "string",
+                                "maxLength": 100000
+                              },
+                              "attachResponseData": {
+                                "type": "boolean"
+                              },
+                              "includeVariables": {
+                                "type": "boolean"
+                              },
+                              "includeHiddenFields": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "to",
+                              "from",
+                              "replyTo",
+                              "subject",
+                              "body",
+                              "attachResponseData"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "actionType",
+                          "config"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "type": {
+                        "type": "string",
+                        "const": "if_else"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "ui": {
+                        "type": "object",
+                        "properties": {
+                          "position": {
+                            "type": "object",
+                            "properties": {
+                              "x": {
+                                "type": "number"
+                              },
+                              "y": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "y"
+                            ]
+                          },
+                          "collapsed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": {},
+                        "description": "Builder-only UI metadata that does not affect workflow execution."
+                      },
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "condition": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "required": [
+                          "condition"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "config"
+                    ],
+                    "description": "Workflow branch node for conditional logic. Not executable by the current workflow runner."
+                  }
+                ]
+              }
+            },
+            "edges": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "target": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sourceHandle": {
+                    "description": "Use then or else for if_else source branches.",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "targetHandle": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "source",
+                  "target"
+                ]
+              }
+            },
+            "entryNodeId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Workflow entry point. Must reference the workflow trigger node, or be null without one."
+            }
+          },
+          "required": [
+            "trigger",
+            "entryNodeId"
+          ],
+          "description": "Persisted workflow definition with graph references validated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "name",
+        "definition"
+      ],
+      "additionalProperties": false,
+      "description": "Creates a draft workflow.",
+      "$defs": {
+        "__schema0": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "connector": {
+              "type": "string",
+              "enum": [
+                "and",
+                "or"
+              ]
+            },
+            "conditions": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "left": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Dot-path to a value in the workflow run context."
+                          },
+                          "fallback": {
+                            "description": "Fallback string used when the referenced path is missing.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path"
+                        ],
+                        "description": "Reference to dynamic workflow data used by conditions or actions."
+                      },
+                      "operator": {
+                        "type": "string",
+                        "enum": [
+                          "equals",
+                          "notEquals",
+                          "lessThan",
+                          "lessEqual",
+                          "greaterThan",
+                          "greaterEqual",
+                          "contains",
+                          "notContains",
+                          "exists",
+                          "notExists"
+                        ]
+                      },
+                      "right": {
+                        "description": "Right-hand comparison value. Omit for presence operators.",
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Dot-path to a value in the workflow run context."
+                              },
+                              "fallback": {
+                                "description": "Fallback string used when the referenced path is missing.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path"
+                            ],
+                            "description": "Reference to dynamic workflow data used by conditions or actions."
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "left",
+                      "operator"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "id",
+            "connector",
+            "conditions"
+          ]
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "patch_workflow",
+    "title": "Patch workflow",
+    "description": "Update a Forma workflow using the v3 Workflows API patch contract. Provided top-level fields replace that whole subtree; definition edits are only accepted while draft or disabled.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID to update."
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "definition": {
+              "description": "Only accepted while the workflow is draft or disabled; the live version of an enabled workflow is immutable.",
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "default": 1,
+                  "description": "Workflow definition schema version understood by this package.",
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1
+                },
+                "trigger": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "trigger"
+                            },
+                            "label": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            "ui": {
+                              "type": "object",
+                              "properties": {
+                                "position": {
+                                  "type": "object",
+                                  "properties": {
+                                    "x": {
+                                      "type": "number"
+                                    },
+                                    "y": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "x",
+                                    "y"
+                                  ]
+                                },
+                                "collapsed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": {},
+                              "description": "Builder-only UI metadata that does not affect workflow execution."
+                            },
+                            "triggerType": {
+                              "type": "string",
+                              "const": "response.completed"
+                            },
+                            "config": {
+                              "type": "object",
+                              "properties": {
+                                "surveyId": {
+                                  "type": "string",
+                                  "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$"
+                                },
+                                "endingCardIds": {
+                                  "default": [],
+                                  "description": "Ending card ids that should trigger the workflow. Empty means all endings.",
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "cuid2",
+                                    "pattern": "^[0-9a-z]+$"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "surveyId"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "triggerType",
+                            "config"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Null while the draft has no trigger yet; the user adds one from the canvas."
+                },
+                "nodes": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "const": "action"
+                              },
+                              "label": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "ui": {
+                                "type": "object",
+                                "properties": {
+                                  "position": {
+                                    "type": "object",
+                                    "properties": {
+                                      "x": {
+                                        "type": "number"
+                                      },
+                                      "y": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "x",
+                                      "y"
+                                    ]
+                                  },
+                                  "collapsed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "additionalProperties": {},
+                                "description": "Builder-only UI metadata that does not affect workflow execution."
+                              },
+                              "actionType": {
+                                "type": "string",
+                                "const": "send_email"
+                              },
+                              "config": {
+                                "type": "object",
+                                "properties": {
+                                  "to": {
+                                    "type": "string",
+                                    "description": "Recipient: either a literal email address, which must belong to someone who can access this workspace, or the element id of a survey question / hidden field holding the respondent's email (contact-info elements resolve index [2]). Enabling or testing a workflow whose literal recipient cannot access the workspace fails, and the runner will not send to one."
+                                  },
+                                  "from": {
+                                    "type": "string",
+                                    "format": "email",
+                                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                  },
+                                  "replyTo": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "format": "email",
+                                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                    }
+                                  },
+                                  "subject": {
+                                    "type": "string",
+                                    "maxLength": 998
+                                  },
+                                  "body": {
+                                    "type": "string",
+                                    "maxLength": 100000
+                                  },
+                                  "attachResponseData": {
+                                    "type": "boolean"
+                                  },
+                                  "includeVariables": {
+                                    "type": "boolean"
+                                  },
+                                  "includeHiddenFields": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "to",
+                                  "from",
+                                  "replyTo",
+                                  "subject",
+                                  "body",
+                                  "attachResponseData"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "actionType",
+                              "config"
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "if_else"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "ui": {
+                            "type": "object",
+                            "properties": {
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y"
+                                ]
+                              },
+                              "collapsed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": {},
+                            "description": "Builder-only UI metadata that does not affect workflow execution."
+                          },
+                          "config": {
+                            "type": "object",
+                            "properties": {
+                              "condition": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            },
+                            "required": [
+                              "condition"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "config"
+                        ],
+                        "description": "Workflow branch node for conditional logic. Not executable by the current workflow runner."
+                      }
+                    ]
+                  }
+                },
+                "edges": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "source": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "target": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sourceHandle": {
+                        "description": "Use then or else for if_else source branches.",
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "targetHandle": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "source",
+                      "target"
+                    ]
+                  }
+                },
+                "entryNodeId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Workflow entry point. Must reference the workflow trigger node, or be null without one."
+                }
+              },
+              "required": [
+                "trigger",
+                "entryNodeId"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "Partial update. Provided top-level fields replace that whole subtree; definition edits are only accepted while draft or disabled."
+        }
+      },
+      "required": [
+        "workflowId",
+        "data"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "__schema0": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "connector": {
+              "type": "string",
+              "enum": [
+                "and",
+                "or"
+              ]
+            },
+            "conditions": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "left": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Dot-path to a value in the workflow run context."
+                          },
+                          "fallback": {
+                            "description": "Fallback string used when the referenced path is missing.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "path"
+                        ],
+                        "description": "Reference to dynamic workflow data used by conditions or actions."
+                      },
+                      "operator": {
+                        "type": "string",
+                        "enum": [
+                          "equals",
+                          "notEquals",
+                          "lessThan",
+                          "lessEqual",
+                          "greaterThan",
+                          "greaterEqual",
+                          "contains",
+                          "notContains",
+                          "exists",
+                          "notExists"
+                        ]
+                      },
+                      "right": {
+                        "description": "Right-hand comparison value. Omit for presence operators.",
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Dot-path to a value in the workflow run context."
+                              },
+                              "fallback": {
+                                "description": "Fallback string used when the referenced path is missing.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path"
+                            ],
+                            "description": "Reference to dynamic workflow data used by conditions or actions."
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "left",
+                      "operator"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "id",
+            "connector",
+            "conditions"
+          ]
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "duplicate_workflow",
+    "title": "Duplicate workflow",
+    "description": "Duplicate a Forma workflow as a new draft (empty run + version history) using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID to duplicate as a new draft."
+        },
+        "name": {
+          "description": "Optional name for the copy. If omitted, the server picks a non-conflicting name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "delete_workflow",
+    "title": "Delete workflow",
+    "description": "Delete a Forma workflow using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "enable_workflow",
+    "title": "Enable workflow",
+    "description": "Enable a Forma workflow using the v3 Workflows API contract: validate executability, snapshot an immutable version, and make it live. Once live it runs on matching survey responses and can send emails.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "disable_workflow",
+    "title": "Disable workflow",
+    "description": "Disable a live Forma workflow (stops future runs) using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "archive_workflow",
+    "title": "Archive workflow",
+    "description": "Archive a Forma workflow using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "unarchive_workflow",
+    "title": "Unarchive workflow",
+    "description": "Unarchive a Forma workflow (back to draft) using the v3 Workflows API contract.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "workflowId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Workflow ID."
+        }
+      },
+      "required": [
+        "workflowId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "list_workspaces",
+    "title": "List workspaces",
+    "description": "List the Forma workspaces the authenticated user can access. Use this to discover the workspaceId required by the survey and workflow tools.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  }
+]

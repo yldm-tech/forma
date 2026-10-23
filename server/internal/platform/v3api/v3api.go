@@ -185,6 +185,11 @@ func ActorFrom(ctx context.Context) (authz.Actor, bool) {
 	return a, ok
 }
 
+// WithActor is ctx with the authenticated caller of a v3 operation. The guard sets it for /api/v3; MCP sets it for the operations its tools run in-process, behind its own authentication.
+func WithActor(ctx context.Context, actor authz.Actor) context.Context {
+	return context.WithValue(ctx, actorKey{}, actor)
+}
+
 // Guard authenticates v3 requests and applies the api:v3 rate limit.
 type Guard struct {
 	sessions httpapi.SessionAuth
@@ -241,7 +246,7 @@ func (g *Guard) authenticate(mode AuthMode, rule ratelimit.Rule) gin.HandlerFunc
 			Fail(c, g.log, err)
 			return
 		}
-		c.Request = c.Request.WithContext(context.WithValue(ctx, actorKey{}, *actor))
+		c.Request = c.Request.WithContext(WithActor(ctx, *actor))
 		c.Next()
 	}
 }

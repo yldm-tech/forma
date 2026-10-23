@@ -1,0 +1,36 @@
+{{- if and (.Values.serviceMonitor).enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+---
+apiVersion: "monitoring.coreos.com/v1"
+kind: ServiceMonitor
+metadata:
+  name: {{ template "forma.name" . }}-svc-monitor
+  namespace: {{ include "forma.namespace" . }}
+  labels:
+  {{- include "forma.labels" $ | nindent 4 }}
+  {{- if .Values.serviceMonitor.additionalLabels }}
+  {{- toYaml .Values.serviceMonitor.additionalLabels | nindent 4 }}
+  {{- end }}
+  {{- if .Values.serviceMonitor.annotations }}
+  annotations:
+  {{- toYaml .Values.serviceMonitor.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  # The server's Service and, with the worker enabled, the worker's metrics Service.
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "forma.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - {{ .Values.componentOverride | default (include "forma.name" .) }}
+          {{- if .Values.worker.enabled }}
+          - worker
+          {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "forma.namespace" . }}
+  endpoints:
+{{ toYaml .Values.serviceMonitor.endpoints | indent 4 }}
+{{- end }}

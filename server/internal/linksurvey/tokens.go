@@ -179,3 +179,27 @@ func verifyContactToken(cfg config.Config, token string, now time.Time) (contact
 	}
 	return contactID, surveyID, nil
 }
+
+// contactTokenClaims is what a personal survey link carries, in jsonwebtoken's order.
+type contactTokenClaims struct {
+	ContactID string `json:"contactId"`
+	SurveyID  string `json:"surveyId"`
+	jwt.Claims
+}
+
+// NewContactToken is forma2's getContactSurveyLink token: the contact and survey ids, each encrypted with forma2's cipher under ENCRYPTION_KEY, signed HS256 with ENCRYPTION_KEY's text; it expires after expiresIn, or never when that is zero. verifyContactToken reads it, as forma2's verifyContactSurveyToken read the tokens forma2 issued.
+func NewContactToken(cfg config.Config, contactID, surveyID uuid.UUID, now time.Time, expiresIn time.Duration) (string, error) {
+	encryptedContact, err := secret.EncryptForma2(contactID.String(), cfg.EncryptionKey)
+	if err != nil {
+		return "", err
+	}
+	encryptedSurvey, err := secret.EncryptForma2(surveyID.String(), cfg.EncryptionKey)
+	if err != nil {
+		return "", err
+	}
+	claims := contactTokenClaims{ContactID: encryptedContact, SurveyID: encryptedSurvey, Claims: jwt.Claims{IssuedAt: jwt.NewNumericDate(now)}}
+	if expiresIn > 0 {
+		claims.Expiry = jwt.NewNumericDate(now.Add(expiresIn))
+	}
+	return sign(string(cfg.EncryptionKeyText), claims)
+}

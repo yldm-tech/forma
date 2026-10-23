@@ -1,4 +1,4 @@
-// Package v1api writes forma2's v1 API responses (apps/web/lib/api/response.ts): every body is {"data": ...} or {"code", "message", "details"}, with Cache-Control "private, no-store" and, when the route asked for it, its CORS headers. The routes that answer this way are the ones external tools call with forma2's contract: /storage and /api/v1/webhooks.
+// Package v1api writes forma2's v1 API responses (apps/web/lib/api/response.ts): every body is {"data": ...} or {"code", "message", "details"}, with Cache-Control "private, no-store" and, when the route asked for it, its CORS headers. The routes that answer this way are the ones external tools call with forma2's contract: /storage, /api/v1/webhooks and /api/v1/management. It also reads their request bodies as forma2's v1 routes did (body.go).
 package v1api
 
 import (
@@ -60,6 +60,21 @@ func BadRequest(c *gin.Context, message string, details map[string]any, cors boo
 // NotFound is forma2's notFoundResponse: "<Type> not found" naming the resource the caller asked for.
 func NotFound(c *gin.Context, resourceType, resourceID string, cors bool) {
 	Error(c, http.StatusNotFound, "not_found", resourceType+" not found", map[string]any{"resource_id": resourceID, "resource_type": resourceType}, cors)
+}
+
+// NotFoundUnnamed is forma2's notFoundResponse without a resource id, which it reported as null.
+func NotFoundUnnamed(c *gin.Context, resourceType string, cors bool) {
+	Error(c, http.StatusNotFound, "not_found", resourceType+" not found", map[string]any{"resource_id": nil, "resource_type": resourceType}, cors)
+}
+
+// Forbidden is forma2's forbiddenResponse.
+func Forbidden(c *gin.Context, message string, cors bool) {
+	Error(c, http.StatusForbidden, "forbidden", message, nil, cors)
+}
+
+// Conflict is forma2's conflictResponse.
+func Conflict(c *gin.Context, message string, cors bool) {
+	Error(c, http.StatusConflict, "conflict", message, nil, cors)
 }
 
 // NotAuthenticated is forma2's notAuthenticatedResponse, the answer to a request without a valid API key.

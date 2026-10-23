@@ -1,0 +1,137 @@
+{
+  "case": "v1-surveys-update-questions",
+  "description": "PUT /api/v1/management/surveys/<id:survey:other> with the `other` key (manage on the second workspace only). Sending questions replaces the blocks; block ids are regenerated.",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/management/surveys/<id:survey:other>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:other>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "questions": [
+        {
+          "id": "q1",
+          "type": "openText",
+          "headline": {
+            "default": "Hello again"
+          },
+          "required": true,
+          "inputType": "text",
+          "charLimit": {
+            "enabled": false
+          }
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:survey:other>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "name": "Other Workspace Survey",
+        "type": "link",
+        "workspaceId": "<id:workspace2>",
+        "createdBy": null,
+        "status": "draft",
+        "welcomeCard": {
+          "enabled": false,
+          "timeToFinish": true,
+          "showResponseCount": false
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "openText",
+            "headline": {
+              "default": "Hello again"
+            },
+            "required": true,
+            "charLimit": {
+              "enabled": false
+            },
+            "inputType": "text",
+            "insightsEnabled": false
+          }
+        ],
+        "blocks": [
+          {
+            "id": "<id:block:1>",
+            "name": "Block 1",
+            "elements": [
+              {
+                "id": "q1",
+                "type": "openText",
+                "headline": {
+                  "default": "Hello again"
+                },
+                "required": true,
+                "charLimit": {
+                  "enabled": false
+                },
+                "inputType": "text",
+                "insightsEnabled": false
+              }
+            ]
+          }
+        ],
+        "endings": [],
+        "hiddenFields": {
+          "enabled": false
+        },
+        "variables": [],
+        "displayOption": "displayOnce",
+        "recontactDays": null,
+        "displayLimit": null,
+        "autoClose": null,
+        "delay": 0,
+        "displayPercentage": null,
+        "autoComplete": null,
+        "publishOn": null,
+        "closeOn": null,
+        "archivedAt": null,
+        "isVerifyEmailEnabled": false,
+        "isBackButtonHidden": false,
+        "isAutoProgressingEnabled": false,
+        "isCaptureIpEnabled": false,
+        "isAnonymizeResponsesEnabled": false,
+        "redirectUrl": null,
+        "workspaceOverwrites": null,
+        "styling": null,
+        "surveyClosedMessage": null,
+        "singleUse": {
+          "enabled": false,
+          "isEncrypted": true
+        },
+        "pin": null,
+        "showLanguageSwitch": null,
+        "recaptcha": {
+          "enabled": false,
+          "threshold": 0.1
+        },
+        "metadata": {},
+        "customHeadScripts": null,
+        "customHeadScriptsMode": "add",
+        "languages": [],
+        "triggers": [],
+        "segment": null,
+        "followUps": [],
+        "slug": null,
+        "projectOverwrites": null,
+        "environmentId": "<id:workspace2>"
+      }
+    }
+  }
+}

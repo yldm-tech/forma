@@ -53,20 +53,24 @@ func (h *Handler) Register(r gin.IRouter) {
 
 // RegisterV3 mounts /api/v3/surveys on the engine.
 func (h *Handler) RegisterV3(r gin.IRouter) {
-	both := r.Group("/api/v3/surveys", h.guard.Handlers(v3api.SessionOrAPIKey)...)
-	both.GET("", h.v3List)
-	both.POST("", h.v3Create)
-	both.POST("/validate", h.v3Validate)
-	both.GET("/:surveyId", h.v3Get)
-	both.PATCH("/:surveyId", h.v3Patch)
-	both.DELETE("/:surveyId", h.v3Delete)
-	both.POST("/:surveyId/archive", h.v3Archive)
-	both.POST("/:surveyId/restore", h.v3Restore)
+	h.MountV3(r.Group("/api/v3/surveys", h.guard.Handlers(v3api.SessionOrAPIKey)...))
 	session := r.Group("/api/v3/surveys/templates", h.guard.Handlers(v3api.SessionOnly)...)
 	session.POST("", h.v3Template)
 	// forma2 charged AI generation to its own limit in place of api:v3.
 	generate := r.Group("/api/v3/surveys/generate", h.guard.LimitedHandlers(v3api.SessionOrAPIKey, ratelimit.APIV3SurveyGenerate)...)
 	generate.POST("", h.v3Generate)
+}
+
+// MountV3 mounts the survey management operations on g, the /api/v3/surveys group. g must authenticate the caller first and put it on the request context (v3api.WithActor): RegisterV3 mounts them behind the v3 guard, MCP behind its own authentication.
+func (h *Handler) MountV3(g gin.IRouter) {
+	g.GET("", h.v3List)
+	g.POST("", h.v3Create)
+	g.POST("/validate", h.v3Validate)
+	g.GET("/:surveyId", h.v3Get)
+	g.PATCH("/:surveyId", h.v3Patch)
+	g.DELETE("/:surveyId", h.v3Delete)
+	g.POST("/:surveyId/archive", h.v3Archive)
+	g.POST("/:surveyId/restore", h.v3Restore)
 }
 
 // appError is a v3 problem as the /api/app envelope: its status, code and detail, with the offending params under details.
@@ -410,7 +414,7 @@ func (h *Handler) v3Create(c *gin.Context) {
 			return
 		}
 	}
-	r, err := h.svc.CreateV3(c.Request.Context(), v3Caller(c), body)
+	r, err := h.svc.CreateV3(c.Request.Context(), v3Caller(c), body, c.Query("createdFrom"))
 	if err != nil {
 		h.fail(c, err)
 		return

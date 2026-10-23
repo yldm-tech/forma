@@ -1,0 +1,26 @@
+{
+  "case": "v2-management-options",
+  "description": "CORS preflight for a v2 management route: Next.js answers 204 with no CORS headers, although successful v2 responses carry Access-Control-Allow-* headers.",
+  "request": {
+    "method": "OPTIONS",
+    "path": "/api/v2/management/responses",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "access-control-request-method": "GET",
+      "access-control-request-headers": "x-api-key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 204,
+    "headers": {
+      "allow": "GET, HEAD, OPTIONS, POST",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "empty",
+    "body": null
+  }
+}

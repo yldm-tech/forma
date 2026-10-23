@@ -21,6 +21,17 @@ const (
 	circuitOpen
 )
 
+func (s circuitState) String() string {
+	switch s {
+	case circuitHalfOpen:
+		return "half_open"
+	case circuitOpen:
+		return "open"
+	default:
+		return "closed"
+	}
+}
+
 // admission is the breaker's answer to "may this call go out": admitted (possibly as the single half-open probe), or refused with the saturation code the circuit opened on.
 type admission struct {
 	admitted bool
@@ -61,7 +72,7 @@ func (b *breaker) admit() admission {
 		return admission{code: b.lastFailureCode}
 	}
 	b.probeInFlight = true
-	b.state = circuitHalfOpen
+	b.transition(circuitHalfOpen)
 	return admission{admitted: true, probe: true}
 }
 
@@ -93,12 +104,21 @@ func (b *breaker) recordFailure(code Code) {
 func (b *breaker) close() {
 	b.consecutiveFailures = 0
 	b.probeInFlight = false
-	b.state = circuitClosed
+	b.transition(circuitClosed)
 }
 
 func (b *breaker) open() {
 	b.consecutiveFailures = 0
 	b.openedAt = b.now()
 	b.probeInFlight = false
-	b.state = circuitOpen
+	b.transition(circuitOpen)
+}
+
+// transition moves the breaker to next and, when that changes its state, records the new state set.
+func (b *breaker) transition(next circuitState) {
+	if b.state == next {
+		return
+	}
+	b.state = next
+	recordCircuitState(next)
 }

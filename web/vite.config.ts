@@ -40,6 +40,8 @@ export default defineConfig({
     proxy: {
       "/api": goServer,
       "/health": goServer,
+      // The OAuth discovery documents MCP clients read.
+      "/.well-known": goServer,
     },
   },
   build: {

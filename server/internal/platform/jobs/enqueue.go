@@ -17,7 +17,8 @@ import (
 
 // Enqueuer inserts jobs in the transaction of the change that causes them, from processes that do not work jobs (`forma serve`). It holds no pool of its own: River's insert-only client writes through the transaction it is handed.
 type Enqueuer struct {
-	client *river.Client[pgx.Tx]
+	client  *river.Client[pgx.Tx]
+	metrics *jobMetrics
 }
 
 func NewEnqueuer(log *slog.Logger) (*Enqueuer, error) {
@@ -25,18 +26,25 @@ func NewEnqueuer(log *slog.Logger) (*Enqueuer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create job enqueuer: %w", err)
 	}
-	return &Enqueuer{client: client}, nil
+	return &Enqueuer{client: client, metrics: defaultJobMetrics()}, nil
 }
 
 // Tx is a GORM transaction that can also enqueue jobs: a job enqueued through it commits or rolls back with the transaction's writes.
 type Tx struct {
 	*gorm.DB
-	conn   *sql.Conn
-	client *river.Client[pgx.Tx]
+	conn    *sql.Conn
+	client  *river.Client[pgx.Tx]
+	metrics *jobMetrics
 }
 
 // Enqueue inserts a job inside the transaction.
 func (t *Tx) Enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+	err := t.enqueue(ctx, args, opts)
+	t.metrics.recordEnqueue(ctx, args.Kind(), err)
+	return err
+}
+
+func (t *Tx) enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
 	return t.conn.Raw(func(driverConn any) error {
 		c, ok := driverConn.(*stdlib.Conn)
 		if !ok {
@@ -57,7 +65,7 @@ func (e *Enqueuer) Transaction(ctx context.Context, db *gorm.DB, fn func(tx *Tx)
 			return fmt.Errorf("job transaction: connection is %T, not *sql.Conn", session.Statement.ConnPool)
 		}
 		return session.Transaction(func(tx *gorm.DB) error {
-			return fn(&Tx{DB: tx, conn: conn, client: e.client})
+			return fn(&Tx{DB: tx, conn: conn, client: e.client, metrics: e.metrics})
 		})
 	})
 }

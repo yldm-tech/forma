@@ -12,6 +12,7 @@ import (
 	"net/mail"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,8 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 type Config struct {
@@ -123,8 +126,11 @@ type Config struct {
 	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
 	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
 
-	// SSO is single sign-on through Google, GitHub, Azure AD and a generic OpenID Connect provider.
+	// SSO is single sign-on through Google, GitHub, Azure AD, a generic OpenID Connect provider and SAML.
 	SSO SSOConfig
+
+	// MCPOAuthJWKSURL is where /api/mcp fetches the keys OAuth access tokens are signed with, forma2's MCP_OAUTH_JWKS_URL, for deployments that verify against another instance's authorization server. It changes no public URL: the issuer, the redirects and the token audience stay derived from WEBAPP_URL and BETTER_AUTH_URL. Unset, the keys are read from the database the authorization server writes them to.
+	MCPOAuthJWKSURL *url.URL `env:"MCP_OAUTH_JWKS_URL"`
 
 	// S3 is the object store uploaded files live in.
 	S3 S3Config
@@ -135,19 +141,25 @@ type Config struct {
 	// Integrations are the OAuth apps of Google Sheets, Airtable, Notion and Slack.
 	Integrations IntegrationsConfig
 
+	// Stripe is Forma Cloud's billing account. Billing runs only on Forma Cloud with STRIPE_SECRET_KEY set; everywhere else it is off.
+	Stripe StripeConfig
+
+	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
+	Telemetry TelemetryConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
 
 // AuthzConfig is forma2's AUTHZED_* configuration. SpiceDB is the only authorization evaluator: while it is disabled every check fails closed with authzed_disabled and the projection outbox is left undelivered.
 type AuthzConfig struct {
-	Enabled bool `env:"AUTHZED_ENABLED" envDefault:"0"`
+	Enabled AuthzedFlag `env:"AUTHZED_ENABLED" envDefault:"0"`
 	// Endpoint is SpiceDB's gRPC address as host:port, without a scheme or path.
 	Endpoint string `env:"AUTHZED_ENDPOINT"`
 	// Token is the gRPC preshared key.
 	Token string `env:"AUTHZED_TOKEN"`
 	// Insecure talks plaintext gRPC instead of TLS.
-	Insecure bool `env:"AUTHZED_INSECURE" envDefault:"0"`
+	Insecure AuthzedFlag `env:"AUTHZED_INSECURE" envDefault:"0"`
 	// Consistency is what permission checks and resource lookups ask SpiceDB for: fully_consistent (the default, and what forma2 always used) evaluates at the newest revision; minimize_latency lets SpiceDB answer from its quantized cache, so a delivered revocation can take effect a few seconds later. Operational reads always use fully_consistent.
 	Consistency string `env:"AUTHZED_CONSISTENCY" envDefault:"fully_consistent"`
 }
@@ -197,6 +209,18 @@ type SSOConfig struct {
 	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
+	// SAMLDatabaseURL is forma2's switch for SAML SSO: set, the SAML button is offered and the connection is read from saml-connection/*.xml at start-up. forma2 kept its SAML state in that separate database; here the connection lives in the main one, so only whether it is set matters.
+	SAMLDatabaseURL Secret `env:"SAML_DATABASE_URL"`
+}
+
+// StripeConfig is forma2's STRIPE_* variables, all optional.
+type StripeConfig struct {
+	// SecretKey is the API key every Stripe call is made with; without it billing does nothing.
+	SecretKey Secret `env:"STRIPE_SECRET_KEY"`
+	// WebhookSecret verifies the signature of the events Stripe posts to /api/billing/stripe-webhook; without it the endpoint answers 503.
+	WebhookSecret Secret `env:"STRIPE_WEBHOOK_SECRET"`
+	// PublishableKey is handed to Stripe.js on the billing page to confirm a card payment that needs 3D Secure.
+	PublishableKey string `env:"STRIPE_PUBLISHABLE_KEY"`
 }
 
 // IntegrationsConfig is forma2's OAuth app credentials of the third-party integrations, under its variable names. An integration can be connected exactly when its variables are set.
@@ -241,10 +265,21 @@ func (s SSOConfig) OIDCEnabled() bool {
 	return s.OIDCClientID != "" && s.OIDCClientSecret != "" && s.OIDCIssuer != ""
 }
 
+// SAMLEnabled is forma2's SAML_OAUTH_ENABLED. Its licence check always granted SAML, so the variable is the only gate.
+func (s SSOConfig) SAMLEnabled() bool { return s.SAMLDatabaseURL != "" }
+
+// forma2ID is zod's cuid2 pattern, which forma2 validated AUTH_SSO_DEFAULT_ORGANIZATION_ID against.
+var forma2ID = regexp.MustCompile(`^[0-9a-z]+$`)
+
+// DefaultOrganization is the organization AUTH_SSO_DEFAULT_ORGANIZATION_ID names, if set. A forma2 id resolves to the row it was migrated to, so a value set for forma2 keeps naming the same organization.
+func (s SSOConfig) DefaultOrganization() (uuid.UUID, bool) {
+	return legacyid.Resolve(s.DefaultOrganizationID)
+}
+
 func (s SSOConfig) validate() error {
-	if s.DefaultOrganizationID != "" {
-		if _, err := uuid.Parse(s.DefaultOrganizationID); err != nil {
-			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID), got %q", s.DefaultOrganizationID)
+	if id := s.DefaultOrganizationID; id != "" {
+		if _, err := uuid.Parse(id); (err != nil || len(id) != 36) && !forma2ID.MatchString(id) {
+			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID, or the cuid2 id forma2 knew it by), got %q", id)
 		}
 	}
 	switch s.DefaultOrganizationRole {
@@ -268,7 +303,7 @@ func (s SSOConfig) validate() error {
 	return nil
 }
 
-// parseFlag reads every bool as a "1"/"0" switch. forma2 accepted exactly those two values, so anything else fails the start instead of being read as one or the other.
+// parseFlag reads every bool as a "1"/"0" switch. forma2 accepted exactly those two values for its switches, so anything else fails the start instead of being read as one or the other.
 func parseFlag(v string) (any, error) {
 	switch v {
 	case "1":
@@ -280,7 +315,24 @@ func parseFlag(v string) (any, error) {
 	}
 }
 
-var parseOptions = env.Options{FuncMap: map[reflect.Type]env.ParserFunc{reflect.TypeFor[bool](): parseFlag}}
+// AuthzedFlag is a switch that also takes "true" and "false": forma2 read AUTHZED_ENABLED and AUTHZED_INSECURE with z.enum(["true", "false", "1", "0"]), its installer writes AUTHZED_ENABLED=true into .env and its compose file and README used true/false, so those deployments keep starting.
+type AuthzedFlag bool
+
+func parseAuthzedFlag(v string) (any, error) {
+	switch v {
+	case "1", "true":
+		return AuthzedFlag(true), nil
+	case "0", "false":
+		return AuthzedFlag(false), nil
+	default:
+		return nil, fmt.Errorf("must be true, false, 1 or 0, got %q", v)
+	}
+}
+
+var parseOptions = env.Options{FuncMap: map[reflect.Type]env.ParserFunc{
+	reflect.TypeFor[bool]():        parseFlag,
+	reflect.TypeFor[AuthzedFlag](): parseAuthzedFlag,
+}}
 
 // SMTPConfigured reports whether mail can be sent at all.
 func (c Config) SMTPConfigured() bool {
@@ -370,10 +422,16 @@ func (c Config) validate() error {
 	if err := c.SSO.validate(); err != nil {
 		return err
 	}
+	if u := c.MCPOAuthJWKSURL; u != nil && ((u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
+		return fmt.Errorf("MCP_OAUTH_JWKS_URL must be an absolute http(s) URL, got %q", u.String())
+	}
 	if err := c.S3.validate(); err != nil {
 		return err
 	}
 	if err := c.AI.validate(); err != nil {
+		return err
+	}
+	if err := c.Telemetry.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {
@@ -466,12 +524,14 @@ func validAuthzEndpoint(value string) bool {
 }
 
 type migrateEnv struct {
-	DatabaseURL string     `env:"DATABASE_URL,required,notEmpty"`
-	LogLevel    slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	LogFormat   string     `env:"LOG_FORMAT" envDefault:"json"`
+	DatabaseURL string `env:"DATABASE_URL"`
+	// MigrateDatabaseURL is forma2's MIGRATE_DATABASE_URL: a connection with the privileges schema changes need, used for migrations only while the processes keep DATABASE_URL.
+	MigrateDatabaseURL string     `env:"MIGRATE_DATABASE_URL"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat          string     `env:"LOG_FORMAT" envDefault:"json"`
 }
 
-// LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone.
+// LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone. Its DatabaseURL is MIGRATE_DATABASE_URL when that is set (ignoring surrounding whitespace, as forma2 did), else DATABASE_URL.
 func LoadForMigrate() (Config, error) {
 	e, err := env.ParseAs[migrateEnv]()
 	if err != nil {
@@ -480,7 +540,57 @@ func LoadForMigrate() (Config, error) {
 	if e.LogFormat != "json" && e.LogFormat != "text" {
 		return Config{}, fmt.Errorf("load config: LOG_FORMAT must be json or text, got %q", e.LogFormat)
 	}
-	return Config{DatabaseURL: e.DatabaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+	databaseURL := strings.TrimSpace(e.MigrateDatabaseURL)
+	if databaseURL == "" {
+		databaseURL = strings.TrimSpace(e.DatabaseURL)
+	}
+	if databaseURL == "" {
+		return Config{}, errors.New("load config: MIGRATE_DATABASE_URL or DATABASE_URL is required")
+	}
+	return Config{DatabaseURL: databaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+}
+
+// Startup is what `forma start`, the container's default command, decides before it serves: forma2's entrypoint switches, under their names.
+type Startup struct {
+	// SkipMigration leaves the schema to a separate migration job (Helm, docker compose) instead of migrating before serving, forma2's SKIP_STARTUP_MIGRATION.
+	SkipMigration bool
+	// WorkerEnabled runs the background job worker in the same process as the HTTP server, as forma2's web container did unless BULLMQ_WORKER_ENABLED was 0. Deployments that run `forma worker` separately turn it off.
+	WorkerEnabled bool
+}
+
+type startupEnv struct {
+	SkipStartupMigration string `env:"SKIP_STARTUP_MIGRATION"`
+	WorkerEnabled        bool   `env:"BULLMQ_WORKER_ENABLED" envDefault:"1"`
+}
+
+// LoadStartup reads the switches of `forma start`. SKIP_STARTUP_MIGRATION keeps forma2's spelling, "true", which its chart and compose file set; 1 and 0 are accepted too, and anything else fails the start.
+func LoadStartup() (Startup, error) {
+	e, err := env.ParseAsWithOptions[startupEnv](parseOptions)
+	if err != nil {
+		return Startup{}, fmt.Errorf("load config: %w", err)
+	}
+	s := Startup{WorkerEnabled: e.WorkerEnabled}
+	switch e.SkipStartupMigration {
+	case "true", "1":
+		s.SkipMigration = true
+	case "", "false", "0":
+	default:
+		return Startup{}, fmt.Errorf("load config: SKIP_STARTUP_MIGRATION must be true or false, got %q", e.SkipStartupMigration)
+	}
+	return s, nil
+}
+
+type healthcheckEnv struct {
+	HTTPAddr string `env:"HTTP_ADDR" envDefault:":3000"`
+}
+
+// LoadForHealthcheck reads only the listen address, which `forma healthcheck` probes.
+func LoadForHealthcheck() (Config, error) {
+	e, err := env.ParseAs[healthcheckEnv]()
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	return Config{HTTPAddr: e.HTTPAddr}, nil
 }
 
 type authzEnv struct {

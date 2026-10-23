@@ -19,11 +19,13 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/authz/authztest"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/storage"
@@ -116,7 +118,12 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		t.Fatal(err)
 	}
 	wsSvc := workspace.NewService(cfg, wsRepo, e.authz.Authorizer, limiter, emitter, schemas, storage.NewService(bucket), log)
-	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, log)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), db, enqueuer, log)
+	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, lifecycle, log)
 
 	e.engine = gin.New()
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

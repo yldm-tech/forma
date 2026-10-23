@@ -52,7 +52,7 @@ func isUniqueViolation(err error, constraint string) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505" && (constraint == "" || pgErr.ConstraintName == constraint)
 }
 
-const surveyColumns = `s.id, s.created_at, s.updated_at, s.workspace_id, s.created_by, s.segment_id, s.name, s.type, s.status,
+const surveyColumns = `s.id, s.created_at, s.updated_at, s.workspace_id, s.created_by, s.segment_id, s.name, s.type, s.status, s.redirect_url,
 	s.welcome_card, s.blocks, s.endings, s.hidden_fields, s.variables, s.inline_triggers, s.survey_closed_message,
 	s.workspace_overwrites, s.styling, s.single_use, s.recaptcha, s.metadata, s.display_option, s.recontact_days,
 	s.display_limit, s.display_percentage::float8 AS display_percentage, s.auto_close, s.auto_complete, s.delay, s.publish_on, s.close_on,
@@ -69,6 +69,7 @@ type surveyRow struct {
 	Name                        string
 	Type                        string
 	Status                      string
+	RedirectURL                 *string
 	WelcomeCard                 []byte
 	Blocks                      []byte
 	Endings                     []byte
@@ -113,7 +114,7 @@ func rawOrNull(b []byte) json.RawMessage {
 func (row surveyRow) survey() *Survey {
 	return &Survey{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Name: row.Name, Type: row.Type, WorkspaceID: row.WorkspaceID,
-		CreatedBy: row.CreatedBy, Status: row.Status, DisplayOption: row.DisplayOption, AutoClose: row.AutoClose, RecontactDays: row.RecontactDays,
+		CreatedBy: row.CreatedBy, Status: row.Status, RedirectURL: row.RedirectURL, DisplayOption: row.DisplayOption, AutoClose: row.AutoClose, RecontactDays: row.RecontactDays,
 		DisplayLimit: row.DisplayLimit, WelcomeCard: rawOrNull(row.WelcomeCard), Blocks: rawOrNull(row.Blocks), Endings: rawOrNull(row.Endings),
 		HiddenFields: rawOrNull(row.HiddenFields), Variables: rawOrNull(row.Variables), Delay: row.Delay, PublishOn: row.PublishOn,
 		CloseOn: row.CloseOn, ArchivedAt: row.ArchivedAt, AutoComplete: row.AutoComplete, WorkspaceOverwrites: rawOrNull(row.WorkspaceOverwrites),

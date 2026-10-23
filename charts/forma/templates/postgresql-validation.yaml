@@ -1,0 +1,8 @@
+{{- /* PostgreSQL cannot open a data directory another major version initialised. An upgrade that would start the bundled database on a new major over its existing volume (a forma2 release ran pgvector/pgvector:pg17) is refused until the data has been moved as README.md describes. */ -}}
+{{- if and .Values.postgresql.enabled .Release.IsUpgrade (not .Values.postgresql.majorUpgradeAcknowledged) -}}
+{{- $running := include "forma.postgresqlMajor" (include "forma.postgresqlRunningImage" .) -}}
+{{- $target := include "forma.postgresqlMajor" (printf "image:%v" .Values.postgresql.image.tag) -}}
+{{- if and $running $target (ne $running $target) -}}
+{{- fail (printf "The bundled PostgreSQL runs PostgreSQL %s, and this chart would start PostgreSQL %s on the same volume, which cannot open a data directory PostgreSQL %s initialised: the database would not start. Dump the databases, start a fresh volume and restore them as the chart's README describes (Upgrading the bundled PostgreSQL from 17 to 18), then upgrade with postgresql.majorUpgradeAcknowledged=true." $running $target $running) -}}
+{{- end -}}
+{{- end -}}

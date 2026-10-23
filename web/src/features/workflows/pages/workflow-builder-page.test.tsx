@@ -15,9 +15,14 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
 import { authKeys } from "../../../lib/queries/auth";
+import { initPostHogClient } from "../../../lib/telemetry/posthog";
 import type { TWorkflowResource } from "../api";
 import type { TWorkflowDefinition } from "../definition";
 import { WorkflowBuilderPage } from "./workflow-builder-page";
+
+const posthog = vi.hoisted(() => ({ __loaded: false, capture: vi.fn(), init: vi.fn() }));
+
+vi.mock("posthog-js", () => ({ default: posthog }));
 
 const WORKSPACE_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
 const WORKFLOW_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d01";
@@ -243,5 +248,58 @@ describe("WorkflowBuilderPage", () => {
     await waitFor(() => expect(screen.getByTestId("node-param").textContent).toBe("email-1"));
     // The first blank field in form order takes the focus.
     await waitFor(() => expect(document.activeElement?.id).toBe("workflow-email-to"));
+  });
+});
+
+describe("WorkflowBuilderPage analytics", () => {
+  beforeAll(async () => {
+    await initPostHogClient("phc_test", {});
+  });
+
+  test("reports the builder, the opened step, the problems and the fix, without node ids or field paths", async () => {
+    posthog.capture.mockClear();
+    stubLayout();
+    stubServer();
+    renderPage("email-1");
+
+    await waitFor(() =>
+      expect(posthog.capture).toHaveBeenCalledWith("workflow_surface_viewed", {
+        surface: "builder",
+        workflow_id: WORKFLOW_ID,
+        workflow_status: "draft",
+        is_read_only: false,
+      })
+    );
+    await waitFor(() =>
+      expect(posthog.capture).toHaveBeenCalledWith("workflow_inspector_opened", {
+        node_type: "send_email",
+        has_config_form: true,
+        is_editable: true,
+      })
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: i18n.t("workspace.workflows.validation_problems_count", { count: 1 }),
+      })
+    );
+    expect(posthog.capture).toHaveBeenCalledWith("workflow_validation_problems_viewed", {
+      problem_count: 1,
+      problem_codes: ["step_incomplete"],
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: i18n.t("workspace.workflows.validation_problem_fix_label", {
+          problem: i18n.t("workspace.workflows.validation_problem_step_incomplete"),
+        }),
+      })
+    );
+    expect(posthog.capture).toHaveBeenCalledWith("workflow_validation_problem_fix_clicked", {
+      problem_code: "step_incomplete",
+    });
+    expect(posthog.capture.mock.calls.filter(([event]) => event === "workflow_surface_viewed")).toHaveLength(
+      1
+    );
+    expect(JSON.stringify(posthog.capture.mock.calls)).not.toContain("email-1");
   });
 });

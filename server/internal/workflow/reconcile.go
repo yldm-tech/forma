@@ -87,6 +87,8 @@ type orphan struct {
 	ID           uuid.UUID
 	WorkflowID   uuid.UUID
 	WorkspaceID  uuid.UUID
+	TriggerType  string
+	Attempt      int
 	CreatedAt    time.Time
 	DispatchedAt *time.Time
 }
@@ -94,7 +96,7 @@ type orphan struct {
 // Orphans is forma2's reconcileOrphanedWorkflowRuns over real runs still queued after the grace window, oldest first. Dispatching again is a no-op while the run's job exists, so every such run is dispatched; one never dispatched before is counted and stamped. Each run is handled on its own, so one failure does not stop the sweep.
 func (r *Reconciler) Orphans(ctx context.Context, now time.Time) (OrphanResult, error) {
 	var rows []orphan
-	if err := r.db.WithContext(ctx).Raw(`SELECT id, workflow_id, workspace_id, created_at, dispatched_at FROM workflow_runs
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, workflow_id, workspace_id, trigger_type, attempt, created_at, dispatched_at FROM workflow_runs
 		WHERE status = 'queued' AND NOT is_dry_run AND created_at < ? ORDER BY created_at LIMIT ?`, now.Add(-orphanMinAge), reconcileBatch).Scan(&rows).Error; err != nil {
 		return OrphanResult{}, fmt.Errorf("scan queued workflow runs: %w", err)
 	}
@@ -114,6 +116,12 @@ func (r *Reconciler) Orphans(ctx context.Context, now time.Time) (OrphanResult, 
 			case failed.RowsAffected > 0:
 				res.AgedOutFailed++
 				log.WarnContext(ctx, "Orphaned workflow run exceeded reconcile age ceiling; marked failed", "created_at", o.CreatedAt)
+				// A lost dispatch counts in the snapshot's failed runs, so it is reported like the runner's own failure.
+				kind := "never_dispatched"
+				if o.DispatchedAt != nil {
+					kind = "dispatched_never_executed"
+				}
+				captureRunFailed(ctx, r.db, log, runFailure{runID: o.ID, workflowID: o.WorkflowID, workspaceID: o.WorkspaceID, triggerType: o.TriggerType, errorKind: kind, attempt: o.Attempt})
 			}
 			continue
 		}
@@ -142,6 +150,8 @@ type stuckRun struct {
 	ID          uuid.UUID
 	WorkflowID  uuid.UUID
 	WorkspaceID uuid.UUID
+	TriggerType string
+	Attempt     int
 	StartedAt   *time.Time
 	UpdatedAt   time.Time
 }
@@ -149,7 +159,7 @@ type stuckRun struct {
 // Stuck is forma2's reconcileStuckRunningWorkflowRuns over real runs running without a write for an hour: each is failed, if it is still running, and only then are its in-flight steps marked skipped, never failed, which the runner would claim and send again.
 func (r *Reconciler) Stuck(ctx context.Context, now time.Time) (StuckResult, error) {
 	var rows []stuckRun
-	if err := r.db.WithContext(ctx).Raw(`SELECT id, workflow_id, workspace_id, started_at, updated_at FROM workflow_runs
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, workflow_id, workspace_id, trigger_type, attempt, started_at, updated_at FROM workflow_runs
 		WHERE status = 'running' AND NOT is_dry_run AND updated_at < ? ORDER BY updated_at LIMIT ?`, now.Add(-stuckRunningMaxAge), reconcileBatch).Scan(&rows).Error; err != nil {
 		return StuckResult{}, fmt.Errorf("scan running workflow runs: %w", err)
 	}
@@ -166,6 +176,7 @@ func (r *Reconciler) Stuck(ctx context.Context, now time.Time) (StuckResult, err
 			continue
 		}
 		res.Recovered++
+		captureRunFailed(ctx, r.db, log, runFailure{runID: s.ID, workflowID: s.WorkflowID, workspaceID: s.WorkspaceID, triggerType: s.TriggerType, errorKind: "abandoned_mid_execution", attempt: s.Attempt})
 		skipped := r.db.WithContext(ctx).Exec(`UPDATE workflow_run_logs SET status = 'skipped', error = ?, finished_at = ? WHERE run_id = ? AND status = 'running'`, abandonedStep, now, s.ID)
 		if skipped.Error != nil {
 			log.ErrorContext(ctx, "Failed to recover stuck running workflow run", "err", skipped.Error)

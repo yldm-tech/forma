@@ -1,0 +1,35 @@
+{
+  "case": "v1-action-classes-create-other-workspace-key",
+  "description": "POST /api/v1/management/action-classes with the `other` key (manage on the second workspace only).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/management/action-classes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:other>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "name": "Other key",
+      "type": "code",
+      "key": "other_key"
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "unauthorized",
+      "message": "You are not authorized to access this resource",
+      "details": {}
+    }
+  }
+}

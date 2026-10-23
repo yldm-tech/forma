@@ -1,0 +1,48 @@
+{
+  "case": "v2-responses-create-validation-failed",
+  "description": "POST /api/v2/management/responses with the `manage` key (manage on the workspace, organization access read and write). With response data that fails the survey's element validation.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/responses",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "surveyId": "<id:survey:link>",
+      "finished": true,
+      "data": {
+        "feedback": ""
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 400,
+        "message": "Bad Request",
+        "details": [
+          {
+            "field": "response.data.feedback",
+            "issue": "Please fill out this field",
+            "meta": {
+              "elementId": "feedback",
+              "ruleId": "required",
+              "ruleType": "minLength"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "case": "mcp-foreign-origin",
+  "description": "POST /api/mcp with the `manage` key from a foreign Origin.",
+  "request": {
+    "method": "POST",
+    "path": "/api/mcp",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json",
+      "accept": "application/json, text/event-stream",
+      "origin": "https://evil.example"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "method": "tools/list",
+      "params": {}
+    }
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "empty",
+    "body": null
+  },
+  "notes": {
+    "knownDefect": "See mcp-unauthenticated: intended is a 403 problem+json for an Origin other than the public origin."
+  }
+}

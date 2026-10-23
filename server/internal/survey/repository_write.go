@@ -15,6 +15,7 @@ type record struct {
 	Name                        string
 	Type                        string
 	Status                      string
+	RedirectURL                 *string
 	CreatedBy                   *uuid.UUID
 	WelcomeCard                 json.RawMessage
 	Blocks                      json.RawMessage
@@ -52,7 +53,7 @@ type record struct {
 // recordOf is a stored survey's columns, the starting point of an edit.
 func recordOf(s *Survey) record {
 	return record{
-		Name: s.Name, Type: s.Type, Status: s.Status, CreatedBy: s.CreatedBy, WelcomeCard: s.WelcomeCard, Blocks: s.Blocks, Endings: s.Endings,
+		Name: s.Name, Type: s.Type, Status: s.Status, RedirectURL: s.RedirectURL, CreatedBy: s.CreatedBy, WelcomeCard: s.WelcomeCard, Blocks: s.Blocks, Endings: s.Endings,
 		HiddenFields: s.HiddenFields, Variables: s.Variables, Metadata: s.Metadata, InlineTriggers: s.InlineTriggers, SurveyClosedMessage: s.SurveyClosedMessage,
 		WorkspaceOverwrites: s.WorkspaceOverwrites, Styling: s.Styling, SingleUse: s.SingleUse, Recaptcha: s.Recaptcha, DisplayOption: s.DisplayOption,
 		RecontactDays: s.RecontactDays, DisplayLimit: s.DisplayLimit, DisplayPercentage: s.DisplayPercentage, AutoClose: s.AutoClose, AutoComplete: s.AutoComplete,
@@ -69,7 +70,7 @@ func (rec *record) columns() ([]string, []string, []any) {
 		json  bool
 		value any
 	}{
-		{"name", false, rec.Name}, {"type", false, rec.Type}, {"status", false, rec.Status},
+		{"name", false, rec.Name}, {"type", false, rec.Type}, {"status", false, rec.Status}, {"redirect_url", false, rec.RedirectURL},
 		{"welcome_card", true, jsonParam(rec.WelcomeCard)}, {"blocks", true, jsonParam(rec.Blocks)}, {"endings", true, jsonParam(rec.Endings)},
 		{"hidden_fields", true, jsonParam(rec.HiddenFields)}, {"variables", true, jsonParam(rec.Variables)}, {"metadata", true, jsonParam(rec.Metadata)},
 		{"inline_triggers", true, jsonParam(rec.InlineTriggers)}, {"survey_closed_message", true, jsonParam(rec.SurveyClosedMessage)},

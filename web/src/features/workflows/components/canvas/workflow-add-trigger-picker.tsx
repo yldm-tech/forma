@@ -10,6 +10,7 @@ import {
 } from "../../../../components/ui/dropdown-menu";
 import { cn } from "../../../../lib/cn";
 import { type TWorkflowTriggerType, WORKFLOW_TRIGGERS } from "../../definition";
+import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
 import { CATEGORY_CHIP_CLASS_NAMES } from "./workflow-canvas-node";
 
 interface TriggerOption {
@@ -59,7 +60,12 @@ export const WorkflowAddTriggerPicker = ({
         <DropdownMenuLabel>{t("workspace.workflows.triggers")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {options.map((option) => (
-          <DropdownMenuItem key={option.triggerType} onClick={() => onSelect(option.triggerType)}>
+          <DropdownMenuItem
+            key={option.triggerType}
+            onClick={() => {
+              trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.triggerAdded, { trigger_type: option.triggerType });
+              onSelect(option.triggerType);
+            }}>
             <span
               className={cn(
                 "flex size-6 shrink-0 items-center justify-center rounded-md",

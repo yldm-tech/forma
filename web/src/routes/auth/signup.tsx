@@ -21,7 +21,6 @@ import { withSignupEmail } from "../../features/auth/history-state";
 import { readLastUsed } from "../../features/auth/last-used";
 import { stringParam } from "../../features/auth/search";
 import { emailError, nameError, passwordError } from "../../features/auth/validation";
-import { errorMessage } from "../../lib/errors";
 import { type Validators, useForm } from "../../lib/form";
 
 interface SignupSearch {
@@ -228,7 +227,7 @@ function SignupPage() {
         returnToUrl={returnToUrl}
         source="signup"
         lastUsed={lastUsed}
-        onError={(error) => setSsoError(errorMessage(t, error))}
+        onError={setSsoError}
       />
 
       <div className="mt-9 text-center text-xs">

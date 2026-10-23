@@ -507,7 +507,7 @@ func (s *Service) recordV3(ctx context.Context, caller Caller, action audit.Acti
 }
 
 // CreateV3 is forma2's POST /api/v3/surveys behind workspace.write: the body is parsed first (400), then the document is checked against its own references and the workspace (422), then forma2's createSurvey runs.
-func (s *Service) CreateV3(ctx context.Context, caller Caller, body json.RawMessage) (*v3Resource, error) {
+func (s *Service) CreateV3(ctx context.Context, caller Caller, body json.RawMessage, createdFrom string) (*v3Resource, error) {
 	value, err := decodeValue(body)
 	if err != nil {
 		return nil, v3api.BadRequest("Invalid request body", v3api.InvalidParam{Name: "body", Reason: "Malformed JSON input, please check your request body"})
@@ -520,7 +520,7 @@ func (s *Service) CreateV3(ctx context.Context, caller Caller, body json.RawMess
 	if err := s.requireWorkspaceV3(ctx, caller, workspaceID, authz.WorkspaceWrite); err != nil {
 		return nil, err
 	}
-	return s.createFromDocument(ctx, caller, workspaceID, d)
+	return s.createFromDocument(ctx, caller, workspaceID, d, createdFrom)
 }
 
 // formatIssues is the API wrapper's formatZodIssues: the path or the fallback, the message as it is, and the v3 code when the issue carries one.
@@ -536,7 +536,8 @@ func formatIssues(issues []surveydoc.Issue, fallback string) []v3api.InvalidPara
 	return out
 }
 
-func (s *Service) createFromDocument(ctx context.Context, caller Caller, workspaceID uuid.UUID, d *v3Document) (*v3Resource, error) {
+// createFromDocument creates the survey; createdFrom is the editor's blank, template, xm-template or ai, empty for an API caller.
+func (s *Service) createFromDocument(ctx context.Context, caller Caller, workspaceID uuid.UUID, d *v3Document, createdFrom string) (*v3Resource, error) {
 	sv, err := s.createV3(ctx, caller, workspaceID, d)
 	if err != nil {
 		s.recordV3(ctx, caller, audit.ActionCreated, "", workspaceID, err, nil, nil)
@@ -544,6 +545,7 @@ func (s *Service) createFromDocument(ctx context.Context, caller Caller, workspa
 	}
 	r, _ := toV3Resource(sv, nil)
 	s.recordV3(ctx, caller, audit.ActionCreated, sv.ID.String(), workspaceID, nil, nil, r)
+	s.captureCreated(ctx, caller, sv, createdFrom)
 	return r, nil
 }
 

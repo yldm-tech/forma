@@ -1,4 +1,4 @@
-// Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseFinished event then starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
+// Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseCreated event is then metered for Stripe billing, and a responseFinished event starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
 //
 // A webhook that fails is retried by retrying the whole job, which delivers again to every subscribed webhook with the same webhook-id, so a receiver can drop the duplicate; no other side effect runs on an attempt that will be retried. The last attempt logs the failure and carries on with the side effects. Integrations and workflows are later modules, called through the Handoffs interfaces when they are registered.
 //
@@ -20,6 +20,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/notification"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
@@ -146,6 +147,16 @@ func (w *Worker) work(ctx context.Context, job *river.Job[response.PipelineArgs]
 	}
 	if err := w.deliverWebhooks(ctx, job, ev, hooks, log); err != nil {
 		return err
+	}
+	// forma2's runResponseCreatedSideEffects: the response is billable from its creation, counts toward the survey's analytics milestones, and may make the usage update due.
+	if args.Event == response.EventResponseCreated {
+		if w.handoffs.Meter != nil {
+			w.handoffs.Meter.ResponseCreated(ctx, ev.StripeCustomerID, ev.Response.ID, ev.Response.CreatedAt)
+		}
+		w.captureResponseMilestone(ctx, ev, log)
+		if w.handoffs.UsageReport != nil {
+			w.handoffs.UsageReport.Send(ctx)
+		}
 	}
 	if args.Event == response.EventResponseFinished {
 		return w.responseFinished(ctx, ev, org, log)
@@ -307,6 +318,37 @@ func (w *Worker) autoComplete(ctx context.Context, ev *Event, log *slog.Logger) 
 		return
 	}
 	w.audit.Log(ctx, e)
+}
+
+// captureResponseMilestone is forma2's captureSurveyResponsePostHogEvent: survey_response_received at the survey's first response, every tenth up to a hundred, then every hundredth.
+func (w *Worker) captureResponseMilestone(ctx context.Context, ev *Event, log *slog.Logger) {
+	if !analytics.Enabled() {
+		return
+	}
+	var count int64
+	if err := w.db.WithContext(ctx).Raw(`SELECT count(*) FROM responses WHERE survey_id = ?`, ev.Survey.ID).Scan(&count).Error; err != nil {
+		log.ErrorContext(ctx, "Response pipeline PostHog capture failed", "err", err)
+		return
+	}
+	milestone := ""
+	switch {
+	case count == 1:
+		milestone = "first"
+	case count <= 100 && count%10 == 0, count > 100 && count%100 == 0:
+		milestone = strconv.FormatInt(count, 10)
+	default:
+		return
+	}
+	org, workspace := ev.OrganizationID.String(), ev.WorkspaceID.String()
+	analytics.Capture(org, "survey_response_received", analytics.Properties{
+		"survey_id":         ev.Survey.ID.String(),
+		"survey_type":       ev.Survey.Type,
+		"organization_id":   org,
+		"workspace_id":      workspace,
+		"response_count":    count,
+		"is_first_response": count == 1,
+		"milestone":         milestone,
+	}, analytics.Groups{OrganizationID: org, WorkspaceID: workspace})
 }
 
 func (w *Worker) loadSurvey(ctx context.Context, id uuid.UUID) (*Survey, error) {

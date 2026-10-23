@@ -2,9 +2,21 @@ package config
 
 import (
 	"log/slog"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
+
+// unsetEnv removes a variable for the duration of the test; t.Setenv first records the value to restore.
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "")
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("unset %s: %v", key, err)
+	}
+}
 
 func setRequired(t *testing.T) {
 	t.Helper()
@@ -177,7 +189,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"reset lifetime long":      {"PASSWORD_RESET_TOKEN_LIFETIME_MINUTES", "121"},
 		"zero session max age":     {"SESSION_MAX_AGE", "0"},
 		"session max age text":     {"SESSION_MAX_AGE", "1d"},
-		"default org not uuid":     {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxyz123abc"},
+		"default org uppercase":    {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "CLXYZ123ABC"},
+		"default org braced uuid":  {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "{0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10}"},
 		"default org role":         {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
 		"relative auth url":        {"BETTER_AUTH_URL", "/api/auth"},
 		"nextauth url scheme":      {"NEXTAUTH_URL", "ftp://auth.example.com"},
@@ -222,6 +235,79 @@ func TestLoadForMigrateNeedsOnlyTheDatabase(t *testing.T) {
 	}
 }
 
+func TestLoadForMigratePrefersMigrateDatabaseURL(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://app@db/forma")
+	t.Setenv("MIGRATE_DATABASE_URL", " postgres://owner@db/forma ")
+	cfg, err := LoadForMigrate()
+	if err != nil {
+		t.Fatalf("LoadForMigrate: %v", err)
+	}
+	if cfg.DatabaseURL != "postgres://owner@db/forma" {
+		t.Fatalf("DatabaseURL = %q, want the trimmed MIGRATE_DATABASE_URL", cfg.DatabaseURL)
+	}
+
+	t.Setenv("MIGRATE_DATABASE_URL", " ")
+	if cfg, err = LoadForMigrate(); err != nil || cfg.DatabaseURL != "postgres://app@db/forma" {
+		t.Fatalf("blank MIGRATE_DATABASE_URL: cfg %q, err %v; want DATABASE_URL", cfg.DatabaseURL, err)
+	}
+
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("MIGRATE_DATABASE_URL", "postgres://owner@db/forma")
+	if cfg, err = LoadForMigrate(); err != nil || cfg.DatabaseURL != "postgres://owner@db/forma" {
+		t.Fatalf("MIGRATE_DATABASE_URL alone: cfg %q, err %v", cfg.DatabaseURL, err)
+	}
+}
+
+func TestLoadStartup(t *testing.T) {
+	cases := []struct {
+		skip, worker      string
+		wantSkip, wantRun bool
+		wantErr           bool
+	}{
+		{"", "", false, true, false},
+		{"true", "", true, true, false},
+		{"1", "0", true, false, false},
+		{"false", "1", false, true, false},
+		{"0", "", false, true, false},
+		{"yes", "", false, false, true},
+		{"TRUE", "", false, false, true},
+		{"", "true", false, false, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.skip+"/"+tc.worker, func(t *testing.T) {
+			t.Setenv("SKIP_STARTUP_MIGRATION", tc.skip)
+			t.Setenv("BULLMQ_WORKER_ENABLED", tc.worker)
+			if tc.worker == "" {
+				unsetEnv(t, "BULLMQ_WORKER_ENABLED")
+			}
+			s, err := LoadStartup()
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("LoadStartup accepted SKIP_STARTUP_MIGRATION=%q BULLMQ_WORKER_ENABLED=%q", tc.skip, tc.worker)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadStartup: %v", err)
+			}
+			if s.SkipMigration != tc.wantSkip || s.WorkerEnabled != tc.wantRun {
+				t.Fatalf("startup = %+v, want skip %v worker %v", s, tc.wantSkip, tc.wantRun)
+			}
+		})
+	}
+}
+
+func TestLoadForHealthcheck(t *testing.T) {
+	unsetEnv(t, "HTTP_ADDR")
+	if cfg, err := LoadForHealthcheck(); err != nil || cfg.HTTPAddr != ":3000" {
+		t.Fatalf("default: %q, %v", cfg.HTTPAddr, err)
+	}
+	t.Setenv("HTTP_ADDR", "127.0.0.1:8080")
+	if cfg, err := LoadForHealthcheck(); err != nil || cfg.HTTPAddr != "127.0.0.1:8080" {
+		t.Fatalf("HTTP_ADDR: %q, %v", cfg.HTTPAddr, err)
+	}
+}
+
 func TestLoadAuthz(t *testing.T) {
 	setRequired(t)
 	cfg, err := Load()
@@ -247,11 +333,41 @@ func TestLoadAuthz(t *testing.T) {
 	}
 }
 
+// forma2 read AUTHZED_ENABLED and AUTHZED_INSECURE with z.enum(["true","false","1","0"]), and its installer writes AUTHZED_ENABLED=true into .env, so both spellings keep working; every other switch stays 1/0.
+func TestLoadAcceptsForma2AuthzedBooleans(t *testing.T) {
+	for _, tc := range []struct {
+		enabled, insecure string
+		want              bool
+	}{{"true", "true", true}, {"false", "false", false}, {"1", "1", true}, {"0", "0", false}} {
+		setRequired(t)
+		t.Setenv("AUTHZED_ENABLED", tc.enabled)
+		t.Setenv("AUTHZED_INSECURE", tc.insecure)
+		t.Setenv("AUTHZED_ENDPOINT", "localhost:50051")
+		t.Setenv("AUTHZED_TOKEN", "secret")
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load with %q/%q: %v", tc.enabled, tc.insecure, err)
+		}
+		if bool(cfg.Authz.Enabled) != tc.want || bool(cfg.Authz.Insecure) != tc.want {
+			t.Errorf("%q/%q read as %v/%v, want %v", tc.enabled, tc.insecure, cfg.Authz.Enabled, cfg.Authz.Insecure, tc.want)
+		}
+		if cfg, err := LoadForAuthz(); err != nil || bool(cfg.Authz.Enabled) != tc.want {
+			t.Errorf("LoadForAuthz with %q: %+v, %v", tc.enabled, cfg.Authz, err)
+		}
+	}
+	setRequired(t)
+	t.Setenv("S3_FORCE_PATH_STYLE", "true")
+	if _, err := Load(); err == nil {
+		t.Error("S3_FORCE_PATH_STYLE=true accepted; only the AUTHZED_* switches take true/false")
+	}
+}
+
 func TestLoadRejectsInvalidAuthz(t *testing.T) {
 	cases := map[string]map[string]string{
 		"enabled without endpoint":  {"AUTHZED_ENABLED": "1", "AUTHZED_TOKEN": "secret"},
 		"enabled without token":     {"AUTHZED_ENABLED": "1", "AUTHZED_ENDPOINT": "localhost:50051"},
-		"enabled spelled true":      {"AUTHZED_ENABLED": "true"},
+		"enabled spelled yes":       {"AUTHZED_ENABLED": "yes"},
+		"insecure spelled TRUE":     {"AUTHZED_INSECURE": "TRUE"},
 		"blank token":               {"AUTHZED_TOKEN": "   "},
 		"endpoint with scheme":      {"AUTHZED_ENDPOINT": "http://localhost:50051"},
 		"endpoint with path":        {"AUTHZED_ENDPOINT": "localhost:50051/v1"},
@@ -307,7 +423,7 @@ func TestLoadSSO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.BetterAuthURL != nil {
+	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.SAMLEnabled() || cfg.SSO.BetterAuthURL != nil {
 		t.Fatalf("SSO = %+v, want every provider off", cfg.SSO)
 	}
 
@@ -316,7 +432,7 @@ func TestLoadSSO(t *testing.T) {
 		"AZUREAD_CLIENT_ID": "a", "AZUREAD_CLIENT_SECRET": "as", "AZUREAD_TENANT_ID": "common",
 		"OIDC_CLIENT_ID": "o", "OIDC_CLIENT_SECRET": "os", "OIDC_ISSUER": "https://idp.example.com/realms/forma", "OIDC_DISPLAY_NAME": "Okta",
 		"AUTH_SSO_DEFAULT_ORGANIZATION_ID": "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10", "AUTH_SSO_DEFAULT_ORGANIZATION_ROLE": "member",
-		"BETTER_AUTH_URL": "https://auth.example.com/api/auth",
+		"BETTER_AUTH_URL": "https://auth.example.com/api/auth", "SAML_DATABASE_URL": "postgres://forma:secret@db:5432/forma-saml",
 	} {
 		t.Setenv(k, v)
 	}
@@ -325,9 +441,21 @@ func TestLoadSSO(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 	s := cfg.SSO
-	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
+	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || !s.SAMLEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
 		s.DefaultOrganizationRole != "member" || s.BetterAuthURL.Host != "auth.example.com" {
 		t.Fatalf("SSO = %+v", s)
+	}
+
+	if id, ok := s.DefaultOrganization(); !ok || id.String() != "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10" {
+		t.Fatalf("DefaultOrganization = %s, %v", id, ok)
+	}
+	// forma2 validated the variable as a cuid2, so an existing deployment's value is its organization's forma2 id, which names the migrated row.
+	t.Setenv("AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxbivtla014iye2vfrn436xd")
+	if cfg, err = Load(); err != nil {
+		t.Fatalf("Load with a forma2 organization id: %v", err)
+	}
+	if id, ok := cfg.SSO.DefaultOrganization(); !ok || id != legacyid.ID("clxbivtla014iye2vfrn436xd") {
+		t.Fatalf("DefaultOrganization = %s, %v; want the migrated id", id, ok)
 	}
 
 	t.Setenv("OIDC_ISSUER", "idp.example.com")
@@ -369,5 +497,52 @@ func TestLoadS3(t *testing.T) {
 	t.Setenv("S3_ENDPOINT_URL", "https://gateway.storjshare.io/")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load rejected an endpoint with a bare trailing slash: %v", err)
+	}
+}
+
+func TestTelemetryDefaultsAreOff(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tc := cfg.Telemetry
+	if tc.OTelEnabled() || tc.SentryDSN != "" || tc.PostHogKey != "" || tc.UsageReportEnabled {
+		t.Errorf("telemetry = %+v, want everything off by default", tc)
+	}
+	if tc.ServiceName != "forma" || tc.PrometheusPort != 9464 || tc.TracesSampler != "always_on" || tc.DeploymentEnvironment() != "production" {
+		t.Errorf("telemetry defaults = %+v (environment %s)", tc, tc.DeploymentEnvironment())
+	}
+}
+
+func TestTelemetryConfig(t *testing.T) {
+	setRequired(t)
+	t.Setenv("PROMETHEUS_ENABLED", "1")
+	t.Setenv("NODE_ENV", "staging")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Telemetry.OTelEnabled() || cfg.Telemetry.DeploymentEnvironment() != "staging" {
+		t.Errorf("telemetry = %+v", cfg.Telemetry)
+	}
+	t.Setenv("ENVIRONMENT", "eu-prod")
+	if cfg, _ := Load(); cfg.Telemetry.DeploymentEnvironment() != "eu-prod" {
+		t.Errorf("ENVIRONMENT did not win over NODE_ENV: %s", cfg.Telemetry.DeploymentEnvironment())
+	}
+	for name, value := range map[string]string{
+		"PROMETHEUS_ENABLED":          "true",
+		"PROMETHEUS_EXPORTER_PORT":    "0",
+		"OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4318",
+		"SENTRY_DSN":                  "not a dsn",
+		"TELEMETRY_ENABLED":           "yes",
+	} {
+		t.Run(name, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(name, value)
+			if _, err := Load(); err == nil {
+				t.Errorf("%s=%q was accepted", name, value)
+			}
+		})
 	}
 }

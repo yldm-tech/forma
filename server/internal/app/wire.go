@@ -14,6 +14,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
@@ -22,7 +23,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/server/internal/mcp"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/notification"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -43,6 +48,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/usagereport"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
@@ -61,7 +67,7 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks. Its sessions are the SessionAuth every other module's routes authenticate with.
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
@@ -69,7 +75,7 @@ var authSet = wire.NewSet(
 	auth.NewService,
 	auth.NewTwoFactor,
 	auth.NewHandler,
-	auth.NewSSO,
+	newSSO,
 	auth.NewSSOHandler,
 )
 
@@ -189,6 +195,12 @@ var webhookSet = wire.NewSet(
 	webhook.NewV1Handler,
 )
 
+// managementAPISet is forma2's API-key management APIs: the v1 wrapper the /api/v1 routes share (/api/v1/management and /api/v1/webhooks), and /api/v1/management with /api/v2.
+var managementAPISet = wire.NewSet(
+	mgmtv1.New,
+	mgmtapi.NewHandler,
+)
+
 // integrationSet is the Google Sheets, Airtable, Notion and Slack integrations: the integrations pages' routes under /api/app, and forma2's OAuth authorize and callback routes at the paths registered with the providers.
 var integrationSet = wire.NewSet(
 	integration.NewRepository,
@@ -204,7 +216,27 @@ var workflowSet = wire.NewSet(
 	workflow.NewHandler,
 )
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
+// mcpSet is the MCP server at /api/mcp and the OAuth authorization server MCP clients sign in through, under /api/auth/oauth2 with its consent page's routes under /api/app.
+var mcpSet = wire.NewSet(
+	oauthserver.NewKeys,
+	oauthserver.NewHandler,
+	oauthserver.NewAppHandler,
+	oauthserver.NewTokenVerifier,
+	mcp.NewHandler,
+)
+
+// billingSet is Forma Cloud billing: the Stripe account, the billing page's routes under /api/app, the Stripe webhook at forma2's /api/billing/stripe-webhook, and the jobs an organization's creation and deletion queue. It does nothing unless IS_FORMA_CLOUD=1 and STRIPE_SECRET_KEY are set.
+var billingSet = wire.NewSet(
+	billing.NewStripe,
+	billing.NewRepository,
+	billing.NewEngine,
+	billing.NewService,
+	billing.NewHandler,
+	billing.NewWebhookHandler,
+	billing.NewLifecycle,
+)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
 	ratelimit.New,
@@ -218,9 +250,13 @@ var pipelineSet = wire.NewSet(
 	integration.NewRepository,
 	integration.NewDeliverer,
 	jobs.NewEnqueuer,
+	billing.NewStripe,
+	billing.NewMeter,
+	wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)),
 	workflow.NewEnqueuer,
 	workflow.NewRunner,
 	workflow.NewReconciler,
+	usagereport.NewReporter,
 	newPipelineHandoffs,
 	pipeline.NewWorker,
 )
@@ -248,8 +284,11 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,
+		managementAPISet,
 		integrationSet,
 		workflowSet,
+		mcpSet,
+		billingSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
@@ -273,6 +312,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		storage.NewService,
 		workspace.NewRepository,
 		pipelineSet,
+		billing.NewRepository,
+		billing.NewEngine,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

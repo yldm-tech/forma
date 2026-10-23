@@ -14,6 +14,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/langcode"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -149,6 +150,14 @@ func (s *Service) CreateLanguage(ctx context.Context, userID, workspaceID uuid.U
 		id = l.ID
 	}
 	s.recordLanguage(ctx, audit.ActionCreated, id, ws, err, nil, l)
+	if err == nil && ws != nil {
+		org := ws.OrganizationID.String()
+		analytics.Capture(userID.String(), "workspace_language_created", analytics.Properties{
+			"organization_id": org,
+			"workspace_id":    workspaceID.String(),
+			"language_code":   l.Code,
+		}, analytics.Groups{OrganizationID: org, WorkspaceID: workspaceID.String()})
+	}
 	return l, err
 }
 

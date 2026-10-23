@@ -1,0 +1,29 @@
+{
+  "case": "v1-rate-limited",
+  "description": "GET /api/v1/management/action-classes with the `ratelimit` key once its api:v1 budget (100 per fixed 60-second window, per key) is used up.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/action-classes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:ratelimit>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "too_many_requests",
+      "message": "Maximum number of requests reached. Please try again later.",
+      "details": {}
+    }
+  }
+}

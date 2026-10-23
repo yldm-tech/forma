@@ -183,7 +183,11 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 		return nil, err
 	}
 	updated, err := s.update(ctx, current, &in, draft)
-	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, in.ID.String(), s.organizationOf(ctx, current.WorkspaceID), err, current, updated)
+	org := s.organizationOf(ctx, current.WorkspaceID)
+	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, in.ID.String(), org, err, current, updated)
+	if err == nil {
+		captureEditorSave(caller, org, current, updated)
+	}
 	return updated, err
 }
 

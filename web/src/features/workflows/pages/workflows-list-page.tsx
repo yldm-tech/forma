@@ -13,6 +13,9 @@ import { WorkflowStatusPill } from "../components/workflow-status-pill";
 import { WorkflowsListBodyLoading } from "../components/workflows-loading";
 import { WorkflowsEmptyState } from "../components/workflows-empty-state";
 import { useWorkflows } from "../hooks/queries";
+import { useTrackWorkflowListFilters } from "../hooks/use-track-workflow-list-filters";
+import { useTrackWorkflowSurface } from "../hooks/use-track-workflow-surface";
+import { resolveWorkflowListSurface } from "../lib/analytics";
 import {
   type TStoredWorkflowFilters,
   WORKFLOW_FILTERS_KEY,
@@ -38,6 +41,15 @@ export const WorkflowsListPage = ({
   const debouncedSearchValue = useDebouncedValue(filters.searchValue, 300);
   const statusIn = useMemo(() => computeStatusIn(filters.selectedStatuses), [filters.selectedStatuses]);
 
+  // The stored filters are read before the first render, so they are settled from the start.
+  useTrackWorkflowListFilters({
+    isFilterInitialized: true,
+    searchValue: filters.searchValue,
+    debouncedSearchValue,
+    selectedStatuses: filters.selectedStatuses,
+    sortBy: filters.sortBy,
+  });
+
   const {
     workflows,
     isLoading,
@@ -57,6 +69,16 @@ export const WorkflowsListPage = ({
   });
 
   const hasActiveFilters = filters.selectedStatuses.length > 0 || filters.searchValue.length > 0;
+
+  // Reported once per screen the user lands on; null while loading or failed, neither of which is a visit. hasActiveFilters separates an empty workspace from an emptied filter.
+  useTrackWorkflowSurface(
+    resolveWorkflowListSurface({
+      showInitialLoading: isLoading && workflows.length === 0,
+      isError,
+      hasActiveFilters,
+      workflowCount: workflows.length,
+    })
+  );
 
   let listContent: React.ReactNode;
   if (isLoading && workflows.length === 0) {

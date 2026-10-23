@@ -1,0 +1,30 @@
+{
+  "case": "v2-users-list-without-organization-access",
+  "description": "GET /api/v2/organizations/<id:organization>/users with the `write` key (write on the workspace, no organization access).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/organizations/<id:organization>/users",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:write>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 401,
+        "message": "Unauthorized"
+      }
+    }
+  }
+}

@@ -64,7 +64,7 @@ func errAccountNotLinked() error {
 	return apperr.InvalidInput(CodeAccountNotLinked, "The sign-in method could not be linked to the account.")
 }
 
-// SSO signs users in through Google, GitHub, Azure AD and a generic OpenID Connect provider with forma2's rules (apps/web/modules/sso and the Better Auth providers it configured): the authorization code flow with state, PKCE and, for OpenID Connect, a nonce; identities matched by provider and subject; an address that already has an account linked only after its owner proves the mailbox; and new users created on first sign-in.
+// SSO signs users in through Google, GitHub, Azure AD, a generic OpenID Connect provider and SAML with forma2's rules (apps/web/modules/sso and the Better Auth providers it configured): the authorization code flow with state, PKCE and, for OpenID Connect, a nonce, or a SAML AuthnRequest bound to the same state (saml.go); identities matched by provider and subject; an address that already has an account linked only after its owner proves the mailbox; and new users created on first sign-in.
 type SSO struct {
 	cfg       config.Config
 	svc       *Service
@@ -101,10 +101,10 @@ func validatedCallbackURL(webApp *url.URL, raw string) string {
 		return ""
 	}
 	if !u.IsAbs() {
-		base, _ := url.Parse(urlOrigin(webApp))
+		base, _ := url.Parse(URLOrigin(webApp))
 		u = base.ResolveReference(u)
 	}
-	if (u.Scheme != "http" && u.Scheme != "https") || urlOrigin(u) != urlOrigin(webApp) || u.User != nil || strings.HasPrefix(u.Path, "//") {
+	if (u.Scheme != "http" && u.Scheme != "https") || URLOrigin(u) != URLOrigin(webApp) || u.User != nil || strings.HasPrefix(u.Path, "//") {
 		return ""
 	}
 	return u.String()
@@ -119,7 +119,7 @@ func enabledSSOProviders(cfg config.SSOConfig) []string {
 		id      string
 		enabled bool
 	}{
-		{providerGoogle, cfg.GoogleEnabled()}, {providerGitHub, cfg.GitHubEnabled()}, {providerAzureAD, cfg.AzureADEnabled()}, {providerOpenID, cfg.OIDCEnabled()},
+		{providerGoogle, cfg.GoogleEnabled()}, {providerGitHub, cfg.GitHubEnabled()}, {providerAzureAD, cfg.AzureADEnabled()}, {providerOpenID, cfg.OIDCEnabled()}, {providerSAML, cfg.SAMLEnabled()},
 	} {
 		if p.enabled {
 			ids = append(ids, p.id)
@@ -128,13 +128,18 @@ func enabledSSOProviders(cfg config.SSOConfig) []string {
 	return ids
 }
 
-// oauthState is what an authorization request in flight remembers. The browser holds only an opaque cookie naming it.
+// oauthState is what an authorization request in flight remembers. The browser holds only an opaque cookie naming it. A SAML flow has neither verifier nor nonce: its state is the RelayState.
 type oauthState struct {
 	Provider     string `json:"provider"`
 	State        string `json:"state"`
 	CodeVerifier string `json:"codeVerifier"`
 	Nonce        string `json:"nonce"`
 	CallbackURL  string `json:"callbackUrl"`
+}
+
+// offered reports whether a normalized provider id without an OAuth provider is SAML with SAML enabled.
+func (s *SSO) offered(provider string) bool {
+	return provider == providerSAML && s.samlEnabled()
 }
 
 // clientContext makes the OAuth and OpenID Connect libraries use the SSO HTTP client.
@@ -144,8 +149,9 @@ func (s *SSO) clientContext(ctx context.Context) context.Context {
 
 // start begins an authorization code flow and returns the provider's authorization URL and the state cookie that binds the flow to this browser. callbackURL is where a successful sign-in lands; empty means the app's root.
 func (s *SSO) start(ctx context.Context, providerID, callbackURL string) (string, issuedToken, error) {
-	p := s.providers[normalizeProvider(providerID)]
-	if p == nil {
+	provider := normalizeProvider(providerID)
+	p := s.providers[provider]
+	if p == nil && !s.offered(provider) {
 		return "", issuedToken{}, errProviderNotFound()
 	}
 	target := s.svc.pageURL("/")
@@ -155,6 +161,9 @@ func (s *SSO) start(ctx context.Context, providerID, callbackURL string) (string
 			errs.add("callbackUrl", "url", "")
 			return "", issuedToken{}, errs.err()
 		}
+	}
+	if p == nil {
+		return s.startSAML(ctx, target)
 	}
 	conf, _, err := p.config(s.clientContext(ctx), s.client)
 	if err != nil {
@@ -210,7 +219,7 @@ var providerErrorCode = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 func (s *SSO) callback(ctx context.Context, providerID string, query url.Values, stateCookie, acceptLanguage string, meta clientMeta) callbackResult {
 	provider := normalizeProvider(providerID)
 	p := s.providers[provider]
-	if p == nil {
+	if p == nil && !s.offered(provider) {
 		return s.failure(callbackProviderNotFound)
 	}
 	if stateCookie == "" {
@@ -241,6 +250,9 @@ func (s *SSO) callback(ctx context.Context, providerID string, query url.Values,
 	code := query.Get("code")
 	if code == "" {
 		return s.failure(callbackNoCode)
+	}
+	if p == nil {
+		return s.finishSAML(ctx, state, code, acceptLanguage, meta)
 	}
 	ctx = s.clientContext(ctx)
 	conf, discovered, err := p.config(ctx, s.client)
@@ -416,7 +428,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		if !created {
 			return errors.New("an account with the address was created concurrently")
 		}
-		if err := tx.setEmailVerified(ctx, userID, id.EmailVerified); err != nil {
+		if err := tx.setEmailVerified(ctx, userID, emailVerifiedOnCreate(provider, id)); err != nil {
 			return err
 		}
 		if err := tx.insertIdentity(ctx, userID, provider, id.Subject); err != nil {
@@ -429,11 +441,11 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		return callbackResult{}, err
 	}
 	orgForAudit := audit.Unknown
-	defaultOrg, hasDefaultOrg := s.defaultOrganization()
+	defaultOrg, hasDefaultOrg := s.cfg.SSO.DefaultOrganization()
 	if hasDefaultOrg {
 		orgForAudit = defaultOrg.String()
 	}
-	if !id.EmailVerified {
+	if !emailVerifiedOnCreate(provider, id) {
 		// The log is what a self-hoster sees; the audit event is the security trail. Neither carries the address.
 		s.log.WarnContext(ctx, "SSO sign-up created an account the identity provider did not report as verified",
 			"source", "sso-signup", "ssoProvider", provider, "userId", userID.String(), "emailVerified", false)
@@ -442,11 +454,23 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 			Status: audit.StatusSuccess, NewObject: map[string]any{"ssoUnverifiedSignupMarker": true, "provider": provider, "emailVerified": false},
 		})
 	}
+	source := "direct"
+	if strings.Contains(callbackURL, "token=") {
+		source = "invite"
+	}
+	var joined *uuid.UUID
 	if hasDefaultOrg {
 		s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
+		joined = &defaultOrg
 	}
+	captureSignedUp(userID, provider, email, source, joined)
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
 	return callbackResult{redirect: callbackURL, session: &sess}, nil
+}
+
+// emailVerifiedOnCreate is forma2's resolveSsoEmailVerifiedForCreate. SAML is its never-attests provider: an assertion cannot carry a verification claim, so there is nothing to honour and the user it creates is verified, as it always was. A linked SAML sign-in reads id.EmailVerified, which SAML never sets, so it never verifies an existing account's address.
+func emailVerifiedOnCreate(provider string, id ssoIdentity) bool {
+	return provider == providerSAML || id.EmailVerified
 }
 
 // callbackInvited is forma2's validateSsoInviteToken as gateSsoProvisioning used it for the domain exemption: the callback URL (already validated, absolute) carries an invite link in its token parameter, as the invite page's sign-in does, and the link is live and issued to this address.
@@ -464,15 +488,6 @@ func (s *SSO) callbackInvited(ctx context.Context, callbackURL, email string) (b
 
 // emailLocalSeparators are the characters of an address's local part that read as word breaks in a name derived from it.
 var emailLocalSeparators = regexp.MustCompile(`[._+]+`)
-
-func (s *SSO) defaultOrganization() (uuid.UUID, bool) {
-	if s.cfg.SSO.DefaultOrganizationID == "" {
-		return uuid.Nil, false
-	}
-	// Validated at start-up.
-	id, err := uuid.Parse(s.cfg.SSO.DefaultOrganizationID)
-	return id, err == nil
-}
 
 // defaultMembershipAttempts is how often the membership write is tried before it is given up and logged (forma2's MAX_ATTEMPTS).
 const defaultMembershipAttempts = 2
@@ -520,6 +535,7 @@ func (s *SSO) resolveDefaultOrganization(ctx context.Context, orgID uuid.UUID, u
 		return "", err
 	}
 	if created {
+		s.svc.billing.OrganizationCreated(ctx, orgID)
 		return "owner", nil
 	}
 	return existingRole, nil

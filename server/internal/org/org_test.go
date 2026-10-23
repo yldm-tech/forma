@@ -91,6 +91,21 @@ func TestCreateOrganizationOnCloudUsesCloudBilling(t *testing.T) {
 	}
 }
 
+// On Forma Cloud with Stripe, a new organization gets its Stripe customer and Hobby subscription and a deleted one has its subscriptions cancelled, forma2's ensureCloudStripeSetupForOrganization and cleanupStripeCustomer, both as jobs for `forma worker`.
+func TestOrganizationBillingJobs(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud, c.Stripe.SecretKey = true, "sk_test_123" })
+	owner := e.user()
+	c := e.organization(owner, "Acme")
+	if e.count(`SELECT count(*) FROM river_job WHERE kind = 'billing.setup-organization' AND args ->> 'organizationId' = ?`, c.ID.String()) != 1 {
+		t.Fatal("the billing setup was not queued")
+	}
+	e.exec(`UPDATE organization_billing SET stripe_customer_id = 'cus_123' WHERE organization_id = ?`, c.ID)
+	e.ok(e.do(owner, http.MethodDelete, orgPath(c.ID, ""), nil), http.StatusNoContent, nil)
+	if e.count(`SELECT count(*) FROM river_job WHERE kind = 'billing.cleanup-customer' AND args ->> 'stripeCustomerId' = 'cus_123'`) != 1 {
+		t.Fatal("the Stripe cleanup was not queued")
+	}
+}
+
 func TestGetOrganization(t *testing.T) {
 	e := newEnv(t)
 	owner, manager, billing, outsider := e.user(), e.user(), e.user(), e.user()
@@ -238,8 +253,8 @@ func TestUserManagementAllowed(t *testing.T) {
 	}
 	for _, tc := range cases {
 		for _, role := range []string{RoleOwner, RoleManager, RoleMember, RoleBilling} {
-			if got := userManagementAllowed(role, tc.minimum); got != slices.Contains(tc.allowed, role) {
-				t.Errorf("userManagementAllowed(%s, %s) = %v", role, tc.minimum, got)
+			if got := UserManagementAllowed(role, tc.minimum); got != slices.Contains(tc.allowed, role) {
+				t.Errorf("UserManagementAllowed(%s, %s) = %v", role, tc.minimum, got)
 			}
 		}
 	}

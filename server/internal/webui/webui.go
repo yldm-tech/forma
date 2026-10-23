@@ -2,7 +2,9 @@
 package webui
 
 import (
+	"bytes"
 	"embed"
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -10,6 +12,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
 //go:embed all:dist
@@ -26,13 +32,59 @@ type Handler struct {
 // surveyShell is the survey page bundle's entry in the build (web/survey.html).
 const surveyShell = "survey.html"
 
-// New uses the build embedded at compile time. A binary compiled without a web build still starts; it answers every page with 404 and keeps the API working.
-func New() (*Handler, error) {
+// New uses the build embedded at compile time, with the browser's runtime configuration written into index.html. A binary compiled without a web build still starts; it answers every page with 404 and keeps the API working.
+func New(cfg config.Config) (*Handler, error) {
 	sub, err := fs.Sub(embedded, "dist")
 	if err != nil {
 		return nil, err
 	}
-	return NewFromFS(sub)
+	h, err := NewFromFS(sub)
+	if err != nil {
+		return nil, err
+	}
+	h.index = withRuntimeConfig(h.index, cfg)
+	return h, nil
+}
+
+// sentryClientConfig is forma2's TSentryClientRuntimeConfig, read by the SPA from window.__formaSentryClientConfig.
+type sentryClientConfig struct {
+	DSN         string `json:"dsn"`
+	Release     string `json:"release,omitempty"`
+	Environment string `json:"environment,omitempty"`
+}
+
+// postHogClientConfig is what the SPA starts posthog-js with, from window.__formaPostHogConfig: the project key, the /ingest proxy as the API host and PostHog's EU app for links.
+type postHogClientConfig struct {
+	Key     string `json:"key"`
+	APIHost string `json:"apiHost"`
+	UIHost  string `json:"uiHost"`
+}
+
+// withRuntimeConfig writes the server-side settings the browser bundle needs into the page, as forma2's root layout did, so one build serves every deployment. Only what is configured is written: without SENTRY_DSN no DSN reaches the browser, without POSTHOG_KEY no key. JSON encoding escapes <, > and &, so no value can close the script element.
+func withRuntimeConfig(index []byte, cfg config.Config) []byte {
+	var script bytes.Buffer
+	if dsn := cfg.Telemetry.SentryDSN; dsn != "" {
+		c := sentryClientConfig{DSN: dsn, Environment: cfg.Telemetry.SentryEnvironment}
+		if buildinfo.Released() {
+			c.Release = buildinfo.Version
+		}
+		b, _ := json.Marshal(c)
+		script.WriteString("window.__formaSentryClientConfig=" + string(b) + ";")
+	}
+	if key := cfg.Telemetry.PostHogKey; key != "" {
+		b, _ := json.Marshal(postHogClientConfig{Key: key, APIHost: analytics.IngestPath, UIHost: analytics.Host})
+		script.WriteString("window.__formaPostHogConfig=" + string(b) + ";")
+	}
+	head := bytes.Index(index, []byte("</head>"))
+	if script.Len() == 0 || head < 0 {
+		return index
+	}
+	out := make([]byte, 0, len(index)+script.Len()+64)
+	out = append(out, index[:head]...)
+	out = append(out, `<script id="forma-runtime-config">`...)
+	out = append(out, script.Bytes()...)
+	out = append(out, "</script>"...)
+	return append(out, index[head:]...)
 }
 
 func NewFromFS(files fs.FS) (*Handler, error) {

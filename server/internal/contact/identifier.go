@@ -2,6 +2,7 @@ package contact
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -34,8 +35,8 @@ var reservedKeys = []string{"user_id", "first_name", "last_name"}
 // ReservedKeysText lists the reserved keys as forma2's messages print them.
 var ReservedKeysText = strings.Join(reservedKeys, ", ")
 
-// reservedKeyValidationMessage is the message of the create-key form's reserved-key check.
-var reservedKeyValidationMessage = "Key is reserved for the v5.1 safe-identifier default attribute migration. Reserved keys: " + ReservedKeysText + "."
+// ReservedKeyValidationMessage is the message of the create-key form's reserved-key check.
+var ReservedKeyValidationMessage = "Key is reserved for the v5.1 safe-identifier default attribute migration. Reserved keys: " + ReservedKeysText + "."
 
 func normalizeKey(key string) string {
 	return strings.ToLower(strings.TrimSpace(key))
@@ -76,4 +77,16 @@ func reservedKeyIssue(keys []string) string {
 func isStringMatch(query, value string) bool {
 	strip := strings.NewReplacer(" ", "", "_", "", "-", "")
 	return strings.Contains(strip.Replace(strings.ToLower(value)), strip.Replace(strings.ToLower(query)))
+}
+
+// ReservedKeysIssue is forma2's getReservedFutureDefaultAttributeKeyIssue: the message the v2 API and the bulk upload refuse reserved keys with, naming them lowercased and once each.
+func ReservedKeysIssue(keys []string) string {
+	var named []string
+	for _, k := range keys {
+		n := normalizeKey(k)
+		if n != "" && IsReservedKey(n) && !slices.Contains(named, n) {
+			named = append(named, n)
+		}
+	}
+	return "Reserved attribute key(s): " + strings.Join(named, ", ") + ". These keys are reserved for the v5.1 safe-identifier default attribute migration and cannot be created as custom attributes."
 }

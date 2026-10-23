@@ -1,0 +1,148 @@
+name: Release
+
+# Publishes the container image the cluster deploys, as forma2's release workflow did: same image names, the same tag scheme (<version>, sha-<commit>, latest) and the same labels, now built from the repository's Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64.
+#
+# Triggered on the push rather than chained off a successful CI run, because no workflow in this repository runs on pushes to main — the gate in `pr.yml` is `pull_request` and `merge_group`, so the merge commit has already been through it by the time it lands here.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish image
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+    env:
+      # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. forma2 published 0.1.<run> from its own repository into the same image repository; this repository's run numbers start again at 1, so its versions are 0.2.<run>, which can never collide with an image forma2 published.
+      VERSION: 0.2.${{ github.run_number }}
+      IMAGE: ghcr.io/yldm-tech/forma
+      DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs
+      RELEASE_SHA: ${{ github.sha }}
+      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover.
+      MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Before anything is pushed: a version is immutable. A rerun of the same run number may republish it from the commit it first published, and nothing else may overwrite it.
+      - name: Refuse to overwrite a published version
+        shell: bash
+        run: |
+          tag="v$VERSION"
+          if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
+            if [ "$(git rev-list -n 1 "$tag")" != "$RELEASE_SHA" ]; then
+              echo "::error::$tag already points at a different commit"
+              exit 1
+            fi
+          elif docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "::error::$IMAGE:$VERSION is already published, but no $tag tag records which commit it came from"
+            exit 1
+          fi
+
+      # Both build stages run on the runner's own platform and Go cross-compiles, so the arm64 image needs no emulation.
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # Stamped into the binary (buildinfo.Version), so telemetry, Sentry and the usage report name the release.
+          build-args: |
+            VERSION=${{ env.VERSION }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+          # `image.source` is not decoration: the github-deploy-tracker CronWorkflow in the cluster resolves an image back to its repository from this label, which is how a rollout becomes a GitHub Deployment status without naming the repo in yldm-platform.
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+          provenance: false
+
+      # The documentation is a second image from the same commit, so the two can never describe different versions of the product. Same tag, different repository.
+      - name: Build and push the documentation
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./docs/deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCS_IMAGE }}:${{ env.VERSION }}
+            ${{ env.DOCS_IMAGE }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+          provenance: false
+
+      # After the build, not before: forma2's first release run failed on a missing build secret and left a v0.1.1 tag pointing at a commit that never produced an image. The concurrency group serialises runs, so nothing is racing for the name.
+      - name: Tag the published commit
+        shell: bash
+        run: |
+          tag="v$VERSION"
+          if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
+            git tag "$tag" "$RELEASE_SHA"
+            git push origin "refs/tags/$tag"
+          fi
+
+      - name: Move latest and publish the release
+        shell: bash
+        run: |
+          # A slow run of an older commit must not roll `latest` backwards.
+          moved_latest=false
+          current=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
+          if [ "$MOVE_LATEST" = "true" ] && [ "$current" = "$RELEASE_SHA" ]; then
+            docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
+            moved_latest=true
+          fi
+
+          if ! gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release create "v$VERSION" --verify-tag --title "v$VERSION" --generate-notes --latest=false
+          fi
+
+          {
+            echo "## Published $VERSION"
+            echo "Source: $RELEASE_SHA"
+            echo "- \`$IMAGE:$VERSION\` (linux/amd64, linux/arm64)"
+            echo "- \`$DOCS_IMAGE:$VERSION\`"
+            echo "- \`$IMAGE:sha-$RELEASE_SHA\`"
+            if [ "$moved_latest" = "true" ]; then
+              echo "- \`$IMAGE:latest\` now points here"
+            else
+              echo "- \`$IMAGE:latest\` was left alone (RELEASE_MOVE_LATEST is not true, or main has moved on)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -12,8 +12,10 @@ import (
 
 // Verification purposes of single sign-on.
 const (
-	purposeOAuthState  = "oauth_state"
-	purposeSSORecovery = "sso_recovery"
+	purposeOAuthState    = "oauth_state"
+	purposeSSORecovery   = "sso_recovery"
+	purposeSAMLRequest   = "saml_request"
+	purposeSAMLAssertion = "saml_assertion"
 )
 
 // identityOwner returns the user an external identity is linked to, or uuid.Nil. External identities carry no issuer: forma2 keyed each provider's accounts by one fixed issuer string, so the provider alone is the namespace.
