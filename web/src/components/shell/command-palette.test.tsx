@@ -79,11 +79,18 @@ describe("navigationDestinations", () => {
     const result = build();
     for (const id of ["user-actions", "integrations", "tags"])
       expect(result.find((d) => d.id === id)?.href).toBe(`/workspaces/ws_1/${id}`);
-    expect(result.find((d) => d.id === "app-connection")?.href).toBe("/workspaces/ws_1/integrations/app-connection");
+    expect(result.find((d) => d.id === "app-connection")?.href).toBe(
+      "/workspaces/ws_1/integrations/app-connection"
+    );
   });
 
   test("offers the billing role only what it can open", () => {
-    expect(ids(build({ isBilling: true }))).toEqual(["org-general", "org-teams", "org-api-keys", "account-profile"]);
+    expect(ids(build({ isBilling: true }))).toEqual([
+      "org-general",
+      "org-teams",
+      "org-api-keys",
+      "account-profile",
+    ]);
   });
 
   test("withholds API keys from a member", () => {
@@ -123,7 +130,8 @@ const stubSurveys = () => {
 const renderPalette = async (isBilling = false) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const rootRoute = createRootRoute({ component: Outlet });
-  const page = (path: string) => createRoute({ getParentRoute: () => rootRoute, path, component: () => null });
+  const page = (path: string) =>
+    createRoute({ getParentRoute: () => rootRoute, path, component: () => null });
   const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => rootRoute,
@@ -169,10 +177,14 @@ test("typing filters the destinations, and choosing one navigates there", async 
   stubSurveys();
   const router = await renderPalette();
   fireEvent.keyDown(document, { key: "k", metaKey: true });
-  fireEvent.change(await screen.findByPlaceholderText(i18n.t("common.search")), { target: { value: "snippet" } });
+  fireEvent.change(await screen.findByPlaceholderText(i18n.t("common.search")), {
+    target: { value: "snippet" },
+  });
   await waitFor(() => expect(screen.queryByRole("option", { name: i18n.t("common.contacts") })).toBeNull());
   fireEvent.click(screen.getByRole("option", { name: i18n.t("common.web_and_mobile_sdk") }));
-  await waitFor(() => expect(router.state.location.pathname).toBe("/workspaces/w1/integrations/app-connection"));
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe("/workspaces/w1/integrations/app-connection")
+  );
   expect(screen.queryByPlaceholderText(i18n.t("common.search"))).toBeNull();
 });
 

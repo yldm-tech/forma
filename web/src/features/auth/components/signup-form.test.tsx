@@ -48,7 +48,9 @@ const stubSignup = () => {
     vi.fn(async (path: string, init: RequestInit = {}) => {
       if (path !== "/api/app/auth/signup") throw new Error(`unexpected ${path}`);
       bodies.push(JSON.parse(init.body as string) as Record<string, unknown>);
-      return new Response(JSON.stringify({ success: true }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "content-type": "application/json" },
+      });
     })
   );
   return bodies;
@@ -68,7 +70,11 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
         </Suspense>
       ),
     }),
-    createRoute({ getParentRoute: () => rootRoute, path: "/auth/verification-requested", component: () => null }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/auth/verification-requested",
+      component: () => null,
+    }),
   ]);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
   render(
@@ -84,7 +90,9 @@ const fillAndSubmit = async (optIn: string) => {
   fireEvent.click(await screen.findByRole("button", { name: i18n.t("auth.continue_with_email") }));
   fireEvent.change(screen.getByLabelText(i18n.t("common.full_name")), { target: { value: "Ada Lovelace" } });
   fireEvent.change(screen.getByLabelText(i18n.t("common.email")), { target: { value: "Ada@Example.com" } });
-  fireEvent.change(screen.getByLabelText(i18n.t("common.password")), { target: { value: "Correct-Horse-1" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("common.password")), {
+    target: { value: "Correct-Horse-1" },
+  });
   fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(optIn) }));
   const submit = screen.getByRole("button", { name: i18n.t("auth.continue_with_email") });
   await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
@@ -96,16 +104,24 @@ describe("the mailing list opt-in", () => {
     const bodies = stubSignup();
     renderForm();
     await fillAndSubmit(i18n.t("auth.signup.security_updates_title"));
-    expect(screen.queryByRole("checkbox", { name: new RegExp(i18n.t("auth.signup.product_updates_title")) })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: new RegExp(i18n.t("auth.signup.product_updates_title")) })
+    ).toBeNull();
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toMatchObject({ email: "ada@example.com", subscribeToSecurityUpdates: true, subscribeToProductUpdates: false });
+    expect(bodies[0]).toMatchObject({
+      email: "ada@example.com",
+      subscribeToSecurityUpdates: true,
+      subscribeToProductUpdates: false,
+    });
   });
 
   test("is the monthly product updates on Forma Cloud", async () => {
     const bodies = stubSignup();
     renderForm({ isFormaCloud: true });
     await fillAndSubmit(i18n.t("auth.signup.product_updates_title"));
-    expect(screen.queryByRole("checkbox", { name: new RegExp(i18n.t("auth.signup.security_updates_title")) })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: new RegExp(i18n.t("auth.signup.security_updates_title")) })
+    ).toBeNull();
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toMatchObject({ subscribeToSecurityUpdates: false, subscribeToProductUpdates: true });
   });

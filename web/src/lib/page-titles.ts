@@ -18,8 +18,12 @@ export type TitleSource = { key: string } | { text: string } | ((context: TitleC
 /** forma2's survey analysis layout: the survey's results, or the neutral "Survey" while its name is unknown. */
 const surveyResultsTitle = ({ t, params, queryClient }: TitleContext): string => {
   // The analysis views' own cache of the survey, which their route loads; read, never fetched, so a title cannot request data the page would not.
-  const survey = params.surveyId ? queryClient.getQueryData(analysisSurveyQuery(params.surveyId).queryKey) : undefined;
-  return survey ? t("workspace.surveys.summary.survey_results", { surveyName: survey.name }) : t("common.survey");
+  const survey = params.surveyId
+    ? queryClient.getQueryData(analysisSurveyQuery(params.surveyId).queryKey)
+    : undefined;
+  return survey
+    ? t("workspace.surveys.summary.survey_results", { surveyName: survey.name })
+    : t("common.survey");
 };
 
 const WS = "/_authenticated/workspaces/$workspaceId";
@@ -35,7 +39,9 @@ export const PAGE_TITLES: Record<string, TitleSource> = {
   [`${WS}/integrations/`]: { key: "common.integrations" },
   [`${WS}/integrations/app-connection`]: { key: "common.web_and_mobile_sdk" },
   [`${WS}/integrations/airtable`]: { key: "workspace.integrations.airtable.airtable_integration" },
-  [`${WS}/integrations/google-sheets`]: { key: "workspace.integrations.google_sheets.google_sheets_integration" },
+  [`${WS}/integrations/google-sheets`]: {
+    key: "workspace.integrations.google_sheets.google_sheets_integration",
+  },
   [`${WS}/integrations/notion`]: { key: "workspace.integrations.notion.notion_integration" },
   [`${WS}/integrations/slack`]: { key: "workspace.integrations.slack.slack_integration" },
   [`${WS}/integrations/webhooks`]: { key: "common.webhooks" },

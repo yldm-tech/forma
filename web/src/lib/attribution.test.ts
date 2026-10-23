@@ -1,10 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import {
-  attributionCookie,
-  buildAttributionQuerySuffix,
-  pickAttributionParams,
-  withAttributionQuery,
-} from "./attribution";
+import { attributionCookie, pickAttributionParams } from "./attribution";
 
 // forma2's attribution.ts and AttributionTracker: only whitelisted, non-blank values, first touch wins, nothing oversized is written.
 
@@ -21,17 +16,8 @@ describe("pickAttributionParams", () => {
 
   test("is empty without parameters", () => {
     expect(pickAttributionParams(null)).toEqual({});
-    expect(buildAttributionQuerySuffix(new URLSearchParams("inviteToken=t"))).toBe("");
+    expect(pickAttributionParams(new URLSearchParams("inviteToken=t"))).toEqual({});
   });
-});
-
-test("withAttributionQuery appends to a path with or without a query", () => {
-  const params = new URLSearchParams("utm_campaign=spring&callbackUrl=x");
-  expect(withAttributionQuery("/auth/signup", params)).toBe("/auth/signup?utm_campaign=spring");
-  expect(withAttributionQuery("/auth/signup?inviteToken=t", params)).toBe(
-    "/auth/signup?inviteToken=t&utm_campaign=spring"
-  );
-  expect(withAttributionQuery("/auth/signup", new URLSearchParams())).toBe("/auth/signup");
 });
 
 describe("attributionCookie", () => {
@@ -51,7 +37,16 @@ describe("attributionCookie", () => {
 
   test("writes nothing without attribution or when it would be too large to keep", () => {
     expect(attributionCookie("", "?inviteToken=t", "http:")).toBeNull();
-    const keys = ["page", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "initial_source", "entry_page"];
+    const keys = [
+      "page",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "initial_source",
+      "entry_page",
+    ];
     const huge = new URLSearchParams(keys.map((key) => [key, "é".repeat(256)]));
     expect(attributionCookie("", `?${huge.toString()}`, "http:")).toBeNull();
   });

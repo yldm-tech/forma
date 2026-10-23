@@ -75,7 +75,10 @@ test.each([
     `/workspaces/${WS}/settings/account/notifications`,
     "/_authenticated/workspaces/$workspaceId/settings/account/$",
   ],
-  [`/workspaces/${WS}/settings/organization`, "/_authenticated/workspaces/$workspaceId/settings/organization/$"],
+  [
+    `/workspaces/${WS}/settings/organization`,
+    "/_authenticated/workspaces/$workspaceId/settings/organization/$",
+  ],
   [
     `/workspaces/${WS}/settings/organization/billing`,
     "/_authenticated/workspaces/$workspaceId/settings/organization/$",
@@ -97,7 +100,13 @@ test.each([
 
 describe("static redirects", () => {
   test.each([
-    ["/i/{path}", InternalPathRoute, { _splat: "workspaces/w1/surveys" }, "?ref=mail", "/workspaces/w1/surveys?ref=mail"],
+    [
+      "/i/{path}",
+      InternalPathRoute,
+      { _splat: "workspaces/w1/surveys" },
+      "?ref=mail",
+      "/workspaces/w1/surveys?ref=mail",
+    ],
     ["/i", InternalPathRoute, {}, "", "/"],
     [
       "/organizations/{id}/projects/new/{path}",

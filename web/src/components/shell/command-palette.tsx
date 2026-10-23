@@ -49,8 +49,18 @@ export const navigationDestinations = (
     : [
         { id: "surveys", label: t("common.surveys"), href: `${workspace}/surveys`, group: workspaceGroup },
         { id: "contacts", label: t("common.contacts"), href: `${workspace}/contacts`, group: workspaceGroup },
-        { id: "workflows", label: t("common.workflows"), href: `${workspace}/workflows`, group: workspaceGroup },
-        { id: "user-actions", label: t("common.user_actions"), href: `${workspace}/user-actions`, group: workspaceGroup },
+        {
+          id: "workflows",
+          label: t("common.workflows"),
+          href: `${workspace}/workflows`,
+          group: workspaceGroup,
+        },
+        {
+          id: "user-actions",
+          label: t("common.user_actions"),
+          href: `${workspace}/user-actions`,
+          group: workspaceGroup,
+        },
         {
           id: "integrations",
           label: t("common.integrations"),
@@ -71,20 +81,45 @@ export const navigationDestinations = (
   const workspaceSettingsItems: NavigationDestination[] = isBilling
     ? []
     : [
-        { id: "ws-general", label: t("common.general"), href: `${workspaceSettings}/general`, group: settingsGroup },
-        { id: "ws-look", label: t("common.appearance"), href: `${workspaceSettings}/look`, group: settingsGroup },
+        {
+          id: "ws-general",
+          label: t("common.general"),
+          href: `${workspaceSettings}/general`,
+          group: settingsGroup,
+        },
+        {
+          id: "ws-look",
+          label: t("common.appearance"),
+          href: `${workspaceSettings}/look`,
+          group: settingsGroup,
+        },
         {
           id: "ws-languages",
           label: t("common.survey_languages"),
           href: `${workspaceSettings}/languages`,
           group: settingsGroup,
         },
-        { id: "ws-teams", label: t("common.team_access"), href: `${workspaceSettings}/teams`, group: settingsGroup },
+        {
+          id: "ws-teams",
+          label: t("common.team_access"),
+          href: `${workspaceSettings}/teams`,
+          group: settingsGroup,
+        },
       ];
 
   const organizationItems: NavigationDestination[] = [
-    { id: "org-general", label: t("common.general"), href: `${organizationSettings}/general`, group: organizationGroup },
-    { id: "org-teams", label: t("common.teams"), href: `${organizationSettings}/teams`, group: organizationGroup },
+    {
+      id: "org-general",
+      label: t("common.general"),
+      href: `${organizationSettings}/general`,
+      group: organizationGroup,
+    },
+    {
+      id: "org-teams",
+      label: t("common.teams"),
+      href: `${organizationSettings}/teams`,
+      group: organizationGroup,
+    },
     ...(isOwnerOrManager
       ? [
           {
@@ -97,12 +132,24 @@ export const navigationDestinations = (
       : []),
     // The billing page exists on Forma Cloud only.
     ...(isFormaCloud
-      ? [{ id: "org-billing", label: t("common.billing"), href: `${organizationSettings}/billing`, group: organizationGroup }]
+      ? [
+          {
+            id: "org-billing",
+            label: t("common.billing"),
+            href: `${organizationSettings}/billing`,
+            group: organizationGroup,
+          },
+        ]
       : []),
   ];
 
   const account: NavigationDestination[] = [
-    { id: "account-profile", label: t("common.your_profile"), href: "/account/settings/profile", group: accountGroup },
+    {
+      id: "account-profile",
+      label: t("common.your_profile"),
+      href: "/account/settings/profile",
+      group: accountGroup,
+    },
     ...(isBilling
       ? []
       : [
@@ -133,7 +180,8 @@ export const CommandPalette = (access: PaletteAccess) => {
   const { workspaceId, organizationId, isBilling, isOwnerOrManager, isFormaCloud } = access;
 
   const destinations = useMemo(
-    () => navigationDestinations(t, { workspaceId, organizationId, isBilling, isOwnerOrManager, isFormaCloud }),
+    () =>
+      navigationDestinations(t, { workspaceId, organizationId, isBilling, isOwnerOrManager, isFormaCloud }),
     [t, workspaceId, organizationId, isBilling, isOwnerOrManager, isFormaCloud]
   );
   const groups = useMemo(() => {

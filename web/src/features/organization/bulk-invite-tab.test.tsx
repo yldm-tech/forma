@@ -29,9 +29,13 @@ afterEach(() => {
 
 describe("readCell", () => {
   test("returns the first non-empty value across header aliases", () => {
-    expect(readCell({ "Email Address": "user@example.com", email: "ignored@example.com" }, "Email Address", "email")).toBe(
-      "user@example.com"
-    );
+    expect(
+      readCell(
+        { "Email Address": "user@example.com", email: "ignored@example.com" },
+        "Email Address",
+        "email"
+      )
+    ).toBe("user@example.com");
     expect(readCell({ email: "user@example.com" }, "Email Address", "email")).toBe("user@example.com");
   });
 
@@ -56,17 +60,28 @@ describe("parseTeamCell", () => {
 
 describe("parseBulkCsv", () => {
   test("reads rows by the header row, skipping empty lines and a byte order mark", () => {
-    expect(parseBulkCsv("﻿Full Name,Email Address,Organization Role,Teams\nAda,ada@example.com,member,\"Design, Sales\"\n\n")).toEqual([
-      { "Full Name": "Ada", "Email Address": "ada@example.com", "Organization Role": "member", Teams: "Design, Sales" },
+    expect(
+      parseBulkCsv(
+        '﻿Full Name,Email Address,Organization Role,Teams\nAda,ada@example.com,member,"Design, Sales"\n\n'
+      )
+    ).toEqual([
+      {
+        "Full Name": "Ada",
+        "Email Address": "ada@example.com",
+        "Organization Role": "member",
+        Teams: "Design, Sales",
+      },
     ]);
   });
 
   test("detects a semicolon file and keeps a short row", () => {
-    expect(parseBulkCsv("name;email;role\nAda;ada@example.com")).toEqual([{ name: "Ada", email: "ada@example.com" }]);
+    expect(parseBulkCsv("name;email;role\nAda;ada@example.com")).toEqual([
+      { name: "Ada", email: "ada@example.com" },
+    ]);
   });
 
   test("throws on a file it cannot read", () => {
-    expect(() => parseBulkCsv('name,email\n"Ada,ada@example.com')).toThrow();
+    expect(() => parseBulkCsv('name,email\n"Ada,ada@example.com')).toThrow(/quote not closed/i);
   });
 });
 
@@ -78,7 +93,12 @@ const TEAMS = [
 describe("checkBulkInvitees", () => {
   test("maps names, emails, roles and team names to an invite per row", () => {
     const rows: BulkCsvRow[] = [
-      { "Full Name": " Ada ", "Email Address": " ada@example.com ", "Organization Role": "Manager", Teams: "design|SALES, Design" },
+      {
+        "Full Name": " Ada ",
+        "Email Address": " ada@example.com ",
+        "Organization Role": "Manager",
+        Teams: "design|SALES, Design",
+      },
       { name: "Grace", email: "grace@example.com", role: "member" },
     ];
     expect(checkBulkInvitees(rows, TEAMS, false)).toEqual({
@@ -90,7 +110,9 @@ describe("checkBulkInvitees", () => {
   });
 
   test("names the teams that do not exist", () => {
-    const rows: BulkCsvRow[] = [{ name: "Ada", email: "ada@example.com", role: "member", teams: "Design, Ops, Legal" }];
+    const rows: BulkCsvRow[] = [
+      { name: "Ada", email: "ada@example.com", role: "member", teams: "Design, Ops, Legal" },
+    ];
     expect(checkBulkInvitees(rows, TEAMS, false)).toEqual({ unknownTeams: ["Ops", "Legal"] });
   });
 
@@ -130,7 +152,13 @@ const renderTab = (onDone = vi.fn()) => {
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={new QueryClient()}>
-        <BulkInviteTab organizationId="o1" teams={TEAMS} billingRoleAllowed={false} onCancel={() => {}} onDone={onDone} />
+        <BulkInviteTab
+          organizationId="o1"
+          teams={TEAMS}
+          billingRoleAllowed={false}
+          onCancel={() => {}}
+          onDone={onDone}
+        />
       </QueryClientProvider>
     </I18nextProvider>
   );
@@ -147,7 +175,9 @@ const importButton = () => screen.getByRole("button", { name: i18n.t("common.imp
 
 test("links forma2's CSV template", () => {
   renderTab();
-  const template = screen.getByRole("link", { name: i18n.t("workspace.settings.general.bulk_invite_download_template") });
+  const template = screen.getByRole("link", {
+    name: i18n.t("workspace.settings.general.bulk_invite_download_template"),
+  });
   expect(template.getAttribute("href")).toBe(BULK_INVITE_TEMPLATE_PATH);
 });
 
@@ -155,7 +185,9 @@ test("previews the rows and shows the teams the organization does not have", asy
   const requests = stubInvites([]);
   renderTab();
   await upload("Full Name,Email Address,Organization Role,Teams\nAda,ada@example.com,member,Ops\n");
-  expect(screen.getByText(i18n.t("workspace.settings.general.bulk_invite_rows_detected", { count: 1 }))).toBeTruthy();
+  expect(
+    screen.getByText(i18n.t("workspace.settings.general.bulk_invite_rows_detected", { count: 1 }))
+  ).toBeTruthy();
   expect(screen.getByRole("cell", { name: "ada@example.com" })).toBeTruthy();
   await waitFor(() => expect((importButton() as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(importButton());
@@ -198,7 +230,10 @@ test("a file of one row is a single invite", async () => {
   fireEvent.click(importButton());
   await waitFor(() => expect(onDone).toHaveBeenCalled());
   expect(requests).toEqual([
-    { path: "/api/app/organizations/o1/invites", body: { name: "Ada", email: "ada@example.com", role: "member", teamIds: [] } },
+    {
+      path: "/api/app/organizations/o1/invites",
+      body: { name: "Ada", email: "ada@example.com", role: "member", teamIds: [] },
+    },
   ]);
 });
 

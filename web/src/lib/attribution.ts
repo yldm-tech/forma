@@ -23,7 +23,7 @@ const MAX_ATTRIBUTION_VALUE_LENGTH = 256;
 /** Browsers silently drop a cookie over about 4 KB; the encoded value stays well under that. */
 export const MAX_ATTRIBUTION_COOKIE_VALUE_LENGTH = 3500;
 
-/** The whitelisted, non-blank attribution parameters, trimmed and capped. */
+/** The whitelisted, non-blank attribution parameters, trimmed and capped: what the cookie stores, and what the links between sign-in and sign-up carry on (forma2's buildAttributionQuerySuffix). */
 export const pickAttributionParams = (params: URLSearchParams | null | undefined): Record<string, string> => {
   const result: Record<string, string> = {};
   if (!params) return result;
@@ -32,17 +32,6 @@ export const pickAttributionParams = (params: URLSearchParams | null | undefined
     if (value && value.trim().length > 0) result[key] = value.trim().slice(0, MAX_ATTRIBUTION_VALUE_LENGTH);
   }
   return result;
-};
-
-/** The attribution parameters as a query string without its leading "?", to carry across the links between sign-in and sign-up; empty when there are none. */
-export const buildAttributionQuerySuffix = (params: URLSearchParams | null | undefined): string =>
-  new URLSearchParams(pickAttributionParams(params)).toString();
-
-/** Appends the current page's attribution parameters to an href. */
-export const withAttributionQuery = (href: string, params: URLSearchParams): string => {
-  const suffix = buildAttributionQuerySuffix(params);
-  if (!suffix) return href;
-  return `${href}${href.includes("?") ? "&" : "?"}${suffix}`;
 };
 
 /** The fb_attribution cookie for the page's query, or null when it must not be written: one is already set (first touch wins), the query carries nothing, or the value would be too large to persist. */
@@ -61,7 +50,11 @@ export const attributionCookie = (cookie: string, search: string, protocol: stri
 /** forma2's AttributionTracker: on the auth pages, writes the first-touch attribution cookie from the URL the visitor arrived with. */
 export const useAttributionTracker = (): void => {
   useEffect(() => {
-    const cookie = attributionCookie(document.cookie, globalThis.location.search, globalThis.location.protocol);
+    const cookie = attributionCookie(
+      document.cookie,
+      globalThis.location.search,
+      globalThis.location.protocol
+    );
     // oxlint-disable-next-line unicorn/no-document-cookie -- the cookie must be readable by the server on the sign-up and sign-in requests, as forma2 wrote it
     if (cookie) document.cookie = cookie;
   }, []);

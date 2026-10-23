@@ -32,12 +32,18 @@ const renderBanner = async (workspaces: { id: string; name: string }[]) => {
     "fetch",
     vi.fn(async (path: string) => {
       if (path !== "/api/app/organizations/o1/workspaces") throw new Error(`unexpected ${path}`);
-      return new Response(JSON.stringify({ workspaces }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ workspaces }), {
+        headers: { "content-type": "application/json" },
+      });
     })
   );
   const rootRoute = createRootRoute({ component: Outlet });
   const routeTree = rootRoute.addChildren([
-    createRoute({ getParentRoute: () => rootRoute, path: "/", component: () => <ConnectAppBanner organizationId="o1" /> }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+      component: () => <ConnectAppBanner organizationId="o1" />,
+    }),
   ]);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
   render(
@@ -55,9 +61,13 @@ test("points to the first workspace's SDK page", async () => {
     { id: "w1", name: "Website" },
     { id: "w2", name: "App" },
   ]);
-  expect(await screen.findByText(i18n.t("workspace.settings.api_keys.connect_app_banner_title"))).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: i18n.t("workspace.settings.api_keys.connect_app_banner_link") }).getAttribute("href")
+    await screen.findByText(i18n.t("workspace.settings.api_keys.connect_app_banner_title"))
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: i18n.t("workspace.settings.api_keys.connect_app_banner_link") })
+      .getAttribute("href")
   ).toBe("/workspaces/w1/integrations/app-connection");
 });
 

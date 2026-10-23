@@ -30,12 +30,18 @@ function RootLayout() {
 function DocumentTitle() {
   const { t } = useTranslation();
   const { queryClient } = Route.useRouteContext();
-  const matches = useRouterState({
-    select: (state) => state.matches.map((match) => ({ routeId: match.routeId, params: match.params })),
-    structuralSharing: true,
-  });
-  const subscribe = useCallback((onChange: () => void) => queryClient.getQueryCache().subscribe(onChange), [queryClient]);
-  const title = useSyncExternalStore(subscribe, () => documentTitle(matches, { t, queryClient }));
+  // The matches array keeps its identity until the matched routes change.
+  const matches = useRouterState({ select: (state) => state.matches });
+  const subscribe = useCallback(
+    (onChange: () => void) => queryClient.getQueryCache().subscribe(onChange),
+    [queryClient]
+  );
+  const title = useSyncExternalStore(subscribe, () =>
+    documentTitle(
+      matches.map((match) => ({ routeId: match.routeId, params: match.params as Record<string, string> })),
+      { t, queryClient }
+    )
+  );
   useEffect(() => {
     document.title = title;
   }, [title]);

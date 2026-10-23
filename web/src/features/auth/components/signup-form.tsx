@@ -2,13 +2,14 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { withAttributionQuery } from "../../../lib/attribution";
+import { pickAttributionParams } from "../../../lib/attribution";
 import { type Validators, useForm } from "../../../lib/form";
 import { authApi, authOptionsQuery } from "../api";
 import { inviteUrl } from "../callback-url";
 import { signupFailure } from "../errors";
 import { withSignupEmail } from "../history-state";
 import { readLastUsed } from "../last-used";
+import type { CallbackSearch } from "../search";
 import { emailError, nameError, passwordError } from "../validation";
 import { PasswordChecks } from "./password-checks";
 import { SSOButtons } from "./sso-buttons";
@@ -47,10 +48,10 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
   // An invited visitor returns to the invite after signing in; everyone else to the root page.
   const returnToUrl = inviteToken ? inviteUrl(inviteToken, origin) : new URL("/", origin).toString();
   // The marketing attribution of this page's address travels to the sign-in page with the link, as forma2 forwarded it.
-  const loginHref = withAttributionQuery(
-    inviteToken ? `/auth/login?${new URLSearchParams({ callbackUrl: returnToUrl }).toString()}` : "/auth/login",
-    new URLSearchParams(window.location.search)
-  );
+  const loginSearch: CallbackSearch = {
+    ...(inviteToken ? { callbackUrl: returnToUrl } : {}),
+    ...pickAttributionParams(new URLSearchParams(window.location.search)),
+  };
 
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string>();
@@ -219,7 +220,7 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
       <div className="mt-9 text-center text-xs">
         <span className="leading-5 text-slate-500">{t("auth.signup.have_an_account")}</span>
         <br />
-        <Link href={loginHref} className={textLinkClasses}>
+        <Link to="/auth/login" search={loginSearch} className={textLinkClasses}>
           {t("auth.signup.log_in")}
         </Link>
       </div>

@@ -89,10 +89,7 @@ export const checkBulkInvitees = (
   if (unknownTeams.size > 0) return { unknownTeams: [...unknownTeams] };
   if (billingEmails.size > 0) return { billingEmails: [...billingEmails] };
   const valid = members.every(
-    (member) =>
-      !userNameError(member.name) &&
-      !emailError(member.email) &&
-      ROLES.includes(member.role)
+    (member) => !userNameError(member.name) && !emailError(member.email) && ROLES.includes(member.role)
   );
   if (!valid) return { invalid: true };
   return { invitees: members.map((member) => ({ ...member, role: member.role as OrganizationRole })) };
@@ -146,7 +143,9 @@ const useInviteRows = (organizationId: string) => {
   });
 
   return async (invitees: Invitee[]): Promise<boolean> => {
-    const toastId = toast.loading(t("workspace.settings.general.inviting_member", { count: invitees.length }));
+    const toastId = toast.loading(
+      t("workspace.settings.general.inviting_member", { count: invitees.length })
+    );
     let results: BulkResult[];
     try {
       results = await invite.mutateAsync(invitees);
@@ -156,7 +155,10 @@ const useInviteRows = (organizationId: string) => {
     }
     const failed = results
       .filter((result) => !result.success)
-      .map((result) => ({ email: result.email, failureReason: inviteFailureReason(result.failureReason ?? "") }));
+      .map((result) => ({
+        email: result.email,
+        failureReason: inviteFailureReason(result.failureReason ?? ""),
+      }));
     const invited = results.length - failed.length;
     if (invited === 0) {
       toast.error(inviteFailureLines(t, failed), { id: toastId });
@@ -232,12 +234,16 @@ export const BulkInviteTab = ({
     if (!file || rows.length === 0 || importing) return;
     const check = checkBulkInvitees(rows, teams, billingRoleAllowed);
     if ("unknownTeams" in check) {
-      setError(t("workspace.settings.general.bulk_invite_unknown_teams", { teams: check.unknownTeams.join(", ") }));
+      setError(
+        t("workspace.settings.general.bulk_invite_unknown_teams", { teams: check.unknownTeams.join(", ") })
+      );
       return;
     }
     if ("billingEmails" in check) {
       setError(
-        t("workspace.settings.general.bulk_invite_billing_not_supported", { emails: check.billingEmails.join(", ") })
+        t("workspace.settings.general.bulk_invite_billing_not_supported", {
+          emails: check.billingEmails.join(", "),
+        })
       );
       return;
     }
@@ -324,7 +330,10 @@ export const BulkInviteTab = ({
             {t("common.cancel")}
           </Button>
         )}
-        <Button onClick={() => void onImport()} disabled={!file || rows.length === 0 || importing} loading={importing}>
+        <Button
+          onClick={() => void onImport()}
+          disabled={!file || rows.length === 0 || importing}
+          loading={importing}>
           {t("common.import")}
         </Button>
       </DialogFooter>

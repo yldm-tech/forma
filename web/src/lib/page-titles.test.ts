@@ -29,7 +29,9 @@ describe("documentTitle", () => {
   });
 
   test("translates a settings page's heading", () => {
-    expect(title(["__root__", "/_authenticated", WS, `${WS}/settings/workspace/look`])).toBe("common.appearance | Forma");
+    expect(title(["__root__", "/_authenticated", WS, `${WS}/settings/workspace/look`])).toBe(
+      "common.appearance | Forma"
+    );
   });
 
   test("is Forma for a page without a title", () => {
@@ -37,7 +39,13 @@ describe("documentTitle", () => {
   });
 
   test("names a survey's results from its loaded survey, under every analysis view", () => {
-    const routes = ["__root__", "/_authenticated", WS, `${WS}/surveys/$surveyId`, `${WS}/surveys/$surveyId/summary`];
+    const routes = [
+      "__root__",
+      "/_authenticated",
+      WS,
+      `${WS}/surveys/$surveyId`,
+      `${WS}/surveys/$surveyId/summary`,
+    ];
     expect(title(routes, { surveyId: "s1" })).toBe("common.survey | Forma");
     const queryClient = new QueryClient();
     queryClient.setQueryData(analysisSurveyQuery("s1").queryKey, { name: "NPS" } as never);
@@ -49,14 +57,21 @@ describe("documentTitle", () => {
 
 test("every titled route exists", () => {
   const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
-  for (const routeId of Object.keys(PAGE_TITLES)) expect(routeId in router.routesById, routeId).toBe(true);
+  const missing = Object.keys(PAGE_TITLES).filter((routeId) => !(routeId in router.routesById));
+  expect(missing).toEqual([]);
 });
 
 test("every translated title exists in all four catalogues", () => {
   const lookup = (catalogue: unknown, key: string) =>
-    key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], catalogue);
-  for (const source of Object.values(PAGE_TITLES)) {
-    if (typeof source === "function" || !("key" in source)) continue;
-    for (const catalogue of [enUS, jaJP, zhHansCN, zhHantTW]) expect(typeof lookup(catalogue, source.key), source.key).toBe("string");
-  }
+    key
+      .split(".")
+      .reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], catalogue);
+  const keys = Object.values(PAGE_TITLES).flatMap((source) =>
+    typeof source !== "function" && "key" in source ? [source.key] : []
+  );
+  const missing = [enUS, jaJP, zhHansCN, zhHantTW].flatMap((catalogue) =>
+    keys.filter((key) => typeof lookup(catalogue, key) !== "string")
+  );
+  expect(keys.length).toBeGreaterThan(10);
+  expect(missing).toEqual([]);
 });
