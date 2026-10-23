@@ -98,6 +98,11 @@ func TestV1StorageAcceptsASession(t *testing.T) {
 	if body := expectStatus(t, "invalid key", e.do("POST", "/api/v1/management/storage", upload, append(browser, "x-api-key", "fbk_nothing")...), 401); body["code"] != "not_authenticated" {
 		t.Errorf("an invalid key never falls back to the session: %v", body)
 	}
+	// forma2 read `workspaceId ?? environmentId`: an empty workspaceId is not absent, so the legacy id is not consulted.
+	empty := map[string]any{"workspaceId": "", "environmentId": "clegacyenvaaaaaaaaaaaaaa1", "fileName": "logo.png", "fileType": "image/png"}
+	if body := expectStatus(t, "empty workspaceId", e.do("POST", "/api/v1/management/storage", empty, "x-api-key", s.bound["<api-key:manage>"]), 400); body["message"] != "workspaceId must be provided" {
+		t.Errorf("empty workspaceId = %v", body)
+	}
 
 	outsider := e.user("Outsider", "outsider@example.com")
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, outsider, s.bound["<id:organization>"])
