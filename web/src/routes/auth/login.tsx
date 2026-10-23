@@ -23,7 +23,6 @@ import { readLastUsed, rememberLastUsed } from "../../features/auth/last-used";
 import { oauthErrorVariant } from "../../features/auth/oauth-error";
 import { type CallbackSearch, callbackSearch, stringParam } from "../../features/auth/search";
 import { emailError, signInPasswordError } from "../../features/auth/validation";
-import { errorMessage } from "../../lib/errors";
 import { type Validators, useForm } from "../../lib/form";
 
 interface LoginSearch extends CallbackSearch {
@@ -305,7 +304,7 @@ function LoginPage() {
             returnToUrl={callbackUrl}
             source="signin"
             lastUsed={lastUsed}
-            onError={(error) => setSsoError(errorMessage(t, error))}
+            onError={setSsoError}
           />
         )}
       </div>

@@ -71,6 +71,10 @@ export const resetPasswordFailure = (t: TFunction, error: unknown): Failure<"pas
   return genericFailure(t, error, ["password"] as const);
 };
 
+/** A single sign-on flow that could not start. SAML offered without a configured connection gets forma2's saml_connection_error toast. */
+export const ssoStartFailure = (t: TFunction, error: unknown): string =>
+  isCode(error, "saml_connection_error") ? t("auth.saml_connection_error") : errorMessage(t, error);
+
 /** Any other form: the forgot-password and resend-verification requests. */
 export const emailFormFailure = (t: TFunction, error: unknown): Failure<"email"> =>
   genericFailure(t, error, ["email"] as const);

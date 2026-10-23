@@ -3,7 +3,7 @@ import { ApiError, api } from "../../lib/api";
 
 // The /api/app/auth and invite endpoints the signed-out screens call (server/internal/auth/handler.go, sso_handler.go, twofactor_handler.go and server/internal/invite/handler.go).
 
-export type SSOProvider = "google" | "github" | "azuread" | "openid";
+export type SSOProvider = "google" | "github" | "azuread" | "openid" | "saml";
 
 /** GET /api/app/auth/options: what this instance offers on the sign-in and sign-up pages. */
 export interface AuthOptions {
