@@ -198,6 +198,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"invite limit text":        {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
 		"invite flag spelled":      {"INVITE_DISABLED", "yes"},
 		"unknown time zone":        {"SURVEY_SCHEDULING_TIME_ZONE", "Mars/Olympus"},
+		"brevo list text":          {"BREVO_LIST_ID", "newsletter"},
+		"brevo list zero":          {"BREVO_LIST_ID", "0"},
 		"local time zone":          {"SURVEY_SCHEDULING_TIME_ZONE", "Local"},
 		"scheduling hour":          {"SURVEY_SCHEDULING_LOCAL_HOUR", "24"},
 		"scheduling minute":        {"SURVEY_SCHEDULING_LOCAL_MINUTE", "60"},

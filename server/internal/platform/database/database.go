@@ -68,9 +68,16 @@ const serializableAttempts = 3
 
 // Serializable runs fn in a Serializable transaction, retried on a serialization failure or deadlock up to three attempts. A guard that reads an invariant (an organization keeps an active owner) in the same transaction as the write it protects holds only against writers that are serializable too: PostgreSQL detects the conflict between two such transactions and aborts one of them, but not between a serializable transaction and one at a weaker isolation level, so every writer of the guarded rows must use this.
 func Serializable(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) error) error {
+	return RetrySerializable(func() error {
+		return db.WithContext(ctx).Transaction(fn, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	})
+}
+
+// RetrySerializable runs a Serializable transaction the caller opens itself, retried as Serializable retries its own: for one Serializable cannot open, such as a transaction that also enqueues jobs (jobs.Enqueuer.Transaction, with SET TRANSACTION ISOLATION LEVEL SERIALIZABLE as its first statement).
+func RetrySerializable(run func() error) error {
 	var err error
 	for attempt := 1; attempt <= serializableAttempts; attempt++ {
-		err = db.WithContext(ctx).Transaction(fn, &sql.TxOptions{Isolation: sql.LevelSerializable})
+		err = run()
 		if !isTransactionConflict(err) {
 			return err
 		}

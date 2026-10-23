@@ -147,6 +147,9 @@ type Config struct {
 	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
 	Telemetry TelemetryConfig
 
+	// Brevo is Forma Cloud's contact sync to its CRM, off unless BREVO_API_KEY is set.
+	Brevo BrevoConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -432,6 +435,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.Telemetry.validate(); err != nil {
+		return err
+	}
+	if err := c.Brevo.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {

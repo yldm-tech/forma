@@ -29,6 +29,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -144,7 +145,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		t.Fatal(err)
 	}
 	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), e.db, enqueuer, log)
-	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, log)
+	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, enqueuer, brevo.NewContacts(cfg), log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
 	cipher, err := secret.NewCipher(cfg)

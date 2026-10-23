@@ -14,9 +14,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/database"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
@@ -64,11 +67,13 @@ type Service struct {
 	turnstile *turnstileVerifier
 	failures  *failureThrottle
 	billing   *billing.Lifecycle
+	jobs      *jobs.Enqueuer
+	contacts  *brevo.Contacts
 	log       *slog.Logger
 	now       func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, lifecycle *billing.Lifecycle, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, lifecycle *billing.Lifecycle, enqueuer *jobs.Enqueuer, contacts *brevo.Contacts, log *slog.Logger) *Service {
 	client := &http.Client{}
 	return &Service{
 		cfg:       cfg,
@@ -82,9 +87,30 @@ func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites
 		turnstile: &turnstileVerifier{client: client, verifyURL: turnstileURL, secret: cfg.TurnstileSecretKey},
 		failures:  &failureThrottle{rdb: rdb, log: log, now: time.Now},
 		billing:   lifecycle,
+		jobs:      enqueuer,
+		contacts:  contacts,
 		log:       log,
 		now:       time.Now,
 	}
+}
+
+// jobTransaction runs fn with a repository bound to a transaction that background jobs are enqueued in, so they commit or roll back with the change that causes them.
+func (s *Service) jobTransaction(ctx context.Context, fn func(tx *Repository, jtx *jobs.Tx) error) error {
+	return s.jobs.Transaction(ctx, s.repo.db, func(jtx *jobs.Tx) error {
+		return fn(&Repository{db: jtx.DB}, jtx)
+	})
+}
+
+// serializableJobTransaction is jobTransaction at Serializable isolation, retried as database.Serializable retries.
+func (s *Service) serializableJobTransaction(ctx context.Context, fn func(tx *Repository, jtx *jobs.Tx) error) error {
+	return database.RetrySerializable(func() error {
+		return s.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
+			if err := tx.db.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE").Error; err != nil {
+				return err
+			}
+			return fn(tx, jtx)
+		})
+	})
 }
 
 // requireEmailVerification is Better Auth's requireEmailVerification as forma2 set it.

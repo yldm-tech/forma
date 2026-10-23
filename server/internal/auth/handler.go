@@ -229,7 +229,7 @@ type signupRequest struct {
 	InviteToken    string `json:"inviteToken"`
 	UserLocale     string `json:"userLocale"`
 	TurnstileToken string `json:"turnstileToken"`
-	// The mailing-list choices are accepted and ignored: forma2 subscribed through Brevo, which is not part of this server.
+	// The mailing-list choices (the security list off Forma Cloud, the product updates list on it) are accepted and ignored: forma2 posted them to its EE server's mailing endpoints, which this server does not call.
 	SubscribeToSecurityUpdates bool `json:"subscribeToSecurityUpdates"`
 	SubscribeToProductUpdates  bool `json:"subscribeToProductUpdates"`
 	turnstileRequired          bool
