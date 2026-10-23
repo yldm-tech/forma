@@ -34,7 +34,10 @@ func (d dailyAt) Next(current time.Time) time.Time {
 }
 
 // SchedulingArgs is forma2's survey-scheduling.reconcile job.
-type SchedulingArgs struct{}
+type SchedulingArgs struct {
+	// Slot is the daily slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
+	Slot time.Time `json:"slot"`
+}
 
 func (SchedulingArgs) Kind() string { return "survey-scheduling.reconcile" }
 
@@ -49,7 +52,10 @@ func (w *schedulingWorker) Work(ctx context.Context, _ *river.Job[SchedulingArgs
 }
 
 // ArchivePurgeArgs is forma2's survey-archive-purge.process job.
-type ArchivePurgeArgs struct{}
+type ArchivePurgeArgs struct {
+	// Slot is the daily slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
+	Slot time.Time `json:"slot"`
+}
 
 func (ArchivePurgeArgs) Kind() string { return "survey-archive-purge.process" }
 
@@ -129,16 +135,16 @@ func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[ArchivePurgeArgs]) 
 	return err
 }
 
-// RegisterJobs adds the survey module's background work to `forma worker`: the daily publish and close run at the configured local time, and the daily archive purge at 01:30, both in the scheduling time zone.
+// RegisterJobs adds the survey module's background work to `forma worker`: the daily publish and close run at the configured local time, and the daily archive purge at 01:30, both in the scheduling time zone; a slot missed while no worker ran is caught up at the next start.
 func RegisterJobs(reg *jobs.Registry, cfg config.Config, db *gorm.DB, emitter *audit.Emitter, log *slog.Logger) {
 	repo := NewRepository(db)
 	schedule := NewSchedule(cfg)
 	jobs.Add(reg, &schedulingWorker{scheduler: NewScheduler(repo, emitter, log)})
 	jobs.Add(reg, &purgeWorker{purger: NewPurger(repo, emitter, log)})
-	reg.AddPeriodic(river.NewPeriodicJob(dailyAt{schedule, cfg.SurveySchedulingLocalHour, cfg.SurveySchedulingLocalMinute}, func() (river.JobArgs, *river.InsertOpts) {
-		return SchedulingArgs{}, nil
-	}, nil))
-	reg.AddPeriodic(river.NewPeriodicJob(dailyAt{schedule, purgeHour, purgeMins}, func() (river.JobArgs, *river.InsertOpts) {
-		return ArchivePurgeArgs{}, nil
-	}, nil))
+	reg.AddPeriodic(jobs.Daily("survey-scheduling", dailyAt{schedule, cfg.SurveySchedulingLocalHour, cfg.SurveySchedulingLocalMinute}, func(slot time.Time) river.JobArgs {
+		return SchedulingArgs{Slot: slot}
+	}))
+	reg.AddPeriodic(jobs.Daily("survey-archive-purge", dailyAt{schedule, purgeHour, purgeMins}, func(slot time.Time) river.JobArgs {
+		return ArchivePurgeArgs{Slot: slot}
+	}))
 }

@@ -218,3 +218,67 @@ func TestWorkerFailsToStartWithoutADatabase(t *testing.T) {
 		t.Fatalf("Migrate = %v, want a connection error", err)
 	}
 }
+
+type dailyArgs struct {
+	Slot time.Time `json:"slot"`
+}
+
+func (dailyArgs) Kind() string { return "test.daily" }
+
+type dailyWorker struct {
+	river.WorkerDefaults[dailyArgs]
+}
+
+func (dailyWorker) Work(context.Context, *river.Job[dailyArgs]) error { return nil }
+
+type bootArgs struct{}
+
+func (bootArgs) Kind() string { return "test.boot" }
+
+type bootWorker struct {
+	river.WorkerDefaults[bootArgs]
+}
+
+func (bootWorker) Work(context.Context, *river.Job[bootArgs]) error { return nil }
+
+// A daily job whose slot passed while no worker ran is enqueued when a worker starts, as forma2's schedulers ran an overdue iteration at the next boot; a later start within the same slot does not run it again.
+func TestDailyJobCatchesUpAMissedSlotOnce(t *testing.T) {
+	cfg := testConfig(pgtest.DSN(t))
+	pool := openPool(t, cfg)
+	missed := time.Now().UTC().Add(-time.Hour).Truncate(time.Minute)
+	registry := func() *jobs.Registry {
+		reg := jobs.NewRegistry(discard)
+		jobs.Add(reg, dailyWorker{})
+		jobs.Add(reg, bootWorker{})
+		reg.AddPeriodic(jobs.Daily("test-daily", jobs.DailyUTC{Hour: missed.Hour(), Minute: missed.Minute()}, func(slot time.Time) river.JobArgs { return dailyArgs{Slot: slot} }))
+		// Inserted in the same batch as the start runs, so once a start's boot job exists, that start has had its chance to enqueue the daily job.
+		reg.AddPeriodic(river.NewPeriodicJob(river.PeriodicInterval(time.Hour), func() (river.JobArgs, *river.InsertOpts) { return bootArgs{}, nil }, &river.PeriodicJobOpts{RunOnStart: true}))
+		return reg
+	}
+	count := func(kind string) (n int) {
+		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM river_job WHERE kind = $1", kind).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	stop, result := startWorker(t, cfg, pool, registry())
+	waitFor(t, "the first start", func() bool { return count("test.boot") == 1 })
+	var slot time.Time
+	if err := pool.QueryRow(context.Background(), "SELECT (args->>'slot')::timestamptz FROM river_job WHERE kind = 'test.daily'").Scan(&slot); err != nil {
+		t.Fatalf("the missed slot was not enqueued: %v", err)
+	}
+	if !slot.Equal(missed) {
+		t.Fatalf("enqueued slot %v, want the missed %v", slot, missed)
+	}
+	stop()
+	if err := <-result; err != nil {
+		t.Fatal(err)
+	}
+
+	startWorker(t, cfg, pool, registry())
+	waitFor(t, "the second start", func() bool { return count("test.boot") == 2 })
+	if n := count("test.daily"); n != 1 {
+		t.Fatalf("%d daily jobs after a second start within the slot, want 1", n)
+	}
+}

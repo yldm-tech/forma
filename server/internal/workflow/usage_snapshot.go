@@ -342,7 +342,10 @@ func (s *UsageSnapshot) Emit(ctx context.Context, now time.Time) (SnapshotSummar
 }
 
 // UsageSnapshotArgs is forma2's workflows-usage.snapshot job.
-type UsageSnapshotArgs struct{}
+type UsageSnapshotArgs struct {
+	// Slot is the daily slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
+	Slot time.Time `json:"slot"`
+}
 
 func (UsageSnapshotArgs) Kind() string { return "workflows-usage.snapshot" }
 
@@ -371,7 +374,5 @@ func (w *usageSnapshotWorker) Work(ctx context.Context, job *river.Job[UsageSnap
 // RegisterUsageSnapshot adds the daily snapshot at 02:45 UTC, after the 02:15 usage report. A second run in a day emits the same facts again, which the dashboards deduplicate per organization and day.
 func RegisterUsageSnapshot(reg *jobs.Registry, snapshot *UsageSnapshot, log *slog.Logger) {
 	jobs.Add(reg, &usageSnapshotWorker{snapshot: snapshot, log: log})
-	reg.AddPeriodic(river.NewPeriodicJob(jobs.DailyUTC{Hour: 2, Minute: 45}, func() (river.JobArgs, *river.InsertOpts) {
-		return UsageSnapshotArgs{}, nil
-	}, &river.PeriodicJobOpts{ID: "workflows-usage-snapshot"}))
+	reg.AddPeriodic(jobs.Daily("workflows-usage-snapshot", jobs.DailyUTC{Hour: 2, Minute: 45}, func(slot time.Time) river.JobArgs { return UsageSnapshotArgs{Slot: slot} }))
 }

@@ -217,7 +217,10 @@ func drain(deleteBatch func() (int64, error)) (deleted int64, capped bool, err e
 }
 
 // SweepArgs is forma2's retention-sweep.process job.
-type SweepArgs struct{}
+type SweepArgs struct {
+	// Slot is the daily slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
+	Slot time.Time `json:"slot"`
+}
 
 func (SweepArgs) Kind() string { return "retention-sweep.process" }
 
@@ -249,7 +252,5 @@ func (w *sweepWorker) Work(ctx context.Context, job *river.Job[SweepArgs]) error
 // RegisterJobs adds the daily sweep. forma2 ran it every 24 hours aligned to the epoch, which is midnight UTC.
 func RegisterJobs(reg *jobs.Registry, db *gorm.DB, log *slog.Logger) {
 	jobs.Add(reg, &sweepWorker{sweeper: NewSweeper(db, log), log: log})
-	reg.AddPeriodic(river.NewPeriodicJob(jobs.DailyUTC{}, func() (river.JobArgs, *river.InsertOpts) {
-		return SweepArgs{}, nil
-	}, &river.PeriodicJobOpts{ID: "retention-sweep"}))
+	reg.AddPeriodic(jobs.Daily("retention-sweep", jobs.DailyUTC{}, func(slot time.Time) river.JobArgs { return SweepArgs{Slot: slot} }))
 }
