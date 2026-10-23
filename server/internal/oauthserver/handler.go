@@ -78,7 +78,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.POST("/oauth2/authorize", h.captureForm, provider)
 	g.GET("/oauth2/authorize/callback", h.sessions.Optional(), h.requireApprover, provider)
 	g.POST("/oauth2/token", h.limit(ratelimit.BAOAuthToken), h.captureForm, h.checkTokenResource, provider)
-	g.POST("/oauth2/introspect", h.limit(ratelimit.BAOAuthIntrospect), provider)
+	g.POST("/oauth2/introspect", h.limit(ratelimit.BAOAuthIntrospect), clientSecretPostAsBasic, provider)
 	g.POST("/oauth2/revoke", h.limit(ratelimit.BAOAuthRevoke), provider)
 	g.GET("/oauth2/userinfo", provider)
 	g.POST("/oauth2/userinfo", provider)
@@ -88,6 +88,8 @@ func (h *Handler) Register(r gin.IRouter) {
 		g.OPTIONS(path, provider)
 	}
 	g.POST("/oauth2/register", h.limit(ratelimit.BAOAuthRegister), h.register)
+	g.GET(endSessionPath, h.endSession)
+	g.POST(endSessionPath, h.endSession)
 	g.GET(loginPath, httpapi.ErrorHandler(h.log), h.sessions.Optional(), h.continueAuthorization)
 	g.GET("/.well-known/oauth-authorization-server", h.metadata)
 	g.GET("/.well-known/openid-configuration", h.metadata)
@@ -127,6 +129,19 @@ func (h *Handler) captureForm(c *gin.Context) {
 		return
 	}
 	c.Request = c.Request.WithContext(withForm(c.Request.Context(), c.Request.Form))
+	c.Next()
+}
+
+// clientSecretPostAsBasic lets a confidential client authenticate to introspection with client_secret_post, as forma2 advertised and accepted: op reads only HTTP Basic there, so form credentials are moved into the Authorization header.
+func clientSecretPostAsBasic(c *gin.Context) {
+	if err := c.Request.ParseForm(); err != nil {
+		oauthError(c, http.StatusBadRequest, "invalid_request", "cannot parse form")
+		return
+	}
+	id, secret := c.Request.PostForm.Get("client_id"), c.Request.PostForm.Get("client_secret")
+	if c.GetHeader("Authorization") == "" && id != "" && secret != "" {
+		c.Request.SetBasicAuth(url.QueryEscape(id), url.QueryEscape(secret))
+	}
 	c.Next()
 }
 
@@ -284,29 +299,63 @@ func errorRedirect(req *AuthRequest, errorType string) string {
 	return u.String()
 }
 
-// metadata is the authorization server metadata (RFC 8414), served as the OpenID configuration too.
+// discovery is the authorization server metadata (RFC 8414), also served as the OpenID configuration. It is the document forma2's Better Auth served, minus what this server does not implement: the client_credentials grant, private_key_jwt client authentication (and the signing algorithms only it uses), DPoP, back-channel logout, the claims request parameter, the iss authorization response parameter, and the claims it never issues (sid, picture, given_name, family_name).
+type discovery struct {
+	ScopesSupported                           []string `json:"scopes_supported"`
+	Issuer                                    string   `json:"issuer"`
+	AuthorizationEndpoint                     string   `json:"authorization_endpoint"`
+	TokenEndpoint                             string   `json:"token_endpoint"`
+	JWKSURI                                   string   `json:"jwks_uri"`
+	RegistrationEndpoint                      string   `json:"registration_endpoint"`
+	IntrospectionEndpoint                     string   `json:"introspection_endpoint"`
+	RevocationEndpoint                        string   `json:"revocation_endpoint"`
+	ResponseTypesSupported                    []string `json:"response_types_supported"`
+	ResponseModesSupported                    []string `json:"response_modes_supported"`
+	GrantTypesSupported                       []string `json:"grant_types_supported"`
+	TokenEndpointAuthMethodsSupported         []string `json:"token_endpoint_auth_methods_supported"`
+	IntrospectionEndpointAuthMethodsSupported []string `json:"introspection_endpoint_auth_methods_supported"`
+	RevocationEndpointAuthMethodsSupported    []string `json:"revocation_endpoint_auth_methods_supported"`
+	CodeChallengeMethodsSupported             []string `json:"code_challenge_methods_supported"`
+	ClaimsSupported                           []string `json:"claims_supported"`
+	UserinfoEndpoint                          string   `json:"userinfo_endpoint"`
+	SubjectTypesSupported                     []string `json:"subject_types_supported"`
+	ACRValuesSupported                        []string `json:"acr_values_supported"`
+	IDTokenSigningAlgValuesSupported          []string `json:"id_token_signing_alg_values_supported"`
+	EndSessionEndpoint                        string   `json:"end_session_endpoint"`
+	RequestParameterSupported                 bool     `json:"request_parameter_supported"`
+	RequestURIParameterSupported              bool     `json:"request_uri_parameter_supported"`
+	PromptValuesSupported                     []string `json:"prompt_values_supported"`
+}
+
+// clientSecretMethods are the client authentication methods of the introspection and revocation endpoints; a public client may revoke its own tokens too, which forma2 did not advertise.
+var clientSecretMethods = []string{authMethodBasic, authMethodPost}
+
+// metadata serves the discovery document at every location MCP clients look for it.
 func (h *Handler) metadata(c *gin.Context) {
 	issuer := h.urls.Issuer
 	c.Header("Cache-Control", metadataCacheControl)
-	c.JSON(http.StatusOK, &oidc.DiscoveryConfiguration{
+	c.JSON(http.StatusOK, &discovery{
+		ScopesSupported:                           Scopes,
 		Issuer:                                    issuer,
 		AuthorizationEndpoint:                     issuer + "/oauth2/authorize",
 		TokenEndpoint:                             issuer + "/oauth2/token",
+		JWKSURI:                                   h.urls.JWKS,
 		RegistrationEndpoint:                      issuer + "/oauth2/register",
 		IntrospectionEndpoint:                     issuer + "/oauth2/introspect",
 		RevocationEndpoint:                        issuer + "/oauth2/revoke",
-		UserinfoEndpoint:                          h.urls.UserInfo,
-		JwksURI:                                   h.urls.JWKS,
-		ScopesSupported:                           Scopes,
 		ResponseTypesSupported:                    []string{string(oidc.ResponseTypeCode)},
 		ResponseModesSupported:                    []string{string(oidc.ResponseModeQuery)},
-		GrantTypesSupported:                       []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken},
+		GrantTypesSupported:                       []string{grantTypeCode, grantTypeRefresh},
+		TokenEndpointAuthMethodsSupported:         []string{authMethodNone, authMethodBasic, authMethodPost},
+		IntrospectionEndpointAuthMethodsSupported: clientSecretMethods,
+		RevocationEndpointAuthMethodsSupported:    clientSecretMethods,
+		CodeChallengeMethodsSupported:             []string{string(oidc.CodeChallengeMethodS256)},
+		ClaimsSupported:                           []string{"sub", "iss", "aud", "exp", "iat", "scope", "azp", "name", "email", "email_verified"},
+		UserinfoEndpoint:                          h.urls.UserInfo,
 		SubjectTypesSupported:                     []string{"public"},
+		ACRValuesSupported:                        []string{"0"},
 		IDTokenSigningAlgValuesSupported:          []string{string(jose.EdDSA)},
-		TokenEndpointAuthMethodsSupported:         []oidc.AuthMethod{oidc.AuthMethodBasic, oidc.AuthMethodPost, oidc.AuthMethodNone},
-		IntrospectionEndpointAuthMethodsSupported: []oidc.AuthMethod{oidc.AuthMethodBasic},
-		RevocationEndpointAuthMethodsSupported:    []oidc.AuthMethod{oidc.AuthMethodBasic, oidc.AuthMethodPost, oidc.AuthMethodNone},
-		CodeChallengeMethodsSupported:             []oidc.CodeChallengeMethod{oidc.CodeChallengeMethodS256},
-		ClaimsSupported:                           []string{"sub", "iss", "aud", "exp", "iat", "email", "email_verified", "name"},
+		EndSessionEndpoint:                        issuer + endSessionPath,
+		PromptValuesSupported:                     []string{oidc.PromptLogin, oidc.PromptConsent, "create", oidc.PromptSelectAccount, oidc.PromptNone},
 	})
 }

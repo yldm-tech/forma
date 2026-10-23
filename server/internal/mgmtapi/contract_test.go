@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -43,8 +44,17 @@ type recorded struct {
 	} `json:"notes"`
 }
 
-// coveredElsewhere are fixtures of the same recording whose routes other packages serve: the MCP endpoint and the OAuth authorization server MCP clients discover.
-var coveredElsewhere = regexp.MustCompile(`^(mcp-|oauth-|auth-|well-known-)`)
+// notReplayed are the recorded exchanges the replay skips, with the reason.
+var notReplayed = map[string]string{
+	"mcp-unauthenticated":       mcpCrashed,
+	"mcp-api-key-initialize":    mcpCrashed,
+	"mcp-api-key-tools-list":    mcpCrashed,
+	"mcp-foreign-origin":        mcpCrashed,
+	"mcp-invalid-bearer":        mcpCrashed,
+	"mcp-query-credential":      mcpCrashed,
+}
+
+const mcpCrashed = "forma2 answered every POST /api/mcp with a bare 500 before authenticating (notes.knownDefect), so the recording holds no MCP exchange; the intended answers the notes describe are tested in internal/mcp."
 
 // replayOrder is the order the recorder's scenarios need: v1 first (action classes, attribute keys, the contacts the client API identified, surveys, the client API's responses and the v1 ones, storage), then v2, whose lists the v1 writes populate. The rate-limit cases come last.
 var replayOrder = []string{
@@ -168,6 +178,13 @@ var replayOrder = []string{
 	"v2-workspace-teams-update", "v2-workspace-teams-update-unknown",
 	"v2-workspace-teams-delete-missing-workspace", "v2-workspace-teams-delete", "v2-workspace-teams-delete-unknown",
 
+	// The MCP endpoint and the OAuth authorization server MCP clients discover.
+	"mcp-get",
+	"well-known-oauth-protected-resource", "well-known-oauth-protected-resource-mcp", "well-known-oauth-protected-resource-unknown",
+	"well-known-oauth-authorization-server", "well-known-oauth-authorization-server-issuer-path", "well-known-openid-configuration",
+	"well-known-openid-configuration-issuer-path", "auth-openid-configuration", "auth-jwks",
+	"oauth-register-public-client", "oauth-register-invalid-redirect", "oauth-register-missing-redirect",
+
 	// Each after its window has been filled to the limit.
 	"v1-rate-limited", "v2-rate-limited", "v1-storage-rate-limited",
 }
@@ -272,6 +289,80 @@ var deviations = map[string]deviation{
 	},
 }
 
+func init() {
+	for _, name := range []string{"mcp-get", "well-known-oauth-protected-resource", "well-known-oauth-protected-resource-mcp", "well-known-oauth-protected-resource-unknown", "oauth-register-public-client", "oauth-register-invalid-redirect", "oauth-register-missing-redirect"} {
+		deviations[name] = deviation{reason: goJSONHeaders, adjust: jsonHeaders}
+	}
+	for _, name := range []string{"well-known-oauth-authorization-server", "well-known-oauth-authorization-server-issuer-path", "well-known-openid-configuration", "well-known-openid-configuration-issuer-path", "auth-openid-configuration"} {
+		deviations[name] = deviation{
+			reason: goJSONHeaders + " The discovery document leaves out what this server does not implement: the client_credentials grant (every token is a user's), private_key_jwt client authentication and the JWT signing algorithms only it uses, DPoP, back-channel logout, the claims request parameter, the iss authorization response parameter, and the sid, picture, given_name and family_name claims it never issues.",
+			adjust: func(f *recorded) {
+				jsonHeaders(f)
+				editBody(f, func(body map[string]any) {
+					for _, member := range []string{
+						"authorization_response_iss_parameter_supported", "dpop_signing_alg_values_supported", "backchannel_logout_supported", "backchannel_logout_session_supported",
+						"claims_parameter_supported", "token_endpoint_auth_signing_alg_values_supported", "introspection_endpoint_auth_signing_alg_values_supported",
+						"revocation_endpoint_auth_signing_alg_values_supported",
+					} {
+						delete(body, member)
+					}
+					without(body, "grant_types_supported", "client_credentials")
+					for _, member := range []string{"token_endpoint_auth_methods_supported", "introspection_endpoint_auth_methods_supported", "revocation_endpoint_auth_methods_supported"} {
+						without(body, member, "private_key_jwt")
+					}
+					without(body, "claims_supported", "sid", "picture", "given_name", "family_name")
+				})
+			},
+		}
+	}
+	deviations["auth-jwks"] = deviation{
+		reason: "The Vary header Next.js added for its React Server Components is not sent, and each key also names its use, sig (RFC 7517 §4.2), which zitadel/oidc always publishes.",
+		adjust: func(f *recorded) {
+			delete(f.Response.Headers, "vary")
+			editBody(f, func(body map[string]any) {
+				for _, k := range body["keys"].([]any) {
+					k.(map[string]any)["use"] = "sig"
+				}
+			})
+		},
+	}
+}
+
+// goJSONHeaders is the deviation every OAuth and MCP exchange shares.
+const goJSONHeaders = "JSON is labelled application/json; charset=utf-8, and the Vary header Next.js added for its React Server Components is not sent: neither changes what an OAuth or MCP client reads."
+
+func jsonHeaders(f *recorded) {
+	delete(f.Response.Headers, "vary")
+	if f.Response.Headers["content-type"] == "application/json" {
+		f.Response.Headers["content-type"] = "application/json; charset=utf-8"
+	}
+}
+
+// editBody rewrites the expected JSON object.
+func editBody(f *recorded, edit func(map[string]any)) {
+	var body map[string]any
+	if err := json.Unmarshal(f.Response.Body, &body); err != nil {
+		panic(err)
+	}
+	edit(body)
+	out, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+	f.Response.Body = out
+}
+
+// without removes values from the list member of body.
+func without(body map[string]any, member string, values ...string) {
+	var kept []any
+	for _, v := range body[member].([]any) {
+		if !slices.Contains(values, v.(string)) {
+			kept = append(kept, v)
+		}
+	}
+	body[member] = kept
+}
+
 // reorderData puts the expected list's entries in the order of their keys.
 func reorderData(f *recorded, keys ...string) {
 	var body struct {
@@ -327,7 +418,13 @@ var kinds = map[string]string{
 	"<sealed-single-use-id>": `[A-Za-z0-9_-]{40,}`,
 	"<contact-link-token>":   `[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`,
 	"<webhook-secret>":       `whsec_[A-Za-z0-9+/]+=*`,
+	"<oauth:client-id>":      `[A-Za-z0-9_-]{20,}`,
+	"<jwk:x>":                `[A-Za-z0-9_-]{43}`,
+	"<jwk:kid>":              `[A-Za-z0-9_-]+`,
 }
+
+// unixTime stands for a JSON number, a time in seconds.
+const unixTime = "<unix-time>"
 
 // idKinds are the patterns an id placeholder not bound yet matches: the rewrite's UUIDs, and the block ids the server generates in a survey document.
 var idKinds = map[string]string{
@@ -412,6 +509,12 @@ func (r *replay) matchString(want, got string) bool {
 func (r *replay) match(path string, want, got any) error {
 	switch w := want.(type) {
 	case string:
+		if w == unixTime {
+			if n, ok := got.(float64); !ok || n < 1e9 || n != math.Trunc(n) {
+				return fmt.Errorf("%s: got %#v, want a unix time", path, got)
+			}
+			return nil
+		}
 		g, ok := got.(string)
 		if !ok || !r.matchString(w, g) {
 			return fmt.Errorf("%s: got %#v, want %q", path, got, w)
@@ -564,7 +667,7 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 	}
 	var all []string
 	for _, f := range files {
-		if name := strings.TrimSuffix(filepath.Base(f), ".json"); !coveredElsewhere.MatchString(name) {
+		if name := strings.TrimSuffix(filepath.Base(f), ".json"); notReplayed[name] == "" {
 			all = append(all, name)
 		}
 	}

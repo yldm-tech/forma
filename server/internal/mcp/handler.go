@@ -117,9 +117,10 @@ func listToolsInOrder(order []string) sdk.Middleware {
 	}
 }
 
-// Register mounts /api/mcp and the protected resource metadata. Only POST is served; other methods get 405.
+// Register mounts /api/mcp and the protected resource metadata. Only POST is served; other methods get 405, GET with an empty body and no Allow header, as forma2's route answered it (it offers no event stream).
 func (h *Handler) Register(r gin.IRouter) {
 	r.POST("/api/mcp", h.serve)
+	r.GET("/api/mcp", func(c *gin.Context) { c.Status(http.StatusMethodNotAllowed) })
 	r.GET("/.well-known/oauth-protected-resource", h.protectedResource)
 	r.GET("/.well-known/oauth-protected-resource/*resource", h.protectedResource)
 }

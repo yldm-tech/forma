@@ -337,7 +337,8 @@ func (e *env) signIn(user uuid.UUID) auth.AuthorizationCodeFetcher {
 			}
 			next = out["url"].(string)
 		}
-		back, err := e.redirect(next, nil)
+		// The callback hands the code only to the browser session that approved the request.
+		back, err := e.redirect(next, map[string]string{testUserHeader: user.String()})
 		if err != nil {
 			return nil, err
 		}

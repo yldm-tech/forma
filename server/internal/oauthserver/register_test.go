@@ -1,7 +1,9 @@
 package oauthserver
 
 import (
+	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -156,5 +158,73 @@ func TestRateLimits(t *testing.T) {
 	}
 	if rec := e.register(map[string]any{"redirect_uris": []string{redirectURI}}); rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("register after the window was spent: %d", rec.Code)
+	}
+}
+
+// A confidential client may authenticate to introspection with client_secret_post, which forma2 advertised and accepted, as well as with HTTP Basic.
+func TestIntrospectionAcceptsClientSecretPost(t *testing.T) {
+	e := newEnv(t)
+	user := e.user("ada@example.com")
+	rec := e.register(map[string]any{"client_name": "Backend", "redirect_uris": []string{redirectURI}, "token_endpoint_auth_method": "client_secret_post", "grant_types": []string{"authorization_code", "refresh_token"}})
+	registered := e.json(rec)
+	clientID, secret := registered["client_id"].(string), registered["client_secret"].(string)
+	p := newPKCE()
+	code := e.code(authorizeQuery(clientID, p, "surveys:read"), user)
+	status, out := e.token(url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirectURI}, "client_id": {clientID}, "client_secret": {secret}, "code_verifier": {p.verifier}})
+	if status != http.StatusOK {
+		t.Fatalf("token: %d %v", status, out)
+	}
+	form := url.Values{"token": {out["access_token"].(string)}, "client_id": {clientID}, "client_secret": {secret}}
+	introspected := e.do(http.MethodPost, "/api/auth/oauth2/introspect", strings.NewReader(form.Encode()), map[string]string{"Content-Type": "application/x-www-form-urlencoded"})
+	if body := e.json(introspected); introspected.Code != http.StatusOK || body["active"] != true || body["sub"] != user.String() {
+		t.Fatalf("introspect with client_secret_post: %d %v", introspected.Code, body)
+	}
+	form.Set("client_secret", "fbocs_wrong")
+	if wrong := e.do(http.MethodPost, "/api/auth/oauth2/introspect", strings.NewReader(form.Encode()), map[string]string{"Content-Type": "application/x-www-form-urlencoded"}); wrong.Code == http.StatusOK {
+		t.Fatalf("a wrong secret introspected: %s", wrong.Body.String())
+	}
+}
+
+// RP-initiated logout is served where the discovery document says, and answers as forma2's Better Auth did for its dynamically registered clients, none of which could initiate logout.
+func TestEndSession(t *testing.T) {
+	e := newEnv(t)
+	user := e.user("ada@example.com")
+	clientID := e.publicClient()
+	idToken := e.tokens(clientID, user, "openid surveys:read")["id_token"].(string)
+	if got := e.json(e.do(http.MethodGet, "/.well-known/openid-configuration", nil, nil))["end_session_endpoint"]; got != issuer+"/oauth2/end-session" {
+		t.Fatalf("end_session_endpoint %v", got)
+	}
+	jsonAccept := map[string]string{"Accept": "application/json"}
+	for _, tc := range []struct {
+		name        string
+		method      string
+		query       url.Values
+		status      int
+		error, desc string
+	}{
+		{"client_id", http.MethodGet, url.Values{"client_id": {clientID}}, http.StatusUnauthorized, "invalid_client", "The client is not allowed to initiate logout"},
+		{"id_token_hint", http.MethodGet, url.Values{"id_token_hint": {idToken}, "post_logout_redirect_uri": {redirectURI}}, http.StatusUnauthorized, "invalid_client", "The client is not allowed to initiate logout"},
+		{"unknown client", http.MethodGet, url.Values{"client_id": {"nope"}}, http.StatusBadRequest, "invalid_client", "The logout client does not exist"},
+		{"hint naming no client", http.MethodPost, url.Values{"id_token_hint": {"not-a-jwt"}}, http.StatusBadRequest, "invalid_client", "The logout client does not exist"},
+		{"nothing", http.MethodPost, url.Values{}, http.StatusBadRequest, "invalid_request", "No active session is available for logout"},
+	} {
+		target, body := "/api/auth/oauth2/end-session?"+tc.query.Encode(), io.Reader(nil)
+		headers := jsonAccept
+		if tc.method == http.MethodPost {
+			target, body = "/api/auth/oauth2/end-session", strings.NewReader(tc.query.Encode())
+			headers = map[string]string{"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
+		}
+		rec := e.do(tc.method, target, body, headers)
+		if out := e.json(rec); rec.Code != tc.status || out["error"] != tc.error || out["error_description"] != tc.desc {
+			t.Errorf("%s: %d %v", tc.name, rec.Code, out)
+		}
+	}
+	// A browser gets Better Auth's error page, or, naming no client, the web app, where Forma signs out.
+	page := e.do(http.MethodGet, "/api/auth/oauth2/end-session?client_id="+clientID, nil, map[string]string{"Accept": "text/html", "Sec-Fetch-Mode": "navigate"})
+	if page.Code != http.StatusUnauthorized || !strings.Contains(page.Body.String(), "The client is not allowed to initiate logout") || !strings.HasPrefix(page.Header().Get("Content-Type"), "text/html") {
+		t.Errorf("browser refusal: %d %s", page.Code, page.Body.String())
+	}
+	if to := location(t, e.do(http.MethodGet, "/api/auth/oauth2/end-session", nil, map[string]string{"Accept": "text/html", "Sec-Fetch-Mode": "navigate"})); to.String() != webApp+"/" {
+		t.Errorf("browser without a client went to %s", to)
 	}
 }

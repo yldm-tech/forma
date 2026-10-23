@@ -30,7 +30,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/authz/authztest"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
+	"github.com/yldm-tech/forma/server/internal/mcp"
 	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -41,6 +43,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/server/internal/platform/ssrf"
+	"github.com/yldm-tech/forma/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/server/internal/platform/valkey/valkeytest"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
@@ -48,6 +51,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
+	"github.com/yldm-tech/forma/server/internal/workflow"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
 
@@ -190,10 +194,25 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The MCP endpoint and the OAuth authorization server MCP clients discover were recorded with the management APIs; their fixtures are replayed here too.
+	guard := v3api.NewGuard(cfg, headerSessions{}, keys, limiter, log)
+	surveyHandler := survey.NewHandler(surveys, headerSessions{}, guard, limiter, log)
+	workflows := workflow.NewHandler(cfg, workflow.NewService(workflow.NewRepository(db), db, authorizer, log), guard, headerSessions{}, emitter, log)
+	signingKeys := oauthserver.NewKeys(db, cipher)
+	oauth, err := oauthserver.NewHandler(cfg, db, signingKeys, headerSessions{}, limiter, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, keys, oauthserver.NewTokenVerifier(cfg, signingKeys), limiter, surveyHandler, workflows, log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	e.engine = httpserver.NewEngine(log)
 	e.engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	webhook.NewV1Handler(webhooks, v1, log).Register(e.engine)
 	h.Register(e.engine)
+	mcpHandler.Register(e.engine)
+	oauth.Register(e.engine)
 	web.Register(e.engine)
 	return e
 }

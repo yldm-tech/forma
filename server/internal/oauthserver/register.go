@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -50,12 +51,16 @@ type registration struct {
 	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
 	GrantTypes              []string `json:"grant_types"`
 	ResponseTypes           []string `json:"response_types"`
+	// Contacts are echoed in the answer, as Better Auth did; nothing reads them, so they are not stored.
+	Contacts []string `json:"contacts"`
 }
 
 // registrationError is an RFC 7591 §3.2.2 error.
 type registrationError struct {
 	code        string
 	description string
+	// schema marks a request Better Auth refused in its request schema, before its handler ran; it answered those without Cache-Control.
+	schema bool
 }
 
 func (e *registrationError) Error() string { return e.code + ": " + e.description }
@@ -82,6 +87,10 @@ func (h *Handler) register(c *gin.Context) {
 	}
 	var regErr *registrationError
 	if errors.As(err, &regErr) {
+		if regErr.schema {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": regErr.code, "error_description": regErr.description})
+			return
+		}
 		oauthError(c, http.StatusBadRequest, regErr.code, regErr.description)
 		return
 	}
@@ -123,6 +132,11 @@ func (h *Handler) register(c *gin.Context) {
 		"token_endpoint_auth_method": client.authMethod,
 		"application_type":           client.applicationType,
 		"scope":                      strings.Join(client.scopes, " "),
+		"contacts":                   orEmpty(reg.Contacts),
+		"post_logout_redirect_uris":  []string{},
+		"disabled":                   false,
+		"dpop_bound_access_tokens":   false,
+		"resources":                  client.resources,
 	}
 	if clientSecret != "" {
 		out["client_secret"] = clientSecret
@@ -137,6 +151,13 @@ func (h *Handler) register(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.Header("Pragma", "no-cache")
 	c.JSON(http.StatusCreated, out)
+}
+
+func orEmpty(list []string) []string {
+	if list == nil {
+		return []string{}
+	}
+	return list
 }
 
 func (h *Handler) fail(c *gin.Context, err error) {
@@ -183,12 +204,16 @@ func (r *registration) validate() error {
 		return invalidMetadata("application_type must be web or native.")
 	}
 	if len(r.RedirectURIs) == 0 {
-		return invalidRedirectURI("At least one redirect_uri is required.")
+		return invalidRedirectURI("Redirect URIs are required for authorization_code and implicit grant types")
 	}
 	if len(r.RedirectURIs) > maxRedirectURIs {
 		return invalidRedirectURI("Too many redirect_uris.")
 	}
-	for _, raw := range r.RedirectURIs {
+	for i, raw := range r.RedirectURIs {
+		// Better Auth's request schema refused these three schemes with this message.
+		if u, err := url.Parse(raw); err == nil && slices.Contains([]string{"javascript", "data", "vbscript"}, strings.ToLower(u.Scheme)) {
+			return &registrationError{code: "invalid_redirect_uri", description: "redirect_uris[" + strconv.Itoa(i) + "]: URL cannot use javascript:, data:, or vbscript: scheme", schema: true}
+		}
 		if err := r.validateRedirectURI(raw); err != nil {
 			return err
 		}
