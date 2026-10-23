@@ -64,8 +64,8 @@ func TestLoadDefaults(t *testing.T) {
 	if !cfg.SMTPAuthenticated || !cfg.SMTPRejectUnauthorizedTLS || cfg.SMTPSecureEnabled {
 		t.Errorf("SMTP flags = auth %v, reject-unauthorized %v, secure %v; want true, true, false", cfg.SMTPAuthenticated, cfg.SMTPRejectUnauthorizedTLS, cfg.SMTPSecureEnabled)
 	}
-	if cfg.MailFrom != "noreply@forma.ylam.ai" || cfg.MailFromName != "Forma" {
-		t.Errorf("mail from = %q <%s>, want Forma <noreply@forma.ylam.ai>", cfg.MailFromName, cfg.MailFrom)
+	if cfg.MailFrom != "noreply@forma.yldm.ai" || cfg.MailFromName != "Forma" {
+		t.Errorf("mail from = %q <%s>, want Forma <noreply@forma.yldm.ai>", cfg.MailFromName, cfg.MailFrom)
 	}
 	if cfg.SMTPConfigured() {
 		t.Error("SMTPConfigured() = true without SMTP_HOST and SMTP_PORT")

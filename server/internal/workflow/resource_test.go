@@ -179,7 +179,7 @@ func TestMessageID(t *testing.T) {
 	if MessageID(run, "other", "team@acme.example") == a {
 		t.Fatal("different steps share a Message-ID")
 	}
-	if got := MessageID(run, "send-email", "nobody"); !strings.HasSuffix(got, "@forma.ylam.ai>") {
+	if got := MessageID(run, "send-email", "nobody"); !strings.HasSuffix(got, "@forma.yldm.ai>") {
 		t.Fatalf("fallback domain: %s", got)
 	}
 }

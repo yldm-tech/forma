@@ -3,12 +3,12 @@
 [![npm package](https://img.shields.io/npm/v/@forma/js?style=flat-square)](https://www.npmjs.com/package/@forma/js)
 [![MIT License](https://img.shields.io/badge/License-MIT-red.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-Please see [Forma Docs](https://forma.ylam.ai/docs).
-Specifically, [Quickstart/Implementation details](https://forma.ylam.ai/docs/getting-started/quickstart-in-app-survey).
+Please see [Forma Docs](https://forma.yldm.ai/docs).
+Specifically, [Quickstart/Implementation details](https://forma.yldm.ai/docs/getting-started/quickstart-in-app-survey).
 
 ## What is Forma
 
-Forma is your go-to solution for in-product micro-surveys that will supercharge your product experience! 🚀 For more information please check out [forma.ylam.ai](https://forma.ylam.ai).
+Forma is your go-to solution for in-product micro-surveys that will supercharge your product experience! 🚀 For more information please check out [forma.yldm.ai](https://forma.yldm.ai).
 
 ## How to use this library
 
@@ -26,11 +26,11 @@ import forma from "@forma/js";
 if (typeof window !== "undefined") {
   forma.setup({
     workspaceId: "your-workspace-id",
-    appUrl: "https://app.forma.ylam.ai",
+    appUrl: "https://forma.yldm.ai",
   });
 }
 ```
 
 Replace your-environment-id with your actual environment ID. You can find your environment ID in the **Setup Checklist** in the Forma settings.
 
-For more detailed guides for different frameworks, check out our [Framework Guides](https://forma.ylam.ai/docs/getting-started/framework-guides).
+For more detailed guides for different frameworks, check out our [Framework Guides](https://forma.yldm.ai/docs/getting-started/framework-guides).

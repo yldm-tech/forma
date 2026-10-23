@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://forma.ylam.ai",
+  "homepage": "https://forma.yldm.ai",
   "license": "MIT",
   "description": "Utility functions for multilingual support in Forma projects",
   "main": "./dist/index.cjs",

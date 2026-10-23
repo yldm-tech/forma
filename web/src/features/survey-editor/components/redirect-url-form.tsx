@@ -53,7 +53,7 @@ export const RedirectUrlForm = ({ localSurvey, endingCard, updateSurvey }: Redir
                   id="redirectUrl"
                   name="redirectUrl"
                   className="relative text-black caret-black"
-                  placeholder="https://forma.ylam.ai"
+                  placeholder="https://forma.yldm.ai"
                   value={
                     recallToHeadline(
                       {

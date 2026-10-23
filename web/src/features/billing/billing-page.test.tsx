@@ -258,8 +258,8 @@ describe("subscription and usage", () => {
     renderPage();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain(t("workspace.settings.billing.payment_error_failed_invoice"));
-    expect(within(alert).getByRole("link", { name: "hola@forma.ylam.ai" }).getAttribute("href")).toBe(
-      "mailto:hola@forma.ylam.ai"
+    expect(within(alert).getByRole("link", { name: "hola@forma.yldm.ai" }).getAttribute("href")).toBe(
+      "mailto:hola@forma.yldm.ai"
     );
   });
 });

@@ -5,15 +5,15 @@ type: application
 # Helm chart Version
 version: 0.0.0-dev
 # No appVersion: the image deployed is deployment.image.tag (or digest), which must be set; forma2's 5.3.4 named an image this repository never published.
-icon: https://forma.ylam.ai/favicon.ico
+icon: https://forma.yldm.ai/favicon.ico
 keywords:
   - forma
   - postgresql
   - valkey
-home: https://forma.ylam.ai/docs/self-hosting/setup/kubernetes
+home: https://forma.yldm.ai/docs/self-hosting/setup/kubernetes
 maintainers:
   - name: Forma
-    email: info@forma.ylam.ai
+    email: info@forma.yldm.ai
 dependencies:
   - name: spicedb-operator
     alias: spicedbOperator

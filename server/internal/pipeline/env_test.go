@@ -72,7 +72,7 @@ func newEnv(t *testing.T, handoffs Handoffs) *env {
 	dsn := pgtest.DSN(t)
 	cfg := config.Config{
 		WebAppURL: app, PublicURL: public, DatabaseURL: dsn, DatabaseMaxOpenConns: 5, ShutdownTimeout: 5 * time.Second, WorkerConcurrency: 2,
-		AuditLogEnabled: true, MailFrom: "noreply@forma.ylam.ai", MailFromName: "Forma", DangerouslyAllowWebhookInternalURLs: true,
+		AuditLogEnabled: true, MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma", DangerouslyAllowWebhookInternalURLs: true,
 	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Discard})
 	if err != nil {

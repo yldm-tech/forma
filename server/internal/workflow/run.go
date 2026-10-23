@@ -30,7 +30,7 @@ const (
 	smtpNotConfigured     = "SMTP is not configured; workflow email was not sent"
 	definitionNotRunnable = "Workflow run definition is not executable"
 	stepFailedFallback    = "Workflow step failed"
-	messageIDDomain       = "forma.ylam.ai"
+	messageIDDomain       = "forma.yldm.ai"
 	emailProvider         = "smtp"
 )
 

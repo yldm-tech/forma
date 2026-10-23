@@ -76,7 +76,7 @@ describe("web scan target", () => {
     };
     root = fixture({
       "web/src/login.tsx": `export const Login = () => <p>{t("auth.login")}</p>;\nexport const s = t("auth.stale");\nexport const u = t("common.unused");`,
-      "server/mailer/render.go": `func (Invite) subjectKey() string { return "emails.invite_subject" }\nvar host = "forma.ylam.ai"`,
+      "server/mailer/render.go": `func (Invite) subjectKey() string { return "emails.invite_subject" }\nvar host = "forma.yldm.ai"`,
       "server/mailer/templates/invite.html": `{{template "heading" (.T "emails.invite_subject")}}`,
       "server/catalog/templates.json": `[{"name": "{{templates.nps_name}}"}]`,
       "web/locales/en-US.json": JSON.stringify(enUS),
@@ -92,7 +92,7 @@ describe("web scan target", () => {
     expect(results.usedKeys).toContain("emails.invite_subject");
     expect(results.usedKeys).toContain("templates.nps_name");
     // A dotted string that is no catalogue key is not a missing key.
-    expect(results.usedKeys).not.toContain("forma.ylam.ai");
+    expect(results.usedKeys).not.toContain("forma.yldm.ai");
     expect(hasIssues(results)).toBe(false);
   });
 
@@ -151,7 +151,7 @@ describe("extractReferencedKeys", () => {
   });
 
   test("ignores dotted strings that are no key", () => {
-    expect(extractReferencedKeys(`"forma.ylam.ai" "emails.unknown"`, catalogue)).toEqual([]);
+    expect(extractReferencedKeys(`"forma.yldm.ai" "emails.unknown"`, catalogue)).toEqual([]);
   });
 });
 

@@ -29,5 +29,5 @@ body:
     attributes:
       label: Your Environment
       options:
-        - Forma Cloud (app.forma.ylam.ai)
+        - Forma Cloud (forma.yldm.ai)
         - Self-hosted Forma

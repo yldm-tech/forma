@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Forma-surveys is a helper library to embed surveys into your application.",
-  "homepage": "https://forma.ylam.ai",
+  "homepage": "https://forma.yldm.ai",
   "type": "module",
   "repository": {
     "type": "git",

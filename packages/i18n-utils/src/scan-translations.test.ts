@@ -95,32 +95,32 @@ describe("Translation Scanner", () => {
 
     test("preserves URLs with // in them", () => {
       const content = `
-        const link = "https://forma.ylam.ai";
+        const link = "https://forma.yldm.ai";
         const link2 = "http://example.com";
         const text = t("valid.key");
       `;
       const result = stripComments(content);
-      expect(result).toContain("https://forma.ylam.ai");
+      expect(result).toContain("https://forma.yldm.ai");
       expect(result).toContain("http://example.com");
       expect(result).toContain('t("valid.key")');
     });
 
     test("preserves translation keys on same line as URLs", () => {
-      const content = `<Link href="https://forma.ylam.ai">{t("s.create_your_own")}</Link>`;
+      const content = `<Link href="https://forma.yldm.ai">{t("s.create_your_own")}</Link>`;
       const result = stripComments(content);
       expect(result).toContain('t("s.create_your_own")');
-      expect(result).toContain("https://forma.ylam.ai");
+      expect(result).toContain("https://forma.yldm.ai");
     });
 
     test("removes actual comments but preserves URLs", () => {
       const content = `
-        const url = "https://forma.ylam.ai";
+        const url = "https://forma.yldm.ai";
         // This is a real comment with t("comment.key")
         const text = t("valid.key");
         const api = "http://api.example.com"; // Comment after URL
       `;
       const result = stripComments(content);
-      expect(result).toContain("https://forma.ylam.ai");
+      expect(result).toContain("https://forma.yldm.ai");
       expect(result).toContain("http://api.example.com");
       expect(result).toContain('t("valid.key")');
       expect(result).not.toContain('t("comment.key")');
@@ -268,7 +268,7 @@ describe("Translation Scanner", () => {
     });
 
     test("extracts keys from lines containing URLs", () => {
-      const content = `<Link href="https://forma.ylam.ai">{t("s.create_your_own")}</Link>`;
+      const content = `<Link href="https://forma.yldm.ai">{t("s.create_your_own")}</Link>`;
       const keys = extractKeysFromContent(content);
       expect(keys).toContain("s.create_your_own");
       expect(keys).toHaveLength(1);
@@ -616,7 +616,7 @@ describe("Translation Scanner", () => {
               <Trans i18nKey="page.footer" />
               <Trans i18nKey={'page.header'} />
               <Trans i18nKey={"page.sidebar"} />
-              <Link href="https://forma.ylam.ai">{t("page.link")}</Link>
+              <Link href="https://forma.yldm.ai">{t("page.link")}</Link>
               {/* Inline comment t("inline.ignored") */}
             </div>
           );

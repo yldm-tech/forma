@@ -4,7 +4,7 @@ import footerLogo from "../assets/footerlogo.svg";
 import type { TCompletedState } from "../lib/state";
 
 const SURVEY_COMPLETED_URL =
-  "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=survey_completed";
+  "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=survey_completed";
 
 /** forma2's SurveyCompletedMessage: a single-use link whose response is finished. */
 export const SurveyCompletedMessage = ({ singleUse, workspace }: TCompletedState) => {

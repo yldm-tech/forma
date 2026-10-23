@@ -27,12 +27,12 @@ func TestSanitizeBody(t *testing.T) {
 		},
 		{`<ul><li>Fruit<ul><li>Banana</li></ul></li><li>Bread</li></ul>`, `<ul><li>Fruit<ul><li>Banana</li></ul></li><li>Bread</li></ul>`},
 		{
-			`<ul><li><b><strong>bold</strong></b> <i><em>italic</em></i><br /><a href="https://forma.ylam.ai">link</a></li></ul>`,
-			`<ul><li><b><strong>bold</strong></b> <i><em>italic</em></i><br/><a href="https://forma.ylam.ai">link</a></li></ul>`,
+			`<ul><li><b><strong>bold</strong></b> <i><em>italic</em></i><br /><a href="https://forma.yldm.ai">link</a></li></ul>`,
+			`<ul><li><b><strong>bold</strong></b> <i><em>italic</em></i><br/><a href="https://forma.yldm.ai">link</a></li></ul>`,
 		},
 		{
-			`<p style="color:red" onclick="steal()"><a href="https://forma.ylam.ai" target="_blank" rel="noopener">ok</a><a href="javascript:alert(1)">bad</a></p>`,
-			`<p><a href="https://forma.ylam.ai" target="_blank" rel="noopener">ok</a><a>bad</a></p>`,
+			`<p style="color:red" onclick="steal()"><a href="https://forma.yldm.ai" target="_blank" rel="noopener">ok</a><a href="javascript:alert(1)">bad</a></p>`,
+			`<p><a href="https://forma.yldm.ai" target="_blank" rel="noopener">ok</a><a>bad</a></p>`,
 		},
 		{`<p dir="rtl"><a href="/relative">r</a><a href="mailto:a@example.com">m</a></p>`, `<p dir="rtl"><a href="/relative">r</a><a>m</a></p>`},
 	}

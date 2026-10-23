@@ -135,7 +135,7 @@ export const EndScreenForm = ({
                 updateSurvey({
                   buttonLabel: { default: t("workspace.surveys.edit.create_your_own_survey") },
                   buttonLink:
-                    "https://forma.ylam.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
+                    "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
                 });
               }
               setshowEndingCardCTA(!showEndingCardCTA);
@@ -204,7 +204,7 @@ export const EndScreenForm = ({
                           id="buttonLink"
                           name="buttonLink"
                           className="relative text-black caret-black"
-                          placeholder="https://forma.ylam.ai"
+                          placeholder="https://forma.yldm.ai"
                           value={
                             recallToHeadline(
                               {

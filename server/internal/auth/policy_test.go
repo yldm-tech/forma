@@ -149,7 +149,7 @@ func TestIsBlockedEmailDomain(t *testing.T) {
 		{"test@33mail.com", true},
 		{"Test@Mailinator.COM.", true},
 		{"alice@acme-corp.com", false},
-		{"bob@forma.ylam.ai", false},
+		{"bob@forma.yldm.ai", false},
 		{"carol@stripe.com", false},
 		{"dave@my-company.co.uk", false},
 		{"a@b@gmail.com", true},

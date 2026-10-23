@@ -20,7 +20,7 @@ export function FormWrapper({ children }: { children: ReactNode }) {
       <main className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl sm:p-8">
         <div className="mb-8 text-center">
           <a
-            href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=auth_logo"
+            href="https://forma.yldm.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=auth_logo"
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("common.forma_homepage")}

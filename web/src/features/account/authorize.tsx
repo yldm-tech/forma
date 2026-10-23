@@ -18,7 +18,7 @@ const Frame = ({ children }: { children: ReactNode }) => {
         <div className="mb-6 flex justify-center">
           <a
             target="_blank"
-            href="https://forma.ylam.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=oauth_consent_logo"
+            href="https://forma.yldm.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=oauth_consent_logo"
             rel="noopener noreferrer"
             aria-label={t("auth.oauth.forma_website")}>
             <Wordmark className="text-xl" />

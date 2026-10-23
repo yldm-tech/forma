@@ -436,7 +436,7 @@ func TestAuthoringContext(t *testing.T) {
 	path := "/api/app/workspaces/" + f.ws.String() + "/workflows/authoring-context"
 	var ctx AuthoringContext
 	e.ok(e.v3(teamMember, http.MethodGet, path, nil), http.StatusOK, &ctx)
-	if ctx.MailFrom != "noreply@forma.ylam.ai" || len(ctx.TeamMemberDetails) != 2 {
+	if ctx.MailFrom != "noreply@forma.yldm.ai" || len(ctx.TeamMemberDetails) != 2 {
 		t.Fatalf("%+v", ctx)
 	}
 	if rec := e.v3(other, http.MethodGet, path, nil); rec.Code != http.StatusForbidden {

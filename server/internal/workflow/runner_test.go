@@ -233,7 +233,7 @@ func TestRunSendsEveryStepOnce(t *testing.T) {
 		t.Fatalf("sent %+v", e.mail.Messages())
 	}
 	m := respondent[0]
-	if m.Subject != "Thanks for your response" || m.ReplyTo != "support@example.com, help@example.com" || m.From != `"Forma" <noreply@forma.ylam.ai>` ||
+	if m.Subject != "Thanks for your response" || m.ReplyTo != "support@example.com, help@example.com" || m.From != `"Forma" <noreply@forma.yldm.ai>` ||
 		m.MessageID != MessageID(run, "send-email", "noreply@example.com") || !strings.Contains(string(logs[0].Output), m.MessageID) {
 		t.Fatalf("respondent mail %+v", m)
 	}

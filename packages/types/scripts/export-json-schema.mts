@@ -36,7 +36,7 @@ const render = (name: string, entry: z.ZodType | JsonSchemaEntry): string => {
       `${name}: exported JSON Schema has no constraints; pick a representable schema or io side`
     );
   }
-  return `${JSON.stringify({ ...json, $id: `https://forma.ylam.ai/schemas/${name}.json` }, null, 2)}\n`;
+  return `${JSON.stringify({ ...json, $id: `https://forma.yldm.ai/schemas/${name}.json` }, null, 2)}\n`;
 };
 
 const main = async (): Promise<void> => {
