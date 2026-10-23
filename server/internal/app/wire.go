@@ -48,6 +48,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/usagereport"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
@@ -255,6 +256,7 @@ var pipelineSet = wire.NewSet(
 	workflow.NewEnqueuer,
 	workflow.NewRunner,
 	workflow.NewReconciler,
+	usagereport.NewReporter,
 	newPipelineHandoffs,
 	pipeline.NewWorker,
 )

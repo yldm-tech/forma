@@ -29,7 +29,7 @@ type Recorder struct {
 	messages []Message
 }
 
-// Start installs a client for the test's duration. It replaces the process-wide client, so a test that calls it must not run in parallel with another that captures events.
+// Start installs a client for the test's duration. It replaces the process-wide client, so events captured by tests running in parallel reach it too: assert on what the test itself created, and do not call Start from two tests that run at the same time.
 func Start(t *testing.T) *Recorder {
 	t.Helper()
 	r := &Recorder{}

@@ -49,6 +49,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/usagereport"
 	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
 	"github.com/yldm-tech/forma/server/internal/webui"
@@ -319,13 +320,14 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	stripe := billing.NewStripe(cfg, log)
 	meter := billing.NewMeter(cfg, stripe, log)
 	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, meter, log)
-	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer, meter)
+	reporter := usagereport.NewReporter(cfg, db, redisClient, log)
+	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer, meter, reporter)
 	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
 	runner := workflow.NewRunner(cfg, db, mailerMailer, log)
 	reconciler := workflow.NewReconciler(db, enqueuer, log)
 	billingRepository := billing.NewRepository(db)
 	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()
@@ -408,4 +410,4 @@ var mcpSet = wire.NewSet(oauthserver.NewKeys, oauthserver.NewHandler, oauthserve
 var billingSet = wire.NewSet(billing.NewStripe, billing.NewRepository, billing.NewEngine, billing.NewService, billing.NewHandler, billing.NewWebhookHandler, billing.NewLifecycle)
 
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
-var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, billing.NewStripe, billing.NewMeter, wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)), workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, newPipelineHandoffs, pipeline.NewWorker)
+var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, billing.NewStripe, billing.NewMeter, wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)), workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, usagereport.NewReporter, newPipelineHandoffs, pipeline.NewWorker)

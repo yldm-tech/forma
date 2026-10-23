@@ -16,6 +16,10 @@ import (
 	"github.com/riverqueue/river/rivertype"
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
+	"sync/atomic"
+
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/server/internal/response"
@@ -498,5 +502,53 @@ func TestInterruptedAttemptIsRetried(t *testing.T) {
 				t.Errorf("emails were sent on an attempt that will be retried")
 			}
 		})
+	}
+}
+
+type usageReports struct{ sent atomic.Int32 }
+
+func (u *usageReports) Send(context.Context) { u.sent.Add(1) }
+
+// TestResponseCreatedAnalytics: a created response sends survey_response_received at forma2's milestones (the first, every tenth to a hundred) with both groups, and asks for the usage update; a finished one does neither.
+func TestResponseCreatedAnalytics(t *testing.T) {
+	rec := analyticstest.Start(t)
+	reports := &usageReports{}
+	e := newEnv(t, Handoffs{UsageReport: reports})
+	f := e.fixture()
+	created := func() {
+		t.Helper()
+		if err := e.work(job(response.EventResponseCreated, f, e.respond(f, false, `{}`), 1)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	created()
+	for range 8 {
+		e.exec(`INSERT INTO responses (survey_id) VALUES (?)`, f.survey)
+	}
+	created()
+	created()
+	if err := e.work(job(response.EventResponseFinished, f, e.respond(f, true, `{}`), 1)); err != nil {
+		t.Fatal(err)
+	}
+	// Events are delivered in order, so once the sentinel arrives every event of this survey has.
+	sentinel := "sentinel-" + f.survey.String()
+	analytics.Capture(sentinel, "test_sentinel", nil, analytics.Groups{})
+	rec.Events(t, "test_sentinel", 1)
+	var milestones []string
+	for _, m := range rec.All() {
+		if m.Event != "survey_response_received" || m.Properties["survey_id"] != f.survey.String() {
+			continue
+		}
+		milestones = append(milestones, m.Properties["milestone"].(string))
+		groups, _ := m.Properties["$groups"].(map[string]any)
+		if m.DistinctID != f.org.String() || groups["organization"] != f.org.String() || groups["workspace"] != f.ws.String() || m.Properties["survey_type"] != "app" || m.Properties["workspace_id"] != f.ws.String() {
+			t.Errorf("survey_response_received = %+v", m)
+		}
+	}
+	if fmt.Sprint(milestones) != "[first 10]" {
+		t.Errorf("milestones = %v, want the first and the tenth response only", milestones)
+	}
+	if n := reports.sent.Load(); n != 3 {
+		t.Errorf("usage update asked for %d times, want once per created response", n)
 	}
 }
