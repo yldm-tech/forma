@@ -59,6 +59,7 @@
     "@testing-library/preact": "3.2.4",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "autoprefixer": "10.6.0",
     "concurrently": "9.2.4",
     "cross-env": "catalog:",

@@ -62,6 +62,7 @@
     "@forma/config-typescript": "workspace:*",
     "@types/node": "catalog:",
     "@types/object-hash": "3.0.6",
+    "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
