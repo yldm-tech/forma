@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/server/internal/linksurvey"
-	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/survey"
 )
 
@@ -35,36 +32,6 @@ func (is *issues) expirationDays(q object, integer bool) int {
 		return 0
 	}
 	return int(n)
-}
-
-// contactLink is forma2's getContactSurveyLink: the personal link on the public domain, with fresh single-use parameters when the survey takes single-use links.
-func (h *Handler) contactLink(sv *survey.Survey, contactID uuid.UUID, days int) (string, error) {
-	link, err := linksurvey.NewContactToken(h.cfg, contactID, sv.ID, h.now(), time.Duration(days)*24*time.Hour)
-	if err != nil {
-		return "", err
-	}
-	out := h.surveys.PublicDomain() + "/c/" + link
-	if settings := sv.SingleUseSettings(); settings.Enabled {
-		su, err := h.surveys.NewSingleUseLink(sv.ID, settings.IsEncrypted)
-		if err != nil {
-			return "", err
-		}
-		q := url.Values{"suId": {su.SuID}}
-		if su.SuToken != "" {
-			q.Set("suToken", su.SuToken)
-		}
-		out += "?" + q.Encode()
-	}
-	return out, nil
-}
-
-// expiresAt is forma2's calculateExpirationDate: now plus the days, nil without them.
-func (h *Handler) expiresAt(days int) *string {
-	if days == 0 {
-		return nil
-	}
-	s := jsvalue.ISOString(h.now().Add(time.Duration(days) * 24 * time.Hour))
-	return &s
 }
 
 // linkSurvey loads the survey a contact link route names and authorizes read on its workspace, answering itself when it cannot: 404 survey, 401 when refused.
@@ -127,12 +94,12 @@ func (h *Handler) v2ContactLink(c *gin.Context) {
 		v2Error(c, http.StatusBadRequest, detail("contactId", "Already responded"))
 		return
 	}
-	link, err := h.contactLink(sv, contactID, days)
+	link, err := contactsurvey.Link(h.cfg, h.surveys, sv, contactID, h.now(), contactsurvey.Days(days))
 	if err != nil {
 		h.v2Unexpected(c, err)
 		return
 	}
-	v2OK(c, map[string]any{"surveyUrl": link, "expiresAt": h.expiresAt(days)}, nil)
+	v2OK(c, map[string]any{"surveyUrl": link, "expiresAt": contactsurvey.ExpiresAt(h.now(), days)}, nil)
 }
 
 // v2SegmentLinks is forma2's GET .../contact-links/segments/{segmentId}: personal links for a page of the contacts a segment of the survey's workspace matches, newest first, each with the requested attributes the workspace has keys for. Only a link survey in progress gives links (403 otherwise).
@@ -204,10 +171,10 @@ func (h *Handler) v2SegmentLinks(c *gin.Context) {
 		h.v2Unexpected(c, err)
 		return
 	}
-	expires := h.expiresAt(days)
+	expires := contactsurvey.ExpiresAt(h.now(), days)
 	out := []map[string]any{}
 	for _, id := range ids {
-		link, err := h.contactLink(sv, id, days)
+		link, err := contactsurvey.Link(h.cfg, h.surveys, sv, id, h.now(), contactsurvey.Days(days))
 		if err != nil {
 			h.log.ErrorContext(ctx, "Failed to generate survey URL for contact", "err", err, "contactId", id.String(), "surveyId", sv.ID.String())
 			continue
