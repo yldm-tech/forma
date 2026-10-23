@@ -104,4 +104,27 @@ func mount(engine gin.IRouter, prefix string, front gin.HandlerFunc, routes []ro
 func (h *Handler) Register(engine gin.IRouter) {
 	h.registerV1(engine)
 	h.registerV2(engine)
+	for from, to := range shortV1Paths {
+		engine.Any(from, permanentRedirect(to))
+	}
+}
+
+// shortV1Paths are the permanent redirects forma2's next.config.mjs sent to the management API.
+var shortV1Paths = map[string]string{
+	"/api/v1/surveys":   "/api/v1/management/surveys",
+	"/api/v1/responses": "/api/v1/management/responses",
+	"/api/v1/me":        "/api/v1/management/me",
+}
+
+// permanentRedirect answers as a Next.js permanent redirect did, for every method: 308 with the query string carried over, a Refresh header and the destination as the body.
+func permanentRedirect(to string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		target := to
+		if q := c.Request.URL.RawQuery; q != "" {
+			target += "?" + q
+		}
+		c.Header("Location", target)
+		c.Header("Refresh", "0;url="+target)
+		c.Data(http.StatusPermanentRedirect, "text/plain; charset=utf-8", []byte(target))
+	}
 }

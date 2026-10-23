@@ -450,5 +450,11 @@ func (h *Handler) registerV2(engine gin.IRouter) {
 		r(http.MethodPost, "/organizations/:organizationId/workspace-teams", orgKey, audited(audit.ActionCreated, audit.TargetWorkspaceTeam, h.v2CreateWorkspaceTeam)),
 		r(http.MethodPut, "/organizations/:organizationId/workspace-teams", orgKey, audited(audit.ActionUpdated, audit.TargetWorkspaceTeam, h.v2UpdateWorkspaceTeam)),
 		r(http.MethodDelete, "/organizations/:organizationId/workspace-teams", orgKey, audited(audit.ActionDeleted, audit.TargetWorkspaceTeam, h.v2DeleteWorkspaceTeam)),
+
+		// forma2's next.config.mjs rewrote the Formbricks-era project-teams path, every method, onto workspace-teams.
+		r(http.MethodGet, "/organizations/:organizationId/project-teams", orgKey, h.v2ListWorkspaceTeams),
+		r(http.MethodPost, "/organizations/:organizationId/project-teams", orgKey, audited(audit.ActionCreated, audit.TargetWorkspaceTeam, h.v2CreateWorkspaceTeam)),
+		r(http.MethodPut, "/organizations/:organizationId/project-teams", orgKey, audited(audit.ActionUpdated, audit.TargetWorkspaceTeam, h.v2UpdateWorkspaceTeam)),
+		r(http.MethodDelete, "/organizations/:organizationId/project-teams", orgKey, audited(audit.ActionDeleted, audit.TargetWorkspaceTeam, h.v2DeleteWorkspaceTeam)),
 	})
 }

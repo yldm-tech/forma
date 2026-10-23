@@ -1,6 +1,7 @@
 package mgmtapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"slices"
@@ -213,5 +214,29 @@ func TestOptionsListTheRoutesMethods(t *testing.T) {
 	res := e.do(http.MethodOptions, "/api/v1/management/surveys/"+uuid.NewString(), nil)
 	if res.Status != http.StatusNoContent || res.Header.Get("Allow") != "DELETE, GET, HEAD, OPTIONS, PUT" {
 		t.Errorf("OPTIONS = %d %v", res.Status, res.Header)
+	}
+}
+
+// forma2's next.config.mjs rewrote the Formbricks-era project-teams path onto workspace-teams and permanently redirected the short v1 paths to the management API; integrations still call both.
+func TestForma2PathAliases(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	canonical := e.do("GET", "/api/v2/organizations/"+org+"/workspace-teams", nil, "x-api-key", key)
+	alias := e.do("GET", "/api/v2/organizations/"+org+"/project-teams", nil, "x-api-key", key)
+	if canonical.Status != http.StatusOK || alias.Status != canonical.Status || !bytes.Equal(alias.Body, canonical.Body) {
+		t.Errorf("project-teams = %d %s, workspace-teams = %d %s", alias.Status, alias.Body, canonical.Status, canonical.Body)
+	}
+	expectStatus(t, "project-teams without a key", e.do("POST", "/api/v2/organizations/"+org+"/project-teams", map[string]any{}), http.StatusUnauthorized)
+
+	for _, tc := range []struct{ method, path, want string }{
+		{"GET", "/api/v1/surveys", "/api/v1/management/surveys"},
+		{"POST", "/api/v1/responses?surveyId=abc", "/api/v1/management/responses?surveyId=abc"},
+		{"GET", "/api/v1/me", "/api/v1/management/me"},
+	} {
+		res := e.do(tc.method, tc.path, nil)
+		if res.Status != http.StatusPermanentRedirect || res.Header.Get("Location") != tc.want || res.Header.Get("Refresh") != "0;url="+tc.want || string(res.Body) != tc.want {
+			t.Errorf("%s %s = %d %v %q, want 308 to %s", tc.method, tc.path, res.Status, res.Header, res.Body, tc.want)
+		}
 	}
 }
