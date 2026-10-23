@@ -316,8 +316,6 @@
               "self-hosting/advanced/migration",
               "self-hosting/advanced/authzed-operations",
               "self-hosting/advanced/migrating-surveys",
-              "self-hosting/advanced/license",
-              "self-hosting/advanced/license-activation",
               {
                 "group": "Enterprise Features",
                 "icon": "building",
@@ -1224,10 +1222,6 @@
     {
       "destination": "/docs/self-hosting/overview",
       "source": "/docs/self-hosting/integrations"
-    },
-    {
-      "destination": "/docs/self-hosting/advanced/license",
-      "source": "/docs/self-hosting/license"
     },
     {
       "destination": "/docs/self-hosting/advanced/rate-limiting",

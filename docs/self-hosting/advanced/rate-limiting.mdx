@@ -87,7 +87,6 @@ These are the limits that still run inside the Forma application server:
 | `actions.inviteMember`        | 50 recipients | 24 hours  | Organization ID               | Single, bulk, onboarding, and resend invite actions                                                                                                       |
 | `actions.surveyFollowUp`      | 50 requests  | 60 minutes | Organization ID               | Survey follow-up email processing                                                                                                                         |
 | `actions.sendLinkSurveyEmail` | 10 requests  | 60 minutes | IP hash                       | Link survey email send action                                                                                                                             |
-| `actions.licenseRecheck`      | 5 requests   | 1 minute   | User ID                       | Enterprise license recheck action                                                                                                                         |
 
 Invite limits are recipient-counted, so a bulk request for 25 people consumes 25 units. Self-hosters can
 change the limit with `INVITE_RATE_LIMIT_PER_24_HOURS`; Forma Cloud organizations with the
