@@ -9,6 +9,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
@@ -24,7 +25,7 @@ import (
 )
 
 // NewJobRegistry is every job kind and schedule `forma worker` runs: the platform's own, then each feature module's.
-func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler, billingEngine *billing.Engine, usageReporter *usagereport.Reporter) *jobs.Registry {
+func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler, billingEngine *billing.Engine, usageReporter *usagereport.Reporter, brevoClient *brevo.Client) *jobs.Registry {
 	reg := jobs.NewRegistry(log)
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
@@ -37,6 +38,7 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	retention.RegisterJobs(reg, db, log)
 	usagereport.RegisterJobs(reg, usageReporter, log)
 	workflow.RegisterUsageSnapshot(reg, workflow.NewUsageSnapshot(cfg, db, log), log)
+	brevo.RegisterJobs(reg, brevoClient)
 	return reg
 }
 

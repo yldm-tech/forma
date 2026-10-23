@@ -34,7 +34,7 @@ function IntroPage() {
             </p>
           ))}
         </div>
-        <ButtonLink to="/auth/signup" className="mt-6">
+        <ButtonLink to="/setup/signup" className="mt-6">
           {t("setup.intro.get_started")}
         </ButtonLink>
         <p className="pt-6 text-xs text-slate-400">{t("setup.intro.made_with_love_in_kiel")}</p>

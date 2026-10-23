@@ -1,31 +1,43 @@
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { errorMessage } from "../../lib/errors";
+import { ApiError } from "../../lib/api";
 import { reportError } from "../../lib/telemetry/sentry";
 import { Button } from "../ui/button";
+import { ErrorComponent } from "../ui/error-component";
 import { LoadingBlock } from "../ui/page";
 
-/** What a route shows when its data could not be loaded or it failed to render: the error, as the client error mapping words it, and a retry. An error the app does not expect is reported to Sentry, as forma2's error boundary did. */
+/** forma2's error boundary (app/error.tsx): a rate limit gets its own wording and no buttons, anything else the generic error with a retry and a way back to the dashboard. An error the app does not expect is reported to Sentry. */
 export const RouteError = ({ error, reset }: ErrorComponentProps) => {
   const { t } = useTranslation();
   const router = useRouter();
   useEffect(() => reportError(error), [error]);
+  const rateLimited = error instanceof ApiError && error.isRateLimited;
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold text-slate-800">{t("common.something_went_wrong")}</h1>
-      <p className="mt-2 text-sm text-slate-600" role="alert">
-        {errorMessage(t, error)}
-      </p>
-      <Button
-        className="mt-4"
-        variant="secondary"
-        onClick={() => {
-          reset();
-          void router.invalidate();
-        }}>
-        {t("common.try_again")}
-      </Button>
+    <main className="flex h-full min-h-[50dvh] w-full flex-col items-center justify-center p-8">
+      <div role="alert">
+        <ErrorComponent
+          title={rateLimited ? t("common.error_rate_limit_title") : t("common.error_component_title")}
+          description={
+            rateLimited ? t("common.error_rate_limit_description") : t("common.error_component_description")
+          }
+        />
+      </div>
+      {!rateLimited && (
+        <div className="mt-2">
+          <Button
+            variant="secondary"
+            className="mr-2"
+            onClick={() => {
+              reset();
+              void router.invalidate();
+            }}>
+            {t("common.try_again")}
+          </Button>
+          {/* A full load, as forma2's window.location.href: whatever broke is not carried into the dashboard. */}
+          <Button onClick={() => globalThis.location.assign("/")}>{t("common.go_to_dashboard")}</Button>
+        </div>
+      )}
     </main>
   );
 };
@@ -40,11 +52,21 @@ export const RoutePending = () => {
   );
 };
 
+/** forma2's not-found page (app/not-found.tsx): the code, what happened and the way home. */
 export const NotFound = () => {
   const { t } = useTranslation();
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold text-slate-800">{t("common.page_not_found")}</h1>
+    <main className="mx-auto flex h-full max-w-xl flex-col items-center justify-center py-16 text-center">
+      <p className="text-sm font-semibold text-zinc-900" data-testid="error-code">
+        404
+      </p>
+      <h1 className="mt-2 text-2xl font-bold text-zinc-900">{t("common.page_not_found")}</h1>
+      <p className="mt-2 text-base text-zinc-600" data-testid="error-message">
+        {t("common.page_not_found_description")}
+      </p>
+      <Button asChild className="mt-8">
+        <Link to="/">{t("common.back_to_home")}</Link>
+      </Button>
     </main>
   );
 };

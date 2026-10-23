@@ -89,6 +89,11 @@ type optionsResponse struct {
 	// SSOProviders are the identity providers offered (google, github, azuread, openid), in the order the page shows them; OIDCDisplayName labels the generic one's button.
 	SSOProviders    []string `json:"ssoProviders"`
 	OIDCDisplayName string   `json:"oidcDisplayName,omitempty"`
+	// TermsURL and PrivacyURL are forma2's TERMS_URL and PRIVACY_URL, linked under the sign-up form when set.
+	TermsURL   string `json:"termsUrl,omitempty"`
+	PrivacyURL string `json:"privacyUrl,omitempty"`
+	// IsFormaCloud makes the sign-up form offer the product update emails instead of the security ones.
+	IsFormaCloud bool `json:"isFormaCloud"`
 }
 
 // options tells the sign-in and sign-up pages what this instance offers.
@@ -105,6 +110,9 @@ func (h *Handler) options(c *gin.Context) {
 		EmailVerificationRequired: !h.cfg.EmailVerificationDisabled,
 		SMTPConfigured:            h.cfg.SMTPConfigured(),
 		SSOProviders:              enabledSSOProviders(h.cfg.SSO),
+		TermsURL:                  h.cfg.TermsURL,
+		PrivacyURL:                h.cfg.PrivacyURL,
+		IsFormaCloud:              h.cfg.IsFormaCloud,
 	}
 	if h.cfg.SSO.OIDCEnabled() {
 		res.OIDCDisplayName = h.cfg.SSO.OIDCDisplayName
@@ -221,7 +229,7 @@ type signupRequest struct {
 	InviteToken    string `json:"inviteToken"`
 	UserLocale     string `json:"userLocale"`
 	TurnstileToken string `json:"turnstileToken"`
-	// The mailing-list choices are accepted and ignored: forma2 subscribed through Brevo, which is not part of this server.
+	// The mailing-list choices (the security list off Forma Cloud, the product updates list on it) are accepted and ignored: forma2 posted them to its EE server's mailing endpoints, which this server does not call.
 	SubscribeToSecurityUpdates bool `json:"subscribeToSecurityUpdates"`
 	SubscribeToProductUpdates  bool `json:"subscribeToProductUpdates"`
 	turnstileRequired          bool
@@ -244,6 +252,7 @@ func (h *Handler) signup(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
+	attr := readAttribution(c)
 	intent, err := h.svc.signup(c.Request.Context(), signupInput{
 		Name: req.Name, Email: req.Email, Password: req.Password, InviteToken: req.InviteToken, UserLocale: req.UserLocale, TurnstileToken: req.TurnstileToken,
 	})
@@ -252,6 +261,7 @@ func (h *Handler) signup(c *gin.Context) {
 		return
 	}
 	h.cookies.set(c, h.cookies.signupIntent, intent)
+	h.cookies.clearAttribution(c, attr)
 	c.JSON(http.StatusOK, successResponse{Success: true})
 }
 
@@ -279,6 +289,7 @@ func (h *Handler) signIn(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
+	attr := readAttribution(c)
 	res, err := h.svc.signIn(c.Request.Context(), req.Email, req.Password, clientMetaFrom(c))
 	if err != nil {
 		httpapi.Fail(c, err)
@@ -291,6 +302,7 @@ func (h *Handler) signIn(c *gin.Context) {
 	}
 	h.cookies.setSession(c, *res.session)
 	h.cookies.clear(c, h.cookies.twoFactor)
+	h.cookies.clearAttribution(c, attr)
 	c.JSON(http.StatusOK, signInResponse{Status: "signed_in"})
 }
 
@@ -377,6 +389,7 @@ func (h *Handler) verifyEmail(c *gin.Context) {
 		current = &a
 	}
 	intent, _ := c.Cookie(h.cookies.signupIntent)
+	attr := readAttribution(c)
 	res, err := h.svc.verifyEmail(c.Request.Context(), req.Token, intent, current, clientMetaFrom(c))
 	if err != nil {
 		httpapi.Fail(c, err)
@@ -386,6 +399,7 @@ func (h *Handler) verifyEmail(c *gin.Context) {
 		h.cookies.setSession(c, *res.session)
 		h.cookies.clear(c, h.cookies.signupIntent)
 	}
+	h.cookies.clearAttribution(c, attr)
 	c.JSON(http.StatusOK, verifyEmailResponse{SignedIn: res.SignedIn})
 }
 

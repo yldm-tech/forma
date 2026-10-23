@@ -193,7 +193,7 @@ func TestOptions(t *testing.T) {
 	e := newEnv(t)
 	r := e.browser().get("/auth/options")
 	expectStatus(t, r, http.StatusOK, "")
-	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil {
+	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil || m["isFormaCloud"] != false || m["termsUrl"] != nil || m["privacyUrl"] != nil {
 		t.Fatalf("fresh instance options %v", m)
 	}
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -205,9 +205,11 @@ func TestOptions(t *testing.T) {
 		c.IsFormaCloud = true
 		c.TurnstileSiteKey, c.TurnstileSecretKey = "site-key", "secret"
 		c.PasswordResetDisabled, c.EmailVerificationDisabled = true, true
+		c.TermsURL, c.PrivacyURL = "https://forma.example/terms", "https://forma.example/privacy"
 	})
 	cloud.seedUser("ada@example.com", strongPassword, userOpts{})
-	if m := cloud.browser().get("/auth/options").json(); m["signupEnabled"] != true || m["turnstileSiteKey"] != "site-key" || m["passwordResetEnabled"] != false || m["emailVerificationRequired"] != false {
+	if m := cloud.browser().get("/auth/options").json(); m["signupEnabled"] != true || m["turnstileSiteKey"] != "site-key" || m["passwordResetEnabled"] != false || m["emailVerificationRequired"] != false ||
+		m["isFormaCloud"] != true || m["termsUrl"] != "https://forma.example/terms" || m["privacyUrl"] != "https://forma.example/privacy" {
 		t.Fatalf("cloud options %v", m)
 	}
 	ssoOnly := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = true })

@@ -8,6 +8,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
 )
@@ -88,7 +89,8 @@ func (s *Service) verifyEmail(ctx context.Context, token, intentToken string, ac
 	}
 
 	justVerified := false
-	err = s.repo.transaction(ctx, func(tx *Repository) error {
+	// The address becomes a Brevo contact with its first verification, as forma2's afterEmailVerification hook made it.
+	err = s.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		acc, err := tx.lockAccount(ctx, v.UserID.UUID)
 		if err != nil {
 			return err
@@ -104,7 +106,10 @@ func (s *Service) verifyEmail(ctx context.Context, token, intentToken string, ac
 			return err
 		}
 		justVerified = true
-		return tx.markEmailVerified(ctx, acc.ID, s.now())
+		if err := tx.markEmailVerified(ctx, acc.ID, s.now()); err != nil {
+			return err
+		}
+		return s.contacts.Verified(ctx, jtx, acc.ID, acc.Email)
 	})
 	if err != nil {
 		return verifyEmailResult{}, err

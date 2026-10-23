@@ -27,12 +27,13 @@ func (h *SSOHandler) Register(r gin.IRouter) {
 	g.POST("/recovery/complete", h.completeRecovery)
 }
 
-// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what forma2 served: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid|saml}, the URI Azure AD and the generic provider have been registered with since forma v5.2 and SAML's bridge returned to. SAML's assertion consumer service is forma2's /api/auth/saml/callback, a cross-site form POST from the identity provider, so it sits outside /api/app and its CSRF check; the service provider's metadata is beside it.
+// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what forma2 served: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid|saml}, the URI Azure AD and the generic provider have been registered with since forma v5.2 and SAML's bridge returned to. SAML's assertion consumer service is forma2's /api/auth/saml/callback, a cross-site form POST from the identity provider, so it sits outside /api/app and its CSRF check; the service provider's metadata is beside it. Better Auth's emailed link endpoints are mounted here too (registerLegacyLinks): they are browser navigations under /api/auth that end in a redirect as well.
 func (h *SSOHandler) RegisterCallbacks(r gin.IRouter) {
 	r.GET("/api/auth/callback/:provider", h.callback)
 	r.GET("/api/auth/oauth2/callback/:provider", h.legacyCallback)
 	r.POST(samlACSPath, h.samlACS)
 	r.GET(samlMetadataPath, h.samlMetadata)
+	registerLegacyLinks(r)
 }
 
 type ssoSignInRequest struct {
@@ -85,11 +86,13 @@ func (h *SSOHandler) legacyCallback(c *gin.Context) {
 // finish completes the flow and redirects. The state cookie is single-use and cleared on every outcome; the URL, which carries the authorization code, is never logged.
 func (h *SSOHandler) finish(c *gin.Context, provider string) {
 	state, _ := c.Cookie(h.cookies.oauthState)
+	attr := readAttribution(c)
 	res := h.sso.callback(c.Request.Context(), provider, c.Request.URL.Query(), state, c.GetHeader("Accept-Language"), clientMetaFrom(c))
 	h.cookies.clear(c, h.cookies.oauthState)
 	if res.session != nil {
 		h.cookies.setSession(c, *res.session)
 	}
+	h.cookies.clearAttribution(c, attr)
 	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, res.redirect)
 }
@@ -136,11 +139,13 @@ func (h *SSOHandler) completeRecovery(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
+	attr := readAttribution(c)
 	redirect, sess, err := h.sso.completeRecovery(c.Request.Context(), req.Token, clientMetaFrom(c))
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
 	}
 	h.cookies.setSession(c, sess)
+	h.cookies.clearAttribution(c, attr)
 	c.JSON(http.StatusOK, ssoRecoveryResponse{RedirectURL: redirect})
 }

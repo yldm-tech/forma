@@ -15,6 +15,11 @@ export interface AuthOptions {
   turnstileSiteKey?: string;
   ssoProviders: SSOProvider[];
   oidcDisplayName?: string;
+  /** TERMS_URL and PRIVACY_URL, linked under the sign-up form when set. */
+  termsUrl?: string;
+  privacyUrl?: string;
+  /** Forma Cloud offers the product update emails at sign-up instead of the security ones. */
+  isFormaCloud: boolean;
 }
 
 /** GET /api/app/auth/me. */
@@ -47,6 +52,7 @@ export interface SignupInput {
   userLocale?: string;
   turnstileToken?: string;
   subscribeToSecurityUpdates?: boolean;
+  subscribeToProductUpdates?: boolean;
 }
 
 export const authKeys = {

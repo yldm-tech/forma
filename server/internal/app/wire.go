@@ -15,6 +15,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
@@ -72,7 +73,7 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service, with the Brevo contact sync its account changes enqueue. Its sessions are the SessionAuth every other module's routes authenticate with.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
@@ -83,6 +84,7 @@ var authSet = wire.NewSet(
 	auth.NewHandler,
 	newSSO,
 	auth.NewSSOHandler,
+	brevo.NewContacts,
 )
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
@@ -350,6 +352,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		pipelineSet,
 		billing.NewRepository,
 		billing.NewEngine,
+		brevo.NewClient,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

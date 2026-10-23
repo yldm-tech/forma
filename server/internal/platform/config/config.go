@@ -153,6 +153,9 @@ type Config struct {
 	// Plain is the in-product support chat, off unless PLAIN_APP_ID is set.
 	Plain PlainConfig
 
+	// Brevo is Forma Cloud's contact sync to its CRM, off unless BREVO_API_KEY is set.
+	Brevo BrevoConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -438,6 +441,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.Telemetry.validate(); err != nil {
+		return err
+	}
+	if err := c.Brevo.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {

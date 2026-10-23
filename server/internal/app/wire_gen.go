@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
@@ -122,7 +123,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	lifecycle := billing.NewLifecycle(cfg, stripe, db, enqueuer, log)
-	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, lifecycle, log)
+	contacts := brevo.NewContacts(cfg)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, lifecycle, enqueuer, contacts, log)
 	cipher, err := secret.NewCipher(cfg)
 	if err != nil {
 		cleanup3()
@@ -348,7 +350,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	reconciler := workflow.NewReconciler(db, enqueuer, log)
 	billingRepository := billing.NewRepository(db)
 	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter)
+	brevoClient := brevo.NewClient(cfg)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter, brevoClient)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()
@@ -370,8 +373,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service, with the Brevo contact sync its account changes enqueue. Its sessions are the SessionAuth every other module's routes authenticate with.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler, brevo.NewContacts)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
