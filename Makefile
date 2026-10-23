@@ -98,8 +98,11 @@ test: web
 	cd $(SERVER) && go test -race ./...
 	pnpm exec vp run -r test
 
-check: lint test
+check: lint test lint-migrations
 	pnpm exec vp run catalog:check
+	pnpm exec vp run tests:run-check
+	pnpm exec vp run bundle:check
+	pnpm exec vp run scan-translations
 	pnpm exec vp run api:v3:lint
 	pnpm exec vp run authzed:validate
 

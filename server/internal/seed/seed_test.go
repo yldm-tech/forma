@@ -84,15 +84,16 @@ func TestContractSeedIsIdempotentAndUsable(t *testing.T) {
 		}
 	}
 
-	// Every seeded user signs in with the documented password.
-	for _, u := range Users {
-		var hash string
-		if err := db.Raw(`SELECT password_hash FROM user_identities WHERE user_id = ? AND provider = 'credential'`, u.ID).Scan(&hash).Error; err != nil {
-			t.Fatal(err)
-		}
-		if ok, err := secret.CheckPassword(hash, Password); err != nil || !ok {
-			t.Errorf("%s cannot sign in with the seed password: %v", u.Email, err)
-		}
+	// Every seeded user signs in with the documented password. They share one hash, so one bcrypt check covers all three.
+	var hashes []string
+	if err := db.Raw(`SELECT DISTINCT password_hash FROM user_identities WHERE user_id IN ? AND provider = 'credential'`, []uuid.UUID{Users[0].ID, Users[1].ID, Users[2].ID}).Scan(&hashes).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n := count(t, db, `SELECT count(*) FROM user_identities WHERE provider = 'credential' AND user_id IN ?`, []uuid.UUID{Users[0].ID, Users[1].ID, Users[2].ID}); n != 3 || len(hashes) != 1 {
+		t.Fatalf("%d credential identities with %d distinct hashes, want 3 sharing one", n, len(hashes))
+	}
+	if ok, err := secret.CheckPassword(hashes[0], Password); err != nil || !ok {
+		t.Errorf("the seeded users cannot sign in with the seed password: %v", err)
 	}
 
 	// The key built from SEED_API_KEY authenticates with manage access to the seeded workspace and nothing at the organization level.
