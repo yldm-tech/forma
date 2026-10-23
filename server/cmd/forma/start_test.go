@@ -89,4 +89,7 @@ func TestRunRejectsUnknownCommands(t *testing.T) {
 	if code := run([]string{"help"}); code != 0 {
 		t.Errorf("run(help) = %d, want 0", code)
 	}
+	if code := run([]string{"version"}); code != 0 {
+		t.Errorf("run(version) = %d, want 0", code)
+	}
 }

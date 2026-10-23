@@ -100,6 +100,8 @@ jobs:
           push: false
           load: true
           tags: ${{ env.IMAGE }}
+          build-args: |
+            VERSION=0.0.0-validation
           provenance: false
 
       - name: Verify the runtime image
@@ -119,6 +121,7 @@ jobs:
             exit 1
           fi
           docker run --rm "$IMAGE" help | grep -F 'wait-for-database'
+          test "$(docker run --rm "$IMAGE" version)" = "0.0.0-validation"
 
       - name: Reject Invalid Environment Before Database Setup
         shell: bash

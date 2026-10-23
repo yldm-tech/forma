@@ -13,6 +13,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
@@ -30,6 +31,7 @@ commands:
   wait-for-database  wait until the migration database accepts connections [--timeout-seconds 900] [--interval-seconds 5] [--connection-timeout-seconds 5]
   healthcheck        exit 0 when the server on HTTP_ADDR answers /health (the image's HEALTHCHECK)
   authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
+  version            print the release version the binary was built as (0.0.0 for a development build)
 `
 
 func main() {
@@ -65,6 +67,9 @@ func run(args []string) int {
 			return 0
 		}
 		return authz.RunCLI(ctx, args[1:], os.Stdout, os.Stderr)
+	case "version":
+		fmt.Println(buildinfo.Version)
+		return 0
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return 0

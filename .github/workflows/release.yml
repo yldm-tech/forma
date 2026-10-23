@@ -80,6 +80,9 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          # Stamped into the binary (buildinfo.Version), so telemetry, Sentry and the usage report name the release.
+          build-args: |
+            VERSION=${{ env.VERSION }}
           tags: |
             ${{ env.IMAGE }}:${{ env.VERSION }}
             ${{ env.IMAGE }}:sha-${{ github.sha }}

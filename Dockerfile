@@ -49,9 +49,11 @@ COPY --from=web /src/web/dist ./internal/webui/dist
 
 ARG TARGETOS
 ARG TARGETARCH
+# The release version (release.yml passes it), which telemetry, Sentry and the usage report carry; a build without it reports 0.0.0, an unreleased build.
+ARG VERSION=0.0.0
 RUN --mount=type=cache,id=forma-go-mod,target=/go/pkg/mod \
     --mount=type=cache,id=forma-go-build,target=/root/.cache/go-build \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/forma ./cmd/forma
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X github.com/yldm-tech/forma/server/internal/platform/buildinfo.Version=${VERSION}" -o /out/forma ./cmd/forma
 
 # ---- runtime ----
 FROM ${RUNTIME_IMAGE}
