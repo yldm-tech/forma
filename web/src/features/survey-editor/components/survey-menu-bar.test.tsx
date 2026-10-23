@@ -12,6 +12,7 @@ import type { i18n as I18n } from "i18next";
 import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import type { TSegment } from "@forma/types/segment";
 import type { TSurvey, TSurveyEditorTabs } from "@forma/types/surveys/types";
 import type { TWorkspace } from "@forma/types/workspace";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
@@ -130,6 +131,73 @@ const stubSaveEndpoint = (failWith?: number): SaveRequest[] => {
   return saves;
 };
 
+/** An app survey as the editor holds it after "Website & App" was picked for a survey without a segment: the placeholder segment how-to-send-card gives it, with the targeting the user set, and one trigger. */
+const appSurvey = (filters: TSegment["filters"]): TSurvey =>
+  survey({
+    type: "app",
+    triggers: [
+      {
+        actionClass: {
+          id: "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d10",
+          name: "New Session",
+          description: null,
+          type: "code",
+          key: "new-session",
+          noCodeConfig: null,
+          workspaceId: WORKSPACE_ID,
+          createdAt: LOADED_AT,
+          updatedAt: LOADED_AT,
+        },
+      },
+    ],
+    segment: {
+      id: "temp",
+      isPrivate: true,
+      title: SURVEY_ID,
+      workspaceId: WORKSPACE_ID,
+      surveys: [SURVEY_ID],
+      filters,
+      createdAt: LOADED_AT,
+      updatedAt: LOADED_AT,
+      description: "",
+    },
+  });
+
+const PRIVATE_SEGMENT_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d11";
+
+/** The Go server's survey saves and segment creation: a PUT is answered with the survey as sent, given the private segment an app survey saved without one gets; a POST to the segments creates the private segment it was sent. */
+const stubAppSurveyEndpoints = (): SaveRequest[] => {
+  const requests: SaveRequest[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+      requests.push({ path, body });
+      const stamp = { createdAt: SAVED_AT, updatedAt: SAVED_AT };
+      if (init.method === "POST" && path === `/api/app/workspaces/${WORKSPACE_ID}/segments`) {
+        const created = { ...body, ...stamp, id: PRIVATE_SEGMENT_ID, workspaceId: WORKSPACE_ID };
+        return Response.json(
+          { ...created, surveys: [SURVEY_ID], activeSurveys: [], inactiveSurveys: [] },
+          { status: 201 }
+        );
+      }
+      if (init.method !== "PUT") throw new Error(`unexpected ${init.method ?? "GET"} ${path}`);
+      const segment = body.segment ?? {
+        ...stamp,
+        id: PRIVATE_SEGMENT_ID,
+        title: SURVEY_ID,
+        description: null,
+        isPrivate: true,
+        filters: [],
+        workspaceId: WORKSPACE_ID,
+        surveys: [SURVEY_ID],
+      };
+      return Response.json({ ...body, segment, updatedAt: SAVED_AT });
+    })
+  );
+  return requests;
+};
+
 /** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. */
 const renderMenuBar = (persisted: TSurvey) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -207,6 +275,65 @@ describe("SurveyMenuBar", () => {
     const cached = queryClient.getQueryData<TSurvey>(surveyEditorKeys.survey(SURVEY_ID));
     expect(cached?.status).toBe("inProgress");
     expect(cached?.updatedAt).toEqual(new Date(SAVED_AT));
+  });
+
+  test("Publish of an app survey with no targeting saves it without a segment, so the server gives it its empty private segment, as forma2's editor did", async () => {
+    const requests = stubAppSurveyEndpoints();
+    const { router } = renderMenuBar(appSurvey([]));
+
+    // A draft app survey first leads to its settings, where its audience is set; Publish follows.
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(router.state.location.search).toEqual({ success: true });
+    // forma2's segment create refuses an empty filter tree, private or not: nothing is created up front.
+    expect(requests.map(({ path }) => path)).toEqual([`/api/app/surveys/${SURVEY_ID}`]);
+    expect(requests[0]?.body).toMatchObject({ type: "app", status: "inProgress", segment: null });
+  });
+
+  test("Publish of an app survey with targeting creates its private segment first and saves the survey on it", async () => {
+    const requests = stubAppSurveyEndpoints();
+    const filters: TSegment["filters"] = [
+      {
+        id: "filternode00000000000000",
+        connector: null,
+        resource: {
+          id: "filterleaf00000000000000",
+          root: { type: "attribute", contactAttributeKey: "email" },
+          value: "user@example.com",
+          qualifier: { operator: "equals" },
+        },
+      },
+    ];
+    renderMenuBar(appSurvey(filters));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(requests.map(({ path }) => path)).toEqual([
+      `/api/app/workspaces/${WORKSPACE_ID}/segments`,
+      `/api/app/surveys/${SURVEY_ID}`,
+    ]);
+    expect(requests[0]?.body).toEqual({ filters, isPrivate: true, surveyId: SURVEY_ID, title: SURVEY_ID });
+    expect(requests[1]?.body).toMatchObject({
+      status: "inProgress",
+      segment: { id: PRIVATE_SEGMENT_ID, isPrivate: true, filters },
+    });
+  });
+
+  test("a draft save of an app survey with no targeting saves it without a segment", async () => {
+    const requests = stubAppSurveyEndpoints();
+    renderMenuBar(appSurvey([]));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save as draft" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save as draft" })).toHaveProperty("disabled", false)
+    );
+    expect(requests.map(({ path }) => path)).toEqual([`/api/app/surveys/${SURVEY_ID}/draft`]);
+    expect(requests[0]?.body).toMatchObject({ type: "app", status: "draft", segment: null });
   });
 
   test("a refused publish stays in the editor", async () => {

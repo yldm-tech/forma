@@ -226,6 +226,36 @@ func TestEditorSaveSchedulesAndAppSegment(t *testing.T) {
 	}
 }
 
+// The editor's publish of a survey switched to "Website & App" with no targeting, as forma2's editor sent it: its placeholder segment never became a segment (forma2's createSegmentAction refused the empty tree), so the survey arrives without one and the save gives it an empty private segment titled with its id.
+func TestEditorPublishesAnAppSurveyWithoutTargeting(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	trigger := e.actionClass(ws, "open")
+
+	for _, path := range []string{"/draft", ""} {
+		id := e.createLink(owner, ws)
+		sv := e.editorSurvey(owner, id)
+		sv["type"] = "app"
+		sv["segment"] = nil
+		sv["triggers"] = []any{map[string]any{"actionClass": map[string]any{"id": trigger.String()}}}
+		if path == "" {
+			sv["status"] = "inProgress"
+		}
+		var saved Survey
+		e.ok(e.do(owner, http.MethodPut, appPath(id, path), sv), http.StatusOK, &saved)
+		if saved.Segment == nil || !saved.Segment.IsPrivate || saved.Segment.Title != id || string(saved.Segment.Filters) != "[]" {
+			t.Fatalf("save %q: segment %+v", path, saved.Segment)
+		}
+		if path == "" && saved.Status != "inProgress" {
+			t.Fatalf("publish left the survey %s", saved.Status)
+		}
+		if n := e.count(`SELECT count(*) FROM segments WHERE workspace_id = ? AND title = ?`, ws, id); n != 1 {
+			t.Fatalf("save %q: %d private segments", path, n)
+		}
+	}
+}
+
 func TestCopyAndDuplicate(t *testing.T) {
 	e := newEnv(t)
 	owner, writer := e.user(), e.user()
