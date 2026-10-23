@@ -11,8 +11,10 @@ import (
 	"net"
 	"net/mail"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +58,8 @@ type Config struct {
 
 	// RateLimitingDisabled turns every rate limit into a no-op that allows the request.
 	RateLimitingDisabled bool `env:"RATE_LIMITING_DISABLED" envDefault:"0"`
+	// GatewayRateLimiting declares a gateway in front of the server that enforces forma2's Envoy rate-limit policy set, forma2's GATEWAY_RATE_LIMITING: the routes that policy covers (ratelimit.CoveredByGateway) then skip their in-app limit. Off by default, because the compose stack runs no gateway.
+	GatewayRateLimiting bool `env:"GATEWAY_RATE_LIMITING" envDefault:"0"`
 	// TrustedProxyHopCount is how many reverse proxies in front of the server append to X-Forwarded-For; the client address is the entry that many places from the right. 0 means no proxy: the address is the TCP peer. Setting it higher than the real chain lets a caller choose their own address by prepending entries.
 	TrustedProxyHopCount int `env:"TRUSTED_PROXY_HOP_COUNT" envDefault:"1"`
 
@@ -84,7 +88,7 @@ type Config struct {
 	// DangerouslyAllowWebhookInternalURLs lets webhooks target private, loopback, link-local and metadata addresses and follow redirects, for self-hosted instances whose receivers live on the internal network, forma2's DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS. A host name that does not resolve is still refused.
 	DangerouslyAllowWebhookInternalURLs bool `env:"DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS" envDefault:"0"`
 
-	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did.
+	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did. Unset, it is taken from forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT when either is set (resolveWorkerConcurrency).
 	WorkerConcurrency int `env:"WORKER_CONCURRENCY" envDefault:"0"`
 
 	// SurveySchedulingTimeZone, SurveySchedulingLocalHour and SurveySchedulingLocalMinute are when, each day, scheduled surveys are published and closed: a publish or close date is snapped to that local time of its calendar day in the zone, forma2's SURVEY_SCHEDULING_* settings.
@@ -147,9 +151,53 @@ type Config struct {
 	// Telemetry is OpenTelemetry, Sentry, PostHog and the daily usage report, all off unless configured.
 	Telemetry TelemetryConfig
 
-	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
+	// Unsplash is the survey editor's image background search.
+	Unsplash UnsplashConfig
+
+	// Plain is the in-product support chat, off unless PLAIN_APP_ID is set.
+	Plain PlainConfig
+
+	// Brevo is Forma Cloud's contact sync to its CRM, off unless BREVO_API_KEY is set.
+	Brevo BrevoConfig
+
+	LogLevel  LogLevel `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat string   `env:"LOG_FORMAT" envDefault:"json"`
+
+	// Warnings are deprecated settings found while loading, still honoured. They are written once the logger exists (logger.New), since configuration is read before it.
+	Warnings []string
 }
+
+// LevelFatal and LevelAudit are forma2's two levels above error. Nothing is logged at fatal: LOG_LEVEL=fatal keeps only audit events, as it did in forma2. LevelAudit sits above every other level, so no LOG_LEVEL but audit's own filters audit events out.
+const (
+	LevelFatal = slog.Level(10)
+	LevelAudit = slog.Level(12)
+)
+
+// LogLevel is LOG_LEVEL, one of forma2's level names: debug, info, warn, error, fatal (only what is above error) or audit (only audit events). Upper case is accepted too, which slog's own names allowed; anything else fails the start. forma2 defaulted to warn in production; the default here is info, the level the processes log their lifecycle at.
+type LogLevel slog.Level
+
+func (l *LogLevel) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "debug":
+		*l = LogLevel(slog.LevelDebug)
+	case "info":
+		*l = LogLevel(slog.LevelInfo)
+	case "warn":
+		*l = LogLevel(slog.LevelWarn)
+	case "error":
+		*l = LogLevel(slog.LevelError)
+	case "fatal":
+		*l = LogLevel(LevelFatal)
+	case "audit":
+		*l = LogLevel(LevelAudit)
+	default:
+		return fmt.Errorf("must be debug, info, warn, error, fatal or audit, got %q", text)
+	}
+	return nil
+}
+
+// Level makes LogLevel a slog.Leveler.
+func (l LogLevel) Level() slog.Level { return slog.Level(l) }
 
 // AuthzConfig is forma2's AUTHZED_* configuration. SpiceDB is the only authorization evaluator: while it is disabled every check fails closed with authzed_disabled and the projection outbox is left undelivered.
 type AuthzConfig struct {
@@ -388,10 +436,92 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
+	if cfg.DatabaseURL, err = databaseURL("DATABASE_URL", cfg.DatabaseURL); err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	if err := cfg.resolveWorkerConcurrency(); err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
 	if err := cfg.validate(); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 	return cfg, nil
+}
+
+// databaseURL accepts a connection URL written for forma2, whose Prisma client took the schema to use as a schema query parameter (its .env.example, compose file and guides all appended ?schema=public). PostgreSQL knows no such parameter, so pgx would send it as a run-time setting and the connection would fail: schema=public, where every table lives, is dropped, and any other schema fails the start. The rest of the URL is kept byte for byte. A key=value connection string is returned as it is.
+func databaseURL(name, raw string) (string, error) {
+	lower := strings.ToLower(raw)
+	if !strings.HasPrefix(lower, "postgres://") && !strings.HasPrefix(lower, "postgresql://") {
+		return raw, nil
+	}
+	base, query, ok := strings.Cut(raw, "?")
+	if !ok {
+		return raw, nil
+	}
+	query, fragment, hasFragment := strings.Cut(query, "#")
+	params := strings.Split(query, "&")
+	kept := make([]string, 0, len(params))
+	for _, p := range params {
+		k, v, _ := strings.Cut(p, "=")
+		key, err := url.QueryUnescape(k)
+		if err != nil || !strings.EqualFold(key, "schema") {
+			kept = append(kept, p)
+			continue
+		}
+		if value, err := url.QueryUnescape(v); err != nil || value != "public" {
+			return "", fmt.Errorf("%s sets schema=%s, Prisma's schema parameter: the Forma server keeps its tables in the public schema and takes no schema parameter. Remove it (schema=public is ignored)", name, v)
+		}
+	}
+	if len(kept) == len(params) {
+		return raw, nil
+	}
+	out := base
+	if len(kept) > 0 {
+		out += "?" + strings.Join(kept, "&")
+	}
+	if hasFragment {
+		out += "#" + fragment
+	}
+	return out, nil
+}
+
+// forma2's BullMQ worker settings. Its parallelism was BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each.
+type bullMQEnv struct {
+	Concurrency int `env:"BULLMQ_WORKER_CONCURRENCY"`
+	Count       int `env:"BULLMQ_WORKER_COUNT"`
+}
+
+// resolveWorkerConcurrency honours forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT, which an instance moved from forma2 may still set: with WORKER_CONCURRENCY unset, the worker runs count x concurrency jobs at once, a missing one taking forma2's default (one worker; DefaultWorkerConcurrency jobs). WORKER_CONCURRENCY wins when both styles are set. Either way the deprecation is reported once at start-up.
+func (c *Config) resolveWorkerConcurrency() error {
+	bull, err := env.ParseAs[bullMQEnv]()
+	if err != nil {
+		return err
+	}
+	concurrencySet, countSet := os.Getenv("BULLMQ_WORKER_CONCURRENCY") != "", os.Getenv("BULLMQ_WORKER_COUNT") != ""
+	if !concurrencySet && !countSet {
+		return nil
+	}
+	if (concurrencySet && bull.Concurrency < 1) || (countSet && bull.Count < 1) {
+		return fmt.Errorf("BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT must be at least 1, got %q and %q", os.Getenv("BULLMQ_WORKER_CONCURRENCY"), os.Getenv("BULLMQ_WORKER_COUNT"))
+	}
+	if os.Getenv("WORKER_CONCURRENCY") != "" {
+		c.Warnings = append(c.Warnings, "BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT are ignored because WORKER_CONCURRENCY is set; remove them")
+		return nil
+	}
+	if !concurrencySet {
+		bull.Concurrency = DefaultWorkerConcurrency()
+	}
+	if !countSet {
+		bull.Count = 1
+	}
+	c.WorkerConcurrency = bull.Concurrency * bull.Count
+	c.Warnings = append(c.Warnings, fmt.Sprintf("BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT are deprecated; set WORKER_CONCURRENCY=%d instead", c.WorkerConcurrency))
+	return nil
+}
+
+// DefaultWorkerConcurrency is forma2's default for how many jobs run at once: every running job can hold a database connection, so jobs take at most half a small pod's pool and never more than four slots.
+func DefaultWorkerConcurrency() int {
+	return max(2, min(4, runtime.NumCPU()))
 }
 
 func (c Config) validate() error {
@@ -432,6 +562,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.Telemetry.validate(); err != nil {
+		return err
+	}
+	if err := c.Brevo.validate(); err != nil {
 		return err
 	}
 	if c.EncryptionKeyVersion < 1 || c.EncryptionKeyVersion > MaxEncryptionKeyVersion {
@@ -526,9 +659,9 @@ func validAuthzEndpoint(value string) bool {
 type migrateEnv struct {
 	DatabaseURL string `env:"DATABASE_URL"`
 	// MigrateDatabaseURL is forma2's MIGRATE_DATABASE_URL: a connection with the privileges schema changes need, used for migrations only while the processes keep DATABASE_URL.
-	MigrateDatabaseURL string     `env:"MIGRATE_DATABASE_URL"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	LogFormat          string     `env:"LOG_FORMAT" envDefault:"json"`
+	MigrateDatabaseURL string   `env:"MIGRATE_DATABASE_URL"`
+	LogLevel           LogLevel `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat          string   `env:"LOG_FORMAT" envDefault:"json"`
 }
 
 // LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone. Its DatabaseURL is MIGRATE_DATABASE_URL when that is set (ignoring surrounding whitespace, as forma2 did), else DATABASE_URL.
@@ -540,14 +673,18 @@ func LoadForMigrate() (Config, error) {
 	if e.LogFormat != "json" && e.LogFormat != "text" {
 		return Config{}, fmt.Errorf("load config: LOG_FORMAT must be json or text, got %q", e.LogFormat)
 	}
-	databaseURL := strings.TrimSpace(e.MigrateDatabaseURL)
-	if databaseURL == "" {
-		databaseURL = strings.TrimSpace(e.DatabaseURL)
+	name, raw := "MIGRATE_DATABASE_URL", strings.TrimSpace(e.MigrateDatabaseURL)
+	if raw == "" {
+		name, raw = "DATABASE_URL", strings.TrimSpace(e.DatabaseURL)
 	}
-	if databaseURL == "" {
+	if raw == "" {
 		return Config{}, errors.New("load config: MIGRATE_DATABASE_URL or DATABASE_URL is required")
 	}
-	return Config{DatabaseURL: databaseURL, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+	dsn, err := databaseURL(name, raw)
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	return Config{DatabaseURL: dsn, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
 }
 
 // Startup is what `forma start`, the container's default command, decides before it serves: forma2's entrypoint switches, under their names.
@@ -596,8 +733,8 @@ func LoadForHealthcheck() (Config, error) {
 type authzEnv struct {
 	DatabaseURL string `env:"DATABASE_URL,required,notEmpty"`
 	Authz       AuthzConfig
-	LogLevel    slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	LogFormat   string     `env:"LOG_FORMAT" envDefault:"json"`
+	LogLevel    LogLevel `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat   string   `env:"LOG_FORMAT" envDefault:"json"`
 }
 
 // LoadForAuthz reads only what the `forma authz` operator commands need: the database and the SpiceDB connection.
@@ -610,6 +747,9 @@ func LoadForAuthz() (Config, error) {
 		return Config{}, fmt.Errorf("load config: LOG_FORMAT must be json or text, got %q", e.LogFormat)
 	}
 	if err := e.Authz.validate(); err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	if e.DatabaseURL, err = databaseURL("DATABASE_URL", e.DatabaseURL); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 	return Config{DatabaseURL: e.DatabaseURL, DatabaseMaxOpenConns: 4, Authz: e.Authz, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil

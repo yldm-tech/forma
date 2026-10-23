@@ -8,8 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-
-	"github.com/yldm-tech/forma/server/internal/platform/database"
 )
 
 // Verification purposes (the verifications.purpose check constraint).
@@ -34,13 +32,6 @@ func NewRepository(db *gorm.DB) *Repository {
 // transaction runs fn with a repository bound to one transaction.
 func (r *Repository) transaction(ctx context.Context, fn func(tx *Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(&Repository{db: tx})
-	})
-}
-
-// serializable runs fn with a repository bound to a Serializable transaction, retried as database.Serializable does.
-func (r *Repository) serializable(ctx context.Context, fn func(tx *Repository) error) error {
-	return database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
 		return fn(&Repository{db: tx})
 	})
 }

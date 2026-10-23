@@ -1,139 +1,174 @@
 ---
 title: "Environment Variables"
-description: "Environment variables for Forma"
+description: "Environment variables of the Forma server"
 icon: "code"
 ---
 
 #### Custom Configurations
 
-These variables are present inside your machine's docker-compose file. Restart the docker containers if you change any variables for them to take effect.
+Every Forma process (`forma serve`, `forma worker`, `forma start`, `forma migrate` and `forma authz`) reads its configuration from the environment once, when it starts. With Docker Compose and the one-click install the settings live in `.env` next to `docker-compose.yml`; with Helm, in the chart's values and Secrets. Restart the containers after changing a value.
+
+A missing required variable or a malformed value stops the process at start-up with a message that names the variable, rather than starting with a guess. Switches are forma2's `1` or `0`; any other spelling fails the start. The exceptions keep forma2's wider spellings: `AUTHZED_ENABLED` and `AUTHZED_INSECURE` also take `true` and `false`, and `SKIP_STARTUP_MIGRATION` takes `true` and `false`.
 
 <Note>
-  Upgrading from Forma 4.x to 5.0? Read the [migration guide](/self-hosting/advanced/migration#v5) first.
-  Forma v5 changes how rate limiting is enforced.
+  Moving from forma2 to the Go server? Read the [upgrade guide](/self-hosting/advanced/migration#forma2-to-the-go-server) first. The variables forma2 read that the Go server ignores are listed [below](#variables-forma2-read-that-the-go-server-ignores); `./forma.sh update` comments them out of `.env`.
 </Note>
 
-For the `AI_*` variables, see [AI Features](/self-hosting/advanced/enterprise-features/ai-features) — it walks through each provider and the credentials it needs. Set only the variables for the provider you use; unused provider variables can be omitted.
+For the `AI_*` variables, see [AI Features](/self-hosting/advanced/enterprise-features/ai-features): it walks through each provider and the credentials it needs. Set only the variables of the provider you use.
 
 {/* prettier-ignore-start */}
 
-| Variable                                | Description                                                                                                                                                                                     | Required                                                                                 | Default                                                                   |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| WEBAPP_URL                              | Base URL of the private/admin Forma app. OAuth and MCP protected-resource URLs are derived from this value.                                                                                | required                                                                                 | http://localhost:3000                                                     |
-| PUBLIC_URL                              | Base URL for the public domain where surveys and public-facing content are served. If not set, uses WEBAPP_URL. OAuth and MCP do not use PUBLIC_URL.                                           | optional                                                                                 | WEBAPP_URL                                                                |
-| NEXTAUTH_URL                            | Legacy-compatible auth base URL. This should normally be the same as WEBAPP_URL; Forma derives the Better Auth issuer under `/api/auth`.                                                   | required                                                                                 | http://localhost:3000                                                     |
-| BETTER_AUTH_URL                         | Optional Better Auth base URL override. Set this only when the auth server base differs from NEXTAUTH_URL; preserve any custom subpath.                                                         | optional                                                                                 | NEXTAUTH_URL                                                              |
-| MCP_OAUTH_JWKS_URL                      | Optional server-only URL used to fetch Better Auth signing keys for MCP OAuth. It does not change the public issuer, redirects, cookies, or token audience. Docker Compose and Helm leave it unset unless explicitly configured. Use an internal HTTP URL only on a trusted application network and include any custom application subpath. | optional | `{BETTER_AUTH_URL or NEXTAUTH_URL}/jwks` |
-| DATABASE_URL                            | Database URL with credentials.                                                                                                                                                                  | required                                                                                 |                                                                           |
-| NEXTAUTH_SECRET                         | Secret for NextAuth, used for session signing and encryption.                                                                                                                                   | required                                                                                 | (Generated by the user, must not exceed 32 bytes, `openssl rand -hex 32`) |
-| BETTER_AUTH_SECRET                      | Optional Better Auth secret override. If unset, Forma uses NEXTAUTH_SECRET for Better Auth session signing.                                                                                | optional                                                                                 | NEXTAUTH_SECRET                                                           |
-| ENCRYPTION_KEY                          | Secret used by Forma for data encryption and audit log hashing.                                                                                                                            | required                                                                                 | (Generated by the user, must not exceed 32 bytes, `openssl rand -hex 32`) |
-| CRON_SECRET                             | API Secret for running cron jobs.                                                                                                                                                               | required                                                                                 | (Generated by the user, must not exceed 32 bytes, `openssl rand -hex 32`) |
-| LOG_LEVEL                               | Minimum log level (debug, info, warn, error, fatal)                                                                                                                                             | optional                                                                                 | info                                                                      |
-| S3_ACCESS_KEY                           | Access key for S3.                                                                                                                                                                              | optional                                                                                 | (resolved by the AWS SDK)                                                 |
-| S3_SECRET_KEY                           | Secret key for S3.                                                                                                                                                                              | optional                                                                                 | (resolved by the AWS SDK)                                                 |
-| S3_REGION                               | Region for S3.                                                                                                                                                                                  | optional                                                                                 | (resolved by the AWS SDK)                                                 |
-| S3_BUCKET_NAME                          | S3 bucket name for data storage. Forma enables S3 storage when this is set.                                                                                                                | optional (required if S3 is enabled)                                                     |                                                                           |
-| S3_ENDPOINT_URL                         | Endpoint for S3.                                                                                                                                                                                | optional                                                                                 | (resolved by the AWS SDK)                                                 |
-| S3_FORCE_PATH_STYLE                     | Set to `1` to force path-style S3 URLs. Required for S3-compatible storage (MinIO, RustFS, LocalStack). Leave unset or `0` for standard AWS S3.                                                 | optional                                                                                 | 0                                                                         |
-| SAML_DATABASE_URL                       | Database URL for SAML.                                                                                                                                                                          | optional                                                                                 | postgres://postgres:@localhost:5432/forma-saml                       |
-| PRIVACY_URL                             | URL for privacy policy.                                                                                                                                                                         | optional                                                                                 |                                                                           |
-| TERMS_URL                               | URL for terms of service.                                                                                                                                                                       | optional                                                                                 |                                                                           |
-| IMPRINT_URL                             | URL for imprint.                                                                                                                                                                                | optional                                                                                 |                                                                           |
-| IMPRINT_ADDRESS                         | Address for imprint.                                                                                                                                                                            | optional                                                                                 |                                                                           |
-| EMAIL_AUTH_DISABLED                     | Disables the ability for users to signup or login via email and password if set to 1.                                                                                                           | optional                                                                                 |                                                                           |
-| PASSWORD_RESET_DISABLED                 | Disables password reset functionality if set to 1.                                                                                                                                              | optional                                                                                 |                                                                           |
-| PASSWORD_HIBP_CHECK_DISABLED            | Disables the Have-I-Been-Pwned breach check on password set (signup / reset) if set to 1. The check calls api.pwnedpasswords.com and fails open on network errors; set this on air-gapped / closed-network deployments to skip the outbound call. | optional                                                                                 |                                                                           |
-| PASSWORD_RESET_TOKEN_LIFETIME_MINUTES   | Configures how long password reset links remain valid in minutes. Accepted values are integers from 5 to 120.                                                                                   | optional                                                                                 | 30                                                                        |
-| EMAIL_VERIFICATION_DISABLED             | Disables email verification if set to 1.                                                                                                                                                        | optional                                                                                 |                                                                           |
-| RATE_LIMITING_DISABLED                  | Disables only the application-level rate limiter if set to 1. It does not disable Envoy or an equivalent edge rate limiter.                                                                   | optional                                                                                 |                                                                           |
-| INVITE_RATE_LIMIT_PER_24_HOURS          | Maximum invite recipients one organization may target across single, bulk, onboarding, and resend flows within 24 hours.                                                                     | optional                                                                                 | 50                                                                        |
-| ENTERPRISE_LICENSE_KEY                  | License key for the Forma Enterprise Edition. Unlocks Enterprise-only features; the instance validates it against the Forma license server, so it needs outbound network access (or `HTTP_PROXY`/`HTTPS_PROXY`). See [License Activation](/self-hosting/advanced/license-activation). | optional (required for Enterprise Edition features)                                      |                                                                           |
-| TELEMETRY_ENABLED                      | Reports anonymous usage to the instance registry if set to 1. Off otherwise.                                                                                                         | optional                                                                                 |                                                                           |
-| DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS | Allows webhook URLs to point to internal/private network addresses (e.g. localhost, 192.168.x.x) if set to 1. Useful for self-hosted instances that need to send webhooks to internal services. | optional                                                                                 |                                                                           |
-| INVITE_DISABLED                         | Disables the ability for invited users to create an account if set to 1.                                                                                                                        | optional                                                                                 |                                                                           |
-| MAIL_FROM                               | Email address to send emails from.                                                                                                                                                              | optional (required if email services are to be enabled)                                  |                                                                           |
-| MAIL_FROM_NAME                          | Email name/title to send emails from.                                                                                                                                                           | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_HOST                               | Host URL of your SMTP server.                                                                                                                                                                   | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_PORT                               | Host Port of your SMTP server.                                                                                                                                                                  | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_USER                               | Username for your SMTP Server.                                                                                                                                                                  | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_PASSWORD                           | Password for your SMTP Server.                                                                                                                                                                  | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_AUTHENTICATED                      | If set to 0, the server will not require SMTP_USER and SMTP_PASSWORD(default is 1)                                                                                                              | optional                                                                                 |                                                                           |
-| SMTP_SECURE_ENABLED                     | SMTP secure connection. For using TLS, set to 1 else to 0.                                                                                                                                      | optional (required if email services are to be enabled)                                  |                                                                           |
-| SMTP_REJECT_UNAUTHORIZED_TLS            | Keep at `1` to verify the SMTP server certificate. Setting `0` disables certificate verification and is unsafe for production; mount a private CA and configure `NODE_EXTRA_CA_CERTS` instead.                                                               | optional                                                                                 | 1                                                                         |
-| TURNSTILE_SITE_KEY                      | Site key for Turnstile.                                                                                                                                                                         | optional                                                                                 |                                                                           |
-| TURNSTILE_SECRET_KEY                    | Secret key for Turnstile.                                                                                                                                                                       | optional                                                                                 |                                                                           |
-| RECAPTCHA_SITE_KEY                      | Site key for survey responses recaptcha bot protection                                                                                                                                          | optional                                                                                 |                                                                           |
-| RECAPTCHA_SECRET_KEY                    | Secret key for recaptcha bot protection.                                                                                                                                                        | optional                                                                                 |                                                                           |
-| GITHUB_ID                               | Client ID for GitHub.                                                                                                                                                                           | optional (required if GitHub auth is enabled)                                            |                                                                           |
-| GITHUB_SECRET                           | Secret for GitHub.                                                                                                                                                                              | optional (required if GitHub auth is enabled)                                            |                                                                           |
-| GOOGLE_CLIENT_ID                        | Client ID for Google.                                                                                                                                                                           | optional (required if Google auth is enabled)                                            |                                                                           |
-| GOOGLE_CLIENT_SECRET                    | Secret for Google.                                                                                                                                                                              | optional (required if Google auth is enabled)                                            |                                                                           |
-| AI_PROVIDER                             | Instance-level AI provider used in the background. Supported values: `aws`, `google`, `azure`, `openai-compatible`.                                                                             | optional (required if AI is enabled)                                                     |                                                                           |
-| AI_MODEL                                | Instance-level AI model or deployment name used by the active provider.                                                                                                                         | optional (required if `AI_PROVIDER` is set)                                              |                                                                           |
-| AI_MODEL_TRANSLATION                    | Model or deployment name of the active provider that AI translation runs on instead of `AI_MODEL`.                                                                                            | optional                                                                                 | `AI_MODEL`                                                                |
-| AI_MODEL_EXAMPLE_RESPONSES              | Model or deployment name of the active provider that example responses are generated with instead of `AI_MODEL`.                                                                              | optional                                                                                 | `AI_MODEL`                                                                |
-| AI_GOOGLE_CLOUD_PROJECT                 | Google Cloud project ID for the `google` AI provider.                                                                                                                                          | optional (required if `AI_PROVIDER=google`)                                              |                                                                           |
-| AI_GOOGLE_CLOUD_LOCATION                | Google Cloud location for `google` AI requests. Passed through as given; `us` and `eu` use multi-region endpoints. `global` is the safe default.                                                                                          | optional (required if `AI_PROVIDER=google`)                                              |                                                                           |
-| AI_GOOGLE_CLOUD_CREDENTIALS_JSON        | Optional service account credentials JSON override for the `google` AI provider. Omit when Application Default Credentials are available.                                                       | optional                                                                                 |                                                                           |
-| AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS | Optional path to Google Application Default Credentials used by the `google` AI provider.                                                                                                      | optional                                                                                 |                                                                           |
-| AI_AWS_REGION                           | AWS region for Amazon Bedrock.                                                                                                                                                                  | optional (required if `AI_PROVIDER=aws`)                                                 |                                                                           |
-| AI_AWS_ACCESS_KEY_ID                    | AWS access key ID for Amazon Bedrock.                                                                                                                                                           | optional (required if `AI_PROVIDER=aws`)                                                 |                                                                           |
-| AI_AWS_SECRET_ACCESS_KEY                | AWS secret access key for Amazon Bedrock.                                                                                                                                                       | optional (required if `AI_PROVIDER=aws`)                                                 |                                                                           |
-| AI_AWS_SESSION_TOKEN                    | AWS session token for Amazon Bedrock temporary credentials.                                                                                                                                     | optional                                                                                 |                                                                           |
-| AI_AZURE_BASE_URL                       | Azure OpenAI / Foundry base URL, ending at `/openai` — the SDK appends `/v1` itself. When set, this is preferred over `AI_AZURE_RESOURCE_NAME`.                                                                                                     | optional (one of this or `AI_AZURE_RESOURCE_NAME` required if `AI_PROVIDER=azure`)       |                                                                           |
-| AI_AZURE_RESOURCE_NAME                  | Azure resource name used to assemble the Azure OpenAI URL.                                                                                                                                      | optional (one of this or `AI_AZURE_BASE_URL` required if `AI_PROVIDER=azure`)            |                                                                           |
-| AI_AZURE_API_KEY                        | API key for Azure OpenAI / Foundry.                                                                                                                                                             | optional (required if `AI_PROVIDER=azure`)                                               |                                                                           |
-| AI_AZURE_API_VERSION                    | Azure API version for OpenAI-compatible calls.                                                                                                                                                  | optional                                                                                 | v1                                                                        |
-| AI_OPENAI_COMPATIBLE_BASE_URL           | Base URL for a Qwen/vLLM OpenAI-compatible `/v1` endpoint, e.g. `http://vllm:8000/v1`.                                                                                                         | optional (required if `AI_PROVIDER=openai-compatible`)                                   |                                                                           |
-| AI_OPENAI_COMPATIBLE_API_KEY            | Optional API key for the OpenAI-compatible endpoint.                                                                                                                                            | optional                                                                                 |                                                                           |
-| AI_OPENAI_COMPATIBLE_PROVIDER_NAME      | Provider name passed to the OpenAI-compatible adapter. Use `vllm` for the supported Qwen/vLLM self-hosted path.                                                                                | optional                                                                                 | openai-compatible                                                         |
-| AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS | Set to `1` when the Qwen/vLLM endpoint supports structured outputs.                                                                                                                   | optional                                                                                 | 0                                                                         |
-| AI_OPENAI_COMPATIBLE_HEADERS_JSON       | Optional JSON object of string-valued headers to send with OpenAI-compatible requests.                                                                                                         | optional                                                                                 |                                                                           |
-| AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON  | Optional JSON object of string-valued query parameters to send with OpenAI-compatible requests.                                                                                                | optional                                                                                 |                                                                           |
-| STRIPE_SECRET_KEY                       | Secret key of the Stripe account Forma Cloud bills through. Billing runs only when it is set and `IS_FORMA_CLOUD=1`.                                                                            | optional                                                                                 |                                                                           |
-| STRIPE_WEBHOOK_SECRET                   | Signing secret of the Stripe webhook endpoint `<WEBAPP_URL>/api/billing/stripe-webhook`; without it the endpoint answers 503.                                                                   | optional                                                                                 |                                                                           |
-| STRIPE_PUBLISHABLE_KEY                  | Publishable key the billing page hands to Stripe.js to confirm card payments that need 3D Secure.                                                                                               | optional                                                                                 |                                                                           |
-| DEFAULT_BRAND_COLOR                     | Default brand color for your app (Can be overwritten from the UI as well).                                                                                                                      | optional                                                                                 | #64748b                                                                   |
-| UNSPLASH_ACCESS_KEY                     | Unsplash access key used to search Unsplash for survey background images. Without it, the image tab is hidden in the survey editor's background picker and in the Look & Feel settings.         | optional (required for Unsplash background images)                                       |                                                                           |
-| AUTH_SSO_DEFAULT_ORGANIZATION_ID        | Requires an [Enterprise Edition](/self-hosting/advanced/license) licence with SSO. Automatically assigns new SSO users to this organization, without requiring an invitation. Must be a valid CUID; the organization is created with this ID on the first sign-up if it does not exist yet. Renamed from `DEFAULT_ORGANIZATION_ID` in v6. | optional (Enterprise Edition, SSO)                                                       |                                                                           |
-| AUTH_SSO_DEFAULT_ORGANIZATION_ROLE      | Role given to users auto-assigned by `AUTH_SSO_DEFAULT_ORGANIZATION_ID`. The sign-up that creates the organization is always `owner`. One of `owner`, `manager`, `member`, `billing`. Renamed from `DEFAULT_ORGANIZATION_ROLE` in v6.                                                       | optional (Enterprise Edition, SSO)                                                       | manager                                                                   |
-| OIDC_DISPLAY_NAME                       | Display name for Custom OpenID Connect Provider                                                                                                                                                 | optional                                                                                 |                                                                           |
-| OIDC_CLIENT_ID                          | Client ID for Custom OpenID Connect Provider                                                                                                                                                    | optional (required if OIDC auth is enabled)                                              |                                                                           |
-| OIDC_CLIENT_SECRET                      | Secret for Custom OpenID Connect Provider                                                                                                                                                       | optional (required if OIDC auth is enabled)                                              |                                                                           |
-| OIDC_ISSUER                             | Issuer URL for Custom OpenID Connect Provider (should have .well-known configured at this)                                                                                                      | optional (required if OIDC auth is enabled)                                              |                                                                           |
-| OIDC_SIGNING_ALGORITHM                  | Signing Algorithm for Custom OpenID Connect Provider                                                                                                                                            | optional                                                                                 | RS256                                                                     |
-| OTEL_EXPORTER_OTLP_ENDPOINT             | Base OTLP HTTP endpoint for traces and metrics export (e.g. http://collector:4318).                                                                                                             | optional                                                                                 |                                                                           |
-| OTEL_EXPORTER_OTLP_PROTOCOL             | OTLP protocol to use for export.                                                                                                                                                                | optional                                                                                 | http/protobuf                                                             |
-| OTEL_SERVICE_NAME                       | Service name reported in OpenTelemetry resource attributes.                                                                                                                                     | optional                                                                                 | forma                                                                |
-| OTEL_RESOURCE_ATTRIBUTES                | Comma-separated resource attributes in OTel format (`key=value,key2=value2`).                                                                                                                   | optional                                                                                 |                                                                           |
-| OTEL_TRACES_SAMPLER                     | Trace sampler strategy (`always_on`, `always_off`, `traceidratio`, `parentbased_traceidratio`).                                                                                                 | optional                                                                                 | always_on                                                                 |
-| OTEL_TRACES_SAMPLER_ARG                 | Sampling argument used by ratio-based samplers (`0` to `1`).                                                                                                                                    | optional                                                                                 |                                                                           |
-| PROMETHEUS_ENABLED                      | Enables Prometheus metrics if set to 1.                                                                                                                                                         | optional                                                                                 |                                                                           |
-| PROMETHEUS_EXPORTER_PORT                | Port for Prometheus metrics.                                                                                                                                                                    | optional                                                                                 | 9090                                                                      |
-| AUTH_SSO_DEFAULT_TEAM_ID                | ID of the team that new SSO users are automatically added to. The owning organization is derived from this team. Must be set together with `AUTH_SKIP_INVITE_FOR_SSO=1` for auto-provisioning to work. | optional                                                                                 |                                                                           |
-| AUTH_SKIP_INVITE_FOR_SSO                | Set to `1` to allow SSO users to create an account without a manual invite. Keep unset (or `0`) for stricter access control where only invited users can join.                                  | optional                                                                                 | 0                                                                         |
-| HTTP_PROXY                              | HTTP proxy URL used for outbound requests (e.g., license checks). When both are set, `HTTPS_PROXY` takes precedence.                                                                            | optional                                                                                 |                                                                           |
-| HTTPS_PROXY                             | HTTPS proxy URL used for outbound requests. Takes precedence over `HTTP_PROXY`.                                                                                                                 | optional                                                                                 |                                                                           |
-| SENTRY_DSN                              | Set this to track errors and monitor performance in Sentry.                                                                                                                                     | optional                                                                                 |                                                                           |
-| SENTRY_ENVIRONMENT                      | Set this to identify the environment in Sentry                                                                                                                                                  | optional                                                                                 |                                                                           |
-| SENTRY_AUTH_TOKEN                       | Set this if you want to make errors more readable in Sentry.                                                                                                                                    | optional                                                                                 |                                                                           |
-| SESSION_MAX_AGE                         | Configure the maximum age for the session in seconds.                                                                                                                                           | optional                                                                                 | 86400 (24 hours)                                                          |
-| USER_MANAGEMENT_MINIMUM_ROLE            | Set this to control which roles can access user management features. Accepted values: "owner", "manager", "disabled"                                                                            | optional                                                                                 | manager                                                                   |
-| REDIS_URL                               | Redis URL for caching, rate limiting, audit logging, and the shared BullMQ background-job queue. All web and worker replicas must share this Redis instance. Application will not start without this. | required                                                                                 | redis://localhost:6379                                                    |
-| BULLMQ_WORKER_ENABLED                   | Set to `1` to start BullMQ workers inside each Forma web process. Set to `0` only in a custom deployment that already runs an external consumer with the complete Forma application job handlers. | optional                                                                                 | 1 outside test environments                                              |
-| BULLMQ_EXTERNAL_WORKER_ENABLED          | Custom integrations only: set to `1` on web/API processes that only enqueue jobs while an external consumer with the complete Forma application job handlers processes them. This flag only keeps queueing enabled; it does not provide or start a worker. | optional                                                                                 | 0                                                                         |
-| BULLMQ_WORKER_COUNT                     | Number of BullMQ worker instances to start in each Forma web process. Must be a positive integer.                                                                                          | optional                                                                                 | 1                                                                         |
-| BULLMQ_WORKER_CONCURRENCY               | Number of jobs each in-process BullMQ worker can process concurrently. Must be a positive integer. Each concurrent job can hold a database connection, so keep it below the Prisma pool size (`2 * logical_cpus + 1`). | optional                                                                                 | `max(2, min(4, logical_cpus))`                                            |
-| AUDIT_LOG_ENABLED                       | Set this to 1 to enable audit logging. Requires Redis to be configured with the REDIS_URL env variable.                                                                                         | optional                                                                                 | 0                                                                         |
-| AUDIT_LOG_GET_USER_IP                   | Set to 1 to include user IP addresses in audit logs from request headers                                                                                                                        | optional                                                                                 | 0                                                                         |
-See [Job Runner](/self-hosting/configuration/job-runner) for BullMQ architecture, scaling, and
-troubleshooting guidance.
+#### Server and database
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| WEBAPP_URL | Base URL of the admin app, for example `https://forma.example.com`. OAuth and MCP URLs are derived from it. | required | |
+| PUBLIC_URL | Separate origin for public surveys and the client API. OAuth and MCP do not use it. | optional | WEBAPP_URL |
+| HTTP_ADDR | Listen address of `forma serve`. | optional | `:3000` |
+| SHUTDOWN_TIMEOUT | How long in-flight requests, and in the worker running jobs, get to finish after SIGTERM, as a Go duration (`20s`, `1m`). | optional | `20s` |
+| DATABASE_URL | PostgreSQL 18 (or newer) connection URL. forma2's Prisma suffix `?schema=public` is accepted and dropped; any other `schema` value fails the start, since the server keeps its tables in the `public` schema. | required | |
+| MIGRATE_DATABASE_URL | Used instead of `DATABASE_URL` by `forma migrate` (and the migration step of `forma start`, `forma wait-for-database`): a role allowed to change the schema while the processes connect with a narrower one. Same `?schema=public` rule. | optional | DATABASE_URL |
+| DATABASE_MAX_OPEN_CONNS | Connection pool size of one process; every process has its own pool. | optional | 20 |
+| SKIP_STARTUP_MIGRATION | `true` makes `forma start` skip its migrations, for deployments where a separate `forma migrate` job applies them (Helm, Docker Compose). | optional | false |
+| REDIS_URL | Valkey (or Redis) for rate-limit counters and short-lived state. Every process needs it; while it is unreachable, rate limits let requests through. It no longer holds a job queue. | required | |
+| ENCRYPTION_KEY | Seals secrets stored at rest (two-factor secrets and backup codes) and signs single-use and personal links. 64 hex characters (`openssl rand -hex 32`) or exactly 32 characters; an instance moved from forma2 must keep its value. | required | |
+| ENCRYPTION_KEY_VERSION | Version written in front of every value `ENCRYPTION_KEY` seals, 1 to 255. Give a new key a new version when rotating. | optional | 1 |
+| ENCRYPTION_PREVIOUS_KEYS | Retired keys still accepted to open what they sealed, as `<version>:<key>,...`. A 32-character key that contains a comma must be given in hex. | optional | |
+| NEXTAUTH_SECRET | forma2's signing secret. Kept so that the link survey email verification and PIN tokens forma2 issued keep verifying; at least 32 characters. Without it these tokens are signed with a secret derived from `ENCRYPTION_KEY`. | optional | |
+| BETTER_AUTH_SECRET | forma2's Better Auth secret, used before `NEXTAUTH_SECRET` for link survey PIN tokens; at least 32 characters. | optional | NEXTAUTH_SECRET |
+| TRUSTED_PROXY_HOP_COUNT | How many reverse proxies in front of the server append to `X-Forwarded-For`; the client address is the entry that many places from the right. `0` means none: the TCP peer is the client. A value higher than the real chain lets callers choose their own address. See [Rate Limiting](/self-hosting/advanced/rate-limiting). | optional | 1 |
+| RATE_LIMITING_DISABLED | `1` turns the server's own rate limits off. It does not disable a gateway in front of it. | optional | 0 |
+| GATEWAY_RATE_LIMITING | `1` declares a gateway (Envoy or equivalent) in front of the server that enforces forma2's rate-limit policy: the client API routes it covers (response, display, environment, user and upload requests) and requests to `/api/v1/management/*` and `/api/v1/webhooks/<id>` that send their API key in `x-api-key` are then not limited again by the server. Leave it unset with Docker Compose, which runs no gateway. | optional | 0 |
+| WORKER_CONCURRENCY | Jobs one `forma worker` process runs at once; `0` derives it from the CPU count (2 to 4). See [Job Runner](/self-hosting/configuration/job-runner). | optional | 0 |
+| BULLMQ_WORKER_CONCURRENCY, BULLMQ_WORKER_COUNT | forma2's worker settings, still honoured when `WORKER_CONCURRENCY` is unset: the worker runs `BULLMQ_WORKER_COUNT x BULLMQ_WORKER_CONCURRENCY` jobs at once and logs a deprecation warning. Ignored, with a warning, when `WORKER_CONCURRENCY` is set. | optional | |
+| BULLMQ_WORKER_ENABLED | Read by `forma start` only: `0` serves without the in-process job worker, for deployments that run `forma worker` separately. | optional | 1 |
+| SURVEY_SCHEDULING_TIME_ZONE | IANA time zone in which scheduled surveys are published and closed. | optional | Europe/Berlin |
+| SURVEY_SCHEDULING_LOCAL_HOUR, SURVEY_SCHEDULING_LOCAL_MINUTE | The local time of day, in that zone, at which a publish or close date takes effect. | optional | 0, 0 |
+| LOG_LEVEL | `debug`, `info`, `warn`, `error`, `fatal` (only what is above error, which is audit events) or `audit` (audit events only). forma2 defaulted to `warn` in production; the Go server defaults to `info`, the level it logs its start-up and shutdown at. Any other value fails the start. | optional | info |
+| LOG_FORMAT | `json` (one object per line, for log pipelines) or `text`. See [Monitoring](/self-hosting/setup/monitoring). | optional | json |
+| HTTP_PROXY, HTTPS_PROXY, NO_PROXY | Go's standard proxy variables, honoured by outbound HTTP requests. Webhook deliveries never use them: they connect directly to the address they validated. | optional | |
+| SSL_CERT_FILE, SSL_CERT_DIR | Trust a private certificate authority (an SMTP server or S3 endpoint with an internal CA): Go's standard locations for extra root certificates, in place of forma2's `NODE_EXTRA_CA_CERTS`. | optional | |
+
+#### Storage
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| S3_BUCKET_NAME | Bucket uploaded files are stored in. File uploads are available exactly when it is set. | optional (required for uploads) | |
+| S3_ACCESS_KEY, S3_SECRET_KEY | Credentials, used only when both are set; otherwise the AWS default credential chain applies (environment, shared credentials file, web identity, container and instance roles). | optional | |
+| S3_REGION | Region of the bucket. | optional | (resolved by the AWS SDK) |
+| S3_ENDPOINT_URL | S3-compatible service (RustFS, MinIO, StorJ, ...) as `scheme://host[:port]`, without a path. Browsers upload straight to it, so it must be reachable from them. Unset means Amazon S3. | optional | |
+| S3_FORCE_PATH_STYLE | `1` addresses the bucket as `<endpoint>/<bucket>`, which most self-hosted services need. | optional | 0 |
+
+#### Email
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| SMTP_HOST, SMTP_PORT | SMTP server. Mail is sent only when both are set. | optional (required for email) | |
+| SMTP_USER, SMTP_PASSWORD | SMTP credentials. | optional | |
+| SMTP_AUTHENTICATED | `0` connects without `SMTP_USER` and `SMTP_PASSWORD`. | optional | 1 |
+| SMTP_SECURE_ENABLED | `1` uses implicit TLS; port 465 always does. Other ports upgrade with STARTTLS when the server offers it. | optional | 0 |
+| SMTP_REJECT_UNAUTHORIZED_TLS | Keep at `1` to verify the SMTP server's certificate. `0` disables verification and is unsafe; trust a private CA with `SSL_CERT_FILE` instead. | optional | 1 |
+| MAIL_FROM | Sender address, a plain email address. | optional | noreply@forma.ylam.ai |
+| MAIL_FROM_NAME | Sender name. | optional | Forma |
+| PRIVACY_URL, TERMS_URL, IMPRINT_URL | Legal links on the email footer and the public survey pages (`TERMS_URL` on the survey pages only). Absolute http(s) URLs. | optional | |
+| IMPRINT_ADDRESS | Address in the email footer. | optional | |
+
+#### Sign-up, sign-in and users
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| EMAIL_AUTH_DISABLED | `1` switches email and password sign-up and sign-in off, for SSO-only instances. | optional | 0 |
+| EMAIL_VERIFICATION_DISABLED | `1` lets unverified users sign in and applies email changes without confirmation. Needed without SMTP. | optional | 0 |
+| PASSWORD_RESET_DISABLED | `1` refuses every password reset. Needed without SMTP. | optional | 0 |
+| PASSWORD_RESET_TOKEN_LIFETIME_MINUTES | How long a reset link stays valid, 5 to 120 minutes. | optional | 30 |
+| PASSWORD_HIBP_CHECK_DISABLED | `1` skips the Have I Been Pwned breach check when a password is set, for deployments without egress. The check fails open on network errors. | optional | 0 |
+| INVITE_DISABLED | `1` switches inviting members off. Pending invites can still be accepted. | optional | 0 |
+| INVITE_RATE_LIMIT_PER_24_HOURS | Invite recipients one organization may be sent per day. | optional | 50 |
+| SESSION_MAX_AGE | Session lifetime in seconds. | optional | 86400 |
+| USER_MANAGEMENT_MINIMUM_ROLE | Lowest organization role allowed to manage members and invites: `owner`, `manager` or `disabled`. | optional | manager |
+| TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY | Cloudflare Turnstile on sign-up, when both are set. | optional | |
+| RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY | Google reCAPTCHA v3; surveys can turn on spam protection only when both are set. | optional | |
+
+A self-hosted instance admits its first user and invitees only; there is no open sign-up outside Forma Cloud (`IS_FORMA_CLOUD=1`) and end-to-end test runs (`E2E_TESTING=1`), whatever the build. forma2's development builds opened sign-up; the Go server has no development mode. Single sign-on is the exception: whoever a configured identity provider admits gets an account on their first sign-in (see [Authentication Behavior](/self-hosting/auth-behavior)).
+
+#### Single sign-on
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET | Google sign-in, offered when both are set. | optional | |
+| GITHUB_ID, GITHUB_SECRET | GitHub sign-in. | optional | |
+| AZUREAD_CLIENT_ID, AZUREAD_CLIENT_SECRET | Microsoft Entra ID sign-in. | optional | |
+| AZUREAD_TENANT_ID | A directory ID or verified domain gets full `id_token` verification; unset means the multi-tenant `common` authority. | optional | common |
+| OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER | A generic OpenID Connect provider, offered when all three are set. Its discovery document is read from `OIDC_ISSUER/.well-known/openid-configuration`, which also says how its tokens are signed. | optional | |
+| OIDC_DISPLAY_NAME | Label of its sign-in button. | optional | |
+| SAML_DATABASE_URL | forma2's switch for SAML SSO: when set, SAML is offered and the identity provider's metadata is read from `saml-connection/*.xml`. The connection itself now lives in the main database, so only whether the variable is set matters. | optional | |
+| AUTH_SSO_DEFAULT_ORGANIZATION_ID | Every new SSO user joins this organization without an invite; it is created on the first such sign-up. An organization UUID, or the cuid2 id forma2 knew it by. No licence is needed. | optional | |
+| AUTH_SSO_DEFAULT_ORGANIZATION_ROLE | Role of the later SSO sign-ups in it (the one that creates it is `owner`): `owner`, `manager`, `member` or `billing`. | optional | manager |
+| BETTER_AUTH_URL, NEXTAUTH_URL | forma2's auth base URLs. The first one set, else `WEBAPP_URL`, is where identity providers send the browser back, so redirect URIs registered for forma2 keep working. Set them only when those were registered under another origin. | optional | WEBAPP_URL |
+| MCP_OAUTH_JWKS_URL | Where `/api/mcp` fetches the keys OAuth access tokens are signed with, for deployments that verify against another instance's authorization server. Unset, the keys are read from the database. | optional | |
+
+#### Integrations, AI and third-party services
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| GOOGLE_SHEETS_CLIENT_ID, GOOGLE_SHEETS_CLIENT_SECRET, GOOGLE_SHEETS_REDIRECT_URL | Google Sheets integration. The redirect URL is used verbatim; normally `<WEBAPP_URL>/api/google-sheet/callback`. | optional | |
+| AIRTABLE_CLIENT_ID | Airtable integration (OAuth with PKCE, no secret). | optional | |
+| NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET | Notion integration. | optional | |
+| SLACK_CLIENT_ID, SLACK_CLIENT_SECRET | Slack integration. | optional | |
+| DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS | `1` lets webhooks target private, loopback, link-local and metadata addresses and follow redirects, for receivers on the internal network. | optional | 0 |
+| UNSPLASH_ACCESS_KEY | Unsplash search for survey background images. Without it, the Unsplash tab of the background picker is hidden. | optional | |
+| PLAIN_APP_ID | Plain in-product support chat, shown when set. | optional | |
+| PLAIN_CHAT_HMAC_SECRET | Secret from Plain's chat settings that verifies the signed-in user's email; without it the chat runs unverified. | optional | |
+| PLAIN_ACTIVE_CUSTOMER_LABEL_TYPE_ID | Plain label type applied to the chat threads of paying customers. | optional | |
+| BREVO_API_KEY, BREVO_LIST_ID | Adds new users to a Brevo contact list. | optional | |
+| AI_PROVIDER | Instance AI provider: `aws`, `google`, `azure` or `openai-compatible`. | optional (required for AI) | |
+| AI_MODEL | Model or deployment name of the provider. | optional (required with `AI_PROVIDER`) | |
+| AI_MODEL_TRANSLATION, AI_MODEL_EXAMPLE_RESPONSES | Models that AI translation and example responses run on instead of `AI_MODEL`. | optional | AI_MODEL |
+| AI_GOOGLE_CLOUD_PROJECT, AI_GOOGLE_CLOUD_LOCATION | Google Vertex AI project and location (`global` is the safe default; `us` and `eu` are multi-region). | optional (required for `google`) | |
+| AI_GOOGLE_CLOUD_CREDENTIALS_JSON, AI_GOOGLE_CLOUD_APPLICATION_CREDENTIALS | A service account JSON, or the path to Application Default Credentials. Omit both when ADC are available. | optional | |
+| AI_AWS_REGION, AI_AWS_ACCESS_KEY_ID, AI_AWS_SECRET_ACCESS_KEY, AI_AWS_SESSION_TOKEN | Amazon Bedrock. | optional (required for `aws`) | |
+| AI_AZURE_BASE_URL or AI_AZURE_RESOURCE_NAME, AI_AZURE_API_KEY, AI_AZURE_API_VERSION | Azure OpenAI / Foundry. The base URL ends at `/openai` and wins over the resource name. | optional (required for `azure`) | |
+| AI_OPENAI_COMPATIBLE_BASE_URL, AI_OPENAI_COMPATIBLE_API_KEY, AI_OPENAI_COMPATIBLE_PROVIDER_NAME, AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS, AI_OPENAI_COMPATIBLE_HEADERS_JSON, AI_OPENAI_COMPATIBLE_QUERY_PARAMS_JSON | An OpenAI-compatible `/v1` endpoint such as the bundled Qwen on vLLM (`http://vllm:8000/v1`, provider name `vllm`). | optional (required for `openai-compatible`) | |
+| STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PUBLISHABLE_KEY | Forma Cloud billing; it runs only with `IS_FORMA_CLOUD=1` and `STRIPE_SECRET_KEY` set. The webhook endpoint is `<WEBAPP_URL>/api/billing/stripe-webhook`. | optional | |
+
+#### Observability
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| AUDIT_LOG_ENABLED | `1` writes audit events to the log, at level `audit`. See [Audit Logging](/self-hosting/advanced/enterprise-features/audit-logging). | optional | 1 |
+| AUDIT_LOG_GET_USER_IP | `1` records the client address in audit events instead of `unknown`. | optional | 0 |
+| OTEL_EXPORTER_OTLP_ENDPOINT | Turns on the OTLP HTTP trace and metric exporters (`/v1/traces` and `/v1/metrics` are appended). They also read `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_RESOURCE_ATTRIBUTES` and the other standard `OTEL_EXPORTER_OTLP_*` variables. Only HTTP/protobuf is spoken. | optional | |
+| OTEL_SERVICE_NAME | `service.name` of every span and metric. | optional | forma |
+| OTEL_TRACES_SAMPLER, OTEL_TRACES_SAMPLER_ARG | Sampler (`always_on`, `always_off`, `traceidratio` and the `parentbased_` variants) and its ratio. | optional | always_on |
+| ENVIRONMENT | `deployment.environment` of spans and metrics (falls back to `NODE_ENV`, then `production`). | optional | production |
+| PROMETHEUS_ENABLED, PROMETHEUS_EXPORTER_PORT | `1` serves metrics at `0.0.0.0:<port>/metrics`, beside the app's port. | optional | 0, 9464 |
+| SENTRY_DSN, SENTRY_ENVIRONMENT | Server errors (5xx answers and panics) go to Sentry; the admin UI reports to the same DSN. | optional | |
+| POSTHOG_KEY | Product analytics to PostHog's EU cloud. | optional | |
+| TELEMETRY_ENABLED | `1` sends a daily anonymous usage report (counts only) to Forma. | optional | 0 |
+
+#### Variables forma2 read that the Go server ignores
+
+They do no harm if left in place, but nothing reads them; `./forma.sh update` comments them out of `.env`.
+
+| Variable | Why |
+| --- | --- |
+| CRON_SECRET | Periodic work runs inside `forma worker`; no endpoint is called from outside. |
+| BULLMQ_EXTERNAL_WORKER_ENABLED | The job queue is River on PostgreSQL. `BULLMQ_WORKER_ENABLED`, `BULLMQ_WORKER_CONCURRENCY` and `BULLMQ_WORKER_COUNT` are still read, as described above. |
+| AUTHZED_SYSTEM_KEY | The SpiceDB object namespace is fixed by the schema. |
+| FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED | forma2's installer gate; `forma.sh update` now checks the installation itself. |
+| AUTH_SKIP_INVITE_FOR_SSO, AUTH_SSO_DEFAULT_TEAM_ID | Dead in forma2 already: every SSO sign-up gets an account without an invite and joins `AUTH_SSO_DEFAULT_ORGANIZATION_ID` when it is set. |
+| OIDC_SIGNING_ALGORITHM | The provider's discovery document says how its tokens are signed. |
+| ENTERPRISE_LICENSE_KEY | Every feature is available without a licence. |
+| DEBUG, DEBUG_SHOW_RESET_LINK | The Go mailer has no SMTP debug output and there is no development build. |
+| ASSET_PREFIX_URL, DEFAULT_BRAND_COLOR, SENTRY_AUTH_TOKEN | Build-time settings of forma2's Next.js app. |
+| OTEL_LOGS_ENABLED | Logs are not exported over OTLP; collect them from stdout (see [Monitoring](/self-hosting/setup/monitoring)). |
+| NODE_EXTRA_CA_CERTS | Use `SSL_CERT_FILE` or `SSL_CERT_DIR`. |
+
+{/* prettier-ignore-end */}
 
 #### OAuth and MCP URLs
 
-The MCP server is available on the private/admin app at `/api/mcp`. OAuth discovery and token
-issuance are also private/admin app surfaces:
+The MCP server is available on the admin app at `/api/mcp`. OAuth discovery and token issuance are also admin app surfaces:
 
 ```text
 {WEBAPP_URL}/api/mcp
@@ -141,71 +176,31 @@ issuance are also private/admin app surfaces:
 {WEBAPP_URL}/.well-known/oauth-authorization-server/api/auth
 ```
 
-If you use a custom subpath, include that subpath in `WEBAPP_URL`, `NEXTAUTH_URL`, and
-`BETTER_AUTH_URL` if set. Do not point MCP or OAuth clients at `PUBLIC_URL`; that domain is reserved
-for public survey delivery and SDK traffic.
+Do not point MCP or OAuth clients at `PUBLIC_URL`; that origin is reserved for public survey delivery and SDK traffic.
 
 #### AuthZed / SpiceDB Authorization
 
-These variables define the supported authorization-client contract. Forma v6 enables AuthZed by default
-for fresh Docker, one-click, and Helm installations. Existing installations must pass the release-matched
-upgrade gate before enabling the v6 application image.
+SpiceDB is the only authorization evaluator. While it is disabled every permission check fails closed, so an instance needs it configured.
 
-| Variable            | Description                                                                                                      | Required when enabled | Default            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
-| AUTHZED_ENABLED     | Enables the required AuthZed authorization engine.                                                              | required              | `true` in bundled Docker, Helm, and dev |
-| AUTHZED_ENDPOINT    | AuthZed gRPC endpoint as `host:port`. The default Helm-managed service is `forma-spicedb:50051`.             | required              | `spicedb:50051` in Docker; `localhost:50051` in dev |
-| AUTHZED_TOKEN       | Preshared API token. Always load this from a secret.                                                             | required              |                    |
-| AUTHZED_SYSTEM_KEY  | Stable namespace for Forma authorization objects and relationships.                                         | required              | `forma`       |
-| AUTHZED_INSECURE    | Allows plaintext gRPC for an in-cluster service. Keep disabled for endpoints outside the trusted cluster network. | optional              | `true` in Helm and bundled Docker/dev |
-| AUTHZED_CONSISTENCY | Consistency policy used by authorization decisions.                                                            | optional              | `fully_consistent` in released Docker and Helm |
+| Variable | Description | Required when enabled | Default |
+| --- | --- | --- | --- |
+| AUTHZED_ENABLED | Turns the SpiceDB client on. `1`/`0` or `true`/`false`. | required | `0` (Docker Compose and Helm set `1`) |
+| AUTHZED_ENDPOINT | SpiceDB's gRPC address as `host:port`, without a scheme or path. | required | `spicedb:50051` in Docker Compose |
+| AUTHZED_TOKEN | gRPC preshared key. Load it from a secret. | required | |
+| AUTHZED_INSECURE | Plaintext gRPC instead of TLS, for an in-cluster service. `1`/`0` or `true`/`false`. | optional | `0` (Docker Compose and Helm set `1` for the bundled SpiceDB) |
+| AUTHZED_CONSISTENCY | `fully_consistent` evaluates every check at the newest revision; `minimize_latency` lets SpiceDB answer from its cache, so a delivered revocation can take effect a few seconds later. | optional | fully_consistent |
 
-Docker Compose additionally requires `AUTHZED_DATABASE_PASSWORD` for its dedicated `spicedb` PostgreSQL
-login. Generate both it and `AUTHZED_TOKEN` with `openssl rand -hex 32`. `SPICEDB_IMAGE_REF` can override the
-bundled `authzed/spicedb:v1.52.0` image for an explicitly reviewed upgrade; the migration and server services
-always use the same reference.
+Docker Compose additionally needs `AUTHZED_DATABASE_PASSWORD` for SpiceDB's own PostgreSQL login; generate it and `AUTHZED_TOKEN` with `openssl rand -hex 32`. `SPICEDB_IMAGE_REF` overrides the bundled `authzed/spicedb:v1.52.0` image.
 
-`AUTHZED_ENABLED` and `AUTHZED_INSECURE` accept `true`, `false`, `1`, or `0`. When `AUTHZED_ENABLED` is unset,
-the application client is disabled; when `AUTHZED_INSECURE` is unset, it uses TLS. A configured endpoint must
-be a bare `host:port` with an explicit port from 1 through 65535, for example `spicedb:50051`,
-`grpc.authzed.com:443`, or `[::1]:50051`. Do not include a URL scheme, path, query, credentials, or whitespace.
-`AUTHZED_SYSTEM_KEY` must be a 3–64 character lowercase SpiceDB identifier made from letters, digits, and
-underscores; it must start with a letter or underscore and end with a letter or digit. The supported
-consistency values are `minimize_latency` and `fully_consistent`. Released v6 Docker and Helm deployments
-require `fully_consistent`; the upgrade gate rejects weaker consistency.
+An endpoint must be a bare `host:port` with a port from 1 to 65535, for example `spicedb:50051`, `grpc.authzed.com:443` or `[::1]:50051`. Supplied values are validated even while SpiceDB is disabled, and the token is never printed.
 
-Valid endpoint, token, and system-key values may be set before enabling AuthZed. Invalid supplied values are
-rejected even while it is disabled. Changing any AuthZed setting requires restarting the Forma process.
-Configuration validation never prints the token.
-
-In a released Docker installation, validate the configured connection without installing a schema or changing
-data:
+Check the connection and the schema without changing anything:
 
 ```bash
-docker compose --profile authzed-ops run --rm authzed-ops health
-docker compose --profile authzed-ops run --rm authzed-ops upgrade check
+# Docker Compose
+docker compose --profile authzed-ops run --rm authzed-ops schema check
+# Kubernetes (the image has no shell; run the binary directly)
+kubectl -n forma exec deploy/forma -- forma authz schema check
 ```
 
-For Helm, run `forma-authzed health` inside a Forma application pod. Repository development can keep
-using `pnpm authzed:health`. See [AuthZed Operations](/self-hosting/advanced/authzed-operations) for the complete
-Docker and Kubernetes command set, schema lifecycle, backups, and relationship repair.
-
-Only the repository-development `pnpm authzed:health` command reads the repository `.env`. Docker Compose
-uses the `authzed-ops` container environment, while Helm and Kubernetes use the Forma Pod environment.
-Each invocation performs an authenticated read-only schema request, prints exactly one JSON result, and exits
-`0` only for `{"status":"healthy","latencyMs":12}` (the latency varies). Disabled or failed checks exit `1`.
-Failures use stable codes: `authzed_unauthenticated` or
-`authzed_permission_denied` for rejected credentials or schema-read access (the bundled SpiceDB preshared-key
-check reports a wrong token as permission denied), `authzed_timeout` when an attempt exceeds its deadline,
-`authzed_overloaded` when SpiceDB is resource constrained, `authzed_unavailable` when the service cannot be
-reached, and `authzed_internal` for an unexpected client failure. Schema text, tokens, raw SDK errors, and stack
-traces are never included.
-
-This check is intentionally a CLI rather than a browser page or HTTP endpoint. AuthZed is not part of the
-general `/health` response, Kubernetes readiness, or application startup, so a transient SpiceDB outage does
-not restart or mark the rest of Forma unhealthy.
-
-Failed or unavailable permission checks fail the protected operation closed; there is no runtime fallback to
-legacy authorization. Existing installations must complete `forma-authzed upgrade prepare` followed by
-`upgrade check` before upgrading. The general application readiness probe remains independent from AuthZed so a
-transient authorization outage does not restart unrelated Forma workloads.
+The command prints one JSON object and exits `0` when SpiceDB holds the schema the release ships, `2` on drift and `1` on failure. `forma authz backfill`, `forma authz outbox status|drain|replay` and `forma authz schema apply` complete the set; see [AuthZed Operations](/self-hosting/advanced/authzed-operations). SpiceDB is not part of `/health`, readiness or start-up, so a SpiceDB outage fails the operations that need a permission check without restarting Forma.

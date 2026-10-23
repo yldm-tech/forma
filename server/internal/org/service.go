@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -32,11 +33,12 @@ type Service struct {
 	limiter    *ratelimit.Limiter
 	audit      *audit.Emitter
 	billing    *billing.Lifecycle
+	mailer     *mailer.Mailer
 	log        *slog.Logger
 }
 
-func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, billing: lifecycle, log: log}
+func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, m *mailer.Mailer, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, billing: lifecycle, mailer: m, log: log}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.

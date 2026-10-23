@@ -1,16 +1,18 @@
 import type { TSurvey } from "@forma/types/surveys/types";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useRouter } from "@tanstack/react-router";
-import { BellRing, Eye, ListRestart, RefreshCcwIcon, SquarePenIcon } from "lucide-react";
-import { useState } from "react";
+import { BellRing, Eye, ListRestart, RefreshCcwIcon, SparklesIcon, SquarePenIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { ConfirmationModal } from "../../../components/ui/confirmation-modal";
-import { IconBar } from "../../../components/ui/icon-bar";
+import { IconBar, type IconAction } from "../../../components/ui/icon-bar";
+import { ApiError } from "../../../lib/api";
 import { errorMessage } from "../../../lib/errors";
 import type { Me } from "../../../lib/queries/auth";
 import type { WorkspaceDetail } from "../../../lib/queries/workspaces";
 import { toast } from "../../../lib/toast";
+import { getAIUnavailableMessage, workspaceAIQuery } from "../../ai/availability";
 import { EditPublicSurveyAlertDialog } from "../../survey-editor/components/edit-public-survey-alert-dialog";
 import { surveysApi } from "../../surveys/api";
 import { surveyKeys } from "../../surveys/list/query";
@@ -27,6 +29,90 @@ export interface AnalysisSearch {
   success?: boolean;
   scheduled?: boolean;
 }
+
+/** How long each status line holds before the next, forma2's AI_STATUS_DEFAULT_CADENCE_MS; the last one holds until the answer, since cycling back would read as the work restarting. */
+export const EXAMPLE_STATUS_CADENCE_MS = 2500;
+
+/**
+ * forma2's example-responses action of the analysis toolbar: AI-written responses for a survey that has none, so its summary can be explored before it is shared. It is offered to writers of a survey that is not archived, and disabled while AI is unavailable to the workspace, once the survey has responses, and while a generation runs. The wait is shown as status lines in the loading toast, which turns into the result in place.
+ */
+export const useExampleResponsesAction = ({
+  survey,
+  workspaceId,
+  responseCount,
+  isReadOnly,
+  onGenerated,
+}: {
+  survey: TSurvey;
+  workspaceId: string;
+  responseCount: number;
+  isReadOnly: boolean;
+  onGenerated: () => Promise<unknown>;
+}): IconAction => {
+  const { t } = useTranslation();
+  const ai = useQuery({ ...workspaceAIQuery(workspaceId), enabled: !isReadOnly && !survey.archivedAt }).data;
+  const [isGenerating, setIsGenerating] = useState(false);
+  const isAIUnavailable = ai?.available !== true;
+
+  // The generation is one request the server cancels when the tab goes away, so a reload mid-run throws away answers the user is waiting on and cannot cheaply ask for again.
+  useEffect(() => {
+    if (!isGenerating) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isGenerating]);
+
+  const generate = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    const id = toast.loading(t("workspace.surveys.summary.ai_status_reading_survey"));
+    const nextStatuses = [
+      t("workspace.surveys.summary.ai_status_drafting_answers"),
+      t("workspace.surveys.summary.ai_status_saving_responses"),
+    ];
+    const cadence = setInterval(() => {
+      const next = nextStatuses.shift();
+      if (next !== undefined) toast.loading(next, { id });
+    }, EXAMPLE_STATUS_CADENCE_MS);
+    try {
+      const result = await analysisApi.generateExampleResponses(survey.id);
+      clearInterval(cadence);
+      toast.success(
+        t("workspace.surveys.summary.example_responses_generated_successfully", {
+          count: result.createdCount,
+        }),
+        { id }
+      );
+      await onGenerated();
+    } catch (error) {
+      clearInterval(cadence);
+      // The server's reason when it refused (AI switched off, the survey answered meanwhile, the rate limit), forma2's wording for anything else.
+      const refused = error instanceof ApiError && error.status < 500;
+      toast.error(
+        refused ? errorMessage(t, error) : t("workspace.surveys.summary.example_responses_generation_failed"),
+        { id }
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const tooltip = (() => {
+    if (isGenerating) return t("workspace.surveys.summary.generating_example_responses");
+    if (ai && !ai.available) return getAIUnavailableMessage(ai.reason, t);
+    if (responseCount > 0)
+      return t("workspace.surveys.summary.generate_example_responses_disabled_has_responses");
+    return t("workspace.surveys.summary.generate_example_responses");
+  })();
+
+  return {
+    icon: SparklesIcon,
+    tooltip,
+    onClick: () => void generate(),
+    disabled: isGenerating || isAIUnavailable || responseCount > 0,
+    isVisible: !isReadOnly && !survey.archivedAt,
+  };
+};
 
 /** forma2's SurveyAnalysisCTA: the status, the tool icons, and the share modal of a survey's analysis header. */
 export const SurveyAnalysisCTA = ({
@@ -71,6 +157,14 @@ export const SurveyAnalysisCTA = ({
   };
 
   const refreshAnalysis = () => invalidateSurveyAnalysis(queryClient, survey.id);
+
+  const exampleResponsesAction = useExampleResponsesAction({
+    survey,
+    workspaceId: workspace.id,
+    responseCount,
+    isReadOnly,
+    onGenerated: refreshAnalysis,
+  });
 
   const duplicateSurveyAndRoute = async () => {
     setIsDuplicating(true);
@@ -153,6 +247,7 @@ export const SurveyAnalysisCTA = ({
       },
       isVisible: survey.type === "link" && !survey.archivedAt,
     },
+    exampleResponsesAction,
     {
       icon: ListRestart,
       tooltip: t("workspace.surveys.summary.reset_survey"),

@@ -474,3 +474,20 @@ func TestTrialDaysFollowTheExperiment(t *testing.T) {
 		t.Fatalf("test variant = %d days, want %d", days, shortenedProTrialDays)
 	}
 }
+
+// forma2's billing page: the plan comparison table is shown to the users PostHog puts in the a-b_billing_plan-comparison-table experiment's test variant. Not parallel: the flag is answered by the process-wide PostHog client.
+func TestPlanComparisonFollowsTheExperiment(t *testing.T) {
+	user := uuid.New()
+	if isPlanComparison(user) {
+		t.Fatal("plan comparison without PostHog")
+	}
+	rec := analyticstest.Start(t)
+	rec.SetFlag("a-b_billing_plan-comparison-table", "control")
+	if isPlanComparison(user) {
+		t.Fatal("plan comparison for the control variant")
+	}
+	rec.SetFlag("a-b_billing_plan-comparison-table", "test")
+	if !isPlanComparison(user) {
+		t.Fatal("no plan comparison for the test variant")
+	}
+}

@@ -11,8 +11,7 @@
 # Overridden by --url in CI; this is the local dev-server default.
 base-url = "http://localhost:3000"
 
-# Generous enough for a cold Next.js route on the first hit, tight enough that a hung route fails the
-# job instead of sitting until the step timeout.
+# Generous enough for a slow first request against a freshly started server, tight enough that a hung route fails the job instead of sitting until the step timeout.
 request-timeout = 30
 
 [phases.examples]

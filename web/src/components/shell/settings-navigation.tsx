@@ -7,6 +7,7 @@ import {
   ChevronDownIcon,
   CreditCardIcon,
   FoldersIcon,
+  GlobeIcon,
   KeyIcon,
   LanguagesIcon,
   UsersIcon,
@@ -28,7 +29,7 @@ import { NavigationLink } from "./navigation-link";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
 /**
- * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, and the organization's settings, each section with a switcher beside its label. Entries are disabled for the billing role; API keys are offered to owners and managers only, and billing on Forma Cloud only. Domain settings are not part of this server.
+ * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, and the organization's settings, each section with a switcher beside its label. Entries are disabled for the billing role; API keys are offered to owners and managers only, domain settings self-hosted only, and billing on Forma Cloud only.
  */
 export const SettingsNavigation = ({
   organizationId,
@@ -114,6 +115,17 @@ export const SettingsNavigation = ({
           },
         ]
       : []),
+    ...(isFormaCloud
+      ? []
+      : [
+          {
+            id: "domain",
+            label: t("common.domain"),
+            href: organizationSettingsPath(organizationId, "domain"),
+            icon: <GlobeIcon className={iconClassName} />,
+            disabledReason: undefined,
+          },
+        ]),
     ...(isFormaCloud
       ? [
           {

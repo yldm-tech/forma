@@ -1,0 +1,14 @@
+{
+  "name": "@forma/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vp test run"
+  },
+  "devDependencies": {
+    "@forma/config-typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

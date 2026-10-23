@@ -66,19 +66,9 @@ helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
 The default chart path keeps `secret.enabled: true`, which lets the chart generate the required application
 secrets for you.
 
-### Adding An Enterprise License
+### No Enterprise License
 
-There is no separate `enterprise.enabled` switch. Enterprise features are unlocked by a valid
-`ENTERPRISE_LICENSE_KEY`. For a quick-start deployment that uses the chart-generated app Secret, set:
-
-```yaml
-enterprise:
-  licenseKey: your-enterprise-license-key
-```
-
-For production, keep the license out of a values file and provide `ENTERPRISE_LICENSE_KEY` through your existing
-Secret or ExternalSecret instead. The `enterprise.licenseKey` chart value only writes to the generated app Secret
-when `secret.enabled: true`.
+Every feature is available without a licence. The chart has no `enterprise.enabled` or `enterprise.licenseKey` value, and the server does not read `ENTERPRISE_LICENSE_KEY`; remove them from values carried over from forma2.
 
 ### Using Managed PostgreSQL And Redis
 
@@ -132,21 +122,15 @@ to an externally managed AuthZed endpoint. The external endpoint must serve TLS 
 sent on every authenticated request. The application endpoint remains internal and uses plaintext gRPC by
 default when the chart owns SpiceDB.
 
-Helm prints release-specific commands that execute the release-matched operator CLI
-inside a Forma pod. Start with:
+Run the operator commands inside a Forma pod. The image is distroless, with no shell, so call the binary directly:
 
 ```bash
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed health
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed schema check
-kubectl exec -n <namespace> deployment/<release-name> -- forma-authzed upgrade check
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz schema check
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz outbox status
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz backfill
 ```
 
-A fresh install runs an idempotent initialization Job, but application startup and probes remain independent
-from it. Upgrades never run relationship preparation automatically. Before the first v6 upgrade, run
-`forma-authzed upgrade prepare`, require `upgrade check` to exit `0`, and then set
-`authzed.migrationAcknowledged: true`. The chart refuses an unacknowledged upgrade, disabled AuthZed, or weaker
-consistency. Follow [AuthZed Operations](/self-hosting/advanced/authzed-operations) and do not expose SpiceDB
-through an Ingress.
+A fresh install runs the AuthZed initialization Job (`forma authz` steps) after the migrations; application startup and probes remain independent from it. On an upgrade the chart still refuses to render until `authzed.migrationAcknowledged=true` says the preparation is done: `forma authz schema apply`, `forma authz outbox drain` and `forma authz backfill --apply` until it exits `0`. forma2's `forma-authzed` commands are gone. Follow [AuthZed Operations](/self-hosting/advanced/authzed-operations) and do not expose SpiceDB through an Ingress.
 
 ## 3. v5-Specific Deployment Notes
 
@@ -178,6 +162,8 @@ controller, set `envoy.controller.enabled: false`. In either mode, configure
 `envoy.forma.ingress` or your platform ingress/load balancer so public traffic reaches the Envoy-managed
 routes. If you use an equivalent external edge solution instead, verify that it covers every route in the
 [rate-limiting guide](/self-hosting/advanced/rate-limiting) before exposing Forma.
+
+The server keeps applying its own limits to the routes the gateway covers until you declare the gateway with `GATEWAY_RATE_LIMITING=1` (in `deployment.env`), as with forma2; the chart does not set it for you.
 
 ### Production Replicas And Disruption Budgets
 

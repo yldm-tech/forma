@@ -24,6 +24,7 @@ import { oauthErrorVariant } from "../../features/auth/oauth-error";
 import { type CallbackSearch, callbackSearch, stringParam } from "../../features/auth/search";
 import { emailError, signInPasswordError } from "../../features/auth/validation";
 import { type Validators, useForm } from "../../lib/form";
+import { pickAttributionParams } from "../../lib/attribution";
 
 interface LoginSearch extends CallbackSearch {
   /** The code a failed SSO callback reports. */
@@ -313,7 +314,14 @@ function LoginPage() {
         <div className="mt-9 text-center text-xs">
           <span className="leading-5 text-slate-500">{t("auth.login.new_to_forma")}</span>
           <br />
-          <Link to="/auth/signup" search={inviteToken ? { inviteToken } : {}} className={textLinkClasses}>
+          <Link
+            to="/auth/signup"
+            // The marketing attribution of this page's address travels to the sign-up page, as forma2 forwarded it.
+            search={{
+              ...(inviteToken ? { inviteToken } : {}),
+              ...pickAttributionParams(new URLSearchParams(window.location.search)),
+            }}
+            className={textLinkClasses}>
             {t("auth.login.create_an_account")}
           </Link>
         </div>

@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { NoMobileOverlay } from "../components/shell/no-mobile-overlay";
 import { ApiError } from "../lib/api";
 import { changeLocale, isLocale } from "../lib/i18n";
 import { loginHref } from "../lib/navigation";
@@ -34,6 +35,8 @@ function AuthenticatedLayout() {
 
   return (
     <>
+      {/* forma2's app layout covered every signed-in page on a phone-sized screen. */}
+      <NoMobileOverlay />
       <PostHogIdentify userId={me.id} email={me.email} />
       <Outlet />
     </>

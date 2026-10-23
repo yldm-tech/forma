@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "extends": "@forma/config-typescript/js-library.json",
+  "include": ["*.ts"]
+}

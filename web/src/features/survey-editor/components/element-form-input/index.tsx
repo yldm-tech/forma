@@ -445,6 +445,8 @@ export const ElementFormInput = ({
               fileUrl={getFileUrl()}
               videoUrl={getVideoUrl()}
               isVideoAllowed={true}
+              workspaceId={localSurvey.workspaceId}
+              maxSizeInMB={5}
             />
           )}
 

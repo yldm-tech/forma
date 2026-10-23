@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { ArrowLeftIcon, SettingsIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -19,6 +19,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { ApiError } from "../../../lib/api";
 import { errorMessage } from "../../../lib/errors";
+import { instanceQuery } from "../../../lib/queries/instance";
 import { isDeepEqual } from "../../../lib/survey/object";
 import { toast } from "../../../lib/toast";
 import { analysisKeys } from "../../survey-analysis/api";
@@ -74,6 +75,7 @@ export const SurveyMenuBar = ({
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: instance } = useQuery(instanceQuery);
   const createSegment = useCreateSegment(localSurvey.workspaceId);
   const [audiencePrompt, setAudiencePrompt] = useState(true);
   const [isLinkSurvey, setIsLinkSurvey] = useState(true);
@@ -496,20 +498,21 @@ export const SurveyMenuBar = ({
 
       <div className="mt-3 flex items-center gap-2 sm:mt-0 sm:ml-4">
         <AutoSaveIndicator isDraft={localSurvey.status === "draft"} lastSaved={lastAutoSaved} />
-        {/* The Go server has no file storage, so forma2's banner for an instance without it always shows. */}
-        <div>
-          <Alert variant="warning" size="small" role="status">
-            <AlertTitle>{t("common.storage_not_configured")}</AlertTitle>
-            <AlertButton asChild>
-              <a
-                href="https://forma.yldm.ai/docs/self-hosting/configuration/file-uploads"
-                target="_blank"
-                rel="noopener noreferrer">
-                {t("common.learn_more")}
-              </a>
-            </AlertButton>
-          </Alert>
-        </div>
+        {instance?.storageConfigured === false && (
+          <div>
+            <Alert variant="warning" size="small" role="status">
+              <AlertTitle>{t("common.storage_not_configured")}</AlertTitle>
+              <AlertButton asChild>
+                <a
+                  href="https://forma.yldm.ai/docs/self-hosting/configuration/file-uploads"
+                  target="_blank"
+                  rel="noopener noreferrer">
+                  {t("common.learn_more")}
+                </a>
+              </AlertButton>
+            </Alert>
+          </div>
+        )}
         {responseCount > 0 && (
           <div>
             <Alert variant="warning" size="small" role="status">

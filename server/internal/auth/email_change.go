@@ -9,6 +9,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
@@ -84,7 +85,7 @@ func (s *Service) redeemEmailChange(ctx context.Context, token string) (string, 
 	}
 	var userID uuid.UUID
 	var oldEmail, newEmail string
-	err := s.repo.transaction(ctx, func(tx *Repository) error {
+	err := s.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		v, err := tx.consumeVerification(ctx, purposeEmailChange, secret.HashToken(token), s.now())
 		if err != nil {
 			return err
@@ -100,7 +101,7 @@ func (s *Service) redeemEmailChange(ctx context.Context, token string) (string, 
 			return errInvalidToken()
 		}
 		userID, oldEmail, newEmail = acc.ID, acc.Email, v.Email
-		return s.moveEmail(ctx, tx, acc.ID, v.Email, true)
+		return s.moveEmail(ctx, tx, jtx, acc.ID, acc.Email, v.Email, true)
 	})
 	if err != nil {
 		return "", err
@@ -115,7 +116,7 @@ func (s *Service) redeemEmailChange(ctx context.Context, token string) (string, 
 // applyEmailChange changes the address immediately, for instances with email verification disabled.
 func (s *Service) applyEmailChange(ctx context.Context, userID uuid.UUID, email string, verified bool) error {
 	var oldEmail string
-	err := s.repo.transaction(ctx, func(tx *Repository) error {
+	err := s.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		acc, err := tx.lockAccount(ctx, userID)
 		if err != nil {
 			return err
@@ -124,7 +125,7 @@ func (s *Service) applyEmailChange(ctx context.Context, userID uuid.UUID, email 
 			return apperr.NotAuthenticated("Not authenticated")
 		}
 		oldEmail = acc.Email
-		return s.moveEmail(ctx, tx, userID, email, verified)
+		return s.moveEmail(ctx, tx, jtx, userID, oldEmail, email, verified)
 	})
 	if err != nil {
 		return err
@@ -136,8 +137,8 @@ func (s *Service) applyEmailChange(ctx context.Context, userID uuid.UUID, email 
 	return nil
 }
 
-// moveEmail writes the new address and revokes the links that were sent to the old one or bound to it: outstanding email change and password reset links.
-func (s *Service) moveEmail(ctx context.Context, tx *Repository, userID uuid.UUID, email string, verified bool) error {
+// moveEmail writes the new address, revokes the links that were sent to the old one or bound to it (outstanding email change and password reset links) and moves the user's Brevo contact from oldEmail to the new address, as forma2's updateBrevoCustomer did after both kinds of change.
+func (s *Service) moveEmail(ctx context.Context, tx *Repository, jtx *jobs.Tx, userID uuid.UUID, oldEmail, email string, verified bool) error {
 	taken, err := tx.updateEmail(ctx, userID, email, verified, s.now())
 	if err != nil {
 		return err
@@ -145,5 +146,8 @@ func (s *Service) moveEmail(ctx context.Context, tx *Repository, userID uuid.UUI
 	if taken {
 		return apperr.Conflict("This email address is already in use.")
 	}
-	return tx.deleteVerifications(ctx, userID, purposeEmailChange, purposePasswordReset)
+	if err := tx.deleteVerifications(ctx, userID, purposeEmailChange, purposePasswordReset); err != nil {
+		return err
+	}
+	return s.contacts.EmailChanged(ctx, jtx, userID, oldEmail, email)
 }

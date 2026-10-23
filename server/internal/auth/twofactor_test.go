@@ -245,8 +245,14 @@ func TestSignInWithBackupCode(t *testing.T) {
 	again := e.browser()
 	again.signInPending()
 	expectStatus(t, verifyBackup(again, codes[0]), http.StatusUnauthorized, CodeInvalidBackupCode)
-	expectStatus(t, verifyBackup(again, strings.ToUpper(codes[1])), http.StatusUnauthorized, CodeInvalidBackupCode)
-	expectStatus(t, verifyBackup(again, codes[1]), http.StatusOK, "")
+	// Codes are compared case-sensitively. Upper-casing only changes a code that has a hex letter, so the check uses an unspent one that does; all nine being digits only is a chance of about 1 in 10^18.
+	lettered := slices.IndexFunc(codes[1:], func(code string) bool { return strings.ContainsAny(code, "abcdef") })
+	if lettered < 0 {
+		t.Fatalf("no unspent backup code has a letter: %v", codes[1:])
+	}
+	code := codes[1+lettered]
+	expectStatus(t, verifyBackup(again, strings.ToUpper(code)), http.StatusUnauthorized, CodeInvalidBackupCode)
+	expectStatus(t, verifyBackup(again, code), http.StatusOK, "")
 }
 
 func (e *env) backupCodesCiphertext(id uuid.UUID) []byte {

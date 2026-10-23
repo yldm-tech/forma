@@ -16,10 +16,13 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/instance"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -31,6 +34,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -46,9 +50,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/unsplash"
 	"github.com/yldm-tech/forma/server/internal/usagereport"
 	v3api2 "github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
@@ -117,7 +123,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		return nil, nil, err
 	}
 	lifecycle := billing.NewLifecycle(cfg, stripe, db, enqueuer, log)
-	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, lifecycle, log)
+	contacts := brevo.NewContacts(cfg)
+	authService := auth.NewService(cfg, repository, sessions, service, limiter, mailerMailer, emitter, client, lifecycle, enqueuer, contacts, log)
 	cipher, err := secret.NewCipher(cfg)
 	if err != nil {
 		cleanup3()
@@ -147,7 +154,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	storageService := storage.NewService(bucket)
 	workspaceService := workspace.NewService(cfg, workspaceRepository, authorizer, limiter, emitter, validator, storageService, log)
-	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, lifecycle, log)
+	orgService := org.NewService(cfg, orgRepository, workspaceRepository, workspaceService, authorizer, limiter, emitter, lifecycle, mailerMailer, log)
 	orgHandler := org.NewHandler(orgService, sessions)
 	workspaceHandler := workspace.NewHandler(workspaceService, sessions)
 	teamRepository := team.NewRepository(db)
@@ -188,7 +195,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
 	analysisHandler := analysis.NewHandler(analysisService, sessions)
-	aiHandler := ai.NewHandler(aiService, sessions)
+	exampleResponses := ai.NewExampleResponses(aiService, db, responseService, limiter, emitter, log)
+	aiHandler := ai.NewHandler(aiService, exampleResponses, sessions)
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
 	linksurveyService := linksurvey.NewService(cfg, linksurveyRepository, surveyService, mailerMailer, log)
@@ -241,7 +249,22 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	billingService := billing.NewService(engine, authorizer, limiter, emitter)
 	billingHandler := billing.NewHandler(billingService, sessions)
 	billingWebhookHandler := billing.NewWebhookHandler(engine, log)
-	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, webuiHandler)
+	releases := instance.NewReleases(client, log)
+	instanceHandler := instance.NewHandler(bucket, releases, sessions)
+	unsplashService := unsplash.NewService(cfg, limiter)
+	unsplashHandler := unsplash.NewHandler(unsplashService, sessions)
+	contactsurveyService := contactsurvey.NewService(cfg, db, surveyService, authorizer, limiter, emitter, log)
+	contactsurveyHandler := contactsurvey.NewHandler(contactsurveyService, sessions)
+	emailembedService, err := emailembed.NewService(cfg, db, surveyService, authorizer, mailerMailer)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	emailembedHandler := emailembed.NewHandler(emailembedService, sessions)
+	plainHandler := plain.NewHandler(cfg, db, sessions)
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler, unsplashHandler, contactsurveyHandler, emailembedHandler, plainHandler)
 	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()
@@ -327,7 +350,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	reconciler := workflow.NewReconciler(db, enqueuer, log)
 	billingRepository := billing.NewRepository(db)
 	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter)
+	brevoClient := brevo.NewClient(cfg)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter, brevoClient)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()
@@ -349,8 +373,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 // platformSet is the shared infrastructure of `forma serve`, bundled into Platform for the feature modules.
 var platformSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, audit.New, httpapi.NewClientIPResolver, secret.NewCipher, wire.Struct(new(Platform), "*"))
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
-var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler)
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service, with the Brevo contact sync its account changes enqueue. Its sessions are the SessionAuth every other module's routes authenticate with.
+var authSet = wire.NewSet(auth.NewRepository, auth.NewSessions, wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)), wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)), auth.NewService, auth.NewTwoFactor, auth.NewHandler, newSSO, auth.NewSSOHandler, brevo.NewContacts)
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
 var tenancySet = wire.NewSet(workspace.NewRepository, workspace.NewService, workspace.NewHandler, org.NewRepository, org.NewService, org.NewHandler)
@@ -367,8 +391,8 @@ var apikeySet = wire.NewSet(apikey.NewRepository, apikey.NewService, apikey.NewH
 // contactSet is contacts, their attribute keys and values, CSV import and segments under /api/app, and /api/v3/contact-attribute-keys.
 var contactSet = wire.NewSet(contact.NewRepository, contact.NewService, contact.NewHandler, contact.NewV3Handler)
 
-// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
-var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewHandler)
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability, the editor's AI translation and a survey summary's example responses.
+var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewExampleResponses, ai.NewHandler)
 
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)
@@ -379,11 +403,14 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
-var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, the job enqueuer their writes share their transaction with, and the quota screening the AI example responses are written through.
+var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, wire.Bind(new(ai.QuotaScreener), new(*response.Service)), response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
 var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)
+
+// instanceSet is /api/app/instance: whether file storage is configured, the running release, and the latest stable release for the self-hosted update notice.
+var instanceSet = wire.NewSet(instance.NewReleases, instance.NewHandler)
 
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
 var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService, linksurvey.NewHandler)
@@ -408,6 +435,15 @@ var mcpSet = wire.NewSet(oauthserver.NewKeys, oauthserver.NewHandler, oauthserve
 
 // billingSet is Forma Cloud billing: the Stripe account, the billing page's routes under /api/app, the Stripe webhook at forma2's /api/billing/stripe-webhook, and the jobs an organization's creation and deletion queue. It does nothing unless IS_FORMA_CLOUD=1 and STRIPE_SECRET_KEY are set.
 var billingSet = wire.NewSet(billing.NewStripe, billing.NewRepository, billing.NewEngine, billing.NewService, billing.NewHandler, billing.NewWebhookHandler, billing.NewLifecycle)
+
+// unsplashSet is the survey editor's Unsplash image search under /api/app/unsplash, offered when UNSPLASH_ACCESS_KEY is set.
+var unsplashSet = wire.NewSet(unsplash.NewService, unsplash.NewHandler)
+
+// contactSurveySet is a contact's activity on the contact page and personal links, one from the contact page or a CSV of a segment's from the share modal, under /api/app.
+var contactSurveySet = wire.NewSet(contactsurvey.NewService, contactsurvey.NewHandler)
+
+// emailEmbedSet is the share modal's Email tab under /api/app: a survey's email embed and the preview mailed to the member.
+var emailEmbedSet = wire.NewSet(emailembed.NewService, emailembed.NewHandler)
 
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(valkey.Open, ratelimit.New, mailer.New, ssrf.New, secret.NewCipher, webhook.NewRepository, webhook.NewDeliverer, followup.NewSender, notification.NewNotifier, integration.NewRepository, integration.NewDeliverer, jobs.NewEnqueuer, billing.NewStripe, billing.NewMeter, wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)), workflow.NewEnqueuer, workflow.NewRunner, workflow.NewReconciler, usagereport.NewReporter, newPipelineHandoffs, pipeline.NewWorker)

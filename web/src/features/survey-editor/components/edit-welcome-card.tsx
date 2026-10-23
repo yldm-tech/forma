@@ -120,6 +120,8 @@ export const EditWelcomeCard = ({
                   }
                 }}
                 fileUrl={localSurvey?.welcomeCard?.fileUrl}
+                workspaceId={localSurvey.workspaceId}
+                maxSizeInMB={5}
               />
             </div>
             <div className="mt-3">

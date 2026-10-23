@@ -88,7 +88,6 @@ Integrating Keycloak with your Forma instance allows users to log in using their
     OIDC_CLIENT_SECRET=your-client-secret-here
     OIDC_ISSUER=https://your-keycloak-domain.com/realms/your-realm-name
     OIDC_DISPLAY_NAME="Keycloak Login"
-    OIDC_SIGNING_ALGORITHM=RS256
     ```
 
     | Variable | Description |
@@ -97,7 +96,6 @@ Integrating Keycloak with your Forma instance allows users to log in using their
     | `OIDC_CLIENT_SECRET` | The client secret from the **Credentials** tab. |
     | `OIDC_ISSUER` | Your Keycloak realm URL (see step above). |
     | `OIDC_DISPLAY_NAME` | The label shown on the Forma login button. |
-    | `OIDC_SIGNING_ALGORITHM` | Optional. Keycloak and Forma both default to `RS256`. Only set this if your realm uses a different algorithm. |
   </Step>
 
   <Step title="Restart and test">
@@ -113,39 +111,19 @@ Integrating Keycloak with your Forma instance allows users to log in using their
 
 ## Automatic User Provisioning
 
-By default, new SSO users must be invited by an organization admin before they can access Forma. To allow Keycloak users to join automatically and be assigned to a team, configure the following additional environment variables:
+Every Keycloak user gets a Forma account on their first sign-in, without an invitation: Keycloak decides who may sign in. To have them all join one organization, set:
 
 ```yml Automatic User Provisioning
-AUTH_SKIP_INVITE_FOR_SSO=1
-AUTH_SSO_DEFAULT_TEAM_ID=your-team-id-here
+AUTH_SSO_DEFAULT_ORGANIZATION_ID=your-organization-id
+AUTH_SSO_DEFAULT_ORGANIZATION_ROLE=member
 ```
 
 | Variable | Description |
 | --- | --- |
-| `AUTH_SKIP_INVITE_FOR_SSO` | Set to `1` to let SSO users create an account without a manual invite. |
-| `AUTH_SSO_DEFAULT_TEAM_ID` | The ID of the team that new SSO users are automatically added to. The organization is determined from this team. |
+| `AUTH_SSO_DEFAULT_ORGANIZATION_ID` | The organization every new SSO user joins; created on the first such sign-up if it does not exist. |
+| `AUTH_SSO_DEFAULT_ORGANIZATION_ROLE` | Their role in it: `owner`, `manager` (default), `member` or `billing`. |
 
-### Finding Your Team ID
-
-1. Log in to Forma as an admin.
-2. Go to **Settings → Organization → Teams**.
-3. Click **Manage Team** on the team you want to use as the default.
-4. The Team ID is displayed in the modal.
-
-<Note>
-  The Teams feature requires the **Role-Based Access Control (RBAC)** add-on on your Enterprise license. If you don't see the Teams section under **Settings → Organization**, contact [Forma support](mailto:support@forma.ylam.ai) to enable it.
-</Note>
-
-### How It Works
-
-When `AUTH_SKIP_INVITE_FOR_SSO=1` and `AUTH_SSO_DEFAULT_TEAM_ID` are both set:
-
-1. A user authenticates through Keycloak for the first time.
-2. Forma creates a new user account.
-3. The user is automatically added as a **member** of the organization that owns the specified team.
-4. The user is assigned to the default team, granting them access to all Workspaces associated with that team.
-
-No manual invitation or admin action is required.
+forma2's `AUTH_SKIP_INVITE_FOR_SSO` and `AUTH_SSO_DEFAULT_TEAM_ID` are not read; see [Authentication Behavior](/self-hosting/auth-behavior).
 
 ## Full Configuration Example
 
@@ -156,9 +134,7 @@ OIDC_CLIENT_ID=forma
 OIDC_CLIENT_SECRET=your-client-secret-here
 OIDC_ISSUER=https://login.example.com/realms/production
 OIDC_DISPLAY_NAME="Company Login"
-OIDC_SIGNING_ALGORITHM=RS256
-AUTH_SKIP_INVITE_FOR_SSO=1
-AUTH_SSO_DEFAULT_TEAM_ID=your-team-id-here
+AUTH_SSO_DEFAULT_ORGANIZATION_ID=your-organization-id
 # Optional: disable email/password login to force Keycloak-only authentication
 # EMAIL_AUTH_DISABLED=1
 ```
@@ -167,27 +143,11 @@ AUTH_SSO_DEFAULT_TEAM_ID=your-team-id-here
 
 <AccordionGroup>
   <Accordion title="Users see 'No access to Workspaces' after login">
-    This means the user was added to the organization but not assigned to a team. Verify that:
-    - `AUTH_SSO_DEFAULT_TEAM_ID` is set correctly (the env variable name is `AUTH_SSO_DEFAULT_TEAM_ID`, not `DEFAULT_TEAM_ID`).
-    - The Team ID is a valid cuid that exists in your database.
-    - The team is linked to a Workspace via **Workspace Teams** settings.
-
-    You can verify the team exists by checking your database:
-    ```sql
-    SELECT id, name, "organizationId" FROM "Team" WHERE id = 'your-team-id';
-    ```
-  </Accordion>
-
-  <Accordion title="Users see 'No membership found' after login">
-    Forma determines the organization automatically from the `AUTH_SSO_DEFAULT_TEAM_ID` — you do not need to set a separate organization ID. If this error appears:
-    - Verify the team specified in `AUTH_SSO_DEFAULT_TEAM_ID` exists and belongs to the correct organization.
-    - Confirm your Enterprise license includes the RBAC feature (required for Teams).
-    - Ensure the organization has an active billing plan that supports access control.
+    The user joined the organization but belongs to no team with access to a workspace. Add them to a team linked to the workspace under **Settings → Organization → Teams**, or give them a role (`AUTH_SSO_DEFAULT_ORGANIZATION_ROLE`) that sees every workspace.
   </Accordion>
 
   <Accordion title="OIDC login button does not appear">
-    - Confirm that `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_ISSUER` are all set.
-    - Ensure your Forma instance has a valid Enterprise license.
+    - Confirm that `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_ISSUER` are all set; no licence is needed.
     - Restart the Forma container after adding the environment variables.
   </Accordion>
 

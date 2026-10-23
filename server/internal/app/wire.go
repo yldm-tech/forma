@@ -15,10 +15,13 @@ import (
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/billing"
+	"github.com/yldm-tech/forma/server/internal/brevo"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
+	"github.com/yldm-tech/forma/server/internal/contact/contactsurvey"
 	"github.com/yldm-tech/forma/server/internal/followup"
 	"github.com/yldm-tech/forma/server/internal/health"
+	"github.com/yldm-tech/forma/server/internal/instance"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
@@ -30,6 +33,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -45,9 +49,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/survey"
+	"github.com/yldm-tech/forma/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/server/internal/tag"
 	"github.com/yldm-tech/forma/server/internal/team"
+	"github.com/yldm-tech/forma/server/internal/unsplash"
 	"github.com/yldm-tech/forma/server/internal/usagereport"
 	"github.com/yldm-tech/forma/server/internal/v3api"
 	"github.com/yldm-tech/forma/server/internal/webhook"
@@ -67,16 +73,18 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service, with the Brevo contact sync its account changes enqueue. Its sessions are the SessionAuth every other module's routes authenticate with.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
 	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
+	wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)),
 	auth.NewService,
 	auth.NewTwoFactor,
 	auth.NewHandler,
 	newSSO,
 	auth.NewSSOHandler,
+	brevo.NewContacts,
 )
 
 // tenancySet is the organization and workspace modules under /api/app/organizations, /api/app/workspaces and /api/app/home. Their routes authenticate through the credential module's sessions.
@@ -120,11 +128,12 @@ var contactSet = wire.NewSet(
 	contact.NewV3Handler,
 )
 
-// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability, the editor's AI translation and a survey summary's example responses.
 var aiSet = wire.NewSet(
 	ai.NewClient,
 	ai.NewRepository,
 	ai.NewService,
+	ai.NewExampleResponses,
 	ai.NewHandler,
 )
 
@@ -154,10 +163,11 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, the job enqueuer their writes share their transaction with, and the quota screening the AI example responses are written through.
 var responseSet = wire.NewSet(
 	jobs.NewEnqueuer,
 	response.NewService,
+	wire.Bind(new(ai.QuotaScreener), new(*response.Service)),
 	response.NewHandler,
 	analysis.NewService,
 	analysis.NewHandler,
@@ -171,6 +181,12 @@ var storageSet = wire.NewSet(
 	storage.NewService,
 	wire.Bind(new(workspace.FileStore), new(*storage.Service)),
 	storage.NewHandler,
+)
+
+// instanceSet is /api/app/instance: whether file storage is configured, the running release, and the latest stable release for the self-hosted update notice.
+var instanceSet = wire.NewSet(
+	instance.NewReleases,
+	instance.NewHandler,
 )
 
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
@@ -236,6 +252,24 @@ var billingSet = wire.NewSet(
 	billing.NewLifecycle,
 )
 
+// unsplashSet is the survey editor's Unsplash image search under /api/app/unsplash, offered when UNSPLASH_ACCESS_KEY is set.
+var unsplashSet = wire.NewSet(
+	unsplash.NewService,
+	unsplash.NewHandler,
+)
+
+// contactSurveySet is a contact's activity on the contact page and personal links, one from the contact page or a CSV of a segment's from the share modal, under /api/app.
+var contactSurveySet = wire.NewSet(
+	contactsurvey.NewService,
+	contactsurvey.NewHandler,
+)
+
+// emailEmbedSet is the share modal's Email tab under /api/app: a survey's email embed and the preview mailed to the member.
+var emailEmbedSet = wire.NewSet(
+	emailembed.NewService,
+	emailembed.NewHandler,
+)
+
 // pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
@@ -281,6 +315,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		surveyConfigSet,
 		responseSet,
 		storageSet,
+		instanceSet,
 		linkSurveySet,
 		clientAPISet,
 		webhookSet,
@@ -289,7 +324,11 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		workflowSet,
 		mcpSet,
 		billingSet,
+		unsplashSet,
 		notification.NewHandler,
+		contactSurveySet,
+		emailEmbedSet,
+		plain.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,
@@ -314,6 +353,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		pipelineSet,
 		billing.NewRepository,
 		billing.NewEngine,
+		brevo.NewClient,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

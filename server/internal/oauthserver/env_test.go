@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -42,10 +43,10 @@ const (
 	redirectURI = "http://127.0.0.1:33418/callback"
 )
 
-// testUserHeader carries the signed-in user; headerSessions stands in for the credential module's sessions, which have their own tests.
+// testUserHeader carries the signed-in user; headerSessions stands in for the credential module's sessions on it and otherwise defers to the real ones, whose session cookie RP-initiated logout reads and ends.
 const testUserHeader = "X-Test-User"
 
-type headerSessions struct{}
+type headerSessions struct{ *auth.Sessions }
 
 func (headerSessions) Require() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -59,12 +60,15 @@ func (headerSessions) Require() gin.HandlerFunc {
 	}
 }
 
-func (headerSessions) Optional() gin.HandlerFunc {
+func (s headerSessions) Optional() gin.HandlerFunc {
+	cookie := s.Sessions.Optional()
 	return func(c *gin.Context) {
 		if id, err := uuid.Parse(c.GetHeader(testUserHeader)); err == nil {
 			httpapi.SetActor(c, httpapi.Actor{UserID: id})
+			c.Next()
+			return
 		}
-		c.Next()
+		cookie(c)
 	}
 }
 
@@ -98,13 +102,14 @@ func newEnv(t *testing.T, rateLimits ...bool) *env {
 		frozen := time.Now()
 		e.limiter = ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
 	}
-	if e.handler, err = NewHandler(cfg, db, e.keys, headerSessions{}, e.limiter, log); err != nil {
+	sessions := headerSessions{auth.NewSessions(cfg, db, log)}
+	if e.handler, err = NewHandler(cfg, db, e.keys, sessions, e.limiter, log); err != nil {
 		t.Fatal(err)
 	}
 	e.verifier = NewTokenVerifier(cfg, e.keys)
 	e.engine = httpserver.NewEngine(log)
 	e.handler.Register(e.engine)
-	NewAppHandler(e.handler, headerSessions{}).Register(e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg)))
+	NewAppHandler(e.handler, sessions).Register(e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg)))
 	return e
 }
 

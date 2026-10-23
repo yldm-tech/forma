@@ -30,7 +30,7 @@ container=""
 
 cleanup() {
   for container in "${containers[@]:-}"; do
-    [ -n "${container}" ] && docker rm --force "${container}" >/dev/null 2>&1 || true
+    [ -n "${container}" ] && docker rm --force -v "${container}" >/dev/null 2>&1 || true
   done
 }
 trap cleanup EXIT
@@ -72,7 +72,7 @@ fi
 start_postgres() {
   local version="$1"
   container="authzed-bootstrap-runtime-${version}"
-  docker rm --force "${container}" >/dev/null 2>&1 || true
+  docker rm --force -v "${container}" >/dev/null 2>&1 || true
   docker run --detach --name "${container}" \
     --env POSTGRES_PASSWORD=superuser-pw "postgres:${version}-alpine" >/dev/null
   containers+=("${container}")
@@ -176,7 +176,7 @@ for version in "${postgres_versions[@]}"; do
     }
   fi
 
-  docker rm --force "${container}" >/dev/null 2>&1 || true
+  docker rm --force -v "${container}" >/dev/null 2>&1 || true
 done
 
 printf '%s\n' "AuthZed bootstrap runtime contracts are valid."

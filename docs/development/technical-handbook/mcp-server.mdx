@@ -35,24 +35,11 @@ For local development:
 http://localhost:3000/api/mcp
 ```
 
-The route supports `POST` requests, runs with the Next.js Node.js runtime, and sets private no-store
-response headers. Browser-origin MCP requests must come from the configured Forma app origin.
+The route supports `POST` requests (a `GET` answers 405), is served by the Go server (`server/internal/mcp`), and sets private no-store response headers. Browser-origin MCP requests must come from the configured Forma app origin.
 
 ### Protocol revisions
 
-The server implements protocol revision **2026-07-28** and keeps serving the 2025 era from the same
-endpoint, so a client on an older revision does not need to change anything. The MCP TypeScript SDK
-answers the legacy `initialize` handshake alongside `server/discover`, and `mcp-handler` serves with
-`legacy: "stateless"`.
-
-Three parts of the revision are handled by the SDK rather than by our code: the `server/discover` RPC,
-the `resultType` field now required on every result, and the `ttlMs` / `cacheScope` cache hints (which
-default conservatively to `ttlMs: 0` and `cacheScope: "private"`).
-
-Notable removals in the revision that used to be configured here: protocol-level sessions and the
-`Mcp-Session-Id` header, the `initialize` handshake as a precondition, and the HTTP+SSE transport. The
-handler therefore takes no `sessionIdGenerator`, `disableSse`, `basePath`, or `maxDuration` option — the
-route this handler is mounted on is the only mount point.
+The server is built on the official MCP Go SDK (`github.com/modelcontextprotocol/go-sdk`) and serves Streamable HTTP statelessly with JSON responses, as forma2 did: protocol revision 2026-07-28 has no sessions, and a client on an older revision gets a fresh session per request, so neither needs to change anything. There are no protocol-level sessions, no `Mcp-Session-Id` header and no HTTP+SSE transport; the route the handler is mounted on is the only mount point.
 
 OAuth clients discover the protected resource metadata here:
 
@@ -199,15 +186,13 @@ gate and the per-workspace access check above are independent — a `:write` too
 Start Forma and prepare the database:
 
 ```bash
-pnpm db:up
-pnpm db:migrate:dev
-pnpm --filter @forma/web dev
+make deps-up
+make migrate
+make dev-server
 ```
 
 <Note>
-  Restart the dev server after changing tool registrations. The MCP server is built once at module scope by
-  `createMcpHandler`, so hot reload does not pick up an added, removed or renamed tool — `tools/list` keeps
-  serving the previous set until the process restarts.
+  Restart the server after changing tool registrations: the MCP server and its tool list are built once, when the process starts.
 </Note>
 
 Verify OAuth discovery:
@@ -948,8 +933,7 @@ framework-agnostic `@forma/workflows` handlers used by the v3 REST routes:
 
 ## Relationship to V3 Surveys API
 
-The MCP server does not run custom survey database queries. Each tool calls the shared server-only v3
-survey operations used by the REST routes:
+The MCP server does not run custom survey database queries. Each tool runs the v3 survey operation in-process, through the same handlers the REST routes serve, so it answers with the v3 API's bodies and problems:
 
 | MCP Tool          | REST Contract                       |
 | ----------------- | ----------------------------------- |
@@ -1000,14 +984,9 @@ v3 OpenAPI spec lives at `docs/api-v3-reference/openapi.yml`.
 
 ## Implementation Files
 
-- `apps/web/app/api/mcp/route.ts`
-- `apps/web/modules/mcp/auth.ts`
-- `apps/web/modules/mcp/server.ts`
-- `apps/web/modules/mcp/tools/surveys.ts`
-- `apps/web/modules/mcp/tools/workspaces.ts`
-- `apps/web/modules/mcp/tools/feedback-records.ts`
-- `apps/web/modules/mcp/tools/schemas.ts`
-- `apps/web/modules/mcp/tools/workflows.ts`
-- `apps/web/modules/mcp/tools/workflow-schemas.ts`
-- `apps/web/app/api/v3/surveys/lib/operations.ts`
-- `apps/web/app/api/v3/workflows/lib/context.ts` (adapter to the `@forma/workflows` handlers)
+- `server/internal/mcp/handler.go`: the route, the body limit, the protected resource metadata and the SDK server
+- `server/internal/mcp/auth.go`: authentication by API key or OAuth access token, and the audience check
+- `server/internal/mcp/tools.go` and `tools.json`: the tools and their input schemas
+- `server/internal/mcp/workspaces.go`: the workspace tools
+- `server/internal/mcp/operations.go`: the v3 survey and workflow operations the tools run in-process
+- `server/internal/oauthserver/`: the OAuth authorization server MCP clients sign in through

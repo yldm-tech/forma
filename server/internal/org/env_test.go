@@ -12,9 +12,11 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
@@ -26,8 +28,11 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/server/internal/platform/mailer/mailertest"
 	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/valkey/valkeytest"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/workspace"
 )
@@ -92,6 +97,10 @@ type env struct {
 	svc    *Service
 	engine *gin.Engine
 	logs   *syncBuffer
+	mail   *mailertest.Transport
+	// cache and now are the rate limiter's Valkey and frozen clock, set when a test turns rate limiting on.
+	cache *redis.Client
+	now   time.Time
 }
 
 func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
@@ -103,13 +112,22 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		f(&cfg)
 	}
 	db := pgtest.GORM(t)
-	e := &env{t: t, cfg: cfg, db: db, authz: authztest.New(t, cfg, db), logs: &syncBuffer{}}
+	e := &env{t: t, cfg: cfg, db: db, authz: authztest.New(t, cfg, db), logs: &syncBuffer{}, mail: &mailertest.Transport{}}
 	log := slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	schemas, err := jsonschema.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	limiter := ratelimit.New(cfg, nil, log)
+	if !cfg.RateLimitingDisabled {
+		// The clock is frozen mid-window so a seeded window cannot roll over under the test.
+		e.cache, e.now = valkeytest.Client(t), time.Now().Truncate(time.Minute).Add(30*time.Second)
+		limiter = ratelimit.New(cfg, e.cache, log).WithClock(func() time.Time { return e.now })
+	}
+	m, err := mailer.NewWithTransport(cfg, e.mail, log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	emitter := audit.New(cfg, log)
 	wsRepo := workspace.NewRepository(db, log)
 	// No bucket is configured, so deleting a workspace has no files to delete.
@@ -123,7 +141,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		t.Fatal(err)
 	}
 	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), db, enqueuer, log)
-	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, lifecycle, log)
+	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, lifecycle, m, log)
 
 	e.engine = gin.New()
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

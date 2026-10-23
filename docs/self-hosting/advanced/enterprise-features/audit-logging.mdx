@@ -8,8 +8,7 @@ icon: file-shield
 Audit logs record **who** did **what**, **when**, **from where**, and **with what outcome** across your Forma instance.
 
 <Note>
-  Audit logging is an Enterprise feature. Configure your
-  [Enterprise license](/self-hosting/advanced/license) before enabling it.
+  Audit logging needs no licence. It is on by default (`AUDIT_LOG_ENABLED=1`); forma2 had it off unless set.
 </Note>
 
 ## Benefits Of Audit Logging
@@ -34,8 +33,7 @@ TRUSTED_PROXY_HOP_COUNT=1
 2. Redeploy your containers.
 3. Confirm you can see audit logs in the output of your containers.
 
-Audit logs are written to **stdout** as JSON Lines. Configure your container platform or logging agent to forward
-records with `level: "audit"` to your central logging destination.
+Audit logs are written to **stdout** as JSON Lines, interleaved with the application log. Configure your container platform or logging agent to forward records with `level == "audit"` to your central logging destination. Audit events pass every `LOG_LEVEL`; `LOG_LEVEL=audit` writes nothing else.
 
 ### Configure Trusted Proxy Hops
 
@@ -74,7 +72,7 @@ deployment:
 Audit logs are **JSON Lines** (one JSON object per line). A typical entry looks like this:
 
 ```json
-{"level":"audit","time":1749207302158,"pid":20023,"hostname":"forma-node-1","name":"forma","actor":{"id":"cm90t4t7l0000vrws5hpo5ta5","type":"api"},"action":"created","target":{"id":"cmbkov4dn0000vrg72i7oznqv","type":"webhook"},"timestamp":"2025-06-06T10:55:02.145Z","organizationId":"cm8zovtbm0001vr3efa4n03ms","status":"success","ipAddress":"unknown","apiUrl":"http://localhost:3000/api/v1/webhooks","changes":{"id":"cmbkov4dn0000vrg72i7oznqv","name":"********","createdAt":"2025-06-06T10:55:02.123Z","updatedAt":"2025-06-06T10:55:02.123Z","url":"https://eoy8o887lmsqmhz.m.pipedream.net","source":"user","workspaceId":"cm8zowv0b0009vr3ec56w2qf3","environmentId":"cm8zowv0b0009vr3ec56w2qf3","triggers":["responseCreated","responseUpdated","responseFinished"],"surveyIds":[]}}
+{"time":"2026-06-06T10:55:02.158204Z","level":"audit","msg":"audit","actor":{"id":"0197446e-6c3a-7a2b-9f10-5d2c8e4b1a77","type":"api"},"action":"created","target":{"id":"0197446e-7d41-7c55-8e02-1b9a3f6d2c08","type":"webhook"},"status":"success","timestamp":"2026-06-06T10:55:02.145Z","organizationId":"0197446e-5b20-7f31-a6c4-3e8d2b7f9a01","ipAddress":"unknown","apiUrl":"http://localhost:3000/api/v1/webhooks","changes":{"name":"********","url":"https://example.com/hook","source":"user","triggers":["responseCreated","responseUpdated","responseFinished"]}}
 ```
 
 Key fields:
@@ -82,11 +80,9 @@ Key fields:
 | Field | Description |
 |-------|-------------|
 | `level` | Log level, always `"audit"` for audit events |
-| `time` | Unix timestamp in milliseconds |
-| `pid` | Process ID of the logging instance |
-| `hostname` | Hostname of the server generating the log |
-| `name` | Application name, typically `"forma"` |
-| `timestamp` | ISO‑8601 time of the action |
+| `time` | When the line was written, RFC 3339 (`Z` on UTC) |
+| `msg` | Always `"audit"` |
+| `timestamp` | ISO‑8601 time of the action, in UTC with milliseconds |
 | `actor` | User or API key responsible (object with `id` and `type`) |
 | `action` | Action value such as `created`, `updated`, `authenticationAttempted`, or `signedIn` |
 | `target` | The resource affected (object with `id` and `type`) |
@@ -96,6 +92,15 @@ Key fields:
 | `apiUrl` | (Optional) API endpoint URL when the event was generated through an API call |
 | `eventId` | (Optional) Available on failure events for correlation with the application log |
 | `changes` | (Optional) Only the fields that actually changed (sensitive values redacted) |
+
+### Differences from forma2's audit log
+
+The event fields (`actor`, `action`, `target`, `status`, `timestamp`, `organizationId`, `ipAddress`, `apiUrl`, `eventId`, `changes`) and the `level` label `"audit"` are unchanged, so a filter on `level == "audit"` and queries on the event fields keep working. The envelope around them changed:
+
+- `time` is an RFC 3339 string instead of milliseconds since the epoch. Use `timestamp` (unchanged) for the time of the action, or convert `time` in your pipeline.
+- Every line has a `msg`, `"audit"` for audit events.
+- `pid`, `hostname` and `name` are not written. Take the host or pod from your collector's container metadata.
+- Ids of records created on the Go server are UUIDs; records migrated from forma2 keep a UUID derived from their old id.
 
 ## Centralized Logging And Compliance
 

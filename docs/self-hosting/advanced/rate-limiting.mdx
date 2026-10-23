@@ -12,11 +12,9 @@ Starting with Forma v5, rate limiting is split across two layers:
 - The application server for remaining session-authenticated routes, server actions, and other flows Envoy does
   not currently cover
 
-<Warning>
-  Forma v5 removes application-level rate limiting for several routes that are now expected to be
-  protected by Envoy Gateway. If you self-host Forma without Envoy or an equivalent edge rate limiter,
-  those routes will no longer be throttled by the application server after upgrading.
-</Warning>
+<Note>
+  The server limits every route itself unless `GATEWAY_RATE_LIMITING=1` declares a gateway in front of it. With that switch, the routes the gateway policy covers (the client API's response, display, environment, user and upload requests, and requests to `/api/v1/management/*` and `/api/v1/webhooks/<id>` that send their API key in `x-api-key`, the header the gateway counts) are left to the gateway and not limited again. Leave it unset without Envoy or an equivalent edge rate limiter, as in the Docker Compose stack.
+</Note>
 
 <Info>
   For the full self-hosted upgrade checklist, use this page together with the

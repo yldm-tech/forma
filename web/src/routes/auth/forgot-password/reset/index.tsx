@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { authApi } from "../../../../features/auth/api";
 import { PasswordChecks } from "../../../../features/auth/components/password-checks";
-import { Alert, Button, Field, PasswordInput } from "../../../../features/auth/components/ui";
+import { Alert, Button, ButtonLink, Field, PasswordInput } from "../../../../features/auth/components/ui";
 import { resetPasswordFailure } from "../../../../features/auth/errors";
 import { redirectIfSignedIn } from "../../../../features/auth/guards";
 import { tokenSearch } from "../../../../features/auth/search";
@@ -55,6 +55,21 @@ function ResetPasswordPage() {
       await navigate({ to: "/auth/forgot-password/reset/success" });
     },
   });
+
+  // Without a token the link is no longer valid: the server's redirect of a pre-cutover Better Auth reset link lands here (server/internal/auth/legacy_links.go). A new one is requested from the forgot-password page.
+  if (!token) {
+    return (
+      <div className="space-y-6 text-center">
+        <h1 className="font-bold text-red-600">{t("c.link_expired_heading")}</h1>
+        <p className="text-sm" role="alert">
+          {t("c.link_expired_description")}
+        </p>
+        <ButtonLink to="/auth/forgot-password" className="w-full">
+          {t("auth.login.forgot_your_password")}
+        </ButtonLink>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={(event) => void form.handleSubmit(event)} className="space-y-6" noValidate>

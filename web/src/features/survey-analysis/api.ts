@@ -41,6 +41,11 @@ export interface SurveyResetResult {
   deletedDisplaysCount: number;
 }
 
+/** POST /api/app/surveys/{id}/ai/example-responses. */
+export interface ExampleResponsesResult {
+  createdCount: number;
+}
+
 /** A tag added to or removed from a response. */
 export interface ResponseTagChange {
   responseId: string;
@@ -54,6 +59,21 @@ export interface SingleUseLink {
 }
 
 export type ExportFormat = "csv" | "xlsx";
+
+/** The dry run of the attachment export: how many files the archive would hold, and whether that is over its limit. */
+export interface AttachmentCounts {
+  fileCount: number;
+  responseCount: number;
+  exceedsMaxFiles: boolean;
+  maxFiles: number;
+}
+
+/** forma2's attachment export route (server/internal/analysis/attachments_handler.go), outside /api/app: the browser downloads the ZIP by navigating to it, since an archive of several GB cannot be buffered in the tab. Without criteria it exports every response's files; with dryRun it only counts them. */
+export const attachmentsUrl = (surveyId: string, criteria?: TResponseFilterCriteria, dryRun = false) => {
+  const params = new URLSearchParams(dryRun ? { dryRun: "true" } : undefined);
+  if (criteria) params.set("filters", JSON.stringify(criteria));
+  return `/api/surveys/${surveyId}/attachments?${params.toString()}`;
+};
 
 type ResponseWire = Omit<TResponseWithQuotas, "createdAt" | "updatedAt" | "tags"> & {
   createdAt: string;
@@ -222,9 +242,15 @@ export const analysisApi = {
       .post<Stamped<TTag>>(`/api/app/workspaces/${workspaceId}/tags`, { name })
       .then((tag) => stamped<TTag>(tag)),
   resetSurvey: (surveyId: string) => api.post<SurveyResetResult>(`${surveyPath(surveyId)}/reset`),
+  /** forma2's generateExampleResponsesAction: AI-written example responses for a survey without any. */
+  generateExampleResponses: (surveyId: string) =>
+    api.post<ExampleResponsesResult>(`${surveyPath(surveyId)}/ai/example-responses`),
   /** The export file itself, named by the server's Content-Disposition. */
   exportResponses: (surveyId: string, format: ExportFormat, criteria: TResponseFilterCriteria) =>
     downloadFile(`${surveyPath(surveyId)}/responses/export`, { format, filterCriteria: criteria }),
+  /** The attachment export's dry run, which the download asks before navigating. */
+  attachmentCounts: (surveyId: string, criteria?: TResponseFilterCriteria) =>
+    api.get<{ data: AttachmentCounts }>(attachmentsUrl(surveyId, criteria, true)).then((res) => res.data),
   singleUseLinks: (surveyId: string, input: { isEncrypted: boolean; count?: number; singleUseId?: string }) =>
     api
       .post<{ links: SingleUseLink[] }>(`${surveyPath(surveyId)}/single-use-links`, input)

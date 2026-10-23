@@ -6,452 +6,115 @@ icon: "rocket"
 
 <Note>This only works with an Ubuntu machine, so ensure the underlying OS is verified beforehand!</Note>
 
-If you’re looking to quickly set up a production instance of Forma on an Ubuntu server, this guide is for you. Using a convenient shell script, you can install everything—including Docker, Postgres DB, SpiceDB, and an SSL certificate—in just a few steps. The script takes care of all the dependencies and configuration for your server, making the process smooth and simple.
+If you're looking to quickly set up a production instance of Forma on an Ubuntu server, this guide is for you. `forma.sh` installs Docker if it is missing, writes the production [Docker Compose stack](/self-hosting/setup/docker) (the Forma server and its job worker, PostgreSQL 18, Valkey and SpiceDB) into `./forma`, puts Traefik in front of it with a Let's Encrypt certificate, and starts it.
 
 <Note>
-  This setup uses **Traefik** as a **reverse proxy**, essential for directing incoming traffic to the correct
-  container and enabling secure internet access to Forma. Traefik is chosen for its simplicity and
-  automatic SSL management via Let’s Encrypt.
+  **Traefik** is the reverse proxy: it routes incoming traffic to the containers and manages certificates through Let's Encrypt. The installer writes its service and labels into `forma/docker-compose.override.yml`, next to the release's unchanged `docker-compose.yml`.
 </Note>
 
 <Warning>
-  The bundled RustFS option in this one-click setup is designed for convenience on a single server. It is a
-  good fit for small-scale or low-complexity self-hosted deployments, but it is not the ideal RustFS
-  architecture for high-availability or larger production environments. For stricter production requirements,
-  use external object storage or run a dedicated RustFS deployment separately from the Forma one-click
-  stack.
+  The bundled RustFS option is designed for convenience on a single server. For high availability or larger production storage, use external object storage or a dedicated RustFS deployment. Keep `rustfs-data` on local SSD or NVMe storage rather than NFS or another network filesystem.
 </Warning>
 
-<Note>
-  restricts the file to `0600`. PostgreSQL has a raw password for the database plus a URL-encoded companion for
-  connection strings. When bundled RustFS is enabled, its generated credentials are stored there too. Keep that
-  file private, include it in your server backup plan, and avoid checking it into source control or copying it to
-  shared locations.
-</Note>
-
-<Note>
-  For better RustFS performance and stability, prefer local SSD or NVMe-backed storage for the host volume
-  behind `rustfs-data`. Avoid NFS and other network filesystems for bundled RustFS data, and use XFS on
-  dedicated storage disks when you manage the host layout yourself.
-</Note>
-
-For other operating systems or a more customized installation, please refer to the advanced installation guide with [Docker](/self-hosting/setup/docker).
+For other operating systems or a more customized installation, see the [Docker](/self-hosting/setup/docker) guide.
 
 ### Requirements
 
-- An Ubuntu Virtual Machine with SSH access.
-
-- A custom domain with an **A record** pointing to your server.
-
-- Ports **80** and **443** are open in your VM's Security Group, allowing Traefik to create an SSL certificate.
+- An Ubuntu virtual machine with SSH access and `sudo`.
+- A domain with an **A record** pointing to the server (and one for `files.<domain>` if you use the bundled object storage).
+- Ports **80** and **443** open in the VM's security group, so Traefik can obtain a certificate.
 
 ### Deployment
 
-Run this command in your terminal:
+Download the script from the `stable` branch, the release that `ghcr.io/yldm-tech/forma:latest` names, and run it:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh && chmod +x forma.sh && ./forma.sh install
 ```
 
-<Info>
-  The v6 one-click stack is based on the production Docker Compose file
-  Bundled SpiceDB is installed for every new setup and does not
-  require an Enterprise license check.
-</Info>
+The script downloads `docker-compose.yml` and its helper scripts from the same branch. To install a specific release, set `FORMA_REF=v0.2.<n>` (the release's tag) when running it, and pin the image with `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `forma/.env`.
 
 ### Script Prompts
 
-During installation, the script will prompt you to provide some details:
+1. **Legacy Docker packages**: only when Docker is not installed yet, whether to remove `docker.io`, `containerd` and similar distribution packages that conflict with Docker CE.
+2. **Domain**: the app domain, without `http://` or `https://`, for example `surveys.example.com`. It becomes `WEBAPP_URL`.
+3. **HTTPS certificate**: whether Traefik should obtain a Let's Encrypt certificate. It asks to confirm that the domain points at the server with ports 80 and 443 open, then for the email address of the certificate. Answer no to set up TLS yourself (see [Custom SSL](/self-hosting/configuration/custom-ssl)).
+4. **HSTS**: whether to redirect HTTP to HTTPS and send `Strict-Transport-Security`.
+5. **Email**: whether to configure SMTP now (`MAIL_FROM`, `MAIL_FROM_NAME`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, authenticated SMTP, implicit TLS). Without it, email verification and password reset are switched off (`EMAIL_VERIFICATION_DISABLED=1`, `PASSWORD_RESET_DISABLED=1`), since nobody could receive the mail.
+6. **File uploads**: whether to configure storage, then either an external S3-compatible service (access key, secret key, region, bucket, endpoint) or the bundled RustFS on a files subdomain (`files.<domain>` by default), whose administrator and least-privilege service credentials are generated.
 
-- **Overwriting Docker GPG Keys**:
-  If Docker GPG keys already exist, the script will ask whether you want to overwrite them.
+The script then writes `forma/.env` (mode `0600`) with generated secrets, `ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `AUTHZED_TOKEN`, `AUTHZED_DATABASE_PASSWORD` and the RustFS credentials, plus your answers; writes `traefik.yaml`, `traefik-dynamic.yaml` and `docker-compose.override.yml`; pulls the images and runs `docker compose up -d`. Keep `forma/.env` private and include it in your backups: `ENCRYPTION_KEY` seals two-factor secrets, and losing it locks those users out.
 
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
+Running `./forma.sh install` again in the same directory keeps the secrets already in `.env`.
 
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N)
-```
-
-- **Domain Name**:
-  Enter the domain name where you’ll host Forma. The domain will be used to generate an SSL certificate. Do not include the protocol (http/https).
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-```
-
-- **HTTPS Certificate Setup**:
-  The script will ask if you’d like to create an HTTPS certificate for your domain. Enter `Y` to proceed (highly recommended for secure access).
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-```
-
-- **DNS Setup Prompt**: Ensure that your domain's DNS is correctly configured and ports 80 and 443 are open. Confirm this by entering `Y`. This step is crucial for proper SSL certificate issuance and secure server access.
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-Y
-🔗 Please make sure that the domain points to the server's IP address and that ports 80 & 443 are open in your server's firewall. Is everything set up? [Y/n]
-```
-
-- **Email Address for SSL Certificate**:
-  Provide an email address to register the SSL certificate. Notifications regarding the certificate will be sent to this address.
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-Y
-🔗 Please make sure that the domain points to the server's IP address and that ports 80 & 443 are open in your server's firewall. Is everything set up? [Y/n]
-Y
-💡 Please enter your email address for the SSL certificate:
-```
-
-- **Enforce HTTPS with HSTS**:
-  Enabling HTTP Strict Transport Security (HSTS) ensures all communication with your server is encrypted. It’s a recommended best practice. Enter `Y` to enforce HTTPS.
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-Y
-🔗 Please make sure that the domain points to the server's IP address and that ports 80 & 443 are open in your server's firewall. Is everything set up? [Y/n]
-Y
-💡 Please enter your email address for the SSL certificate:
-docs@forma.ylam.ai
-🔗 Do you want to enforce HTTPS (HSTS)? [Y/n]
-```
-
-- **Email Service Setup Prompt**: The script will ask if you want to set up the email service. Enter `Y` to proceed.(default is `N`). You can skip this step if you don't want to set up the email service. You will still be able to use Forma without setting up the email service.
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-Y
-🔗 Please make sure that the domain points to the server's IP address and that ports 80 & 443 are open in your server's firewall. Is everything set up? [Y/n]
-Y
-💡 Please enter your email address for the SSL certificate:
-docs@forma.ylam.ai
-🔗 Do you want to enforce HTTPS (HSTS)? [Y/n]
-Y
-🚗 Configuring Traefik...
-💡 Created traefik.yaml and traefik-dynamic.yaml file.
-💡 Created acme.json file with correct permissions.
-📧 Do you want to set up the email service? You will need SMTP credentials for the same! [y/N]
-
-```
-
-**That's it**! After running the command and providing the required information, visit the domain name you entered, and you should see the Forma home wizard!
-
-```
-🚀 Executing default step of installing Forma
-🧱 Welcome to the Forma Setup Script
-
-🛸 Fasten your seatbelts! We're setting up your Forma environment on your Ubuntu 24.04 LTS server.
-
-🧹 Time to sweep away any old Docker installations.
-🔄 Updating your package list.
-📦 Installing the necessary dependencies.
-🔑 Adding Docker's official GPG key and setting up the stable repository.
-File '/etc/apt/keyrings/docker.gpg' exists. Overwrite? (y/N) y
-🔄 Updating your package list again.
-🐳 Installing Docker.
-🚀 Testing your Docker installation.
-🎉 Docker is installed!
-🐳 Adding your user to the Docker group to avoid using sudo with docker commands.
-🎉 Hooray! Docker is all set and ready to go. You're now ready to run your Forma instance!
-📁 Created Forma Quickstart directory at ./forma.
-🔗 Please enter your domain name for the SSL certificate (🚨 do NOT enter the protocol (http/https/etc)):
-my.hosted.url.com
-🔗 Do you want us to set up an HTTPS certificate for you? [Y/n]
-Y
-🔗 Please make sure that the domain points to the server's IP address and that ports 80 & 443 are open in your server's firewall. Is everything set up? [Y/n]
-Y
-💡 Please enter your email address for the SSL certificate:
-docs@forma.ylam.ai
-🔗 Do you want to enforce HTTPS (HSTS)? [Y/n]
-Y
-🚗 Configuring Traefik...
-💡 Created traefik.yaml and traefik-dynamic.yaml file.
-💡 Created acme.json file with correct permissions.
-📧 Do you want to set up the email service? You will need SMTP credentials for the same! [y/N] N
-📥 Downloading docker-compose.yml from Forma GitHub repository...
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  6632  100  6632    0     0  24280      0 --:--:-- --:--:-- --:--:-- 24382
-🚙 Updating docker-compose.yml with your custom inputs...
-🚗 NEXTAUTH_SECRET updated successfully!
-🚗 ENCRYPTION_KEY updated successfully!
-🚗 CRON_SECRET updated successfully!
-
-[+] Running 4/4
- ✔ Network forma_default         Created                                                                                                                                                    0.2s
- ✔ Container forma-postgres-1    Started                                                                                                                                                    1.0s
- ✔ Container forma-forma-1  Started                                                                                                                                                    1.6s
- ✔ Container traefik                  Started                                                                                                                                                    2.8s
-🔗 To edit more variables and deeper config, go to the forma/docker-compose.yml, edit the file, and restart the container!
-🚨 Make sure you have set up the DNS records as well as inbound rules for the domain name and IP address of this instance.
-
-🎉 All done! Please setup your Forma instance by visiting your domain at https://my.hosted.url.com. You can check the status of Forma & Traefik with 'cd forma && sudo docker compose ps.'
-```
+When it finishes, open `https://<your domain>` and sign up: the instance admits its first user, who owns it, and afterwards only people with an invitation.
 
 ## Update
 
-To update Forma for a minor or patch release, first go to the directory that contains your
-`forma/` folder. Download the current stable updater there, replacing any older `forma.sh`, and
-then run it:
+Run the update from the directory that contains the `forma/` folder, with the current script (replace an older `forma.sh`, in particular forma2's):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh \
-  -o forma.sh
+curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/docker/forma.sh -o forma.sh
 chmod +x forma.sh
 ./forma.sh update
 ```
 
-The script pulls the latest images, runs database migrations, executes the AuthZed v6 preparation and read-only
-gate, and only then stops and restarts the running stack. A failed gate leaves the existing application running.
+The update:
 
-Starting with v5.4, the updater also recognizes the old amd64-only bundled Valkey digest. It backs up your
-Compose file, replaces only that exact image reference with the native amd64/arm64 digest, and validates the
-result before pulling. An already-updated or custom Valkey image is left unchanged. The named `redis` volume
-and its AOF data are preserved.
+1. Backs up `.env` (and, on a forma2 installation, `docker-compose.yml`) next to the originals with a timestamp suffix.
+2. On a forma2 installation, moves the settings forma2's installer wrote into its compose file (`WEBAPP_URL`, the secrets, SMTP, storage) into `.env` and its Traefik service and labels into `docker-compose.override.yml`. See [forma2 to the Go server](/self-hosting/advanced/migration#forma2-to-the-go-server).
+3. Updates `.env`: drops Prisma's `?schema=public` from `DATABASE_URL` and `MIGRATE_DATABASE_URL`, replaces `BULLMQ_WORKER_CONCURRENCY` x `BULLMQ_WORKER_COUNT` with `WORKER_CONCURRENCY`, maps the bundled RustFS credentials (`FORMA_RUSTFS_*`) to the storage profile, and comments out the [variables the Go server ignores](/self-hosting/configuration/environment-variables#variables-forma2-read-that-the-go-server-ignores).
+4. Replaces `docker-compose.yml` and its helper scripts with the release's (a file that differed is kept as `<name>.<timestamp>`), validates the configuration, and restores the backups if it is invalid.
+5. Pulls the images, checks the database (it refuses to start the Go server on a database that holds forma2's data but not yet its own; see the upgrade guide), and runs `docker compose up -d`: `forma-migrate` applies the migrations and `authzed-initialize` the authorization schema before the server and the worker restart.
 
-Existing one-click installations keep the database credentials in their local `docker-compose.yml` or `.env`.
-The update command does not regenerate or rotate them.
+Every step is idempotent, so running the update again is safe. Keep your own changes to the stack in `docker-compose.override.yml`; `docker-compose.yml` is replaced on every update.
 
-<Warning>
-  Apart from the exact v5.4 Valkey pin migration described above, `./forma.sh update` does **not** rewrite
-  your existing `forma/docker-compose.yml`. For a major migration such as Forma 4.x to 5.0, follow
-  the [migration guide](/self-hosting/advanced/migration#v5) first, merge the current v5 Compose changes into
-  one-click install also uses bundled MinIO for file uploads, review that storage path separately before the
-  first v5 restart; newer self-hosting updates move the bundled object-storage path to RustFS, while external
-  S3-compatible storage keeps the same `S3_*` app contract. The v6 updater also refuses to continue until the
-  Compose file contains the release-matched AuthZed services and `.env` contains
-  `FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED=true` after a clean preparation.
-
-  The same applies to pinned third-party images. Because the update command only re-pulls what your Compose
-  file already names, a bundled `rustfs` service stays on whatever version it was installed with — `docker
-  compose pull` cannot move a pinned tag. To take a newer RustFS, edit the `image:` line of the `rustfs`
-  service in `forma/docker-compose.yml` to match the version in the [Docker
-  guide](/self-hosting/setup/docker), then run the update command. Your `rustfs-data` volume is reused as-is;
-  roll back by restoring the previous `image:` line.
-</Warning>
-
-### Add SpiceDB to an Existing One-Click Installation
-
-The update command intentionally preserves your customized Compose file, so it cannot add SpiceDB by itself.
-Before upgrading to a release that uses AuthZed:
-
-1. Back up `forma/.env`, `forma/docker-compose.yml`, and the PostgreSQL volume.
-2. Download the release-matched `authzed-postgres-bootstrap.sh` into the `forma` directory.
-3. Generate and add `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD` to `.env` using `openssl rand -hex 32`.
-4. Merge `authzed-db-bootstrap`, `spicedb-migrate`, `spicedb`, `authzed-initialize`, and the profiled
-   `authzed-ops` service from the released Compose file while preserving installer-added Traefik, storage, and
-   mail configuration. Add the six application variables and use `AUTHZED_CONSISTENCY=fully_consistent`.
-5. Run `docker compose config`, `docker compose pull`, and `docker compose run --rm forma-migrate` from the
-   `forma` directory. The current application can remain running during these backward-compatible database
-   migrations.
-6. Start the datastore services, then prepare and verify the graph:
-
-   ```bash
-   docker compose up -d postgres authzed-db-bootstrap spicedb-migrate spicedb
-   docker compose --profile authzed-ops run --rm authzed-ops upgrade prepare
-   docker compose --profile authzed-ops run --rm authzed-ops upgrade check
-   ```
-
-7. If `upgrade check` exits `0`, add `FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED=true` to `.env` and run
-   `./forma.sh update`. Do not set the acknowledgement to bypass a blocked check.
-8. Verify `authzed-db-bootstrap`, `spicedb-migrate`, and `authzed-initialize` completed and `spicedb` is healthy.
-9. Back up the authorization database with
-   `docker compose exec -T postgres pg_dump -U postgres -d spicedb > spicedb-backup.sql` and add it to your
-   regular backup procedure.
-
-Do not use `docker compose down -v` during this migration or rollback because the existing PostgreSQL volume
-stores both Forma and SpiceDB data.
-
-For upgrades, restoration, schema changes, and relationship repair, follow the canonical
-[AuthZed Operations guide](/self-hosting/advanced/authzed-operations).
+For upgrades, restores, schema changes and relationship repair of SpiceDB, see [AuthZed Operations](/self-hosting/advanced/authzed-operations).
 
 ## Stop
 
-To stop Forma, simply run the following command:
-
-```
+```bash
 ./forma.sh stop
 ```
 
-The script will automatically stop all the Forma related containers and brings the entire stack down.
+Runs `docker compose down` in `forma/`. The data volumes are kept.
 
 ## Restart
 
-To restart Forma, simply run the following command:
-
-```
+```bash
 ./forma.sh restart
 ```
 
-The script will automatically restart all the Forma related containers and brings the entire stack up with the previous configuration.
-
 ## Cleanup RustFS init (optional)
 
-During the one-click setup, a temporary `rustfs-init` service configures RustFS (bucket, policy, service
-user). It is idempotent and safe to leave in place; it will do nothing on subsequent starts once the
-configuration exists.
-
-If you prefer to remove the `rustfs-init` service and its references after a successful setup, run:
-
-```
+```bash
 ./forma.sh cleanup-rustfs-init
 ```
 
-`./forma.sh cleanup-minio-init` is still available as a backward-compatible alias.
-
-This only removes the init job and its Compose references; it does not delete any data or affect your RustFS
-configuration.
+Removes the finished `rustfs-init` container. It runs again, harmlessly, on the next `docker compose up`, since it is part of the storage profile. `./forma.sh cleanup-minio-init` is an alias.
 
 ## Uninstall
 
-To uninstall Forma, simply run the following command, but keep in mind that this will delete all your data!
-
-```
+```bash
 ./forma.sh uninstall
 ```
 
-The script will automatically stop all the Forma related containers, remove the Forma directory, and delete the Docker network.
+After you type `yes`, it stops the stack and deletes `forma/` with its configuration and secrets. The Docker volumes (`forma_postgres`, `forma_redis`, `forma_rustfs-data`, ...) are kept; `docker volume rm` deletes them.
 
 ## Debug
 
-If you encounter any issues, you can check the logs of the containers with:
-
-```
+```bash
 ./forma.sh logs
+./forma.sh logs -f forma forma-worker
 ```
+
+Arguments are passed to `docker compose logs`.
 
 ## Troubleshooting
 
-If you encounter any issues, consider the following steps:
+- **Inbound rules**: ports 80 and 443 must be open in the VM's security group.
+- **A record**: the domain (and the files subdomain) must point at the VM's IP address.
+- **Containers**: `cd forma && docker compose ps -a` shows which service stopped; the one-shot `forma-migrate`, `authzed-db-bootstrap`, `spicedb-migrate` and `authzed-initialize` should have exited with code 0.
+- **Logs**: `cd forma && docker compose logs forma forma-worker forma-migrate`. A server that exits at start-up names the variable it could not accept.
 
-- **Inbound Rules**: Make sure you have added inbound rules for Port 80 and 443 in your VM's Security Group.
-
-- **A Record**: Verify that you have set up an A record for your domain, pointing to your VM's IP address.
-
-- **Check Docker Instances**: Run `docker ps` to check the status of the Docker instances.
-
-- **Check Forma Logs**: Run `cd forma && docker compose logs` to check the logs of the Forma stack.
-
-If you have any questions or require help, feel free to reach out to us on [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions). 😃[
-](https://forma.ylam.ai/docs/developer-docs/rest-api)
+If you have any questions or require help, reach out on [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions).

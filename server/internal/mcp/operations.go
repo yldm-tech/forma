@@ -23,6 +23,8 @@ import (
 
 // newOperations mounts the v3 survey and workflow operations on an engine of their own, which tool calls are served by in-process, as forma2's tools called the v3 operations directly. The caller is already authenticated and charged its rate limit, so no guard runs here.
 func newOperations(surveys *survey.Handler, workflows *workflow.Handler, log *slog.Logger) http.Handler {
+	// The engine is built while the server is wired, before httpserver.NewEngine leaves gin's debug mode, which would print [GIN-debug] route lines into the JSON log stream.
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(
 		gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, recovered any) {

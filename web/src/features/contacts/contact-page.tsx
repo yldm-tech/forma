@@ -4,6 +4,7 @@ import {
   ArrowLeftIcon,
   CalendarIcon,
   HashIcon,
+  LinkIcon,
   PencilIcon,
   PlusIcon,
   RefreshCwIcon,
@@ -44,17 +45,23 @@ import { meQuery } from "../../lib/queries/auth";
 import {
   type ContactAttribute,
   attributeKeysQuery,
+  contactActivityQuery,
   contactKeys,
   contactQuery,
+  publishedLinkSurveysQuery,
   useDeleteContacts,
   useUpdateContactAttributes,
 } from "../../lib/queries/contacts";
+import { tagsQuery } from "../../lib/queries/tags";
 import { toast } from "../../lib/toast";
+import { toResponseTag } from "../survey-analysis/api";
+import { ActivityTimeline } from "./contact-activity";
+import { GeneratePersonalLinkModal } from "./generate-personal-link-modal";
 
 const DATA_TYPE_ICONS = { date: CalendarIcon, number: HashIcon, string: TagIcon } as const;
 
 /**
- * forma2's single contact page: the contact's system and custom attributes, and the actions on it. The activity timeline, the response and display counts and the personal link belong to the response modules and arrive with them.
+ * forma2's single contact page: the contact's system and custom attributes with how many responses and displays it has, its activity, and the actions on it.
  */
 export const ContactPage = ({
   workspaceId,
@@ -67,7 +74,10 @@ export const ContactPage = ({
 }) => {
   const { t } = useTranslation();
   const { data: detail } = useSuspenseQuery(contactQuery(workspaceId, contactId));
+  const { data: activity } = useSuspenseQuery(contactActivityQuery(workspaceId, contactId));
+  const { data: me } = useSuspenseQuery(meQuery);
   const keys = useQuery(attributeKeysQuery(workspaceId));
+  const tags = useQuery(tagsQuery(workspaceId));
   const title = contactIdentifier(
     Object.fromEntries(detail.attributes.map((attr) => [attr.key, attr.value]))
   );
@@ -94,7 +104,20 @@ export const ContactPage = ({
       />
       <section className="pt-6 pb-24">
         <div className="grid grid-cols-4 gap-x-8">
-          <AttributesSection contactId={contactId} attributes={detail.attributes} />
+          <AttributesSection
+            contactId={contactId}
+            attributes={detail.attributes}
+            responseCount={activity.responseCount}
+            displayCount={activity.displayCount}
+          />
+          <ActivityTimeline
+            workspaceId={workspaceId}
+            contactId={contactId}
+            activity={activity}
+            environmentTags={(tags.data ?? []).map(toResponseTag)}
+            locale={me.locale}
+            isReadOnly={isReadOnly}
+          />
         </div>
       </section>
     </PageContentWrapper>
@@ -104,9 +127,13 @@ export const ContactPage = ({
 const AttributesSection = ({
   contactId,
   attributes,
+  responseCount,
+  displayCount,
 }: {
   contactId: string;
   attributes: ContactAttribute[];
+  responseCount: number;
+  displayCount: number;
 }) => {
   const { t } = useTranslation();
   const { data: me } = useSuspenseQuery(meQuery);
@@ -151,11 +178,20 @@ const AttributesSection = ({
           {custom.map(row)}
         </>
       )}
+      <hr />
+      <div>
+        <dt className="text-sm font-medium text-slate-500">{t("common.responses")}</dt>
+        <dd className="mt-1 text-sm text-slate-900">{responseCount}</dd>
+      </div>
+      <div>
+        <dt className="text-sm font-medium text-slate-500">{t("workspace.contacts.displays")}</dt>
+        <dd className="mt-1 text-sm text-slate-900">{displayCount}</dd>
+      </div>
     </dl>
   );
 };
 
-/** forma2's ContactControlBar: refresh, and for writers edit attributes and delete. */
+/** forma2's ContactControlBar: refresh, and for writers edit attributes, generate a personal link and delete. */
 const ContactControlBar = ({
   workspaceId,
   contactId,
@@ -175,7 +211,9 @@ const ContactControlBar = ({
   const remove = useDeleteContacts(workspaceId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const publishedLinkSurveys = useQuery({ ...publishedLinkSurveysQuery(workspaceId), enabled: !isReadOnly });
 
   const refresh = async () => {
     setRefreshing(true);
@@ -218,6 +256,13 @@ const ContactControlBar = ({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t("workspace.contacts.generate_personal_link")}
+              onClick={() => setLinkOpen(true)}>
+              <LinkIcon className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label={t("common.delete")}
               onClick={() => setConfirmDelete(true)}>
               <TrashIcon className="size-4" />
@@ -232,6 +277,12 @@ const ContactControlBar = ({
         onDelete={() => void deleteContact()}
         isDeleting={remove.isPending}
         text={t("workspace.contacts.delete_contact_confirmation_with_quotas", { value: 1 })}
+      />
+      <GeneratePersonalLinkModal
+        open={linkOpen}
+        setOpen={setLinkOpen}
+        contactId={contactId}
+        publishedLinkSurveys={publishedLinkSurveys.data ?? []}
       />
       {editOpen && (
         <EditContactAttributesModal

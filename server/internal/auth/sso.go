@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/server/internal/platform/secret"
@@ -419,7 +420,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 	locale := mailer.MatchLocale(acceptLanguage)
 	var userID uuid.UUID
 	var sess issuedToken
-	err := s.svc.repo.transaction(ctx, func(tx *Repository) error {
+	err := s.svc.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		var created bool
 		var err error
 		if userID, created, err = tx.insertUser(ctx, name, email, locale); err != nil {
@@ -434,8 +435,11 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		if err := tx.insertIdentity(ctx, userID, provider, id.Subject); err != nil {
 			return err
 		}
-		sess, err = s.svc.sessions.create(ctx, tx.db, userID, meta)
-		return err
+		if sess, err = s.svc.sessions.create(ctx, tx.db, userID, meta); err != nil {
+			return err
+		}
+		// forma2's SSO provisioning added the new user to Brevo whether or not the provider vouched for the address.
+		return s.svc.contacts.Verified(ctx, jtx, userID, email)
 	})
 	if err != nil {
 		return callbackResult{}, err
@@ -463,7 +467,8 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
 		joined = &defaultOrg
 	}
-	captureSignedUp(userID, provider, email, source, joined)
+	// The sign-in below consumes the attribution; the sign-up reads it first, as forma2 carried it from the create hook to the after hook.
+	captureSignedUp(userID, provider, email, source, joined, attributionProperties(ctx))
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
 	return callbackResult{redirect: callbackURL, session: &sess}, nil
 }
