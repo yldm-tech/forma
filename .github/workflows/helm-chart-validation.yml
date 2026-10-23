@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          chart="charts/forma"
+          chart="deploy/helm/forma"
           render_dir="$(mktemp -d)"
           trap 'rm -rf "$render_dir"' EXIT
 
@@ -47,11 +47,11 @@ jobs:
           }
 
           helm lint "$chart" --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0
-          bash charts/forma/tests/authzed-operations.sh
-          bash charts/forma/tests/deployment-hardening.sh
-          bash charts/forma/tests/worker.sh
-          bash charts/forma/tests/redis-memory-limits.sh
-          bash charts/forma/tests/postgresql-major-upgrade.sh
+          bash deploy/helm/forma/tests/authzed-operations.sh
+          bash deploy/helm/forma/tests/deployment-hardening.sh
+          bash deploy/helm/forma/tests/worker.sh
+          bash deploy/helm/forma/tests/redis-memory-limits.sh
+          bash deploy/helm/forma/tests/postgresql-major-upgrade.sh
 
           helm template qa "$chart" \
             --set forma.webappUrl=https://qa.example.com --set deployment.image.tag=0.2.0 \
@@ -184,4 +184,4 @@ jobs:
       # The render tests cannot execute the bootstrap SQL, and the SQL is where ENG-2390 actually broke: an administrator holding the documented CREATEROLE and CREATEDB could not run `CREATE DATABASE ... OWNER`. This runs the *rendered* script against real PostgreSQL, on both sides of the 16 CREATEROLE change and on 18. It skips itself when Docker is unavailable, so the suite stays runnable locally.
       - name: Validate the AuthZed bootstrap against real PostgreSQL
         shell: bash
-        run: bash charts/forma/tests/authzed-bootstrap-runtime.sh
+        run: bash deploy/helm/forma/tests/authzed-bootstrap-runtime.sh
