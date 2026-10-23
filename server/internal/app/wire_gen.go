@@ -195,7 +195,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	responseHandler := response.NewHandler(responseService, sessions)
 	analysisService := analysis.NewService(cfg, db, authorizer, enqueuer, emitter, log)
 	analysisHandler := analysis.NewHandler(analysisService, sessions)
-	exampleResponses := ai.NewExampleResponses(aiService, db, limiter, emitter, log)
+	exampleResponses := ai.NewExampleResponses(aiService, db, responseService, limiter, emitter, log)
 	aiHandler := ai.NewHandler(aiService, exampleResponses, sessions)
 	storageHandler := storage.NewHandler(cfg, storageService, workspaceRepository, sessions, authenticator, authorizer, limiter, emitter, log)
 	linksurveyRepository := linksurvey.NewRepository(db, surveyRepository, client, log)
@@ -403,8 +403,8 @@ var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, and the job enqueuer their writes share their transaction with.
-var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, the job enqueuer their writes share their transaction with, and the quota screening the AI example responses are written through.
+var responseSet = wire.NewSet(jobs.NewEnqueuer, response.NewService, wire.Bind(new(ai.QuotaScreener), new(*response.Service)), response.NewHandler, analysis.NewService, analysis.NewHandler, analysis.NewAttachmentExporter, analysis.NewAttachmentsHandler)
 
 // storageSet is file storage: the S3 bucket, the layout of the files in it, and the /storage route that serves and deletes them. Deleting a workspace deletes its files through it.
 var storageSet = wire.NewSet(storage.NewBucket, storage.NewService, wire.Bind(new(workspace.FileStore), new(*storage.Service)), storage.NewHandler)

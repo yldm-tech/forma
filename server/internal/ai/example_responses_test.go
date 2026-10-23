@@ -185,6 +185,57 @@ func TestGenerateExampleResponses(t *testing.T) {
 	}
 }
 
+// forma2 wrote each example response through createResponseWithQuotaEvaluation: the survey's quotas screen it as it is written, so the quota progress and the responses' quotas show the example data. Abandoned responses do not count towards a quota that does not count partial submissions.
+func TestGenerateExampleResponsesScreensQuotas(t *testing.T) {
+	e := newServiceEnv(t, nil)
+	owner := e.user()
+	_, ws := e.organization(owner, true)
+	survey := e.exampleSurvey(ws, exampleBlocks)
+	quota := e.insert(`INSERT INTO survey_quotas (survey_id, name, "limit", logic, action) VALUES (?, 'Plan chosen', 5,
+		'{"connector":"and","conditions":[{"id":"c","leftOperand":{"type":"element","value":"plan"},"operator":"isSubmitted"}]}'::jsonb, 'continueSurvey') RETURNING id`, survey)
+	e.answerOpenTexts()
+
+	var out ExampleResponsesResult
+	e.ok(e.do(owner, http.MethodPost, examplesPath(survey), nil), &out)
+	if out.CreatedCount != 20 {
+		t.Fatalf("created %d", out.CreatedCount)
+	}
+	if n := e.count(`SELECT count(*) FROM response_quota_links l JOIN responses r ON r.id = l.response_id WHERE l.quota_id = ? AND l.status = 'screenedIn' AND r.finished`, quota); n != 5 {
+		t.Fatalf("screened in %d, want the quota's limit", n)
+	}
+	if n := e.count(`SELECT count(*) FROM response_quota_links l JOIN responses r ON r.id = l.response_id WHERE l.quota_id = ? AND l.status = 'screenedOut' AND r.finished`, quota); n != 11 {
+		t.Fatalf("screened out %d, want the other finished responses", n)
+	}
+	if n := e.count(`SELECT count(*) FROM response_quota_links l JOIN responses r ON r.id = l.response_id WHERE l.quota_id = ? AND NOT r.finished`, quota); n != 0 {
+		t.Fatalf("%d abandoned responses were screened", n)
+	}
+}
+
+// A quota that fails to screen is logged and rolled back to its savepoint, as forma2 caught and logged it: the dataset is still written.
+func TestGenerateExampleResponsesSurviveAFailingQuota(t *testing.T) {
+	e := newServiceEnv(t, nil)
+	owner := e.user()
+	_, ws := e.organization(owner, true)
+	survey := e.exampleSurvey(ws, exampleBlocks)
+	e.insert(`INSERT INTO survey_quotas (survey_id, name, "limit", logic, action) VALUES (?, 'Plan chosen', 5,
+		'{"connector":"and","conditions":[{"id":"c","leftOperand":{"type":"element","value":"plan"},"operator":"isSubmitted"}]}'::jsonb, 'continueSurvey') RETURNING id`, survey)
+	e.answerOpenTexts()
+	e.exec(`CREATE FUNCTION fail_quota_link() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'quota hiccup'; END $$`)
+	e.exec(`CREATE TRIGGER fail_quota_link BEFORE INSERT ON response_quota_links FOR EACH ROW EXECUTE FUNCTION fail_quota_link()`)
+
+	var out ExampleResponsesResult
+	e.ok(e.do(owner, http.MethodPost, examplesPath(survey), nil), &out)
+	if out.CreatedCount != 20 || e.count(`SELECT count(*) FROM responses WHERE survey_id = ?`, survey) != 20 {
+		t.Fatalf("created %d", out.CreatedCount)
+	}
+	if n := e.count(`SELECT count(*) FROM response_quota_links`); n != 0 {
+		t.Fatalf("links %d", n)
+	}
+	if len(e.logs.lines(t, "Error evaluating quotas for response")) == 0 {
+		t.Fatal("the quota failure was not logged")
+	}
+}
+
 // A chunk the model fails on gets the fallback answers: the generation still writes every response.
 func TestGenerateExampleResponsesFallBackWhenTheModelFails(t *testing.T) {
 	e := newServiceEnv(t, nil)
@@ -276,7 +327,7 @@ func TestGenerateExampleResponsesRateLimit(t *testing.T) {
 	if err := limiter.Apply(t.Context(), ratelimit.ActionGenerateExampleResponses, owner.String()); err != nil {
 		t.Fatal(err)
 	}
-	examples := NewExampleResponses(e.svc, e.db, limiter, audit.New(cfg, log), log)
+	examples := NewExampleResponses(e.svc, e.db, NewQuotaScreener(e.db, log), limiter, audit.New(cfg, log), log)
 	_, err := examples.Generate(t.Context(), owner, survey)
 	expectCode(t, err, http.StatusTooManyRequests, apperr.CodeTooManyRequests)
 	if n := e.count(`SELECT count(*) FROM displays`); n != 0 || len(e.provider.requests()) != 0 {
