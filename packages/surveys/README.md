@@ -18,9 +18,9 @@ The `@forma/surveys` package provides a complete survey rendering system built w
 ```text
 packages/surveys/
 ├── locales/                 # Translation files
-│   ├── en.json             # Source translations (English)
-│   ├── de.json             # Generated translations (German)
-│   ├── fr.json             # Generated translations (French)
+│   ├── en-US.json          # Source translations (English)
+│   ├── de-DE.json          # Generated translations (German)
+│   ├── fr-FR.json          # Generated translations (French)
 │   └── ...                 # Other target languages
 ├── i18n.json               # lingo.dev configuration
 ├── src/
@@ -30,7 +30,7 @@ packages/surveys/
 │   │   ├── i18n/
 │   │   │   └── provider.tsx # i18n provider component
 │   │   ├── icons/          # Icon components
-│   │   ├── questions/      # Question type components
+│   │   ├── elements/       # Question type components
 │   │   └── wrappers/       # Layout wrappers
 │   ├── lib/
 │   │   ├── i18n.config.ts  # i18next configuration
@@ -60,10 +60,10 @@ packages/surveys/
 
 3. **Configure Environment Variables**
 
-   In the surveys package directory, create a `.env` file:
+   Add the key to the `.env` file at the root of the repository, which `i18n:generate` reads:
 
    ```bash
-   # packages/surveys/.env
+   # .env
    LINGO_API_KEY=<YOUR_API_KEY>
    ```
 
@@ -72,7 +72,7 @@ packages/surveys/
    Run the translation generation script:
 
    ```bash
-   # From the root of the repo or from within the surveys package
+   # From within packages/surveys (from the repository root: pnpm i18n:surveys:generate)
    pnpm run i18n:generate
    ```
 
@@ -82,7 +82,7 @@ This will execute the auto-translate script and update translation files if need
 
 ### Adding New Translation Keys
 
-1. **Update Source File**: Add new keys to `packages/surveys/locales/en.json`
+1. **Update Source File**: Add new keys to `packages/surveys/locales/en-US.json`
 2. **Generate Translations**: Run `pnpm run i18n:generate`
 3. **Update Components**: Use the new translation keys in your components with `useTranslation` hook
 4. **Test**: Verify translations work across all supported languages
@@ -102,15 +102,15 @@ Edit `packages/surveys/i18n.json` to include new target languages:
 ```json
 {
   "locale": {
-    "source": "en",
-    "targets": ["de", "it", ...otherLanguages, "new-lang"]
+    "source": "en-US",
+    "targets": ["de-DE", "it-IT", ...otherLanguages, "new-lang"]
   }
 }
 ```
 
 #### 2. Update i18n Configuration
 
-Modify `packages/surveys/src/lib/i18n.config.ts`:
+Add the language tag to `SURVEY_RUNTIME_LANGUAGE_CODES` in `packages/i18n-utils/src/survey-runtime-languages.ts`, which the runtime uses as `supportedLngs`, then register the bundle in `packages/surveys/src/lib/i18n.config.ts`:
 
 ```tsx
 // Add new import
@@ -120,7 +120,8 @@ i18n
   .use(ICU)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "de", ...otherLanguages, "new-lang"],
+    fallbackLng: resolveFallbackBundles,
+    supportedLngs: [...SURVEY_RUNTIME_LANGUAGE_CODES],
     resources: {
       // ... existing resources
       "new-lang": { translation: newLangTranslations },
@@ -145,4 +146,3 @@ This will create new translation files in the `locales/` directory for each targ
 - `pnpm test` - Run tests
 - `pnpm test:coverage` - Run tests with coverage
 - `pnpm i18n:generate` - Generate translations using Lingo.dev
-- `pnpm lint` - Lint and fix code
