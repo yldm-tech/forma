@@ -13,6 +13,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/ai"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -29,11 +30,12 @@ type Service struct {
 	authz      *authz.Authorizer
 	limiter    *ratelimit.Limiter
 	audit      *audit.Emitter
+	billing    *billing.Lifecycle
 	log        *slog.Logger
 }
 
-func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, log: log}
+func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, billing: lifecycle, log: log}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.
@@ -81,6 +83,8 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string) (*C
 	if err != nil {
 		return nil, err
 	}
+	// forma2 set up the Stripe customer and Hobby subscription after the organization existed.
+	s.billing.OrganizationCreated(ctx, orgID)
 	o, err := s.repo.byID(ctx, orgID, s.cfg.IsFormaCloud)
 	if err != nil {
 		return nil, err
@@ -228,7 +232,7 @@ func ValidTimeZone(name string) bool {
 	return err == nil
 }
 
-// Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check; a user left without one is sent to create one by the root page. Everything the organization holds cascades, and the SpiceDB cleanup follows from the triggers.
+// Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check; a user left without one is sent to create one by the root page. Everything the organization holds cascades, the SpiceDB cleanup follows from the triggers, and on Forma Cloud its Stripe subscriptions are cancelled.
 func (s *Service) Delete(ctx context.Context, userID, organizationID uuid.UUID) error {
 	old, err := s.delete(ctx, userID, organizationID)
 	s.record(ctx, audit.ActionDeleted, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, nil)
@@ -246,5 +250,9 @@ func (s *Service) delete(ctx context.Context, userID, organizationID uuid.UUID) 
 	if old == nil {
 		return nil, apperr.NotFound("Organization", organizationID.String())
 	}
-	return old, s.repo.delete(ctx, organizationID)
+	if err := s.repo.delete(ctx, organizationID); err != nil {
+		return old, err
+	}
+	s.billing.OrganizationDeleted(ctx, old.Billing.StripeCustomerID)
+	return old, nil
 }

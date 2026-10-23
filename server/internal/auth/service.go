@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
@@ -61,11 +62,12 @@ type Service struct {
 	breaches  *breachChecker
 	turnstile *turnstileVerifier
 	failures  *failureThrottle
+	billing   *billing.Lifecycle
 	log       *slog.Logger
 	now       func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, lifecycle *billing.Lifecycle, log *slog.Logger) *Service {
 	client := &http.Client{}
 	return &Service{
 		cfg:       cfg,
@@ -78,6 +80,7 @@ func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites
 		breaches:  &breachChecker{client: client, rangeURL: hibpRangeURL, disabled: cfg.PasswordHIBPCheckDisabled, log: log},
 		turnstile: &turnstileVerifier{client: client, verifyURL: turnstileURL, secret: cfg.TurnstileSecretKey},
 		failures:  &failureThrottle{rdb: rdb, log: log, now: time.Now},
+		billing:   lifecycle,
 		log:       log,
 		now:       time.Now,
 	}

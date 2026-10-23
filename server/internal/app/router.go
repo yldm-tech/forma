@@ -13,6 +13,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apiv3"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/health"
@@ -61,7 +62,7 @@ type v3Registrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, integrationHandler *integration.Handler, integrationOAuthHandler *integration.OAuthHandler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, workflowHandler *workflow.Handler, web *webui.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, integrationHandler *integration.Handler, integrationOAuthHandler *integration.OAuthHandler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, workflowHandler *workflow.Handler, billingHandler *billing.Handler, stripeWebhookHandler *billing.WebhookHandler, web *webui.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Log)
 	r.Use(httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
 	healthHandler.Register(r)
@@ -71,7 +72,9 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	clientAPIHandler.Register(r)
 	// The webhook subscription API Zapier, Make, n8n and Activepieces call with an API key: forma2's paths and v1 envelope, outside /api/app.
 	webhookV1Handler.Register(r)
-	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, webhookHandler, integrationHandler, workflowHandler)
+	// The Stripe webhook at the path registered in Stripe's dashboard, authenticated by its signature: forma2's path and answers, outside /api/app.
+	stripeWebhookHandler.Register(r)
+	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, webhookHandler, integrationHandler, workflowHandler, billingHandler)
 	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope. Its modules were built on three middleware stacks, each mounted on its own /api/v3 group: the guard of the survey and workflow modules, the contact module's group-wide authentication, and the per-route v3api middleware of action classes and tags.
 	surveyHandler.RegisterV3(r)
 	workflowHandler.RegisterV3(r)

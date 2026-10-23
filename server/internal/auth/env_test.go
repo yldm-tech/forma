@@ -28,10 +28,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer/mailertest"
 	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
@@ -137,7 +139,12 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	limiter, emitter := ratelimit.New(cfg, e.rdb, log), audit.New(cfg, log)
 	// Sign-up redeems invites through the real invite module; nothing on that path asks SpiceDB, so it runs without one.
 	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), limiter, m, emitter, log)
-	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, log)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), e.db, enqueuer, log)
+	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
 	cipher, err := secret.NewCipher(cfg)

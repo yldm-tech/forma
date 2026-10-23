@@ -1,4 +1,4 @@
-// Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseFinished event then starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
+// Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseCreated event is then metered for Stripe billing, and a responseFinished event starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
 //
 // A webhook that fails is retried by retrying the whole job, which delivers again to every subscribed webhook with the same webhook-id, so a receiver can drop the duplicate; no other side effect runs on an attempt that will be retried. The last attempt logs the failure and carries on with the side effects. Integrations and workflows are later modules, called through the Handoffs interfaces when they are registered.
 //
@@ -146,6 +146,10 @@ func (w *Worker) work(ctx context.Context, job *river.Job[response.PipelineArgs]
 	}
 	if err := w.deliverWebhooks(ctx, job, ev, hooks, log); err != nil {
 		return err
+	}
+	// forma2's runResponseCreatedSideEffects: the response is billable from its creation.
+	if args.Event == response.EventResponseCreated && w.handoffs.Meter != nil {
+		w.handoffs.Meter.ResponseCreated(ctx, ev.StripeCustomerID, ev.Response.ID, ev.Response.CreatedAt)
 	}
 	if args.Event == response.EventResponseFinished {
 		return w.responseFinished(ctx, ev, org, log)

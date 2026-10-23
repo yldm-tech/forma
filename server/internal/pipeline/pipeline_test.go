@@ -299,7 +299,20 @@ type recorder struct {
 	order     []string
 	events    []*Event
 	workflowE error
+	metered   []string
 }
+
+func (r *recorder) ResponseCreated(_ context.Context, stripeCustomerID *string, responseID uuid.UUID, createdAt time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	customer := "<nil>"
+	if stripeCustomerID != nil {
+		customer = *stripeCustomerID
+	}
+	r.metered = append(r.metered, fmt.Sprintf("response %s %s %d", customer, responseID, createdAt.Unix()))
+}
+
+func (r *recorder) WorkflowRunCreated(context.Context, *string, uuid.UUID, time.Time) {}
 
 func (r *recorder) HandleResponse(_ context.Context, ev *Event) error {
 	r.mu.Lock()
@@ -320,9 +333,10 @@ func (r *recorder) EnqueueResponseCompleted(_ context.Context, ev *Event) error 
 // The hand-offs run on responseFinished only, workflows first; an integration failure is logged and the job goes on, and a workflow failure that asks for a retry fails the job before follow-ups and emails.
 func TestHandoffs(t *testing.T) {
 	rec := &recorder{}
-	e := newEnv(t, Handoffs{Integrations: rec, Workflows: rec})
+	e := newEnv(t, Handoffs{Integrations: rec, Workflows: rec, Meter: rec})
 	f := e.fixture()
 	e.exec(`UPDATE organizations SET display_time_zone = 'Asia/Tokyo' WHERE id = ?`, f.org)
+	e.exec(`INSERT INTO organization_billing (organization_id, stripe_customer_id, limits) VALUES (?, 'cus_123', '{}')`, f.org)
 	owner := e.user("owner@example.com", f.survey)
 	e.member(f.org, owner, "owner")
 	r := e.respond(f, true, `{}`)
@@ -331,6 +345,10 @@ func TestHandoffs(t *testing.T) {
 	}
 	if len(rec.order) != 0 {
 		t.Fatalf("hand-offs ran on responseCreated: %v", rec.order)
+	}
+	// forma2's runResponseCreatedSideEffects: the created response is metered for the organization's Stripe customer, once per responseCreated event.
+	if want := fmt.Sprintf("[response cus_123 %s %d]", r.ID, r.CreatedAt.Unix()); fmt.Sprint(rec.metered) != want {
+		t.Fatalf("metered %v, want %s", rec.metered, want)
 	}
 	j := job(response.EventResponseFinished, f, r, 1)
 	j.Args.Locale = "ja-JP"
@@ -358,6 +376,9 @@ func TestHandoffs(t *testing.T) {
 	rec.workflowE = errors.New("bad definition")
 	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err != nil {
 		t.Fatalf("any other workflow failure is logged: %v", err)
+	}
+	if len(rec.metered) != 1 {
+		t.Errorf("responseFinished was metered: %v", rec.metered)
 	}
 }
 

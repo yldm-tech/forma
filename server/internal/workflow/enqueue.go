@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -17,15 +18,16 @@ import (
 	"github.com/yldm-tech/forma/server/internal/survey/surveydoc"
 )
 
-// Enqueuer is the producer half of the runner, forma2's enqueueResponseCompletedWorkflowRuns: the pipeline's workflow hand-off.
+// Enqueuer is the producer half of the runner, forma2's enqueueResponseCompletedWorkflowRuns: the pipeline's workflow hand-off. Every run it creates is metered for Stripe billing; a nil meter skips that.
 type Enqueuer struct {
-	db   *gorm.DB
-	jobs *jobs.Enqueuer
-	log  *slog.Logger
+	db    *gorm.DB
+	jobs  *jobs.Enqueuer
+	meter pipeline.UsageMeter
+	log   *slog.Logger
 }
 
-func NewEnqueuer(db *gorm.DB, enqueuer *jobs.Enqueuer, log *slog.Logger) *Enqueuer {
-	return &Enqueuer{db: db, jobs: enqueuer, log: log}
+func NewEnqueuer(db *gorm.DB, enqueuer *jobs.Enqueuer, meter pipeline.UsageMeter, log *slog.Logger) *Enqueuer {
+	return &Enqueuer{db: db, jobs: enqueuer, meter: meter, log: log}
 }
 
 var _ pipeline.WorkflowEnqueuer = (*Enqueuer)(nil)
@@ -119,15 +121,33 @@ func (e *Enqueuer) EnqueueResponseCompleted(ctx context.Context, ev *pipeline.Ev
 		return nil
 	}
 	payload := mustJSON(e.payload(ev, log))
+	var created []persistedRun
+	// Runs created before a retryable failure are metered too: they exist, and the retry finds them instead of creating them again.
+	defer func() { e.meterRuns(ctx, ev, created) }()
 	for _, c := range matched {
-		if err := e.createAndDispatch(ctx, ev, c, payload); err != nil {
+		run, err := e.createAndDispatch(ctx, ev, c, payload)
+		if err != nil {
 			if transient(err) {
 				return retryable(err)
 			}
 			log.ErrorContext(ctx, "Failed to persist workflow run", "err", err, "workflow_id", c.WorkflowID)
+			continue
+		}
+		if run.Inserted {
+			created = append(created, run)
 		}
 	}
 	return nil
+}
+
+// meterRuns is forma2's metering of new runs: once per run, when it is created, so a replayed event that finds its run is not billed twice after Stripe's identifier deduplication window; timestamped with the run's own creation. It runs after every dispatch, so a slow Stripe never delays one.
+func (e *Enqueuer) meterRuns(ctx context.Context, ev *pipeline.Event, runs []persistedRun) {
+	if e.meter == nil {
+		return
+	}
+	for _, run := range runs {
+		e.meter.WorkflowRunCreated(ctx, ev.StripeCustomerID, run.ID, run.CreatedAt)
+	}
 }
 
 func retryable(err error) error {
@@ -181,17 +201,26 @@ func (e *Enqueuer) payload(ev *pipeline.Event, log *slog.Logger) TriggerPayload 
 	return p
 }
 
+// persistedRun is a run createAndDispatch wrote or found; Inserted is forma2's isNew.
+type persistedRun struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	Inserted  bool
+}
+
 // createAndDispatch writes the queued run bound to the published version, or finds the run an earlier delivery of the event wrote, and queues its job in the same transaction, so no run is left without one.
-func (e *Enqueuer) createAndDispatch(ctx context.Context, ev *pipeline.Event, c candidate, payload json.RawMessage) error {
+func (e *Enqueuer) createAndDispatch(ctx context.Context, ev *pipeline.Event, c candidate, payload json.RawMessage) (persistedRun, error) {
 	r := ev.Response
-	return e.jobs.Transaction(ctx, e.db, func(tx *jobs.Tx) error {
-		var id uuid.UUID
+	var run persistedRun
+	err := e.jobs.Transaction(ctx, e.db, func(tx *jobs.Tx) error {
+		// xmax is 0 on a row this statement inserted and set on one it updated.
 		if err := tx.Raw(`INSERT INTO workflow_runs (workflow_id, workspace_id, workflow_version_id, status, trigger_type, survey_id, response_id, is_dry_run, attempt, idempotency_key, trigger_payload, dispatched_at)
 			VALUES (?, ?, ?, 'queued', 'response.completed', ?, ?, false, 0, ?, ?::jsonb, now())
 			ON CONFLICT (workflow_id, idempotency_key) DO UPDATE SET dispatched_at = now(), updated_at = now()
-			RETURNING id`, c.WorkflowID, ev.WorkspaceID, c.VersionID, r.SurveyID, r.ID, r.ID.String(), string(payload)).Row().Scan(&id); err != nil {
+			RETURNING id, created_at, xmax = 0`, c.WorkflowID, ev.WorkspaceID, c.VersionID, r.SurveyID, r.ID, r.ID.String(), string(payload)).Row().Scan(&run.ID, &run.CreatedAt, &run.Inserted); err != nil {
 			return fmt.Errorf("persist workflow run: %w", err)
 		}
-		return dispatch(ctx, tx, id, c.WorkflowID, ev.WorkspaceID)
+		return dispatch(ctx, tx, run.ID, c.WorkflowID, ev.WorkspaceID)
 	})
+	return run, err
 }

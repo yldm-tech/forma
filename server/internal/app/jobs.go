@@ -8,6 +8,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/integration"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
@@ -20,7 +21,7 @@ import (
 )
 
 // NewJobRegistry is every job kind and schedule `forma worker` runs: the platform's own, then each feature module's.
-func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler) *jobs.Registry {
+func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler, billingEngine *billing.Engine) *jobs.Registry {
 	reg := jobs.NewRegistry(log)
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
@@ -28,10 +29,11 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	pipeline.RegisterJobs(reg, responsePipeline)
 	workflow.RegisterJobs(reg, workflowRunner, workflowReconciler)
 	storage.RegisterJobs(reg, files, workspaces, log)
+	billing.RegisterJobs(reg, billingEngine)
 	return reg
 }
 
-// newPipelineHandoffs is the consumers the response pipeline hands a finished response to after its webhooks: the integrations and the workflow runs.
-func newPipelineHandoffs(integrations *integration.Deliverer, workflows *workflow.Enqueuer) pipeline.Handoffs {
-	return pipeline.Handoffs{Integrations: integrations, Workflows: workflows}
+// newPipelineHandoffs is the consumers the response pipeline hands a response to after its webhooks: the integrations and the workflow runs of a finished one, and the Stripe meter of a created one.
+func newPipelineHandoffs(integrations *integration.Deliverer, workflows *workflow.Enqueuer, meter pipeline.UsageMeter) pipeline.Handoffs {
+	return pipeline.Handoffs{Integrations: integrations, Workflows: workflows, Meter: meter}
 }

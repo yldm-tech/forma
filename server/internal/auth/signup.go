@@ -132,6 +132,9 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	if !created {
 		return s.decoyIntent()
 	}
+	if !invited {
+		s.billing.OrganizationCreated(ctx, orgID)
+	}
 	if notifyInviter != nil {
 		notifyInviter(ctx)
 	}

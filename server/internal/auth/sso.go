@@ -520,6 +520,7 @@ func (s *SSO) resolveDefaultOrganization(ctx context.Context, orgID uuid.UUID, u
 		return "", err
 	}
 	if created {
+		s.svc.billing.OrganizationCreated(ctx, orgID)
 		return "owner", nil
 	}
 	return existingRole, nil

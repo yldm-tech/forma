@@ -105,6 +105,7 @@ type env struct {
 	mailer     *mailer.Mailer
 	jobs       *jobs.Enqueuer
 	enqueuer   *Enqueuer
+	meter      *meterRecorder
 	runner     *Runner
 	reconciler *Reconciler
 }
@@ -141,7 +142,8 @@ func newEnv(t *testing.T) *env {
 	e.engine = httpserver.NewEngine(e.log)
 	h.Register(e.engine.Group("/api/app", httpapi.ErrorHandler(e.log), httpapi.CSRF(cfg), authz.DecisionMemo()))
 	h.RegisterV3(e.engine)
-	e.enqueuer = NewEnqueuer(db, e.jobs, e.log)
+	e.meter = &meterRecorder{}
+	e.enqueuer = NewEnqueuer(db, e.jobs, e.meter, e.log)
 	e.runner = NewRunner(cfg, db, e.mailer, e.log)
 	e.reconciler = NewReconciler(db, e.jobs, e.log)
 	return e
@@ -347,4 +349,28 @@ func waitFor(t *testing.T, what string, deadline time.Duration, cond func() bool
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+// meterRecorder records the usage the enqueuer reports, in place of Stripe's meter events.
+type meterRecorder struct {
+	mu   sync.Mutex
+	runs []string
+}
+
+func (m *meterRecorder) ResponseCreated(context.Context, *string, uuid.UUID, time.Time) {}
+
+func (m *meterRecorder) WorkflowRunCreated(_ context.Context, stripeCustomerID *string, runID uuid.UUID, createdAt time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	customer := "<nil>"
+	if stripeCustomerID != nil {
+		customer = *stripeCustomerID
+	}
+	m.runs = append(m.runs, customer+" "+runID.String()+" "+createdAt.UTC().Format(time.RFC3339Nano))
+}
+
+func (m *meterRecorder) metered() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string(nil), m.runs...)
 }

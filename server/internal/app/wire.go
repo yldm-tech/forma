@@ -14,6 +14,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/auth"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/billing"
 	"github.com/yldm-tech/forma/server/internal/clientapi"
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/followup"
@@ -204,7 +205,18 @@ var workflowSet = wire.NewSet(
 	workflow.NewHandler,
 )
 
-// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails and survey auto-complete. Integrations and workflows plug in through pipeline.Handoffs.
+// billingSet is Forma Cloud billing: the Stripe account, the billing page's routes under /api/app, the Stripe webhook at forma2's /api/billing/stripe-webhook, and the jobs an organization's creation and deletion queue. It does nothing unless IS_FORMA_CLOUD=1 and STRIPE_SECRET_KEY are set.
+var billingSet = wire.NewSet(
+	billing.NewStripe,
+	billing.NewRepository,
+	billing.NewEngine,
+	billing.NewService,
+	billing.NewHandler,
+	billing.NewWebhookHandler,
+	billing.NewLifecycle,
+)
+
+// pipelineSet is the response pipeline `forma worker` runs after every response write: webhook delivery, integration delivery, workflow runs, follow-up emails, notification emails, survey auto-complete and the Stripe meter events of responses and workflow runs. Integrations, workflows and metering plug in through pipeline.Handoffs.
 var pipelineSet = wire.NewSet(
 	valkey.Open,
 	ratelimit.New,
@@ -218,6 +230,9 @@ var pipelineSet = wire.NewSet(
 	integration.NewRepository,
 	integration.NewDeliverer,
 	jobs.NewEnqueuer,
+	billing.NewStripe,
+	billing.NewMeter,
+	wire.Bind(new(pipeline.UsageMeter), new(*billing.Meter)),
 	workflow.NewEnqueuer,
 	workflow.NewRunner,
 	workflow.NewReconciler,
@@ -250,6 +265,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		webhookSet,
 		integrationSet,
 		workflowSet,
+		billingSet,
 		notification.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
@@ -273,6 +289,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		storage.NewService,
 		workspace.NewRepository,
 		pipelineSet,
+		billing.NewRepository,
+		billing.NewEngine,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)
