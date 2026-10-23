@@ -30,10 +30,10 @@ type Handler struct {
 	survey []byte
 }
 
-// surveyShell is the survey page bundle's entry in the build (web/survey.html).
+// surveyShell is the survey page bundle's entry in the build (apps/web/survey.html).
 const surveyShell = "survey.html"
 
-// publicContentTypes are the types of the static files in web/public that Go's built-in table does not know, set explicitly because the distroless image has no system MIME database to fall back on; forma2 sent text/csv for its CSV templates and image/svg+xml for every SVG.
+// publicContentTypes are the types of the static files in apps/web/public that Go's built-in table does not know, set explicitly because the distroless image has no system MIME database to fall back on; forma2 sent text/csv for its CSV templates and image/svg+xml for every SVG.
 var publicContentTypes = map[string]string{
 	".mp4":         "video/mp4",
 	".ico":         "image/x-icon",

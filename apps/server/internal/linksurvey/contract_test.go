@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// fixture is one exchange recorded against forma2 (server/internal/clientapi/testdata/forma2, see its README).
+// fixture is one exchange recorded against forma2 (apps/server/internal/clientapi/testdata/forma2, see its README).
 type fixture struct {
 	Request struct {
 		Method  string            `json:"method"`

@@ -21,7 +21,7 @@ var catalogKeys = []string{
 	"emails.accept", "emails.click_or_drag_to_upload_files", "emails.reject", "emails.schedule_your_meeting", "emails.select_a_date",
 }
 
-// locales/*.json are those keys of web/locales; TestLocalesMatchWebLocales keeps them in step.
+// locales/*.json are those keys of apps/web/locales; TestLocalesMatchWebLocales keeps them in step.
 //
 //go:embed locales/*.json
 var localeFS embed.FS

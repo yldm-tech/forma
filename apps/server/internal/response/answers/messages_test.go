@@ -14,7 +14,7 @@ var update = flag.Bool("update", false, "rewrite messages.json from packages/sur
 
 // The messages are a copy of the survey runtime's bundles; this keeps the copy identical. After editing a bundle, run go test ./internal/response/answers -run TestMessagesMatchSurveyLocales -update.
 func TestMessagesMatchSurveyLocales(t *testing.T) {
-	dir := filepath.Join("..", "..", "..", "..", "packages", "surveys", "locales")
+	dir := filepath.Join("..", "..", "..", "..", "..", "packages", "surveys", "locales")
 	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no survey locales in %s: %v", dir, err)

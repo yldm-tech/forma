@@ -54,7 +54,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
-// The v3 route parity check, forma2's scripts/check-v3-route-parity.mjs: every /api/v3 operation the production router serves is documented in the committed bundle, and every documented operation is served. Documenting an operation is what enrols it in the published reference and in the Schemathesis contract suite (docs/api-v3-reference/contract-tests), which drives exactly what the bundle lists; nothing else notices a route that ships without an entry, or an entry whose route never landed.
+// The v3 route parity check, forma2's scripts/check-v3-route-parity.mjs: every /api/v3 operation the production router serves is documented in the committed bundle, and every documented operation is served. Documenting an operation is what enrols it in the published reference and in the Schemathesis contract suite (apps/docs/api-v3-reference/contract-tests), which drives exactly what the bundle lists; nothing else notices a route that ships without an entry, or an entry whose route never landed.
 
 // v3Bundle is the committed v3 OpenAPI bundle, relative to this package.
 const v3Bundle = "../../../docs/api-v3-reference/openapi.yml"
@@ -82,7 +82,7 @@ func TestV3RouteParity(t *testing.T) {
 	undocumented, unrouted, stale := compareV3Operations(served, documented, routeWithoutDocumentation, documentedWithoutRoute)
 
 	for _, op := range undocumented {
-		t.Errorf("%s is served but not documented: add a file under docs/api-v3-reference/src/paths/, reference it from src/openapi.yml and run `pnpm api:v3:bundle` (an operation not ready for real data is documented with x-excluded: true)", op)
+		t.Errorf("%s is served but not documented: add a file under apps/docs/api-v3-reference/src/paths/, reference it from src/openapi.yml and run `pnpm api:v3:bundle` (an operation not ready for real data is documented with x-excluded: true)", op)
 	}
 	for _, op := range unrouted {
 		t.Errorf("%s is documented but not served, so the contract suite fails on it: implement the route, remove the operation from the bundle, or record it in documentedWithoutRoute with the ticket that removes it", op)

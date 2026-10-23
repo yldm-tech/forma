@@ -7,7 +7,7 @@ import (
 	"regexp"
 )
 
-// The survey page bundle's HTML (web/survey.html, built into the embedded web UI) marks where the server writes the head and the page state.
+// The survey page bundle's HTML (apps/web/survey.html, built into the embedded web UI) marks where the server writes the head and the page state.
 const (
 	headMarker  = "<!--forma:head-->"
 	stateMarker = "<!--forma:state-->"

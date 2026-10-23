@@ -22,7 +22,7 @@ var Locales = []string{"en-US", "ja-JP", "zh-Hans-CN", "zh-Hant-TW"}
 //go:embed templates/*.html
 var templateFS embed.FS
 
-// locales/<locale>.json is the "emails" namespace of web/locales/<locale>.json; TestCatalogueMatchesWebLocales keeps the two identical.
+// locales/<locale>.json is the "emails" namespace of apps/web/locales/<locale>.json; TestCatalogueMatchesWebLocales keeps the two identical.
 //
 //go:embed locales/*.json
 var localeFS embed.FS

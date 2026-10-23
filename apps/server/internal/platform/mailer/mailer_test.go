@@ -26,7 +26,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer/mailertest"
 )
 
-var update = flag.Bool("update", false, "rewrite locales/*.json from web/locales")
+var update = flag.Bool("update", false, "rewrite locales/*.json from apps/web/locales")
 
 var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 
@@ -276,7 +276,7 @@ func TestSendThroughTransport(t *testing.T) {
 	}
 }
 
-// locales/*.json must stay the "emails" namespace of the web catalogue; run with -update after changing web/locales.
+// locales/*.json must stay the "emails" namespace of the web catalogue; run with -update after changing apps/web/locales.
 func TestCatalogueMatchesWebLocales(t *testing.T) {
 	for _, locale := range mailer.Locales {
 		web, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "web", "locales", locale+".json"))
@@ -306,7 +306,7 @@ func TestCatalogueMatchesWebLocales(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(normalizeJSON(t, got), normalizeJSON(t, want)) {
-			t.Errorf("%s differs from the emails namespace of web/locales/%s.json; run go test ./internal/platform/mailer -run TestCatalogueMatchesWebLocales -update", path, locale)
+			t.Errorf("%s differs from the emails namespace of apps/web/locales/%s.json; run go test ./internal/platform/mailer -run TestCatalogueMatchesWebLocales -update", path, locale)
 		}
 	}
 }
