@@ -51,6 +51,7 @@ jobs:
           bash charts/forma/tests/deployment-hardening.sh
           bash charts/forma/tests/worker.sh
           bash charts/forma/tests/redis-memory-limits.sh
+          bash charts/forma/tests/postgresql-major-upgrade.sh
 
           helm template qa "$chart" \
             --set forma.webappUrl=https://qa.example.com \

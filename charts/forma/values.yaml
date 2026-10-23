@@ -908,10 +908,12 @@ postgresql:
     security:
       allowInsecureImages: true
   fullnameOverride: "forma-postgresql"
-  # PostgreSQL 18 or newer: the schema uses uuidv7().
+  # PostgreSQL 18 or newer: the schema uses uuidv7(). forma2's chart ran pg17, whose data directory PostgreSQL 18 cannot open, so an upgrade over a release still running another major is refused until its data has been moved (README: Upgrading the bundled PostgreSQL from 17 to 18).
   image:
     repository: pgvector/pgvector
     tag: pg18
+  # Set to true once the databases of a release whose bundled PostgreSQL ran another major version have been dumped and restored onto a fresh volume.
+  majorUpgradeAcknowledged: false
   auth:
     # The bundled AuthZed bootstrap creates a dedicated role and database and
     # therefore requires the PostgreSQL administrator account.

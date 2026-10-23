@@ -17,11 +17,41 @@ The chart keeps forma2's values, Secrets and resource names; these are the diffe
 - The AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare` (see below).
 - Booleans are `1` or `0`. The chart renders `AUTHZED_ENABLED` and `AUTHZED_INSECURE` that way; those two also accept forma2's `"true"`/`"false"` in `deployment.env`, every other switch must be `1` or `0`. `SKIP_STARTUP_MIGRATION` keeps forma2's `"true"`.
 - The image runs as uid 1001 on a distroless base, with no shell: `kubectl exec ... -- forma <command>` replaces shell sessions, and there is no `uploads` volume (files live in S3). The working directory stays forma2's `/home/nextjs/apps/web`: for SAML SSO, mount the identity provider's metadata XML at `/home/nextjs/apps/web/saml-connection` through `deployment.extraVolumes` / `deployment.extraVolumeMounts`.
-- PostgreSQL 18 or newer is required; the bundled database image is `pgvector/pgvector:pg18`.
+- PostgreSQL 18 or newer is required; the bundled database image is `pgvector/pgvector:pg18`, where forma2's chart ran `pg17`. PostgreSQL 18 cannot open a data directory PostgreSQL 17 initialised, so upgrading a release whose bundled database still runs 17 is refused until its data has been moved (see [Upgrading the bundled PostgreSQL from 17 to 18](#upgrading-the-bundled-postgresql-from-17-to-18)). A release on an external database (`postgresql.enabled=false`) is not affected.
 - Valkey no longer holds the job queue (River keeps it in PostgreSQL), only rate limits and short-lived state. Its sizing is unchanged.
 - With a ServiceMonitor, the worker exports metrics too, through a headless `<name>-worker-metrics` Service the ServiceMonitor also selects.
 - Removed values, which nothing reads any more: `enterprise.enabled`, `enterprise.licenseKey` (every feature is available without a license) and `authzed.systemKey`. The generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
 - `forma.mcpOauthJwksUrl` still renders `MCP_OAUTH_JWKS_URL`; leave it empty to verify MCP tokens against the keys in this release's database.
+
+## Upgrading the bundled PostgreSQL from 17 to 18
+
+A release installed with forma2's chart runs the bundled PostgreSQL as `pgvector/pgvector:pg17`, and its StatefulSet keeps the volume across `helm upgrade`. Started on that volume, PostgreSQL 18 stops with "database files are incompatible with server" and the database, the migration Job, SpiceDB and Forma go down with it. On an upgrade the chart therefore looks up the image the bundled StatefulSet runs and refuses to render while its major version differs from `postgresql.image.tag`, until `postgresql.majorUpgradeAcknowledged=true` says the data has been moved. (A render without cluster access, such as `helm template` or Argo CD, cannot look it up and does not check.) `pg_upgrade` is not an option here: it needs both versions' binaries with pgvector built for each, which no published image has. Move the data with a dump instead, in a maintenance window. The commands assume the release `forma` in namespace `forma` and the default `postgresql.fullnameOverride`, `postgresql.auth.username` and `postgresql.auth.database` (`forma-postgresql`, `forma`, `forma`).
+
+1. Take a snapshot of the volume `data-forma-postgresql-0` if your storage class supports it. The steps below delete the volume.
+2. Stop everything that writes: `kubectl -n forma scale deployment -l app.kubernetes.io/instance=forma --replicas=0` (the server and the worker; with `autoscaling.enabled` the HPA keeps a minimum, so delete it or set `autoscaling.enabled=false` first).
+3. Dump Forma's database from the running PostgreSQL 17 and check that the dump is complete:
+
+   ```sh
+   kubectl -n forma exec forma-postgresql-0 -c postgresql -- pg_dump -U forma -d forma --no-owner > forma-pg17.sql
+   tail -n 3 forma-pg17.sql   # ends with "-- PostgreSQL database dump complete"
+   ```
+
+   SpiceDB's database is not dumped: it is a projection of Forma's, and the AuthZed initialization Job rebuilds it (`forma authz backfill --apply`).
+4. Remove the PostgreSQL 17 volume: `kubectl -n forma scale statefulset forma-postgresql --replicas=0`, then `kubectl -n forma delete pvc data-forma-postgresql-0`.
+5. Start PostgreSQL 18 on a fresh volume with nothing else running, so nothing writes before the restore:
+
+   ```sh
+   helm upgrade forma ./charts/forma -n forma --reuse-values \
+     --set postgresql.majorUpgradeAcknowledged=true --set migration.enabled=false \
+     --set autoscaling.enabled=false --set deployment.replicas=0 --set worker.replicas=0 \
+     --set authzed.initialization.enabled=false
+   kubectl -n forma rollout status statefulset forma-postgresql
+   ```
+
+6. Restore the dump: `kubectl -n forma exec -i forma-postgresql-0 -c postgresql -- psql -v ON_ERROR_STOP=1 -U forma -d forma < forma-pg17.sql`.
+7. Upgrade again with your usual values plus `postgresql.majorUpgradeAcknowledged=true`. The migration Job and the AuthZed initialization Job run as on any upgrade, and the server and worker start.
+
+Keep `postgresql.majorUpgradeAcknowledged=true` afterwards or drop it: once the StatefulSet runs PostgreSQL 18 the check passes either way.
 
 ## Maintainers
 
@@ -450,6 +480,7 @@ externalSecret:
 | postgresql.global.security.allowInsecureImages                     | bool   | `true`                                                                      |                                                           |
 | postgresql.image.repository                                        | string | `"pgvector/pgvector"`                                                       |                                                           |
 | postgresql.image.tag | string | `"pg18"` | PostgreSQL 18 or newer is required (`uuidv7()`). |
+| postgresql.majorUpgradeAcknowledged | bool | `false` | Set once a release whose bundled PostgreSQL ran another major version has been dumped and restored onto a fresh volume ([procedure](#upgrading-the-bundled-postgresql-from-17-to-18)). |
 | postgresql.primary.containerSecurityContext.enabled                | bool   | `true`                                                                      |                                                           |
 | postgresql.primary.containerSecurityContext.readOnlyRootFilesystem | bool   | `false`                                                                     |                                                           |
 | postgresql.primary.containerSecurityContext.runAsUser              | int    | `1001`                                                                      |                                                           |

@@ -529,3 +529,25 @@ env:
   - name: AUTHZED_CONSISTENCY
     value: fully_consistent
 {{- end }}
+
+{{/*
+The image the bundled PostgreSQL StatefulSet runs now, empty when there is none or it cannot be looked up (a fresh install, helm template, Argo CD).
+*/}}
+{{- define "forma.postgresqlRunningImage" -}}
+{{- $name := .Values.postgresql.fullnameOverride | default (printf "%s-postgresql" .Release.Name) -}}
+{{- $statefulSet := lookup "apps/v1" "StatefulSet" .Release.Namespace $name -}}
+{{- range (dig "spec" "template" "spec" "containers" list $statefulSet) -}}
+{{- if eq .name "postgresql" }}{{ .image }}{{ end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+The PostgreSQL major version an image reference names through its tag (pg18, 18, 18.1-bookworm), empty when the tag does not say.
+*/}}
+{{- define "forma.postgresqlMajor" -}}
+{{- $reference := regexReplaceAll "@.*$" . "" -}}
+{{- if contains ":" $reference -}}
+{{- $tag := regexReplaceAll "^.*:" $reference "" -}}
+{{- regexReplaceAll "^pg" (regexFind "^(pg)?[0-9]+" $tag) "" -}}
+{{- end -}}
+{{- end }}
