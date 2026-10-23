@@ -89,7 +89,7 @@ For the `AI_*` variables, see [AI Features](/self-hosting/advanced/enterprise-fe
 | TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY | Cloudflare Turnstile on sign-up, when both are set. | optional | |
 | RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY | Google reCAPTCHA v3; surveys can turn on spam protection only when both are set. | optional | |
 
-A self-hosted instance admits its first user and invitees only; there is no open sign-up outside Forma Cloud (`IS_FORMA_CLOUD=1`) and end-to-end test runs (`E2E_TESTING=1`), whatever the build. forma2's development builds opened sign-up; the Go server has no development mode.
+A self-hosted instance admits its first user and invitees only; there is no open sign-up outside Forma Cloud (`IS_FORMA_CLOUD=1`) and end-to-end test runs (`E2E_TESTING=1`), whatever the build. forma2's development builds opened sign-up; the Go server has no development mode. Single sign-on is the exception: whoever a configured identity provider admits gets an account on their first sign-in (see [Authentication Behavior](/self-hosting/auth-behavior)).
 
 #### Single sign-on
 
@@ -156,7 +156,7 @@ They do no harm if left in place, but nothing reads them; `./forma.sh update` co
 | BULLMQ_EXTERNAL_WORKER_ENABLED | The job queue is River on PostgreSQL. `BULLMQ_WORKER_ENABLED`, `BULLMQ_WORKER_CONCURRENCY` and `BULLMQ_WORKER_COUNT` are still read, as described above. |
 | AUTHZED_SYSTEM_KEY | The SpiceDB object namespace is fixed by the schema. |
 | FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED | forma2's installer gate; `forma.sh update` now checks the installation itself. |
-| AUTH_SKIP_INVITE_FOR_SSO, AUTH_SSO_DEFAULT_TEAM_ID | Dead in forma2 already: every SSO sign-up without an invite either joins `AUTH_SSO_DEFAULT_ORGANIZATION_ID` or creates its own organization. |
+| AUTH_SKIP_INVITE_FOR_SSO, AUTH_SSO_DEFAULT_TEAM_ID | Dead in forma2 already: every SSO sign-up gets an account without an invite and joins `AUTH_SSO_DEFAULT_ORGANIZATION_ID` when it is set. |
 | OIDC_SIGNING_ALGORITHM | The provider's discovery document says how its tokens are signed. |
 | ENTERPRISE_LICENSE_KEY | Every feature is available without a licence. |
 | DEBUG, DEBUG_SHOW_RESET_LINK | The Go mailer has no SMTP debug output and there is no development build. |

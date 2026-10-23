@@ -16,7 +16,7 @@ Integrating your own OIDC (OpenID Connect) instance with your Forma instance all
 
 - `OIDC_ISSUER`
 
-- `OIDC_SIGNING_ALGORITHM`
+The signing algorithm comes from the provider's discovery document; forma2's `OIDC_SIGNING_ALGORITHM` is not read.
 
 <Note>
   Make sure the Redirect URI for your OIDC Client is set to
@@ -52,7 +52,6 @@ OIDC_CLIENT_ID=59cada54-56d4-4aa8-a5e7-5823bbe0e5b7
 OIDC_CLIENT_SECRET=4f4dwP0ZoOAqMW8fM9290A7uIS3E8Xg29xe1umhlB_s
 OIDC_ISSUER=http://localhost:9011 
 OIDC_DISPLAY_NAME=FusionAuth
-OIDC_SIGNING_ALGORITHM=HS256
 ```
 
 
