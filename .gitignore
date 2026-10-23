@@ -73,3 +73,8 @@ web/public/js
 
 # Vitest attachments and cache
 **/.vitest/
+
+# Playwright (e2e/)
+**/test-results/
+/playwright-report/
+/blob-report/
