@@ -1,0 +1,179 @@
+-- Representative forma2 rows in every table of forma2's schema, as forma2 wrote them. The ciphertexts and hashes are filled in by the test with forma2's algorithms and a known ENCRYPTION_KEY and NEXTAUTH_SECRET.
+
+INSERT INTO "Organization" (id, created_at, updated_at, name, whitelabel, "isAISmartToolsEnabled", "displayTimeZone")
+VALUES ('clorg00000000000000000001', '2026-09-20 10:00:00.123', '2026-09-21 11:00:00.456', 'Acme', '{"logoUrl": "https://acme.example/logo.png"}', true, 'Asia/Tokyo');
+
+INSERT INTO "OrganizationBilling" (organization_id, stripe_customer_id, limits, usage_cycle_anchor, stripe, created_at, updated_at)
+VALUES ('clorg00000000000000000001', 'cus_123', '{"projects": 3, "monthly": {"responses": 1500}}', '2026-09-01 00:00:00', 'null', '2026-09-20 10:00:00', '2026-09-20 10:00:00');
+
+INSERT INTO "User" (id, created_at, updated_at, name, email, email_verified, "twoFactorEnabled", "twoFactorSecret", "backupCodes", password, "identityProvider", "identityProviderAccountId", "notificationSettings", locale, "lastLoginAt", "isActive") VALUES
+('cluserowner0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Olivia Owner', 'owner@example.com', true, false, NULL, NULL, NULL, 'email', NULL,
+ '{"alert": {"clsurvey000000000000000001": true}, "unsubscribedOrganizationIds": ["clorg00000000000000000001"], "weeklySummary": {"x": true}}', 'en-US', '2026-10-01 08:00:00.5', true),
+('cluser2fa000000000000000001', '2026-09-20 10:00:01', '2026-09-20 10:00:01', 'Tom Twofactor', 'twofactor@example.com', true, true, NULL, NULL, NULL, 'email', NULL, '{}', 'de-DE', NULL, true),
+('cluserlegacy2fa000000000001', '2026-09-20 10:00:02', '2026-09-20 10:00:02', 'Lena Legacy', 'legacy@example.com', true, true, '{{.LegacySecret}}', '{{.LegacyCodes}}', '{{.LegacyPassword}}', 'email', NULL, '{}', 'en-US', NULL, true),
+('clusersso000000000000000001', '2026-09-20 10:00:03', '2026-09-20 10:00:03', 'Sam Sso', 'sso@example.com', true, false, NULL, NULL, NULL, 'github', 'gh-4242', '{}', 'ja-JP', NULL, true),
+('clusermember000000000000001', '2026-09-20 10:00:04', '2026-09-20 10:00:04', 'Mia Member', 'member@example.com', false, false, NULL, NULL, NULL, 'azuread', NULL, '{}', 'en-US', NULL, false);
+
+INSERT INTO "Account" (id, created_at, updated_at, "userId", type, provider, "providerAccountId", access_token, refresh_token, id_token, scope, password, issuer) VALUES
+('clacctowner0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'cluserowner0000000000000001', NULL, 'credential', 'cluserowner0000000000000001', NULL, NULL, NULL, NULL, '{{.OwnerPassword}}', NULL),
+('claccttwofactor00000000001', '2026-09-20 10:00:01', '2026-09-20 10:00:01', 'cluser2fa000000000000000001', NULL, 'credential', 'cluser2fa000000000000000001', NULL, NULL, NULL, NULL, '{{.TwoFactorPassword}}', NULL),
+('clacctgoogle00000000000001', '2026-09-20 10:00:03', '2026-09-20 10:00:03', 'clusersso000000000000000001', 'oidc', 'google', 'google-sub-1', 'ya29.upstream', 'refresh-upstream', 'id-token', 'openid email', NULL, 'https://accounts.google.com'),
+('clacctazure000000000000001', '2026-09-20 10:00:04', '2026-09-20 10:00:04', 'clusermember000000000000001', 'oidc', 'azure-ad', 'azure-oid-1', NULL, NULL, NULL, NULL, NULL, 'https://login.microsoftonline.com/x/v2.0');
+
+INSERT INTO "TwoFactor" (id, secret, "backupCodes", "userId", verified, "failedVerificationCount", "lockedUntil")
+VALUES ('cltwofactor0000000000000001', '{{.TwoFactorSecret}}', '{{.TwoFactorCodes}}', 'cluser2fa000000000000000001', true, 2, NULL);
+
+INSERT INTO "Session" (id, created_at, updated_at, "sessionToken", "userId", expires, "ipAddress", "userAgent")
+VALUES ('clsession000000000000000001', now(), now(), 'session-token.signature', 'cluserowner0000000000000001', now() + interval '1 day', '127.0.0.1', 'test');
+
+INSERT INTO "VerificationToken" (identifier, token, expires) VALUES ('owner@example.com', 'verify-token', now() + interval '1 hour');
+
+INSERT INTO "PasswordResetToken" (id, created_at, updated_at, token_hash, expires_at, "userId")
+VALUES ('clreset00000000000000000001', now(), now(), 'reset-hash', now() + interval '1 hour', 'cluserowner0000000000000001');
+
+INSERT INTO "Workspace" (id, created_at, updated_at, name, "legacyEnvironmentId", "organizationId", styling, config, "recontactDays", "linkSurveyBranding", "inAppSurveyBranding", placement, "clickOutsideClose", overlay, logo, "appSetupCompleted", "customHeadScripts")
+VALUES ('clws000000000000000000001', '2026-09-20 10:00:00', '2026-09-22 10:00:00', 'Website', 'clenv00000000000000000001', 'clorg00000000000000000001', '{"allowStyleOverwrite": true}', '{"channel": "link", "industry": "saas"}', 14, false, true, 'topRight', false, 'dark', 'null', true, '<script>/* analytics */</script>');
+
+INSERT INTO "Membership" ("organizationId", "userId", accepted, role) VALUES
+('clorg00000000000000000001', 'cluserowner0000000000000001', true, 'owner'),
+('clorg00000000000000000001', 'cluser2fa000000000000000001', true, 'manager'),
+('clorg00000000000000000001', 'cluserlegacy2fa000000000001', true, 'member'),
+('clorg00000000000000000001', 'clusersso000000000000000001', true, 'member'),
+('clorg00000000000000000001', 'clusermember000000000000001', false, 'billing');
+
+INSERT INTO "Team" (id, created_at, updated_at, name, "organizationId") VALUES ('clteam00000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Research', 'clorg00000000000000000001');
+INSERT INTO "TeamUser" (created_at, updated_at, "teamId", "userId", role) VALUES ('2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clteam00000000000000000001', 'cluserlegacy2fa000000000001', 'admin');
+INSERT INTO "WorkspaceTeam" (created_at, updated_at, "workspaceId", "teamId", permission) VALUES ('2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clws000000000000000000001', 'clteam00000000000000000001', 'readWrite');
+
+-- Two invites to one address, in different case: the newer one is kept, with the team that still exists.
+INSERT INTO "Invite" (id, email, name, "organizationId", "creatorId", "acceptorId", "createdAt", "expiresAt", role, "teamIds") VALUES
+('6f1c8a52-0b7e-4d2a-9c3e-1a2b3c4d5e01', 'Invitee@Example.com', 'Ivy', 'clorg00000000000000000001', 'cluserowner0000000000000001', NULL, '2026-09-25 10:00:00', '2026-10-02 10:00:00', 'member', ARRAY[]::text[]),
+('6f1c8a52-0b7e-4d2a-9c3e-1a2b3c4d5e02', 'invitee@example.com', 'Ivy', 'clorg00000000000000000001', 'cluserowner0000000000000001', NULL, '2026-09-26 10:00:00', '2026-10-03 10:00:00', 'manager', ARRAY['clteam00000000000000000001', 'clteamdeleted0000000000001']);
+
+INSERT INTO "ApiKey" (id, "createdAt", "createdBy", "lastUsedAt", label, "hashedKey", "lookupHash", "organizationId", "organizationAccess") VALUES
+('clapikey000000000000000001', '2026-09-20 10:00:00', 'cluserowner0000000000000001', '2026-10-01 00:00:00', 'Zapier', '{{.ModernKeyHash}}', '{{.ModernKeyLookup}}', 'clorg00000000000000000001', '{"accessControl": {"read": true, "write": false}}'),
+('clapikeylegacy000000000001', '2026-09-20 10:00:00', 'cluserdeleted00000000000001', NULL, 'Old script', '{{.LegacyKeyHash}}', NULL, 'clorg00000000000000000001', '{}');
+INSERT INTO "ApiKeyWorkspace" (id, "createdAt", "updatedAt", "apiKeyId", "workspaceId", permission) VALUES
+('clapikeyws0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clapikey000000000000000001', 'clws000000000000000000001', 'manage'),
+('clapikeyws0000000000000002', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clapikeylegacy000000000001', 'clws000000000000000000001', 'read');
+
+INSERT INTO "Language" (id, created_at, updated_at, code, alias, "workspaceId") VALUES
+('cllang000000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'en', 'English', 'clws000000000000000000001'),
+('cllang000000000000000000002', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'de', NULL, 'clws000000000000000000001');
+
+INSERT INTO "ActionClass" (id, created_at, updated_at, name, description, type, key, "noCodeConfig", "workspaceId") VALUES
+('claction00000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Signed up', 'A user signed up', 'code', 'signup', NULL, 'clws000000000000000000001'),
+('claction00000000000000000002', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Pricing page', NULL, 'noCode', NULL, '{"type": "pageView", "urlFilters": [{"rule": "contains", "value": "/pricing"}]}', 'clws000000000000000000001');
+
+INSERT INTO "ContactAttributeKey" (id, created_at, updated_at, "isUnique", key, name, description, type, "dataType", "workspaceId") VALUES
+('clkeyemail0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', true, 'email', 'Email', NULL, 'default', 'string', 'clws000000000000000000001'),
+('clkeyuserid000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', true, 'userId', 'User Id', NULL, 'default', 'string', 'clws000000000000000000001'),
+('clkeyfirst0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'firstName', 'First Name', NULL, 'default', 'string', 'clws000000000000000000001'),
+('clkeylast00000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'lastName', 'Last Name', NULL, 'default', 'string', 'clws000000000000000000001'),
+('clkeylang00000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'language', 'Language', NULL, 'default', 'string', 'clws000000000000000000001'),
+('clkeyage000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'age', 'Age', NULL, 'custom', 'number', 'clws000000000000000000001'),
+('clkeyscore0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'score', 'Score', NULL, 'custom', 'number', 'clws000000000000000000001'),
+('clkeybirthday000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', false, 'birthday', 'Birthday', NULL, 'custom', 'date', 'clws000000000000000000001');
+
+INSERT INTO "Contact" (id, created_at, updated_at, "workspaceId") VALUES ('clcontact0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clws000000000000000000001');
+
+-- One value of each type, and a number never backfilled into valueNumber, which keeps its text.
+INSERT INTO "ContactAttribute" (id, created_at, updated_at, "attributeKeyId", "contactId", value, "valueNumber", "valueDate") VALUES
+('clattr000000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clkeyemail0000000000000001', 'clcontact0000000000000001', 'contact@example.com', NULL, NULL),
+('clattr000000000000000000002', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clkeyage000000000000000001', 'clcontact0000000000000001', '42', 42, NULL),
+('clattr000000000000000000003', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clkeyscore0000000000000001', 'clcontact0000000000000001', '7.5', NULL, NULL),
+('clattr000000000000000000004', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clkeybirthday000000000001', 'clcontact0000000000000001', '1990-01-02T00:00:00.000Z', NULL, '1990-01-02 00:00:00');
+
+-- A public segment referring to another segment and to a survey, and the app survey's private segment, titled with its id.
+INSERT INTO "Segment" (id, created_at, updated_at, title, description, "isPrivate", filters, "workspaceId") VALUES
+('clsegment0000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Adults', 'Over 18', false,
+ '[{"id": "nodeage", "connector": null, "resource": {"id": "leafage", "root": {"type": "attribute", "contactAttributeKey": "age"}, "value": 18, "qualifier": {"operator": "greaterEqual"}}},
+   {"id": "nodegroup", "connector": "and", "resource": [
+     {"id": "nodeseg", "connector": null, "resource": {"id": "leafseg", "root": {"type": "segment", "segmentId": "clsegment0000000000000000002"}, "value": "clsegment0000000000000000002", "qualifier": {"operator": "userIsNotIn"}}},
+     {"id": "nodeseen", "connector": "or", "resource": {"id": "leafseen", "root": {"type": "surveyInteraction"}, "value": {"surveyScope": "specific", "surveyIds": ["clsurvey000000000000000001"], "within": {"amount": 30, "unit": "days"}}, "qualifier": {"operator": "haveSeen"}}}]}]',
+ 'clws000000000000000000001'),
+('clsegment0000000000000000002', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clsurvey000000000000000002', NULL, true, '[]', 'clws000000000000000000001');
+
+-- A published link survey with blocks, and a paused app survey that still has only forma2's legacy questions.
+INSERT INTO "Survey" (id, created_at, updated_at, name, "redirectUrl", type, "workspaceId", "createdBy", status, "welcomeCard", questions, blocks, endings, "hiddenFields", variables, "displayOption", "recontactDays", "displayLimit", "inlineTriggers", "autoClose", "autoComplete", delay, "publishOn", "closeOn", "archivedAt", "surveyClosedMessage", "segmentId", "workspaceOverwrites", styling, "singleUse", "isVerifyEmailEnabled", "isBackButtonHidden", "isAutoProgressingEnabled", "isCaptureIpEnabled", is_anonymize_responses_enabled, pin, "displayPercentage", "showLanguageSwitch", recaptcha, metadata, slug, "customHeadScripts", "customHeadScriptsMode") VALUES
+('clsurvey000000000000000001', '2026-09-20 10:00:00', '2026-09-23 10:00:00', 'Customer feedback', NULL, 'link', 'clws000000000000000000001', 'cluserowner0000000000000001', 'inProgress',
+ '{"enabled": false}', '[]',
+ ARRAY['{"id": "blockone", "name": "Block 1", "elements": [{"id": "liked", "type": "openText", "headline": {"default": "What did you like?", "de": "Was hat Ihnen gefallen?"}, "required": true, "inputType": "text", "charLimit": {"enabled": false}}]}'::jsonb,
+       '{"id": "blocktwo", "name": "Block 2", "elements": [{"id": "rating", "type": "rating", "headline": {"default": "How would you rate us?", "de": "Wie bewerten Sie uns?"}, "required": false, "scale": "star", "range": 5}]}'::jsonb],
+ ARRAY['{"id": "endingone", "type": "endScreen", "headline": {"default": "Thank you!", "de": "Danke!"}}'::jsonb],
+ '{"enabled": true, "fieldIds": ["utm"]}', '[{"id": "varscore", "name": "score", "type": "number", "value": 0}]', 'displayOnce', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 'null',
+ '{"enabled": false, "isEncrypted": true}', false, false, false, false, false, NULL, NULL, NULL, '{"enabled": false, "threshold": 0.1}', '{}', 'feedback', NULL, 'add'),
+('clsurvey000000000000000002', '2026-09-20 10:00:00', '2026-09-23 10:00:00', 'In-app check', NULL, 'app', 'clws000000000000000000001', NULL, 'paused',
+ '{"enabled": false}',
+ '[{"id": "useful", "type": "openText", "headline": {"default": "Is this page useful?"}, "required": true, "inputType": "text", "charLimit": {"enabled": false}, "buttonLabel": {"default": "Next"}},
+   {"id": "nps", "type": "nps", "headline": {"default": "Would you recommend us?"}, "required": false, "lowerLabel": {"default": "No"}, "upperLabel": {"default": "Yes"}}]',
+ ARRAY[]::jsonb[], ARRAY[]::jsonb[],
+ '{"enabled": false}', '[]', 'displaySome', 3, 5, NULL, NULL, NULL, 5, NULL, NULL, NULL, NULL, 'clsegment0000000000000000002', NULL, NULL,
+ '{"enabled": false, "isEncrypted": true}', false, false, false, false, false, NULL, 12.345, NULL, '{"enabled": false, "threshold": 0.1}', '{}', NULL, NULL, 'add');
+
+INSERT INTO "SurveyTrigger" (id, created_at, updated_at, "surveyId", "actionClassId") VALUES ('cltrigger000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clsurvey000000000000000002', 'claction00000000000000000002');
+INSERT INTO "SurveyAttributeFilter" (id, created_at, updated_at, "attributeKeyId", "surveyId", condition, value) VALUES ('clattrfilter0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clkeylang00000000000000001', 'clsurvey000000000000000002', 'equals', 'de');
+INSERT INTO "SurveyQuota" (id, created_at, updated_at, "surveyId", name, "limit", logic, action, "endingCardId", "countPartialSubmissions") VALUES
+('clquota000000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clsurvey000000000000000001', 'First 100', 100, '{"connector": "and", "conditions": []}', 'endSurvey', 'endingone', false);
+INSERT INTO "SurveyFollowUp" (id, created_at, updated_at, "surveyId", name, trigger, action) VALUES
+('clfollowup00000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'clsurvey000000000000000001', 'Thank respondents', '{"type": "response", "properties": null}',
+ '{"type": "send-email", "properties": {"to": "owner@example.com", "from": "noreply@example.com", "replyTo": ["owner@example.com"], "subject": "New response", "body": "<p>Thanks</p>", "attachResponseData": true}}');
+-- Both of the link survey's languages say they are its default; only one may stay.
+INSERT INTO "SurveyLanguage" ("languageId", "surveyId", "default", enabled) VALUES
+('cllang000000000000000000001', 'clsurvey000000000000000001', true, true),
+('cllang000000000000000000002', 'clsurvey000000000000000001', true, false);
+
+INSERT INTO "EmbeddedData" (id, created_at, updated_at, key, name, description, source, "dataType", "defaultValue", locked, "surveyId", "workspaceId") VALUES
+('clembedplan0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'plan', 'Plan', NULL, 'ingested', 'string', '"free"', false, NULL, 'clws000000000000000000001'),
+('clembedlocal000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', NULL, 'Local score', NULL, 'computed', 'number', NULL, false, 'clsurvey000000000000000001', 'clws000000000000000000001'),
+('clembedreserved00000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'country', 'Country', NULL, 'reserved', 'string', NULL, true, NULL, 'clws000000000000000000001');
+INSERT INTO "SurveyEmbeddedData" (id, "workspaceId", "surveyId", "embeddedDataId", "storageKey", "order") VALUES
+('clsurveyembed0000000000001', 'clws000000000000000000001', 'clsurvey000000000000000001', 'clembedplan0000000000000001', 'plan', 0),
+('clsurveyembed0000000000002', 'clws000000000000000000001', 'clsurvey000000000000000001', 'clembedreserved00000000001', 'country', 1);
+
+INSERT INTO "Display" (id, created_at, updated_at, "surveyId", "contactId") VALUES
+('cldisplay0000000000000000001', '2026-09-24 10:00:00', '2026-09-24 10:00:00', 'clsurvey000000000000000001', NULL),
+('cldisplay0000000000000000002', '2026-09-24 11:00:00', '2026-09-24 11:00:00', 'clsurvey000000000000000001', 'clcontact0000000000000001');
+
+INSERT INTO "Response" (id, created_at, updated_at, finished, "surveyId", "contactId", "endingId", data, variables, ttc, meta, ingest_flags, "contactAttributes", "singleUseId", language, "displayId") VALUES
+('clresponse000000000000000001', '2026-09-24 10:01:00', '2026-09-24 10:02:00', true, 'clsurvey000000000000000001', NULL, 'endingone', '{"liked": "The speed", "rating": 5}', '{"varscore": 3}', '{"liked": 1200.5, "_total": 3000}', '{"source": "link", "country": "JP"}', NULL, NULL, NULL, 'default', 'cldisplay0000000000000000001'),
+('clresponse000000000000000002', '2026-09-24 11:01:00', '2026-09-24 11:01:00', false, 'clsurvey000000000000000001', 'clcontact0000000000000001', NULL, '{"liked": "Docs"}', '{}', '{}', '{}', '{"rating": ["missing"]}', '{"email": "contact@example.com"}', 'single-use-1', NULL, 'cldisplay0000000000000000002');
+
+INSERT INTO "Tag" (id, created_at, updated_at, name, "workspaceId") VALUES ('cltag0000000000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'vip', 'clws000000000000000000001');
+INSERT INTO "TagsOnResponses" ("responseId", "tagId") VALUES ('clresponse000000000000000001', 'cltag0000000000000000000001');
+INSERT INTO "ResponseQuotaLink" ("responseId", "quotaId", status) VALUES ('clresponse000000000000000001', 'clquota000000000000000000001', 'screenedIn');
+
+INSERT INTO "Webhook" (id, name, created_at, updated_at, url, source, "workspaceId", triggers, "surveyIds", secret) VALUES
+('clwebhookall000000000000001', 'Everything', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'https://hooks.example.com/all', 'user', 'clws000000000000000000001', ARRAY['responseFinished']::"PipelineTriggers"[], ARRAY[]::text[], 'whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw'),
+('clwebhookscoped0000000001', NULL, '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'https://hooks.example.com/scoped', 'zapier', 'clws000000000000000000001', ARRAY['responseCreated', 'responseUpdated']::"PipelineTriggers"[], ARRAY['clsurvey000000000000000001', 'clsurveydeleted0000000001'], NULL);
+
+INSERT INTO "Integration" (id, type, config, "workspaceId") VALUES
+('clintnotion0000000000000001', 'notion', '{{.NotionConfig}}', 'clws000000000000000000001'),
+('clintsheets0000000000000001', 'googleSheets', '{{.SheetsConfig}}', 'clws000000000000000000001'),
+('clintslack00000000000000001', 'slack', '{{.SlackConfig}}', 'clws000000000000000000001');
+
+INSERT INTO "DataMigration" (id, started_at, finished_at, name, status) VALUES ('cldatamigration0000000001', now(), now(), 'repair_account_issuer', 'applied');
+
+INSERT INTO jwks (id, "publicKey", "privateKey", "createdAt", "expiresAt", alg, crv) VALUES ('cljwk000000000000000000001', '{"kty":"OKP"}', 'encrypted-private-key', now(), NULL, 'EdDSA', 'Ed25519');
+INSERT INTO "oauthClient" (id, "clientId", "clientSecret", "userId", "redirectUris", name) VALUES ('cloauthclient000000000001', 'mcp-client', NULL, 'cluserowner0000000000000001', ARRAY['http://localhost/callback'], 'Claude');
+INSERT INTO "oauthRefreshToken" (id, token, "clientId", "userId", "expiresAt", "createdAt") VALUES ('cloauthrefresh00000000001', 'refresh-hash', 'mcp-client', 'cluserowner0000000000000001', now() + interval '1 day', now());
+INSERT INTO "oauthAccessToken" (id, token, "clientId", "userId", "refreshId", "expiresAt", "createdAt") VALUES ('cloauthaccess000000000001', 'access-hash', 'mcp-client', 'cluserowner0000000000000001', 'cloauthrefresh00000000001', now() + interval '15 minutes', now());
+INSERT INTO "oauthConsent" (id, "clientId", "userId", scopes, "createdAt", "updatedAt") VALUES ('cloauthconsent00000000001', 'mcp-client', 'cluserowner0000000000000001', ARRAY['openid'], now(), now());
+INSERT INTO "oauthResource" (id, identifier, name) VALUES ('cloauthresource0000000001', 'https://forma.example.com/api/mcp', 'Forma MCP');
+INSERT INTO "oauthClientResource" (id, "clientId", "resourceId") VALUES ('cloauthclientres000000001', 'mcp-client', 'https://forma.example.com/api/mcp');
+INSERT INTO "oauthClientAssertion" (id, "expiresAt") VALUES ('cloauthassertion00000001', now() + interval '5 minutes');
+
+-- An enabled workflow with a completed run and a run forma2 never finished.
+INSERT INTO "Workflow" (id, created_at, updated_at, name, description, status, "workspaceId", "createdBy", definition) VALUES
+('clworkflow0000000000000001', '2026-09-20 10:00:00', '2026-09-20 10:00:00', 'Notify on completion', NULL, 'enabled', 'clws000000000000000000001', 'cluserowner0000000000000001',
+ '{"version": 1, "trigger": {"triggerType": "response.completed", "config": {"surveyId": "clsurvey000000000000000001"}}, "steps": [{"id": "stepmail", "type": "send_email", "config": {"to": "owner@example.com", "subject": "Done", "body": "A response"}}]}');
+INSERT INTO "WorkflowVersion" (id, "workflowId", "workspaceId", version, definition, "publishedAt", "publishedBy") VALUES
+('clworkflowv00000000000000001', 'clworkflow0000000000000001', 'clws000000000000000000001', 1,
+ '{"version": 1, "trigger": {"triggerType": "response.completed", "config": {"surveyId": "clsurvey000000000000000001"}}, "steps": [{"id": "stepmail", "type": "send_email", "config": {"to": "owner@example.com", "subject": "Done", "body": "A response"}}]}',
+ '2026-09-20 10:00:00', 'cluserowner0000000000000001');
+INSERT INTO "WorkflowRun" (id, created_at, updated_at, "workflowId", "workspaceId", "workflowVersionId", "responseId", status, "triggerType", "surveyId", "isDryRun", "idempotencyKey", attempt, "nextAttemptAt", "lastErrorAt", "triggerPayload", data, error, "dispatchedAt", "startedAt", "finishedAt") VALUES
+('clworkflowrun0000000000001', '2026-09-24 10:02:00', '2026-09-24 10:02:05', 'clworkflow0000000000000001', 'clws000000000000000000001', 'clworkflowv00000000000000001', 'clresponse000000000000000001', 'completed', 'response.completed', 'clsurvey000000000000000001', false, 'clresponse000000000000000001', 1, NULL, NULL, '{"surveyId": "clsurvey000000000000000001", "responseId": "clresponse000000000000000001"}', '{}', NULL, '2026-09-24 10:02:01', '2026-09-24 10:02:02', '2026-09-24 10:02:05'),
+('clworkflowrun0000000000002', '2026-09-24 11:02:00', '2026-09-24 11:02:01', 'clworkflow0000000000000001', 'clws000000000000000000001', 'clworkflowv00000000000000001', 'clresponse000000000000000002', 'running', 'response.completed', 'clsurvey000000000000000001', false, 'clresponse000000000000000002', 1, '2026-09-24 11:05:00', NULL, '{"surveyId": "clsurvey000000000000000001", "responseId": "clresponse000000000000000002"}', '{}', NULL, '2026-09-24 11:02:01', '2026-09-24 11:02:01', NULL);
+INSERT INTO "WorkflowRunLog" (id, "runId", sequence, "stepId", "stepType", status, input, output, error, "startedAt", "finishedAt") VALUES
+('clworkflowlog0000000000001', 'clworkflowrun0000000000001', 0, 'stepmail', 'send_email', 'succeeded', '{"to": "owner@example.com"}', '{"messageId": "m-1"}', NULL, '2026-09-24 10:02:02', '2026-09-24 10:02:05'),
+('clworkflowlog0000000000002', 'clworkflowrun0000000000002', 0, 'stepmail', 'send_email', 'running', '{"to": "owner@example.com"}', '{}', NULL, '2026-09-24 11:02:01', NULL);

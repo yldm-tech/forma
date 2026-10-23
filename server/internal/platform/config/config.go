@@ -730,6 +730,41 @@ func LoadForHealthcheck() (Config, error) {
 	return Config{HTTPAddr: e.HTTPAddr}, nil
 }
 
+type importEnv struct {
+	EncryptionKey          EncryptionKey     `env:"ENCRYPTION_KEY,required,notEmpty"`
+	EncryptionKeyVersion   int               `env:"ENCRYPTION_KEY_VERSION" envDefault:"1"`
+	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
+	NextAuthSecret         Secret            `env:"NEXTAUTH_SECRET"`
+	BetterAuthSecret       Secret            `env:"BETTER_AUTH_SECRET"`
+	Authz                  AuthzConfig
+}
+
+// LoadForImport reads what `forma import-forma2` needs: the migration connection (MIGRATE_DATABASE_URL, else DATABASE_URL, as LoadForMigrate reads it), ENCRYPTION_KEY, which both opens what forma2 encrypted with it and seals what the import stores, forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET, which Better Auth encrypted the two-factor secrets with, and the SpiceDB connection, for the authorization backfill after the import when AuthZed is enabled.
+func LoadForImport() (Config, error) {
+	cfg, err := LoadForMigrate()
+	if err != nil {
+		return Config{}, err
+	}
+	e, err := env.ParseAsWithOptions[importEnv](parseOptions)
+	if err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	if e.EncryptionKeyVersion < 1 || e.EncryptionKeyVersion > MaxEncryptionKeyVersion {
+		return Config{}, fmt.Errorf("load config: ENCRYPTION_KEY_VERSION must be between 1 and %d, got %d", MaxEncryptionKeyVersion, e.EncryptionKeyVersion)
+	}
+	if _, ok := e.EncryptionPreviousKeys[e.EncryptionKeyVersion]; ok {
+		return Config{}, fmt.Errorf("load config: ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", e.EncryptionKeyVersion)
+	}
+	if err := e.Authz.validate(); err != nil {
+		return Config{}, fmt.Errorf("load config: %w", err)
+	}
+	cfg.EncryptionKey, cfg.EncryptionKeyVersion, cfg.EncryptionPreviousKeys = e.EncryptionKey, e.EncryptionKeyVersion, e.EncryptionPreviousKeys
+	cfg.NextAuthSecret, cfg.BetterAuthSecret = e.NextAuthSecret, e.BetterAuthSecret
+	cfg.Authz = e.Authz
+	cfg.DatabaseMaxOpenConns = 4
+	return cfg, nil
+}
+
 type authzEnv struct {
 	DatabaseURL string `env:"DATABASE_URL,required,notEmpty"`
 	Authz       AuthzConfig

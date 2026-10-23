@@ -95,7 +95,7 @@ printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
 case "$*" in
   *to_regclass*) echo "$FAKE_DB_TABLES" ;;
   *'FROM "User"'*) echo "$FAKE_DB_FORMA2_USERS" ;;
-  *'FROM users'*) echo "$FAKE_DB_GO_USERS" ;;
+  *'FROM forma2_imports'*) echo "$FAKE_DB_IMPORTED" ;;
 esac
 exit 0
 `
@@ -184,7 +184,7 @@ func dotenvValues(t *testing.T, content string) map[string]string {
 
 func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	e := newInstall(t)
-	e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_GO_USERS=t"}
+	e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t"}
 	out, err := e.run("update")
 	if err != nil {
 		t.Fatalf("update: %v\n%s", err, out)
@@ -292,18 +292,18 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	}
 }
 
-// The Go server keeps its data in its own schema: started on a database where only forma2's tables hold users, it would serve an empty instance whose first sign-up becomes its owner, so the update stops before starting anything.
+// The Go server keeps its data in tables of its own: started on a database where only forma2's tables hold users, it would serve an empty instance whose first sign-up becomes its owner, so the update stops before starting anything until forma2_imports records an import (or a discard).
 func TestFormaShUpdateRefusesADatabaseWithoutTheMigratedData(t *testing.T) {
 	requireBash(t)
 	for name, db := range map[string][]string{
 		"go schema absent": {"FAKE_DB_TABLES=true,false", "FAKE_DB_FORMA2_USERS=t"},
-		"go schema empty":  {"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_GO_USERS=f"},
+		"not imported":     {"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=f"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := newInstall(t)
 			e.dbVars = db
 			out, err := e.run("update")
-			if err == nil || !strings.Contains(out, "still holds forma2's data") {
+			if err == nil || !strings.Contains(out, "still holds forma2's data") || !strings.Contains(out, "docker compose run --rm forma-migrate import-forma2") {
 				t.Fatalf("update: %v\n%s", err, out)
 			}
 			if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "--remove-orphans") {

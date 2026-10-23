@@ -12,6 +12,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/forma2import"
 	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
@@ -31,6 +32,7 @@ commands:
   wait-for-database  wait until the migration database accepts connections [--timeout-seconds 900] [--interval-seconds 5] [--connection-timeout-seconds 5]
   healthcheck        exit 0 when the server on HTTP_ADDR answers /health (the image's HEALTHCHECK)
   authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
+  import-forma2      copy a forma2 database into this schema, verified, in one transaction [--dry-run] [--source url] [--refresh] (forma import-forma2 --help)
   seed               write the demo organization, users, surveys and responses; needs ALLOW_SEED=1 [--clear] [--contract [--out path]]
   version            print the release version the binary was built as (0.0.0 for a development build)
 `
@@ -68,6 +70,12 @@ func run(args []string) int {
 			return 0
 		}
 		return authz.RunCLI(ctx, args[1:], os.Stdout, os.Stderr)
+	case "import-forma2":
+		if len(args) == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
+			fmt.Print(forma2import.CLIUsage)
+			return 0
+		}
+		return forma2import.RunCLI(ctx, args[1:], os.Stdout, os.Stderr)
 	case "seed":
 		err = runSeed(ctx, args[1:])
 	case "version":
@@ -112,6 +120,9 @@ func serve(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
+	if err := forma2import.GuardDSN(ctx, cfg.DatabaseURL); err != nil {
+		return err
+	}
 	return runServer(ctx, cfg, log)
 }
 
@@ -122,6 +133,9 @@ func worker(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
+	if err := forma2import.GuardDSN(ctx, cfg.DatabaseURL); err != nil {
+		return err
+	}
 	return runWorker(ctx, cfg, log)
 }
 

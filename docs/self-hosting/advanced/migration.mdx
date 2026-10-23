@@ -34,7 +34,7 @@ Forma now runs as a Go server instead of forma2's Next.js application. The image
 
 ### The database
 
-The Go server keeps its data in a schema of its own, next to forma2's tables in the same database: `forma migrate` creates it, and forma2's data is copied into it by the data migration of the release `latest` moves to. Started on a database where only forma2's tables hold data, the Go server would serve an empty instance whose first sign-up becomes its owner. `./forma.sh update` therefore refuses to start the new stack while forma2's `User` table has rows and the Go server's `users` table has none; with Docker Compose or Helm, make sure the data migration has run before the server starts.
+The Go server keeps its data in tables of its own (`users`, `surveys`, ...), next to forma2's tables (`"User"`, `"Survey"`, ...) in the same database: `forma migrate` creates them without touching forma2's, and `forma import-forma2` copies forma2's data into them (see [Import forma2's data](#import-forma2s-data)). Started on a database where only forma2's tables hold data, the Go server would serve an empty instance whose first sign-up becomes its owner, so it refuses to start (`forma start`, `serve` and `worker` all check) while forma2's `User` table has rows and no import has been recorded. `./forma.sh update` runs the same check before it starts the new stack.
 
 Before anything else, back up the database (both `forma` and SpiceDB's `spicedb`), `.env` and your compose file or Helm values, and note the image your forma2 containers run, so you can return to it: `latest` will no longer name it.
 
@@ -44,6 +44,33 @@ docker compose exec -T postgres pg_dump -U postgres -d forma > forma2-forma.sql
 docker compose exec -T postgres pg_dump -U postgres -d spicedb > forma2-spicedb.sql
 docker image inspect --format '{{index .RepoDigests 0}}' "$(docker inspect --format '{{.Image}}' "$(docker compose ps -q forma)")"   # the forma2 image, by digest
 ```
+
+### Import forma2's data
+
+`forma import-forma2` copies forma2's data into the Go server's tables. It reads forma2's tables in one read-only snapshot and writes the Go server's tables in one transaction, so a run imports everything or nothing, and it never writes forma2's tables: forma2 can be started on them again as they were.
+
+Run it after `forma migrate` and after stopping forma2, since anything forma2 writes after the copy is not imported. It connects through `MIGRATE_DATABASE_URL` when that is set, else `DATABASE_URL`; behind PgBouncer, give it the direct connection, as `forma migrate` needs. It needs `ENCRYPTION_KEY` and `NEXTAUTH_SECRET` (and `BETTER_AUTH_SECRET`, if forma2 had one) exactly as forma2 ran with them: they open forma2's two-factor secrets and integration credentials, which it encrypts again for the Go server.
+
+```bash
+forma import-forma2 --dry-run   # import, verify and print the counts, then roll everything back
+forma import-forma2             # import, verify and commit
+```
+
+- **Ids.** Every forma2 id becomes a UUID derived from it, so survey links, SDK snippets, API calls and webhook receivers that still carry an old id reach the same survey, workspace or response.
+- **Verification.** Before it commits, the import reads back what it wrote: every row is there, a sample of each table holds forma2's values, every survey document passes the editor's validation (a draft needs only the shape a draft save needs; what a draft still lacks is listed as a warning) and every segment filter is one the Go server can evaluate. When anything fails, the run lists it, writes nothing and exits 1. Warnings (a survey with two default languages, a workflow run forma2 had not finished, a credential that does not decrypt with `ENCRYPTION_KEY`) are printed and the run goes on.
+- **The record.** The last write of a run is a row in `forma2_imports`, the record the startup check waits for.
+- **SpiceDB.** The import queues the authorization projection of every imported organization, membership, team, workspace and API key, which `forma worker` delivers. With `AUTHZED_ENABLED=1` and SpiceDB reachable, the import also runs `forma authz backfill --apply` itself; otherwise run it once SpiceDB is up. Give the Go server a SpiceDB datastore of its own rather than forma2's (see [AuthZed Operations](/self-hosting/advanced/authzed-operations)): the two never delete each other's relationships automatically, but a prune from either side would, and both audits would report the other's relationships as drift.
+- **Again.** A second run is refused unless you pass `--refresh`, which brings every imported row back to what forma2 holds (rows forma2 no longer has are not deleted). Use it to repeat a rehearsal, not after the Go server has started serving: it overwrites changes made since.
+- **Elsewhere.** `--source=<postgres url>` reads forma2 from another database than the one the Go server uses.
+- **Starting empty.** To start the Go server on such a database without forma2's data, on purpose, run `forma import-forma2 --discard-forma2-data --reason="<why>"`, which records that decision instead.
+
+What is not carried over, and what users notice:
+
+- Sessions: everyone signs in again once. Passwords, two-factor authentication and single sign-on identities are carried over.
+- Password reset and email verification links sent before the switch: request a new one.
+- Pending invitations: their links were tokens the Go server does not read, so resend them from the organization settings.
+- MCP and other OAuth clients: they register and authorize again on their own.
+- Jobs still queued in forma2's Redis (webhook and integration deliveries, follow-up emails), and workflow runs forma2 had not finished, which are imported as canceled.
 
 ### One-click installations
 
@@ -62,7 +89,17 @@ It recognises forma2's compose file and, before touching the running stack:
 3. updates `.env` as listed above, and maps the bundled RustFS credentials (`FORMA_RUSTFS_*`) to the compose file's storage profile (`COMPOSE_PROFILES=storage`, `RUSTFS_ADMIN_*`, `S3_*`);
 4. writes the release's `docker-compose.yml`, `authzed-postgres-bootstrap.sh` and `rustfs-init.sh`, and checks the result with `docker compose config`.
 
-Then it pulls the images, checks the database as described above, and runs `docker compose up -d`: `forma-migrate` runs `forma migrate`, `authzed-initialize` runs `forma authz schema apply`, and `forma` and `forma-worker` start. Run it again after the data migration if it stopped at the database check; every step is idempotent.
+Then it pulls the images, checks the database as described above, and runs `docker compose up -d`: `forma-migrate` runs `forma migrate`, `authzed-initialize` runs `forma authz schema apply`, and `forma` and `forma-worker` start. On a forma2 installation the first run stops at the database check, before anything is started, and prints the commands that import the data:
+
+```bash
+docker compose stop forma                                   # forma2's server
+docker compose run --rm forma-migrate                       # the Go server's schema, next to forma2's tables
+docker compose run --rm forma-migrate import-forma2 --dry-run
+docker compose run --rm forma-migrate import-forma2
+./forma.sh update
+```
+
+Every step is idempotent. After the stack is up, `docker compose --profile authzed-ops run --rm authzed-ops backfill --apply` rebuilds SpiceDB's relationships from the imported data.
 
 ### Docker Compose installations
 
@@ -80,7 +117,7 @@ Then it pulls the images, checks the database as described above, and runs `dock
 3. Edit `.env`: remove `?schema=public` from any database URL, replace `BULLMQ_WORKER_CONCURRENCY`/`BULLMQ_WORKER_COUNT` with `WORKER_CONCURRENCY`, and remove the ignored variables. Keep `POSTGRES_PASSWORD`, `POSTGRES_PASSWORD_URL_ENCODED`, `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD`.
 4. Move your own additions (a reverse proxy, labels, extra volumes) into `docker-compose.override.yml`, which Docker Compose merges on its own, so later updates can replace `docker-compose.yml` without losing them. If you used forma2's `minio`/`rustfs` services for uploads, the new file has RustFS under the `storage` profile; see [Docker Setup](/self-hosting/setup/docker#enable-rustfs-for-file-storage).
 5. Replace the files and check the result: `mv docker-compose.yml.new docker-compose.yml` (and the two scripts, `chmod 700` them), then `docker compose config >/dev/null`.
-6. Run the data migration, then `docker compose pull && docker compose up -d --remove-orphans`.
+6. Pull the images, stop forma2 (`docker compose pull && docker compose stop forma`), apply the schema and import the data (`docker compose run --rm forma-migrate`, then `docker compose run --rm forma-migrate import-forma2`, see [Import forma2's data](#import-forma2s-data)), then `docker compose up -d --remove-orphans`.
 
 ### Helm installations
 
@@ -91,7 +128,7 @@ The chart in this repository (`charts/forma`) replaces forma2's and keeps its va
 - Remove `enterprise.enabled`, `enterprise.licenseKey` and `authzed.systemKey`; the generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
 - The bundled PostgreSQL is 18; a release whose bundled database still runs forma2's 17 is refused until its data has been moved, as the README describes.
 - With the chart's Envoy gateway in front, add `GATEWAY_RATE_LIMITING: "1"` to `deployment.env` so the server does not limit the covered routes a second time.
-- Run the data migration before the new server pods serve traffic.
+- Import forma2's data once the migration Job has run, from a one-off pod with the release's image and the server's Secret: `forma import-forma2` with `MIGRATE_DATABASE_URL` set to a direct (not pooled) connection. The server pods refuse to start until it has run, and start on their next restart after it.
 
 ```bash
 helm upgrade forma ./charts/forma -n forma -f values.yaml --set deployment.image.tag=0.2.<n>
@@ -106,7 +143,7 @@ helm upgrade forma ./charts/forma -n forma -f values.yaml --set deployment.image
 
 ### Roll back
 
-Stop the new stack, restore `docker-compose.yml.forma2-<timestamp>` and `.env.<timestamp>` (or your previous Helm values), set the forma2 image to the digest you noted (`image: ghcr.io/yldm-tech/forma@sha256:...`), and start it again. forma2's tables are not modified by `forma migrate`, so forma2 starts on them as they were; anything written through the Go server since the switch is not in them.
+Stop the new stack, restore `docker-compose.yml.forma2-<timestamp>` and `.env.<timestamp>` (or your previous Helm values), set the forma2 image to the digest you noted (`image: ghcr.io/yldm-tech/forma@sha256:...`), and start it again. Neither `forma migrate` nor `forma import-forma2` modifies forma2's tables, so forma2 starts on them as they were; anything written through the Go server since the switch is not in them. The Go server's tables stay next to forma2's; a later `forma import-forma2 --refresh` brings them back to what forma2 then holds.
 
 ## v6
 
