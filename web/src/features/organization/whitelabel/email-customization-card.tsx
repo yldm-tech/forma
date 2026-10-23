@@ -170,7 +170,10 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
               onClick={() => void sendTestEmail()}>
               {t("common.send_test_email")}
             </Button>
-            <Button onClick={() => void save()} disabled={!logoFile || isReadOnly} loading={isSaving}>
+            <Button
+              onClick={() => void save()}
+              disabled={!logoFile || isReadOnly || !workspaceId}
+              loading={isSaving}>
               {t("common.save")}
             </Button>
           </div>

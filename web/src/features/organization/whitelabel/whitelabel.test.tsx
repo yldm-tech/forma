@@ -130,6 +130,13 @@ const renderAt = (element: ReactNode, path = `/organizations/${ORG}/settings/gen
   return router;
 };
 
+/** The upload input, once the workspace that receives organization uploads is known and it is enabled. */
+const enabledUploadInput = async () => {
+  const input = (await screen.findByTestId("upload-file-input")) as HTMLInputElement;
+  await waitFor(() => expect(input.disabled).toBe(false));
+  return input;
+};
+
 const toastMessages = () => toast.getSnapshot().map((shown) => shown.message);
 const png = (name: string) => new File(["img"], name, { type: "image/png" });
 
@@ -203,7 +210,7 @@ describe("FaviconCustomizationCard", () => {
     renderAt(<FaviconCustomizationCard organization={organization("owner")} />);
     await waitFor(() => expect(calls.map((call) => call.key)).toContain(`GET ${API}/workspaces`));
 
-    fireEvent.change(await screen.findByTestId("upload-file-input"), {
+    fireEvent.change(await enabledUploadInput(), {
       target: { files: [png("icon.png")] },
     });
     fireEvent.click(await screen.findByRole("button", { name: t("common.save") }));
@@ -231,7 +238,7 @@ describe("FaviconCustomizationCard", () => {
     const calls = stubServer();
     renderAt(<FaviconCustomizationCard organization={organization("owner")} />);
     const big = new File([new Uint8Array(200_000)], "icon.png", { type: "image/png" });
-    fireEvent.change(await screen.findByTestId("upload-file-input"), { target: { files: [big] } });
+    fireEvent.change(await enabledUploadInput(), { target: { files: [big] } });
     await waitFor(() => expect(toastMessages()).toEqual(["File exceeds 0.1 MB size limit."]));
     expect(calls.map((call) => call.key)).not.toContain("POST /api/v1/management/storage");
   });

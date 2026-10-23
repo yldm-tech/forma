@@ -114,7 +114,7 @@ export const FaviconCustomizationCard = ({ organization }: { organization: Organ
                 setIsEditing(true);
               }
             }}
-            disabled={isReadOnly}
+            disabled={isReadOnly || !workspaceId}
             maxSizeInMB={MAX_FAVICON_SIZE_MB}
           />
         )}
@@ -123,7 +123,7 @@ export const FaviconCustomizationCard = ({ organization }: { organization: Organ
           type="file"
           accept="image/jpeg, image/png, image/webp, image/x-icon, image/ico"
           className="hidden"
-          disabled={isReadOnly}
+          disabled={isReadOnly || !workspaceId}
           data-testid="favicon-replace-input"
           onChange={(e) => void handleFileChange(e)}
         />
