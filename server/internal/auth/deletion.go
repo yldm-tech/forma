@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/mailer"
@@ -120,6 +121,7 @@ func (s *Service) accountDeleted(ctx context.Context, acc *account, stripeCustom
 		s.billing.OrganizationDeleted(ctx, &customer)
 	}
 	s.logDeletion(ctx, acc)
+	analytics.Capture(acc.ID.String(), "delete_account", nil, analytics.Groups{})
 }
 
 func (s *Service) logDeletion(ctx context.Context, acc *account) {

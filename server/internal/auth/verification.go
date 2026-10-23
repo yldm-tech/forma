@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -109,6 +110,9 @@ func (s *Service) verifyEmail(ctx context.Context, token, intentToken string, ac
 		return verifyEmailResult{}, err
 	}
 	userID := v.UserID.UUID
+	if justVerified {
+		analytics.Capture(userID.String(), "user_email_confirmed", nil, analytics.Groups{})
+	}
 	alreadySignedIn := actor != nil && actor.UserID == userID
 	// An already verified address short-circuits: the link was used before, and only that first use may sign anyone in.
 	if !justVerified || alreadySignedIn {

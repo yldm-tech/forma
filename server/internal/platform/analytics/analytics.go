@@ -169,3 +169,18 @@ func (l slogLogger) Warnf(format string, args ...any) { l.log.Warn(fmt.Sprintf(f
 func (l slogLogger) Errorf(format string, args ...any) {
 	l.log.Error(fmt.Sprintf(format, args...))
 }
+
+// OrganizationCreated is forma2's events for a new organization with its first workspace, the same on every path that creates one (setup, the organization switcher, sign-up): the two groups' names and the creator's email domain, organization_created and workspace_created.
+func OrganizationCreated(userID, organizationID, organizationName, workspaceID, workspaceName, emailDomain string, isFirstOrganization bool) {
+	GroupIdentify(GroupOrganization, organizationID, Properties{"name": organizationName, "email_domain": emailDomain})
+	GroupIdentify(GroupWorkspace, workspaceID, Properties{"name": workspaceName})
+	groups := Groups{OrganizationID: organizationID, WorkspaceID: workspaceID}
+	Capture(userID, "organization_created", Properties{"organization_id": organizationID, "is_first_org": isFirstOrganization}, groups)
+	Capture(userID, "workspace_created", Properties{"organization_id": organizationID, "workspace_id": workspaceID, "name": workspaceName}, groups)
+}
+
+// WorkspaceCreated is forma2's events for a workspace added to an existing organization.
+func WorkspaceCreated(userID, organizationID, workspaceID, workspaceName string) {
+	GroupIdentify(GroupWorkspace, workspaceID, Properties{"name": workspaceName})
+	Capture(userID, "workspace_created", Properties{"organization_id": organizationID, "workspace_id": workspaceID, "name": workspaceName}, Groups{OrganizationID: organizationID, WorkspaceID: workspaceID})
+}

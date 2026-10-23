@@ -101,6 +101,9 @@ func WithSurface(ctx context.Context, surface string) (context.Context, func(ctx
 	}
 }
 
+// SurfaceOf is the authorization surface ctx belongs to, "unscoped" outside any: product analytics tell an MCP tool's call from a plain API call by it.
+func SurfaceOf(ctx context.Context) string { return surfaceOf(ctx) }
+
 func surfaceOf(ctx context.Context) string {
 	if s, ok := ctx.Value(surfaceKey{}).(*surfaceScope); ok {
 		return s.surface

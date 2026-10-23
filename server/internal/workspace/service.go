@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/jsonschema"
 	"github.com/yldm-tech/forma/server/internal/langcode"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
@@ -76,7 +77,11 @@ func (s *Service) create(ctx context.Context, userID, organizationID uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.byID(ctx, id)
+	ws, err := s.repo.byID(ctx, id)
+	if err == nil && ws != nil {
+		analytics.WorkspaceCreated(userID.String(), organizationID.String(), ws.ID.String(), ws.Name)
+	}
+	return ws, err
 }
 
 // List is forma2's getUserWorkspaces: the organization's workspaces the user may read (or write, with writable), oldest first, 30 per page when a page is given. Writable lists are forma2's getWritableWorkspacesAction, gated on organization.read_access.

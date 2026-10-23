@@ -442,9 +442,16 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 			Status: audit.StatusSuccess, NewObject: map[string]any{"ssoUnverifiedSignupMarker": true, "provider": provider, "emailVerified": false},
 		})
 	}
+	source := "direct"
+	if strings.Contains(callbackURL, "token=") {
+		source = "invite"
+	}
+	var joined *uuid.UUID
 	if hasDefaultOrg {
 		s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
+		joined = &defaultOrg
 	}
+	captureSignedUp(userID, provider, email, source, joined)
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
 	return callbackResult{redirect: callbackURL, session: &sess}, nil
 }

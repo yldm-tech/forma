@@ -133,7 +133,11 @@ func (s *Service) Create(ctx context.Context, actor authz.Actor, readBody func()
 	if err := v3api.RequireWorkspace(ctx, s.authz, actor, authz.WorkspaceWrite, in.WorkspaceID); err != nil {
 		return nil, err
 	}
-	return s.repo.create(ctx, in.WorkspaceID, in.Name, in.Description, mustJSON(in.Definition), userOf(actor))
+	created, err := s.repo.create(ctx, in.WorkspaceID, in.Name, in.Description, mustJSON(in.Definition), userOf(actor))
+	if err == nil {
+		s.capture(ctx, actor, lifecycleEvent{operation: "created", row: created})
+	}
+	return created, err
 }
 
 // Get is one workflow.
@@ -194,6 +198,9 @@ func (s *Service) Duplicate(ctx context.Context, actor authz.Actor, id uuid.UUID
 		copyName = *name
 	}
 	created, err = s.repo.create(ctx, w.WorkspaceID, copyName, w.Description, w.Definition, userOf(actor))
+	if err == nil {
+		s.capture(ctx, actor, lifecycleEvent{operation: "duplicated", row: created, sourceWorkflowID: &w.ID})
+	}
 	return w, created, err
 }
 
@@ -203,7 +210,11 @@ func (s *Service) Delete(ctx context.Context, actor authz.Actor, id uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	return w, s.repo.delete(ctx, w.ID, w.WorkspaceID)
+	if err := s.repo.delete(ctx, w.ID, w.WorkspaceID); err != nil {
+		return w, err
+	}
+	s.capture(ctx, actor, lifecycleEvent{operation: "deleted", row: w})
+	return w, nil
 }
 
 // Archive takes a workflow of any other status out of use; its trigger survey is kept.
@@ -216,6 +227,7 @@ func (s *Service) Archive(ctx context.Context, actor authz.Actor, id uuid.UUID) 
 		return nil, nil, invalidState(alreadyArchived)
 	}
 	after, err = s.repo.update(ctx, w.ID, w.WorkspaceID, map[string]any{"status": StatusArchived})
+	s.captureTransition(ctx, actor, "archived", w, after, err)
 	return w, after, err
 }
 
@@ -229,6 +241,7 @@ func (s *Service) Unarchive(ctx context.Context, actor authz.Actor, id uuid.UUID
 		return nil, nil, invalidState(onlyArchived)
 	}
 	after, err = s.repo.update(ctx, w.ID, w.WorkspaceID, map[string]any{"status": StatusDraft})
+	s.captureTransition(ctx, actor, "unarchived", w, after, err)
 	return w, after, err
 }
 
@@ -242,6 +255,7 @@ func (s *Service) Disable(ctx context.Context, actor authz.Actor, id uuid.UUID) 
 		return nil, nil, invalidState(onlyEnabled)
 	}
 	after, err = s.repo.update(ctx, w.ID, w.WorkspaceID, map[string]any{"status": StatusDisabled})
+	s.captureTransition(ctx, actor, "disabled", w, after, err)
 	return w, after, err
 }
 
@@ -340,6 +354,7 @@ func (s *Service) Enable(ctx context.Context, actor authz.Actor, id uuid.UUID) (
 	case err != nil:
 		return nil, nil, err
 	}
+	s.captureTransition(ctx, actor, "enabled", w, after, nil)
 	return w, after, nil
 }
 
@@ -376,7 +391,9 @@ func (s *Service) Test(ctx context.Context, actor authz.Actor, id uuid.UUID) (*T
 			problems = append(problems, TestProblem{Code: problemRecipientBlocked, Field: recipientField, Message: recipientReason(email)})
 		}
 	}
-	return &TestResult{WorkflowID: w.ID, OK: len(problems) == 0, Problems: problems}, nil
+	ok := len(problems) == 0
+	s.capture(ctx, actor, lifecycleEvent{operation: "tested", row: w, testOK: &ok})
+	return &TestResult{WorkflowID: w.ID, OK: ok, Problems: problems}, nil
 }
 
 // ListRuns is a page of the workspace's runs, newest first.
