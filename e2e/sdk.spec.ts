@@ -1,7 +1,14 @@
 import { type Server, createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test } from "@playwright/test";
-import { DEFAULT_QUESTION, finishOnboarding, nameSurvey, publish, signUpAndSignIn, startSurveyFromScratch } from "./helpers";
+import {
+  DEFAULT_QUESTION,
+  finishOnboarding,
+  nameSurvey,
+  publish,
+  signUpAndSignIn,
+  startSurveyFromScratch,
+} from "./helpers";
 
 // forma2's js.spec.ts: a website & app survey triggered on a page view, published from the editor, shown by the SDK (/js/forma.umd.cjs, packages/js-core) on a customer's page, answered there and found in the responses view.
 
