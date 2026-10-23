@@ -1,0 +1,43 @@
+{
+  "case": "v1-contacts-list-invalid-pagination",
+  "description": "GET /api/v1/management/contacts with the `manage` key (manage on the workspace, organization access read and write). Invalid values fall back to the defaults.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/contacts",
+    "query": {
+      "limit": "-5",
+      "skip": "abc"
+    },
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:contact:user2>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contact:user1>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "workspaceId": "<id:workspace>"
+        }
+      ]
+    }
+  }
+}

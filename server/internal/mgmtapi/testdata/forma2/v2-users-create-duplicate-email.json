@@ -1,0 +1,41 @@
+{
+  "case": "v2-users-create-duplicate-email",
+  "description": "POST /api/v2/organizations/<id:organization>/users with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/organizations/<id:organization>/users",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "name": "Dup",
+      "email": "member@example.com",
+      "role": "member"
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 409,
+        "message": "Conflict",
+        "details": [
+          {
+            "field": "email",
+            "issue": "A user with this email already exists"
+          }
+        ]
+      }
+    }
+  }
+}

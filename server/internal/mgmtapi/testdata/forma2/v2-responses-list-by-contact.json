@@ -1,0 +1,69 @@
+{
+  "case": "v2-responses-list-by-contact",
+  "description": "GET /api/v2/management/responses with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/responses",
+    "query": {
+      "contactId": "<id:contact:user1>"
+    },
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:response:client-contact>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "finished": false,
+          "surveyId": "<id:survey:app>",
+          "contactId": "<id:contact:user1>",
+          "endingId": null,
+          "data": {
+            "checkout_feedback": "ok"
+          },
+          "variables": {},
+          "ttc": {
+            "checkout_feedback": 900
+          },
+          "meta": {
+            "url": "https://customer.example/checkout",
+            "userAgent": {
+              "device": "desktop"
+            }
+          },
+          "contactAttributes": {
+            "plan": "pro",
+            "email": "user1@example.com",
+            "seats": "12",
+            "userId": "contract-user-1"
+          },
+          "singleUseId": null,
+          "language": null,
+          "displayId": null
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 50,
+        "offset": 0
+      }
+    }
+  }
+}

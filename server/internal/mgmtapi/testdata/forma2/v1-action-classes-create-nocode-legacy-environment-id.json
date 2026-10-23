@@ -1,0 +1,66 @@
+{
+  "case": "v1-action-classes-create-nocode-legacy-environment-id",
+  "description": "POST /api/v1/management/action-classes with the `manage` key (manage on the workspace, organization access read and write). Addressing the workspace through its legacy environment id.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/management/action-classes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "environmentId": "clegacyenvaaaaaaaaaaaaaa1",
+      "name": "Pricing click",
+      "description": null,
+      "type": "noCode",
+      "noCodeConfig": {
+        "type": "click",
+        "elementSelector": {
+          "cssSelector": ".pricing-cta"
+        },
+        "urlFilters": [
+          {
+            "rule": "contains",
+            "value": "/pricing"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:actionClass:pricing>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "name": "Pricing click",
+        "description": null,
+        "type": "noCode",
+        "key": null,
+        "noCodeConfig": {
+          "type": "click",
+          "urlFilters": [
+            {
+              "rule": "contains",
+              "value": "/pricing"
+            }
+          ],
+          "elementSelector": {
+            "cssSelector": ".pricing-cta"
+          }
+        },
+        "workspaceId": "<id:workspace>"
+      }
+    }
+  }
+}

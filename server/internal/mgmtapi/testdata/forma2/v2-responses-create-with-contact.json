@@ -1,0 +1,54 @@
+{
+  "case": "v2-responses-create-with-contact",
+  "description": "POST /api/v2/management/responses with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/responses",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "surveyId": "<id:survey:app>",
+      "contactId": "<id:contact:jane>",
+      "finished": false,
+      "data": {
+        "checkout_feedback": "Slow"
+      },
+      "createdAt": "2026-03-01T08:00:00.000Z"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:v2-contact>",
+        "createdAt": "2026-03-01T08:00:00.000Z",
+        "updatedAt": "2026-03-01T08:00:00.000Z",
+        "finished": false,
+        "surveyId": "<id:survey:app>",
+        "contactId": null,
+        "endingId": null,
+        "data": {
+          "checkout_feedback": "Slow"
+        },
+        "variables": {},
+        "ttc": {},
+        "meta": {},
+        "contactAttributes": null,
+        "singleUseId": null,
+        "language": null,
+        "displayId": null
+      }
+    }
+  }
+}

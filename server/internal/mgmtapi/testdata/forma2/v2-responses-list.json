@@ -1,0 +1,172 @@
+{
+  "case": "v2-responses-list",
+  "description": "GET /api/v2/management/responses with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/responses",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:response:v1-file-url>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "finished": true,
+          "surveyId": "<id:survey:link>",
+          "contactId": null,
+          "endingId": null,
+          "data": {
+            "feedback": "https://attacker.example/file.png"
+          },
+          "variables": {},
+          "ttc": {},
+          "meta": {},
+          "contactAttributes": null,
+          "singleUseId": null,
+          "language": null,
+          "displayId": null
+        },
+        {
+          "id": "<id:response:v1>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "finished": true,
+          "surveyId": "<id:survey:link>",
+          "contactId": null,
+          "endingId": "clendscreenokaaaaaaaaaaa1",
+          "data": {
+            "score": 4,
+            "feedback": "Imported from the CRM"
+          },
+          "variables": {},
+          "ttc": {
+            "score": 900,
+            "_total": 2900,
+            "feedback": 2000
+          },
+          "meta": {
+            "url": "https://customer.example/import",
+            "source": "api"
+          },
+          "contactAttributes": null,
+          "singleUseId": null,
+          "language": "default",
+          "displayId": null
+        },
+        {
+          "id": "<id:response:client-contact>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "finished": false,
+          "surveyId": "<id:survey:app>",
+          "contactId": "<id:contact:user1>",
+          "endingId": null,
+          "data": {
+            "checkout_feedback": "ok"
+          },
+          "variables": {},
+          "ttc": {
+            "checkout_feedback": 900
+          },
+          "meta": {
+            "url": "https://customer.example/checkout",
+            "userAgent": {
+              "device": "desktop"
+            }
+          },
+          "contactAttributes": {
+            "plan": "pro",
+            "email": "user1@example.com",
+            "seats": "12",
+            "userId": "contract-user-1"
+          },
+          "singleUseId": null,
+          "language": null,
+          "displayId": null
+        },
+        {
+          "id": "<id:response:client>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "finished": true,
+          "surveyId": "<id:survey:link>",
+          "contactId": null,
+          "endingId": "clendscreenokaaaaaaaaaaa1",
+          "data": {
+            "score": 5,
+            "feedback": "Faster load times",
+            "utm_source": "newsletter"
+          },
+          "variables": {},
+          "ttc": {
+            "score": 1200,
+            "_total": 8400,
+            "feedback": 3000
+          },
+          "meta": {
+            "url": "<webapp-url>/s/<id:survey:link>?utm_source=newsletter",
+            "source": "link",
+            "userAgent": {
+              "os": "macOS",
+              "device": "desktop",
+              "browser": "Chrome"
+            }
+          },
+          "contactAttributes": null,
+          "singleUseId": null,
+          "language": "default",
+          "displayId": "<id:display:client>"
+        },
+        {
+          "id": "<id:response:v1-userid>",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "<timestamp>",
+          "finished": true,
+          "surveyId": "<id:survey:app>",
+          "contactId": "<id:contact:user2>",
+          "endingId": null,
+          "data": {
+            "checkout_feedback": "Finished checkout"
+          },
+          "variables": {},
+          "ttc": {
+            "_total": 4100,
+            "checkout_feedback": 4100
+          },
+          "meta": {},
+          "contactAttributes": {
+            "plan": "free",
+            "email": "user2@example.com",
+            "userId": "contract-user-2"
+          },
+          "singleUseId": null,
+          "language": null,
+          "displayId": null
+        }
+      ],
+      "meta": {
+        "total": 5,
+        "limit": 50,
+        "offset": 0
+      }
+    }
+  }
+}

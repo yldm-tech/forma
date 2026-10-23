@@ -1,0 +1,66 @@
+{
+  "case": "v2-responses-list-date-filter",
+  "description": "GET /api/v2/management/responses with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/responses",
+    "query": {
+      "startDate": "2026-01-01T00:00:00.000Z",
+      "endDate": "2026-02-01T00:00:00.000Z",
+      "filterDateField": "createdAt"
+    },
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:response:v1-userid>",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "<timestamp>",
+          "finished": true,
+          "surveyId": "<id:survey:app>",
+          "contactId": "<id:contact:user2>",
+          "endingId": null,
+          "data": {
+            "checkout_feedback": "Finished checkout"
+          },
+          "variables": {},
+          "ttc": {
+            "_total": 4100,
+            "checkout_feedback": 4100
+          },
+          "meta": {},
+          "contactAttributes": {
+            "plan": "free",
+            "email": "user2@example.com",
+            "userId": "contract-user-2"
+          },
+          "singleUseId": null,
+          "language": null,
+          "displayId": null
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 50,
+        "offset": 0
+      }
+    }
+  }
+}

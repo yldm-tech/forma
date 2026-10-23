@@ -1,0 +1,39 @@
+{
+  "case": "v1-action-classes-create-invalid-body",
+  "description": "POST /api/v1/management/action-classes with the `manage` key (manage on the workspace, organization access read and write). With a body that fails schema validation.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/management/action-classes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "name": "",
+      "type": "banana"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "bad_request",
+      "message": "Fields are missing or incorrectly formatted",
+      "details": {
+        "type": "Invalid input"
+      }
+    }
+  }
+}

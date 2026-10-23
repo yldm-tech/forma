@@ -1,0 +1,83 @@
+{
+  "case": "v2-responses-update-partial-body",
+  "description": "PUT /api/v2/management/responses/<id:response:v2> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v2/management/responses/<id:response:v2>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": false
+    }
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 422,
+        "message": "Unprocessable Entity",
+        "details": [
+          {
+            "field": "createdAt",
+            "issue": "Invalid input: expected date, received Date"
+          },
+          {
+            "field": "updatedAt",
+            "issue": "Invalid input: expected date, received Date"
+          },
+          {
+            "field": "contactId",
+            "issue": "Invalid input: expected string, received undefined"
+          },
+          {
+            "field": "endingId",
+            "issue": "Invalid input: expected string, received undefined"
+          },
+          {
+            "field": "data",
+            "issue": "Invalid input: expected record, received undefined"
+          },
+          {
+            "field": "variables",
+            "issue": "Invalid input: expected record, received undefined"
+          },
+          {
+            "field": "ttc",
+            "issue": "Invalid input: expected record, received undefined"
+          },
+          {
+            "field": "meta",
+            "issue": "Invalid input: expected object, received undefined"
+          },
+          {
+            "field": "contactAttributes",
+            "issue": "Invalid input: expected record, received undefined"
+          },
+          {
+            "field": "singleUseId",
+            "issue": "Invalid input: expected string, received undefined"
+          },
+          {
+            "field": "language",
+            "issue": "Invalid input: expected string, received undefined"
+          },
+          {
+            "field": "displayId",
+            "issue": "Invalid input: expected string, received undefined"
+          }
+        ]
+      }
+    }
+  }
+}

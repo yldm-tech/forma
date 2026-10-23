@@ -1,0 +1,33 @@
+{
+  "case": "v2-teams-create-without-organization-access",
+  "description": "POST /api/v2/organizations/<id:organization>/teams with the `write` key (write on the workspace, no organization access).",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/organizations/<id:organization>/teams",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:write>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "name": "No access"
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 401,
+        "message": "Unauthorized"
+      }
+    }
+  }
+}

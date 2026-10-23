@@ -1,0 +1,98 @@
+{
+  "case": "v1-contact-attributes-list",
+  "description": "GET /api/v1/management/contact-attributes with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/contact-attributes",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:contactAttribute:user1:userId>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:userId>",
+          "contactId": "<id:contact:user1>",
+          "value": "contract-user-1",
+          "valueNumber": null,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user1:email>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:email>",
+          "contactId": "<id:contact:user1>",
+          "value": "user1@example.com",
+          "valueNumber": null,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user1:plan>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:plan>",
+          "contactId": "<id:contact:user1>",
+          "value": "pro",
+          "valueNumber": null,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user1:seats>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:seats>",
+          "contactId": "<id:contact:user1>",
+          "value": "12",
+          "valueNumber": 12,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user2:userId>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:userId>",
+          "contactId": "<id:contact:user2>",
+          "value": "contract-user-2",
+          "valueNumber": null,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user2:email>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:email>",
+          "contactId": "<id:contact:user2>",
+          "value": "user2@example.com",
+          "valueNumber": null,
+          "valueDate": null
+        },
+        {
+          "id": "<id:contactAttribute:user2:plan>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "attributeKeyId": "<id:contactAttributeKey:plan>",
+          "contactId": "<id:contact:user2>",
+          "value": "free",
+          "valueNumber": null,
+          "valueDate": null
+        }
+      ]
+    }
+  }
+}

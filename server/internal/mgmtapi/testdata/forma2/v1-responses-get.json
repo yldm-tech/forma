@@ -1,0 +1,60 @@
+{
+  "case": "v1-responses-get",
+  "description": "GET /api/v1/management/responses/<id:response:client> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/management/responses/<id:response:client>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:client>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "surveyId": "<id:survey:link>",
+        "finished": true,
+        "endingId": "clendscreenokaaaaaaaaaaa1",
+        "data": {
+          "score": 5,
+          "feedback": "Faster load times",
+          "utm_source": "newsletter"
+        },
+        "meta": {
+          "url": "<webapp-url>/s/<id:survey:link>?utm_source=newsletter",
+          "source": "link",
+          "userAgent": {
+            "os": "macOS",
+            "device": "desktop",
+            "browser": "Chrome"
+          }
+        },
+        "ttc": {
+          "score": 1200,
+          "_total": 8400,
+          "feedback": 3000
+        },
+        "variables": {},
+        "contactAttributes": null,
+        "singleUseId": null,
+        "language": "default",
+        "displayId": "<id:display:client>",
+        "contact": null,
+        "tags": []
+      }
+    }
+  }
+}
