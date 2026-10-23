@@ -168,8 +168,9 @@ const (
 	signInMethodSSO      = "sso"
 )
 
-// finalizeSignIn is what forma2 ran after every sign-in completion: the signedIn audit event and the user's last login time. Neither may fail a sign-in that already succeeded.
+// finalizeSignIn is what forma2 ran after every sign-in completion: the signedIn audit event, user_signed_in with the request's marketing attribution (consumed whether or not analytics is on), and the user's last login time. None of it may fail a sign-in that already succeeded.
 func (s *Service) finalizeSignIn(ctx context.Context, userID uuid.UUID, method string) {
+	attribution := consumeAttribution(ctx)
 	s.logEvent(ctx, audit.Event{
 		Action: audit.ActionSignedIn, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(),
 		Status: audit.StatusSuccess, NewObject: map[string]string{"authMethod": method, "sessionStrategy": "database"},
@@ -178,7 +179,7 @@ func (s *Service) finalizeSignIn(ctx context.Context, userID uuid.UUID, method s
 		if previous, organizations, err := s.repo.signInFacts(ctx, userID); err != nil {
 			s.log.WarnContext(ctx, "Failed to capture PostHog sign-in event", "err", err)
 		} else {
-			captureSignedIn(userID, method, previous, organizations, s.now())
+			captureSignedIn(userID, method, previous, organizations, s.now(), attribution)
 		}
 	}
 	if err := s.repo.touchLastLogin(ctx, userID, s.now()); err != nil {

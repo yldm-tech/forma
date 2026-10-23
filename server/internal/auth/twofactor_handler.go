@@ -125,6 +125,7 @@ func (h *Handler) verifySecondFactor(c *gin.Context, factor secondFactor) {
 		return
 	}
 	token, _ := c.Cookie(h.cookies.twoFactor)
+	attr := readAttribution(c)
 	sess, err := h.twoFactor.verifySignIn(c.Request.Context(), token, factor, req.Code, clientMetaFrom(c))
 	if err != nil {
 		if e, ok := apperr.As(err); ok && (e.Code == CodeTooManyAttempts || e.Code == CodeInvalidTwoFactorCookie) {
@@ -135,5 +136,6 @@ func (h *Handler) verifySecondFactor(c *gin.Context, factor secondFactor) {
 	}
 	h.cookies.setSession(c, sess)
 	h.cookies.clear(c, h.cookies.twoFactor)
+	h.cookies.clearAttribution(c, attr)
 	c.JSON(http.StatusOK, signInResponse{Status: "signed_in"})
 }

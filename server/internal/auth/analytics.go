@@ -13,10 +13,10 @@ import (
 // The product events of the identity module, forma2's (apps/web/modules/auth, sso, account). They carry the email domain but never the address or the name: the person is identified by their user id alone.
 
 // captureSignedUp is forma2's user_signed_up with the person identified first, so the event lands on an identified person. organizationID is the organization the sign-up joined or created, nil when it has none.
-func captureSignedUp(userID uuid.UUID, provider, email, source string, organizationID *uuid.UUID) {
+func captureSignedUp(userID uuid.UUID, provider, email, source string, organizationID *uuid.UUID, attribution analytics.Properties) {
 	domain := analytics.EmailDomain(email)
 	analytics.Identify(userID.String(), analytics.Properties{"email_domain": domain})
-	props := analytics.Properties{"auth_provider": provider, "email_domain": domain, "signup_source": source, "invite_organization_id": nil}
+	props := withAttribution(attribution, analytics.Properties{"auth_provider": provider, "email_domain": domain, "signup_source": source, "invite_organization_id": nil})
 	groups := analytics.Groups{}
 	if organizationID != nil {
 		props["invite_organization_id"] = organizationID.String()
@@ -25,8 +25,9 @@ func captureSignedUp(userID uuid.UUID, provider, email, source string, organizat
 	analytics.Capture(userID.String(), "user_signed_up", props, groups)
 }
 
-// captureCredentialSignUp is the analytics of a password sign-up: an invitee's organization group, or the events of the organization the sign-up created, then the sign-up itself.
+// captureCredentialSignUp is the analytics of a password sign-up: an invitee's organization group, or the events of the organization the sign-up created, then the sign-up itself. The request's marketing attribution is consumed whether or not analytics is on, as forma2 cleared the cookie either way.
 func (s *Service) captureCredentialSignUp(ctx context.Context, userID uuid.UUID, email string, orgID uuid.UUID, invited bool) {
+	attribution := consumeAttribution(ctx)
 	if !analytics.Enabled() {
 		return
 	}
@@ -44,17 +45,17 @@ func (s *Service) captureCredentialSignUp(ctx context.Context, userID uuid.UUID,
 	case org != nil:
 		analytics.OrganizationCreated(userID.String(), orgID.String(), org.Name, org.WorkspaceID.String(), org.WorkspaceName, analytics.EmailDomain(email), true)
 	}
-	captureSignedUp(userID, "credentials", email, source, &orgID)
+	captureSignedUp(userID, "credentials", email, source, &orgID, attribution)
 }
 
 // captureSignedIn is forma2's user_signed_in: how the user signed in, how many organizations they belong to, and whether this is their first sign-in of the UTC day. previousLogin is the last sign-in before this one.
-func captureSignedIn(userID uuid.UUID, method string, previousLogin *time.Time, organizations int64, now time.Time) {
+func captureSignedIn(userID uuid.UUID, method string, previousLogin *time.Time, organizations int64, now time.Time, attribution analytics.Properties) {
 	firstToday := previousLogin == nil || previousLogin.UTC().Format(time.DateOnly) != now.UTC().Format(time.DateOnly)
-	analytics.Capture(userID.String(), "user_signed_in", analytics.Properties{
+	analytics.Capture(userID.String(), "user_signed_in", withAttribution(attribution, analytics.Properties{
 		"auth_provider":        method,
 		"organization_count":   organizations,
 		"is_first_login_today": firstToday,
-	}, analytics.Groups{})
+	}), analytics.Groups{})
 }
 
 // signInFacts are what user_signed_in reports, read before the sign-in is recorded.

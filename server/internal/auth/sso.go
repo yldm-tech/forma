@@ -463,7 +463,8 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
 		joined = &defaultOrg
 	}
-	captureSignedUp(userID, provider, email, source, joined)
+	// The sign-in below consumes the attribution; the sign-up reads it first, as forma2 carried it from the create hook to the after hook.
+	captureSignedUp(userID, provider, email, source, joined, attributionProperties(ctx))
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
 	return callbackResult{redirect: callbackURL, session: &sess}, nil
 }
