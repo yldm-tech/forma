@@ -155,6 +155,15 @@ func (s *Sessions) delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// End ends the request's session and clears the browser's session cookie, for a sign-out another module completes: the authorization server's RP-initiated logout.
+func (s *Sessions) End(c *gin.Context, id uuid.UUID) error {
+	if err := s.delete(c.Request.Context(), id); err != nil {
+		return err
+	}
+	s.cookies.clear(c, s.cookies.session)
+	return nil
+}
+
 // RevokeAll ends every session of the user except keep (uuid.Nil keeps none) and returns how many it ended. Pass the transaction of the change that requires it, or nil to use the pool.
 func (s *Sessions) RevokeAll(ctx context.Context, tx *gorm.DB, userID, keep uuid.UUID) (int64, error) {
 	db := s.db

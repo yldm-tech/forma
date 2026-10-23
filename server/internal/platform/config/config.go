@@ -150,6 +150,9 @@ type Config struct {
 	// Unsplash is the survey editor's image background search.
 	Unsplash UnsplashConfig
 
+	// Plain is the in-product support chat, off unless PLAIN_APP_ID is set.
+	Plain PlainConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
@@ -54,6 +55,12 @@ func TestBillingPage(t *testing.T) {
 	a.ok(a.do(member, http.MethodGet, billingPath(org, ""), nil), &page)
 	if page.HasBillingRights {
 		t.Error("a member has billing rights")
+	}
+	// The users in the a-b_billing_plan-comparison-table experiment's test variant see the comparison table.
+	analyticstest.Start(t).SetFlag("a-b_billing_plan-comparison-table", "test")
+	a.ok(a.do(owner, http.MethodGet, billingPath(org, ""), nil), &page)
+	if !page.IsPlanComparison {
+		t.Error("no plan comparison for the experiment's test variant")
 	}
 	a.fails(a.do(a.user("Stranger", "s@example.com"), http.MethodGet, billingPath(org, ""), nil), http.StatusNotFound, apperr.CodeNotFound)
 	if len(a.stripe.requests(http.MethodGet, "/v1/subscriptions")) != 0 {

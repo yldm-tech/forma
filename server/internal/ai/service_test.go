@@ -27,10 +27,12 @@ import (
 	"github.com/yldm-tech/forma/server/internal/authz"
 	"github.com/yldm-tech/forma/server/internal/authz/authztest"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
 )
 
 func TestMain(m *testing.M) {
@@ -133,6 +135,7 @@ type serviceEnv struct {
 	db       *gorm.DB
 	authz    *authztest.Env
 	svc      *Service
+	examples *ExampleResponses
 	engine   *gin.Engine
 	logs     *syncBuffer
 	provider *fakeProvider
@@ -144,7 +147,7 @@ func newServiceEnv(t *testing.T, configure func(*config.AIConfig)) *serviceEnv {
 	t.Parallel()
 	provider := newFakeProvider(t)
 	u, _ := url.Parse(webApp)
-	cfg := config.Config{WebAppURL: u, RateLimitingDisabled: true, TrustedProxyHopCount: 1, AI: config.AIConfig{Provider: "openai-compatible", Model: "qwen", ModelTranslation: "qwen-small", OpenAICompatibleBaseURL: provider.URL, OpenAICompatibleSupportsStructuredOutputs: "1"}}
+	cfg := config.Config{WebAppURL: u, RateLimitingDisabled: true, AuditLogEnabled: true, TrustedProxyHopCount: 1, AI: config.AIConfig{Provider: "openai-compatible", Model: "qwen", ModelTranslation: "qwen-small", OpenAICompatibleBaseURL: provider.URL, OpenAICompatibleSupportsStructuredOutputs: "1"}}
 	if configure != nil {
 		configure(&cfg.AI)
 	}
@@ -155,9 +158,10 @@ func newServiceEnv(t *testing.T, configure func(*config.AIConfig)) *serviceEnv {
 	client := NewClient(cfg, log)
 	client.endpoints = endpoints{retries: &zero}
 	e.svc = NewService(client, NewRepository(db), e.authz.Authorizer, log)
+	e.examples = NewExampleResponses(e.svc, db, ratelimit.New(cfg, nil, log), audit.New(cfg, log), log)
 	e.engine = httpserver.NewEngine(log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
-	NewHandler(e.svc, headerSessions{}).Register(group)
+	NewHandler(e.svc, e.examples, headerSessions{}).Register(group)
 	return e
 }
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { PlainChat } from "./plain-chat";
 
-/** forma2's workspace and settings shell: a sidebar, and beside it the top bar over the scrolling page. A banner (the limits notice) floats over both. */
+/** forma2's workspace and settings shell: a sidebar, and beside it the top bar over the scrolling page. A banner (the limits notice) floats over both. The Plain support chat is mounted here, as forma2's app layout did, and loads only where the server configured it. */
 export const AppShell = ({
   sidebar,
   topBar,
@@ -14,6 +15,7 @@ export const AppShell = ({
 }) => (
   <div className="flex h-screen min-h-screen flex-col overflow-hidden">
     {banner}
+    <PlainChat />
     <div className="flex h-full">
       {sidebar}
       <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">

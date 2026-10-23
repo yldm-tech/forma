@@ -32,6 +32,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/server/internal/org"
 	"github.com/yldm-tech/forma/server/internal/pipeline"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
@@ -76,6 +77,7 @@ var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
 	wire.Bind(new(httpapi.SessionAuth), new(*auth.Sessions)),
+	wire.Bind(new(oauthserver.Sessions), new(*auth.Sessions)),
 	auth.NewService,
 	auth.NewTwoFactor,
 	auth.NewHandler,
@@ -124,11 +126,12 @@ var contactSet = wire.NewSet(
 	contact.NewV3Handler,
 )
 
-// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability and the editor's AI translation.
+// aiSet is the instance's AI provider, the organization AI service every AI feature generates through, and its /api/app routes: availability, the editor's AI translation and a survey summary's example responses.
 var aiSet = wire.NewSet(
 	ai.NewClient,
 	ai.NewRepository,
 	ai.NewService,
+	ai.NewExampleResponses,
 	ai.NewHandler,
 )
 
@@ -322,6 +325,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		notification.NewHandler,
 		contactSurveySet,
 		emailEmbedSet,
+		plain.NewHandler,
 		health.NewDatabasePinger,
 		health.NewHandler,
 		webui.New,

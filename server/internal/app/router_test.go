@@ -23,6 +23,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/invite"
 	"github.com/yldm-tech/forma/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/server/internal/org"
+	"github.com/yldm-tech/forma/server/internal/plain"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
@@ -108,7 +109,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	r := httpserver.NewEngine(log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)
 	actionClasses, tags := actionclass.NewHandler(nil, sessions, v3), tag.NewHandler(nil, sessions, v3, nil)
-	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, sessions), workflows, billing.NewHandler(nil, sessions))
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, nil, sessions), workflows, billing.NewHandler(nil, sessions), plain.NewHandler(cfg, nil, sessions))
 	billing.NewWebhookHandler(nil, log).Register(r)
 	surveys.RegisterV3(r)
 	workflows.RegisterV3(r)
@@ -148,6 +149,8 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"POST /api/app/workspaces/:workspaceId/ai/translations":                       true,
 		"GET /api/app/organizations/:organizationId/ai":                               true,
 		"GET /api/app/surveys/:surveyId/ai/translation-availability":                  true,
+		"POST /api/app/surveys/:surveyId/ai/example-responses":                        true,
+		"GET /api/app/plain/session":                                                  true,
 		"POST /api/app/surveys/generate/stream":                                       true,
 		"GET /api/app/organizations/:organizationId/workspaces":                       true,
 		"GET /api/app/organizations/:organizationId/members":                          true,
