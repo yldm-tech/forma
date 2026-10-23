@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -79,7 +80,10 @@ func TestEnqueueResponseCompleted(t *testing.T) {
 
 	ending := testEndingID
 	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, &ending)
-	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+	customer := "cus_123"
+	ev := e.event(f, r)
+	ev.StripeCustomerID = &customer
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), ev); err != nil {
 		t.Fatal(err)
 	}
 	if e.count(`SELECT count(*) FROM workflow_runs`) != 3 {
@@ -88,6 +92,15 @@ func TestEnqueueResponseCompleted(t *testing.T) {
 	run := e.runFor(all, r.ID)
 	e.runFor(oneEnding, r.ID)
 	e.runFor(unnarrowed, r.ID)
+	// Every new run is metered once for the organization's customer, at its own creation time.
+	var createdAt time.Time
+	if err := e.db.Raw(`SELECT created_at FROM workflow_runs WHERE id = ?`, run).Row().Scan(&createdAt); err != nil {
+		t.Fatal(err)
+	}
+	metered := e.meter.metered()
+	if len(metered) != 3 || !slices.Contains(metered, "cus_123 "+run.String()+" "+createdAt.UTC().Format(time.RFC3339Nano)) {
+		t.Fatalf("metered %v", metered)
+	}
 	if !strings.Contains(e.logs.String(), "Enabled workflow has no published version") || !strings.Contains(e.logs.String(), unpublished.String()) {
 		t.Fatal("the unpublished workflow was not reported")
 	}
@@ -118,11 +131,11 @@ func TestEnqueueResponseCompleted(t *testing.T) {
 		t.Fatalf("%d jobs for the run", e.jobsFor(run))
 	}
 
-	// A replayed event creates no run and no job.
-	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+	// A replayed event creates no run and no job, and meters nothing again.
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), ev); err != nil {
 		t.Fatal(err)
 	}
-	if e.count(`SELECT count(*) FROM workflow_runs`) != 3 || e.jobsFor(run) != 1 {
+	if e.count(`SELECT count(*) FROM workflow_runs`) != 3 || e.jobsFor(run) != 1 || len(e.meter.metered()) != 3 {
 		t.Fatal("a replay duplicated work")
 	}
 

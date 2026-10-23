@@ -138,6 +138,9 @@ type Config struct {
 	// Integrations are the OAuth apps of Google Sheets, Airtable, Notion and Slack.
 	Integrations IntegrationsConfig
 
+	// Stripe is Forma Cloud's billing account. Billing runs only on Forma Cloud with STRIPE_SECRET_KEY set; everywhere else it is off.
+	Stripe StripeConfig
+
 	LogLevel  slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string     `env:"LOG_FORMAT" envDefault:"json"`
 }
@@ -200,6 +203,16 @@ type SSOConfig struct {
 	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
+}
+
+// StripeConfig is forma2's STRIPE_* variables, all optional.
+type StripeConfig struct {
+	// SecretKey is the API key every Stripe call is made with; without it billing does nothing.
+	SecretKey Secret `env:"STRIPE_SECRET_KEY"`
+	// WebhookSecret verifies the signature of the events Stripe posts to /api/billing/stripe-webhook; without it the endpoint answers 503.
+	WebhookSecret Secret `env:"STRIPE_WEBHOOK_SECRET"`
+	// PublishableKey is handed to Stripe.js on the billing page to confirm a card payment that needs 3D Secure.
+	PublishableKey string `env:"STRIPE_PUBLISHABLE_KEY"`
 }
 
 // IntegrationsConfig is forma2's OAuth app credentials of the third-party integrations, under its variable names. An integration can be connected exactly when its variables are set.
