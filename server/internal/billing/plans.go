@@ -9,12 +9,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v84"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
 // Trial lengths, forma2's DEFAULT_PRO_TRIAL_DAYS. forma2 shortened it to seven days for a PostHog experiment's test variant; without the experiment every trial is the default.
 const proTrialDays = 14
+
+// shortenedProTrialDays is the trial of forma2's a-b_billing_shorten-trial-days experiment's "test" variant.
+const shortenedProTrialDays = 7
+
+// trialDays is forma2's getProTrialDays: the Pro trial's length, shortened for the organizations PostHog puts in the experiment's test variant.
+func trialDays(organizationID uuid.UUID) int64 {
+	if analytics.FeatureFlag(organizationID.String(), "a-b_billing_shorten-trial-days", analytics.Groups{OrganizationID: organizationID.String()}) == "test" {
+		return shortenedProTrialDays
+	}
+	return proTrialDays
+}
 
 func errNotFound(resource string, organizationID uuid.UUID) *apperr.Error {
 	return apperr.NotFound(resource, organizationID.String())

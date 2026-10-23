@@ -184,3 +184,24 @@ func WorkspaceCreated(userID, organizationID, workspaceID, workspaceName string)
 	GroupIdentify(GroupWorkspace, workspaceID, Properties{"name": workspaceName})
 	Capture(userID, "workspace_created", Properties{"organization_id": organizationID, "workspace_id": workspaceID, "name": workspaceName}, Groups{OrganizationID: organizationID, WorkspaceID: workspaceID})
 }
+
+// FeatureFlag is forma2's getPostHogFeatureFlag: the flag's value for distinctID within groups, false without PostHog or when PostHog cannot answer.
+func FeatureFlag(distinctID, key string, groups Groups) any {
+	c := current.Load()
+	if c == nil {
+		return false
+	}
+	payload := posthog.FeatureFlagPayload{Key: key, DistinctId: distinctID}
+	if g := groups.posthog(); g != nil {
+		payload.Groups = g
+	}
+	value, err := c.ph.GetFeatureFlag(payload)
+	if err != nil {
+		c.log.Warn("Failed to evaluate PostHog feature flag", "flagKey", key, "err", err)
+		return false
+	}
+	if value == nil {
+		return false
+	}
+	return value
+}

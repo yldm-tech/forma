@@ -56,3 +56,14 @@ func TestEmailDomain(t *testing.T) {
 		}
 	}
 }
+
+func TestFeatureFlagsDefaultToFalse(t *testing.T) {
+	if v := analytics.FeatureFlag("org-1", "a-b_billing_shorten-trial-days", analytics.Groups{OrganizationID: "org-1"}); v != false {
+		t.Errorf("flag without PostHog = %v, want false", v)
+	}
+	// The test endpoint answers flag requests with an error, as an unreachable PostHog would.
+	analyticstest.Start(t)
+	if v := analytics.FeatureFlag("org-1", "a-b_billing_shorten-trial-days", analytics.Groups{OrganizationID: "org-1"}); v != false {
+		t.Errorf("flag PostHog could not answer = %v, want false", v)
+	}
+}
