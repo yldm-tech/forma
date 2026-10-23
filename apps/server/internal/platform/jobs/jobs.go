@@ -27,7 +27,7 @@ const (
 	discardedRetention = 7 * 24 * time.Hour
 )
 
-// Migrate installs or upgrades River's own tables (river_job, river_queue, ...). It runs after the goose migrations in `forma migrate`; River versions its schema itself, so these tables are not in server/migrations.
+// Migrate installs or upgrades River's own tables (river_job, river_queue, ...). It runs after the goose migrations in `forma migrate`; River versions its schema itself, so these tables are not in apps/server/migrations.
 func Migrate(ctx context.Context, databaseURL string, log *slog.Logger) error {
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {

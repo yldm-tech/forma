@@ -17,8 +17,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/seed"
 )
 
-// defaultFixturesPath is where `forma seed --contract` writes the contract tests' id map when run from the repository root, the directory docs/api-v3-reference/contract-tests/hooks.py reads it from.
-const defaultFixturesPath = "docs/api-v3-reference/contract-tests/fixtures.json"
+// defaultFixturesPath is where `forma seed --contract` writes the contract tests' id map when run from the repository root, the directory apps/docs/api-v3-reference/contract-tests/hooks.py reads it from.
+const defaultFixturesPath = "apps/docs/api-v3-reference/contract-tests/fixtures.json"
 
 // seedEnv is what `forma seed` reads besides the database: forma2's ALLOW_SEED switch and SEED_API_KEY.
 type seedEnv struct {

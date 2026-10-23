@@ -12,9 +12,9 @@ import (
 	"testing"
 )
 
-// docker/forma.sh, the one-click installer, rewrites a forma2 installation's compose file and .env for the server this package configures; these tests run it against forma2's files with a docker stand-in on PATH, and check that what it drops and keeps agrees with what Load reads.
+// deploy/docker/forma.sh, the one-click installer, rewrites a forma2 installation's compose file and .env for the server this package configures; these tests run it against forma2's files with a docker stand-in on PATH, and check that what it drops and keeps agrees with what Load reads.
 
-const formaSh = "../../../../docker/forma.sh"
+const formaSh = "../../../../../deploy/docker/forma.sh"
 
 // readEnvNames is every variable the loaders of this package read.
 func readEnvNames() map[string]bool {
@@ -125,7 +125,7 @@ func (e *installEnv) run(args ...string) (string, error) {
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	source, err := filepath.Abs("../../../../docker")
+	source, err := filepath.Abs("../../../../../deploy/docker")
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	}
 
 	// The release's compose file replaces forma2's, which is kept.
-	release, err := os.ReadFile("../../../../docker/docker-compose.yml")
+	release, err := os.ReadFile("../../../../../deploy/docker/docker-compose.yml")
 	if err != nil {
 		t.Fatal(err)
 	}

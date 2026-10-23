@@ -14,10 +14,10 @@ func TestWebSurveyHTMLHasTheMarkers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s := newShell(b); string(s.doc) != string(b) {
-		t.Fatal("web/survey.html lacks the head or state marker")
+		t.Fatal("apps/web/survey.html lacks the head or state marker")
 	}
 	if !strings.Contains(string(b), `<html lang="`) {
-		t.Fatal("web/survey.html has no lang attribute to set")
+		t.Fatal("apps/web/survey.html has no lang attribute to set")
 	}
 }
 

@@ -1,6 +1,6 @@
 // Package linksurvey is the public survey pages respondents open: /s/{surveyId}, the personal /c/{token} links and the /p/{slug} pretty URLs, with the PIN and email verification gates in front of a survey and the OG image its link previews show. It ports forma2's modules/survey/link.
 //
-// The server decides everything a page may show and renders the document head; the page itself is the survey page bundle of the web app (web/survey.html), which reads the state the server embeds and renders the survey with the respondent runtime (/js/surveys.umd.js).
+// The server decides everything a page may show and renders the document head; the page itself is the survey page bundle of the web app (apps/web/survey.html), which reads the state the server embeds and renders the survey with the respondent runtime (/js/surveys.umd.js).
 package linksurvey
 
 import (

@@ -13,8 +13,7 @@ assertion-based validation suite.
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than
   being duplicated in this repository.
-- [`AuthZed Operations`](../docs/self-hosting/advanced/authzed-operations.mdx) —
-  the public self-hosting contract for Docker and Kubernetes operators.
+- [`AuthZed Operations`](../../docs/self-hosting/advanced/authzed-operations.mdx) — the public self-hosting contract for Docker and Kubernetes operators.
 
 ## Running the validation
 
@@ -162,13 +161,7 @@ organization, and any membership update that leaves `role` unchanged (the
 projected snapshot ignores `accepted`, so accepting an invite writes identical
 relationships).
 
-The permission ladder is deliberately not encoded in the trigger. It is rankable,
-but a rank table in SQL has no compile-time backstop the way
-`relationship-map.ts` does, so a change to `authzed/schema.zed` would silently
-make it wrong in the fail-open direction — the one direction this guard must
-never be wrong in. Role changes are one-at-a-time admin actions rather than the
-bulk operations the classifier exists to keep off the guard. Revisit only if a
-bulk re-roling path appears.
+The permission ladder is deliberately not encoded in the trigger. It is rankable, but a rank table in SQL has no compile-time backstop the way `relationship-map.ts` does, so a change to `apps/server/authzed/schema.zed` would silently make it wrong in the fail-open direction — the one direction this guard must never be wrong in. Role changes are one-at-a-time admin actions rather than the bulk operations the classifier exists to keep off the guard. Revisit only if a bulk re-roling path appears.
 
 This matters because the guard is global and unscoped. Direct authority refuses
 protected operations with `authzed_projection_stale` when an unresolved
@@ -552,7 +545,7 @@ dead-letter rows are never removed by retention cleanup.
 
 ## Self-hosted initialization and upgrades
 
-There is no separate upgrade command; deployments run the `forma authz` steps above in order. The Helm chart's `authzed-initialize` Job (`charts/forma/templates/authzed-initialize-job.yaml`) runs on a fresh install, and before an upgrade once `authzed.migrationAcknowledged=true`:
+There is no separate upgrade command; deployments run the `forma authz` steps above in order. The Helm chart's `authzed-initialize` Job (`deploy/helm/forma/templates/authzed-initialize-job.yaml`) runs on a fresh install, and before an upgrade once `authzed.migrationAcknowledged=true`:
 
 ```bash
 forma authz schema apply

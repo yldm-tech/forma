@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-var update = flag.Bool("update", false, "rewrite catalog/locales from web/locales")
+var update = flag.Bool("update", false, "rewrite catalog/locales from apps/web/locales")
 
-// catalog/locales/*.json must stay the strings of web/locales the template catalog uses; run with -update after changing web/locales.
+// catalog/locales/*.json must stay the strings of apps/web/locales the template catalog uses; run with -update after changing apps/web/locales.
 func TestCatalogueMatchesWebLocales(t *testing.T) {
 	for _, locale := range catalogLocales {
 		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "locales", locale+".json"))
@@ -75,7 +75,7 @@ func TestCatalogueMatchesWebLocales(t *testing.T) {
 		a, _ := json.Marshal(got)
 		b, _ := json.Marshal(want)
 		if !bytes.Equal(a, b) {
-			t.Errorf("%s differs from web/locales/%s.json; run go test ./internal/survey -run TestCatalogueMatchesWebLocales -update", path, locale)
+			t.Errorf("%s differs from apps/web/locales/%s.json; run go test ./internal/survey -run TestCatalogueMatchesWebLocales -update", path, locale)
 		}
 	}
 }

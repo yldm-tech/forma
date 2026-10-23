@@ -10,9 +10,9 @@ import (
 	"testing"
 )
 
-var update = flag.Bool("update", false, "rewrite locales/*.json from web/locales")
+var update = flag.Bool("update", false, "rewrite locales/*.json from apps/web/locales")
 
-// locales/*.json must stay the keys of web/locales the preview uses; run with -update after changing web/locales.
+// locales/*.json must stay the keys of apps/web/locales the preview uses; run with -update after changing apps/web/locales.
 func TestLocalesMatchWebLocales(t *testing.T) {
 	for _, locale := range Locales {
 		b, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "web", "locales", locale+".json"))
@@ -32,7 +32,7 @@ func TestLocalesMatchWebLocales(t *testing.T) {
 			}
 			s, ok := v.(string)
 			if !ok {
-				t.Fatalf("web/locales/%s.json has no %s", locale, key)
+				t.Fatalf("apps/web/locales/%s.json has no %s", locale, key)
 			}
 			messages[key] = s
 		}
@@ -53,7 +53,7 @@ func TestLocalesMatchWebLocales(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(got, want) {
-			t.Errorf("%s differs from web/locales/%s.json; run go test ./internal/survey/emailembed -run TestLocalesMatchWebLocales -update", path, locale)
+			t.Errorf("%s differs from apps/web/locales/%s.json; run go test ./internal/survey/emailembed -run TestLocalesMatchWebLocales -update", path, locale)
 		}
 	}
 }

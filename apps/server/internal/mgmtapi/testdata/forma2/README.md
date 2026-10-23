@@ -4,7 +4,7 @@ Each `<case>.json` file is one HTTP exchange recorded against a running forma2 i
 
 ## Source
 
-- Image: `ghcr.io/yldm-tech/forma:latest`, digest `sha256:f26ba6bd0c01cbbb1d0207490f1f9af702b53b67a70745867707164230bbbd57` (linux/amd64, run under emulation on arm64), label `org.opencontainers.image.version=0.1.22`, built from `2f54f4df3ce7c7023627b5b4134be93abb645fa0`. This is the same image the client API fixtures in `server/internal/clientapi/testdata/forma2` were recorded from.
+- Image: `ghcr.io/yldm-tech/forma:latest`, digest `sha256:f26ba6bd0c01cbbb1d0207490f1f9af702b53b67a70745867707164230bbbd57` (linux/amd64, run under emulation on arm64), label `org.opencontainers.image.version=0.1.22`, built from `2f54f4df3ce7c7023627b5b4134be93abb645fa0`. This is the same image the client API fixtures in `apps/server/internal/clientapi/testdata/forma2` were recorded from.
 - That commit is 15 commits before `3db326f`, the forma2 snapshot the rewrite ports from. Between the two, the code behind these routes changed in four places, none of which changes a recorded response except the webhook source: `POST /api/v2/management/responses` no longer loads the organization's billing row (no response change); the webhook `source` enum is derived from the Prisma enum and so also accepts `activepieces`, which this image rejects (`v2-webhooks-create-activepieces-source`: 422 here, 201 at `3db326f`); `lastLoginAt` became nullable in the v2 user schema (an input-schema change only); and the MCP survey tools gained `archive_survey` and `restore_survey` (MCP could not be recorded, see below).
 - Recorded on 2026-10-22 (UTC).
 

@@ -64,7 +64,7 @@ type Options struct {
 	Contract bool
 }
 
-// Run seeds db. In contract mode the returned fixtures are the id map docs/api-v3-reference/contract-tests/hooks.py reads; otherwise they are nil.
+// Run seeds db. In contract mode the returned fixtures are the id map apps/docs/api-v3-reference/contract-tests/hooks.py reads; otherwise they are nil.
 func Run(ctx context.Context, db *gorm.DB, opts Options, log *slog.Logger) (*Fixtures, error) {
 	if opts.Contract && opts.APIKeySecret == "" {
 		return nil, errors.New("contract fixtures need SEED_API_KEY: the contract tests authenticate with the seeded API key")
