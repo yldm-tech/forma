@@ -45,9 +45,6 @@ export type TValidationResult =
   | (TPictureSelectionValidResult & { type: TSurveyElementTypeEnum.PictureSelection });
 
 // Type guards for narrowing validation results
-export const isValidResult = (result: TValidationResult): result is TValidationResult & { isValid: true } =>
-  result.isValid;
-
 export const isSingleChoiceResult = (
   result: TValidationResult
 ): result is TSingleChoiceValidResult & { type: TSurveyElementTypeEnum.MultipleChoiceSingle } =>

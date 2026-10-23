@@ -18,15 +18,11 @@ const createLocalCalendarDate = ({
 }: Pick<TimeZoneDateParts, "day" | "month" | "year">): Date =>
   new Date(year, month - 1, day, LOCAL_CALENDAR_NOON_HOUR, 0, 0, 0);
 
-// Config-independent helpers. `toDateOnlySelection` stores the picked day as noon UTC and
-// `isDateDue` compares absolute instants, so neither depends on the scheduling time zone.
+// Config-independent helper. `toDateOnlySelection` stores the picked day as noon UTC, so it does not depend on the scheduling time zone.
 export const toDateOnlySelection = (date: Date): Date =>
   new Date(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), DATE_ONLY_SELECTION_UTC_HOUR, 0, 0, 0)
   );
-
-export const isDateDue = (date: Date | null, now: Date = new Date()): boolean =>
-  date !== null && date.getTime() <= now.getTime();
 
 /**
  * Builds the timezone-aware scheduling date helpers for a given configuration. The config is
