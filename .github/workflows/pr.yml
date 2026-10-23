@@ -165,7 +165,13 @@ jobs:
 
   required:
     name: PR Check Summary
-    needs: [server, server-test, workspace, validate-authzed-schema, helm-chart-validation, coderabbit-config-validation]
+    needs:
+      - server
+      - server-test
+      - workspace
+      - validate-authzed-schema
+      - helm-chart-validation
+      - coderabbit-config-validation
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
