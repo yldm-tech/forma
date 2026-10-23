@@ -341,7 +341,7 @@ func TestFormaShStripsSchemaPublic(t *testing.T) {
 			t.Errorf("strip_schema_public(%q) = %q, %v; want %q", in, got, err, want)
 		}
 		// The server agrees, except that it refuses another schema where the script leaves it for the server to report.
-		if server, err := databaseURL("DATABASE_URL", in); err == nil && server != want {
+		if server, err := databaseURL("DATABASE_URL", in, true); err == nil && server != want {
 			t.Errorf("databaseURL(%q) = %q, forma.sh %q", in, server, want)
 		}
 	}

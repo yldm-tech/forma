@@ -26,7 +26,7 @@ For the `AI_*` variables, see [AI Features](/self-hosting/advanced/enterprise-fe
 | PUBLIC_URL | Separate origin for public surveys and the client API. OAuth and MCP do not use it. | optional | WEBAPP_URL |
 | HTTP_ADDR | Listen address of `forma serve`. | optional | `:3000` |
 | SHUTDOWN_TIMEOUT | How long in-flight requests, and in the worker running jobs, get to finish after SIGTERM, as a Go duration (`20s`, `1m`). | optional | `20s` |
-| DATABASE_URL | PostgreSQL 18 (or newer) connection URL. forma2's Prisma suffix `?schema=public` is accepted and dropped; any other `schema` value fails the start, since the server keeps its tables in the `public` schema. | required | |
+| DATABASE_URL | PostgreSQL 18 (or newer) connection URL. forma2's Prisma suffix `?schema=public` is accepted and dropped; any other `schema` value fails the start, since the server keeps its tables in the `public` schema. Prisma's pool parameters (`pgbouncer`, `connection_limit`, `pool_timeout` and the others forma2's URLs could carry) are dropped too; see the [upgrade guide](/self-hosting/advanced/migration#forma2-to-the-go-server). | required | |
 | MIGRATE_DATABASE_URL | Used instead of `DATABASE_URL` by `forma migrate` (and the migration step of `forma start`, `forma wait-for-database`): a role allowed to change the schema while the processes connect with a narrower one. Same `?schema=public` rule. | optional | DATABASE_URL |
 | DATABASE_MAX_OPEN_CONNS | Connection pool size of one process; every process has its own pool. | optional | 20 |
 | SKIP_STARTUP_MIGRATION | `true` makes `forma start` skip its migrations, for deployments where a separate `forma migrate` job applies them (Helm, Docker Compose). | optional | false |
