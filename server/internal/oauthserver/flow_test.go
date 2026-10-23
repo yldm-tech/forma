@@ -34,7 +34,14 @@ func TestAuthorizationCodeFlow(t *testing.T) {
 		t.Fatalf("authorization request %v", view)
 	}
 	callback, _ := url.Parse(e.consent(requestID, user, true))
-	back := location(t, e.do(http.MethodGet, pathOf(callback), nil, nil))
+	// Only the browser that approved the request collects its code: not one without a session, not another user's.
+	for name, headers := range map[string]map[string]string{"no session": nil, "another user": {testUserHeader: e.user("mallory@example.com").String()}} {
+		rec := e.do(http.MethodGet, pathOf(callback), nil, headers)
+		if rec.Code != http.StatusForbidden || rec.Header().Get("Location") != "" || e.json(rec)["error"] != "access_denied" {
+			t.Fatalf("callback with %s: %d %v %s", name, rec.Code, rec.Header(), rec.Body.String())
+		}
+	}
+	back := location(t, e.do(http.MethodGet, pathOf(callback), nil, map[string]string{testUserHeader: user.String()}))
 	code := back.Query().Get("code")
 	if code == "" || back.Query().Get("state") != "st" {
 		t.Fatalf("redirected to %s", back)

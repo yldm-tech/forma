@@ -76,7 +76,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g := r.Group(basePath)
 	g.GET("/oauth2/authorize", h.captureForm, provider)
 	g.POST("/oauth2/authorize", h.captureForm, provider)
-	g.GET("/oauth2/authorize/callback", provider)
+	g.GET("/oauth2/authorize/callback", h.sessions.Optional(), h.requireApprover, provider)
 	g.POST("/oauth2/token", h.limit(ratelimit.BAOAuthToken), h.captureForm, h.checkTokenResource, provider)
 	g.POST("/oauth2/introspect", h.limit(ratelimit.BAOAuthIntrospect), provider)
 	g.POST("/oauth2/revoke", h.limit(ratelimit.BAOAuthRevoke), provider)
@@ -212,6 +212,31 @@ func (h *Handler) continueAuthorization(c *gin.Context) {
 	default:
 		c.Redirect(http.StatusFound, h.consentURL(id, req))
 	}
+}
+
+// requireApprover lets only the session that approved a request collect its code: op's callback issues the code to whoever presents the request id, which the client that started the flow also knows, so without this check it could take the code of a request someone else approved for it. A request not yet approved goes on to op, which refuses it.
+func (h *Handler) requireApprover(c *gin.Context) {
+	id, err := uuid.Parse(c.Query("id"))
+	if err != nil {
+		c.Next()
+		return
+	}
+	req, err := h.repo.authRequest(c.Request.Context(), id)
+	if err != nil {
+		h.log.ErrorContext(c.Request.Context(), "Failed to load OAuth authorization request", "err", err)
+		oauthError(c, http.StatusInternalServerError, "server_error", "")
+		return
+	}
+	if req == nil || !req.Done() {
+		c.Next()
+		return
+	}
+	actor, signedIn := httpapi.ActorFrom(c.Request.Context())
+	if !signedIn || actor.UserID != *req.userID {
+		oauthError(c, http.StatusForbidden, "access_denied", "The authorization request was approved in another session.")
+		return
+	}
+	c.Next()
 }
 
 // covered reports whether the user's consent for the client already includes every scope and the resource of the request.

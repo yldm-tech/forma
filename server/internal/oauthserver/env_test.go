@@ -245,7 +245,7 @@ func (e *env) code(q url.Values, user uuid.UUID) string {
 		cb, _ := url.Parse(e.consent(next.Query().Get("request_id"), user, true))
 		next = cb
 	}
-	back := location(e.t, e.do(http.MethodGet, pathOf(next), nil, nil))
+	back := location(e.t, e.do(http.MethodGet, pathOf(next), nil, map[string]string{testUserHeader: user.String()}))
 	if back.String()[:len(redirectURI)] != redirectURI || back.Query().Get("state") != "st" || back.Query().Get("code") == "" {
 		e.t.Fatalf("callback redirected to %s", back)
 	}
