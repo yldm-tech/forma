@@ -52,7 +52,7 @@ type UsageReporter interface {
 // ErrRetry marks a hand-off failure that should retry the pipeline job.
 var ErrRetry = errors.New("retry the response pipeline job")
 
-// Handoffs are the consumers later modules register; a nil one is skipped.
+// Handoffs are the consumers the app package registers; a nil one is skipped.
 type Handoffs struct {
 	Integrations IntegrationHandler
 	Workflows    WorkflowEnqueuer
