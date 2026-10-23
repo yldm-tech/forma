@@ -1,7 +1,9 @@
+import type { TResponseFilterCriteria } from "@forma/types/responses";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TFunction } from "i18next";
 import { Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DateRangeCalendar } from "../../../../components/ui/date-picker";
 import {
@@ -13,7 +15,7 @@ import {
 import { formatDateForDisplay } from "../../../../lib/survey/datetime";
 import { toast } from "../../../../lib/toast";
 import { useClickOutside } from "../../../../lib/use-click-outside";
-import { type ExportFormat, analysisApi } from "../../api";
+import { type ExportFormat, analysisApi, attachmentsUrl } from "../../api";
 import {
   type TDateRangePreset,
   resolveDateRangeLabelPreset,
@@ -66,6 +68,43 @@ const getRangeLabel = (mode: RangeMode, dateRange: DateRange, locale: string, t:
   return getCustomRangeLabel(dateRange, locale, t);
 };
 
+/**
+ * forma2's handleDownloadAttachments. The archive is downloaded by navigating to the export route, never by fetch and blob: it can reach several GB. That is also why it asks for the counts first: once the route has sent its headers it can no longer answer with an error, and a problem document rendered into the tab would replace the page. So the dry run's answer is toasted when the download cannot go ahead, and only then does the browser navigate. The toast stays from the click until the navigation, since both steps are slow; it says "started" because nothing here can see the archive finish.
+ */
+export const downloadAttachments = async (
+  surveyId: string,
+  criteria: TResponseFilterCriteria | undefined,
+  t: TFunction,
+  navigate: (url: string) => void = (url) => globalThis.location.assign(url)
+): Promise<void> => {
+  const id = toast.loading(t("workspace.surveys.responses.preparing_attachments_download"));
+  try {
+    const counts = await analysisApi.attachmentCounts(surveyId, criteria);
+    if (counts.exceedsMaxFiles) {
+      toast.error(
+        t("workspace.surveys.responses.too_many_attachments_to_download", { maxFiles: counts.maxFiles }),
+        {
+          id,
+        }
+      );
+      return;
+    }
+    if (counts.fileCount === 0) {
+      toast.error(t("workspace.surveys.responses.no_attachments_to_download"), { id });
+      return;
+    }
+    navigate(attachmentsUrl(surveyId, criteria));
+    toast.success(
+      t("workspace.surveys.responses.attachments_download_started", { fileCount: counts.fileCount }),
+      {
+        id,
+      }
+    );
+  } catch {
+    toast.error(t("workspace.surveys.responses.error_downloading_attachments"), { id });
+  }
+};
+
 /** forma2's CustomFilter: the filter popover, the date range and the response download, above the summary and the response table. */
 export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
   const { t, i18n } = useTranslation();
@@ -82,6 +121,25 @@ export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(datePickerRef, () => setIsDatePickerOpen(false));
+
+  // The attachment items only make sense when the survey collects files; hidden rather than disabled, since a survey without a file upload has nothing to explain.
+  const hasFileUploadElements = useMemo(
+    () =>
+      survey.blocks.some((block) =>
+        block.elements.some((element) => element.type === TSurveyElementTypeEnum.FileUpload)
+      ),
+    [survey.blocks]
+  );
+
+  // "All" exports every response's files, "Filtered" those of the current criteria, as forma2 did.
+  const handleDownloadAttachments = async (filtered: boolean) => {
+    setIsDownloading(true);
+    try {
+      await downloadAttachments(survey.id, filtered ? filterCriteria : undefined, t);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // "All" sends no criteria at all, "Filtered" the current ones, as forma2 did.
   const handleDownloadResponses = async (filtered: boolean, format: ExportFormat) => {
@@ -188,6 +246,22 @@ export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
                 <p className="text-slate-700">{item.label}</p>
               </DropdownMenuItem>
             ))}
+            {hasFileUploadElements && (
+              <>
+                <DropdownMenuItem
+                  data-testid="fb__custom-filter-download-all-attachments"
+                  onClick={() => void handleDownloadAttachments(false)}>
+                  <p className="text-slate-700">{t("workspace.surveys.summary.all_responses_attachments")}</p>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-testid="fb__custom-filter-download-filtered-attachments"
+                  onClick={() => void handleDownloadAttachments(true)}>
+                  <p className="text-slate-700">
+                    {t("workspace.surveys.summary.filtered_responses_attachments")}
+                  </p>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
