@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"runtime"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -119,7 +118,7 @@ type Worker struct {
 func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.Logger) (*Worker, error) {
 	concurrency := cfg.WorkerConcurrency
 	if concurrency == 0 {
-		concurrency = defaultConcurrency()
+		concurrency = config.DefaultWorkerConcurrency()
 	}
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:                      log,
@@ -138,11 +137,6 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		return nil, fmt.Errorf("create job worker: %w", err)
 	}
 	return &Worker{client: client, shutdownTimeout: cfg.ShutdownTimeout, log: log}, nil
-}
-
-// defaultConcurrency is forma2's: every running job can hold a database connection, so jobs take at most half a small pod's pool and never more than four slots.
-func defaultConcurrency() int {
-	return max(2, min(4, runtime.NumCPU()))
 }
 
 // Run works jobs until ctx is cancelled, then stops taking new ones and gives running jobs the shutdown timeout to finish before cancelling them.

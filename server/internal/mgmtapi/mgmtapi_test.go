@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
 
@@ -117,6 +118,19 @@ func TestV1StorageAcceptsASession(t *testing.T) {
 }
 
 // Without x-api-key, GET /api/v1/management/me is the signed-in user, unwrapped; Authorization is never read there.
+// With GATEWAY_RATE_LIMITING=1 forma2 left an API key's requests on the routes its gateway policy covers to the gateway, so a spent api:v1 window does not refuse them here. The webhook collection is outside the policy's /api/v1/webhooks/ prefix and is still charged.
+func TestV1GatewayRateLimiting(t *testing.T) {
+	e := newEnv(t, func(cfg *config.Config) { cfg.GatewayRateLimiting = true })
+	s := e.seedRecording()
+	key := s.bound["<api-key:manage>"]
+	s.fill("api:v1", s.keys["manage"], 100)
+	expectStatus(t, "management route", e.do("GET", "/api/v1/management/action-classes", nil, "x-api-key", key), 200)
+	if res := e.do("GET", "/api/v1/management/me", nil, "x-api-key", key); res.Status == 429 {
+		t.Fatalf("me: %d %s, want it left to the gateway", res.Status, res.Body)
+	}
+	expectStatus(t, "webhook collection", e.do("GET", "/api/v1/webhooks", nil, "x-api-key", key), 429)
+}
+
 func TestV1MeSession(t *testing.T) {
 	e := newEnv(t)
 	s := e.seedRecording()

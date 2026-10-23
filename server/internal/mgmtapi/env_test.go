@@ -144,7 +144,7 @@ type env struct {
 	logs   *syncBuffer
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	t.Helper()
 	t.Parallel()
 	u, _ := url.Parse(webAppURL)
@@ -153,6 +153,9 @@ func newEnv(t *testing.T) *env {
 		WebAppURL: u, TrustedProxyHopCount: 1, AuditLogEnabled: true, UserManagementMinimumRole: "manager", SurveySchedulingTimeZone: "UTC",
 		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
 		S3: config.S3Config{AccessKey: "contractfixtureaccess", SecretKey: "contractfixturesecret", Region: "us-east-1", EndpointURL: s3, ForcePathStyle: true, BucketName: "forma-uploads"},
+	}
+	for _, f := range configure {
+		f(&cfg)
 	}
 	db := pgtest.GORM(t)
 	e := &env{t: t, cfg: cfg, db: db, cache: valkeytest.Client(t), authz: authztest.New(t, cfg, db), logs: &syncBuffer{}, clock: &clock{now: time.Now().Truncate(time.Minute)}}

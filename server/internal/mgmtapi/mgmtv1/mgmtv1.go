@@ -104,6 +104,11 @@ func (w *Wrapper) APIKey(opts apikey.Options, rule ratelimit.Rule) gin.HandlerFu
 			return
 		}
 		c.Set(callerKey, Caller{Key: p})
+		// With GATEWAY_RATE_LIMITING=1 the gateway limits API key requests to the routes its policy covers, and forma2's wrapper did not charge them again.
+		if w.cfg.GatewayRateLimiting && ratelimit.CoveredByGateway(c.Request.Method, c.Request.URL.Path, ratelimit.GatewayAuthAPIKey) {
+			c.Next()
+			return
+		}
 		if w.limited(c, rule, p.APIKeyID.String()) {
 			return
 		}

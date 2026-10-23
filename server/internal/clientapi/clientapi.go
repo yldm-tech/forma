@@ -95,9 +95,13 @@ func options(cache string) gin.HandlerFunc {
 	return func(c *gin.Context) { writeData(c, fields{}, cache) }
 }
 
-// ratelimitBy charges one request to the client's address under rule, forma2's applyIPRateLimit. Over the limit is 429 with forma2's message and no Retry-After; the limiter fails open when Valkey is unreachable.
+// ratelimitBy charges one request to the client's address under rule, forma2's applyIPRateLimit. Over the limit is 429 with forma2's message and no Retry-After; the limiter fails open when Valkey is unreachable. With GATEWAY_RATE_LIMITING=1 a route the gateway policy covers is not charged here, as forma2's client API wrapper skipped it.
 func ratelimitBy(h *Handler, rule ratelimit.Rule) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if h.cfg.GatewayRateLimiting && ratelimit.CoveredByGateway(c.Request.Method, c.Request.URL.Path, ratelimit.GatewayAuthNone) {
+			c.Next()
+			return
+		}
 		res, err := h.limiter.Check(c.Request.Context(), rule, ratelimit.IPIdentifier(c.Request.Context()), 1)
 		if err != nil {
 			h.fail(c, err, msgGeneric)

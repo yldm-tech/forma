@@ -23,7 +23,7 @@ import (
 func newEmitter(t *testing.T, cfg config.Config) (*Emitter, *bytes.Buffer) {
 	t.Helper()
 	var buf bytes.Buffer
-	cfg.LogLevel = slog.LevelError // audit events must pass any LOG_LEVEL
+	cfg.LogLevel = config.LogLevel(slog.LevelError) // audit events must pass any LOG_LEVEL
 	cfg.LogFormat = "json"
 	em := New(cfg, logger.New(cfg, &buf))
 	em.now = func() time.Time { return time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC) }
@@ -63,7 +63,7 @@ func TestLogWritesTheEvent(t *testing.T) {
 	}
 	ev := got[0]
 	want := map[string]any{
-		"level":          "AUDIT",
+		"level":          "audit",
 		"msg":            "audit",
 		"action":         "updated",
 		"status":         "success",
@@ -127,7 +127,7 @@ func TestLogNeverFailsOnAnInvalidEvent(t *testing.T) {
 			em, buf := newEmitter(t, config.Config{AuditLogEnabled: true})
 			em.Log(context.Background(), e)
 			got := lines(t, buf)
-			if len(got) != 1 || got[0]["level"] != "ERROR" || got[0]["msg"] != "Failed to log audit event" {
+			if len(got) != 1 || got[0]["level"] != "error" || got[0]["msg"] != "Failed to log audit event" {
 				t.Fatalf("logged %v, want one application error and no audit event", got)
 			}
 		})

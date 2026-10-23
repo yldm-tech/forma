@@ -93,7 +93,9 @@ func (h *Handler) v1MeKey(c *gin.Context, raw string) {
 		v1api.NotAuthenticated(c)
 		return
 	}
-	if !h.v1MeLimit(c, p.APIKeyID.String()) {
+	// forma2 left an API key request to the gateway when GATEWAY_RATE_LIMITING declared one, keyed as every sibling management route.
+	gateway := h.cfg.GatewayRateLimiting && ratelimit.CoveredByGateway(http.MethodGet, "/api/v1/management/me", ratelimit.GatewayAuthAPIKey)
+	if !gateway && !h.v1MeLimit(c, p.APIKeyID.String()) {
 		return
 	}
 	permissions := []string{apikey.PermissionManage, apikey.PermissionRead, apikey.PermissionWrite}
