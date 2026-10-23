@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/buildinfo"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
+	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 )
 
 //go:embed all:dist
@@ -191,5 +192,7 @@ func (h *Handler) serve(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache")
+	// The SPA converts HEIC images with WebAssembly.
+	httpserver.AllowWebAssembly(c)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", h.index)
 }

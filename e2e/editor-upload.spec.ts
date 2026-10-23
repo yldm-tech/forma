@@ -9,21 +9,32 @@ const PNG = Buffer.from(
   "base64"
 );
 
-// The browser uploads straight to the bucket. A real deployment's S3 endpoint is https, which the server's Content-Security-Policy allows (connect-src https:); the CI's RustFS is plain http on its own port, which it does not. forma2 widened its policy to loopback origins under E2E_TESTING; the Go server keeps forma2's production policy only, so this spec lets the browser ignore it instead.
-test.use({ bypassCSP: true });
-
+// The browser uploads straight to the bucket, under the server's Content-Security-Policy. The CI's RustFS is plain http on a loopback port, which the policy allows (connect-src) only under E2E_TESTING or outside production, as forma2's did; a real deployment's S3 endpoint is https. A policy that blocks the upload fails this spec.
 test("uploads an image to a question and serves it from storage", async ({ page, baseURL }) => {
+  const cspViolations: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().includes("Content Security Policy")) cspViolations.push(message.text());
+  });
   await signUpAndSignIn(page, baseURL!, "upload");
   const { workspaceId, surveyId } = await finishOnboarding(page);
 
   await page.goto(`/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
   await page.getByRole("button", { name: "Toggle image uploader" }).click();
+  const appOrigin = new URL(baseURL!).origin;
+  const bucketUpload = page.waitForResponse(
+    (response) => response.request().method() === "POST" && new URL(response.url()).origin !== appOrigin,
+    { timeout: 15_000 }
+  );
   await page
     .getByTestId("upload-file-input")
     .setInputFiles({ name: "playwright.png", mimeType: "image/png", buffer: PNG });
+  // The presigned POST went from the page to the bucket's own origin and was accepted.
+  expect((await bucketUpload).ok()).toBe(true);
 
-  // The editor previews the picked file from memory at once; the URL the survey stores is the one the upload returned, which the live preview beside the editor renders.
-  await expect(page.getByRole("main").getByRole("img", { name: "playwright.png" })).toBeVisible();
+  // Once the upload is done, the editor shows the file under the name the bucket stores it as (the picked name with a file id), and the live preview beside the editor renders the URL the upload returned.
+  await expect(
+    page.getByRole("main").getByRole("img", { name: /^playwright--fid--[0-9a-f-]+\.png$/ })
+  ).toBeVisible();
   const stored = page.getByRole("complementary").locator('img[src*="/storage/"]');
   await expect(stored).toBeVisible();
   // Decoded by the browser, so the bytes really came back from storage.
@@ -34,4 +45,5 @@ test("uploads an image to a question and serves it from storage", async ({ page,
   const response = await page.request.get((await stored.getAttribute("src"))!);
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("image/png");
+  expect(cspViolations).toEqual([]);
 });

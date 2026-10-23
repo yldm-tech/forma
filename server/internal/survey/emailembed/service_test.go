@@ -98,7 +98,7 @@ func newRouteEnv(t *testing.T) *routeEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(svc, headerSessions{}).Register(group)
 	return e

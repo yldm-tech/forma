@@ -214,7 +214,7 @@ func newEnv(t *testing.T) *env {
 	e.deliverer.airtime = airtableTiming{fieldCreateGap: time.Millisecond, fieldWaitRetries: 3, fieldWaitGap: time.Millisecond}
 	fast := airtableRefreshTiming{lockTTL: 30 * time.Second, waitGap: time.Millisecond, waitAttempts: 3}
 	e.deliverer.tokens.refresh, e.svc.tokens.refresh = fast, fast
-	e.engine = httpserver.NewEngine(log)
+	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)
 	NewOAuthHandler(e.svc, headerSessions{}, limiter, log).Register(e.engine)

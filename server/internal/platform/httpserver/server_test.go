@@ -7,15 +7,18 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
+
+	"github.com/yldm-tech/forma/server/internal/platform/config"
 )
 
 func TestRequestID(t *testing.T) {
-	r := NewEngine(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	r := NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	r.GET("/ping", func(c *gin.Context) { c.String(http.StatusOK, "pong") })
 
 	t.Run("mints an id when none is sent", func(t *testing.T) {
@@ -49,7 +52,7 @@ func TestRequestID(t *testing.T) {
 
 func TestRecoveryReturnsJSONAndLogs(t *testing.T) {
 	var logs bytes.Buffer
-	r := NewEngine(slog.New(slog.NewJSONHandler(&logs, nil)))
+	r := NewEngine(config.Config{}, slog.New(slog.NewJSONHandler(&logs, nil)))
 	r.GET("/boom", func(*gin.Context) { panic("kaboom") })
 
 	rec := httptest.NewRecorder()
@@ -68,7 +71,7 @@ func TestRecoveryReturnsJSONAndLogs(t *testing.T) {
 
 // forma2's next.config.mjs headers(): every response carries the security headers, and only the public survey pages may be framed by another site.
 func TestSecurityHeaders(t *testing.T) {
-	r := NewEngine(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	r := NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	r.GET("/api/app/me", func(c *gin.Context) { c.String(http.StatusOK, "{}") })
 	r.NoRoute(func(c *gin.Context) { c.String(http.StatusOK, "<!DOCTYPE html>") })
 
@@ -111,6 +114,75 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+// forma2's next.config.mjs headers() policy, byte for byte. In production it allows https and wss connections only, so an http S3 endpoint stays blocked; in development and under E2E_TESTING it adds the loopback origins (any port on localhost and 127.0.0.1, plus WEBAPP_URL, NEXTAUTH_URL and S3_ENDPOINT_URL when they are loopback) to img-src and connect-src, so the browser can upload to a local RustFS. Only a response that calls AllowWebAssembly, the admin SPA's document, may compile WebAssembly, which its in-browser HEIC conversion needs; the frozen APIs and the public survey pages (/s, /c, /p) keep forma2's script-src.
+func TestContentSecurityPolicy(t *testing.T) {
+	const (
+		production    = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		productionSPA = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		e2eLoopback   = "http://localhost:* http://127.0.0.1:* http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:9000 http://localhost:9000"
+		e2e           = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + e2eLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + e2eLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		e2eSPA        = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + e2eLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + e2eLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		devLoopback   = "http://localhost:* http://127.0.0.1:* https://localhost:8443 https://127.0.0.1:8443 https://127.0.0.1 https://localhost"
+		dev           = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + devLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + devLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		devSPA        = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + devLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + devLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+	)
+	httpS3 := config.S3Config{BucketName: "forma", EndpointURL: &url.URL{Scheme: "http", Host: "127.0.0.1:9000"}}
+	cases := []struct {
+		name string
+		cfg  config.Config
+		// want maps a path to its policy, without the frame-ancestors directive the path adds. /workspaces/... is the admin SPA's document.
+		want map[string]string
+	}{
+		{
+			name: "production with an http S3 endpoint",
+			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3},
+			want: map[string]string{"/workspaces/1/surveys/2/edit": productionSPA, "/api/v1/client/1/environment": production, "/js/surveys.umd.cjs": production, "/s/abc": production, "/c/abc": production, "/p/abc": production},
+		},
+		{
+			name: "production under NODE_ENV=production",
+			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3, Telemetry: config.TelemetryConfig{NodeEnv: "production"}},
+			want: map[string]string{"/workspaces/1": productionSPA, "/api/v1/client/1/environment": production, "/s/abc": production},
+		},
+		{
+			name: "E2E_TESTING with the CI stack's loopback RustFS",
+			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3, E2ETesting: true},
+			want: map[string]string{"/workspaces/1/surveys/2/edit": e2eSPA, "/api/v1/management/storage": e2e, "/s/abc": e2e, "/c/abc": e2e, "/p/abc": e2e},
+		},
+		{
+			// A host other than localhost and 127.0.0.1 is never added, an https loopback origin is added in both spellings, a default port is dropped as the URL parser drops it, and duplicates are listed once.
+			name: "development",
+			cfg: config.Config{
+				WebAppURL: &url.URL{Scheme: "https", Host: "LOCALHOST:8443"},
+				SSO:       config.SSOConfig{NextAuthURL: &url.URL{Scheme: "https", Host: "127.0.0.1:443"}},
+				S3:        config.S3Config{BucketName: "forma", EndpointURL: &url.URL{Scheme: "http", Host: "minio.internal:9000"}},
+				Telemetry: config.TelemetryConfig{NodeEnv: "development"},
+			},
+			want: map[string]string{"/workspaces/1": devSPA, "/api/app/me": dev, "/s/abc": dev},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewEngine(tc.cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			r.GET("/workspaces/*path", func(c *gin.Context) {
+				AllowWebAssembly(c)
+				c.String(http.StatusOK, "<!DOCTYPE html>")
+			})
+			r.NoRoute(func(c *gin.Context) { c.String(http.StatusOK, "{}") })
+			for path, want := range tc.want {
+				rec := httptest.NewRecorder()
+				r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+				frameAncestors := "; frame-ancestors 'self'"
+				if strings.HasPrefix(path, "/s/") || strings.HasPrefix(path, "/c/") {
+					frameAncestors = "; frame-ancestors *"
+				}
+				if got := rec.Header().Get("Content-Security-Policy"); got != want+frameAncestors {
+					t.Errorf("%s: Content-Security-Policy =\n%q\nwant\n%q", path, got, want+frameAncestors)
+				}
+			}
+		})
+	}
+}
+
 // TestServerErrorsReachSentry: a 5xx is reported once with the error a handler recorded, a 5xx without one with forma2's synthetic error, a panic with its value, and a 4xx not at all. Tags carry the route pattern and the request id, never the raw path.
 func TestServerErrorsReachSentry(t *testing.T) {
 	transport := &sentry.MockTransport{}
@@ -123,7 +195,7 @@ func TestServerErrorsReachSentry(t *testing.T) {
 	hub.BindClient(client)
 	t.Cleanup(func() { hub.BindClient(previous) })
 
-	r := NewEngine(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	r := NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	r.GET("/api/v1/management/responses/:responseId", func(c *gin.Context) {
 		_ = c.Error(errors.New("load response: connection refused"))
 		c.Status(http.StatusInternalServerError)
