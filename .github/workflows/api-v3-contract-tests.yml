@@ -1,0 +1,113 @@
+name: API v3 Contract Tests
+
+# Drives a running server against the committed v3 OpenAPI bundle with Schemathesis and fails when a response violates the documented status codes, content type or schema, or answers 5xx. api-v3-spec.yml proves the document is well-formed and the bundle fresh, and the route parity test (server/internal/app/v3_routes_test.go) that every served operation is documented and every documented one served; this proves the running API matches the document. Harness and local instructions: docs/api-v3-reference/contract-tests/.
+#
+# Fast profile on purpose, as in forma2: the `examples` phase only, a sampled case per documented operation. Deep fuzzing, the coverage phase and stateful suites stay out of the PR gate.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# No `concurrency` block: under `workflow_call`, `github.workflow` resolves to the caller, so a group here would collide with pr.yml's own and let this job cancel its parent. The caller's concurrency already covers superseded runs.
+
+jobs:
+  contract-tests:
+    name: v3 OpenAPI contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go (version from go.mod)
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      # The API alone: without a web build the binary serves 404 for pages and every API route as usual.
+      - name: Build forma
+        run: make server
+
+      # The key is generated per run and never leaves this job: the database is disposable and the key only reaches the seeded workspace on this runner.
+      - name: Start PostgreSQL, Valkey, SpiceDB, RustFS and forma, seeded with the contract fixtures
+        env:
+          FORMA_LOG: ${{ runner.temp }}/forma.log
+          SEED_ARGS: --contract
+        run: |
+          SEED_API_KEY="$(openssl rand -hex 32)"
+          echo "::add-mask::${SEED_API_KEY}"
+          echo "SEED_API_KEY=${SEED_API_KEY}" >> "$GITHUB_ENV"
+          SEED_API_KEY="${SEED_API_KEY}" bash scripts/ci-stack.sh up
+
+      # Guards the failure this job is most likely to die of quietly: with the seed or the key broken every operation would answer a documented 401 or 403, and Schemathesis would report a green run that proved nothing.
+      - name: Verify the seeded API key reaches real data
+        run: |
+          fixtures=docs/api-v3-reference/contract-tests/fixtures.json
+          workspace_id=$(jq -r .workspaceId "${fixtures}")
+          survey_id=$(jq -r .read.surveyId "${fixtures}")
+          probe() {
+            local status
+            status=$(curl -o /tmp/probe.json -s -w "%{http_code}" -H "x-api-key: fbk_${SEED_API_KEY}" "http://localhost:3000$1")
+            if [ "${status}" -ne 200 ]; then
+              echo "::error::GET $1 answered ${status}, expected 200. $2"
+              cat /tmp/probe.json
+              exit 1
+            fi
+          }
+          probe "/api/v3/surveys?workspaceId=${workspace_id}&limit=1" "The seeded data or API key is broken; the contract run would be meaningless."
+          # The survey resource, the deepest schema in the contract, is only validated when the read fixture exists and carries the languages the spec's `lang` examples ask for.
+          probe "/api/v3/surveys/${survey_id}?lang=de-DE" "The survey resource schema would not be validated by this run."
+          probe "/api/v3/workflows?workspaceId=${workspace_id}&limit=1" "The workflow operations would be checked against an error response instead of real data."
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install Schemathesis
+        run: python -m pip install schemathesis==4.25.0
+
+      # `--exclude-path-regex '^/api/v3/responses'` skips the eight response operations: forma2 agreed their contract before building them (ENG-2868) and never routed them, so each would answer 404 against a spec documenting 200/400/401/403/429/500. The route parity test records the same eight in documentedWithoutRoute; remove both together when the routes land.
+      - name: Run v3 contract tests
+        env:
+          SCHEMATHESIS_HOOKS: docs/api-v3-reference/contract-tests/hooks.py
+        run: |
+          schemathesis \
+            --config-file docs/api-v3-reference/contract-tests/schemathesis.toml \
+            run docs/api-v3-reference/openapi.yml \
+            --url http://localhost:3000 \
+            --phases examples \
+            --checks not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance \
+            --exclude-path-regex '^/api/v3/responses' \
+            --generation-database=:memory: \
+            --report junit \
+            --report-dir schemathesis-report \
+            -H "x-api-key: fbk_${SEED_API_KEY}"
+
+      - name: Upload contract test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-v3-contract-report
+          if-no-files-found: ignore
+          path: schemathesis-report/
+
+      # Failure only: a green run's server log says nothing the probes above do not.
+      - name: Upload the server log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-v3-contract-server-log
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/forma.log

@@ -1,0 +1,37 @@
+name: Translation Validation
+
+# forma2's translation-check.yml: scans the code that reads each translation catalogue against it (packages/i18n-utils/src/scan-translations.ts). The admin UI's catalogue, web/locales, is read by web/src and by the Go server (the mailer's `emails` namespace and the survey template catalogue); the survey runtime's is packages/surveys/locales. It fails on a key used but missing, a key nobody reads (beyond those recorded in packages/i18n-utils/web-unused-keys.json), a key with spaces, a key a locale lacks or has beyond en-US, and an en-US value changed since the last translation run (i18n.lock).
+#
+# Called by pr.yml, so it is part of the PR Check Summary. forma2 skipped it when no translation-related file changed; it takes seconds once the workspace is installed, and a filter would have to know every Go file that names a key, so it always runs.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-translations:
+    name: Validate Translation Keys
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          node-version-file: ".node-version"
+          cache: true
+
+      - name: Validate translation keys
+        run: vp run scan-translations

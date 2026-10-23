@@ -106,10 +106,12 @@ jobs:
         with:
           egress-policy: audit
 
+      # Two commits deep: on a pull request the checkout is the merge commit, whose first parent is the base branch, which is what the migration lint diffs against.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
 
       # Installs Vite+ (version from the pnpm catalog), Node.js from .node-version and pnpm from packageManager, then runs `vp install` against the frozen lockfile.
       - name: Setup Vite+
@@ -125,9 +127,18 @@ jobs:
       - name: Verify the TanStack Router route tree is committed
         run: git diff --exit-code -- web/src/routeTree.gen.ts
 
-      - name: Catalog, OpenAPI and exported JSON Schema checks
+      # The two bundles every respondent downloads, weighed right after the build that produced them (scripts/check-bundle-budget.mjs).
+      - name: Check the SDK bundle budgets
+        run: vp run bundle:check
+
+      # Squawk on the goose migrations this change adds or edits, Up sections only (scripts/lint-migrations.sh, server/.squawk.toml). Shipped migrations are never edited, so they are never linted.
+      - name: Lint added or changed migrations
+        run: bash scripts/lint-migrations.sh
+
+      - name: Catalog, orphaned test, OpenAPI and exported JSON Schema checks
         run: |
           vp run catalog:check
+          vp run tests:run-check
           vp run api:v3:lint
           vp run --filter @forma/types export-json-schema -- --check
 
@@ -136,6 +147,60 @@ jobs:
 
       - name: Test
         run: vp run -r test
+
+  # forma2 held its authentication and authorization code to 80% statement coverage (test.yml). The same packages here are auth, authz and apikey; on 2026-10-23 they stood at 85.7%, 87.8% and 89.7%. Without the race detector, which the shards above already run them under, the three took about 25 seconds side by side on a development machine.
+  server-coverage:
+    name: Go coverage (auth, authz, apikey)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go (version from go.mod)
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: Check statement coverage
+        env:
+          MIN_COVERAGE: "80"
+        run: |
+          set -euo pipefail
+          go test -count=1 -cover ./internal/auth ./internal/authz ./internal/apikey | tee coverage.txt
+          status=0
+          for pkg in auth authz apikey; do
+            pct=$(awk -v pkg="internal/${pkg}" '$1 == "ok" && $2 ~ pkg"$" { for (i = 1; i <= NF; i++) if ($i == "coverage:") { sub("%", "", $(i + 1)); print $(i + 1) } }' coverage.txt)
+            if [ -z "${pct}" ]; then
+              echo "::error::No coverage reported for internal/${pkg}."
+              status=1
+            elif awk -v pct="${pct}" -v min="${MIN_COVERAGE}" 'BEGIN { exit !(pct < min) }'; then
+              echo "::error::internal/${pkg} statement coverage is ${pct}%, below the ${MIN_COVERAGE}% floor."
+              status=1
+            else
+              echo "internal/${pkg}: ${pct}% (floor ${MIN_COVERAGE}%)"
+            fi
+          done
+          exit "${status}"
+
+  translations:
+    name: Validate Translations
+    uses: ./.github/workflows/translation-check.yml
+
+  contract-tests:
+    name: API v3 Contract Tests
+    uses: ./.github/workflows/api-v3-contract-tests.yml
 
   validate-authzed-schema:
     name: Validate AuthZed Schema
@@ -168,7 +233,10 @@ jobs:
     needs:
       - server
       - server-test
+      - server-coverage
       - workspace
+      - translations
+      - contract-tests
       - validate-authzed-schema
       - helm-chart-validation
       - coderabbit-config-validation

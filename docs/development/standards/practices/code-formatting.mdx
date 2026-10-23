@@ -4,13 +4,16 @@ description: "Standards for consistent code formatting across the Forma codebase
 icon: code
 ---
 
+Formatting is never a matter of taste in review: a formatter decides it, a pre-commit hook applies it, and CI fails when a file was committed without it.
 
-## Core Configuration
+## TypeScript, JSON, YAML, Markdown and CSS
 
-### Prettier Config
-Forma uses a standardized Prettier configuration defined in `@forma/config-prettier`:
-```javascript
-module.exports = {
+The TypeScript workspace uses [Vite+](https://viteplus.dev/) (`vp`): **Oxfmt** formats, **Oxlint** lints, and **tsgolint** type-checks. There is no Prettier and no ESLint. The configuration lives only in the root [`vite.config.ts`](https://github.com/yldm-tech/forma/blob/main/vite.config.ts), under `fmt` and `lint`; package configs carry build, test and dev settings only.
+
+### Oxfmt settings
+
+```ts
+fmt: {
   bracketSpacing: true,
   bracketSameLine: true,
   singleQuote: false,
@@ -19,196 +22,76 @@ module.exports = {
   semi: true,
   printWidth: 110,
   arrowParens: "always",
-  importOrder: [
-    // Mocks must be at the top as they contain vi.mock calls
-    "(.*)/__mocks__/(.*)",
-    "server-only",
-    "<THIRD_PARTY_MODULES>",
-    "^@forma/(.*)$",
-    "^~/(.*)$",
-    "^@/(.*)$",
-    "^[./]",
-  ],
+  importOrder: ["(.*)/__mocks__/(.*)", "<THIRD_PARTY_MODULES>", "^@forma/(.*)$", "^~/(.*)$", "^@/(.*)$", "^[./]"],
   importOrderSeparation: false,
   importOrderSortSpecifiers: true,
-};
-```
-
-Key configurations:
-- 110 characters line width
-- Double quotes for strings
-- ES5 trailing commas
-- Always use parentheses for arrow functions
-- Strict import ordering
-
-### Import Order
-All imports follow a strict ordering:
-1. Mocks (for testing)
-2. Server-only imports
-3. Third-party modules
-4. Internal `@forma/*` modules
-5. Local aliases (`~/*)
-6. Relative imports
-
-### TypeScript Config
-- Strict TypeScript checking enabled
-- Consistent use of `tsconfig.json` extending from `@forma/config-typescript`
-- Example configuration:
-
-```json
-{
-  "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "strict": true
-  },
-  "extends": "@forma/config-typescript/js-library.json",
-  "include": ["src", "package.json"]
+  jsonRecursiveSort: true,
+  sortTailwindcss: {},
 }
 ```
 
-### JSDoc Comments
-Required for public APIs and complex functions:
+In practice: 110 characters, double quotes, ES5 trailing commas, parentheses around every arrow function's parameters, imports grouped (mocks, third-party, `@forma/*`, aliases, relative) and sorted, JSON keys sorted, and Tailwind classes in canonical order. Generated files (`web/src/routeTree.gen.ts`, the bundled `openapi.yml`, the lockfile), `server/**` and MDX pages are not formatted by Oxfmt.
 
-```typescript
-/**
- * Creates a new user
- * @param {string} name - User's name
- * @returns {Promise<User>} The created user object
- */
-function createUser(name: string): Promise<User> {
-  // implementation
+### Lint rules
+
+Oxlint runs the `eslint`, `typescript`, `unicorn`, `oxc`, `react`, `jsx-a11y`, `import` and `vitest` plugins with every correctness rule as an error, type-aware rules on, and a handful of rules set explicitly, among them:
+
+- `typescript/no-explicit-any` is an error.
+- Unused variables are errors unless their name starts with `_`.
+- React's rules of hooks are errors; `exhaustive-deps` and the React Compiler diagnostics are warnings.
+- Imports from Vite and Vitest go through `vite-plus` (`vite-plus/test`), which `vite-plus/prefer-vite-plus-imports` enforces.
+
+A path that needs an exception gets one in `lint.overrides`, with a comment saying why.
+
+### Running it
+
+```bash
+pnpm exec vp check          # format check, lint and type-check
+pnpm exec vp check --fix    # format and apply lint autofixes
+```
+
+Type-aware rules resolve sibling packages through their `dist/` declarations, so run `pnpm build` (`vp run -r build`) first after switching branches.
+
+## Go
+
+Go code is formatted by `gofmt` and `goimports` with `github.com/yldm-tech/forma/server` as the local import prefix, so imports fall into three groups: the standard library, third-party modules, and the server's own packages. [golangci-lint](https://golangci-lint.run/) (`server/.golangci.yml`, the same version CI pins) runs the standard linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`, `nilerr`, `noctx`, `revive`, `rowserrcheck`, `sqlclosecheck`, `unconvert` and `unparam`.
+
+```bash
+cd server
+golangci-lint fmt ./...   # gofmt and goimports
+golangci-lint run ./...   # 0 issues is the bar
+```
+
+## Comments and prose
+
+- Code comments are English and explain why, not what the next line does.
+- Comments, commit messages and documentation are not hard-wrapped: one paragraph is one line, and the editor or the renderer wraps it. A hard-wrapped paragraph reflows into ragged lines on GitHub, and every rewording re-wraps the whole paragraph in the diff.
+
+## Enforcement
+
+### Pre-commit hook
+
+`pnpm install` installs `.vite-hooks/pre-commit`, which runs `vp staged` with the `staged` block of `vite.config.ts`:
+
+```ts
+staged: {
+  "*.{js,mjs,cjs,ts,mts,cts,tsx,json,md,yml,yaml,css}": "vp check --fix",
+  "server/**/*.go": "gofmt -w",
 }
 ```
 
-### Error Handling
-Standardized error handling using the ErrorHandler class:
+A commit whose staged files still fail the check after the fixes is refused.
 
-```typescript
-export class ErrorHandler {
-  private static instance: ErrorHandler | null;
-  private handleError: (error: unknown) => void;
-  public customized = false;
-  public static initialized = false;
+### Continuous integration
 
-  private constructor(errorHandler?: (error: unknown) => void) {
-    if (errorHandler) {
-      this.handleError = errorHandler;
-      this.customized = true;
-    } else {
-      this.handleError = (error) => {
-        Logger.getInstance().error(JSON.stringify(error));
-      };
-    }
-  }
+`.github/workflows/pr.yml` runs, on every pull request:
 
-  // ... additional methods
-}
-```
+- golangci-lint, `go build` and a check that `wire_gen.go` is regenerated;
+- `vp check` (format, lint, type-check) after `vp run -r build`;
+- the catalog, orphaned-test, OpenAPI and exported JSON Schema checks.
 
-## Enforcement Tools
+`make lint` runs golangci-lint and `vp check` locally; `make check` runs everything CI runs.
 
-### Pre-commit Hooks
-Using Husky and lint-staged for automated checks:
+## Editor setup
 
-```json
-{
-  "lint-staged": {
-    "(apps|packages)/**/*.{js,ts,jsx,tsx}": [
-      "prettier --write"
-    ],
-    "*.json": [
-      "prettier --write"
-    ],
-    "packages/database/schema.prisma": [
-      "prisma format"
-    ]
-  }
-}
-```
-
-The hook formats staged files only — ESLint is not part of it. Lint violations are caught by `pnpm lint` and the "Run Linters" CI job.
-
-### ESLint Configuration
-ESLint runs on the flat config format. Every package and app has its own `eslint.config.mjs` that imports one of the composable tiers exported by `@forma/config-eslint`:
-
-| Import | Use for |
-| --- | --- |
-| `@forma/config-eslint/library` | Node/TypeScript packages |
-| `@forma/config-eslint/react` | React packages (react, react-hooks, jsx-a11y) |
-| `@forma/config-eslint/react-hooks` | React packages that only need the hooks rules |
-| `@forma/config-eslint/next` | Next.js applications |
-
-Every tier builds on `@forma/config-eslint/base`, which holds the shared turbo, prettier, vitest and unused-vars conventions. It exports named building blocks rather than a ready-made config, so packages import one of the tiers above instead of `base` directly.
-
-The `library` and `react` tiers are factories — call them with the package's `tsconfigRootDir` so the type-aware rules resolve against that package's own tsconfig. The `react-hooks` and `next` tiers are plain arrays a config re-exports or spreads with its own overrides:
-
-```javascript
-// packages/<pkg>/eslint.config.mjs
-import library from "@forma/config-eslint/library";
-
-export default library({ tsconfigRootDir: import.meta.dirname });
-```
-
-```javascript
-// apps/web/eslint.config.mjs
-import next from "@forma/config-eslint/next";
-
-export default [
-  { ignores: [".next/**", "public/**"] },
-  ...next,
-  { rules: { "react-hooks/exhaustive-deps": "warn" } },
-];
-```
-
-Use the extensionless subpaths above — they are the only ones the package exports.
-
-### Continuous Integration
-- Automated formatting checks in CI/CD pipeline
-- SonarCloud integration for code quality analysis
-- Coverage requirements for tests
-
-## VS Code Integration
-
-### Required Extensions
-- `esbenp.prettier-vscode` - Prettier formatting
-- `dbaeumer.vscode-eslint` - ESLint integration
-- `bradlc.vscode-tailwindcss` - Tailwind CSS support
-
-### Recommended Settings
-```json
-{
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
-  },
-  "typescript.tsdk": "node_modules/typescript/lib"
-}
-```
-
-## Best Practices
-
-1. **Consistent Formatting**
-   - Always run `pnpm format` before committing
-   - Use VS Code's format on save feature
-   - Follow the established import order
-
-2. **Type Safety**
-   - Enable strict TypeScript checks
-   - Use explicit type annotations when necessary
-   - Avoid using `any` type
-
-3. **Code Organization**
-   - Keep files focused and modular
-   - Group related functionality
-   - Use clear, descriptive names
-
-4. **Documentation**
-   - Document complex logic
-   - Use JSDoc for public APIs
-   - Keep comments current with code changes
-
-These standards ensure consistency across the Forma codebase while maintaining high code quality and developer productivity.
+Use the Oxc extension for VS Code (or any editor speaking the Oxc language server) for Oxfmt and Oxlint, and gopls for Go with `goimports` on save. Prettier and ESLint extensions should be disabled in this workspace: their output disagrees with Oxfmt's.

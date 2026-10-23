@@ -9,7 +9,7 @@ Two jobs, both generic over the contract rather than per endpoint:
 
 2. Point identifiers at the seeded data so authenticated endpoints answer with real payloads
    instead of a wall of 401/403s. Substitution is keyed by parameter name and operationId, from the
-   map ``db:seed:contract`` writes (``fixtures.json``) — nothing here is registered per test, so a
+   map ``forma seed --contract`` writes (``fixtures.json``) — nothing here is registered per test, so a
    newly documented endpoint is exercised the moment it lands in the bundle. An id the map does not
    mention keeps its generated cuid2 and gets the documented 403, which is still a contract check.
 
@@ -31,8 +31,7 @@ from hypothesis import strategies as st
 FIXTURES_ENV_VAR = "V3_CONTRACT_FIXTURES"
 DEFAULT_FIXTURES_PATH = Path(__file__).with_name("fixtures.json")
 
-# cuid2 as the v3 routes validate it (`z.cuid2()` in packages/types/common.ts): lowercase
-# alphanumeric. The fixed length keeps generated ids visually distinct from real ones in reports.
+# cuid2 as forma2's v3 routes validated it (`z.cuid2()`): lowercase alphanumeric. The Go server accepts it as a forma2 id and resolves it to the uuid it was migrated to (platform/legacyid), which no seeded row has, so a generated id reaches the handler and gets the documented 403. The fixed length keeps generated ids visually distinct from the seeded uuids in reports.
 CUID2_STRATEGY = st.from_regex(r"\A[a-z][a-z0-9]{23}\Z")
 
 # Any parameter or body field with this name identifies the tenant, on every current and future v3
@@ -50,7 +49,7 @@ def _load_fixtures() -> dict[str, Any]:
     except (OSError, ValueError) as exc:
         raise RuntimeError(
             f"Contract fixtures at {path} are missing or unreadable. Run "
-            "`pnpm --filter=@forma/database db:seed:contract` first, or point "
+            "`ALLOW_SEED=1 SEED_API_KEY=... forma seed --contract` first, or point "
             f"{FIXTURES_ENV_VAR} at the file it wrote. Running without it would test an empty "
             "workspace and report a green run that proves nothing."
         ) from exc
@@ -63,8 +62,8 @@ _FIXTURES = _load_fixtures()
 if not _FIXTURES.get(WORKSPACE_FIELD):
     raise RuntimeError(
         f"Contract fixtures at {os.environ.get(FIXTURES_ENV_VAR) or DEFAULT_FIXTURES_PATH} carry no "
-        f"'{WORKSPACE_FIELD}'. Re-run `pnpm --filter=@forma/database db:seed:contract` to "
-        "regenerate them. Running without it would test an empty workspace and report a green run "
+        f"'{WORKSPACE_FIELD}'. Re-run `ALLOW_SEED=1 SEED_API_KEY=... forma seed --contract` "
+        "to regenerate them. Running without it would test an empty workspace and report a green run "
         "that proves nothing."
     )
 WORKSPACE_ID: str = _FIXTURES[WORKSPACE_FIELD]
