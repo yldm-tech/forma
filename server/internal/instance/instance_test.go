@@ -144,7 +144,7 @@ func latest(t *testing.T, r http.Handler) *string {
 	return res.TagName
 }
 
-// A found release is cached for an hour under forma2's key, so GitHub is asked once.
+// A found release is cached for an hour, so GitHub is asked once.
 func TestLatestReleaseIsCached(t *testing.T) {
 	t.Parallel()
 	cache := valkeytest.Client(t)
@@ -160,6 +160,25 @@ func TestLatestReleaseIsCached(t *testing.T) {
 	}
 	if ttl := cache.TTL(t.Context(), cacheKey).Val(); ttl <= failureTTL || ttl > successTTL {
 		t.Errorf("ttl = %v", ttl)
+	}
+}
+
+// forma2 caches the release of another repository under "fb:github:latest_release". The two servers share one Valkey during the cutover and after a rollback, so this server neither reads forma2's entry nor overwrites it.
+func TestLatestReleaseLeavesForma2sEntryAlone(t *testing.T) {
+	t.Parallel()
+	cache := valkeytest.Client(t)
+	const forma2Key, forma2Entry = "fb:github:latest_release", `{"tagName":"v9.9.9"}`
+	cache.Set(t.Context(), forma2Key, forma2Entry, 0)
+	srv, hits := github(t, http.StatusOK, `{"tag_name":"v0.2.99"}`)
+	r := engine(t, config.Config{}, releasesFor(cache, srv))
+	if tag := latest(t, r); tag == nil || *tag != "v0.2.99" || hits.Load() != 1 {
+		t.Fatalf("tag = %v after %d lookups", tag, hits.Load())
+	}
+	if got := cache.Get(t.Context(), forma2Key).Val(); got != forma2Entry {
+		t.Fatalf("forma2's entry was overwritten with %s", got)
+	}
+	if got := cache.Get(t.Context(), "forma:github:latest_release").Val(); got != `{"tagName":"v0.2.99"}` {
+		t.Fatalf("own entry %s", got)
 	}
 }
 

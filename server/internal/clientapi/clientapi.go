@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/server/internal/contact"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/server/internal/response"
 	"github.com/yldm-tech/forma/server/internal/storage"
 	"github.com/yldm-tech/forma/server/internal/workspace"
@@ -118,9 +119,14 @@ func ratelimitBy(h *Handler, rule ratelimit.Rule) gin.HandlerFunc {
 // idResolutionTTL is how long forma2 cached a resolved client id.
 const idResolutionTTL = time.Hour
 
-// resolveWorkspace is forma2's resolveClientApiIds: the workspace the {id} in the path names, by its id, its forma2 id or its legacy environment id, or nil. A hit is cached for an hour under forma2's key, a miss never, and a cache failure reads through to the database.
+// idResolutionKey is where a resolved {id} is cached. It is not forma2's "fb:env:<id>:id-resolution": forma2 keys the same raw id but stores its own cuids under it, so a shared key would hand this server forma2's ids and, after a rollback, forma2 this server's UUIDs for up to an hour.
+func idResolutionKey(raw string) string {
+	return valkey.KeyPrefix + "env:" + raw + ":id-resolution"
+}
+
+// resolveWorkspace is forma2's resolveClientApiIds: the workspace the {id} in the path names, by its id, its forma2 id or its legacy environment id, or nil. A hit is cached for an hour, a miss never, and a cache failure reads through to the database.
 func (h *Handler) resolveWorkspace(ctx context.Context, raw string) (*workspace.ClientWorkspace, error) {
-	key := "fb:env:" + raw + ":id-resolution"
+	key := idResolutionKey(raw)
 	if b, err := h.cache.Get(ctx, key).Bytes(); err == nil {
 		var cached struct {
 			ID             uuid.UUID `json:"id"`

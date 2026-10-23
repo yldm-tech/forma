@@ -194,7 +194,7 @@ func TestAirtableReadsBackTheWinnersRotation(t *testing.T) {
 	e.airtableFake("Question 2")
 	expired := AirtableKey{AccessToken: "old-token", RefreshToken: "old-refresh", ExpiryDate: "not a date"}
 	id := e.connect(ws, TypeAirtable, expired, "a@example.com", []AirtableLink{{LinkBase: base(sv), Elements: elements("q2"), BaseID: "base1", TableID: "table1"}})
-	if err := e.rdb.Set(context.Background(), "oauth:airtable-token-refresh:"+ws.String(), "1", time.Minute).Err(); err != nil {
+	if err := e.rdb.Set(context.Background(), "forma:oauth:airtable-token-refresh:"+ws.String(), "1", time.Minute).Err(); err != nil {
 		t.Fatal(err)
 	}
 	rotated, _ := json.Marshal(freshAirtableKey(e.now))
@@ -219,7 +219,7 @@ func TestAirtableRefreshesWhenTheHolderNeverPublishes(t *testing.T) {
 	_, ws := e.organization(e.user())
 	e.fake.reply("POST /airtable/oauth2/v1/token", http.StatusOK, `{"access_token":"mine","refresh_token":"r2","expires_in":3600}`)
 	id := e.connect(ws, TypeAirtable, AirtableKey{AccessToken: "old", RefreshToken: "r1", ExpiryDate: e.now.Add(-time.Hour).UTC().Format(time.RFC3339)}, "a@example.com", nil)
-	if err := e.rdb.Set(context.Background(), "oauth:airtable-token-refresh:"+ws.String(), "1", time.Minute).Err(); err != nil {
+	if err := e.rdb.Set(context.Background(), "forma:oauth:airtable-token-refresh:"+ws.String(), "1", time.Minute).Err(); err != nil {
 		t.Fatal(err)
 	}
 	in, _ := e.repo.ByID(context.Background(), id)
