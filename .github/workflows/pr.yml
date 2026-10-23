@@ -148,7 +148,7 @@ jobs:
       - name: Test
         run: vp run -r test
 
-  # forma2 held its authentication and authorization code to 80% statement coverage (test.yml). The same packages here are auth, authz and apikey; on 2026-10-23 they stood at 85.7%, 87.8% and 89.7%. Without the race detector, which the shards above already run them under, the three take about a minute side by side.
+  # forma2 held its authentication and authorization code to 80% statement coverage (test.yml). The same packages here are auth, authz and apikey; on 2026-10-23 they stood at 85.7%, 87.8% and 89.7%. Without the race detector, which the shards above already run them under, the three took about 25 seconds side by side on a development machine.
   server-coverage:
     name: Go coverage (auth, authz, apikey)
     runs-on: ubuntu-latest
