@@ -6,13 +6,15 @@ WEB_DIST := web/dist
 EMBED_DIR := $(SERVER)/internal/webui/dist
 BIN := bin/forma
 
-.PHONY: help deps-up deps-down authz-schema migrate dev-server dev-worker dev-web build web embed server generate lint test check clean
+.PHONY: help deps-up deps-down authz-schema migrate seed seed-clear dev-server dev-worker dev-web build web embed server generate lint test check clean
 
 help:
 	@echo "deps-up      start local dependencies (docker compose), write the SpiceDB schema and create the storage bucket"
 	@echo "deps-down    stop local dependencies"
 	@echo "authz-schema write authzed/schema.zed into SpiceDB (reads .env, else .env.example)"
 	@echo "migrate      apply pending database and job queue migrations (reads .env)"
+	@echo "seed         write the demo organization, users, surveys and responses into the .env database (forma seed)"
+	@echo "seed-clear   remove what an earlier seed wrote, then seed again"
 	@echo "dev-server   run the Go server against .env"
 	@echo "dev-worker   run the background job worker against .env"
 	@echo "dev-web      run the Vite dev server (proxies the API to the Go server)"
@@ -46,6 +48,13 @@ authz-schema:
 
 migrate:
 	set -a && . ./.env && set +a && cd $(SERVER) && go run ./cmd/forma migrate
+
+# The seed refuses to run without ALLOW_SEED=1, since it writes users with a published password. These targets set it: they only ever point at the local database in .env.
+seed:
+	set -a && . ./.env && set +a && cd $(SERVER) && ALLOW_SEED=1 go run ./cmd/forma seed
+
+seed-clear:
+	set -a && . ./.env && set +a && cd $(SERVER) && ALLOW_SEED=1 go run ./cmd/forma seed --clear
 
 dev-server:
 	set -a && . ./.env && set +a && cd $(SERVER) && go run ./cmd/forma serve
