@@ -1,0 +1,115 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { cleanup, render, screen } from "@testing-library/react";
+import type { i18n as I18n } from "i18next";
+import { I18nextProvider } from "react-i18next";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
+import { initI18n } from "../../lib/i18n";
+import { billingKeys } from "../../lib/queries/billing";
+import { instanceKeys } from "../../lib/queries/instance";
+import type { OrganizationDetail } from "../../lib/queries/organizations";
+import { OrganizationGeneralPage } from "./general";
+
+const ORG = "0190a000-0000-7000-8000-000000000001";
+const API = `/api/app/organizations/${ORG}`;
+
+let i18n: I18n;
+const t = (key: string) => i18n.t(key);
+
+beforeAll(async () => {
+  i18n = await initI18n("en-US");
+  window.scrollTo = () => {};
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const organization: OrganizationDetail = {
+  id: ORG,
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  name: "Acme",
+  isAISmartToolsEnabled: false,
+  displayTimeZone: null,
+  whitelabel: {},
+  membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
+  userManagementAllowed: true,
+};
+
+/** The server behind the page's other cards. */
+const stubServer = () =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init: RequestInit = {}) => {
+      const key = `${init.method ?? "GET"} ${path}`;
+      const answers: Record<string, unknown> = {
+        [`GET ${API}/ai`]: { isInstanceConfigured: false },
+        [`GET ${API}/workspaces`]: { workspaces: [] },
+        "GET /api/app/auth/me": { id: "u1", name: "Grace" },
+      };
+      if (!(key in answers)) throw new Error(`unexpected ${key}`);
+      return new Response(JSON.stringify(answers[key]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    })
+  );
+
+/** The page on an instance with or without file storage, self-hosted or on Forma Cloud, both already known as the settings shell would have loaded them. */
+const renderPage = ({
+  storageConfigured,
+  isFormaCloud,
+}: {
+  storageConfigured: boolean;
+  isFormaCloud: boolean;
+}) => {
+  stubServer();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  queryClient.setQueryData(instanceKeys.info, { storageConfigured, version: "0.2.42" });
+  queryClient.setQueryData(billingKeys.summary(ORG), { isFormaCloud });
+  const rootRoute = createRootRoute({ component: Outlet });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/",
+        component: () => <OrganizationGeneralPage organization={organization} />,
+      }),
+    ]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </I18nextProvider>
+  );
+};
+
+describe("OrganizationGeneralPage", () => {
+  test("self-hosted without file storage: the storage warning, the security list tip and the version", async () => {
+    renderPage({ storageConfigured: false, isFormaCloud: false });
+    expect(await screen.findByText(t("common.storage_not_configured"))).toBeTruthy();
+    expect(await screen.findByText(t("workspace.settings.general.security_list_tip_link"))).toBeTruthy();
+    expect(await screen.findByText(t("common.forma_version"))).toBeTruthy();
+    expect(screen.getByText("0.2.42")).toBeTruthy();
+    expect(screen.getByText(t("workspace.look.email_customization"))).toBeTruthy();
+  });
+
+  test("on Forma Cloud with file storage: neither the warning nor the tip", async () => {
+    renderPage({ storageConfigured: true, isFormaCloud: true });
+    expect(await screen.findByText("0.2.42")).toBeTruthy();
+    expect(screen.queryByText(t("common.storage_not_configured"))).toBeNull();
+    expect(screen.queryByText(t("workspace.settings.general.security_list_tip_link"))).toBeNull();
+  });
+});
