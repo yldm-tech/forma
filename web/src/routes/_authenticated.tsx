@@ -6,6 +6,7 @@ import { ApiError } from "../lib/api";
 import { changeLocale, isLocale } from "../lib/i18n";
 import { loginHref } from "../lib/navigation";
 import { meQuery } from "../lib/queries/auth";
+import { PostHogIdentify } from "../lib/telemetry/posthog-identify";
 
 // Every page under this layout needs a session; without one the browser goes to sign-in and comes back afterwards, as forma2's proxy sent it.
 export const Route = createFileRoute("/_authenticated")({
@@ -31,5 +32,10 @@ function AuthenticatedLayout() {
     if (isLocale(me.locale) && i18n.language !== me.locale) void changeLocale(i18n, me.locale);
   }, [me.locale, i18n]);
 
-  return <Outlet />;
+  return (
+    <>
+      <PostHogIdentify userId={me.id} email={me.email} />
+      <Outlet />
+    </>
+  );
 }

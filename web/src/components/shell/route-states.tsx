@@ -1,13 +1,16 @@
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { errorMessage } from "../../lib/errors";
+import { reportError } from "../../lib/telemetry/sentry";
 import { Button } from "../ui/button";
 import { LoadingBlock } from "../ui/page";
 
-/** What a route shows when its data could not be loaded: the error, as the client error mapping words it, and a retry. */
+/** What a route shows when its data could not be loaded or it failed to render: the error, as the client error mapping words it, and a retry. An error the app does not expect is reported to Sentry, as forma2's error boundary did. */
 export const RouteError = ({ error, reset }: ErrorComponentProps) => {
   const { t } = useTranslation();
   const router = useRouter();
+  useEffect(() => reportError(error), [error]);
   return (
     <main className="mx-auto max-w-xl p-8">
       <h1 className="text-xl font-semibold text-slate-800">{t("common.something_went_wrong")}</h1>

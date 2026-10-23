@@ -12,6 +12,7 @@ import { meQuery } from "../../../lib/queries/auth";
 import { organizationQuery } from "../../../lib/queries/organizations";
 import { workspaceQuery } from "../../../lib/queries/workspaces";
 import { rememberWorkspace } from "../../../lib/storage";
+import { PostHogGroupIdentify } from "../../../lib/telemetry/posthog-identify";
 
 export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId")({
   loader: async ({ context: { queryClient }, params }) => {
@@ -65,6 +66,12 @@ function WorkspaceLayout() {
           membershipRole={organization.membership.role}
         />
       }>
+      <PostHogGroupIdentify
+        organizationId={organization.id}
+        organizationName={organization.name}
+        workspaceId={workspace.id}
+        workspaceName={workspace.name}
+      />
       <Outlet />
     </AppShell>
   );
