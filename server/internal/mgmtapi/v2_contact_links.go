@@ -147,7 +147,7 @@ func (h *Handler) v2SegmentLinks(c *gin.Context) {
 	}
 	if v := q.get("skip"); !isAbsent(v) {
 		if n, ok := is.coerceNumber("skip", v, 0, math.Inf(1)); ok {
-			f.Skip = int(n)
+			f.Skip = saturatingInt(n)
 		}
 	}
 	days := is.expirationDays(q, false)

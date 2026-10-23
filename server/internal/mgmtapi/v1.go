@@ -21,6 +21,9 @@ import (
 	"github.com/yldm-tech/forma/server/internal/response"
 )
 
+// maxSafeInteger is JavaScript's Number.MAX_SAFE_INTEGER, the largest integer zod's int() accepts.
+const maxSafeInteger = 1<<53 - 1
+
 // maxItemsPerPage is forma2's MAX_ITEMS_PER_PAGE, the largest page a v1 collection returns.
 const maxItemsPerPage = 250
 
@@ -94,7 +97,8 @@ func v1Pagination(c *gin.Context, defaultLimit int, offsetParam string) (limit, 
 	}
 	if raw := c.Query(offsetParam); raw != "" {
 		n := jsvalue.ParseNumber(raw)
-		if n != math.Trunc(n) || n < 0 || math.IsInf(n, 0) {
+		// z.int() accepts safe integers only.
+		if n != math.Trunc(n) || n < 0 || n > maxSafeInteger {
 			details[offsetParam] = offsetParam + " must be an integer of 0 or greater"
 		} else {
 			offset = int(n)

@@ -357,6 +357,11 @@ func (is *issues) coerceNumber(path string, v any, low, high float64) (float64, 
 		is.add(path, "Invalid input: expected number, received NaN")
 		return 0, false
 	}
+	// z.number() refuses ±Infinity as a type error, reported with typeof's name.
+	if math.IsInf(n, 0) {
+		is.add(path, "Invalid input: expected number, received number")
+		return 0, false
+	}
 	ok := true
 	if n < low {
 		is.add(path, "Too small: expected number to be >="+jsvalue.FormatNumber(low))
@@ -379,7 +384,7 @@ func (is *issues) commonFilter(q object) listFilter {
 	}
 	if v := q.get("skip"); !isAbsent(v) {
 		if n, ok := is.coerceNumber("skip", v, 0, math.Inf(1)); ok {
-			f.Skip = int(n)
+			f.Skip = saturatingInt(n)
 		}
 	}
 	if s, ok := is.enum("sortBy", q.get("sortBy"), optional, []string{"createdAt", "updatedAt"}); ok {
@@ -394,6 +399,14 @@ func (is *issues) commonFilter(q object) listFilter {
 		f.DateField = "updated_at"
 	}
 	return f
+}
+
+// saturatingInt converts a finite, non-negative float64 to int, capping at math.MaxInt64: Go leaves an out-of-range conversion to the platform (amd64 yields math.MinInt64), and an offset that large is an empty page anyway.
+func saturatingInt(n float64) int {
+	if n >= math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int(n)
 }
 
 // dateRange is the refinement every list adds to ZGetFilter, which zod runs only when the members parsed.

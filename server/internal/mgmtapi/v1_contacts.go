@@ -26,7 +26,7 @@ func positiveInt(c *gin.Context, name string) (int, bool) {
 	if n != math.Trunc(n) || n <= 0 || math.IsInf(n, 0) {
 		return 0, false
 	}
-	return int(n), true
+	return saturatingInt(n), true
 }
 
 // v1ListContacts is forma2's GET /contacts: the raw contacts of every workspace the key has a grant on, newest first, at most 500 a page.

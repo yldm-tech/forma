@@ -3,6 +3,7 @@ package mgmtapi
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"net/http"
 	"slices"
 	"strings"
@@ -237,6 +238,38 @@ func TestForma2PathAliases(t *testing.T) {
 		res := e.do(tc.method, tc.path, nil)
 		if res.Status != http.StatusPermanentRedirect || res.Header.Get("Location") != tc.want || res.Header.Get("Refresh") != "0;url="+tc.want || string(res.Body) != tc.want {
 			t.Errorf("%s %s = %d %v %q, want 308 to %s", tc.method, tc.path, res.Status, res.Header, res.Body, tc.want)
+		}
+	}
+}
+
+// zod's z.number() refuses Infinity and v1's .int() refuses an unsafe integer; an offset beyond int64 is an empty page, never a negative OFFSET.
+func TestPaginationBounds(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	key := s.bound["<api-key:manage>"]
+	for _, skip := range []string{"Infinity", "-Infinity"} {
+		body := expectStatus(t, "v2 skip "+skip, e.do("GET", "/api/v2/management/webhooks?skip="+skip, nil, "x-api-key", key), http.StatusUnprocessableEntity)
+		if d := body["error"].(map[string]any)["details"].([]any)[0].(map[string]any); d["field"] != "skip" || d["issue"] != "Invalid input: expected number, received number" {
+			t.Errorf("skip=%s details = %v", skip, d)
+		}
+	}
+	body := expectStatus(t, "v2 skip 1e19", e.do("GET", "/api/v2/management/webhooks?skip=1e19", nil, "x-api-key", key), http.StatusOK)
+	if meta := body["meta"].(map[string]any); meta["offset"] != float64(math.MaxInt64) || len(body["data"].([]any)) != 0 {
+		t.Errorf("skip=1e19 = %v", body)
+	}
+	for _, offset := range []string{"1e19", "9007199254740992"} {
+		expectStatus(t, "v1 offset "+offset, e.do("GET", "/api/v1/management/surveys?offset="+offset, nil, "x-api-key", key), http.StatusBadRequest)
+	}
+	expectStatus(t, "v1 largest safe offset", e.do("GET", "/api/v1/management/surveys?offset=9007199254740991", nil, "x-api-key", key), http.StatusOK)
+}
+
+func TestSaturatingInt(t *testing.T) {
+	for _, tc := range []struct {
+		in   float64
+		want int
+	}{{0, 0}, {12, 12}, {1e19, math.MaxInt64}, {math.MaxInt64, math.MaxInt64}, {9007199254740991, 9007199254740991}} {
+		if got := saturatingInt(tc.in); got != tc.want {
+			t.Errorf("saturatingInt(%g) = %d, want %d", tc.in, got, tc.want)
 		}
 	}
 }
