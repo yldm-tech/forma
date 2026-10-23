@@ -23,8 +23,8 @@ func mustURL(t *testing.T, raw string) *url.URL {
 // forma2's provider-normalization.test.ts.
 func TestNormalizeProvider(t *testing.T) {
 	cases := map[string]string{
-		"google": "google", "GitHub": "github", "azuread": "azuread", "azure-ad": "azuread", "AZURE-AD": "azuread", "openid": "openid",
-		"saml": "", "email": "", "credential": "", "": "", "toString": "", "__proto__": "",
+		"google": "google", "GitHub": "github", "azuread": "azuread", "azure-ad": "azuread", "AZURE-AD": "azuread", "openid": "openid", "saml": "saml", "SAML": "saml",
+		"email": "", "credential": "", "": "", "toString": "", "__proto__": "",
 	}
 	for in, want := range cases {
 		if got := normalizeProvider(in); got != want {

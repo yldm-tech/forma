@@ -16,8 +16,8 @@ import (
 type samlConnection struct {
 	ID          uuid.UUID
 	Name        string
-	IdPEntityID string
-	IdPMetadata string
+	IdPEntityID string `gorm:"column:idp_entity_id"`
+	IdPMetadata string `gorm:"column:idp_metadata"`
 }
 
 // samlConnection returns the connection of a tenant and product, or nil.
