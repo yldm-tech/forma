@@ -12,6 +12,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/app"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/database"
 	"github.com/yldm-tech/forma/server/internal/platform/jobs"
@@ -118,11 +119,17 @@ func worker(ctx context.Context) error {
 // telemetryShutdownTimeout bounds the final flush of spans, metrics and error reports.
 const telemetryShutdownTimeout = 10 * time.Second
 
-// startTelemetry sets up OpenTelemetry and Sentry before anything else is built, so every instrument and error report of the process goes through them. The returned function flushes both; it runs last, after the process has drained its work.
+// startTelemetry sets up OpenTelemetry, Sentry and PostHog before anything else is built, so every instrument, error report and product event of the process goes through them. The returned function flushes all three; it runs last, after the process has drained its work.
 func startTelemetry(ctx context.Context, cfg config.Config, log *slog.Logger) func() {
 	otel := telemetry.Setup(ctx, cfg, log)
 	flushSentry := telemetry.SetupSentry(ctx, cfg, log)
+	closeAnalytics, err := analytics.Setup(cfg, log)
+	if err != nil {
+		log.ErrorContext(ctx, "PostHog could not be set up; product analytics are off", "err", err)
+		closeAnalytics = func() {}
+	}
 	return func() {
+		closeAnalytics()
 		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
 		defer cancel()
 		otel.Shutdown(shutdownCtx)
