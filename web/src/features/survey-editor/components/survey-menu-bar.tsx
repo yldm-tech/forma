@@ -218,10 +218,10 @@ export const SurveyMenuBar = ({
     }
   };
 
-  // An app survey still on the placeholder segment the editor gives it gets a private segment of its own before it is saved.
+  // An app survey still on the placeholder segment the editor gives it gets a private segment of its own before it is saved. With no targeting there is nothing to create: forma2's createSegmentAction refused an empty filter tree for every segment, private ones included, and its editor then saved the survey without a segment, so the save itself gave the app survey its empty private segment. The server's save does the same here (survey saveSegment), so the placeholder is sent as no segment.
   const handleSegmentUpdate = async (): Promise<TSegment | null> => {
     if (localSurvey.segment?.id !== "temp") return localSurvey.segment;
-    if (localSurvey.type !== "app") return null;
+    if (localSurvey.type !== "app" || localSurvey.segment.filters.length === 0) return null;
     return createSegment.mutateAsync({
       filters: localSurvey.segment.filters,
       isPrivate: true,

@@ -74,6 +74,43 @@ func TestCreateSegment(t *testing.T) {
 	}
 }
 
+// forma2's ZSegmentCreateInput and ZSegmentUpdateInput take ZRequiredSegmentFilters whatever isPrivate says: an empty tree is refused for a private segment as for a public one, and nothing is written. The survey editor never sends one: an app survey without targeting is saved without a segment and the survey save gives it its empty private segment (survey saveSegment).
+func TestSegmentFiltersAreRequiredPrivateOrPublic(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+
+	for _, tc := range []struct {
+		name      string
+		isPrivate any
+	}{
+		{"private by default", nil},
+		{"private", true},
+		{"public", false},
+	} {
+		survey := e.survey(ws, "draft")
+		body := map[string]any{"title": survey.String(), "filters": tree(), "surveyId": survey.String()}
+		if tc.isPrivate != nil {
+			body["isPrivate"] = tc.isPrivate
+		}
+		e.fails(e.do(owner, http.MethodPost, wsPath(ws, "/segments"), body), http.StatusBadRequest, codeInvalidFilters, atLeastOneFilterMessage)
+		if n := e.count(`SELECT count(*) FROM segments WHERE workspace_id = ? AND title = ?`, ws, survey.String()); n != 0 {
+			t.Fatalf("%s: a refused create wrote %d segments", tc.name, n)
+		}
+		if n := e.count(`SELECT count(*) FROM surveys WHERE id = ? AND segment_id IS NOT NULL`, survey); n != 0 {
+			t.Fatalf("%s: a refused create linked the survey", tc.name)
+		}
+	}
+
+	for _, isPrivate := range []bool{true, false} {
+		seg := e.segmentRow(ws, uuid.NewString(), isPrivate, `[{"id":"n1","connector":null,"resource":{"id":"f1","root":{"type":"attribute","contactAttributeKey":"plan"},"value":"pro","qualifier":{"operator":"equals"}}}]`)
+		e.fails(e.do(owner, http.MethodPatch, segmentPath(seg, ""), map[string]any{"filters": tree()}), http.StatusBadRequest, codeInvalidFilters, atLeastOneFilterMessage)
+		if n := e.count(`SELECT jsonb_array_length(filters) FROM segments WHERE id = ?`, seg); n != 1 {
+			t.Fatalf("a refused update of a segment (private %v) left %d filters", isPrivate, n)
+		}
+	}
+}
+
 func TestUpdateSegment(t *testing.T) {
 	e := newEnv(t)
 	owner, outsider := e.user(), e.user()
