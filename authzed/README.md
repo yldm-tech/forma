@@ -13,13 +13,6 @@ assertion-based validation suite.
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than
   being duplicated in this repository.
-- [`RUNBOOK.md`](./RUNBOOK.md) — diagnosing and recovering from relationship-sync
-  failures: the metrics, the log field contract, suggested alert rules, and the
-  recovery path through `pnpm authzed:backfill`.
-- [`PERFORMANCE.md`](./PERFORMANCE.md) — measured cost of a single authorization
-  decision (legacy vs SpiceDB), the proof that the workspace-scoped list paths issue
-  a row-count-independent number of checks, and how to reproduce both with
-  `pnpm authzed:perf`.
 - [`AuthZed Operations`](../docs/self-hosting/advanced/authzed-operations.mdx) —
   the public self-hosting contract for Docker and Kubernetes operators.
 
@@ -44,7 +37,7 @@ Configure the normal server-only AuthZed variables, then check the connected
 SpiceDB instance without changing it:
 
 ```bash
-pnpm authzed:schema check
+forma authz schema check
 ```
 
 The command compares the checked-in schema with SpiceDB semantically by using
@@ -56,15 +49,14 @@ counts. Schema contents and changed object names are never printed.
 An empty SpiceDB installation can be initialized explicitly:
 
 ```bash
-pnpm authzed:schema apply
+forma authz schema apply
 ```
 
 Replacing a non-empty schema requires the exact remote digest returned by the
 immediately preceding check:
 
 ```bash
-pnpm authzed:schema apply \
-  --expected-current-digest sha256:<digest-from-check>
+forma authz schema apply --expected-current-digest=sha256:<digest-from-check>
 ```
 
 This guards against applying over a schema the operator did not inspect.
@@ -132,12 +124,7 @@ The current authorization contract treats every `Membership` row as active witho
 behavior: accepted and pending membership rows project identically. An
 `Invite` alone is not projected.
 
-Every authorization-bearing source table has a PostgreSQL trigger that inserts a
-projection event in the same transaction as the source mutation. The existing
-post-commit projector remains as a low-latency fast path, but the PostgreSQL
-outbox is the durable delivery contract: BullMQ wakes a worker every five
-seconds, the worker claims rows with leases and `FOR UPDATE SKIP LOCKED`, and the
-idempotent reconcilers deliver each claimed batch as six independent groups.
+Every authorization-bearing source table has a PostgreSQL trigger that inserts a projection event in the same transaction as the source mutation. The existing post-commit projector remains as a low-latency fast path, but the PostgreSQL outbox is the durable delivery contract: the periodic River job `authzed-projection.deliver` runs every five seconds on the job worker (`forma worker`, or in process under `forma start`), claims rows with leases and `FOR UPDATE SKIP LOCKED`, and the idempotent reconcilers deliver each claimed batch as six independent groups.
 
 Failure is attributed rather than shared. A group that fails takes only its own
 events; the rest of the batch is still delivered. A retryable failure releases
@@ -163,7 +150,7 @@ AuthZed being disabled performs no delivery work. An AuthZed outage never
 changes a successful PostgreSQL mutation into an application error; committed
 outbox rows remain recoverable and are replayed when SpiceDB returns. Existing
 records and independent drift are reconciled by the six-hour applying audit and
-by `pnpm authzed:backfill` (see [Backfill and repair](#backfill-and-repair)). A
+by `forma authz backfill` (see [Backfill and repair](#backfill-and-repair)). A
 clean graph and drained outbox are mandatory before direct authority.
 
 Deletes, and updates that are not provably grants, are classified as revocations.
@@ -258,7 +245,7 @@ Projection covers UI and API team creation/update/deletion, workspace
 creation/deletion, API v2 workspace-team CRUD, invite/signup/SSO team
 assignment, organization-role promotions, membership removal, API v2 nested
 organization-user team changes, and user/organization cascades. Existing records
-are not backfilled by these hooks; `pnpm authzed:backfill` covers them.
+are not backfilled by these hooks; `forma authz backfill` covers them.
 
 ## API-key scope projection
 
@@ -298,7 +285,7 @@ or usage timestamps. Reconciliation uses the same post-commit, best-effort,
 three-pass convergence and bounded batching contract as organization, team,
 and workspace projection.
 
-Existing API keys are not backfilled by mutation hooks; `pnpm authzed:backfill`
+Existing API keys are not backfilled by mutation hooks; `forma authz backfill`
 covers them, including a scope revoked outside a hook, which the projector alone
 cannot see. API-key principals are routed through the central interface; the
 direct-authority release contract is now owned by ENG-2448 and
@@ -337,8 +324,7 @@ relationship graph current.
 The immutable bridge/candidate artifacts, fail-closed behavior, sandbox-first
 sequence, staging and regional production gates, abort triggers, rollback, and
 self-hosted v6 contract are defined in the [direct AuthZed cutover and rollback
-contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad). Operational execution is documented in the
-[relationship sync runbook](./RUNBOOK.md#7-direct-authority-cutover).
+contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad).
 
 ## Mapping from the current system
 
@@ -404,24 +390,20 @@ Behavioral sources of truth (referenced from the schema's doc comments). They ar
 
 ## Backfill and repair
 
-Mutation hooks only project records that change while they are running. They do
-not cover records that predate them, and they cannot see a row deleted outside a
-hook — a projector derives its targets from PostgreSQL, so a relationship whose
-source row is already gone is never named and never removed. `pnpm
-authzed:backfill` closes both gaps.
+Mutation hooks only project records that change while they are running. They do not cover records that predate them, and they cannot see a row deleted outside a hook — a projector derives its targets from PostgreSQL, so a relationship whose source row is already gone is never named and never removed. `forma authz backfill` closes both gaps.
 
 ```bash
 # Report drift over every organization. Writes nothing.
-pnpm authzed:backfill
+forma authz backfill
 
 # Converge one organization from PostgreSQL, or a single workspace's grants.
-pnpm authzed:backfill --apply --organization-id=<cuid>
-pnpm authzed:backfill --apply --workspace-id=<cuid>
+forma authz backfill --apply --organization-id=<id>
+forma authz backfill --apply --workspace-id=<id>
 
 # Remove the relationships of a workspace whose row is gone. This is a prune —
 # every relationship on that workspace goes, team and API-key grants included —
 # so it takes the prune flags rather than --apply alone.
-pnpm authzed:backfill --apply --prune --confirm-prune --workspace-id=<cuid> \
+forma authz backfill --apply --prune --confirm-prune --workspace-id=<id> \
   --expected-endpoint=<host:port>
 
 # A stale grant whose *team or API key* is also gone is reported but not removed by
@@ -429,14 +411,14 @@ pnpm authzed:backfill --apply --prune --confirm-prune --workspace-id=<cuid> \
 # which is the organization or full sweep's unit of work, not one workspace's.
 
 # Converge everything, then remove relationships PostgreSQL no longer holds.
-pnpm authzed:backfill --apply --prune --confirm-prune --scope=all \
+forma authz backfill --apply --prune --confirm-prune --scope=all \
   --expected-endpoint=<host:port>
 
 # Resume an interrupted run from the lastOrganizationId it reported.
-pnpm authzed:backfill --apply --after-organization-id=<cuid>
+forma authz backfill --apply --after-organization-id=<id>
 ```
 
-Exit codes match `authzed:schema`: `0` reconciled, `2` drift remains, `1` failed
+Exit codes match `forma authz schema`: `0` reconciled, `2` drift remains, `1` failed
 or misused. **`0` means every category is clear, including the ones this tool
 deliberately will not repair** — `invalid` and `unmanaged` count toward drift
 exactly like `orphaned` and `missing`, because unrepaired authorization state is
@@ -534,19 +516,15 @@ Note also that the command reads `.env` and ignores `.env.local`, so the instanc
 it rewrites is not necessarily the one a local dev server talks to. Always pass
 `--expected-endpoint` when pruning.
 
-Released Forma images include the equivalent `forma-authzed backfill`
-command for self-hosted operators. Repository development retains
-`pnpm authzed:backfill`.
-
 ## Durable projection outbox
 
 Release images expose bounded, identifier-free outbox operations:
 
 ```bash
-forma-authzed outbox status
-forma-authzed outbox drain
-forma-authzed outbox drain --max-batches=500
-forma-authzed outbox replay
+forma authz outbox status
+forma authz outbox drain
+forma authz outbox drain --max-batches=500
+forma authz outbox replay
 ```
 
 `status` reports aggregate pending, dead-letter, oldest-age, and revocation-age
@@ -572,20 +550,19 @@ workflow above. Successfully delivered outbox rows are retained for seven days;
 the scheduled audit removes at most 10,000 expired rows per run. Pending and
 dead-letter rows are never removed by retention cleanup.
 
-## Self-hosted v6 upgrade gate
+## Self-hosted initialization and upgrades
 
-Release images expose two aggregate-only orchestration commands:
+There is no separate upgrade command; deployments run the `forma authz` steps above in order. The Helm chart's `authzed-initialize` Job (`charts/forma/templates/authzed-initialize-job.yaml`) runs on a fresh install, and before an upgrade once `authzed.migrationAcknowledged=true`:
 
 ```bash
-forma-authzed upgrade prepare
-forma-authzed upgrade check
+forma authz schema apply
+forma authz outbox drain
+forma authz backfill --apply
 ```
 
-`prepare` requires `AUTHZED_ENABLED=true` and `AUTHZED_CONSISTENCY=fully_consistent`, checks authenticated
-datastore health, applies an empty or guarded canonical schema, drains the outbox, runs attributable repair, and
-audits the final graph. `check` repeats the health, schema, outbox, and full dry-run audit without writing. It
-exits 0 only for a direct-authority-ready deployment, 2 when readiness is blocked by drift, and 1 for a failed
-configuration or operation. Unlike the detailed backfill report, both commands emit aggregate counters only.
+The schema step is a no-op when SpiceDB already holds the release's schema and refuses a different one unless its digest is supplied (see [Checking and applying the schema](#checking-and-applying-the-schema)). The backfill step exits 0 only when nothing is left unreconciled. Set `authzed.initialization.enabled=false` only when an operator runs the same steps outside the chart. The Docker Compose stack's `authzed-initialize` service runs only `forma authz schema apply`.
+
+To check readiness without writing, run `forma authz schema check`, `forma authz outbox status` and a dry-run `forma authz backfill`; each exits 0 when clean and 2 when it is not.
 
 ## Deliberately not modeled (stays in application code)
 

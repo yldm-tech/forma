@@ -458,24 +458,3 @@ export const handleErrorOnFirstSetup = (e: { code: string; responseMessage: stri
 
   throw new Error("Could not set up forma");
 };
-
-export const putFormaInErrorState = (formaConfig: Config): void => {
-  const logger = Logger.getInstance();
-
-  if (getIsDebug()) {
-    logger.debug("Not putting forma in error state because debug mode is active (no error state)");
-    return;
-  }
-
-  logger.debug("Putting forma in error state");
-  // change forma status to error
-  formaConfig.update({
-    ...formaConfig.get(),
-    status: {
-      value: "error",
-      expiresAt: new Date(new Date().getTime() + 10 * 60000), // 10 minutes in the future
-    },
-  });
-
-  tearDown();
-};

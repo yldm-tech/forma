@@ -138,21 +138,14 @@ catalogs:
     zod:
       specifier: 4.3.6
       version: 4.3.6
-    zod-openapi:
-      specifier: 5.4.6
-      version: 5.4.6
 
 overrides:
-  protobufjs@8: 8.6.6
   lodash: 4.18.1
   minimatch@10: 10.2.5
   postcss: 8.5.28
   dompurify: 3.4.15
   fast-xml-parser: 5.7.0
-  ip-address@10: 10.3.1
   nanoid@3: 3.3.18
-  uuid@8: 11.1.1
-  uuid@9: 11.1.1
   ws@8: 8.21.0
   '@opentelemetry/core': 2.8.0
   esbuild: 0.28.1
@@ -160,9 +153,7 @@ overrides:
   undici@6: 6.28.0
   undici@7: 7.29.0
   '@opentelemetry/propagator-jaeger': 2.9.0
-  socket.io-parser@4: 4.2.7
   fast-uri@3: 3.1.6
-  deepmerge-ts@7: 8.0.1
   browserslist: 4.28.7
   '@faker-js/faker': 10.5.0
   fflate: 0.4.9
@@ -373,15 +364,9 @@ importers:
       '@storybook/react':
         specifier: 'catalog:'
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))(typescript@5.9.3)
-      '@storybook/react-vite':
-        specifier: 'catalog:'
-        version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rollup@4.63.2)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))(typescript@5.9.3)
       '@tailwindcss/postcss':
         specifier: 'catalog:'
         version: 4.3.3
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.3.3(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -391,18 +376,12 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
-      '@vitejs/plugin-react':
-        specifier: 'catalog:'
-        version: 6.1.2(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1(@noble/hashes@2.3.0)
-      preact:
-        specifier: 'catalog:'
-        version: 10.29.8
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -536,9 +515,6 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
-      zod-openapi:
-        specifier: 'catalog:'
-        version: 5.4.6(zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9))
     devDependencies:
       '@forma/config-typescript':
         specifier: workspace:*
@@ -6867,12 +6843,6 @@ packages:
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
-  zod-openapi@5.4.6:
-    resolution: {integrity: sha512-P2jsOOBAq/6hCwUsMCjUATZ8szkMsV5VAwZENfyxp2Hc/XPJQpVwAgevWZc65xZauCwWB9LAn7zYeiCJFAEL+A==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      zod: ^3.25.74 || ^4.0.0
-
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -12964,10 +12934,6 @@ snapshots:
       '@yuku-parser/binding-win32-x64': 0.9.5
 
   zimmerframe@1.1.4: {}
-
-  zod-openapi@5.4.6(zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)):
-    dependencies:
-      zod: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
 
   zod@4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9): {}
 

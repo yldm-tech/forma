@@ -18,7 +18,7 @@ export default defineConfig({
     rollupOptions: {
       output: { inlineDynamicImports: true },
     },
-    emptyOutDir: false, // keep the dist folder to avoid errors with pnpm go when folder is empty during build
+    emptyOutDir: false, // keep the dist folder so a parallel watch build (pnpm dev) never sees it empty
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       name: "forma",

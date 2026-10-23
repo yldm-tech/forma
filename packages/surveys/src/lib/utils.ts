@@ -167,14 +167,6 @@ const getPossibleNextBlocks = (blocks: TSurveyBlock[], element: TSurveyElement):
   return possibleBlockIds;
 };
 
-export const isFulfilled = <T>(val: PromiseSettledResult<T>): val is PromiseFulfilledResult<T> => {
-  return val.status === "fulfilled";
-};
-
-export const isRejected = <T>(val: PromiseSettledResult<T>): val is PromiseRejectedResult => {
-  return val.status === "rejected";
-};
-
 export const makeRequest = async <T>(
   appUrl: string,
   endpoint: string,

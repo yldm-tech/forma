@@ -47,8 +47,7 @@ OAuth clients discover the protected resource metadata here:
 https://forma.yldm.ai/.well-known/oauth-protected-resource/api/mcp
 ```
 
-The metadata advertises `/api/mcp` as the protected resource and points clients to the Better Auth
-issuer under `/api/auth`.
+The metadata advertises `/api/mcp` as the protected resource and points clients to the Go server's authorization server, whose issuer is `/api/auth`.
 
 ## Authentication
 
@@ -71,7 +70,7 @@ Discovery endpoints:
 
 | Endpoint                                           | Purpose                              |
 | -------------------------------------------------- | ------------------------------------ |
-| `/api/auth/.well-known/oauth-authorization-server` | Better Auth authorization metadata   |
+| `/api/auth/.well-known/oauth-authorization-server` | Authorization server metadata        |
 | `/api/auth/.well-known/openid-configuration`       | OpenID Connect metadata              |
 | `/.well-known/oauth-authorization-server/api/auth` | RFC 8414 path-insertion alias        |
 | `/.well-known/openid-configuration/api/auth`       | RFC 8414 OpenID path-insertion alias |
@@ -91,16 +90,10 @@ Supported scopes:
 | `email` | User email claim |
 | `offline_access` | Refresh tokens for MCP clients |
 
-**The rule:** every MCP tool is registered through `registerScopedTool`, which takes the required
-scope(s) as a mandatory argument and runs the gate before the handler. Read tools declare
-`<resource>:read`; every mutating tool declares `<resource>:write`. A tool cannot be registered
-without declaring a scope, so a new tool inherits enforcement by construction — the gate returns a
-`403 insufficient_scope` before the handler touches a v3 operation. Tools that more than one scope
-group legitimately reaches pass `{ anyOf: [...] }` instead of a plain list, which keeps them on the
-same registration path rather than a hand-rolled gate.
+**The rule:** every MCP tool has a `toolSpec{scopes, anyOf}` entry in `toolSpecs` (`server/internal/mcp/tools.go`), and the handler refuses to start when an advertised tool has none. `toolHandler` runs the scope gate before the tool's handler, so a new tool inherits enforcement from its entry: the gate returns a `403` before the handler touches a v3 operation. Read tools declare `<resource>:read`; every mutating tool declares `<resource>:write`. By default the token must hold every listed scope; tools that more than one scope group legitimately reaches set `anyOf: true`, which requires any one of them and keeps them on the same gate rather than a hand-rolled one.
 
 **There is no single mandatory baseline scope.** Authentication requires *at least one* resource scope
-(`MCP_RESOURCE_SCOPES`), so a workflows-only grant is a legitimate MCP
+(`oauthserver.ResourceScopes`), so a workflows-only grant is a legitimate MCP
 client. `list_workspaces` — the workspaceId-discovery prerequisite for every resource tool — therefore
 gates on any resource read scope rather than one specific one; its result is derived from the caller's
 own memberships and key grants, so admitting any read scope exposes nothing extra.
@@ -235,8 +228,8 @@ curl -sS -X POST http://localhost:3000/api/auth/oauth2/register \
 <Note>
   For the same reason, the `scope` in the MCP endpoint's 401 `WWW-Authenticate` challenge is exactly
   the metadata's `scopes_supported`, not a subset — a client that hits the 401 before fetching the
-  metadata uses the challenge string as its registration scope. The two are derived from one constant
-  (`MCP_CHALLENGE_SCOPE`) and a test asserts they stay equal; when they diverged, every new client
+  metadata uses the challenge string as its registration scope. Both read one list
+  (`oauthserver.ProtectedResourceScopes`) and a test asserts they stay equal; when they diverged, every new client
   failed its first connect with `invalid_scope` and only succeeded on retry.
 </Note>
 

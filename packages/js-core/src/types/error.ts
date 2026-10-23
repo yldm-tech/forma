@@ -3,11 +3,6 @@ export interface ResultError<T> {
   error: T;
 }
 
-export interface ResultOk<T> {
-  ok: true;
-  value: T;
-}
-
 export type Result<T, E = Error> = { ok: true; data: T } | { ok: false; error: E };
 
 export const ok = <T, E>(data: T): Result<T, E> => ({ ok: true, data });
@@ -18,12 +13,6 @@ export const err = <E = Error>(error: E): ResultError<E> => ({
   ok: false,
   error,
 });
-
-export const match = <TSuccess, TError, TReturn>(
-  result: Result<TSuccess, TError>,
-  onSuccess: (value: TSuccess) => TReturn,
-  onError: (error: TError) => TReturn
-): TReturn => (result.ok ? onSuccess(result.data) : onError(result.error));
 
 export interface ApiErrorResponse {
   code:

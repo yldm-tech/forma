@@ -23,7 +23,7 @@ import { rewriteNodeNextDtsSpecifiers } from "../vite-plugins/node-next-dts";
  */
 export default defineConfig({
   build: {
-    // Keep dist when running watch so surveys (and others) can resolve types during parallel go
+    // Keep dist when running watch so surveys (and others) can resolve types during parallel dev builds
     emptyOutDir: false,
     lib: {
       entry: "src/index.ts",

@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import "@testing-library/jest-dom/vitest";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { z } from "zod";

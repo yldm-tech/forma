@@ -34,7 +34,6 @@
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 BUILD_UMD=true vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
     "build:analyze": "cross-env NODE_OPTIONS=--max-old-space-size=8192 ANALYZE=true vp build && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
     "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vp build --mode dev && cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --project tsconfig.build.json",
-    "go": "concurrently -n \"ESM,UMD\" \"vp build --watch --mode dev\" \"BUILD_UMD=true vp build --watch --mode dev\"",
     "preview": "vp preview",
     "clean": "rimraf node_modules dist",
     "test": "vp test run",

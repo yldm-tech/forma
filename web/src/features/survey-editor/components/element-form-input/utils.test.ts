@@ -1,4 +1,3 @@
-import "@testing-library/jest-dom/vitest";
 import { TFunction } from "i18next";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { type TI18nString } from "@forma/types/i18n";

@@ -31,7 +31,6 @@
     "dev": "vp build --watch --mode dev",
     "build": "vp build",
     "build:dev": "vp build --mode dev",
-    "go": "vp build --watch --mode dev",
     "clean": "rimraf node_modules dist coverage",
     "test": "vp test run",
     "test:coverage": "vp test run --coverage"

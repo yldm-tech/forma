@@ -597,5 +597,3 @@ const LanguageSelector = ({
     </DropdownMenu>
   );
 };
-
-export { getPlacementStyle } from "./lib/utils";
