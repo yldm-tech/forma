@@ -63,6 +63,11 @@ var (
 	BAChangePassword = Rule{Namespace: "ba:change-password", Window: time.Minute, Limit: 5}
 	// BASSORecovery is forma2's /sso-recovery/* limit. It guards both halves of linking an identity provider to an existing account: starting it, which mails the address on record, and redeeming the emailed link.
 	BASSORecovery = Rule{Namespace: "ba:sso-recovery", Window: time.Minute, Limit: 5}
+	// The MCP authorization server's limits, forma2's oauthProvider rateLimit (set both in the plugin and in Better Auth's custom rules): dynamic client registration, the token endpoint, introspection and revocation.
+	BAOAuthRegister   = Rule{Namespace: "ba:oauth2-register", Window: time.Minute, Limit: 5}
+	BAOAuthToken      = Rule{Namespace: "ba:oauth2-token", Window: time.Minute, Limit: 20}
+	BAOAuthIntrospect = Rule{Namespace: "ba:oauth2-introspect", Window: time.Minute, Limit: 60}
+	BAOAuthRevoke     = Rule{Namespace: "ba:oauth2-revoke", Window: time.Minute, Limit: 30}
 
 	StorageUpload             = Rule{Namespace: "storage:upload", Window: time.Minute, Limit: 5}
 	StorageUploadPerWorkspace = Rule{Namespace: "storage:upload:workspace", Window: time.Minute, Limit: 100}
