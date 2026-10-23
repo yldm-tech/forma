@@ -32,7 +32,7 @@ func (h *Handler) registerV1(engine gin.IRouter) {
 	orgKey := h.v1.APIKey(apikey.Options{AllowOrganizationOnly: true}, ratelimit.APIV1)
 	audited := h.v1.Audited
 	storage := append(h.v1.APIKeyOrSession(h.sessions.Optional(), ratelimit.StorageUpload), h.v1StorageUpload)
-	mount(engine, "/api/v1/management", nil, []route{
+	mount(engine, "/api/v1/management", mgmtv1.Front(h.log), []route{
 		r(http.MethodGet, "/me", h.v1Me),
 
 		r(http.MethodGet, "/surveys", orgKey, h.v1ListSurveys),

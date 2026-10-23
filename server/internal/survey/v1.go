@@ -422,6 +422,9 @@ func recaptchaEnabled(v any) bool {
 
 // CreateV1 is forma2's POST /api/v1/management/surveys after the workspace was resolved and authorized: the body checked against ZSurveyCreateInputWithWorkspaceId (questions or blocks, not both), legacy questions converted into one block each, a reCAPTCHA setting refused when the instance has no keys, then createSurvey: the survey, its triggers, languages and follow-ups, and an app survey's private segment. The caller is the API key; the survey has no creator.
 func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.UUID, body map[string]any) (*Survey, error) {
+	// The create schema omits these, so zod stripped them: a create sets neither overwrites nor the archive stamp.
+	delete(body, "workspaceOverwrites")
+	delete(body, "archivedAt")
 	issues := typeIssues(body, "name")
 	if len(issues) > 0 {
 		return nil, &V1Invalid{Issues: issues}

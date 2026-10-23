@@ -78,10 +78,17 @@ func PrincipalOf(c *gin.Context) *apikey.Principal {
 	return CallerOf(c).Key
 }
 
-// Headers sets what every v1 response of these routes carries regardless of its handler: Next.js's Vary.
-func Headers(c *gin.Context) {
-	c.Header("Vary", RouteVary)
-	c.Next()
+// Front sets what every response of these routes carries regardless of its handler, Next.js's Vary, and answers a failure a middleware recorded with httpapi.Fail (a session that could not be read) as v1's unexpected error, since these routes have no /api/app error envelope.
+func Front(log *slog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Vary", RouteVary)
+		c.Next()
+		if len(c.Errors) == 0 || c.Writer.Written() {
+			return
+		}
+		log.ErrorContext(c.Request.Context(), "v1 management request failed", "route", c.FullPath(), "err", c.Errors.Last().Err)
+		v1api.InternalError(c, MessageUnexpected)
+	}
 }
 
 // APIKey is the front of forma2's withV1ApiWrapper for a route that accepts an API key only (a session is never read): a key valid for opts, then rule charged to the key. A missing or invalid key is 401 not_authenticated and charges nothing.

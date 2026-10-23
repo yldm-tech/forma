@@ -73,9 +73,9 @@ func r(method, path string, handlers ...gin.HandlerFunc) route {
 	return route{method: method, path: path, handlers: handlers}
 }
 
-// mount registers routes under prefix behind front, and on every path the OPTIONS answer Next.js generated for a route handler: 204 with Allow listing the methods the path exports, unauthenticated and uncharged.
-func mount(engine gin.IRouter, prefix string, front []gin.HandlerFunc, routes []route) {
-	g := engine.Group(prefix, append([]gin.HandlerFunc{mgmtv1.Headers, authz.DecisionMemo()}, front...)...)
+// mount registers routes under prefix behind front (mgmtv1.Front), and on every path the OPTIONS answer Next.js generated for a route handler: 204 with Allow listing the methods the path exports, unauthenticated and uncharged.
+func mount(engine gin.IRouter, prefix string, front gin.HandlerFunc, routes []route) {
+	g := engine.Group(prefix, front, authz.DecisionMemo())
 	methods := map[string][]string{}
 	var paths []string
 	for _, rt := range routes {
@@ -85,7 +85,7 @@ func mount(engine gin.IRouter, prefix string, front []gin.HandlerFunc, routes []
 		}
 		methods[rt.path] = append(methods[rt.path], rt.method)
 	}
-	options := engine.Group(prefix, mgmtv1.Headers)
+	options := engine.Group(prefix, front)
 	for _, p := range paths {
 		allow := append([]string{http.MethodOptions}, methods[p]...)
 		if slices.Contains(allow, http.MethodGet) {

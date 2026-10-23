@@ -14,6 +14,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/apikey"
 	"github.com/yldm-tech/forma/server/internal/authz"
+	"github.com/yldm-tech/forma/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/server/internal/platform/jsvalue"
@@ -406,7 +407,7 @@ func (h *Handler) registerV2(engine gin.IRouter) {
 	key := h.v2Auth(apikey.Options{})
 	orgKey := h.v2Auth(apikey.Options{AllowOrganizationOnly: true})
 	audited := h.v2Audited
-	mount(engine, "/api/v2", nil, []route{
+	mount(engine, "/api/v2", mgmtv1.Front(h.log), []route{
 		r(http.MethodGet, "/health", h.v2Health),
 		r(http.MethodGet, "/me", orgKey, h.v2Me),
 		r(http.MethodGet, "/roles", orgKey, h.v2Roles),

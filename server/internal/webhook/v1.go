@@ -32,7 +32,7 @@ func NewV1Handler(svc *Service, v1 *mgmtv1.Wrapper, log *slog.Logger) *V1Handler
 
 // Register mounts the routes outside /api/app: they answer with forma2's v1 envelope and accept an API key only, charged to forma2's api:v1 limit.
 func (h *V1Handler) Register(r gin.IRouter) {
-	g := r.Group("/api/v1/webhooks", mgmtv1.Headers, h.v1.APIKey(apikey.Options{}, ratelimit.APIV1))
+	g := r.Group("/api/v1/webhooks", mgmtv1.Front(h.log), h.v1.APIKey(apikey.Options{}, ratelimit.APIV1))
 	g.GET("", h.list)
 	g.POST("", h.v1.Audited(audit.ActionCreated, audit.TargetWebhook, h.create))
 	g.GET("/:webhookId", h.get)
