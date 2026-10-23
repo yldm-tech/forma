@@ -307,7 +307,7 @@ func TestLoadSSO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.BetterAuthURL != nil {
+	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.SAMLEnabled() || cfg.SSO.BetterAuthURL != nil {
 		t.Fatalf("SSO = %+v, want every provider off", cfg.SSO)
 	}
 
@@ -316,7 +316,7 @@ func TestLoadSSO(t *testing.T) {
 		"AZUREAD_CLIENT_ID": "a", "AZUREAD_CLIENT_SECRET": "as", "AZUREAD_TENANT_ID": "common",
 		"OIDC_CLIENT_ID": "o", "OIDC_CLIENT_SECRET": "os", "OIDC_ISSUER": "https://idp.example.com/realms/forma", "OIDC_DISPLAY_NAME": "Okta",
 		"AUTH_SSO_DEFAULT_ORGANIZATION_ID": "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10", "AUTH_SSO_DEFAULT_ORGANIZATION_ROLE": "member",
-		"BETTER_AUTH_URL": "https://auth.example.com/api/auth",
+		"BETTER_AUTH_URL": "https://auth.example.com/api/auth", "SAML_DATABASE_URL": "postgres://forma:secret@db:5432/forma-saml",
 	} {
 		t.Setenv(k, v)
 	}
@@ -325,7 +325,7 @@ func TestLoadSSO(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 	s := cfg.SSO
-	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
+	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || !s.SAMLEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
 		s.DefaultOrganizationRole != "member" || s.BetterAuthURL.Host != "auth.example.com" {
 		t.Fatalf("SSO = %+v", s)
 	}

@@ -7,6 +7,7 @@ import {
   resetPasswordFailure,
   signInFailure,
   signupFailure,
+  ssoStartFailure,
   twoFactorFailure,
 } from "./errors";
 import { MESSAGES } from "./validation";
@@ -22,6 +23,20 @@ const apiError = (status: number, code: string, message: string, details?: Recor
 
 const validation = (...fields: { field: string; rule: string }[]) =>
   apiError(400, "validation_error", "Invalid input", { fields });
+
+describe("ssoStartFailure", () => {
+  test("gives forma2's SAML connection toast when no connection is configured", () => {
+    expect(
+      ssoStartFailure(t, apiError(404, "saml_connection_error", "No SAML connection is configured."))
+    ).toBe("Something went wrong. Please check your app console for more details.");
+  });
+
+  test("shows the server's wording for any other refusal", () => {
+    expect(ssoStartFailure(t, apiError(404, "oauth_provider_not_found", "Provider not found"))).toBe(
+      "Provider not found"
+    );
+  });
+});
 
 describe("signInFailure", () => {
   test("points an unverified address at its inbox", () => {

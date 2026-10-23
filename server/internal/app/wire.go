@@ -66,7 +66,7 @@ var platformSet = wire.NewSet(
 	wire.Struct(new(Platform), "*"),
 )
 
-// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks. Its sessions are the SessionAuth every other module's routes authenticate with.
+// authSet is the identity module: sessions, sign-up, sign-in, two-factor authentication and the account flows under /api/app/auth, and single sign-on with its identity provider callbacks and SAML's assertion consumer service. Its sessions are the SessionAuth every other module's routes authenticate with.
 var authSet = wire.NewSet(
 	auth.NewRepository,
 	auth.NewSessions,
@@ -74,7 +74,7 @@ var authSet = wire.NewSet(
 	auth.NewService,
 	auth.NewTwoFactor,
 	auth.NewHandler,
-	auth.NewSSO,
+	newSSO,
 	auth.NewSSOHandler,
 )
 

@@ -1,6 +1,6 @@
 // forma2's FORMA_LOGGED_IN_WITH_LS: the sign-in method this browser used last, which the sign-in page marks "Last used". Storage can be unavailable (private mode, blocked site data), and the badge is a convenience, so a failure only loses it.
 
-export type SignInMethod = "Email" | "Google" | "Github" | "Azure" | "OpenID";
+export type SignInMethod = "Email" | "Google" | "Github" | "Azure" | "OpenID" | "Saml";
 
 export const LAST_USED_KEY = "forma-logged-in-with";
 

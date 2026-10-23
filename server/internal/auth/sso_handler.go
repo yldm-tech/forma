@@ -7,6 +7,7 @@ import (
 
 	"github.com/yldm-tech/forma/server/internal/platform/config"
 	"github.com/yldm-tech/forma/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/server/internal/platform/v1api"
 )
 
 // SSOHandler serves single sign-on: starting a sign-in and completing SSO recovery under /api/app/auth/sso, and the identity providers' callbacks at forma2's paths.
@@ -26,10 +27,12 @@ func (h *SSOHandler) Register(r gin.IRouter) {
 	g.POST("/recovery/complete", h.completeRecovery)
 }
 
-// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what forma2 served: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid}, the URI Azure AD and the generic provider have been registered with since forma v5.2.
+// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what forma2 served: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid|saml}, the URI Azure AD and the generic provider have been registered with since forma v5.2 and SAML's bridge returned to. SAML's assertion consumer service is forma2's /api/auth/saml/callback, a cross-site form POST from the identity provider, so it sits outside /api/app and its CSRF check; the service provider's metadata is beside it.
 func (h *SSOHandler) RegisterCallbacks(r gin.IRouter) {
 	r.GET("/api/auth/callback/:provider", h.callback)
 	r.GET("/api/auth/oauth2/callback/:provider", h.legacyCallback)
+	r.POST(samlACSPath, h.samlACS)
+	r.GET(samlMetadataPath, h.samlMetadata)
 }
 
 type ssoSignInRequest struct {
@@ -72,7 +75,7 @@ func (h *SSOHandler) callback(c *gin.Context) {
 // legacyCallback serves the pinned paths of the providers forma2 pinned there; others were never served at it.
 func (h *SSOHandler) legacyCallback(c *gin.Context) {
 	provider := c.Param("provider")
-	if provider != providerAzureAD && provider != providerOpenID {
+	if provider != providerAzureAD && provider != providerOpenID && provider != providerSAML {
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -89,6 +92,37 @@ func (h *SSOHandler) finish(c *gin.Context, provider string) {
 	}
 	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, res.redirect)
+}
+
+// samlDisabledMessage is forma2's answer from the SAML routes when Jackson was not initialised.
+const samlDisabledMessage = "SAML SSO is not enabled in your Forma license"
+
+// samlACS is the assertion consumer service. It answers with a 303, so the browser follows with a GET that, being a same-site navigation, carries the SameSite=Lax state cookie the cross-site POST did not.
+func (h *SSOHandler) samlACS(c *gin.Context) {
+	if !h.sso.samlEnabled() {
+		v1api.Forbidden(c, samlDisabledMessage, false)
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, samlResponseLimit)
+	// A body that cannot be read leaves both fields empty, which fails as a response that answers nothing.
+	res := h.sso.consumeResponse(c.Request.Context(), c.PostForm("SAMLResponse"), c.PostForm("RelayState"))
+	c.Header("Cache-Control", "no-store")
+	c.Redirect(http.StatusSeeOther, res.redirect)
+}
+
+// samlMetadata serves the service provider's metadata for identity providers that import it.
+func (h *SSOHandler) samlMetadata(c *gin.Context) {
+	if !h.sso.samlEnabled() {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	body, err := h.sso.serviceProviderMetadata()
+	if err != nil {
+		h.sso.log.ErrorContext(c.Request.Context(), "SAML metadata failed", "err", err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.Data(http.StatusOK, "application/samlmetadata+xml; charset=utf-8", body)
 }
 
 type ssoRecoveryResponse struct {

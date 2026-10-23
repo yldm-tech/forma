@@ -30,7 +30,7 @@ const (
 	providerOpenID  = "openid"
 )
 
-// normalizeProvider is forma2's normalizeSsoProvider: provider ids are matched without regard to case, and "azure-ad", the NextAuth-era id, still names Azure AD. SAML is recognized by forma2 but has no provider here. It returns "" for anything else.
+// normalizeProvider is forma2's normalizeSsoProvider: provider ids are matched without regard to case, and "azure-ad", the NextAuth-era id, still names Azure AD. It returns "" for anything else.
 func normalizeProvider(id string) string {
 	switch strings.ToLower(id) {
 	case providerGoogle:
@@ -41,6 +41,8 @@ func normalizeProvider(id string) string {
 		return providerAzureAD
 	case providerOpenID:
 		return providerOpenID
+	case providerSAML:
+		return providerSAML
 	}
 	return ""
 }

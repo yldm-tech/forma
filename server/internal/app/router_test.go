@@ -162,6 +162,8 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"POST /api/v3/surveys/generate":                                               true,
 		"GET /api/v3/contact-attribute-keys":                                          true,
 		"GET /api/auth/callback/:provider":                                            true,
+		"POST /api/auth/saml/callback":                                                true,
+		"GET /api/auth/saml/metadata":                                                 true,
 		"POST /api/app/workspaces/:workspaceId/action-classes":                        true,
 		"PATCH /api/app/action-classes/:actionClassId":                                true,
 		"POST /api/app/workspaces/:workspaceId/tags":                                  true,
