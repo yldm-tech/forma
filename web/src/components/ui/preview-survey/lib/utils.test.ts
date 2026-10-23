@@ -1,4 +1,3 @@
-import "@testing-library/jest-dom/vitest";
 import { describe, expect, test } from "vite-plus/test";
 import { getPlacementStyle, mirrorPlacementForDir } from "./utils";
 
