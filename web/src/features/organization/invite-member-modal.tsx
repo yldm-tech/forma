@@ -16,6 +16,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { MultiSelect } from "../../components/ui/multi-select";
 import { Select } from "../../components/ui/select";
+import { TabToggle } from "../../components/ui/tab-toggle";
 import { Small } from "../../components/ui/typography";
 import { ApiError } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
@@ -25,11 +26,12 @@ import { useCreateInvite } from "../../lib/queries/invites";
 import { teamsQuery } from "../../lib/queries/teams";
 import { type OrganizationRole, accessFlags, assignableRoles } from "../../lib/roles";
 import { toast } from "../../lib/toast";
+import { BulkInviteTab } from "./bulk-invite-tab";
 
 const EMPTY: InviteForm = { name: "", email: "", role: "member", teamIds: [] };
 
 /**
- * forma2's invite member modal, individual tab. A team admin who is not an owner or manager invites members only, into the teams they administer. Bulk CSV invites are not offered here (see the module notes).
+ * forma2's invite member modal: one member at a time, or a CSV of them (the bulk tab). A team admin who is not an owner or manager gets the individual form only and invites members, into the teams they administer.
  */
 export const InviteMemberModal = ({
   open,
@@ -49,6 +51,7 @@ export const InviteMemberModal = ({
   const { t } = useTranslation();
   const [form, setForm] = useState<InviteForm>(EMPTY);
   const [errors, setErrors] = useState<InviteFormErrors>({});
+  const [type, setType] = useState<"individual" | "bulk">("individual");
   const teams = useQuery({ ...teamsQuery(organizationId), enabled: open });
   const create = useCreateInvite(organizationId);
   const { isOwnerOrManager } = accessFlags(membershipRole);
@@ -63,6 +66,7 @@ export const InviteMemberModal = ({
     setOpen(false);
     setForm(EMPTY);
     setErrors({});
+    setType("individual");
   };
 
   const submit = async (e: FormEvent) => {
@@ -102,6 +106,26 @@ export const InviteMemberModal = ({
         <DialogTitle>{t("workspace.settings.teams.invite_member")}</DialogTitle>
         <DialogDescription>{t("workspace.settings.teams.invite_member_description")}</DialogDescription>
       </DialogHeader>
+      {!teamAdminOnly && (
+        <TabToggle
+          id="invite-type"
+          options={[
+            { value: "individual", label: t("workspace.settings.teams.individual") },
+            { value: "bulk", label: t("workspace.settings.teams.bulk_invite") },
+          ]}
+          onChange={setType}
+          defaultSelected={type}
+        />
+      )}
+      {type === "bulk" && !teamAdminOnly ? (
+        <BulkInviteTab
+          organizationId={organizationId}
+          teams={allTeams}
+          billingRoleAllowed={billingRoleAllowed}
+          onCancel={close}
+          onDone={close}
+        />
+      ) : (
       <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
         <DialogBody className="flex flex-col gap-6">
           <div className="flex flex-col gap-y-2">
@@ -191,6 +215,7 @@ export const InviteMemberModal = ({
           </Button>
         </DialogFooter>
       </form>
+      )}
     </Dialog>
   );
 };

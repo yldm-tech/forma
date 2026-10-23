@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { FilesIcon, Trash2Icon, TrashIcon } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
@@ -53,6 +54,7 @@ export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.api_keys")} />
+      <ConnectAppBanner organizationId={organization.id} />
       <SettingsCard
         title={t("common.api_keys")}
         description={t("workspace.settings.api_keys.api_keys_description")}
@@ -61,6 +63,25 @@ export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail
         <ApiKeyList organizationId={organization.id} />
       </SettingsCard>
     </PageContentWrapper>
+  );
+};
+
+/** forma2's pointer for someone looking for a key to set up a website or app survey, which needs none: the first workspace's SDK page. Shown while the organization has a workspace. */
+export const ConnectAppBanner = ({ organizationId }: { organizationId: string }) => {
+  const { t } = useTranslation();
+  const { data: workspaces } = useQuery(workspacesQuery(organizationId));
+  const first = workspaces?.[0];
+  if (!first) return null;
+  return (
+    <Alert variant="info" role="status" className="max-w-4xl rounded-xl">
+      <AlertTitle>{t("workspace.settings.api_keys.connect_app_banner_title")}</AlertTitle>
+      <AlertDescription>{t("workspace.settings.api_keys.connect_app_banner_description")}</AlertDescription>
+      <AlertButton asChild>
+        <Link to="/workspaces/$workspaceId/integrations/app-connection" params={{ workspaceId: first.id }}>
+          {t("workspace.settings.api_keys.connect_app_banner_link")}
+        </Link>
+      </AlertButton>
+    </Alert>
   );
 };
 
