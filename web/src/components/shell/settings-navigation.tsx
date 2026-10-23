@@ -5,6 +5,7 @@ import {
   BrushIcon,
   Building2Icon,
   ChevronDownIcon,
+  CreditCardIcon,
   FoldersIcon,
   KeyIcon,
   LanguagesIcon,
@@ -27,7 +28,7 @@ import { NavigationLink } from "./navigation-link";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
 /**
- * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, and the organization's settings, each section with a switcher beside its label. Entries are disabled for the billing role; API keys are offered to owners and managers only. Billing and domain settings are not part of this server.
+ * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, and the organization's settings, each section with a switcher beside its label. Entries are disabled for the billing role; API keys are offered to owners and managers only, and billing on Forma Cloud only. Domain settings are not part of this server.
  */
 export const SettingsNavigation = ({
   organizationId,
@@ -36,6 +37,7 @@ export const SettingsNavigation = ({
   workspace,
   backUrl,
   pathname,
+  isFormaCloud = false,
 }: {
   organizationId: string;
   organizationName: string;
@@ -44,6 +46,8 @@ export const SettingsNavigation = ({
   workspace?: { id: string; name: string };
   backUrl: string;
   pathname: string;
+  /** Whether the instance is Forma Cloud, where organizations have billing; false until the billing summary has loaded. */
+  isFormaCloud?: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -106,6 +110,17 @@ export const SettingsNavigation = ({
             label: t("common.api_keys"),
             href: organizationSettingsPath(organizationId, "api-keys"),
             icon: <KeyIcon className={iconClassName} />,
+            disabledReason: undefined,
+          },
+        ]
+      : []),
+    ...(isFormaCloud
+      ? [
+          {
+            id: "billing",
+            label: t("common.billing"),
+            href: organizationSettingsPath(organizationId, "billing"),
+            icon: <CreditCardIcon className={iconClassName} />,
             disabledReason: undefined,
           },
         ]
