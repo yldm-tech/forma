@@ -47,6 +47,7 @@ jobs:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
+      # `packages: write` is not enough on its own: both image repositories were created by forma2's release workflow, and an organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access". yldm-tech/forma needs the Write role there on both ghcr.io/yldm-tech/forma and ghcr.io/yldm-tech/forma-docs (github.com/orgs/yldm-tech/packages/container/<name>/settings); without it the push fails with `denied: permission_denied: write_package`.
       - name: Log in to ghcr.io
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
         with:
@@ -67,9 +68,12 @@ jobs:
               echo "::error::$tag already points at a different commit"
               exit 1
             fi
-          elif docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
-            echo "::error::$IMAGE:$VERSION is already published, but no $tag tag records which commit it came from"
-            exit 1
+          elif published=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{.Manifest.Digest}}' 2>/dev/null); then
+            # An earlier attempt pushed the image and failed before the tag (the documentation push, say). The sha- tag it pushed alongside names the commit, so this commit may finish its own release; any other commit is refused.
+            if [ "$(docker buildx imagetools inspect "$IMAGE:sha-$RELEASE_SHA" --format '{{.Manifest.Digest}}' 2>/dev/null)" != "$published" ]; then
+              echo "::error::$IMAGE:$VERSION is already published, but neither a $tag tag nor $IMAGE:sha-$RELEASE_SHA says it came from this commit"
+              exit 1
+            fi
           fi
 
       # Both build stages run on the runner's own platform and Go cross-compiles, so the arm64 image needs no emulation.
