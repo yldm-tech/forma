@@ -158,7 +158,9 @@ type Summary struct {
 	SubscriptionStatus *string `json:"subscriptionStatus"`
 	TrialEnd           *string `json:"trialEnd"`
 	TrialDaysRemaining *int64  `json:"trialDaysRemaining"`
-	Limits             Limits  `json:"limits"`
+	// ProTrialDays is how long a Pro trial started now would run (forma2's getProTrialDays), which the onboarding plan step promises.
+	ProTrialDays int64  `json:"proTrialDays"`
+	Limits       Limits `json:"limits"`
 	// Usage is counted on Forma Cloud only, where forma2 rendered the limits banner.
 	Usage      *Usage      `json:"usage"`
 	UsageCycle *UsageCycle `json:"usageCycle"`
@@ -177,7 +179,7 @@ func (s *Service) Summary(ctx context.Context, userID, organizationID uuid.UUID)
 		return nil, errNotFound("Organization", organizationID)
 	}
 	now := s.engine.now()
-	out := &Summary{IsFormaCloud: s.engine.cfg.IsFormaCloud, Plan: rec.plan(), Limits: rec.Limits, TrialDaysRemaining: trialDaysRemaining(rec, now)}
+	out := &Summary{IsFormaCloud: s.engine.cfg.IsFormaCloud, Plan: rec.plan(), Limits: rec.Limits, TrialDaysRemaining: trialDaysRemaining(rec, now), ProTrialDays: trialDays(organizationID)}
 	if rec.Stripe != nil {
 		out.SubscriptionStatus, out.TrialEnd = rec.Stripe.SubscriptionStatus, rec.Stripe.TrialEnd
 	}

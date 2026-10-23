@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckIcon, GiftIcon, XCircleIcon } from "lucide-react";
 import { useState } from "react";
@@ -5,25 +6,17 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ApiError } from "../../../lib/api";
-import { billingApi } from "../../../lib/queries/billing";
+import { billingApi, billingSummaryQuery } from "../../../lib/queries/billing";
 import { toast } from "../../../lib/toast";
 
-/** forma2's default Pro trial length; its a-b_billing_shorten-trial-days experiment shortened it server-side. */
-export const PRO_TRIAL_DAYS = 14;
-
 /**
- * forma2's SelectPlanCard, the onboarding plan step on Forma Cloud: start the Pro trial, or stay on Hobby after a confirmation that lists what that gives up. Either way the flow moves on to nextUrl.
+ * forma2's SelectPlanCard, the onboarding plan step on Forma Cloud: start the Pro trial, or stay on Hobby after a confirmation that lists what that gives up. Either way the flow moves on to nextUrl. The trial it promises is the one the server would start, which forma2's a-b_billing_shorten-trial-days experiment shortens for some organizations.
  */
-export const SelectPlanCard = ({
-  organizationId,
-  nextUrl,
-  trialDays = PRO_TRIAL_DAYS,
-}: {
-  organizationId: string;
-  nextUrl: string;
-  trialDays?: number;
-}) => {
+export const SelectPlanCard = ({ organizationId, nextUrl }: { organizationId: string; nextUrl: string }) => {
   const { t } = useTranslation();
+  const {
+    data: { proTrialDays: trialDays },
+  } = useSuspenseQuery(billingSummaryQuery(organizationId));
   const navigate = useNavigate();
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const [isStartingHobby, setIsStartingHobby] = useState(false);

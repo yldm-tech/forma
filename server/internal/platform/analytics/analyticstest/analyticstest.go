@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -27,6 +28,7 @@ type Message struct {
 type Recorder struct {
 	mu       sync.Mutex
 	messages []Message
+	flags    map[string]any
 	close    func()
 }
 
@@ -35,6 +37,10 @@ func Start(t *testing.T) *Recorder {
 	t.Helper()
 	r := &Recorder{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/flags/" {
+			r.answerFlags(w)
+			return
+		}
 		body, _ := io.ReadAll(req.Body)
 		var batch struct {
 			Batch []Message `json:"batch"`
@@ -60,6 +66,29 @@ func Start(t *testing.T) *Recorder {
 		srv.Close()
 	})
 	return r
+}
+
+// SetFlag makes PostHog evaluate the feature flag key to value (a variant name, or true) for everyone. Without it, flag requests fail, as when PostHog is unreachable.
+func (r *Recorder) SetFlag(key string, value any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.flags == nil {
+		r.flags = map[string]any{}
+	}
+	r.flags[key] = value
+}
+
+// answerFlags is PostHog's /flags answer in its v3 shape, or an error when no flag is set.
+func (r *Recorder) answerFlags(w http.ResponseWriter) {
+	r.mu.Lock()
+	flags := maps.Clone(r.flags)
+	r.mu.Unlock()
+	if flags == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"featureFlags": flags, "featureFlagPayloads": map[string]any{}})
 }
 
 // Flush returns once every message captured so far has reached the recorder, so All is complete. The client sends each message on its own goroutine, so arrival order says nothing about what is still in flight; Flush closes the client instead, and messages captured afterwards are dropped. Call it once the test has captured everything it asserts on.

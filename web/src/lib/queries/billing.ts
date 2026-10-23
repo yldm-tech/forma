@@ -117,6 +117,8 @@ export interface BillingSummary {
   subscriptionStatus: SubscriptionStatus | null;
   trialEnd: string | null;
   trialDaysRemaining: number | null;
+  /** How long a Pro trial started now runs, forma2's getProTrialDays: 14 days, 7 in its a-b_billing_shorten-trial-days experiment's test variant. */
+  proTrialDays: number;
   limits: BillingLimits;
   usage: { responses: number; workflowRuns: number; workspaces: number } | null;
   usageCycle: { start: string; end: string } | null;

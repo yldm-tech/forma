@@ -186,7 +186,7 @@ func TestBillingSummary(t *testing.T) {
 	org, _, _, member, _ := a.billedOrganization()
 	var s Summary
 	a.ok(a.do(member, http.MethodGet, billingPath(org, "/summary"), nil), &s)
-	if !s.IsFormaCloud || s.Plan != PlanPro || s.Usage == nil || s.Usage.Responses != 0 || *s.Limits.Monthly.Responses != 250 || s.TrialDaysRemaining == nil || *s.TrialDaysRemaining != 3 || *s.TrialEnd != "2026-03-11T13:00:00.000Z" {
+	if !s.IsFormaCloud || s.Plan != PlanPro || s.Usage == nil || s.Usage.Responses != 0 || *s.Limits.Monthly.Responses != 250 || s.TrialDaysRemaining == nil || *s.TrialDaysRemaining != 3 || *s.TrialEnd != "2026-03-11T13:00:00.000Z" || s.ProTrialDays != proTrialDays {
 		t.Fatalf("summary %+v", s)
 	}
 }

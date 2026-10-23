@@ -123,6 +123,7 @@ describe("the onboarding plan step", () => {
     subscriptionStatus: null,
     trialEnd: null,
     trialDaysRemaining: null,
+    proTrialDays: 14,
     limits: { workspaces: 1, monthly: { responses: 250 } },
     usage: null,
     usageCycle: null,

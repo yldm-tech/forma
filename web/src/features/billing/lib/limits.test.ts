@@ -8,6 +8,7 @@ const summary = (isFormaCloud: boolean, workspaces: number | null): BillingSumma
   subscriptionStatus: null,
   trialEnd: null,
   trialDaysRemaining: null,
+  proTrialDays: 14,
   limits: { workspaces, monthly: { responses: 250 } },
   usage: null,
   usageCycle: null,

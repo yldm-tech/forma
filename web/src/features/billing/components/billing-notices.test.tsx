@@ -198,17 +198,43 @@ describe("SelectPlanCard", () => {
       <SelectPlanCard organizationId={ORG} nextUrl={`/organizations/${ORG}/workspaces/new/survey`} />
     );
 
+  /** The billing summary, which names the length of a trial started now. */
+  const summary = (proTrialDays: number) => ({
+    [`GET ${API}/summary`]: {
+      body: {
+        isFormaCloud: true,
+        plan: "hobby",
+        subscriptionStatus: null,
+        trialEnd: null,
+        trialDaysRemaining: null,
+        proTrialDays,
+        limits: { workspaces: 1, monthly: { responses: 250 } },
+        usage: null,
+        usageCycle: null,
+      },
+    },
+  });
+
   test("starting the trial moves on to the first survey", async () => {
-    const calls = stubServer({ [`POST ${API}/trial`]: { body: { success: true } } });
+    const calls = stubServer({ ...summary(14), [`POST ${API}/trial`]: { body: { success: true } } });
     card();
     expect(await screen.findByText("You're on Pro for the next 14 days")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: t("workspace.settings.billing.select_plan_cta") }));
     expect(await screen.findByText(`page /organizations/${ORG}/workspaces/new/survey`)).toBeTruthy();
-    expect(calls).toEqual([`POST ${API}/trial`]);
+    expect(calls).toEqual([`GET ${API}/summary`, `POST ${API}/trial`]);
+  });
+
+  // The server shortens the trial for the organizations in forma2's a-b_billing_shorten-trial-days test variant; the card promises the trial it will start.
+  test("promises the trial length the server will start", async () => {
+    stubServer(summary(7));
+    card();
+    expect(await screen.findByText("You're on Pro for the next 7 days")).toBeTruthy();
+    expect(screen.queryByText("You're on Pro for the next 14 days")).toBeNull();
   });
 
   test("a trial already used is said so, and the card stays", async () => {
     stubServer({
+      ...summary(14),
       [`POST ${API}/trial`]: {
         status: 403,
         body: { code: "trial_already_used", message: "trial_already_used" },
@@ -231,17 +257,17 @@ describe("SelectPlanCard", () => {
   });
 
   test("staying on Hobby is confirmed first, then moves on", async () => {
-    const calls = stubServer({ [`POST ${API}/hobby`]: { body: { success: true } } });
+    const calls = stubServer({ ...summary(14), [`POST ${API}/hobby`]: { body: { success: true } } });
     card();
     fireEvent.click(
       await screen.findByRole("button", { name: t("workspace.settings.billing.select_plan_skip") })
     );
-    expect(calls).toEqual([]);
+    expect(calls).toEqual([`GET ${API}/summary`]);
     fireEvent.click(
       await screen.findByRole("button", { name: t("workspace.settings.billing.hobby_confirm_downgrade") })
     );
     expect(await screen.findByText(`page /organizations/${ORG}/workspaces/new/survey`)).toBeTruthy();
-    expect(calls).toEqual([`POST ${API}/hobby`]);
+    expect(calls).toEqual([`GET ${API}/summary`, `POST ${API}/hobby`]);
   });
 });
 

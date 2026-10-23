@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/server/internal/platform/legacyid"
 )
@@ -455,4 +456,21 @@ func TestCheckoutRejectsMixedIntervals(t *testing.T) {
 	e.stripe.catalogOn(prices...)
 	_, err := e.engine.PlanCheckoutURL(context.Background(), org, "cus_123", PlanScale, IntervalMonthly)
 	notAllowed(t, err, CodeMixedIntervalCheckout)
+}
+
+// forma2's getProTrialDays: fourteen days, seven for the organizations PostHog puts in the a-b_billing_shorten-trial-days experiment's test variant. Not parallel: the flag is answered by the process-wide PostHog client.
+func TestTrialDaysFollowTheExperiment(t *testing.T) {
+	org := uuid.New()
+	if days := trialDays(org); days != proTrialDays {
+		t.Fatalf("trial without PostHog = %d days, want %d", days, proTrialDays)
+	}
+	rec := analyticstest.Start(t)
+	rec.SetFlag("a-b_billing_shorten-trial-days", "control")
+	if days := trialDays(org); days != proTrialDays {
+		t.Fatalf("control variant = %d days, want %d", days, proTrialDays)
+	}
+	rec.SetFlag("a-b_billing_shorten-trial-days", "test")
+	if days := trialDays(org); days != shortenedProTrialDays {
+		t.Fatalf("test variant = %d days, want %d", days, shortenedProTrialDays)
+	}
 }
