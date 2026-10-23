@@ -1,8 +1,9 @@
 /**
  * Translation Key Scanner
  *
- * This script scans the web app for translation keys and validates them against
- * the translation files. It detects missing keys and unused keys.
+ * This script scans the admin UI (web/) and the survey runtime (packages/surveys) for translation keys and validates them against
+ * their catalogues: keys used but missing, keys present but unused, keys with spaces, keys a locale lacks or has beyond en-US, and
+ * en-US values that changed since the last translation run (the Lingo.dev lockfile, i18n.lock).
  *
  * Usage:
  *   pnpm scan-translations
@@ -23,10 +24,57 @@ import objectHash from "object-hash";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Configuration for Surveys Package
-const SURVEYS_PKG_DIR = path.join(__dirname, "..", "..", "..", "packages", "surveys");
-const SURVEYS_LOCALES_DIR = path.join(SURVEYS_PKG_DIR, "locales");
-const SURVEYS_DEFAULT_LOCALE = "en-US";
+const REPO_ROOT = path.join(__dirname, "..", "..", "..");
+
+/** Another consumer of a catalogue, outside the TypeScript sources: every catalogue key it names, quoted or as a `{{key}}` marker, counts as used. */
+export interface ReferenceSource {
+  dir: string;
+  pattern: string;
+}
+
+/** One catalogue and the code that reads it. */
+export interface ScanTarget {
+  name: string;
+  /** TypeScript sources, read for `t("key")` and `i18nKey`. */
+  sourceDirs: string[];
+  referenceSources?: ReferenceSource[];
+  localesDir: string;
+  defaultLocale: string;
+  /** Keys known to be unused, recorded rather than hidden. The list may only shrink: a new unused key fails, and so does an entry that is used again or gone. */
+  knownUnusedKeys?: string[];
+}
+
+const WEB_DIR = path.join(REPO_ROOT, "web");
+
+/**
+ * The admin UI's catalogue, web/locales, is read by the SPA and by the Go server: the mailer renders the `emails` namespace (server/internal/platform/mailer, from an embedded copy a Go test keeps identical) and the survey template catalogue resolves `{{templates.*}}` markers (server/internal/survey/catalog). forma2 scanned apps/web and packages/email together for the same reason.
+ */
+export const WEB_TARGET: ScanTarget = {
+  name: "Admin UI (web)",
+  sourceDirs: [path.join(WEB_DIR, "src")],
+  referenceSources: [
+    { dir: path.join(REPO_ROOT, "server", "internal"), pattern: "**/*.go" },
+    {
+      dir: path.join(REPO_ROOT, "server", "internal", "platform", "mailer", "templates"),
+      pattern: "**/*.html",
+    },
+    { dir: path.join(REPO_ROOT, "server", "internal", "survey", "catalog"), pattern: "templates.json" },
+  ],
+  localesDir: path.join(WEB_DIR, "locales"),
+  defaultLocale: "en-US",
+  knownUnusedKeys: JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "web-unused-keys.json"), "utf-8")
+  ) as string[],
+};
+
+const SURVEYS_PKG_DIR = path.join(REPO_ROOT, "packages", "surveys");
+
+export const SURVEYS_TARGET: ScanTarget = {
+  name: "Surveys Package",
+  sourceDirs: [SURVEYS_PKG_DIR],
+  localesDir: path.join(SURVEYS_PKG_DIR, "locales"),
+  defaultLocale: "en-US",
+};
 
 // Patterns to match translation keys
 const TRANSLATION_PATTERNS = [
@@ -74,6 +122,8 @@ export interface ScanResults {
   missingKeys: Set<string>;
   unusedKeys: Set<string>;
   incompleteTranslations: Map<string, string[]>; // locale -> missing keys
+  extraTranslations: Map<string, string[]>; // locale -> keys the default locale does not have
+  staleKnownUnusedKeys: string[]; // recorded as unused, but used again or gone
   keysWithSpaces: Set<string>; // keys that contain spaces
   lockfileValidation?: LockfileValidationResults | null;
 }
@@ -157,6 +207,42 @@ export function extractKeysFromContent(content: string): string[] {
   return keys;
 }
 
+// A dotted key quoted or between `{{ }}`: Go string literals, template arguments and catalogue markers.
+const REFERENCED_KEY_PATTERN = /["'`{](?<key>[A-Za-z][\w-]*(?:\.[\w-]+)+)["'`}]/g;
+
+/**
+ * Catalogue keys a non-TypeScript consumer names. Only keys the catalogue has count, so a dotted string that is no key (a host name, a file name) is never reported as missing.
+ */
+export function extractReferencedKeys(content: string, catalogueKeys: Set<string>): string[] {
+  const keys: string[] = [];
+  REFERENCED_KEY_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+  while ((match = REFERENCED_KEY_PATTERN.exec(content)) !== null) {
+    const key = match.groups?.key ?? "";
+    if (catalogueKeys.has(key)) {
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+async function scanReferenceSources(
+  sources: ReferenceSource[],
+  catalogueKeys: Set<string>,
+  usedKeys: Set<string>
+): Promise<void> {
+  for (const source of sources) {
+    const files = await glob(source.pattern, { cwd: source.dir, ignore: EXCLUDE_DIRS, absolute: true });
+    console.log(
+      `   Found ${files.length.toString()} files naming catalogue keys in ${path.relative(REPO_ROOT, source.dir)} (${source.pattern})`
+    );
+    for (const file of files) {
+      const content = await fs.promises.readFile(file, "utf-8");
+      extractReferencedKeys(content, catalogueKeys).forEach((key) => usedKeys.add(key));
+    }
+  }
+}
+
 /**
  * Scan source files for translation keys
  */
@@ -174,9 +260,7 @@ async function scanSourceFiles(sourceDirs: string | string[], packageName: strin
       absolute: true,
     });
 
-    console.log(
-      `   Found ${files.length.toString()} files to scan in ${path.relative(path.join(__dirname, "..", "..", ".."), dir)}`
-    );
+    console.log(`   Found ${files.length.toString()} files to scan in ${path.relative(REPO_ROOT, dir)}`);
 
     for (const file of files) {
       try {
@@ -299,6 +383,42 @@ function checkIncompleteTranslations(
 }
 
 /**
+ * Keys a locale has that the default locale does not: left behind by a rename or removal, they are never shown and never translated again.
+ */
+export function checkExtraTranslations(
+  translationsByLocale: Map<string, Set<string>>,
+  defaultLocale: string
+): Map<string, string[]> {
+  const defaultKeys = translationsByLocale.get(defaultLocale);
+  if (!defaultKeys) {
+    throw new Error(`Default locale ${defaultLocale} not found`);
+  }
+  const extra = new Map<string, string[]>();
+  for (const [locale, keys] of translationsByLocale.entries()) {
+    if (locale === defaultLocale) continue;
+    const extraKeys = [...keys].filter((key) => !defaultKeys.has(key)).sort();
+    if (extraKeys.length > 0) {
+      extra.set(locale, extraKeys);
+    }
+  }
+  return extra;
+}
+
+/**
+ * Split unused keys against the recorded ones: the unused keys nobody recorded, and the recorded keys that are no longer unused (used again, or removed from the catalogue).
+ */
+export function compareWithKnownUnused(
+  unusedKeys: Set<string>,
+  knownUnusedKeys: string[]
+): { unexpected: Set<string>; stale: string[] } {
+  const known = new Set(knownUnusedKeys);
+  return {
+    unexpected: new Set([...unusedKeys].filter((key) => !known.has(key))),
+    stale: knownUnusedKeys.filter((key) => !unusedKeys.has(key)).sort(),
+  };
+}
+
+/**
  * Detect keys that contain spaces (which should not be used in translation keys)
  */
 export function detectKeysWithSpaces(usedKeys: Set<string>, translationKeys: Set<string>): Set<string> {
@@ -329,7 +449,8 @@ function compareKeys(
   translationKeys: Set<string>,
   translationsByLocale: Map<string, Set<string>>,
   defaultLocale: string,
-  packageName: string
+  packageName: string,
+  knownUnusedKeys: string[]
 ): ScanResults {
   console.log(`🔄 Comparing ${packageName} keys...`);
 
@@ -352,6 +473,8 @@ function compareKeys(
 
   // Check for incomplete translations across locales
   const incompleteTranslations = checkIncompleteTranslations(translationsByLocale, defaultLocale);
+  const extraTranslations = checkExtraTranslations(translationsByLocale, defaultLocale);
+  const { unexpected, stale } = compareWithKnownUnused(unusedKeys, knownUnusedKeys);
 
   // Detect keys with spaces
   const keysWithSpaces = detectKeysWithSpaces(usedKeys, translationKeys);
@@ -362,10 +485,34 @@ function compareKeys(
     usedKeys,
     translationKeys,
     missingKeys,
-    unusedKeys,
+    unusedKeys: unexpected,
     incompleteTranslations,
+    extraTranslations,
+    staleKnownUnusedKeys: stale,
     keysWithSpaces,
   };
+}
+
+/** Whether a scan found anything that fails validation. */
+export function hasIssues(results: ScanResults): boolean {
+  return (
+    results.missingKeys.size > 0 ||
+    results.unusedKeys.size > 0 ||
+    results.incompleteTranslations.size > 0 ||
+    results.extraTranslations.size > 0 ||
+    results.staleKnownUnusedKeys.length > 0 ||
+    results.keysWithSpaces.size > 0 ||
+    hasLockfileIssues(results)
+  );
+}
+
+function hasLockfileIssues(results: ScanResults): boolean {
+  return (
+    !results.lockfileValidation ||
+    results.lockfileValidation.missing.length > 0 ||
+    results.lockfileValidation.outOfSync.length > 0 ||
+    results.lockfileValidation.extra.length > 0
+  );
 }
 
 /**
@@ -376,21 +523,7 @@ function displayResults(results: ScanResults, packageName: string, defaultLocale
   console.log(`              ${packageName} VALIDATION RESULTS              `);
   console.log("═══════════════════════════════════════════════════════════\n");
 
-  const hasLockfileIssues =
-    results.lockfileValidation &&
-    (results.lockfileValidation.missing.length > 0 ||
-      results.lockfileValidation.outOfSync.length > 0 ||
-      results.lockfileValidation.extra.length > 0);
-
-  const hasIssues =
-    results.missingKeys.size > 0 ||
-    results.unusedKeys.size > 0 ||
-    results.incompleteTranslations.size > 0 ||
-    results.keysWithSpaces.size > 0 ||
-    !results.lockfileValidation ||
-    hasLockfileIssues;
-
-  if (!hasIssues) {
+  if (!hasIssues(results)) {
     console.log("✅ All translation keys are valid!\n");
     console.log(`   • ${results.usedKeys.size.toString()} keys used in code`);
     console.log(`   • ${results.translationKeys.size.toString()} keys in translations`);
@@ -439,6 +572,32 @@ function displayResults(results: ScanResults, packageName: string, defaultLocale
     }
   }
 
+  if (results.extraTranslations.size > 0) {
+    console.log(`\n❌ KEYS MISSING FROM ${defaultLocale}:\n`);
+    console.log(
+      `   These keys exist in a target language but not in ${defaultLocale}, so nothing shows them:\n`
+    );
+    for (const [locale, extraKeys] of results.extraTranslations.entries()) {
+      console.log(`   📝 ${locale} (${extraKeys.length.toString()} extra keys):`);
+      extraKeys.slice(0, 10).forEach((key) => {
+        console.log(`      • ${key}`);
+      });
+      if (extraKeys.length > 10) {
+        console.log(`      ... and ${(extraKeys.length - 10).toString()} more`);
+      }
+    }
+  }
+
+  if (results.staleKnownUnusedKeys.length > 0) {
+    console.log(
+      `\n❌ RECORDED UNUSED KEYS THAT ARE USED OR GONE (${results.staleKnownUnusedKeys.length.toString()}):\n`
+    );
+    console.log("   Delete these entries from packages/i18n-utils/web-unused-keys.json:\n");
+    results.staleKnownUnusedKeys.forEach((key) => {
+      console.log(`   • ${key}`);
+    });
+  }
+
   if (results.keysWithSpaces.size > 0) {
     console.log(`\n❌ KEYS WITH SPACES (${results.keysWithSpaces.size.toString()}):\n`);
     console.log("   Translation keys should not contain spaces. These keys have spaces:\n");
@@ -454,7 +613,7 @@ function displayResults(results: ScanResults, packageName: string, defaultLocale
   if (results.lockfileValidation) {
     const { missing, outOfSync, extra } = results.lockfileValidation;
 
-    if (hasLockfileIssues) {
+    if (hasLockfileIssues(results)) {
       console.log(`❌ LOCKFILE OUT OF SYNC:\n`);
       console.log(`   Please run "pnpm i" and then "pnpm i18n" to regenerate i18n.lock.\n`);
 
@@ -577,38 +736,40 @@ export async function validateLockfile(
 }
 
 /**
- * Validate translations for a single package
+ * Validate one catalogue against the code that reads it, printing what it finds.
  */
-async function validatePackage(
-  sourceDirs: string | string[],
-  localesDir: string,
-  defaultLocale: string,
-  packageName: string
-): Promise<ScanResults> {
-  // Scan source files for used keys
-  const usedKeys = await scanSourceFiles(sourceDirs, packageName);
+export async function validateTarget(target: ScanTarget): Promise<ScanResults> {
+  const usedKeys = await scanSourceFiles(target.sourceDirs, target.name);
 
-  // Load translation keys from all locale files
-  const translationsByLocale = await loadAllTranslationKeys(localesDir, defaultLocale, packageName);
-  const defaultKeys = translationsByLocale.get(defaultLocale);
-
+  const translationsByLocale = await loadAllTranslationKeys(
+    target.localesDir,
+    target.defaultLocale,
+    target.name
+  );
+  const defaultKeys = translationsByLocale.get(target.defaultLocale);
   if (!defaultKeys) {
-    throw new Error(`Default locale ${defaultLocale} not found in ${packageName}`);
+    throw new Error(`Default locale ${target.defaultLocale} not found in ${target.name}`);
   }
 
-  // Compare and find issues
-  const results = compareKeys(usedKeys, defaultKeys, translationsByLocale, defaultLocale, packageName);
+  if (target.referenceSources) {
+    await scanReferenceSources(target.referenceSources, defaultKeys, usedKeys);
+    console.log();
+  }
 
-  // Run lockfile validation
-  const lockfileValidation = await validateLockfile(localesDir, defaultLocale);
+  const results = compareKeys(
+    usedKeys,
+    defaultKeys,
+    translationsByLocale,
+    target.defaultLocale,
+    target.name,
+    target.knownUnusedKeys ?? []
+  );
   const resultsWithLockfile: ScanResults = {
     ...results,
-    lockfileValidation,
+    lockfileValidation: await validateLockfile(target.localesDir, target.defaultLocale),
   };
 
-  // Display results
-  displayResults(resultsWithLockfile, packageName, defaultLocale);
-
+  displayResults(resultsWithLockfile, target.name, target.defaultLocale);
   return resultsWithLockfile;
 }
 
@@ -623,46 +784,35 @@ async function main(): Promise<void> {
   console.log();
 
   try {
-    // Validate Surveys Package. The admin UI (web/) joins this scan once it has locale files of its own.
-    const surveysResults = await validatePackage(
-      SURVEYS_PKG_DIR,
-      SURVEYS_LOCALES_DIR,
-      SURVEYS_DEFAULT_LOCALE,
-      "Surveys Package"
-    );
+    const results: ScanResults[] = [];
+    for (const target of [WEB_TARGET, SURVEYS_TARGET]) {
+      results.push(await validateTarget(target));
+    }
 
-    const hasSurveysLockfileIssues =
-      !surveysResults.lockfileValidation ||
-      surveysResults.lockfileValidation.missing.length > 0 ||
-      surveysResults.lockfileValidation.outOfSync.length > 0 ||
-      surveysResults.lockfileValidation.extra.length > 0;
-
-    const hasSurveysIssues =
-      surveysResults.missingKeys.size > 0 ||
-      surveysResults.unusedKeys.size > 0 ||
-      surveysResults.incompleteTranslations.size > 0 ||
-      surveysResults.keysWithSpaces.size > 0 ||
-      hasSurveysLockfileIssues;
-
-    // Exit with error if validation failed for any package
-    if (hasSurveysIssues) {
+    if (results.some(hasIssues)) {
       console.error("═══════════════════════════════════════════════════════════");
       console.error("❌ Translation validation failed!\n");
       console.error("   Please fix the issues above before committing.\n");
 
-      if (surveysResults.missingKeys.size > 0) {
+      if (results.some((r) => r.missingKeys.size > 0)) {
         console.error("   • Add missing keys to your translation files");
       }
-      if (surveysResults.unusedKeys.size > 0) {
+      if (results.some((r) => r.unusedKeys.size > 0)) {
         console.error("   • Remove unused keys from translation files");
       }
-      if (surveysResults.keysWithSpaces.size > 0) {
+      if (results.some((r) => r.staleKnownUnusedKeys.length > 0)) {
+        console.error("   • Delete the recorded unused keys that are used again or gone");
+      }
+      if (results.some((r) => r.keysWithSpaces.size > 0)) {
         console.error("   • Remove spaces from translation keys (use underscores or camelCase instead)");
       }
-      if (surveysResults.incompleteTranslations.size > 0) {
+      if (results.some((r) => r.incompleteTranslations.size > 0)) {
         console.error("   • Complete missing translations in target language files");
       }
-      if (hasSurveysLockfileIssues) {
+      if (results.some((r) => r.extraTranslations.size > 0)) {
+        console.error("   • Remove keys the source language no longer has from target language files");
+      }
+      if (results.some(hasLockfileIssues)) {
         console.error("   • Rebuild and update your lockfiles (run 'pnpm i18n')");
       }
       console.error();
