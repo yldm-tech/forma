@@ -108,7 +108,6 @@ export const ZWorkflowSendEmailActionConfig = z.object({
   includeVariables: z.boolean().optional(),
   includeHiddenFields: z.boolean().optional(),
 });
-export type TWorkflowSendEmailActionConfig = z.infer<typeof ZWorkflowSendEmailActionConfig>;
 
 export const ZWorkflowSendEmailActionNode = ZWorkflowNodeBase.extend({
   type: z.literal("action"),
@@ -201,7 +200,6 @@ const ZWorkflowEdge = z.object({
   sourceHandle: z.string().min(1).optional(),
   targetHandle: z.string().min(1).optional(),
 });
-export type TWorkflowEdge = z.infer<typeof ZWorkflowEdge>;
 
 const BRANCHES = new Set(["then", "else"]);
 

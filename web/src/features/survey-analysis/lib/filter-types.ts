@@ -65,11 +65,6 @@ export interface SelectedFilterValue {
   responseStatus: TResponseStatus;
 }
 
-export interface SelectedFilterOptions {
-  elementOptions: ElementOptions[];
-  elementFilterOptions: ElementFilterOptions[];
-}
-
 export interface DateRange {
   from: Date | undefined;
   to?: Date;

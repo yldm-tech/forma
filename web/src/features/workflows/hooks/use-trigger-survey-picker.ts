@@ -19,11 +19,6 @@ interface TWorkflowSurveyOption {
   name: string;
 }
 
-export interface TWorkflowSurveyEnding {
-  id: string;
-  label: string;
-}
-
 const DEFAULT_LANGUAGE_CODE = "default";
 
 /** What an ending is called in the picker: an end screen's headline with its recall resolved as the editor shows it, a redirect's label, else its id. */
