@@ -18,9 +18,6 @@ var ResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read",
 // ProtectedResourceScopes are the scopes the protected resource metadata advertises and the 401 challenge names, forma2's MCP_PROTECTED_RESOURCE_SCOPES: the resource scopes and offline_access, which MCP clients must register to be issued refresh tokens.
 var ProtectedResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read", "workflows:write", "offline_access"}
 
-// ResourceName is the display name of the MCP resource.
-const ResourceName = "Forma MCP"
-
 // URLs are the public URLs of the authorization server and the MCP resource, forma2's oauth-urls.ts. They derive from WEBAPP_URL and BETTER_AUTH_URL (else NEXTAUTH_URL), never from PUBLIC_URL or the request's headers.
 type URLs struct {
 	// Issuer is <BETTER_AUTH_URL, else NEXTAUTH_URL, else WEBAPP_URL>/api/auth; the authorization server's endpoints live under it.
