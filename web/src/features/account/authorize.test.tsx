@@ -174,6 +174,32 @@ describe("AuthorizePage", () => {
     expect(screen.queryByRole("button", { name: i18n.t("auth.oauth.allow_access") })).toBeNull();
   });
 
+  test("when continuing on its own fails, the page asks instead of waiting forever", async () => {
+    const location = stubLocation();
+    const answers = stubServer(pending({ consentRequired: false }), () =>
+      json(500, { code: "internal_server_error", message: "boom" })
+    );
+    renderPage(REQUEST_ID);
+
+    const allow = await screen.findByRole("button", { name: i18n.t("auth.oauth.allow_access") });
+    expect(toast.getSnapshot().map((shown) => shown.message)).toContain(i18n.t("auth.oauth.consent_failed"));
+    expect(answers).toEqual([{ accept: true }]);
+    expect(location.href).toBe("http://localhost:3000/account/authorize");
+    // The user can try again.
+    fireEvent.click(allow);
+    await waitFor(() => expect(answers).toEqual([{ accept: true }, { accept: true }]));
+  });
+
+  test("when the request expired or was answered elsewhere before continuing, the page says it is invalid", async () => {
+    stubServer(pending({ consentRequired: false }), () =>
+      json(404, { code: "not_found", message: "Authorization request not found" })
+    );
+    renderPage(REQUEST_ID);
+
+    expect(await screen.findByText(i18n.t("auth.oauth.invalid_oauth_request"))).toBeTruthy();
+    expect(screen.queryByRole("button", { name: i18n.t("auth.oauth.allow_access") })).toBeNull();
+  });
+
   test("a redirect that would run script in this page is refused with forma2's toast", async () => {
     const location = stubLocation();
     stubServer(pending(), () => json(200, { redirect: true, url: "javascript:alert(1)" }));

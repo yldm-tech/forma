@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { LoadingBlock } from "../../components/ui/page";
 import { Wordmark } from "../../components/ui/logo";
+import { ApiError } from "../../lib/api";
 import { authorizationRequestQuery, useAnswerAuthorizationRequest } from "../../lib/queries/oauth";
 import { toast } from "../../lib/toast";
 import { consentRedirectUrl, hostOf, isLocalhostHost, scopeLabel } from "./oauth";
@@ -40,18 +41,23 @@ export const AuthorizePage = ({ requestId }: { requestId?: string }) => {
   });
   const answer = useAnswerAuthorizationRequest();
   const continued = useRef(false);
+  // How continuing on its own ended when it did not leave the page: the request is gone (expired, or answered in another tab), or the answer failed and the user is asked instead.
+  const [autoContinue, setAutoContinue] = useState<"gone" | "failed" | null>(null);
 
-  const respond = async (accept: boolean) => {
+  /** Answers the request and sends the browser on. When the page answered on its own (auto) and stays, it records why, so the user is asked or told instead of waiting. */
+  const respond = async (accept: boolean, auto = false) => {
     if (!requestId) return;
     try {
       const url = consentRedirectUrl(await answer.mutateAsync({ requestId, accept }));
       if (!url) {
         toast.error(t("auth.oauth.consent_failed"));
+        if (auto) setAutoContinue("failed");
         return;
       }
       window.location.href = url;
-    } catch {
+    } catch (error) {
       toast.error(t("auth.oauth.consent_failed"));
+      if (auto) setAutoContinue(error instanceof ApiError && error.status === 404 ? "gone" : "failed");
     }
   };
 
@@ -59,10 +65,10 @@ export const AuthorizePage = ({ requestId }: { requestId?: string }) => {
   useEffect(() => {
     if (!approvedBefore || continued.current) return;
     continued.current = true;
-    void respond(true);
+    void respond(true, true);
   });
 
-  if (!requestId || request.isError) {
+  if (!requestId || request.isError || autoContinue === "gone") {
     return (
       <Frame>
         <Alert variant="error" role="status">
@@ -72,7 +78,7 @@ export const AuthorizePage = ({ requestId }: { requestId?: string }) => {
       </Frame>
     );
   }
-  if (!request.data || approvedBefore) {
+  if (!request.data || (approvedBefore && autoContinue === null)) {
     return (
       <Frame>
         <LoadingBlock />
