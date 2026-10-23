@@ -7,6 +7,9 @@
 
 -- +goose Up
 
+-- goose runs this migration in one transaction; SET LOCAL bounds only it. forma2_imports holds a row or two, but the ACCESS EXCLUSIVE lock waits behind any open reader of it (a server's startup guard), and a migration should fail fast rather than queue every later query behind it.
+SET LOCAL lock_timeout = '1s';
+
 ALTER TABLE forma2_imports
     ADD COLUMN target_digests jsonb CHECK (jsonb_typeof(target_digests) = 'object'),
     ADD COLUMN source_marks jsonb CHECK (jsonb_typeof(source_marks) = 'object');
