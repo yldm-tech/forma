@@ -12,7 +12,7 @@ import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-tog
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { TooltipRenderer } from "../../../components/ui/tooltip";
-import { ACTION_TYPE_ICON_LOOKUP } from "../../action-classes/lib/action-icon";
+import { ActionClassIcon } from "../../action-classes/lib/action-icon";
 import { ActionDetailModal } from "../../action-classes/components/action-detail-modal";
 
 interface WhenToSendCardProps {
@@ -224,9 +224,10 @@ export const WhenToSendCard = ({
                       className="flex grow items-center justify-between rounded-md border border-slate-300 bg-white p-2 px-3">
                       <div>
                         <div className="mt-1 flex items-center">
-                          <div className="mr-1.5 size-4 text-slate-600">
-                            {ACTION_TYPE_ICON_LOOKUP[trigger.actionClass.type]}
-                          </div>
+                          <ActionClassIcon
+                            actionClass={trigger.actionClass}
+                            className="mr-1.5 size-4 shrink-0 text-slate-600"
+                          />
 
                           <h4 className="text-sm font-semibold text-slate-600">{trigger.actionClass.name}</h4>
                         </div>
