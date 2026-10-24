@@ -75,10 +75,11 @@ type Service struct {
 	audit   *audit.Emitter
 	schemas *jsonschema.Validator
 	log     *slog.Logger
+	now     func() time.Time
 }
 
 func NewService(repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, log *slog.Logger) *Service {
-	return &Service{repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, log: log}
+	return &Service{repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, log: log, now: time.Now}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.
