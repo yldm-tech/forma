@@ -48,6 +48,8 @@ const config = ({ mode }: ConfigEnv) => {
         "react-dom": "preact/compat",
         "react/jsx-runtime": "preact/jsx-runtime",
       },
+      // The aliases above rewrite survey-ui's `react` imports to `preact/compat`, which Vite then resolves from the importing file, packages/survey-ui/dist, and survey-ui does not depend on Preact. Deduping resolves every `preact` import from this package instead, the one Preact this bundle ships.
+      dedupe: ["preact"],
     },
     define: {
       "process.env.NODE_ENV": JSON.stringify(mode),

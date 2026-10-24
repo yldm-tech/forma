@@ -175,6 +175,9 @@ importers:
 
   .:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
       js-yaml:
         specifier: 'catalog:'
         version: 4.3.2
@@ -184,6 +187,9 @@ importers:
       squawk-cli:
         specifier: 2.65.0
         version: 2.65.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
       vite-plus:
         specifier: 'catalog:'
         version: 1.3.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.5)(@vitest/ui@5.0.5)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@21.0.4)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
@@ -229,6 +235,12 @@ importers:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.3(@voidzero-dev/vite-plus-core@1.3.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.1.2(@voidzero-dev/vite-plus-core@1.3.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))
@@ -850,6 +862,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.5(@vitest/browser@5.0.5)(vitest@5.0.5)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1(@noble/hashes@2.3.0)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
