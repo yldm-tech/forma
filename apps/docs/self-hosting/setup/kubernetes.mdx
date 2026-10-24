@@ -1,18 +1,17 @@
 ---
 title: "Kubernetes Deployment"
-description: "Deploy Forma on Kubernetes with the current OCI Helm chart."
+description: "Deploy Forma on Kubernetes with the Helm chart in the Forma repository."
 icon: "circle-nodes"
 ---
 
-Deploy Forma on Kubernetes using the current OCI Helm chart published from the `deploy/helm/forma`
-directory in the Forma repository.
+Deploy Forma on Kubernetes using the Helm chart in the `deploy/helm/forma` directory of the Forma repository. The chart is not published to a chart registry: install it from a checkout of the release you deploy. `oci://ghcr.io/yldm-tech/helm-charts/forma` is forma2's chart and installs forma2's image.
 
 ## Prerequisites
 
 Ensure you have the following before proceeding:
 
 - a running Kubernetes cluster
-- Helm 3 installed locally
+- Helm 3 and git installed locally
 - a public hostname for `forma.webappUrl`
 - a plan for PostgreSQL and Redis/Valkey, either in-cluster or managed externally
 - an edge rate-limiting plan for the v5-covered routes: the chart's Envoy bundle or an equivalent external edge
@@ -34,11 +33,15 @@ forma:
 
   <Step title="Install Forma">
 
+    Check out the release you deploy (its tag is `v0.2.<n>`, its image `ghcr.io/yldm-tech/forma-server:0.2.<n>`), then install the chart from it. The chart needs the image tag; there is no default.
+
 ```sh
-helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+git clone --depth 1 --branch v0.2.<n> https://github.com/yldm-tech/forma.git forma-0.2.<n>
+helm install forma ./forma-0.2.<n>/deploy/helm/forma \
   -n forma \
   --create-namespace \
-  -f values.yaml
+  -f values.yaml \
+  --set deployment.image.tag=0.2.<n>
 ```
 
     By default, the chart deploys:
@@ -220,12 +223,14 @@ OpenAI-compatible endpoint. Configure those providers through `deployment.env`.
 
 ## 4. Upgrade The Deployment
 
-For normal chart upgrades:
+For normal chart upgrades, check out the new release and upgrade from its chart:
 
 ```sh
-helm upgrade forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+git clone --depth 1 --branch v0.2.<n> https://github.com/yldm-tech/forma.git forma-0.2.<n>
+helm upgrade forma ./forma-0.2.<n>/deploy/helm/forma \
   -n forma \
-  -f values.yaml
+  -f values.yaml \
+  --set deployment.image.tag=0.2.<n>
 ```
 
 For a Forma 4.x to 5.0 migration, confirm the following before running the upgrade:
