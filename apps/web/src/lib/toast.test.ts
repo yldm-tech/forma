@@ -69,3 +69,41 @@ test("a toast with an action keeps it and stays longer", () => {
   expect(store.getSnapshot()[0]?.action).toBe(action);
   expect(timers.pending.map((p) => p.ms)).toEqual([ACTION_TOAST_DURATION_MS]);
 });
+
+test("a hovered or focused toast does not expire, and gets its full duration again once left", () => {
+  const timers = manualTimers();
+  const store = createToastStore(timers.schedule);
+  const id = store.success("archived", { action: { label: "Undo", onClick: () => {} } });
+  store.pause(id);
+  timers.run();
+  expect(store.getSnapshot()).toHaveLength(1);
+  store.resume(id);
+  expect(timers.pending.map((p) => p.ms)).toEqual([ACTION_TOAST_DURATION_MS]);
+  timers.run();
+  expect(store.getSnapshot()).toHaveLength(0);
+});
+
+test("a timer from before a pause does not end the toast after it resumes", () => {
+  const timers = manualTimers();
+  const store = createToastStore(timers.schedule);
+  const id = store.success("saved");
+  const [first] = timers.pending.splice(0);
+  store.pause(id);
+  store.resume(id);
+  first?.fn();
+  expect(store.getSnapshot()).toHaveLength(1);
+  timers.run();
+  expect(store.getSnapshot()).toHaveLength(0);
+});
+
+test("a toast replaced while paused waits for the resume, and resuming a toast that is not paused starts nothing", () => {
+  const timers = manualTimers();
+  const store = createToastStore(timers.schedule);
+  const id = store.loading("copying");
+  store.pause(id);
+  store.success("copied", { id });
+  expect(timers.pending).toHaveLength(0);
+  store.resume(id);
+  store.resume(id);
+  expect(timers.pending.map((p) => p.ms)).toEqual([4000]);
+});
