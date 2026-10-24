@@ -18,7 +18,7 @@ import { getAIUnavailableMessage, workspaceAIQuery } from "../ai/availability";
 import { CUSTOM_TEMPLATE_ID } from "../surveys/api";
 import { useCreateSurveyFromTemplate } from "../surveys/templates/use-create-survey";
 import { onboardingPath } from "./onboarding";
-import { OnboardingOptions } from "./onboarding-options";
+import { OnboardingBackLink, OnboardingOptions } from "./onboarding-options";
 
 /**
  * forma2's CreateFirstSurvey, the onboarding step that creates the workspace's first survey: written by AI, from one of the experience-management templates, or from scratch. Each opens the editor in its CX mode; the AI option is disabled, with the reason under it, where AI is unavailable.
@@ -90,9 +90,11 @@ export const CreateFirstSurvey = ({
 
 /** forma2's XMTemplateList: the six experience-management templates, each creating a link survey and opening it in the editor's CX mode. */
 export const XMTemplateList = ({
+  organizationId,
   workspaceId,
   defaultLanguage,
 }: {
+  organizationId: string;
   workspaceId: string;
   defaultLanguage: string;
 }) => {
@@ -150,6 +152,7 @@ export const XMTemplateList = ({
   return (
     <OnboardingOptions
       title={t("workspace.xm-templates.headline")}
+      back={<OnboardingBackLink organizationId={organizationId} />}
       options={cards.map((card) => ({
         title: card.title,
         description: card.description,
