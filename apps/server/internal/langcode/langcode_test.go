@@ -3,10 +3,13 @@ package langcode
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 // The tables are copies of packages/i18n-utils; these tests read the TypeScript source so the copies cannot drift.
@@ -48,7 +51,7 @@ func block(t *testing.T, lines []string, start, end string) []string {
 }
 
 func TestCanonicalMapMatchesI18nUtils(t *testing.T) {
-	lines := block(t, readLines(t, "../../../../packages/i18n-utils/src/canonical.ts"), "export const LANGUAGE_CANONICAL_MAP", "};")
+	lines := block(t, readLines(t, filepath.Join(repotest.Root(t), "packages/i18n-utils/src/canonical.ts")), "export const LANGUAGE_CANONICAL_MAP", "};")
 	want := map[string]string{}
 	var keys []string
 	for _, l := range lines {
@@ -74,7 +77,7 @@ func TestCanonicalMapMatchesI18nUtils(t *testing.T) {
 }
 
 func TestCanonicalCodesMatchI18nUtils(t *testing.T) {
-	lines := block(t, readLines(t, "../../../../packages/i18n-utils/src/canonical.ts"), "export const CANONICAL_LANGUAGE_CODES", "];")
+	lines := block(t, readLines(t, filepath.Join(repotest.Root(t), "packages/i18n-utils/src/canonical.ts")), "export const CANONICAL_LANGUAGE_CODES", "];")
 	if len(lines) != len(canonicalCodes) {
 		t.Fatalf("canonicalCodes has %d codes, i18n-utils %d", len(canonicalCodes), len(lines))
 	}
@@ -89,7 +92,7 @@ func TestCanonicalCodesMatchI18nUtils(t *testing.T) {
 }
 
 func TestRuntimeLanguagesMatchI18nUtils(t *testing.T) {
-	lines := block(t, readLines(t, "../../../../packages/i18n-utils/src/survey-runtime-languages.ts"), "export const SURVEY_RUNTIME_LANGUAGE_CODES", "] as const;")
+	lines := block(t, readLines(t, filepath.Join(repotest.Root(t), "packages/i18n-utils/src/survey-runtime-languages.ts")), "export const SURVEY_RUNTIME_LANGUAGE_CODES", "] as const;")
 	var want []string
 	for _, l := range lines {
 		want = append(want, strings.Trim(strings.TrimSpace(l), `",`))

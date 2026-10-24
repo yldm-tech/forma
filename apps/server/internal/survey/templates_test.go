@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
@@ -21,7 +22,7 @@ var update = flag.Bool("update", false, "rewrite catalog/locales from apps/web/l
 // catalog/locales/*.json must stay the strings of apps/web/locales the template catalog uses; run with -update after changing apps/web/locales.
 func TestCatalogueMatchesWebLocales(t *testing.T) {
 	for _, locale := range catalogLocales {
-		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "locales", locale+".json"))
+		raw, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/locales", locale+".json"))
 		if err != nil {
 			t.Fatal(err)
 		}
