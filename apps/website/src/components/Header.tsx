@@ -1,12 +1,4 @@
-import {
-  APP_LOGIN_PATH,
-  GITHUB_URL,
-  HTML_LANG,
-  LOCALES,
-  LOCALE_NAME,
-  localePrefix,
-  pagePath,
-} from "../site";
+import { APP_LOGIN_PATH, GITHUB_URL, HTML_LANG, LOCALES, LOCALE_NAME, localePrefix, pagePath } from "../site";
 import { Icon, type IconName } from "./icons";
 import { LogoMark } from "./Logo";
 import { useSite } from "./site-context";
