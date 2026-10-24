@@ -10,7 +10,7 @@ keywords:
   - forma
   - postgresql
   - valkey
-home: https://forma.yldm.ai/docs/self-hosting/setup/kubernetes
+home: https://forma.yldm.ai
 maintainers:
   - name: Forma
     email: info@forma.yldm.ai

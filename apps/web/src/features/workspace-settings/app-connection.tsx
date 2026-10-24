@@ -5,7 +5,6 @@ import {
   CheckIcon,
   ChevronDownIcon,
   CopyIcon,
-  ExternalLinkIcon,
   GlobeIcon,
   RotateCcwIcon,
   SmartphoneIcon,
@@ -24,10 +23,6 @@ import { errorMessage } from "../../lib/errors";
 import { organizationSettingsPath } from "../../lib/navigation";
 import { type AppConnection, type WorkspaceDetail, appConnectionQuery } from "../../lib/queries/workspaces";
 import { sdkSnippets } from "../../lib/sdk-snippets";
-
-const WORKSPACE_ID_MIGRATION_URL =
-  "https://forma.yldm.ai/docs/surveys/website-app-surveys/workspace-id-migration";
-const GUIDES = "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides";
 
 /** forma2's app connection page: whether the SDK has reached the workspace, the ids it is set up with, and how to install it. */
 export const AppConnectionPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
@@ -105,16 +100,7 @@ const ConnectionCards = ({ connection, onRecheck }: { connection: AppConnection;
           {connection.legacyEnvironmentId && (
             <Alert variant="info" role="status">
               <AlertDescription>
-                <p>
-                  {t("workspace.app-connection.environment_id_legacy_alert")}{" "}
-                  <a
-                    href={WORKSPACE_ID_MIGRATION_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline">
-                    {t("workspace.app-connection.environment_id_legacy_alert_link")}
-                  </a>
-                </p>
+                <p>{t("workspace.app-connection.environment_id_legacy_alert")}</p>
               </AlertDescription>
             </Alert>
           )}
@@ -199,11 +185,9 @@ interface InstallOption {
   label: string;
   steps: string[];
   snippet?: string;
-  docsHref?: string;
 }
 
 const Steps = ({ option }: { option: InstallOption }) => {
-  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       <ol className="list-inside list-decimal space-y-1 text-sm text-slate-700">
@@ -212,14 +196,6 @@ const Steps = ({ option }: { option: InstallOption }) => {
         ))}
       </ol>
       {option.snippet && <CodeBlock>{option.snippet}</CodeBlock>}
-      {option.docsHref && (
-        <Button variant="secondary" size="sm" asChild>
-          <a href={option.docsHref} target="_blank" rel="noopener noreferrer">
-            {t("common.learn_more")}
-            <ExternalLinkIcon />
-          </a>
-        </Button>
-      )}
     </div>
   );
 };
@@ -272,28 +248,24 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
               label: step("html"),
               steps: [step("html_step_1"), step("html_step_2")],
               snippet: snippets.html,
-              docsHref: `${GUIDES}#html`,
             },
             {
               id: "react",
               label: step("react"),
               steps: [step("react_step_1"), step("react_step_2")],
               snippet: snippets.react,
-              docsHref: `${GUIDES}#react-js`,
             },
             {
               id: "nextjs",
               label: step("nextjs"),
               steps: [step("nextjs_step_1"), step("nextjs_step_2"), step("nextjs_step_3")],
               snippet: snippets.nextjs,
-              docsHref: `${GUIDES}#next-js`,
             },
             {
               id: "vue",
               label: step("vue"),
               steps: [step("vue_step_1"), step("vue_step_2")],
               snippet: snippets.vue,
-              docsHref: `${GUIDES}#vue-js`,
             },
           ]}
         />
@@ -312,28 +284,24 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
               label: step("react_native"),
               steps: [step("react_native_step_1"), step("react_native_step_2")],
               snippet: snippets.reactNative,
-              docsHref: `${GUIDES}#react-native`,
             },
             {
               id: "swift",
               label: step("swift"),
               steps: [step("swift_step_1"), step("swift_step_2")],
               snippet: snippets.swift,
-              docsHref: `${GUIDES}#swift`,
             },
             {
               id: "android",
               label: step("android"),
               steps: [step("android_step_1"), step("android_step_2")],
               snippet: snippets.android,
-              docsHref: `${GUIDES}#android`,
             },
             {
               id: "flutter",
               label: step("flutter"),
               steps: [step("flutter_step_1"), step("flutter_step_2")],
               snippet: snippets.flutter,
-              docsHref: `${GUIDES}#flutter`,
             },
           ]}
         />
@@ -351,7 +319,6 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
             label: step("gtm"),
             steps: [step("gtm_step_1"), step("gtm_step_2"), step("gtm_step_3"), step("gtm_step_4")],
             snippet: snippets.html,
-            docsHref: "https://forma.yldm.ai/docs/surveys/website-app-surveys/google-tag-manager",
           }}
         />
       ),
@@ -372,7 +339,6 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
               step("wordpress_step_3"),
               step("wordpress_step_4"),
             ],
-            docsHref: "https://forma.yldm.ai/docs/platform/features/integrations/wordpress",
           }}
         />
       ),

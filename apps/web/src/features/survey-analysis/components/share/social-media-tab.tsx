@@ -1,6 +1,6 @@
 import { AlertCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
 import { Button } from "../../../../components/ui/button";
 import { FacebookIcon, LinkedinIcon, RedditIcon, ThreadsIcon, XIcon } from "./social-icons";
 
@@ -67,16 +67,6 @@ export const SocialMediaTab = ({ surveyUrl, surveyTitle }: { surveyUrl: string; 
         <AlertDescription>
           {t("workspace.surveys.share.social_media.source_tracking_enabled_alert_description")}
         </AlertDescription>
-        <AlertButton
-          onClick={() =>
-            window.open(
-              "https://forma.yldm.ai/docs/surveys/link-surveys/source-tracking",
-              "_blank",
-              "noopener,noreferrer"
-            )
-          }>
-          {t("common.learn_more")}
-        </AlertButton>
       </Alert>
     </>
   );

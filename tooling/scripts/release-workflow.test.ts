@@ -177,7 +177,6 @@ const run = (stub: Record<string, string> = {}) => {
       STUB_REPO: repo,
       VERSION: "0.2.7",
       IMAGE: "ghcr.io/yldm-tech/forma-server",
-      DOCS_IMAGE: "ghcr.io/yldm-tech/forma-docs-site",
       RELEASE_SHA: release,
       GH_REPO: REPO,
       GH_TOKEN: "job-token",

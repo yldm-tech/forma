@@ -1,8 +1,0 @@
-oneOf:
-  - $ref: ./ValidateSurveyCreateRequest.yml
-  - $ref: ./ValidateSurveyPatchRequest.yml
-discriminator:
-  propertyName: operation
-  mapping:
-    create: ./ValidateSurveyCreateRequest.yml
-    patch: ./ValidateSurveyPatchRequest.yml

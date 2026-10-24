@@ -502,14 +502,6 @@ export const SurveyMenuBar = ({
           <div>
             <Alert variant="warning" size="small" role="status">
               <AlertTitle>{t("common.storage_not_configured")}</AlertTitle>
-              <AlertButton asChild>
-                <a
-                  href="https://forma.yldm.ai/docs/self-hosting/configuration/file-uploads"
-                  target="_blank"
-                  rel="noopener noreferrer">
-                  {t("common.learn_more")}
-                </a>
-              </AlertButton>
             </Alert>
           </div>
         )}

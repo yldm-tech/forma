@@ -77,8 +77,7 @@ reviews:
     # allowlist. The fix then is to enumerate the generated locales explicitly.
     - "!packages/surveys/locales/!(en-US).json"
     - "!**/i18n.lock"
-    # Generated artefacts. apps/docs/api-*-reference/openapi*.{yml,json} are deliberately NOT
-    # excluded — oasdiff reviews them for breaking API changes.
+    # Generated artefacts.
     - "!apps/server/internal/jsonschema/schemas/**"
     - "!apps/web/src/routeTree.gen.ts"
 
@@ -118,8 +117,7 @@ reviews:
         - The client API (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, v3, MCP and webhook or
           OAuth callback paths are frozen external contracts: flag any change to a path, status code,
           field or default that is not mirrored in a contract test and the PR's breaking-change table.
-        - v3 handlers follow the hand-authored spec in `apps/docs/api-v3-reference/src/**/*.yml` and return
-          RFC 9457 problems. Return 403, not 404, for a resource the caller may not see.
+        - v3 handlers return RFC 9457 problems. Return 403, not 404, for a resource the caller may not see.
         - Errors are wrapped with context and logged once, where handled. Never log secrets, tokens,
           request bodies, or raw URL paths that can carry a token.
         - Flag defensive error handling around internal calls; validation belongs at the boundary.
@@ -144,12 +142,6 @@ reviews:
         - Third-party actions should be pinned to a commit SHA, not a tag.
         - Flag anything that interpolates untrusted input (PR title, body, branch name) directly
           into a `run:` block, and any workflow that exposes secrets to `pull_request_target`.
-
-    - path: "apps/docs/**/*.mdx"
-      instructions: |
-        Mintlify docs. Frontmatter needs `title`, `description`, and `icon`; the body must not start
-        with an H1; headings are Camel Case with only the feature name capitalized. Enterprise-only
-        features need the Enterprise note block. New pages must be added to `apps/docs/docs.json` nav.
 
     - path: "packages/{surveys,js-core,survey-ui}/**"
       instructions: |

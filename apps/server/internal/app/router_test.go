@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -20,13 +17,23 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/actionclass"
 	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/billing"
 	"github.com/yldm-tech/forma/apps/server/internal/clientapi"
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/contact/contactsurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/health"
+	"github.com/yldm-tech/forma/apps/server/internal/instance"
+	"github.com/yldm-tech/forma/apps/server/internal/integration"
 	"github.com/yldm-tech/forma/apps/server/internal/invite"
 	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/mcp"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/org"
 	"github.com/yldm-tech/forma/apps/server/internal/plain"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
@@ -34,10 +41,15 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/apps/server/internal/tag"
 	"github.com/yldm-tech/forma/apps/server/internal/team"
+	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
@@ -199,7 +211,9 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	}
 }
 
-// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai routes /docs to the documentation and every other path to the website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. Each is a whole path segment, matched as the path itself and everything under it (/s and /s/...), never as a character prefix: a prefix rule for /s or /p would also take the website's /security or /pricing. The ingress in yldm-platform lists exactly these; apps/docs/self-hosting/configuration/domain-configuration.mdx documents them.
+// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai sends every other path to the marketing website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. The ingress in yldm-platform lists exactly these, plus /app.
+//
+// Each entry is a whole path segment, matched as the path itself and everything under it (/s and /s/...), never as a character prefix: a prefix rule for /s or /p would also take the website's /security or /pricing. A proxy whose prefix match is character-wise, such as Traefik's Ingress pathType Prefix, must route each entry as Exact /x plus Prefix /x/ (the single files favicon.ico and logo-transparent.png need only Exact).
 var RootPathPrefixes = []string{
 	".well-known",          // OAuth and OpenID discovery documents for MCP clients
 	"account",              // legacy admin pages, redirected to /app
@@ -232,41 +246,6 @@ var RootPathPrefixes = []string{
 	"workspaces",           // legacy admin pages and email links, redirected to /app
 }
 
-// rootPathFiles are the RootPathPrefixes that name a single file rather than a directory, so a proxy routes them by exact path.
-var rootPathFiles = []string{"favicon.ico", "logo-transparent.png"}
-
-// The segment-matching proxy rules the self-hosting docs publish (the Traefik and nginx regexes, plus an exact rule per file) name exactly /app and RootPathPrefixes, so a copied rule cannot drop a path or catch one the server does not answer.
-func TestRootPathPrefixesDocumentedAsSegments(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "self-hosting", "configuration", "domain-configuration.mdx"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	doc := string(raw)
-	want := []string{"app"}
-	for _, p := range RootPathPrefixes {
-		if !slices.Contains(rootPathFiles, p) {
-			want = append(want, p)
-		}
-	}
-	sort.Strings(want)
-	rules := regexp.MustCompile(`\^/\(([^)]*)\)\(/\|\$\)`).FindAllStringSubmatch(doc, -1)
-	if len(rules) != 2 {
-		t.Fatalf("found %d segment regexes in the docs, want the Traefik and the nginx one", len(rules))
-	}
-	for _, rule := range rules {
-		got := strings.Split(strings.ReplaceAll(rule[1], `\.`, "."), "|")
-		sort.Strings(got)
-		if !slices.Equal(got, want) {
-			t.Errorf("documented segments = %q, want %q", got, want)
-		}
-	}
-	for _, f := range rootPathFiles {
-		if !strings.Contains(doc, "Path(`/"+f+"`)") || !strings.Contains(doc, "location = /"+f) {
-			t.Errorf("the docs do not route /%s by exact path", f)
-		}
-	}
-}
-
 // The production router answers exactly RootPathPrefixes outside /app, so the list an ingress is configured with cannot fall behind a new route, a new public file or a removed one.
 func TestRootPathPrefixes(t *testing.T) {
 	webURL, _ := url.Parse("https://app.example.com")
@@ -293,7 +272,7 @@ func TestRootPathPrefixes(t *testing.T) {
 	sort.Strings(got)
 	want := slices.Sorted(slices.Values(RootPathPrefixes))
 	if !slices.Equal(got, want) {
-		t.Fatalf("root path prefixes = %q, want %q; update RootPathPrefixes, the ingress and the documentation together", got, want)
+		t.Fatalf("root path prefixes = %q, want %q; update RootPathPrefixes and the ingress together", got, want)
 	}
 
 	// Through the whole router, with every middleware in front: the legacy admin prefixes redirect, the root leads to the app, and a path outside the list is not the app.
@@ -314,4 +293,70 @@ func TestRootPathPrefixes(t *testing.T) {
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/app/" {
 		t.Errorf("/ = %d %s, want 302 to /app/", rec.Code, rec.Header().Get("Location"))
 	}
+}
+
+// newProductionRouter builds the production router (NewRouter, the graph `forma serve` mounts) with handlers that have no dependencies behind them, which is enough to register every route.
+func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
+	t.Helper()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	p := &Platform{Config: cfg, Log: log, ClientIP: httpapi.NewClientIPResolver(cfg, log)}
+	sessions := auth.NewSessions(cfg, nil, log)
+	guard := surveyv3.NewGuard(cfg, sessions, nil, nil, log)
+	v3 := v3api.NewMiddleware(cfg, nil, nil)
+	web, err := webui.NewFromFS(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	surveys := survey.NewHandler(nil, sessions, guard, nil, log)
+	workflows := workflow.NewHandler(cfg, nil, guard, sessions, nil, log)
+	oauth, err := oauthserver.NewHandler(cfg, nil, nil, sessions, nil, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpHandler, err := mcp.NewHandler(cfg, nil, nil, nil, nil, nil, surveys, workflows, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v1 := mgmtv1.New(cfg, nil, nil, nil, nil, nil, log)
+
+	return NewRouter(p, sessions, nil,
+		health.NewHandler(nil, log),
+		auth.NewHandler(cfg, nil, sessions, nil),
+		auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log)),
+		org.NewHandler(nil, sessions),
+		workspace.NewHandler(nil, sessions),
+		team.NewHandler(nil, sessions),
+		invite.NewHandler(nil, sessions),
+		apikey.NewHandler(nil, sessions, nil),
+		surveys,
+		contact.NewHandler(nil, sessions),
+		contact.NewV3Handler(nil),
+		actionclass.NewHandler(nil, sessions, v3),
+		tag.NewHandler(nil, sessions, v3, nil),
+		response.NewHandler(nil, sessions),
+		analysis.NewHandler(nil, sessions),
+		ai.NewHandler(nil, nil, sessions),
+		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
+		linksurvey.NewHandler(cfg, nil, nil, web, log),
+		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log),
+		webhook.NewHandler(nil, sessions),
+		webhook.NewV1Handler(nil, v1, log),
+		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
+		integration.NewHandler(nil, sessions),
+		integration.NewOAuthHandler(nil, sessions, nil, log),
+		notification.NewHandler(web),
+		analysis.NewAttachmentsHandler(nil, nil, v3, nil, nil, log),
+		workflows,
+		oauth,
+		oauthserver.NewAppHandler(oauth, sessions),
+		mcpHandler,
+		billing.NewHandler(nil, sessions),
+		billing.NewWebhookHandler(nil, log),
+		instance.NewHandler(nil, nil, sessions),
+		web,
+		unsplash.NewHandler(nil, sessions),
+		contactsurvey.NewHandler(nil, sessions),
+		emailembed.NewHandler(nil, sessions),
+		plain.NewHandler(cfg, nil, sessions),
+	)
 }

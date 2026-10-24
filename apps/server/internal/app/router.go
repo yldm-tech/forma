@@ -130,7 +130,7 @@ func mountAuthenticatedV3API(r *gin.Engine, p *Platform, sessions httpapi.Sessio
 	}
 }
 
-// mountV3API mounts /api/v3, the management API specified in apps/docs/api-v3-reference. Errors are RFC 9457 problems, a signed-in browser's session is read for every route (each route then decides with v3api.Middleware.Auth whether it also accepts an API key), and each request evaluates a repeated authorization question once.
+// mountV3API mounts /api/v3, the management API. Errors are RFC 9457 problems, a signed-in browser's session is read for every route (each route then decides with v3api.Middleware.Auth whether it also accepts an API key), and each request evaluates a repeated authorization question once.
 func mountV3API(r *gin.Engine, p *Platform, sessions httpapi.SessionAuth, handlers ...v3Registrar) {
 	group := r.Group("/api/v3", v3api.ErrorHandler(p.Log), authz.DecisionMemo(), sessions.Optional())
 	for _, h := range handlers {

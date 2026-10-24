@@ -1,4 +1,4 @@
-// Package apiv3 holds the conventions of the v3 management API (forma2's apps/web/app/api/v3/lib): RFC 9457 problem responses, authentication by session or API key, the per-principal rate limit, workspace access that answers 403 for a workspace the caller may not see whether or not it exists, and cursor pagination of workspace reference lists. The contract is apps/docs/api-v3-reference.
+// Package apiv3 holds the conventions of the v3 management API (forma2's apps/web/app/api/v3/lib): RFC 9457 problem responses, authentication by session or API key, the per-principal rate limit, workspace access that answers 403 for a workspace the caller may not see whether or not it exists, and cursor pagination of workspace reference lists.
 package apiv3
 
 import (
@@ -66,7 +66,7 @@ func Forbidden() *apperr.Error {
 	return apperr.Forbidden(ForbiddenDetail)
 }
 
-// problemCodes maps the /api/app error codes onto the v3 problem codes the spec allows.
+// problemCodes maps the /api/app error codes onto the v3 API's RFC 9457 problem codes.
 func problemCode(e *apperr.Error) string {
 	switch e.Status {
 	case http.StatusBadRequest:

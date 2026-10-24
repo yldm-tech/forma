@@ -238,7 +238,7 @@ describe("Google Sheets", () => {
     expect(toasts()).toContain(t("workspace.integrations.connecting_integration_failed_please_try_again"));
   });
 
-  test("an instance without Google credentials cannot connect and says how to configure it", async () => {
+  test("an instance without Google credentials cannot connect and says it is not configured", async () => {
     stubServer({
       [`GET ${BASE}`]: () => ({ body: overview([], false) }),
       [`GET ${BASE}/surveys`]: () => ({ body: [] }),
@@ -254,9 +254,6 @@ describe("Google Sheets", () => {
         exact: false,
       })
     ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "docs" }).getAttribute("href")).toBe(
-      "https://forma.yldm.ai/docs/integrations/google-sheets"
-    );
   });
 
   const connected = (links: Integration<"googleSheets">["config"]["data"] = []) => ({

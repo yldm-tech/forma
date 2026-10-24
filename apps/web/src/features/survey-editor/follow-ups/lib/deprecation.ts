@@ -15,11 +15,7 @@ export const SURVEY_FOLLOW_UPS_SUNSET_DATE = new Date("2026-12-01T00:00:00.000Z"
 /**
  * The sunset date as the announcement means it: a calendar day, not an instant.
  *
- * `formatDateForDisplay` builds an `Intl.DateTimeFormat` with no `timeZone`, so it renders in the
- * viewer's own zone — and midnight UTC on 1 December is still 30 November anywhere west of it. Left
- * alone, a reader in New York would be told follow-ups stop working on "Nov 30, 2026" while the docs
- * and the deprecation announcement both say 1 December. Locale still controls the formatting; only
- * the represented calendar day is pinned, which is exactly the split AGENTS.md asks for.
+ * `formatDateForDisplay` builds an `Intl.DateTimeFormat` with no `timeZone`, so it renders in the viewer's own zone — and midnight UTC on 1 December is still 30 November anywhere west of it. Left alone, a reader in New York would be told follow-ups stop working on "Nov 30, 2026" while the deprecation announcement says 1 December. Locale still controls the formatting; only the represented calendar day is pinned, which is exactly the split AGENTS.md asks for.
  *
  * Formatting lives here rather than at the call site so a second consumer of the date cannot
  * reintroduce the shift by forgetting the zone.
@@ -31,9 +27,6 @@ export const formatSurveyFollowUpsSunsetDate = (locale: string): string =>
     day: "numeric",
     timeZone: "UTC",
   });
-
-/** Docs page that explains the replacement. */
-export const WORKFLOWS_DOCS_URL = "https://forma.yldm.ai/docs/workflows/overview";
 
 /**
  * Whether the survey editor still offers the Follow-ups tab: only to a survey that already has follow-ups. They are live automation and their owner has to be able to read, fix and eventually migrate them; with none, new automation starts as a Workflow.

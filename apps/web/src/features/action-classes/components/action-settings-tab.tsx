@@ -38,7 +38,6 @@ export const ActionSettingsTab = ({
   currentSurveyId,
   onActionUpdated,
 }: Readonly<ActionSettingsTabProps>) => {
-  const actionDocsHref = "https://forma.yldm.ai/docs/surveys/website-app-surveys/actions";
   const { createdAt: _createdAt, updatedAt: _updatedAt, id: _id, ...restActionClass } = actionClass;
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const { t } = useTranslation();
@@ -144,12 +143,6 @@ export const ActionSettingsTab = ({
                   {t("common.delete")}
                 </Button>
               )}
-
-              <Button variant="secondary" asChild>
-                <a href={actionDocsHref} target="_blank" rel="noopener noreferrer">
-                  {t("common.read_docs")}
-                </a>
-              </Button>
             </div>
 
             {isReadOnly ? null : (

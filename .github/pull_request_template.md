@@ -63,13 +63,7 @@ only thing that writes a migration entry, so ticking it "to be safe" when nothin
 invents an upgrade step for self-hosters that does not exist; a reviewer who disagrees can still ask
 for it.
 
-The checkbox alone drives the label: ticking it applies `breaking-change`, which feeds the release notes
-and the self-hoster migration guide. Leave its wording alone — `pr-label-sync.yml` finds it by that text,
-ignores every other checkbox in this section, and never reads the prose. What you write underneath is
-still read: by reviewers, and by the CodeRabbit "Breaking changes match the diff" check, which compares
-the tick against the diff and expects a ticked box to be explained. Ticked → replace "None" with the
-table below, one row per change, written for an external integrator; not ticked → keep "None" and say in
-a line why. -->
+The checkbox alone drives the label: ticking it applies `breaking-change`, which feeds the release notes. Leave its wording alone — `pr-label-sync.yml` finds it by that text, ignores every other checkbox in this section, and never reads the prose. What you write underneath is still read: by reviewers, and by the CodeRabbit "Breaking changes match the diff" check, which compares the tick against the diff and expects a ticked box to be explained. Ticked → replace "None" with the table below, one row per change, written for an external integrator; not ticked → keep "None" and say in a line why. -->
 
 - [ ] This PR contains breaking changes
 

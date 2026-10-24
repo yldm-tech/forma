@@ -1,5 +1,4 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { CircleHelpIcon } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
@@ -261,16 +260,6 @@ export const SlackLinkModal = ({
                   ))}
                 </Select>
               </div>
-              <Button variant="ghost" size="sm" className="my-2" type="button" asChild>
-                <a
-                  href="https://forma.yldm.ai/docs/developer-docs/integrations/slack"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs">
-                  <CircleHelpIcon className="size-4" />
-                  {t("workspace.integrations.slack.dont_see_your_channel")}
-                </a>
-              </Button>
               {alreadyLinked && (
                 <p className="text-xs text-amber-700">
                   <strong>{t("common.note")}:</strong>{" "}

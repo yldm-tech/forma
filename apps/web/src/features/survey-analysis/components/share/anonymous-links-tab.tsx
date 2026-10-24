@@ -10,7 +10,6 @@ import { copyText } from "../../../../lib/clipboard";
 import { toast } from "../../../../lib/toast";
 import { analysisApi } from "../../api";
 import { DisableLinkModal } from "./disable-link-modal";
-import { DocumentationLinks } from "./documentation-links";
 import { ShareSurveyLink } from "./share-survey-link";
 import { useUpdateSurveySettings } from "./use-survey-settings";
 
@@ -271,27 +270,6 @@ export const AnonymousLinksTab = ({
             </div>
           </AdvancedOptionToggle>
         </div>
-
-        <DocumentationLinks
-          links={[
-            {
-              title: t("workspace.surveys.share.anonymous_links.single_use_links"),
-              href: "https://forma.yldm.ai/docs/surveys/link-surveys/single-use-links",
-            },
-            {
-              title: t("workspace.surveys.share.anonymous_links.data_prefilling"),
-              href: "https://forma.yldm.ai/docs/surveys/link-surveys/data-prefilling",
-            },
-            {
-              title: t("workspace.surveys.share.anonymous_links.source_tracking"),
-              href: "https://forma.yldm.ai/docs/surveys/link-surveys/source-tracking",
-            },
-            {
-              title: t("workspace.surveys.share.anonymous_links.custom_start_point"),
-              href: "https://forma.yldm.ai/docs/surveys/link-surveys/start-at-block",
-            },
-          ]}
-        />
       </div>
       {pendingDisable && (
         <DisableLinkModal
