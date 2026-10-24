@@ -96,6 +96,7 @@
   },
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
+    "@forma/vite-plugins": "workspace:*",
     "@storybook/react": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@testing-library/react": "catalog:",
