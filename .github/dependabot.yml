@@ -31,4 +31,3 @@ updates:
       go-modules:
         patterns:
           - "*"
-
