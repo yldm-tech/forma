@@ -245,6 +245,8 @@ export const CommandPalette = (access: PaletteAccess) => {
         <DialogTitle className="sr-only">{t("common.search")}</DialogTitle>
         <Command>
           <CommandInput
+            // The dialog focuses this on opening; otherwise showModal() leaves the focus on cmdk's root and typing does nothing.
+            data-autofocus
             placeholder={t("common.search")}
             value={query}
             onValueChange={setQuery}

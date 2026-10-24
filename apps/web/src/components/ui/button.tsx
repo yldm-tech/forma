@@ -5,17 +5,17 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "../../lib/cn";
 
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-400 disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground enabled:hover:bg-primary/80",
-        destructive: "bg-destructive text-destructive-foreground enabled:hover:bg-destructive/80",
+        default: "bg-primary text-primary-foreground enabled:hover:bg-primary-hover",
+        destructive: "bg-destructive text-destructive-foreground enabled:hover:bg-destructive-hover",
         outline:
           "border border-slate-300 bg-white enabled:hover:bg-accent enabled:hover:text-accent-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground enabled:hover:bg-secondary/30 border border-primary/5 hover:border-primary/20",
-        ghost: "enabled:hover:bg-accent enabled:hover:text-accent-foreground text-primary",
+          "bg-secondary text-secondary-foreground enabled:hover:bg-secondary/30 border border-ink/5 hover:border-ink/20",
+        ghost: "enabled:hover:bg-accent enabled:hover:text-accent-foreground text-ink",
         link: "text-primary underline-offset-4 enabled:hover:underline",
       },
       size: {
