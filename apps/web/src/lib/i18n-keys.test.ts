@@ -159,7 +159,10 @@ test("zh and ja values differ from en-US unless the key is a brand or technical 
   const english = new Map(flatten(enUS));
   const untranslated = Object.entries(unspacedCatalogues).flatMap(([locale, catalogue]) =>
     flatten(catalogue)
-      .filter(([key, value]) => value === english.get(key) && /[A-Za-z]{2}/.test(value) && !SAME_IN_EVERY_LOCALE.has(key))
+      .filter(
+        ([key, value]) =>
+          value === english.get(key) && /[A-Za-z]{2}/.test(value) && !SAME_IN_EVERY_LOCALE.has(key)
+      )
       .map(([key, value]) => `${locale}: ${key} = ${value}`)
   );
   expect(untranslated).toEqual([]);
