@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { PlusCircleIcon, SplitIcon } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { PlusCircleIcon, SplitIcon, XIcon } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { LoadingBlock } from "../../../components/ui/page";
@@ -30,10 +30,8 @@ const roleStyling: Record<TemplateRole, string> = {
 
 const chipClass = (active: boolean) =>
   cn(
-    active
-      ? "bg-slate-800 font-semibold text-white"
-      : "bg-white text-slate-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-hidden",
-    "rounded-sm border border-slate-800 px-2 py-1 text-xs transition-all duration-150"
+    active ? "bg-slate-800 font-semibold text-white" : "bg-white text-slate-700 hover:bg-slate-100",
+    "rounded-sm border border-slate-800 px-2 py-1 text-xs transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
   );
 
 /** One axis of the gallery's filters: "All ..." and each value, one of them chosen. */
@@ -131,19 +129,21 @@ const TemplateTags = ({ template, selected }: { template: SurveyTemplate; select
 };
 
 /**
- * forma2's TemplateList: "start from scratch" and the catalog's templates, narrowed by the channel, industry and role filters or by a name search. Choosing a card selects it; its button then creates the survey and opens the editor.
+ * forma2's TemplateList: "start from scratch" and the catalog's templates, narrowed by the channel, industry and role filters or by a name search. Choosing a card selects it; its button then creates the survey and opens the editor. A search that matches no template says so and offers to clear it.
  */
 export const TemplateList = ({
   workspaceId,
   surveyType,
   defaultLanguage,
   search,
+  onClearSearch,
   aiCard,
 }: {
   workspaceId: string;
   surveyType: "link" | "app";
   defaultLanguage: string;
   search: string;
+  onClearSearch: () => void;
   /** The create-with-AI card, shown after "start from scratch" where the gallery is a workspace's first survey. */
   aiCard?: ReactNode;
 }) => {
@@ -189,6 +189,8 @@ export const TemplateList = ({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {custom && (
           <TemplateCard
+            title={custom.name}
+            description={custom.description}
             isActive={activeId === custom.id}
             onSelect={() => setActiveId(custom.id)}
             className={cn(
@@ -205,15 +207,29 @@ export const TemplateList = ({
                 <span className="truncate">{t("common.create_survey")}</span>
               </Button>
             }>
-            <PlusCircleIcon className="text-brand-dark size-8 transition-all duration-150 group-hover:scale-110" />
-            <h3 className="text-md mt-3 mb-1 text-left font-bold text-slate-700">{custom.name}</h3>
-            <p className="text-left text-xs text-slate-600">{custom.description}</p>
+            <PlusCircleIcon
+              className="text-brand-dark order-first mb-3 size-8 transition-all duration-150 group-hover:scale-110"
+              aria-hidden="true"
+            />
           </TemplateCard>
         )}
         {aiCard}
+        {search.trim() !== "" && templates.length === 0 && (
+          <div role="status" className="flex flex-col items-start gap-3 rounded-lg bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-600">
+              {t("workspace.surveys.templates.no_templates_match", { query: search.trim() })}
+            </p>
+            <Button variant="secondary" size="sm" onClick={onClearSearch}>
+              {t("workspace.surveys.templates.clear_search")}
+              <XIcon />
+            </Button>
+          </div>
+        )}
         {templates.map((template) => (
           <TemplateCard
             key={template.id}
+            title={template.name}
+            description={template.description}
             isActive={activeId === template.id}
             onSelect={() => setActiveId(template.id)}
             action={
@@ -224,9 +240,9 @@ export const TemplateList = ({
                 <span className="truncate">{t("workspace.surveys.templates.use_this_template")}</span>
               </Button>
             }>
-            <TemplateTags template={template} selected={filter} />
-            <h3 className="text-md mt-3 mb-1 text-left font-bold text-slate-700">{template.name}</h3>
-            <p className="text-left text-xs text-slate-600">{template.description}</p>
+            <div className="order-first mb-3">
+              <TemplateTags template={template} selected={filter} />
+            </div>
           </TemplateCard>
         ))}
       </div>
@@ -234,36 +250,49 @@ export const TemplateList = ({
   );
 };
 
-/** A gallery card: a button until chosen, then a panel with the action that creates the survey. */
+/**
+ * A gallery card. Its title is a heading whose button chooses the card, stretched over the whole card so a click anywhere chooses it; once chosen, the card shows the action that creates the survey. In the DOM the title comes first and the description follows it, so the heading names the card; children (the tags or an icon) are drawn above the title with CSS order.
+ */
 const TemplateCard = ({
+  title,
+  description,
   isActive,
   onSelect,
   action,
   className,
   children,
 }: {
+  title: string;
+  description: string;
   isActive: boolean;
   onSelect: () => void;
   action: ReactNode;
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) => {
-  const classes = cn(
-    "group relative flex flex-col rounded-lg bg-white p-6 text-left shadow-sm transition-all duration-150 hover:ring-2 hover:ring-slate-300",
-    isActive && "ring-2 ring-slate-400",
-    className
-  );
-  if (!isActive) {
-    return (
-      <button type="button" className={cn(classes, "cursor-pointer")} onClick={onSelect}>
-        {children}
-      </button>
-    );
-  }
+  const descriptionId = useId();
   return (
-    <div className={classes}>
+    <div
+      className={cn(
+        "group relative flex flex-col rounded-lg bg-white p-6 text-left shadow-sm transition-all duration-150 focus-within:ring-2 focus-within:ring-ring hover:ring-2 hover:ring-slate-300",
+        isActive ? "ring-2 ring-slate-400" : "cursor-pointer",
+        className
+      )}>
+      <h3 className="text-md mb-1 text-left font-bold text-slate-700">
+        <button
+          type="button"
+          aria-expanded={isActive}
+          aria-describedby={descriptionId}
+          onClick={onSelect}
+          className="text-left after:absolute after:inset-0 after:rounded-lg focus-visible:outline-hidden">
+          {title}
+        </button>
+      </h3>
+      <p id={descriptionId} className="text-left text-xs text-slate-600">
+        {description}
+      </p>
       {children}
-      <div className="flex justify-start">{action}</div>
+      {isActive && <div className="relative z-10 flex justify-start">{action}</div>}
     </div>
   );
 };

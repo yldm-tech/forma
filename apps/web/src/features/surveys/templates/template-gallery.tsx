@@ -43,7 +43,7 @@ export const TemplateGallery = ({
               ? t("workspace.surveys.templates.create_a_new_survey")
               : t("workspace.surveys.all_set_time_to_create_first_survey")}
           </h1>
-          <label className="mx-6 flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-white px-4 text-slate-800">
+          <label className="focus-within:ring-ring mx-6 flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-white px-4 text-slate-800 focus-within:ring-2 focus-within:ring-offset-1">
             <SearchIcon className="size-4" aria-hidden="true" />
             <span className="sr-only">{t("common.search")}</span>
             <input
@@ -60,6 +60,7 @@ export const TemplateGallery = ({
           surveyType={surveyType}
           defaultLanguage={defaultLanguage}
           search={search}
+          onClearSearch={() => setSearch("")}
           aiCard={
             isTemplatePage ? undefined : (
               <CreateWithAICard
