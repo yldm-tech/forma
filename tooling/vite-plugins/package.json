@@ -18,7 +18,9 @@
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "postcss": "catalog:",
+    "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"

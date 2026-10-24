@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "composite": true,
     "outDir": "./dist",
     "paths": {
       "@forma/types/surveys/html-text": ["./surveys/html-text.ts"]

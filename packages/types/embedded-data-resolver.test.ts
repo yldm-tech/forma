@@ -330,9 +330,7 @@ describe("resolveEmbeddedValue", () => {
   });
 
   test("a mixed field/link/entry shape is unrepresentable at compile time", () => {
-    // This pin is enforced by `tsc` (this package's tsconfig includes *.test.ts, and an unused
-    // expect-error directive fails the build), NOT by vitest — no CI workflow currently runs
-    // typecheck, so the pin bites on local and agent `pnpm typecheck` runs only.
+    // This pin is enforced by the type-check, NOT by vitest: this package's tsconfig includes *.test.ts, and an unused expect-error directive is a type error, which `vp check` reports (CI runs it in pr.yml).
     const acceptsRef = (ref: TEmbeddedValueRef): TEmbeddedValueRef => ref;
     const mixed = { field: makeField(), link: { storageKey: "plan" }, entry: countryEntry };
 
