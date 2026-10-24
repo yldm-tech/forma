@@ -1,0 +1,14 @@
+{
+  "name": "@forma/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@forma/config-typescript": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

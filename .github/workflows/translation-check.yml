@@ -1,6 +1,6 @@
 name: Translation Validation
 
-# forma2's translation-check.yml: scans the code that reads each translation catalogue against it (packages/i18n-utils/src/scan-translations.ts). The admin UI's catalogue, web/locales, is read by web/src and by the Go server (the mailer's `emails` namespace and the survey template catalogue); the survey runtime's is packages/surveys/locales. It fails on a key used but missing, a key nobody reads (beyond those recorded in packages/i18n-utils/web-unused-keys.json), a key with spaces, a key a locale lacks or has beyond en-US, and an en-US value changed since the last translation run (i18n.lock).
+# forma2's translation-check.yml: scans the code that reads each translation catalogue against it (packages/i18n-utils/src/scan-translations.ts). The admin UI's catalogue, apps/web/locales, is read by apps/web/src and by the Go server (the mailer's `emails` namespace and the survey template catalogue); the survey runtime's is packages/surveys/locales. It fails on a key used but missing, a key nobody reads (beyond those recorded in packages/i18n-utils/web-unused-keys.json), a key with spaces, a key a locale lacks or has beyond en-US, and an en-US value changed since the last translation run (i18n.lock).
 #
 # Called by pr.yml, so it is part of the PR Check Summary. forma2 skipped it when no translation-related file changed; it takes seconds once the workspace is installed, and a filter would have to know every Go file that names a key, so it always runs.
 

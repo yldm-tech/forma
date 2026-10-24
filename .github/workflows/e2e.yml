@@ -1,19 +1,18 @@
 name: E2E Tests
 
-# The Playwright browser suite (e2e/, playwright.config.ts) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change what it drives.
+# The Playwright browser suite (apps/e2e) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change what it drives.
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "web/**"
-      - "server/internal/webui/**"
-      - "server/internal/linksurvey/**"
+      - "apps/web/**"
+      - "apps/server/internal/webui/**"
+      - "apps/server/internal/linksurvey/**"
       - "packages/surveys/**"
       - "packages/js-core/**"
-      - "e2e/**"
-      - "playwright.config.ts"
-      - "scripts/ci-stack.sh"
+      - "apps/e2e/**"
+      - "tooling/scripts/ci-stack.sh"
       - ".github/workflows/e2e.yml"
 
 permissions:
@@ -42,8 +41,8 @@ jobs:
       - name: Setup Go (version from go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: server/go.mod
-          cache-dependency-path: server/go.sum
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
@@ -58,14 +57,16 @@ jobs:
           make embed server
 
       - name: Install Chromium
+        working-directory: apps/e2e
         run: vp exec playwright install --with-deps chromium
 
       - name: Start PostgreSQL, Valkey, SpiceDB, RustFS and forma
         env:
           FORMA_LOG: ${{ runner.temp }}/forma.log
-        run: bash scripts/ci-stack.sh up
+        run: bash tooling/scripts/ci-stack.sh up
 
       - name: Run the browser suite
+        working-directory: apps/e2e
         run: vp exec playwright test
 
       - name: Upload the Playwright report
@@ -75,8 +76,8 @@ jobs:
           name: playwright-report
           if-no-files-found: ignore
           path: |
-            playwright-report/
-            test-results/
+            apps/e2e/playwright-report/
+            apps/e2e/test-results/
 
       - name: Upload the server log
         if: failure()

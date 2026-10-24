@@ -1,0 +1,265 @@
+---
+title: "Kubernetes Deployment"
+description: "Deploy Forma on Kubernetes with the current OCI Helm chart."
+icon: "circle-nodes"
+---
+
+Deploy Forma on Kubernetes using the current OCI Helm chart published from the `deploy/helm/forma`
+directory in the Forma repository.
+
+## Prerequisites
+
+Ensure you have the following before proceeding:
+
+- a running Kubernetes cluster
+- Helm 3 installed locally
+- a public hostname for `forma.webappUrl`
+- a plan for PostgreSQL and Redis/Valkey, either in-cluster or managed externally
+- an edge rate-limiting plan for the v5-covered routes: the chart's Envoy bundle or an equivalent external edge
+  solution
+
+## 1. Install The Chart
+
+<Steps>
+  <Step title="Create A Minimal values.yaml">
+
+```yaml
+forma:
+  webappUrl: https://surveys.example.com
+```
+
+    Add any additional overrides you need for ingress, external services, secrets, or Enterprise license features.
+
+  </Step>
+
+  <Step title="Install Forma">
+
+```sh
+helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+  -n forma \
+  --create-namespace \
+  -f values.yaml
+```
+
+    By default, the chart deploys:
+
+    - the Forma application
+    - PostgreSQL
+    - Redis
+    - generated Kubernetes Secrets
+
+  </Step>
+</Steps>
+
+<Warning>
+  The default values are a starting point, not a production edge or high-availability configuration. Both
+  `ingress.enabled` and `envoy.enabled` default to `false`, so the chart does not expose the application or add
+  the v5 edge rate limits unless you configure them. The defaults also combine `autoscaling.minReplicas: 1` with
+  `pdb.minAvailable: 1`; that PodDisruptionBudget can block a node drain because Kubernetes cannot voluntarily
+  evict the only app pod.
+</Warning>
+
+## 2. Configure Secrets And External Services
+
+### Using Generated Secrets
+
+The default chart path keeps `secret.enabled: true`, which lets the chart generate the required application
+secrets for you.
+
+### No Enterprise License
+
+Every feature is available without a licence. The chart has no `enterprise.enabled` or `enterprise.licenseKey` value, and the server does not read `ENTERPRISE_LICENSE_KEY`; remove them from values carried over from forma2.
+
+### Using Managed PostgreSQL And Redis
+
+For production workloads, many teams prefer managed services:
+
+```yaml
+postgresql:
+  enabled: false
+  externalDatabaseUrl: "postgresql://user:password@your-postgres-host:5432/forma"
+
+redis:
+  enabled: false
+  externalRedisUrl: "redis://your-redis-host:6379"
+```
+
+### Using External Secrets
+
+If your cluster already uses an external secret manager, enable `externalSecret` and point it at your existing
+SecretStore. Ensure the resulting app secret exposes the values your deployment needs, including `DATABASE_URL`,
+
+### AuthZed / SpiceDB
+
+Forma v6 uses AuthZed as its authorization engine. Fresh chart installations enable a private,
+two-replica SpiceDB cluster and `fully_consistent` decisions by default. If the cluster already has a compatible
+SpiceDB operator, keep the authorization runtime enabled but disable this release's operator installation:
+
+```yaml
+authzed:
+  operator:
+    install: false
+```
+
+The default `authzed.operator.install: true` installs the pinned operator, creates the cluster, and bootstraps a
+dedicated `spicedb` database and login. Install only one operator in a Kubernetes cluster.
+
+For managed PostgreSQL, create a separate SpiceDB database and login first. Store its connection URI and a
+strong API token in a Kubernetes Secret using the keys `datastore_uri` and `preshared_key`, then configure:
+
+```yaml
+authzed:
+  enabled: true
+  auth:
+    existingSecret: forma-authzed
+  datastore:
+    existingSecret: forma-authzed
+```
+
+Use `authzed.mode: external`, `authzed.operator.install: false`, `authzed.endpoint: <host>:<port>`, and
+`authzed.insecure: false` when connecting
+to an externally managed AuthZed endpoint. The external endpoint must serve TLS because the preshared token is
+sent on every authenticated request. The application endpoint remains internal and uses plaintext gRPC by
+default when the chart owns SpiceDB.
+
+Run the operator commands inside a Forma pod. The image is distroless, with no shell, so call the binary directly:
+
+```bash
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz schema check
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz outbox status
+kubectl exec -n <namespace> deployment/<release-name> -- /usr/local/bin/forma authz backfill
+```
+
+A fresh install runs the AuthZed initialization Job (`forma authz` steps) after the migrations; application startup and probes remain independent from it. On an upgrade the chart still refuses to render until `authzed.migrationAcknowledged=true` says the preparation is done: `forma authz schema apply`, `forma authz outbox drain` and `forma authz backfill --apply` until it exits `0`. forma2's `forma-authzed` commands are gone. Follow [AuthZed Operations](/self-hosting/advanced/authzed-operations) and do not expose SpiceDB through an Ingress.
+
+## 3. v5-Specific Deployment Notes
+
+### Envoy Bundle Modes
+
+The chart supports three edge patterns for the v5-covered routes:
+
+- **Bundled Envoy controller**: set `envoy.enabled=true` and `envoy.controller.enabled=true`
+- **Existing cluster Envoy controller**: set `envoy.enabled=true` and `envoy.controller.enabled=false`
+- **Equivalent external edge protection**: keep using your platform's own ingress or gateway layer if it already
+  provides equivalent rate-limiting coverage
+
+If you use the chart-managed Envoy rate-limiting path, enable a dedicated backend with:
+
+```yaml
+envoy:
+  enabled: true
+  controller:
+    enabled: true
+
+envoyRedis:
+  enabled: true
+```
+
+This keeps Envoy rate-limiting state separate from the application's own Redis traffic.
+
+The example installs the bundled controller. If your cluster already provides a compatible Envoy Gateway
+controller, set `envoy.controller.enabled: false`. In either mode, configure
+`envoy.forma.ingress` or your platform ingress/load balancer so public traffic reaches the Envoy-managed
+routes. If you use an equivalent external edge solution instead, verify that it covers every route in the
+[rate-limiting guide](/self-hosting/advanced/rate-limiting) before exposing Forma.
+
+The server keeps applying its own limits to the routes the gateway covers until you declare the gateway with `GATEWAY_RATE_LIMITING=1` (in `deployment.env`), as with forma2; the chart does not set it for you.
+
+### Production Replicas And Disruption Budgets
+
+For a production deployment that should remain available during a voluntary disruption, run at least two app
+replicas:
+
+```yaml
+autoscaling:
+  enabled: true
+  minReplicas: 2
+
+pdb:
+  enabled: true
+  minAvailable: 1
+```
+
+If you intentionally run a single app replica, either disable the PDB or use `maxUnavailable: 1` instead of
+`minAvailable` and accept downtime during the eviction. Never set both fields; set the unused field to `null` in
+your values file.
+
+Two autoscaling defaults are easy to miss:
+
+- **`maxReplicas: 10` can exceed what the node pool can hold.** Each app pod requests 1 vCPU, so the ceiling
+  SpiceDB pods. A smaller pool leaves the extra replicas `Pending` — an HPA does not lower its own ceiling.
+- **The HPA scales on CPU and memory utilization only.** Queue depth is not one of its metrics, so a job
+  backlog can grow while both targets sit under their thresholds and no replica is added. Backlog-driven
+  scaling needs a queue-depth metric published to the metrics API and added to the HPA yourself.
+
+### Optional Bundled Qwen/vLLM For AI
+
+The Helm chart can optionally deploy a Forma-provided Qwen runtime through vLLM. This is disabled by
+default and requires GPU-capable Kubernetes nodes.
+
+To deploy Qwen/vLLM and automatically point the Forma app at the in-cluster OpenAI-compatible endpoint:
+
+```yaml
+llm:
+  enabled: true
+```
+
+With `llm.enabled: true`, the chart renders the vLLM router and Qwen serving engine, then injects the required
+`AI_PROVIDER=openai-compatible` app environment variables unless you override them in `deployment.env`.
+
+If you want to deploy the bundled Qwen runtime without changing the Forma app AI configuration:
+
+```yaml
+llm:
+  enabled: true
+  autoConfigureApp: false
+```
+
+Keep `llm.enabled: false` when you use Google Vertex, Azure, AWS Bedrock, or an externally managed
+OpenAI-compatible endpoint. Configure those providers through `deployment.env`.
+
+## 4. Upgrade The Deployment
+
+For normal chart upgrades:
+
+```sh
+helm upgrade forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+  -n forma \
+  -f values.yaml
+```
+
+For a Forma 4.x to 5.0 migration, confirm the following before running the upgrade:
+
+- your edge rate-limiting plan is in place
+- any required `AI_*` variables are added
+
+## 5. Key Values
+
+| Field                            | Description                                                    |
+| -------------------------------- | -------------------------------------------------------------- |
+| `forma.webappUrl`           | Public base URL for the Forma app                         |
+| `deployment.image.tag`           | Forma image tag override                                  |
+| `envoy.enabled`                  | Enables chart-managed Envoy Gateway resources                  |
+| `envoy.controller.enabled`       | Installs the bundled Envoy controller when `true`              |
+| `envoyRedis.enabled`             | Deploys a dedicated Redis backend for Envoy rate limiting      |
+| `llm.enabled`                    | Deploys the optional bundled Qwen/vLLM runtime                 |
+| `llm.autoConfigureApp`           | Injects Forma OpenAI-compatible env vars for bundled Qwen |
+| `postgresql.externalDatabaseUrl` | Uses an external PostgreSQL service instead of in-cluster      |
+| `redis.externalRedisUrl`         | Uses an external Redis/Valkey service instead of in-cluster    |
+
+For the complete values surface, refer to the chart README in the repository:
+[deploy/helm/forma/README.md](https://github.com/yldm-tech/forma/tree/main/deploy/helm/forma).
+
+## 6. Uninstalling The Deployment
+
+To remove the deployment:
+
+```sh
+helm uninstall forma -n forma
+```
+
+If you also want to remove in-cluster persistent volumes:
+
+```sh
+kubectl delete pvc --all -n forma
+```

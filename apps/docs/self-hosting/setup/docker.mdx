@@ -1,0 +1,207 @@
+---
+title: "Docker Setup"
+description: "Set up Forma quickly using our ready-to-use Docker image."
+icon: "docker"
+---
+
+Use this guide for a manual Docker Compose setup. It downloads the production Compose file and starts the baseline stack: the Forma server (`forma serve`), its job worker (`forma worker`), the one-shot migration (`forma migrate`), PostgreSQL 18, Valkey and SpiceDB. Optional services, S3-compatible storage with RustFS and a local Qwen model with vLLM, are documented after the baseline stack is running.
+
+Every Forma container runs the same image, `ghcr.io/yldm-tech/forma`: a single `forma` binary on a distroless base, running as uid 1001, with no shell. Its default command is `forma start`; the Compose file gives each service its own subcommand instead.
+
+### Requirements
+
+Make sure the following tools are installed:
+
+- Docker Engine with Docker Compose V2 (`docker compose`)
+- `curl`
+- `openssl`
+- A POSIX-compatible shell such as `sh`, `bash`, or `zsh`
+
+Docker and Docker Compose are usually included in tools like Docker Desktop and Rancher Desktop.
+
+## Choose Your Setup Path
+
+- Use this manual Docker Compose guide for local installs, custom servers, or custom reverse-proxy setups.
+- Use the [one-click setup script](/self-hosting/setup/one-click) for production Ubuntu servers where you want Traefik, HTTPS certificates, and optional RustFS automation.
+- Moving an existing forma2 installation? Follow [forma2 to the Go server](/self-hosting/advanced/migration#forma2-to-the-go-server) instead: its Compose file cannot run the Go image.
+
+## Start
+
+1. **Create a New Directory for Forma**
+
+   ```bash
+   mkdir forma-quickstart && cd forma-quickstart
+   ```
+
+1. **Download the Docker Files**
+
+   Get the Compose file and the two helper scripts it mounts. `stable` is the branch the release that `ghcr.io/yldm-tech/forma:latest` names was built from; to pin a release, replace it with that release's tag (`v0.2.<n>`) and set `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `.env`.
+
+   ```bash
+   for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
+     curl -fsSL -o "$file" "https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/$file"
+   done
+   chmod 700 authzed-postgres-bootstrap.sh rustfs-init.sh
+   ```
+
+1. **Create the Environment File**
+
+   Every Forma service reads `.env`, and Docker Compose reads it for variable interpolation. For a local install, use `http://localhost:3000`; for a server, your public HTTPS URL.
+
+   ```bash
+   POSTGRES_PASSWORD=$(openssl rand -hex 32)
+   cat <<EOF > .env
+   WEBAPP_URL=http://localhost:3000
+   POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+   POSTGRES_PASSWORD_URL_ENCODED=$POSTGRES_PASSWORD
+   ENCRYPTION_KEY=$(openssl rand -hex 32)
+   AUTHZED_TOKEN=$(openssl rand -hex 32)
+   AUTHZED_DATABASE_PASSWORD=$(openssl rand -hex 32)
+   EMAIL_VERIFICATION_DISABLED=1
+   PASSWORD_RESET_DISABLED=1
+   EOF
+   chmod 600 .env
+   ```
+
+   `EMAIL_VERIFICATION_DISABLED` and `PASSWORD_RESET_DISABLED` are for an instance without email; remove them once [SMTP](/self-hosting/configuration/smtp) is configured. Keep `POSTGRES_PASSWORD` unchanged after PostgreSQL initializes its volume: the image applies it only when it creates the database. The generated hexadecimal value is URL-safe, so `POSTGRES_PASSWORD_URL_ENCODED` is the same value; a password with URI-reserved characters needs its percent-encoded form there. `ENCRYPTION_KEY` seals two-factor secrets; losing it locks those users out.
+
+   The Compose file sets `DATABASE_URL`, `REDIS_URL`, the `AUTHZED_*` connection and `TRUSTED_PROXY_HOP_COUNT=1` itself. Set `TRUSTED_PROXY_HOP_COUNT=0` when clients reach port 3000 directly, without a reverse proxy in front. See [Environment Variables](/self-hosting/configuration/environment-variables) for everything else.
+
+1. **Validate the Docker Compose Configuration**
+
+   ```bash
+   docker compose config >/dev/null
+   ```
+
+   If validation fails, the message names the variable `.env` is missing.
+
+1. **Start the Docker Setup**
+
+   ```bash
+   docker compose up -d
+   ```
+
+   PostgreSQL starts first; `forma-migrate` applies the schema and the job queue's tables, and SpiceDB's own bootstrap and migration run beside it; then `authzed-initialize` writes the authorization schema, and `forma` and `forma-worker` start.
+
+1. **Verify the Stack**
+
+   ```bash
+   docker compose ps -a
+   curl -fsS http://localhost:3000/health
+   docker compose logs --tail=100 forma-migrate authzed-db-bootstrap spicedb-migrate authzed-initialize
+   docker compose logs --tail=100 forma forma-worker
+   ```
+
+   `forma-migrate`, `authzed-db-bootstrap`, `spicedb-migrate` and `authzed-initialize` should have exited with code 0. `postgres`, `redis`, `spicedb`, `forma` and `forma-worker` should be running, and `forma-worker`'s log should show `job worker started`.
+
+1. **Open Forma in Your Browser**
+
+   Open [**http://localhost:3000**](http://localhost:3000) and sign up: a self-hosted instance admits its first user, who owns it, and afterwards only people with an invitation.
+
+## AuthZed and SpiceDB
+
+The bundled SpiceDB service stores its data in a dedicated `spicedb` database and login inside the PostgreSQL container. Database bootstrap, datastore migration and `authzed-initialize` (`forma authz schema apply`) are idempotent, and Forma's start-up and `/health` do not depend on SpiceDB. SpiceDB is reachable only inside the Compose network at `spicedb:50051`; it is not published on the host.
+
+Keep `AUTHZED_TOKEN` and `AUTHZED_DATABASE_PASSWORD` private and include `.env` and the PostgreSQL volume in your backups. `docker compose down` preserves the volume; `docker compose down -v` deletes both the Forma and the SpiceDB data.
+
+The `authzed-ops` profile runs `forma authz` from the same image. It does not start during a normal `docker compose up`:
+
+```bash
+docker compose --profile authzed-ops run --rm authzed-ops schema check
+docker compose --profile authzed-ops run --rm authzed-ops schema apply --expected-current-digest=sha256:<digest from check>
+docker compose --profile authzed-ops run --rm authzed-ops backfill
+docker compose --profile authzed-ops run --rm authzed-ops outbox status
+```
+
+Every command prints one JSON line; exit `0` is clean, `2` drift, `1` failed. See [AuthZed Operations](/self-hosting/advanced/authzed-operations) before applying a schema, repairing relationships, upgrading SpiceDB, or restoring a backup.
+
+The bundled PostgreSQL leaves `track_commit_timestamp` at its default `off`, so SpiceDB reports that its Watch API is disabled. This does not affect schema writes, relationship writes or permission checks.
+
+## Optional Services
+
+Start and verify the baseline stack before enabling optional services. Both are Compose profiles: list the ones you use in `COMPOSE_PROFILES` in `.env` (comma-separated, one line), and `docker compose up -d` starts them.
+
+### Enable Bundled Qwen/vLLM For AI
+
+The Docker stack can optionally run Qwen through vLLM as an OpenAI-compatible `/v1` endpoint. It needs a GPU-capable Docker host with the NVIDIA Container Toolkit. Model files are kept in the `qwen-model-cache` volume, and the first start can take several minutes while vLLM downloads and loads the model.
+
+```bash
+cat <<EOF >> .env
+COMPOSE_PROFILES=qwen
+AI_PROVIDER=openai-compatible
+AI_MODEL=qwen3-14b-awq
+AI_OPENAI_COMPATIBLE_BASE_URL=http://vllm:8000/v1
+AI_OPENAI_COMPATIBLE_PROVIDER_NAME=vllm
+AI_OPENAI_COMPATIBLE_SUPPORTS_STRUCTURED_OUTPUTS=1
+EOF
+docker compose up -d
+docker compose logs --tail=100 vllm
+curl -fsS http://127.0.0.1:8000/health
+```
+
+The endpoint is `http://vllm:8000/v1` inside the Compose network and is bound to `127.0.0.1:8000` on the host for local checks. To use your own Qwen/vLLM service instead, leave the profile off and point `AI_OPENAI_COMPATIBLE_BASE_URL` at it.
+
+### Enable RustFS for File Storage
+
+RustFS provides S3-compatible object storage for uploads: images in surveys, the File Upload and Picture Selection questions, and logos. See [File Uploads](/self-hosting/configuration/file-uploads) for external S3 instead.
+
+Browsers upload straight to the bucket, so RustFS must be published under an address both browsers and the Forma containers resolve: a domain your reverse proxy routes to port 9000 (`RUSTFS_PORT` changes the host port). Add to `.env`:
+
+```bash
+cat <<EOF >> .env
+COMPOSE_PROFILES=storage
+RUSTFS_ADMIN_USER=$(openssl rand -hex 16)
+RUSTFS_ADMIN_PASSWORD=$(openssl rand -hex 16)
+S3_ACCESS_KEY=forma-$(openssl rand -hex 4)
+S3_SECRET_KEY=$(openssl rand -hex 20)
+S3_BUCKET_NAME=forma
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=1
+S3_ENDPOINT_URL=https://files.example.com
+EOF
+docker compose up -d
+docker compose logs rustfs-init
+```
+
+`rustfs-init` creates the bucket, its CORS rule for `WEBAPP_URL` (and `PUBLIC_URL`) and the service account `S3_ACCESS_KEY` with access to that bucket only; it is idempotent and runs again, harmlessly, on every `docker compose up`. The [one-click setup script](/self-hosting/setup/one-click) does all of this behind Traefik with a `files.` subdomain and certificates.
+
+<Warning>
+  Bundled RustFS is a convenience-oriented single-server deployment. For high availability or larger storage footprints, use external object storage or a dedicated RustFS deployment. Back up the `rustfs-data` volume, keep it on local SSD or NVMe storage rather than a network filesystem, and do not publish the RustFS console.
+</Warning>
+
+## Update
+
+Download the release's `docker-compose.yml` and helper scripts again (step 2 above), then:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+`forma-migrate` applies the new release's migrations before the server and the worker restart. Keep local changes (a reverse proxy, extra services) in `docker-compose.override.yml`, which Docker Compose merges on its own, so replacing `docker-compose.yml` never loses them. The [one-click script](/self-hosting/setup/one-click)'s `./forma.sh update` does all of this, with backups.
+
+An installation set up for forma2 needs the [forma2 to the Go server](/self-hosting/advanced/migration#forma2-to-the-go-server) steps: its Compose file runs `sh`, `node` and `forma-authzed` entrypoints the Go image does not have.
+
+## Debug
+
+If start-up fails, check the resolved configuration and container state, then the logs of the services that explain most failures:
+
+```bash
+docker compose config >/dev/null
+docker compose ps -a
+docker compose logs --tail=200 forma-migrate forma forma-worker
+docker compose logs --tail=200 postgres redis spicedb
+```
+
+- **The server exits at start-up**: its last log line names the variable that is missing or malformed (`load config: ...`). Switches are `1` or `0`.
+- **`load config: DATABASE_URL sets schema=...`**: remove the Prisma `schema` parameter from the database URL; `schema=public` is accepted.
+- **Migration failures**: check `forma-migrate` and `postgres`. PostgreSQL 18 or newer is required. Do not remove Docker volumes on an existing install unless you intend to delete its data.
+- **The image has no shell**: `docker compose exec forma sh` fails by design. Run the binary instead, for example `docker compose exec forma /usr/local/bin/forma version`, and use the `postgres` container for SQL.
+- **Port conflicts**: port `3000`, and `9000` or `8000` when the storage or qwen profiles are on, must be free on the host. Valkey is not published.
+- **Optional Qwen/vLLM issues**: check GPU availability, the NVIDIA Container Toolkit, and `docker compose logs --tail=200 vllm`.
+
+<Warning>
+  **Older Compose files published Valkey on `0.0.0.0:6379` without a password.** Remove the `ports:` mapping from the `redis:` service and run `docker compose up -d`; the app reaches Valkey over the Compose network. With the Go server, sessions live in PostgreSQL, and Valkey holds only rate-limit counters, caches and locks that are rebuilt on demand. If the port was reachable from an untrusted network, flush it so no entry an attacker wrote survives: `docker compose exec redis valkey-cli FLUSHALL`. To also sign every user out, delete the sessions: `docker compose exec -T postgres psql -U postgres -d forma -c 'DELETE FROM sessions'`.
+</Warning>
+
+If you have any questions or require help, reach out on [**GitHub Discussions**](https://github.com/yldm-tech/forma/discussions).

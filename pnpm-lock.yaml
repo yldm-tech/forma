@@ -173,12 +173,6 @@ importers:
 
   .:
     devDependencies:
-      '@axe-core/playwright':
-        specifier: 4.13.0
-        version: 4.13.0(playwright-core@1.63.0)
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.63.0
       '@redocly/cli':
         specifier: 1.34.17
         version: 1.34.17(ajv@8.20.0)(encoding@0.1.13)
@@ -195,6 +189,21 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
 
+  apps/e2e:
+    devDependencies:
+      '@axe-core/playwright':
+        specifier: 4.13.0
+        version: 4.13.0(playwright-core@1.63.0)
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.63.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+
   apps/storybook:
     devDependencies:
       '@chromatic-com/storybook':
@@ -202,7 +211,7 @@ importers:
         version: 5.3.1(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))
       '@forma/config-typescript':
         specifier: workspace:*
-        version: link:../../packages/config-typescript
+        version: link:../../tooling/typescript
       '@storybook/addon-a11y':
         specifier: 10.6.0
         version: 10.6.0(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))
@@ -234,338 +243,7 @@ importers:
         specifier: 'catalog:'
         version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
 
-  packages/config-typescript:
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  packages/i18n-utils:
-    dependencies:
-      glob:
-        specifier: 'catalog:'
-        version: 13.0.6
-      object-hash:
-        specifier: 3.0.0
-        version: 3.0.0
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      '@types/object-hash':
-        specifier: 3.0.6
-        version: 3.0.6
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.1.3
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.13
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-
-  packages/js-core:
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
-      vite-plugin-dts:
-        specifier: 'catalog:'
-        version: 4.5.4(@types/node@25.4.0)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(rollup@4.63.2)(typescript@5.9.3)
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))
-
-  packages/survey-ui:
-    dependencies:
-      '@formkit/auto-animate':
-        specifier: 'catalog:'
-        version: 0.9.0
-      '@radix-ui/react-checkbox':
-        specifier: 'catalog:'
-        version: 1.3.11(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-dropdown-menu':
-        specifier: 'catalog:'
-        version: 2.1.24(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-popover':
-        specifier: 'catalog:'
-        version: 1.1.23(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-progress':
-        specifier: 1.1.16
-        version: 1.1.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-radio-group':
-        specifier: 'catalog:'
-        version: 1.4.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-slot':
-        specifier: 'catalog:'
-        version: 1.3.3(@types/react@19.3.0)(react@19.3.0)
-      class-variance-authority:
-        specifier: 'catalog:'
-        version: 0.7.1
-      clsx:
-        specifier: 'catalog:'
-        version: 2.1.1
-      date-fns:
-        specifier: 'catalog:'
-        version: 4.4.0
-      isomorphic-dompurify:
-        specifier: 'catalog:'
-        version: 3.9.0(@noble/hashes@2.3.0)
-      lucide-react:
-        specifier: 'catalog:'
-        version: 0.577.0(react@19.3.0)
-      react-day-picker:
-        specifier: 'catalog:'
-        version: 9.14.0(react@19.3.0)
-      tailwind-merge:
-        specifier: 'catalog:'
-        version: 3.7.0
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@storybook/react':
-        specifier: 'catalog:'
-        version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))(typescript@5.9.3)
-      '@tailwindcss/postcss':
-        specifier: 'catalog:'
-        version: 4.3.3
-      '@testing-library/react':
-        specifier: 'catalog:'
-        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.3.0(@types/react@19.3.0)
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
-      jsdom:
-        specifier: 'catalog:'
-        version: 29.1.1(@noble/hashes@2.3.0)
-      react:
-        specifier: 19.3.0
-        version: 19.3.0
-      react-dom:
-        specifier: 19.3.0
-        version: 19.3.0(react@19.3.0)
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.1.3
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.3
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
-      vite-plugin-dts:
-        specifier: 'catalog:'
-        version: 4.5.4(@types/node@25.4.0)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(rollup@4.63.2)(typescript@5.9.3)
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-      vite-tsconfig-paths:
-        specifier: 'catalog:'
-        version: 6.1.1(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(typescript@5.9.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))
-
-  packages/surveys:
-    dependencies:
-      '@calcom/embed-snippet':
-        specifier: 1.3.3
-        version: 1.3.3
-      '@forma/survey-ui':
-        specifier: workspace:*
-        version: link:../survey-ui
-      i18next:
-        specifier: 'catalog:'
-        version: 25.8.20(typescript@5.9.3)
-      i18next-icu:
-        specifier: 'catalog:'
-        version: 2.4.4(intl-messageformat@10.7.18)
-      isomorphic-dompurify:
-        specifier: 'catalog:'
-        version: 3.9.0(@noble/hashes@2.3.0)
-      preact:
-        specifier: 'catalog:'
-        version: 10.29.8
-      react-i18next:
-        specifier: 'catalog:'
-        version: 16.5.8(i18next@25.8.20(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
-      tailwind-merge:
-        specifier: 'catalog:'
-        version: 3.7.0
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@forma/i18n-utils':
-        specifier: workspace:*
-        version: link:../i18n-utils
-      '@forma/types':
-        specifier: workspace:*
-        version: link:../types
-      '@preact/preset-vite':
-        specifier: 2.10.6
-        version: 2.10.6(@babel/core@7.29.6)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(preact@10.29.8)(rollup@4.63.2)
-      '@tailwindcss/postcss':
-        specifier: 'catalog:'
-        version: 4.3.3
-      '@testing-library/preact':
-        specifier: 3.2.4
-        version: 3.2.4(preact@10.29.8)
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.3.0
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
-      autoprefixer:
-        specifier: 10.6.0
-        version: 10.6.0(postcss@8.5.28)
-      concurrently:
-        specifier: 9.2.4
-        version: 9.2.4
-      cross-env:
-        specifier: 'catalog:'
-        version: 10.1.0
-      dotenv-cli:
-        specifier: 'catalog:'
-        version: 11.0.0
-      fake-indexeddb:
-        specifier: 6.2.5
-        version: 6.2.5
-      happy-dom:
-        specifier: 20.14.5
-        version: 20.14.5
-      postcss:
-        specifier: 8.5.28
-        version: 8.5.28
-      rollup-plugin-visualizer:
-        specifier: 7.1.1
-        version: 7.1.1(rolldown@1.0.3)(rollup@4.63.2)
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.3
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-      vite-tsconfig-paths:
-        specifier: 'catalog:'
-        version: 6.1.1(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(typescript@5.9.3)
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
-
-  packages/types:
-    dependencies:
-      node-html-parser:
-        specifier: 7.1.0
-        version: 7.1.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.13
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.0.16(@types/node@25.4.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(yaml@2.9.1))
-
-  packages/vite-plugins:
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      postcss:
-        specifier: 8.5.28
-        version: 8.5.28
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vite:
-        specifier: 'catalog:'
-        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-
-  scripts:
-    devDependencies:
-      '@forma/config-typescript':
-        specifier: workspace:*
-        version: link:../packages/config-typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.4.0
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
-
-  web:
+  apps/web:
     dependencies:
       '@dnd-kit/core':
         specifier: 6.3.1
@@ -578,13 +256,13 @@ importers:
         version: 3.2.2(react@19.3.0)
       '@forma/i18n-utils':
         specifier: workspace:*
-        version: link:../packages/i18n-utils
+        version: link:../../packages/i18n-utils
       '@forma/survey-ui':
         specifier: workspace:*
-        version: link:../packages/survey-ui
+        version: link:../../packages/survey-ui
       '@forma/types':
         specifier: workspace:*
-        version: link:../packages/types
+        version: link:../../packages/types
       '@formkit/auto-animate':
         specifier: 'catalog:'
         version: 0.9.0
@@ -747,13 +425,13 @@ importers:
     devDependencies:
       '@forma/config-typescript':
         specifier: workspace:*
-        version: link:../packages/config-typescript
+        version: link:../../tooling/typescript
       '@forma/js-core':
         specifier: workspace:*
-        version: link:../packages/js-core
+        version: link:../../packages/js-core
       '@forma/surveys':
         specifier: workspace:*
-        version: link:../packages/surveys
+        version: link:../../packages/surveys
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.3(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))
@@ -802,6 +480,337 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))
+
+  packages/i18n-utils:
+    dependencies:
+      glob:
+        specifier: 'catalog:'
+        version: 13.0.6
+      object-hash:
+        specifier: 3.0.0
+        version: 3.0.0
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      '@types/object-hash':
+        specifier: 3.0.6
+        version: 3.0.6
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.13
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+
+  packages/js-core:
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
+      vite-plugin-dts:
+        specifier: 'catalog:'
+        version: 4.5.4(@types/node@25.4.0)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(rollup@4.63.2)(typescript@5.9.3)
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))
+
+  packages/survey-ui:
+    dependencies:
+      '@formkit/auto-animate':
+        specifier: 'catalog:'
+        version: 0.9.0
+      '@radix-ui/react-checkbox':
+        specifier: 'catalog:'
+        version: 1.3.11(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-dropdown-menu':
+        specifier: 'catalog:'
+        version: 2.1.24(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-popover':
+        specifier: 'catalog:'
+        version: 1.1.23(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-progress':
+        specifier: 1.1.16
+        version: 1.1.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-radio-group':
+        specifier: 'catalog:'
+        version: 1.4.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-slot':
+        specifier: 'catalog:'
+        version: 1.3.3(@types/react@19.3.0)(react@19.3.0)
+      class-variance-authority:
+        specifier: 'catalog:'
+        version: 0.7.1
+      clsx:
+        specifier: 'catalog:'
+        version: 2.1.1
+      date-fns:
+        specifier: 'catalog:'
+        version: 4.4.0
+      isomorphic-dompurify:
+        specifier: 'catalog:'
+        version: 3.9.0(@noble/hashes@2.3.0)
+      lucide-react:
+        specifier: 'catalog:'
+        version: 0.577.0(react@19.3.0)
+      react-day-picker:
+        specifier: 'catalog:'
+        version: 9.14.0(react@19.3.0)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.7.0
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@storybook/react':
+        specifier: 'catalog:'
+        version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.6)(react@19.3.0)(vite-plus@1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)))(typescript@5.9.3)
+      '@tailwindcss/postcss':
+        specifier: 'catalog:'
+        version: 4.3.3
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1(@noble/hashes@2.3.0)
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      react-dom:
+        specifier: 19.3.0
+        version: 19.3.0(react@19.3.0)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.3
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
+      vite-plugin-dts:
+        specifier: 'catalog:'
+        version: 4.5.4(@types/node@25.4.0)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(rollup@4.63.2)(typescript@5.9.3)
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+      vite-tsconfig-paths:
+        specifier: 'catalog:'
+        version: 6.1.1(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))
+
+  packages/surveys:
+    dependencies:
+      '@calcom/embed-snippet':
+        specifier: 1.3.3
+        version: 1.3.3
+      '@forma/survey-ui':
+        specifier: workspace:*
+        version: link:../survey-ui
+      i18next:
+        specifier: 'catalog:'
+        version: 25.8.20(typescript@5.9.3)
+      i18next-icu:
+        specifier: 'catalog:'
+        version: 2.4.4(intl-messageformat@10.7.18)
+      isomorphic-dompurify:
+        specifier: 'catalog:'
+        version: 3.9.0(@noble/hashes@2.3.0)
+      preact:
+        specifier: 'catalog:'
+        version: 10.29.8
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.5.8(i18next@25.8.20(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.7.0
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@forma/i18n-utils':
+        specifier: workspace:*
+        version: link:../i18n-utils
+      '@forma/types':
+        specifier: workspace:*
+        version: link:../types
+      '@preact/preset-vite':
+        specifier: 2.10.6
+        version: 2.10.6(@babel/core@7.29.6)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(preact@10.29.8)(rollup@4.63.2)
+      '@tailwindcss/postcss':
+        specifier: 'catalog:'
+        version: 4.3.3
+      '@testing-library/preact':
+        specifier: 3.2.4
+        version: 3.2.4(preact@10.29.8)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      autoprefixer:
+        specifier: 10.6.0
+        version: 10.6.0(postcss@8.5.28)
+      concurrently:
+        specifier: 9.2.4
+        version: 9.2.4
+      cross-env:
+        specifier: 'catalog:'
+        version: 10.1.0
+      dotenv-cli:
+        specifier: 'catalog:'
+        version: 11.0.0
+      fake-indexeddb:
+        specifier: 6.2.5
+        version: 6.2.5
+      happy-dom:
+        specifier: 20.14.5
+        version: 20.14.5
+      postcss:
+        specifier: 8.5.28
+        version: 8.5.28
+      rollup-plugin-visualizer:
+        specifier: 7.1.1
+        version: 7.1.1(rolldown@1.0.3)(rollup@4.63.2)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.3
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+      vite-tsconfig-paths:
+        specifier: 'catalog:'
+        version: 6.1.1(@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1))(typescript@5.9.3)
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
+
+  packages/types:
+    dependencies:
+      node-html-parser:
+        specifier: 7.1.0
+        version: 7.1.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6(patch_hash=6fbaed468e3beca0ebd6f6e6005f42a52ec742013ae39f9a39c6e88989d0e5c9)
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.13
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/browser-preview@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.14.5)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.0.16(@types/node@25.4.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(yaml@2.9.1))
+
+  tooling/scripts:
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
+
+  tooling/typescript:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  tooling/vite-plugins:
+    devDependencies:
+      '@forma/config-typescript':
+        specifier: workspace:*
+        version: link:../typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.4.0
+      postcss:
+        specifier: 8.5.28
+        version: 8.5.28
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.1.0(@types/node@25.4.0)(@volar/typescript@2.4.27)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.1.0(@opentelemetry/api@1.9.1)(@types/node@25.4.0)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(@volar/typescript@2.4.27)(esbuild@0.28.1)(happy-dom@20.14.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(playwright@1.63.0)(terser@5.47.1)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
 
 packages:
 

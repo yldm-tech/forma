@@ -5,9 +5,9 @@ import tailwindcss from "@tailwindcss/postcss";
 // styles when the survey widget injects this bundle. These plugins confine
 // them to #fbjs. They MUST run after Tailwind has compiled, so the Tailwind
 // PostCSS plugin is processed here (not via @tailwindcss/vite) to guarantee
-// ordering. See packages/vite-plugins/postcss-scope-fbjs.cjs and
+// ordering. See tooling/vite-plugins/postcss-scope-fbjs.cjs and
 // https://github.com/yldm-tech/js/issues/46.
-import scopeFbjs from "../vite-plugins/postcss-scope-fbjs.cjs";
+import scopeFbjs from "../../tooling/vite-plugins/postcss-scope-fbjs.cjs";
 
 export default {
   plugins: [tailwindcss(), ...scopeFbjs.scopeFbjsPlugins()],

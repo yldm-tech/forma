@@ -12,9 +12,9 @@ interface ParityCase {
   document: unknown;
 }
 
-// The same fixtures drive the Go test in server/internal/jsonschema, which asserts the `jsonSchema` column against the exported schemas. Together they show what the export keeps and what it cannot.
+// The same fixtures drive the Go test in apps/server/internal/jsonschema, which asserts the `jsonSchema` column against the exported schemas. Together they show what the export keeps and what it cannot.
 const cases = JSON.parse(
-  readFileSync(resolve(__dirname, "../../server/internal/jsonschema/testdata/parity.json"), "utf8")
+  readFileSync(resolve(__dirname, "../../apps/server/internal/jsonschema/testdata/parity.json"), "utf8")
 ) as ParityCase[];
 
 describe("JSON Schema parity fixtures", () => {

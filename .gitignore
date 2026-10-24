@@ -57,24 +57,24 @@ stats.html
 
 # v3 API contract tests: generated fixture id map, Schemathesis' local replay cache, and the
 # bytecode cache Python leaves next to hooks.py
-docs/api-v3-reference/contract-tests/fixtures.json
+apps/docs/api-v3-reference/contract-tests/fixtures.json
 .schemathesis/
 __pycache__/
 
 # Go server: the SPA build is copied in at build time; only the placeholder is tracked
 # `**/dist/` above ignores the directory itself, and git never re-includes a file inside an ignored directory, so the directory is re-included first.
-!server/internal/webui/dist/
-server/internal/webui/dist/*
-!server/internal/webui/dist/.gitkeep
+!apps/server/internal/webui/dist/
+apps/server/internal/webui/dist/*
+!apps/server/internal/webui/dist/.gitkeep
 /bin/
 
-# SDK bundles copied in by packages/vite-plugins at build time
-web/public/js
+# SDK bundles copied in by tooling/vite-plugins at build time
+apps/web/public/js
 
 # Vitest attachments and cache
 **/.vitest/
 
-# Playwright (e2e/)
+# Playwright (apps/e2e/)
 **/test-results/
-/playwright-report/
-/blob-report/
+/apps/e2e/playwright-report/
+/apps/e2e/blob-report/

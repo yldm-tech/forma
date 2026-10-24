@@ -11,7 +11,7 @@ import { JSON_SCHEMA_REGISTRY, type JsonSchemaEntry } from "../json-schema-regis
 
 const OUT_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
-  "../../../server/internal/jsonschema/schemas"
+  "../../../apps/server/internal/jsonschema/schemas"
 );
 
 const CONSTRAINING_KEYWORDS = ["type", "anyOf", "oneOf", "allOf", "$ref", "enum", "const"];

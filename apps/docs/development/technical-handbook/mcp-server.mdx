@@ -1,0 +1,985 @@
+---
+title: "MCP Server"
+description: "Configure and use the Forma v3 Surveys and Workflows MCP server"
+icon: "robot"
+---
+
+## Overview
+
+The Forma MCP server exposes v3 Surveys and Workflows tool surfaces for AI agents. It runs inside
+the Forma web app at `/api/mcp` and reuses the same v3 API authentication, authorization,
+rate limiting, response handling, and audit logging paths as the REST routes.
+
+<Note>
+  OAuth 2.1 is the preferred authentication path for MCP clients. Forma API keys remain supported as a
+  backwards-compatible fallback for local development, self-hosters, and clients that do not support MCP OAuth
+  yet.
+</Note>
+
+<Note>
+  Looking for step-by-step setup guides for Claude Code, the Claude apps, and Codex? See [Connect AI agents
+  (MCP)](/platform/mcp/overview). This handbook covers the technical internals.
+</Note>
+
+## Endpoint
+
+Use the streamable HTTP MCP endpoint on the Forma app:
+
+```text
+https://forma.yldm.ai/api/mcp
+```
+
+For local development:
+
+```text
+http://localhost:3000/api/mcp
+```
+
+The route supports `POST` requests (a `GET` answers 405), is served by the Go server (`apps/server/internal/mcp`), and sets private no-store response headers. Browser-origin MCP requests must come from the configured Forma app origin.
+
+### Protocol revisions
+
+The server is built on the official MCP Go SDK (`github.com/modelcontextprotocol/go-sdk`) and serves Streamable HTTP statelessly with JSON responses, as forma2 did: protocol revision 2026-07-28 has no sessions, and a client on an older revision gets a fresh session per request, so neither needs to change anything. There are no protocol-level sessions, no `Mcp-Session-Id` header and no HTTP+SSE transport; the route the handler is mounted on is the only mount point.
+
+OAuth clients discover the protected resource metadata here:
+
+```text
+https://forma.yldm.ai/.well-known/oauth-protected-resource/api/mcp
+```
+
+The metadata advertises `/api/mcp` as the protected resource and points clients to the Go server's authorization server, whose issuer is `/api/auth`.
+
+## Authentication
+
+### OAuth 2.1
+
+OAuth clients use Authorization Code + PKCE with Dynamic Client Registration. The MCP protected
+resource is:
+
+```text
+https://forma.yldm.ai/api/mcp
+```
+
+The authorization server issuer is:
+
+```text
+https://forma.yldm.ai/api/auth
+```
+
+Discovery endpoints:
+
+| Endpoint                                           | Purpose                              |
+| -------------------------------------------------- | ------------------------------------ |
+| `/api/auth/.well-known/oauth-authorization-server` | Authorization server metadata        |
+| `/api/auth/.well-known/openid-configuration`       | OpenID Connect metadata              |
+| `/.well-known/oauth-authorization-server/api/auth` | RFC 8414 path-insertion alias        |
+| `/.well-known/openid-configuration/api/auth`       | RFC 8414 OpenID path-insertion alias |
+| `/.well-known/oauth-protected-resource`            | MCP protected resource metadata      |
+| `/.well-known/oauth-protected-resource/api/mcp`    | MCP resource-specific metadata       |
+
+Supported scopes:
+
+| Scope | Use |
+| --- | --- |
+| `surveys:read` | `list_surveys`, `get_survey`, `validate_survey` |
+| `surveys:write` | `create_survey`, `patch_survey`, `delete_survey`, `archive_survey`, `restore_survey` |
+| `workflows:read` | `list_workflows`, `get_workflow`, `list_workflow_runs`, `get_workflow_run`, `test_workflow` |
+| `workflows:write` | `create_workflow`, `patch_workflow`, `duplicate_workflow`, `delete_workflow`, and the enable/disable/archive/unarchive mutations |
+| `openid` | OpenID Connect subject interoperability |
+| `profile` | User profile claims |
+| `email` | User email claim |
+| `offline_access` | Refresh tokens for MCP clients |
+
+**The rule:** every MCP tool has a `toolSpec{scopes, anyOf}` entry in `toolSpecs` (`apps/server/internal/mcp/tools.go`), and the handler refuses to start when an advertised tool has none. `toolHandler` runs the scope gate before the tool's handler, so a new tool inherits enforcement from its entry: the gate returns a `403` before the handler touches a v3 operation. Read tools declare `<resource>:read`; every mutating tool declares `<resource>:write`. By default the token must hold every listed scope; tools that more than one scope group legitimately reaches set `anyOf: true`, which requires any one of them and keeps them on the same gate rather than a hand-rolled one.
+
+**There is no single mandatory baseline scope.** Authentication requires *at least one* resource scope
+(`oauthserver.ResourceScopes`), so a workflows-only grant is a legitimate MCP
+client. `list_workspaces` — the workspaceId-discovery prerequisite for every resource tool — therefore
+gates on any resource read scope rather than one specific one; its result is derived from the caller's
+own memberships and key grants, so admitting any read scope exposes nothing extra.
+
+The authorization server supports all of the above, but the MCP protected-resource metadata
+(`/.well-known/oauth-protected-resource/api/mcp`) advertises only the resource scopes an MCP client
+needs — `surveys:read`, `surveys:write`, `workflows:read`, `workflows:write`, and `offline_access`. Clients derive their Dynamic Client Registration scopes
+from that list, so `offline_access` must be advertised there for clients to be issued refresh tokens
+(`openid`/`profile`/`email` are OIDC scopes the MCP resource does not require).
+
+<Warning>
+  Adding a resource scope breaks already-connected OAuth clients until they re-register. The
+  authorization server validates `/authorize` against the scopes the **client** registered with, so a
+  client registered before the change requests the newly advertised scope and is rejected with
+  `invalid_scope` — it does not fall back to the scopes it already holds, and re-consenting does not help
+  because the same `client_id` is reused. The client has to run Dynamic Client Registration again: remove
+  and re-add the MCP server (for example `claude mcp remove <name>` then `claude mcp add …`), or delete
+  its `oauthClient` row so the next connection re-registers. Ship a release note whenever this list
+  changes.
+</Warning>
+
+OAuth scopes gate MCP tool categories at the token layer. Actual workspace access is still evaluated
+at tool execution through the existing v3 authorization checks for the signed-in Forma user, so
+a token scope and a workspace role are independent gates — a call must satisfy both.
+
+Scope groups are **independent**: a token authenticates as long as it holds at least one resource
+scope, so a workflows-only grant is valid and simply can't reach the survey tools.
+`list_workspaces` is the shared discovery tool and accepts either read scope.
+
+### API-key fallback
+
+API-key MCP access remains supported. Authenticate with a Forma API key in a request header:
+
+```http
+Authorization: Bearer fbk_...
+```
+
+or:
+
+```http
+x-api-key: fbk_...
+```
+
+Do not pass credentials in the query string. The MCP route rejects query credential names such as
+`api_key`, `x-api-key`, `access_token`, `token`, and `authorization` case-insensitively.
+
+API key permissions are enforced through the same workspace access checks as the v3 REST API:
+
+| Tool | Minimum Workspace Permission |
+| --- | --- |
+| `list_surveys` | `read` |
+| `get_survey` | `read` |
+| `create_survey` | `write` or `manage` |
+| `validate_survey` | `read` — a dry run; it validates a create or patch payload without writing |
+| `patch_survey` | `write` or `manage` |
+| `delete_survey` | `write` or `manage` |
+| `archive_survey` | `write` or `manage` |
+| `restore_survey` | `write` or `manage` |
+| `list_workflows` | `read` |
+| `get_workflow` | `read` |
+| `list_workflow_runs` | `read` |
+| `get_workflow_run` | `read` |
+| `test_workflow` | `read` — a dry run; it validates the definition and resolves its trigger references, creating no run |
+| `create_workflow` | `write` or `manage` |
+| `patch_workflow` | `write` or `manage` |
+| `duplicate_workflow` | `write` or `manage` |
+| `delete_workflow` | `write` or `manage` |
+| `enable_workflow` | `write` or `manage` |
+| `disable_workflow` | `write` or `manage` |
+| `archive_workflow` | `write` or `manage` |
+| `unarchive_workflow` | `write` or `manage` |
+always; the matching `:write` scopes when the key has `write` or `manage` on any workspace. The scope
+gate and the per-workspace access check above are independent — a `:write` tool requires **both** the
+`:write` scope on the token and write/manage on the target workspace.
+
+<Warning>
+  Store fallback MCP API keys as environment variables or client secrets. Do not commit API keys into MCP
+  client config files.
+</Warning>
+
+## Local Setup
+
+Start Forma and prepare the database:
+
+```bash
+make deps-up
+make migrate
+make dev-server
+```
+
+<Note>
+  Restart the server after changing tool registrations: the MCP server and its tool list are built once, when the process starts.
+</Note>
+
+Verify OAuth discovery:
+
+```bash
+curl -sS http://localhost:3000/.well-known/oauth-protected-resource/api/mcp
+curl -sS http://localhost:3000/.well-known/oauth-authorization-server/api/auth
+```
+
+OAuth-capable MCP clients should dynamically register a public client and request `resource` equal to
+the MCP URL:
+
+```text
+http://localhost:3000/api/mcp
+```
+
+Manual Dynamic Client Registration smoke test:
+
+```bash
+curl -sS -X POST http://localhost:3000/api/auth/oauth2/register \
+  -H "Content-Type: application/json" \
+  --data '{
+    "client_name": "MCP Inspector",
+    "redirect_uris": ["http://127.0.0.1:6274/oauth/callback"],
+    "token_endpoint_auth_method": "none",
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+  }'
+```
+
+<Note>
+  This passes `scope` explicitly, so it does **not** reproduce a real client's behavior — real MCP clients
+  register with the scopes from the protected-resource metadata's `scopes_supported` (`surveys:read
+  Because the authorization server validates the `/authorize` request against the client's **registered**
+  scopes, a client that registers with a narrower set than it later requests (e.g. it registers surveys-only
+  but requests `offline_access`) is rejected with `invalid_scope`. To smoke-test the real path, omit `scope`
+  and let the client adopt the advertised set, or pass exactly what the metadata advertises.
+</Note>
+
+<Note>
+  For the same reason, the `scope` in the MCP endpoint's 401 `WWW-Authenticate` challenge is exactly
+  the metadata's `scopes_supported`, not a subset — a client that hits the 401 before fetching the
+  metadata uses the challenge string as its registration scope. Both read one list
+  (`oauthserver.ProtectedResourceScopes`) and a test asserts they stay equal; when they diverged, every new client
+  failed its first connect with `invalid_scope` and only succeeded on retry.
+</Note>
+
+The consent screen is served at `/account/authorize`. Users can revoke approved MCP clients from
+`/account/settings/authorized-apps`.
+
+For API-key fallback, create an API key in the Forma app with access to the target workspace.
+Use the least privileged permission needed by the agent workflow.
+
+Verify that the MCP endpoint can list tools:
+
+```bash
+export FORMA_MCP_API_KEY="fbk_..."
+
+curl -sS -X POST http://localhost:3000/api/mcp \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $FORMA_MCP_API_KEY" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+## Codex Configuration
+
+### OAuth
+
+Add the HTTP MCP server. Include `--oauth-resource` so the OAuth access token is audience-bound to
+the MCP resource URL:
+
+```bash
+codex mcp add forma-local \
+  --url http://localhost:3000/api/mcp \
+  --oauth-resource http://localhost:3000/api/mcp
+```
+
+Authenticate and request the scopes the agent needs:
+
+```bash
+codex mcp login forma-local \
+```
+
+For read-only usage, omit the `:write` scopes:
+
+```bash
+codex mcp login forma-local \
+```
+
+Scope groups are independent — a token needs at least one resource scope, but not all of them. To use
+and omit the survey scopes.
+
+Codex opens the browser to Forma, completes Dynamic Client Registration, and stores the OAuth
+client and tokens in Codex's credential store. The user approves the requested scopes on the
+Forma consent screen.
+
+Equivalent Codex config for the server entry:
+
+```toml
+[mcp_servers.forma-local]
+url = "http://localhost:3000/api/mcp"
+oauth_resource = "http://localhost:3000/api/mcp"
+```
+
+Verify the registration:
+
+```bash
+codex mcp list
+codex mcp get forma-local
+```
+
+Then ask Codex to use the configured server:
+
+```text
+Use the forma-local MCP server to list surveys for workspace clxx1234567890123456789012.
+```
+
+### API-key fallback
+
+Store the API key in the shell environment:
+
+```bash
+export FORMA_MCP_API_KEY="fbk_..."
+```
+
+For Codex Desktop on macOS, persist the value in the launch environment and restart Codex Desktop:
+
+```bash
+launchctl setenv FORMA_MCP_API_KEY "fbk_..."
+```
+
+Register the local MCP server with a bearer-token environment variable:
+
+```bash
+codex mcp add forma-local-api-key \
+  --url http://localhost:3000/api/mcp \
+  --bearer-token-env-var FORMA_MCP_API_KEY
+```
+
+## Claude Configuration
+
+### Claude Code
+
+#### OAuth
+
+Add the remote HTTP MCP server:
+
+```bash
+claude mcp add --transport http forma-local http://localhost:3000/api/mcp
+```
+
+Run `/mcp` and authenticate `forma-local`. Claude Code discovers the MCP protected-resource
+metadata, registers a public client whose scopes are taken from that metadata's `scopes_supported`
+scope-entry step. You approve the requested scopes on the Forma consent screen. A `:write` tool
+requires both the matching `:write` scope on the token and write/manage permission on the target
+workspace at execution time (see [Authentication](#authentication)).
+
+Verify it:
+
+```bash
+claude mcp list
+claude mcp get forma-local
+```
+
+For project-shared Claude Code configuration, use `.mcp.json` without static credentials:
+
+```json
+{
+  "mcpServers": {
+    "forma-local": {
+      "type": "http",
+      "url": "http://localhost:3000/api/mcp"
+    }
+  }
+}
+```
+
+If the installed Claude Code version does not start the OAuth flow for remote HTTP servers, use the
+API-key fallback below until that client is updated.
+
+#### API-key fallback
+
+Set the API key:
+
+```bash
+export FORMA_MCP_API_KEY="fbk_..."
+```
+
+Add the HTTP MCP server:
+
+```bash
+claude mcp add --transport http forma-local-api-key http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer $FORMA_MCP_API_KEY"
+```
+
+For a project-shared fallback configuration, keep the API key outside git:
+
+```json
+{
+  "mcpServers": {
+    "forma-local-api-key": {
+      "headers": {
+        "Authorization": "Bearer ${FORMA_MCP_API_KEY}"
+      },
+      "type": "http",
+      "url": "http://localhost:3000/api/mcp"
+    }
+  }
+}
+```
+
+Claude Code will fail to parse this fallback config if `FORMA_MCP_API_KEY` is not set.
+
+### Claude Desktop
+
+If the installed Claude Desktop build supports remote HTTP MCP server entries, add the same server
+definition to the Claude Desktop config file and restart Claude Desktop. Prefer the OAuth entry
+without headers when supported; use the API-key header entry only as a fallback.
+
+macOS config path:
+
+```text
+~/Library/Application Support/Claude/claude_desktop_config.json
+```
+
+Example config:
+
+```json
+{
+  "mcpServers": {
+    "forma-local": {
+      "type": "http",
+      "url": "http://localhost:3000/api/mcp"
+    }
+  }
+}
+```
+
+Fallback config with an API key:
+
+```json
+{
+  "mcpServers": {
+    "forma-local-api-key": {
+      "headers": {
+        "Authorization": "Bearer ${FORMA_MCP_API_KEY}"
+      },
+      "type": "http",
+      "url": "http://localhost:3000/api/mcp"
+    }
+  }
+}
+```
+
+Set the API key in the Desktop launch environment before opening Claude Desktop when using the
+fallback config:
+
+```bash
+launchctl setenv FORMA_MCP_API_KEY "fbk_..."
+```
+
+If a Claude Desktop version only supports stdio MCP servers, use Claude Code for the HTTP endpoint or
+add a local stdio-to-HTTP bridge.
+
+## Tool Responses
+
+Tool results include both `structuredContent` and a text content item containing the same JSON string.
+Successful results mirror the v3 REST response body and add `requestId` for correlation.
+
+Errors are returned as MCP error tool results with a structured v3 problem payload:
+
+```json
+{
+  "error": {
+    "code": "bad_request",
+    "detail": "Invalid survey document",
+    "invalid_params": [
+      {
+        "name": "blocks.0.elements.0.headline",
+        "reason": "Required"
+      }
+    ],
+    "requestId": "req_...",
+    "status": 400,
+    "title": "Bad Request"
+  }
+}
+```
+
+## Tool Arguments
+
+Every tool input schema is **strict**: an argument a tool does not declare is rejected, not ignored.
+The advertised JSON Schema carries `additionalProperties: false`, and the SDK validates the call before
+the handler runs, so an undeclared or misspelled key comes back as an input-validation error result and
+the underlying v3 operation is never reached.
+
+This matters most on filters. A dropped filter does not narrow, so the pre-strict behaviour ran the
+(the correct key is `user_id`) returned the count for every record in the dataset, which an agent has no
+way to tell from a real answer.
+
+Strictness applies at every depth, not just to the outermost object: a misspelled key inside
+`filter.status` is rejected the same way a misspelled top-level argument is. This matters because a
+dropped nested filter key does not merely lose the key — it leaves the filter object empty, so the query
+runs wider than asked.
+
+Two kinds of exception:
+
+- **Free-form by design.** `blocks`, `metadata`, `welcomeCard` and friends on `create_survey`, and the
+  `data` payload on `patch_survey` / `validate_survey`, accept any nested shape. They are validated by the
+  v3 survey document contract once the call reaches the operation.
+- **The workflow `definition`.** Everything below `definition` on `create_workflow` and `patch_workflow`
+  is still open, so a misspelled key inside a trigger, node, edge or node `config` is dropped rather than
+  rejected. That schema is shared with the v3 Workflows REST API and the workflow builder, so tightening it
+  is a v3 API change rather than an MCP one; it is tracked as ENG-2437. Treat a `create_workflow` result as
+  confirming only what it echoes back.
+
+<Note>
+  A client that adds its own keys to a tool call's `arguments` will be rejected. Nothing in the MCP spec
+  invites that, but it is a behaviour change from earlier Forma releases, which silently dropped
+  such keys.
+
+  — strip the provenance (`source_*`, `field_*`, `submission_id`, `collected_at`) and the derived
+  sentiment/emotions/translation first. The error names every key to remove. And **`list_workspaces`
+  takes no arguments at all**, so a client that pads zero-argument calls with a placeholder key will fail
+  on the one tool every other workspace-scoped tool depends on for its `workspaceId`.
+</Note>
+
+## Available Tools
+
+### list_surveys
+
+Lists surveys in one workspace. The tool is read-only and idempotent.
+
+Input:
+
+```json
+{
+  "cursor": "opaque-cursor-from-previous-response",
+  "filter": {
+    "name": {
+      "contains": "feedback"
+    },
+    "status": {
+      "in": ["draft", "inProgress"]
+    },
+    "type": {
+      "in": ["link"]
+    }
+  },
+  "includeTotalCount": true,
+  "limit": 20,
+  "sortBy": "updatedAt",
+  "workspaceId": "clxx1234567890123456789012"
+}
+```
+
+Output:
+
+```json
+{
+  "data": [
+    {
+      "createdAt": "2026-04-21T10:00:00.000Z",
+      "creator": {
+        "name": "Ada Lovelace"
+      },
+      "id": "clsv1234567890123456789012",
+      "name": "Product Feedback",
+      "responseCount": 0,
+      "status": "draft",
+      "type": "link",
+      "updatedAt": "2026-04-21T11:00:00.000Z",
+      "workspaceId": "clxx1234567890123456789012"
+    }
+  ],
+  "meta": {
+    "limit": 20,
+    "nextCursor": null,
+    "totalCount": 1
+  },
+  "requestId": "req_..."
+}
+```
+
+### get_survey
+
+Gets one survey by ID. The tool is read-only and idempotent.
+
+Input:
+
+```json
+{
+  "lang": ["en-US"],
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+`lang` is optional. When supplied, it filters translatable survey fields to the requested language
+codes or configured aliases.
+
+### create_survey
+
+Creates a block-based link survey using the v3 survey document contract. The tool writes data and is
+not idempotent.
+
+Input:
+
+```json
+{
+  "blocks": [
+    {
+      "elements": [
+        {
+          "headline": {
+            "de-DE": "Was sollen wir verbessern?",
+            "en-US": "What should we improve?"
+          },
+          "id": "satisfaction",
+          "required": true,
+          "type": "openText"
+        }
+      ],
+      "name": "Main Block"
+    }
+  ],
+  "defaultLanguage": "en-US",
+  "endings": [],
+  "hiddenFields": {
+    "enabled": false
+  },
+  "languages": [
+    {
+      "code": "de-DE",
+      "enabled": true
+    }
+  ],
+  "metadata": {
+    "cx_operation": "enterprise_onboarding",
+    "title": {
+      "de-DE": "Produktfeedback",
+      "en-US": "Product Feedback"
+    }
+  },
+  "name": "Product Feedback Survey",
+  "status": "draft",
+  "variables": [],
+  "welcomeCard": {
+    "enabled": true,
+    "headline": {
+      "de-DE": "Willkommen",
+      "en-US": "Welcome"
+    }
+  },
+  "workspaceId": "clxx1234567890123456789012"
+}
+```
+
+Output uses the same survey resource shape as `GET /api/v3/surveys/{surveyId}` and includes the MCP
+`requestId`.
+
+### validate_survey
+
+Validates a create or patch payload without writing survey changes. The tool is read-only and
+idempotent; workspace access is still checked when `workspaceId` is present, at `read` level —
+matching the `surveys:read` scope the tool declares.
+
+Create validation input:
+
+```json
+{
+  "data": {
+    "blocks": [
+      {
+        "elements": [
+          {
+            "headline": {
+              "en-US": "What should we improve?"
+            },
+            "id": "satisfaction",
+            "required": true,
+            "type": "openText"
+          }
+        ],
+        "name": "Main Block"
+      }
+    ],
+    "defaultLanguage": "en-US",
+    "name": "Product Feedback Survey",
+    "workspaceId": "clxx1234567890123456789012"
+  },
+  "operation": "create"
+}
+```
+
+Patch validation input:
+
+```json
+{
+  "data": {
+    "name": "Updated Product Feedback Survey"
+  },
+  "operation": "patch",
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+Validation failures return `200` with `valid: false` and structured `invalid_params`, matching
+`POST /api/v3/surveys/validate`.
+
+### patch_survey
+
+Updates a survey by ID using the v3 survey patch contract. The tool writes data, can be
+destructive, and is not idempotent. Omitted top-level fields are preserved. Provided top-level
+objects and arrays replace that whole subtree, so omitted nested entries inside a provided subtree
+can be removed. The patch tool does not deep-merge nested objects and does not implement JSON Patch.
+
+<Note>
+  For agent workflows, fetch the current survey first, modify only the intended top-level fields, run
+  `validate_survey` with `operation: "patch"`, and then submit the same patch with `patch_survey`.
+</Note>
+
+Input:
+
+```json
+{
+  "data": {
+    "metadata": {
+      "cx_operation": "enterprise_onboarding",
+      "title": {
+        "en-US": "Updated Product Feedback"
+      }
+    },
+    "name": "Updated Product Feedback"
+  },
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+Output uses the same survey resource shape as `GET /api/v3/surveys/{surveyId}` and includes the MCP
+`requestId`.
+
+### delete_survey
+
+Deletes one survey by ID. The tool is destructive, writes data, and is not idempotent.
+
+Input:
+
+```json
+{
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+The v3 REST delete operation returns `204 No Content`. The MCP tool result contains the `requestId`
+so callers can correlate the audit trail:
+
+```json
+{
+  "requestId": "req_..."
+}
+```
+
+### archive_survey / restore_survey
+
+Archive is the reversible counterpart of `delete_survey`: it soft-deletes the survey, hides it from the
+default list, and `restore_survey` brings it back. Both take only a `surveyId` and return the lifecycle
+acknowledgement the v3 routes return (`id`, `status`, `archivedAt`) rather than the full survey document.
+
+```json
+{
+  "surveyId": "clsv1234567890123456789012"
+}
+```
+
+An archived survey is excluded from `list_surveys` unless the status filter asks for it:
+`filter.status.in: ["archived"]`. That value is a pseudo-status accepted only by the list filter — it is
+translated into an `archivedAt` filter, not matched against a real survey status. On its own it returns
+*only* archived surveys; combine it with real statuses to get both. `patch_survey` refuses an archived
+survey with a 422 telling the caller to restore it first.
+
+### Workflow tools
+
+Workflow tools operate on the v3 Workflows API (trigger → condition → action automations). They reuse
+the same authentication, authorization, audit logging, and error mapping as the survey tools.
+
+#### list_workflows
+
+Lists workflows in one workspace. Read-only and idempotent.
+
+Input:
+
+```json
+{
+  "cursor": "opaque-cursor-from-previous-response",
+  "filter": {
+    "name": { "contains": "welcome" },
+    "status": { "in": ["draft", "enabled"] }
+  },
+  "limit": 20,
+  "sortBy": "updatedAt",
+  "workspaceId": "clxx1234567890123456789012"
+}
+```
+
+Output mirrors the v3 list envelope: `{ "data": [...], "meta": { "limit", "nextCursor" }, "requestId" }`.
+Omitting `filter.status.in` returns every status except archived.
+
+#### get_workflow
+
+Gets one workflow by ID. Read-only and idempotent. Unknown or cross-workspace ids return `403`
+(never `404`) so existence is not leaked.
+
+```json
+{ "workflowId": "clwf1234567890123456789012" }
+```
+
+#### list_workflow_runs
+
+Lists workflow runs for a workspace, newest first. Read-only and idempotent.
+
+```json
+{
+  "filter": { "isDryRun": false, "status": { "in": ["completed"] } },
+  "limit": 20,
+  "responseId": "clrs1234567890123456789012",
+  "workflowId": "clwf1234567890123456789012",
+  "workspaceId": "clxx1234567890123456789012"
+}
+```
+
+Only `workspaceId` is required. Omit `filter.isDryRun` to return both real and dry runs.
+
+#### get_workflow_run
+
+Gets one workflow run with its ordered step logs. Read-only and idempotent.
+
+```json
+{ "runId": "clrn1234567890123456789012" }
+```
+
+#### test_workflow
+
+Dry-runs a workflow: validates its live definition would execute and resolves the trigger's survey +
+ending cards. No run is persisted and no side effects occur; the result reports `{ ok, problems }`.
+Annotated read-only (no world mutation). **Drafts are testable** — checking the setup before going
+live is the point of a dry run — so a workflow can be tested straight after `create_workflow`. Only
+**archived** workflows are rejected, with `422 invalid_workflow_state`, since they are soft-deleted.
+
+```json
+{ "workflowId": "clwf1234567890123456789012" }
+```
+
+#### create_workflow
+
+Creates a workflow, always as a draft (only `enable_workflow` makes it live). Writes data; not
+idempotent. Takes the full v3 create payload:
+
+```json
+{
+  "definition": {
+    "edges": [],
+    "entryNodeId": "trigger",
+    "nodes": [],
+    "schemaVersion": 1,
+    "trigger": {
+      "config": { "endingCardIds": ["ending-1"], "surveyId": "clsv1234567890123456789012" },
+      "id": "trigger",
+      "triggerType": "response.completed",
+      "type": "trigger"
+    }
+  },
+  "name": "Notify on churn survey completion",
+  "workspaceId": "clxx1234567890123456789012"
+}
+```
+
+#### patch_workflow
+
+Updates a workflow (v3 PATCH contract: top-level partial merge, no deep merge). Destructive; not
+idempotent. `definition` edits are only accepted while the workflow is draft or disabled.
+
+```json
+{
+  "data": { "name": "Renamed workflow" },
+  "workflowId": "clwf1234567890123456789012"
+}
+```
+
+#### duplicate_workflow
+
+Duplicates a workflow as a new draft with empty run and version history. Writes data; not idempotent.
+
+```json
+{ "name": "Copy of workflow", "workflowId": "clwf1234567890123456789012" }
+```
+
+`name` is optional; if omitted the server picks a non-conflicting copy name.
+
+#### Lifecycle tools
+
+`delete_workflow`, `enable_workflow`, `disable_workflow`, `archive_workflow`, and `unarchive_workflow`
+each take only a workflow id:
+
+```json
+{ "workflowId": "clwf1234567890123456789012" }
+```
+
+- `enable_workflow` — validates executability, snapshots an immutable version, and makes the workflow
+  live. A non-executable definition is refused with `422 workflow_not_executable`.
+
+  <Warning>Once live, the workflow runs on matching survey responses and can send emails.</Warning>
+
+- `disable_workflow` — stops future runs.
+- `archive_workflow` / `unarchive_workflow` — soft archive and restore (to draft).
+- `delete_workflow` — the v3 delete returns `204 No Content`; the MCP result contains the `requestId`.
+
+## Relationship to V3 Workflows API
+
+Like the survey tools, workflow tools run no custom database queries — each calls the shared,
+framework-agnostic `@forma/workflows` handlers used by the v3 REST routes:
+
+| MCP Tool             | REST Contract                                   |
+| -------------------- | ----------------------------------------------- |
+| `list_workflows`     | `GET /api/v3/workflows`                         |
+| `get_workflow`       | `GET /api/v3/workflows/{workflowId}`            |
+| `list_workflow_runs` | `GET /api/v3/workflows/runs`                    |
+| `get_workflow_run`   | `GET /api/v3/workflows/runs/{runId}`            |
+| `test_workflow`      | `POST /api/v3/workflows/{workflowId}/test`      |
+| `create_workflow`    | `POST /api/v3/workflows`                        |
+| `patch_workflow`     | `PATCH /api/v3/workflows/{workflowId}`          |
+| `duplicate_workflow` | `POST /api/v3/workflows/{workflowId}/duplicate` |
+| `delete_workflow`    | `DELETE /api/v3/workflows/{workflowId}`         |
+| `enable_workflow`    | `POST /api/v3/workflows/{workflowId}/enable`    |
+| `disable_workflow`   | `POST /api/v3/workflows/{workflowId}/disable`   |
+| `archive_workflow`   | `POST /api/v3/workflows/{workflowId}/archive`   |
+| `unarchive_workflow` | `POST /api/v3/workflows/{workflowId}/unarchive` |
+
+## Relationship to V3 Surveys API
+
+The MCP server does not run custom survey database queries. Each tool runs the v3 survey operation in-process, through the same handlers the REST routes serve, so it answers with the v3 API's bodies and problems:
+
+| MCP Tool          | REST Contract                       |
+| ----------------- | ----------------------------------- |
+| `list_surveys`    | `GET /api/v3/surveys`               |
+| `get_survey`      | `GET /api/v3/surveys/{surveyId}`    |
+| `create_survey`   | `POST /api/v3/surveys`              |
+| `validate_survey` | `POST /api/v3/surveys/validate`     |
+| `patch_survey`    | `PATCH /api/v3/surveys/{surveyId}`  |
+| `delete_survey`   | `DELETE /api/v3/surveys/{surveyId}` |
+| `archive_survey`  | `POST /api/v3/surveys/{surveyId}/archive` |
+| `restore_survey`  | `POST /api/v3/surveys/{surveyId}/restore` |
+
+When the v3 OpenAPI contract changes, update the MCP schemas and this page together. The hand-maintained
+v3 OpenAPI spec lives at `apps/docs/api-v3-reference/openapi.yml`.
+
+
+## Limitations
+
+- OAuth is user-delegated only. Machine-to-machine client credentials for MCP are not supported.
+- OAuth access tokens must be JWTs audience-bound to `/api/mcp`; opaque MCP access token introspection is not
+  accepted by the MCP route.
+- API-key authentication remains supported for compatibility and fallback use.
+- The MCP server exposes only the survey and workflow operations listed on this page.
+- Survey and workflow tool coverage depends on the current v3 Surveys and Workflows REST endpoint
+  coverage.
+- `enable_workflow` makes a workflow live and can trigger email sending; treat it as a high-impact
+  mutation when granting agents write access.
+- `create_workflow` requires a complete workflow `definition` (schema version, trigger, entry node);
+  it is created as a draft and only `enable_workflow` can make it live.
+- `create_survey` creates link surveys only. In-app survey creation and distribution settings are not
+  part of the current v3 create operation.
+- `patch_survey` follows the v3 PATCH contract: top-level partial document updates only, no JSON Patch,
+  and no nested deep merge. Provided top-level objects and arrays replace their whole subtree and can
+  remove omitted nested entries.
+- `validate_survey` validates payload shape and references; it does not create languages, survey
+  versions, or surveys.
+- Query-string credentials are rejected; use headers for API keys.
+- Large request bodies are rejected before the MCP handler using the same body-size policy as v3 APIs.
+- Tool arguments are strict: undeclared keys are rejected rather than ignored (see [Tool
+  Arguments](#tool-arguments)).
+- Resources and prompts are not exposed — the server registers tools only, so there is no MCP resource
+  for the survey document contract yet.
+- `subscriptions/listen` is refused (`maxSubscriptions: 0`). The 2026-07-28 revision replaced the GET SSE
+  endpoint with a long-lived POST-response stream, but with no resources registered and no list-changed
+  notifications emitted, such a stream could never deliver anything — it would just hold a connection.
+  A client that opens one gets `Subscription limit reached`; the list endpoints remain the way to see
+  current tools, prompts and resources.
+
+## Implementation Files
+
+- `apps/server/internal/mcp/handler.go`: the route, the body limit, the protected resource metadata and the SDK server
+- `apps/server/internal/mcp/auth.go`: authentication by API key or OAuth access token, and the audience check
+- `apps/server/internal/mcp/tools.go` and `tools.json`: the tools and their input schemas
+- `apps/server/internal/mcp/workspaces.go`: the workspace tools
+- `apps/server/internal/mcp/operations.go`: the v3 survey and workflow operations the tools run in-process
+- `apps/server/internal/oauthserver/`: the OAuth authorization server MCP clients sign in through

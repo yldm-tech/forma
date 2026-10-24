@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: server
+        working-directory: apps/server
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -34,8 +34,8 @@ jobs:
       - name: Setup Go (version from go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: server/go.mod
-          cache-dependency-path: server/go.sum
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
 
       - name: Verify wire_gen.go is up to date
         run: |
@@ -46,7 +46,7 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.14.0
-          working-directory: server
+          working-directory: apps/server
 
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/forma
@@ -62,7 +62,7 @@ jobs:
         shard: [auth, apikey, rest-1, rest-2]
     defaults:
       run:
-        working-directory: server
+        working-directory: apps/server
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -77,8 +77,8 @@ jobs:
       - name: Setup Go (version from go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: server/go.mod
-          cache-dependency-path: server/go.sum
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
 
       - name: Test
         env:
@@ -125,15 +125,15 @@ jobs:
         run: vp run -r build
 
       - name: Verify the TanStack Router route tree is committed
-        run: git diff --exit-code -- web/src/routeTree.gen.ts
+        run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
-      # The two bundles every respondent downloads, weighed right after the build that produced them (scripts/check-bundle-budget.mjs).
+      # The two bundles every respondent downloads, weighed right after the build that produced them (tooling/scripts/check-bundle-budget.mjs).
       - name: Check the SDK bundle budgets
         run: vp run bundle:check
 
-      # Squawk on the goose migrations this change adds or edits, Up sections only (scripts/lint-migrations.sh, server/.squawk.toml). Shipped migrations are never edited, so they are never linted.
+      # Squawk on the goose migrations this change adds or edits, Up sections only (tooling/scripts/lint-migrations.sh, apps/server/.squawk.toml). Shipped migrations are never edited, so they are never linted.
       - name: Lint added or changed migrations
-        run: bash scripts/lint-migrations.sh
+        run: bash tooling/scripts/lint-migrations.sh
 
       - name: Catalog, orphaned test, OpenAPI and exported JSON Schema checks
         run: |
@@ -155,7 +155,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: server
+        working-directory: apps/server
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -170,8 +170,8 @@ jobs:
       - name: Setup Go (version from go.mod)
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: server/go.mod
-          cache-dependency-path: server/go.sum
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
 
       - name: Check statement coverage
         env:
@@ -218,7 +218,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate schema assertions
-        run: bash authzed/validate.sh
+        run: bash apps/server/authzed/validate.sh
 
   helm-chart-validation:
     name: Validate Helm Chart

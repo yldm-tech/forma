@@ -3,8 +3,8 @@ import { resolve } from "path";
 import dts from "vite-plugin-dts";
 import { defineConfig, lazyPlugins } from "vite-plus";
 import type { ViteUserConfig } from "vite-plus";
-import { copyCompiledAssetsPlugin } from "../vite-plugins/copy-compiled-assets";
-import { rewriteNodeNextDtsSpecifiers } from "../vite-plugins/node-next-dts";
+import { copyCompiledAssetsPlugin } from "../../tooling/vite-plugins/copy-compiled-assets";
+import { rewriteNodeNextDtsSpecifiers } from "../../tooling/vite-plugins/node-next-dts";
 
 type VitestPluginOption = NonNullable<ViteUserConfig["plugins"]>[number];
 

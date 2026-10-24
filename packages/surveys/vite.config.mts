@@ -5,7 +5,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 import { type ConfigEnv, type Plugin, loadEnv, lazyPlugins } from "vite-plus";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite-plus";
-import { copyCompiledAssetsPlugin } from "../vite-plugins/copy-compiled-assets";
+import { copyCompiledAssetsPlugin } from "../../tooling/vite-plugins/copy-compiled-assets";
 
 // Stubs the @forma/survey-ui/styles?inline import during vitest runs so that
 // tests do not require packages/survey-ui to be built first. The plugin only

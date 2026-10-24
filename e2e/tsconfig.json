@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "noEmit": true,
-    "types": ["node"]
-  },
-  "extends": "../packages/config-typescript/js-library.json",
-  "include": ["**/*.ts"]
-}

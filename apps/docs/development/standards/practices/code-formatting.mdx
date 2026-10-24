@@ -1,0 +1,97 @@
+---
+title: "Code Formatting"
+description: "Standards for consistent code formatting across the Forma codebase"
+icon: code
+---
+
+Formatting is never a matter of taste in review: a formatter decides it, a pre-commit hook applies it, and CI fails when a file was committed without it.
+
+## TypeScript, JSON, YAML, Markdown and CSS
+
+The TypeScript workspace uses [Vite+](https://viteplus.dev/) (`vp`): **Oxfmt** formats, **Oxlint** lints, and **tsgolint** type-checks. There is no Prettier and no ESLint. The configuration lives only in the root [`vite.config.ts`](https://github.com/yldm-tech/forma/blob/main/vite.config.ts), under `fmt` and `lint`; package configs carry build, test and dev settings only.
+
+### Oxfmt settings
+
+```ts
+fmt: {
+  bracketSpacing: true,
+  bracketSameLine: true,
+  singleQuote: false,
+  jsxSingleQuote: false,
+  trailingComma: "es5",
+  semi: true,
+  printWidth: 110,
+  arrowParens: "always",
+  importOrder: ["(.*)/__mocks__/(.*)", "<THIRD_PARTY_MODULES>", "^@forma/(.*)$", "^~/(.*)$", "^@/(.*)$", "^[./]"],
+  importOrderSeparation: false,
+  importOrderSortSpecifiers: true,
+  jsonRecursiveSort: true,
+  sortTailwindcss: {},
+}
+```
+
+In practice: 110 characters, double quotes, ES5 trailing commas, parentheses around every arrow function's parameters, imports grouped (mocks, third-party, `@forma/*`, aliases, relative) and sorted, JSON keys sorted, and Tailwind classes in canonical order. Generated files (`apps/web/src/routeTree.gen.ts`, the bundled `openapi.yml`, the lockfile), `apps/server/**` and MDX pages are not formatted by Oxfmt.
+
+### Lint rules
+
+Oxlint runs the `eslint`, `typescript`, `unicorn`, `oxc`, `react`, `jsx-a11y`, `import` and `vitest` plugins with every correctness rule as an error, type-aware rules on, and a handful of rules set explicitly, among them:
+
+- `typescript/no-explicit-any` is an error.
+- Unused variables are errors unless their name starts with `_`.
+- React's rules of hooks are errors; `exhaustive-deps` and the React Compiler diagnostics are warnings.
+- Imports from Vite and Vitest go through `vite-plus` (`vite-plus/test`), which `vite-plus/prefer-vite-plus-imports` enforces.
+
+A path that needs an exception gets one in `lint.overrides`, with a comment saying why.
+
+### Running it
+
+```bash
+pnpm exec vp check          # format check, lint and type-check
+pnpm exec vp check --fix    # format and apply lint autofixes
+```
+
+Type-aware rules resolve sibling packages through their `dist/` declarations, so run `pnpm build` (`vp run -r build`) first after switching branches.
+
+## Go
+
+Go code is formatted by `gofmt` and `goimports` with `github.com/yldm-tech/forma/apps/server` as the local import prefix, so imports fall into three groups: the standard library, third-party modules, and the server's own packages. [golangci-lint](https://golangci-lint.run/) (`apps/server/.golangci.yml`, the same version CI pins) runs the standard linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`, `nilerr`, `noctx`, `revive`, `rowserrcheck`, `sqlclosecheck`, `unconvert` and `unparam`.
+
+```bash
+cd apps/server
+golangci-lint fmt ./...   # gofmt and goimports
+golangci-lint run ./...   # 0 issues is the bar
+```
+
+## Comments and prose
+
+- Code comments are English and explain why, not what the next line does.
+- Comments, commit messages and documentation are not hard-wrapped: one paragraph is one line, and the editor or the renderer wraps it. A hard-wrapped paragraph reflows into ragged lines on GitHub, and every rewording re-wraps the whole paragraph in the diff.
+
+## Enforcement
+
+### Pre-commit hook
+
+`pnpm install` installs `.vite-hooks/pre-commit`, which runs `vp staged` with the `staged` block of `vite.config.ts`:
+
+```ts
+staged: {
+  "*.{js,mjs,cjs,ts,mts,cts,tsx,json,md,yml,yaml,css}": "vp check --fix",
+  "apps/server/**/*.go": "gofmt -w",
+}
+```
+
+A commit whose staged files still fail the check after the fixes is refused.
+
+### Continuous integration
+
+`.github/workflows/pr.yml` runs, on every pull request:
+
+- golangci-lint, `go build` and a check that `wire_gen.go` is regenerated;
+- `vp check` (format, lint, type-check) after `vp run -r build`;
+- the catalog, orphaned-test, OpenAPI and exported JSON Schema checks.
+
+`make lint` runs golangci-lint and `vp check` locally; `make check` runs everything CI runs.
+
+## Editor setup
+
+Use the Oxc extension for VS Code (or any editor speaking the Oxc language server) for Oxfmt and Oxlint, and gopls for Go with `goimports` on save. Prettier and ESLint extensions should be disabled in this workspace: their output disagrees with Oxfmt's.

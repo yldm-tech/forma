@@ -1,8 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
-  - "scripts"
-  - "web"
+  - "tooling/*"
 
 allowBuilds:
   core-js: true
@@ -14,7 +13,7 @@ allowBuilds:
 # literal version, so a shared dependency cannot drift between packages: bumping one
 # means editing the entry here, which changes every consumer at once.
 #
-# `scripts/check-catalog.mjs` (run by `pnpm lint`) enforces both halves of that: it
+# `tooling/scripts/check-catalog.mjs` (run by `pnpm lint`) enforces both halves of that: it
 # fails if a workspace declares a literal version for a name listed here, and if a
 # dependency is declared by 2+ workspaces without being listed here at all.
 #
@@ -41,7 +40,7 @@ catalog:
   dotenv-cli: 11.0.0
   cross-env: 10.1.0
   glob: 13.0.6
-  # Read by scripts/check-catalog.mjs.
+  # Read by tooling/scripts/check-catalog.mjs.
   js-yaml: 4.3.2
   "@playwright/test": 1.63.0
   "@testing-library/react": 16.3.3
@@ -216,7 +215,7 @@ overrides:
   brace-expansion@5: 5.0.9
   vite@*: "catalog:"
   vitest@*: "catalog:"
-  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the docs/storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in web/ then run against a React that is not the one rendering.
+  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the docs/storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
   react: "catalog:"
   react-dom: "catalog:"
   # === Closed by ENG-2343 (kept as a record, like the section above) ===
