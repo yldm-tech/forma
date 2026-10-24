@@ -313,6 +313,7 @@ function AttributeSegmentFilter({
     return (
       <div className="relative flex flex-col gap-1">
         <Input
+          aria-label={t("workspace.segments.filter_value")}
           className={cn("h-9 w-auto bg-white", valueError && "border border-red-500 focus:border-red-500")}
           disabled={viewOnly}
           onChange={(e) => {
@@ -402,7 +403,7 @@ function AttributeSegmentFilter({
         }}
         value={operatorText}>
         <SelectTrigger
-          aria-label={t("common.select")}
+          aria-label={operatorText}
           className="flex w-auto items-center justify-center bg-white text-center"
           hideArrow>
           <SelectValue>
@@ -543,6 +544,7 @@ function PersonSegmentFilter({
         }}
         value={personIdentifier}>
         <SelectTrigger
+          aria-label={t("common.person")}
           className="flex w-auto items-center justify-center bg-white whitespace-nowrap"
           hideArrow>
           <SelectValue>
@@ -567,7 +569,7 @@ function PersonSegmentFilter({
         }}
         value={operatorText}>
         <SelectTrigger
-          aria-label={t("common.select")}
+          aria-label={operatorText}
           className="flex w-auto items-center justify-center bg-white text-center"
           hideArrow>
           <SelectValue>
@@ -587,6 +589,7 @@ function PersonSegmentFilter({
       {!["isSet", "isNotSet"].includes(resource.qualifier.operator) && (
         <div className="relative flex flex-col gap-1">
           <Input
+            aria-label={t("workspace.segments.filter_value")}
             className={cn("h-8 w-auto bg-white", valueError && "border border-red-500 focus:border-red-500")}
             disabled={viewOnly}
             onChange={(e) => {
@@ -795,7 +798,7 @@ function DeviceFilter({
         }}
         value={operatorText}>
         <SelectTrigger
-          aria-label={t("common.select")}
+          aria-label={operatorText}
           className="flex w-auto max-w-[40px] items-center justify-center bg-white text-center"
           hideArrow>
           <SelectValue>

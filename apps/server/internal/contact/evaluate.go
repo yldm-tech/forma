@@ -81,7 +81,7 @@ type builder struct {
 	workspaceID uuid.UUID
 	device      string
 	now         time.Time
-	// preview leaves out what the admin UI's contact counts do not evaluate: a survey-interaction filter constrains nothing, as a device filter without a device already does. approximate records that the tree had a filter of either kind, nested segments included.
+	// preview is the admin UI's contact counts, which have no request device, so a device filter constrains nothing. approximate records that the tree had a device filter, nested segments included.
 	preview     bool
 	approximate bool
 	// stored resolves nested segments from trees already read, so counting a whole list of segments reads none of them again. A segment it does not hold is read from the database.
@@ -161,10 +161,6 @@ func (b *builder) leaf(ctx context.Context, f *Filter, path []string) (condition
 	case filterRootSegment:
 		return b.segment(ctx, f, path)
 	case filterRootSurveyInteraction:
-		if b.preview {
-			b.approximate = true
-			return condition{}, nil
-		}
 		return b.interaction(f)
 	}
 	return condition{}, nil
@@ -368,7 +364,7 @@ func (b *builder) segment(ctx context.Context, f *Filter, path []string) (condit
 	case operatorUserIsIn:
 		return inner, nil
 	case operatorUserIsNotIn:
-		// A segment that constrains nothing holds every contact, so nobody is outside it; but when it constrains nothing only because a preview left its filters out, who is outside it is unknown, and the preview leaves this filter out too.
+		// A segment that constrains nothing holds every contact, so nobody is outside it; but when it constrains nothing only because a preview left its device filters out, who is outside it is unknown, and the preview leaves this filter out too.
 		if inner.empty() && innerApproximate {
 			return condition{}, nil
 		}

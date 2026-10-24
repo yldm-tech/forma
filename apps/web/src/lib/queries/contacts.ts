@@ -63,10 +63,13 @@ export interface Segment {
   surveys: string[];
   activeSurveys: SurveyRef[];
   inactiveSurveys: SurveyRef[];
-  /** How many of the workspace's contacts the segment matches: set on the public segments of the list, absent on private ones and on a segment that could not be evaluated. */
-  contactCount?: number;
-  /** The count left out device or survey-interaction filters. */
-  contactCountApproximate?: boolean;
+}
+
+/** How many of the workspace's contacts a public segment matches, as the segments page shows it. Approximate says the count left out device filters, which depend on the device a survey is shown on. */
+export interface SegmentContactCount {
+  segmentId: string;
+  count: number;
+  approximate: boolean;
 }
 
 /** A survey offered by the survey-interaction filter. */
@@ -123,6 +126,7 @@ export const contactKeys = {
   publishedLinkSurveys: (workspaceId: string) => ["contacts", workspaceId, "published-link-surveys"] as const,
   segments: (workspaceId: string) => ["segments", workspaceId] as const,
   segmentSurveys: (workspaceId: string) => ["segments", workspaceId, "surveys"] as const,
+  segmentContactCounts: (workspaceId: string) => ["segments", workspaceId, "contact-counts"] as const,
 };
 
 export const attributeKeysQuery = (workspaceId: string) =>
@@ -190,6 +194,16 @@ export const segmentsQuery = (workspaceId: string) =>
   queryOptions({
     queryKey: contactKeys.segments(workspaceId),
     queryFn: ({ signal }) => api.get<Segment[]>(`/api/app/workspaces/${workspaceId}/segments`, { signal }),
+  });
+
+/** The contact counts of the workspace's public segments, read apart from the segment list because counting evaluates every segment over every contact; a segment the server could not count is absent. Keyed under contactKeys.segments, so a segment mutation refreshes it too. */
+export const segmentContactCountsQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: contactKeys.segmentContactCounts(workspaceId),
+    queryFn: ({ signal }) =>
+      api.get<SegmentContactCount[]>(`/api/app/workspaces/${workspaceId}/segments/contact-counts`, {
+        signal,
+      }),
   });
 
 export const segmentSurveysQuery = (workspaceId: string) =>

@@ -24,6 +24,7 @@ import { meQuery } from "../../lib/queries/auth";
 import {
   type Segment,
   attributeKeysQuery,
+  segmentContactCountsQuery,
   segmentsQuery,
   useCreateSegment,
   useDeleteSegment,
@@ -46,6 +47,12 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
   const { data: me } = useSuspenseQuery(meQuery);
   const segments = useQuery(segmentsQuery(workspaceId));
   const keys = useQuery(attributeKeysQuery(workspaceId));
+  // Counting is slow on a large workspace, so the list shows without waiting for it and the column fills in.
+  const counts = useQuery(segmentContactCountsQuery(workspaceId));
+  const countOf = useMemo(
+    () => new Map((counts.data ?? []).map((count) => [count.segmentId, count])),
+    [counts.data]
+  );
   const [editing, setEditing] = useState<Segment | null>(null);
   const all = segments.data ?? [];
   const listed = all.filter((segment) => !segment.isPrivate);
@@ -72,15 +79,19 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
         </div>
       ),
     }),
-    column.accessor("contactCount", {
+    column.display({
+      id: "contactCount",
       header: t("common.contacts"),
-      cell: (info) => (
-        <SegmentContactCount
-          count={info.getValue()}
-          approximate={info.row.original.contactCountApproximate ?? false}
-          locale={me.locale}
-        />
-      ),
+      cell: (info) => {
+        const count = countOf.get(info.row.original.id);
+        return (
+          <SegmentContactCount
+            count={count?.count}
+            approximate={count?.approximate ?? false}
+            locale={me.locale}
+          />
+        );
+      },
     }),
     column.accessor("updatedAt", {
       header: t("common.updated_at"),
@@ -141,7 +152,7 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
   );
 };
 
-/** A segment's contact count in the list; an approximate one is marked and says why. */
+/** A segment's contact count in the list, a dash while it loads or when it could not be counted; an approximate one is marked and says why. */
 const SegmentContactCount = ({
   count,
   approximate,

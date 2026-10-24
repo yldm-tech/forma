@@ -86,7 +86,6 @@ test("an attribute key and a listed segment get the dates the editor's types car
     surveys: ["v1"],
     activeSurveys: [],
     inactiveSurveys: [],
-    contactCount: 3,
   };
   expect(toEditorSegment(segment)).toEqual({
     id: "s1",

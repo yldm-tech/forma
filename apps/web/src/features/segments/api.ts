@@ -59,7 +59,7 @@ export const attributeValuesQuery = (keyId: string) =>
     queryFn: ({ signal }) => api.get<string[]>(`/api/app/contact-attribute-keys/${keyId}/values`, { signal }),
   });
 
-/** How many of the workspace's contacts a filter tree matches, of how many in all. Approximate when the tree has device or survey-interaction filters, which the count leaves out. */
+/** How many of the workspace's contacts a filter tree matches, of how many in all. Approximate when the tree has device filters, which the count leaves out: a device is a property of the request a survey is shown on, not of the contact. */
 export interface SegmentPreviewCount {
   count: number;
   total: number;

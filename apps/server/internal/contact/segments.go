@@ -48,9 +48,6 @@ type Segment struct {
 	Surveys         []uuid.UUID     `json:"surveys"`
 	ActiveSurveys   []SurveyRef     `json:"activeSurveys"`
 	InactiveSurveys []SurveyRef     `json:"inactiveSurveys"`
-	// ContactCount is how many of the workspace's contacts the segment matches, set on the public segments of the segment list (setContactCounts) and absent elsewhere. ContactCountApproximate says it left out device or survey-interaction filters.
-	ContactCount            *int64 `json:"contactCount,omitempty"`
-	ContactCountApproximate bool   `json:"contactCountApproximate,omitempty"`
 }
 
 // SegmentInput is forma2's ZSegmentCreateInput. SurveyID, when set, is a survey of the same workspace the segment is linked to.
@@ -95,19 +92,12 @@ func (s *Service) requiredFilters(raw json.RawMessage) (Filters, error) {
 	return tree, nil
 }
 
-// Segments is forma2's getSegments: every segment of the workspace, private ones included; the segments page shows the public ones, each with how many contacts it matches.
+// Segments is forma2's getSegments: every segment of the workspace, private ones included; the segments page shows the public ones.
 func (s *Service) Segments(ctx context.Context, userID, workspaceID uuid.UUID) ([]Segment, error) {
 	if err := s.read(ctx, userID, workspaceID); err != nil {
 		return nil, err
 	}
-	segs, err := s.repo.segments(ctx, workspaceID, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.setContactCounts(ctx, workspaceID, segs); err != nil {
-		return nil, err
-	}
-	return segs, nil
+	return s.repo.segments(ctx, workspaceID, nil)
 }
 
 // Segment reads one segment for a reader of its workspace.

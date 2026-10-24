@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TDateOperator, TSegmentFilterValue, TTimeUnit } from "@forma/types/segment";
 import { cn } from "../../../lib/cn";
+import { convertOperatorToText } from "../lib/utils";
 import { formatLocalDay, parseStoredDay } from "../../../lib/survey/datetime";
 import { toUTCDateString } from "../lib/date-utils";
 import { DatePicker } from "../../../components/ui/date-picker/index";
@@ -38,6 +39,7 @@ export function DateFilterValue({ operator, value, onChange, viewOnly }: DateFil
         <Input
           type="number"
           min={1}
+          aria-label={t("workspace.segments.number")}
           className={cn("h-9 w-20 bg-white", error && "border border-red-500 focus:border-red-500")}
           disabled={viewOnly}
           value={relativeValue.amount}
@@ -57,7 +59,10 @@ export function DateFilterValue({ operator, value, onChange, viewOnly }: DateFil
           onValueChange={(unit: TTimeUnit) => {
             onChange({ amount: relativeValue.amount, unit });
           }}>
-          <SelectTrigger className="flex w-auto items-center justify-center bg-white" hideArrow>
+          <SelectTrigger
+            aria-label={t("workspace.segments.period")}
+            className="flex w-auto items-center justify-center bg-white"
+            hideArrow>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -78,6 +83,7 @@ export function DateFilterValue({ operator, value, onChange, viewOnly }: DateFil
     return (
       <div className="flex items-center gap-2">
         <DatePicker
+          aria-label={t("workspace.segments.operator_is_after")}
           value={parseStoredDay(betweenStart)}
           locale={locale}
           disabled={viewOnly}
@@ -88,6 +94,7 @@ export function DateFilterValue({ operator, value, onChange, viewOnly }: DateFil
         />
         <span className="text-sm text-slate-600">{t("common.and")}</span>
         <DatePicker
+          aria-label={t("workspace.segments.operator_is_before")}
           value={parseStoredDay(betweenEnd)}
           locale={locale}
           disabled={viewOnly}
@@ -106,6 +113,7 @@ export function DateFilterValue({ operator, value, onChange, viewOnly }: DateFil
 
   return (
     <DatePicker
+      aria-label={convertOperatorToText(operator, t)}
       value={parseStoredDay(dateValue)}
       locale={locale}
       disabled={viewOnly}
