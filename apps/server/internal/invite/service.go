@@ -735,10 +735,12 @@ func sameEmail(a, b string) bool {
 	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
 }
 
-// Inspection is the invite page's view of a link. Email, the invited address, is set only for a valid link, so the page can offer to sign up or sign in with it.
+// Inspection is the invite page's view of a link. Email, the invited address, is set for a valid link, so the page can offer to sign up or sign in with it, and when it belongs to another account than the signed-in one, so the page can say which address to sign in with. OrganizationName and InviterName, the organization the link joins and the person who sent it, are set for the same two answers: whoever holds a working link may know who it is from. An unknown or expired link names nothing.
 type Inspection struct {
-	Status Status `json:"status"`
-	Email  string `json:"email,omitempty"`
+	Status           Status `json:"status"`
+	Email            string `json:"email,omitempty"`
+	OrganizationName string `json:"organizationName,omitempty"`
+	InviterName      string `json:"inviterName,omitempty"`
 }
 
 // Inspect tells the invite page what a link is, for the signed-in user when there is one: forma2's InvitePage, without accepting anything.
@@ -753,10 +755,14 @@ func (s *Service) Inspect(ctx context.Context, token string, userID *uuid.UUID) 
 			return nil, err
 		}
 		if p == nil || !sameEmail(p.Email, inv.Email) {
-			return &Inspection{Status: StatusEmailMismatch}, nil
+			status = StatusEmailMismatch
 		}
 	}
-	return &Inspection{Status: StatusValid, Email: inv.Email}, nil
+	names, err := s.repo.inviteNames(ctx, inv.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &Inspection{Status: status, Email: inv.Email, OrganizationName: names.Organization, InviterName: names.Inviter}, nil
 }
 
 func lookupError(status Status) error {

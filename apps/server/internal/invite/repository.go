@@ -124,6 +124,23 @@ func (r *Repository) creator(ctx context.Context, inviteID uuid.UUID) (*person, 
 	return &rows[0], nil
 }
 
+// invitationNames is what the invite page names: the organization an invite joins and the person who sent it.
+type invitationNames struct {
+	Organization string
+	Inviter      string
+}
+
+func (r *Repository) inviteNames(ctx context.Context, inviteID uuid.UUID) (invitationNames, error) {
+	var rows []invitationNames
+	if err := r.db.WithContext(ctx).Raw(`SELECT o.name AS organization, u.name AS inviter FROM invites i JOIN organizations o ON o.id = i.organization_id JOIN users u ON u.id = i.creator_id WHERE i.id = ?`, inviteID).Scan(&rows).Error; err != nil {
+		return invitationNames{}, fmt.Errorf("load invite names: %w", err)
+	}
+	if len(rows) == 0 {
+		return invitationNames{}, nil
+	}
+	return rows[0], nil
+}
+
 func (r *Repository) inviteExists(ctx context.Context, organizationID uuid.UUID, email string) (bool, error) {
 	var exists bool
 	if err := r.db.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM invites WHERE organization_id = ? AND lower(email) = lower(?))`, organizationID, email).Scan(&exists).Error; err != nil {
