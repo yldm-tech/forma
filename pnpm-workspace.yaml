@@ -8,21 +8,11 @@ allowBuilds:
   esbuild: true
   protobufjs: true
 
-# Single source of truth for the version of every dependency used by two or more
-# workspaces. Packages reference these as `"typescript": "catalog:"` and never as a
-# literal version, so a shared dependency cannot drift between packages: bumping one
-# means editing the entry here, which changes every consumer at once.
+# Single source of truth for the version of every dependency used by two or more workspaces. Packages reference these as `"typescript": "catalog:"` and never as a literal version, so a shared dependency cannot drift between packages: bumping one means editing the entry here, which changes every consumer at once.
 #
-# `tooling/scripts/check-catalog.mjs` (run by `pnpm lint`) enforces both halves of that: it
-# fails if a workspace declares a literal version for a name listed here, and if a
-# dependency is declared by 2+ workspaces without being listed here at all.
+# `tooling/scripts/check-catalog.mjs` (run by `pnpm check`, `make check` and CI) enforces both halves of that: it fails if a workspace declares a literal version for a name listed here, and if a dependency is declared by 2+ workspaces without being listed here at all.
 #
-# Deps with a single consumer deliberately stay in their own package.json — a catalog
-# entry with one referent is indirection for nothing. `saveExact: true` (below) is why
-# every entry is a bare exact version; the sole exception in the workspace is
-# packages/survey-ui's react/react-dom `peerDependencies`, which are intentionally a
-# `^19.0.0` range (a published package's peer range, not a pinned install) and are
-# therefore excluded from the catalog rather than collapsed into the exact version.
+# What else belongs here: a version family that has to move as one even where each member has a single consumer (the Storybook packages, Vitest and its coverage provider), and every name an override below points at with `"catalog:"`, so the override and the direct dependency cannot pin two different versions. dotenv-cli, cross-env and preact (packages/surveys), glob (packages/i18n-utils) and js-yaml (the root) have one consumer each today and are kept here rather than moved back; check-catalog.mjs does not reject a single-consumer entry. Any other dependency with one consumer stays a literal in its own package.json. `saveExact: true` (below) is why every entry is a bare exact version; the sole exception in the workspace is packages/survey-ui's react/react-dom `peerDependencies`, which are intentionally a `^19.0.0` range (a published package's peer range, not a pinned install) and are therefore excluded from the catalog rather than collapsed into the exact version.
 catalog:
   # --- build & test toolchain ---
   typescript: 5.9.3
@@ -52,6 +42,9 @@ catalog:
   storybook: 10.6.3
   "@storybook/react": 10.6.3
   "@storybook/react-vite": 10.6.3
+  "@storybook/addon-a11y": 10.6.3
+  "@storybook/addon-docs": 10.6.3
+  "@storybook/addon-links": 10.6.3
   # --- ui runtime shared by web, survey-ui and surveys ---
   react: 19.3.0
   react-dom: 19.3.0
@@ -82,19 +75,15 @@ catalog:
   # --- toolchain: build, test, lint (Oxlint), format (Oxfmt), type-check, task runner ---
   vite-plus: 1.3.0
 
-# Security overrides for transitive dependencies that still fail audit without a pin.
-# Remove each override once its upstream dependency chain adopts a patched version.
+# Security overrides for transitive dependencies that still fail audit without a pin. Remove each override once its upstream dependency chain adopts a patched version: drop it, resolve the workspace (`pnpm install --lockfile-only`) and re-run `pnpm audit`.
 #
-# Every entry below was re-verified on 2026-07-28 by resolving the workspace with the override dropped (`pnpm install --lockfile-only`) and re-running `pnpm audit`: each one was load-bearing then, i.e. the natural resolution was a version the advisory covers.
-#
-# The `load-bearing:` notes name the packages in the current lockfile that depend on the pinned package (re-checked on 2026-10-24, after the documentation app's tooling was removed), so the next cleanup can check those upstreams instead of re-deriving them. On that date, dropping every override below against the lockfile still resolved lodash 4.17.23 and minimatch 10.2.1; the other pins were kept at their overridden versions by the existing lockfile, so whether they are still needed is only known by dropping them one at a time.
+# The `load-bearing:` notes name the packages in the current lockfile that depend on the pinned package (re-checked on 2026-10-24, after the documentation app's tooling was removed, and against the lockfile's snapshots again on 2026-10-25), so the next cleanup can check those upstreams instead of re-deriving them. On 2026-10-24, dropping every override below against the lockfile still resolved lodash 4.17.23 and minimatch 10.2.1; the other pins were kept at their overridden versions by the existing lockfile, so whether they are still needed is only known by dropping them one at a time.
 overrides:
   lodash: 4.18.1 # GHSA-r5fr-rjxr-66jc + GHSA-f23m-r3pf-42rh: <=4.17.23 vulnerable, patched in 4.17.24. load-bearing: @microsoft/api-extractor (dev, via vite-plugin-dts) resolves 4.17.23.
-  # Webpack / linting / schema validation chains.
   minimatch@10: 10.2.5 # GHSA-7r86-cg39-jmmj + GHSA-23c5-xmqv-rm74: 10.0.0–10.2.2 vulnerable, patched in 10.2.3. load-bearing: @microsoft/api-extractor pins 10.2.1; glob 13 (rimraf, storybook's react-docgen plugin) is on the same line.
-  # GHSA-r28c-9q8g-f849 and GHSA-fxqj-rqcc-2cmp: postcss path traversal and parser denial-of-service findings are patched in 8.5.23. Kept equal to the catalog entry, which is 8.5.31 since vite-plus-core 1.3.0 declares postcss ^8.5.29 (2026-10-24).
+  # GHSA-r28c-9q8g-f849 and GHSA-fxqj-rqcc-2cmp: postcss path traversal and parser denial-of-service findings are patched in 8.5.23. Points at the catalog entry (8.5.31 since vite-plus-core 1.3.0 declares postcss ^8.5.29, 2026-10-24), so the override and the direct dependencies of packages/surveys and tooling/vite-plugins cannot pin two different versions.
   # load-bearing: @tailwindcss/postcss, autoprefixer and vite (vite-plus-core) depend on it.
-  postcss: 8.5.31
+  postcss: "catalog:"
   # ENG-2403 / GHSA-2v37-7h3g-55p8 (CVE-2026-67213): nanoid <3.3.18 customAlphabet/customRandom loop
   # indefinitely when called with size 0 (DoS). Raises the 3.x pin from 3.3.17 to 3.3.18 (still <4).
   # load-bearing: postcss resolves 3.3.17.
@@ -102,7 +91,7 @@ overrides:
   # ENG-1111 / GHSA-58qx-3vcg-4xpx: ws is patched in 8.20.1+. GHSA-96hv-2xvq-fx4p raises that to 8.21.0.
   # load-bearing: @vitest/browser, happy-dom and storybook (all dev) depend on it.
   ws@8: 8.21.0
-  # Dependabot security batch (transitive-only; direct deps vite/ua-parser-js bumped in package.json).
+  # Dependabot security batch (transitive-only).
   esbuild: 0.28.1 # ENG-1327 / GHSA-g7r4-m6w7-qqqr (>=0.27.3 <0.28.1). load-bearing: vite (vite-plus-core), tsx, storybook, unplugin and terser-webpack-plugin (all dev) depend on it.
   # GHSA-4cwx-7wf7-3272, GHSA-8xcm-r25x-g524, GHSA-jr45-8vmc-qm54, GHSA-m8rv-5g2x-5cg5 and GHSA-v3r7-h72x-cjcm: undici request handling findings, patched in 7.29.0 on the 7.x line.
   # GHSA-rfgv-xxqx-mfg5, GHSA-w293-vg96-wgc3, GHSA-3wwx-pv8p-q78v, GHSA-pmjh-fq2x-6v4x, GHSA-3xpg-4rpp-hhhm, GHSA-2jfj-6hjv-fm6j, GHSA-rx4f-c7p8-82vq, GHSA-r53p-7pc4-xj5r, GHSA-2gqq-gqf2-x968 and GHSA-8436-99hf-9mmv (patched in 7.29.1), then GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472 (patched in 7.30.1): WebSocket, retry-handler, decompression, cache and TLS-reconnect findings on the 7.x line. Raised to 7.30.1 on 2026-10-24.
@@ -119,17 +108,8 @@ overrides:
   # load-bearing: no direct dependency — autoprefixer (packages/surveys, dev) resolves 4.28.1 and the
   # @babel/core / storybook / webpack build chain (dev-only) resolves 4.28.2.
   browserslist: 4.28.7
-  # ENG-2821 / ENG-2822 / GHSA-g8qq-57p8-ggw5 (CVE-2026-84371): when SVG animation is allowed,
-  # `attributeName="href"` gives the sibling `values` attribute SMIL URI-list semantics that
-  # sanitize-html's scheme check doesn't recognize, so a list starting with a safe fragment
-  # (`#safe;javascript:...`) keeps its later `javascript:` destination; patched in 2.17.7. Bumped
-  # directly in apps/web/package.json (direct dependency), no override needed.
-  # ENG-2887 / GHSA-px8p-9vwx-vf98 (CVE-2026-45820): fflate's unzipSync() can loop indefinitely on a
-  # malformed ZIP archive whose central-directory entry declares the ZIP64 sentinel
-  # (compressed_size=0xFFFFFFFF) but omits the required ZIP64 extra field; the out-of-bounds read that
-  # should supply the real size returns undefined, which coerces to 0 and keeps the loop condition true
-  # forever (DoS). Affects the 0.4.x line from 0.4.5; patched in 0.4.9.
-  # load-bearing: posthog-js (browser, apps/web) resolves 0.4.8.
+  # ENG-2887 / GHSA-px8p-9vwx-vf98 (CVE-2026-45820): fflate's unzipSync() can loop indefinitely on a malformed ZIP archive whose central-directory entry declares the ZIP64 sentinel (compressed_size=0xFFFFFFFF) but omits the required ZIP64 extra field; the out-of-bounds read that should supply the real size returns undefined, which coerces to 0 and keeps the loop condition true forever (DoS). Affects the 0.4.x line from 0.4.5; patched in 0.4.9.
+  # load-bearing: posthog-js (browser, apps/web) resolves 0.4.8; @vitest/ui and @types/three (apps/website), both dev, depend on it too.
   fflate: 0.4.9
   # === Dependabot security batch (ENG-3091..ENG-3110) ===
   # ENG-3100 / GHSA-w5vr-8v7q-w6rv (CVE-2026-45819): baseline-browser-mapping <2.11.0 calls
@@ -144,7 +124,7 @@ overrides:
   # fast-xml-parser, @opentelemetry/core and brace-expansion@1 went with @redocly/cli too: their only consumers were its openapi-sampler (also redoc's), its OpenTelemetry 0.53 / 1.26 exporter chain and its glob 7 (via minimatch 3), so the tree resolves none of the three without them.
   # dompurify, js-yaml@4, undici@6, @opentelemetry/propagator-jaeger, fast-uri@3, @faker-js/faker and brace-expansion@2 went with @redocly/cli (the v3 API reference tooling, removed with the documentation app): re-resolved without them, both against the lockfile and from scratch, the tree holds no @faker-js/faker, propagator-jaeger or undici 6 at all, js-yaml 4 is only the root's direct 4.3.2, and dompurify (isomorphic-dompurify, posthog-js), fast-uri (ajv) and brace-expansion 2 (minimatch 9) resolve patched versions on their own.
   # The same three, plus source-map-js, were re-resolved in place on 2026-10-24 rather than pinned, because every consumer's range already admits the patched release: dompurify 3.4.15 -> 3.4.17 (GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and three low IN_PLACE / SMIL findings; isomorphic-dompurify wants ^3.4.0, posthog-js ^3.4.13), fast-uri 3.1.6 -> 3.1.9 (GHSA-qw65-cvwx-89v3, GHSA-58mr-gqgx-xq4g and five more; ajv wants ^3.0.1), brace-expansion 2.1.4 -> 2.1.7 (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr; minimatch 9 wants ^2.0.2) and source-map-js 1.2.1 -> 1.2.2 (GHSA-68fv-2mgg-jv7q; @tailwindcss/node, css-tree and @vue/compiler-core want ^1.x). The lockfile is what holds them there, so a future `pnpm audit` regression on these four means a lockfile refresh, not a new override.
-  # js-cookie, shell-quote and form-data@4 were retired by bumping react-use to 17.6.1 (js-cookie ^3), concurrently to 9.2.4 (shell-quote 1.9.0) and @redocly/cli to 1.34.17 (form-data 4.0.6) instead. concurrently 9.2.5 (shell-quote 1.12.0) then closed GHSA-pqg4-j6r4-53mv on 2026-10-24.
+  # shell-quote was retired by bumping concurrently to 9.2.4 (shell-quote 1.9.0) instead; js-cookie and form-data@4 no longer resolve at all, their consumers (forma2's react-use, and @redocly/cli) having left the tree. concurrently 9.2.5 (shell-quote 1.12.0) then closed GHSA-pqg4-j6r4-53mv on 2026-10-24.
   # GHSA-6j4f-fj2g-mc7p (parseCommaParts recursion, patched in 5.0.10), GHSA-qhr7-859c-m2p7 (nested brace groups recursion, 5.0.11) and GHSA-q2hr-2g5m-vwhr (quadratic `{a},b}` rewrite, 5.0.12) raised the 5.x pin from 5.0.9 to 5.0.12 on 2026-10-24.
   # ENG-2234 / GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895: brace-expansion's recursive expansion has no bound on total output length, so a crafted `{a,b}{c,d}...` pattern grows the result set exponentially (DoS). GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays) bypasses the CVE-2026-14257 mitigation; GHSA-mh99-v99m-4gvg covers only the 1.x and 2.x lines. Every line reaches brace-expansion via minimatch. Pinned to the lowest maintenance release closing both advisories on the line. The 1.x and 2.x lines need no pin any more (see the record above).
   # load-bearing: minimatch 10 depends on it, from @microsoft/api-extractor (via vite-plugin-dts) and glob 13 (rimraf, storybook's react-docgen plugin), all dev.
@@ -154,19 +134,6 @@ overrides:
   # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
   react: "catalog:"
   react-dom: "catalog:"
-  # === Closed by ENG-2343 (kept as a record, like the section above) ===
-  # GHSA-p2fr-6hmx-4528 (@better-auth/oauth-provider RFC 8707 resource-indicator confusion) was carried
-  # here as an accepted risk for as long as the only patched line was a pre-release. It is fixed as of
-  # better-auth 1.7.0 stable, which this workspace now pins, so `pnpm audit` no longer reports it and
-  # the ~50 lines of justification that used to sit here are gone with it. What replaced them is real
-  # enforcement: the AS binds each token to the resources the authorization actually approved.
-  #
-  # One thing that did NOT go away: the resource server in apps/web/modules/mcp/auth.ts still asserts
-  # the verified `aud` against its own allow-list (ENG-2339). That is not leftover scaffolding from this
-  # acceptance — `hasAcceptedMcpAudience` answers "is this token for ME", which is a different
-  # question from "does each `aud` resolve to a registered resource"; only the first is the one a
-  # resource server must answer. (An earlier note here claimed 1.7 drops `verifyOptions.audience`
-  # from its own jwtVerify. That could not be substantiated and is retracted — see mcp/auth.ts.)
 
 autoInstallPeers: true
 linkWorkspacePackages: true
@@ -174,12 +141,7 @@ shamefullyHoist: true
 sharedWorkspaceLockfile: true
 access: public
 enablePrePostScripts: true
-# Flat, npm-style node_modules. Deliberate for now: several packages still rely on hoisted
-# (undeclared) dependencies — e.g. @forma/js-core reaches into sibling packages (ENG-1681)
-# and react/react-dom are hoisted from the workspace root (ENG-1693). Moving to the strict
-# `isolated` linker is the long-term goal (ENG-1674); fix the undeclared deps first.
-# `shamefullyHoist` above is left untouched here — it becomes meaningful only under the isolated
-# linker, so it is handled together with that migration rather than in this cleanup.
+# Flat, npm-style node_modules. Moving to the strict `isolated` linker is the long-term goal (ENG-1674). Every workspace now declares what its sources, configs and scripts import or run, the relative imports of tooling/vite-plugins and packages/survey-ui included (as `workspace:*` edges); the one exception is tooling/scripts' js-yaml, declared by the root package.json, which the isolated linker still resolves from the root as an ancestor. React is single through the overrides above (ENG-1693). What is left is the switch itself: `shamefullyHoist: true` has to go in the same change, because under the isolated linker it hoists every package to the root and keeps an undeclared import resolving; tools that load plugins by name at runtime (Storybook's addons, the `@import "tailwindcss"` in packages/survey-ui's CSS that apps/storybook loads) are only proven by an install and a build; and the Docker images copy only some workspaces into the build before `pnpm install --frozen-lockfile`. Delete this note with that change.
 nodeLinker: hoisted
 saveExact: true
 # Supply-chain release cooldown: refuse to install package versions published less than

@@ -10,11 +10,17 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 // deploy/docker/forma.sh, the one-click installer, rewrites a forma2 installation's compose file and .env for the server this package configures; these tests run it against forma2's files with a docker stand-in on PATH, and check that what it drops and keeps agrees with what Load reads.
 
-const formaSh = "../../../../../deploy/docker/forma.sh"
+// formaSh is the path of deploy/docker/forma.sh.
+func formaSh(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(repotest.Root(t), "deploy/docker/forma.sh")
+}
 
 // readEnvNames is every variable the loaders of this package read.
 func readEnvNames() map[string]bool {
@@ -39,7 +45,7 @@ func readEnvNames() map[string]bool {
 // scriptList is a space-separated list variable of forma.sh.
 func scriptList(t *testing.T, name string) []string {
 	t.Helper()
-	src, err := os.ReadFile(formaSh)
+	src, err := os.ReadFile(formaSh(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,14 +127,8 @@ exit 0
 
 func (e *installEnv) run(args ...string) (string, error) {
 	e.t.Helper()
-	script, err := filepath.Abs(formaSh)
-	if err != nil {
-		e.t.Fatal(err)
-	}
-	source, err := filepath.Abs("../../../../../deploy/docker")
-	if err != nil {
-		e.t.Fatal(err)
-	}
+	script := formaSh(e.t)
+	source := filepath.Join(repotest.Root(e.t), "deploy/docker")
 	cmd := exec.Command("bash", append([]string{script}, args...)...)
 	cmd.Dir = e.root
 	cmd.Env = append(os.Environ(),
@@ -138,7 +138,7 @@ func (e *installEnv) run(args ...string) (string, error) {
 	cmd.Env = append(cmd.Env, e.dbVars...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
-	err = cmd.Run()
+	err := cmd.Run()
 	return out.String(), err
 }
 
@@ -193,7 +193,7 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	}
 
 	// The release's compose file replaces forma2's, which is kept.
-	release, err := os.ReadFile("../../../../../deploy/docker/docker-compose.yml")
+	release, err := os.ReadFile(filepath.Join(repotest.Root(t), "deploy/docker/docker-compose.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,10 +343,7 @@ func TestFormaShUpdateRefusesADatabaseWithoutTheMigratedData(t *testing.T) {
 
 func TestFormaShStripsSchemaPublic(t *testing.T) {
 	requireBash(t)
-	script, err := filepath.Abs(formaSh)
-	if err != nil {
-		t.Fatal(err)
-	}
+	script := formaSh(t)
 	cases := map[string]string{
 		"postgresql://u:p@db:5432/forma?schema=public":                     "postgresql://u:p@db:5432/forma",
 		"postgresql://u:p@db/forma?schema=public&sslmode=disable":          "postgresql://u:p@db/forma?sslmode=disable",

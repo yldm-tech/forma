@@ -5,5 +5,5 @@
     "types": ["node"]
   },
   "extends": "@forma/config-typescript/js-library.json",
-  "include": ["*.ts"]
+  "include": ["*.ts", "*.mjs"]
 }

@@ -453,7 +453,7 @@ const evaluateSingleCondition = (
         }
         return false;
       default:
-        // Exhaustiveness gate over `ZSurveyLogicConditionsOperator`. Every member must have an arm above, here and in the twin evaluator in `apps/web/lib/surveyLogic/utils.ts`; once they all do, the operator narrows to `never` here, so an operator added to the union — or handled by only one of the two engines — fails `pnpm typecheck` rather than silently evaluating to false.
+        // Exhaustiveness gate over `ZSurveyLogicConditionsOperator`. Once every member has an arm above, the operator narrows to `never` here, so an operator added to the union without an arm fails the `vp check` type-check rather than silently evaluating to false. It covers this evaluator only: the server's evaluator in `apps/server/internal/survey/surveylogic/surveylogic.go` is held to the same behavior only through its parity corpus (`testdata/parity.json`, a JSON export of `@forma/types/surveys/logic-parity-fixtures`), which has to be re-exported by hand when the fixtures change.
         condition.operator satisfies never;
         return false;
     }

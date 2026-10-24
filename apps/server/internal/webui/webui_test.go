@@ -16,6 +16,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 const indexHTML = "<!doctype html><title>Forma</title>"
@@ -124,7 +125,7 @@ func TestRedirectsToTheApp(t *testing.T) {
 
 // Every top-level entry of apps/web/public is either served at the root or deliberately left to /app, and every root path names something the build has; the SDK bundles under js/ are copied in by the package builds and are not committed.
 func TestRootPublicPathsCoverThePublicDirectory(t *testing.T) {
-	entries, err := os.ReadDir(filepath.FromSlash("../../../web/public"))
+	entries, err := os.ReadDir(filepath.Join(repotest.Root(t), "apps/web/public"))
 	if err != nil {
 		t.Fatal(err)
 	}

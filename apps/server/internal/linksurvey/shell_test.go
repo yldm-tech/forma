@@ -5,11 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 // The survey page bundle's HTML carries the markers the server fills; without them every page would fall back to a shell that renders nothing.
 func TestWebSurveyHTMLHasTheMarkers(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "survey.html"))
+	b, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/survey.html"))
 	if err != nil {
 		t.Fatal(err)
 	}

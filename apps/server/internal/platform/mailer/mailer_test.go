@@ -24,6 +24,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer/mailertest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 var update = flag.Bool("update", false, "rewrite locales/*.json from apps/web/locales")
@@ -279,7 +280,7 @@ func TestSendThroughTransport(t *testing.T) {
 // locales/*.json must stay the "emails" namespace of the web catalogue; run with -update after changing apps/web/locales.
 func TestCatalogueMatchesWebLocales(t *testing.T) {
 	for _, locale := range mailer.Locales {
-		web, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "web", "locales", locale+".json"))
+		web, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/locales", locale+".json"))
 		if err != nil {
 			t.Fatal(err)
 		}
