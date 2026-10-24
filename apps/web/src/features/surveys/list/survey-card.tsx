@@ -9,10 +9,10 @@ import { type SurveyActions, SurveyDropdownMenu } from "./survey-dropdown-menu";
 import { SurveyStatusIndicator } from "./survey-status-indicator";
 
 /**
- * The columns of the survey table, shared by its header and its rows so they line up: name, status, completed responses, type, created at, updated at, created by and the actions menu. The name takes what the fixed columns leave. Below xl the created at and created by columns are left out, and below lg the type and updated at columns as well, so the name keeps room to be read.
+ * The columns of the survey table, shared by its header and its rows so they line up: name, status, completed responses, type, created at, updated at, created by and the actions menu. The name takes what the fixed columns leave. Below 87.5rem (1400px) the created at and created by columns are left out, and below lg the type and updated at columns as well, so the name keeps room to be read: with all eight columns a 1280px screen would leave the name about 12rem, with six it keeps about 27rem. The completed column fits its label on two lines (and the info icon) in every locale.
  */
 export const SURVEY_TABLE_GRID =
-  "grid grid-cols-[minmax(8rem,1fr)_8rem_5.5rem_2.5rem] items-center gap-x-3 lg:grid-cols-[minmax(10rem,1fr)_8rem_5.5rem_5rem_8.5rem_2.5rem] xl:grid-cols-[minmax(11rem,1fr)_8rem_5.5rem_5rem_7.5rem_8.5rem_7rem_2.5rem]";
+  "grid grid-cols-[minmax(8rem,1fr)_8rem_6.5rem_2.5rem] items-center gap-x-3 lg:grid-cols-[minmax(10rem,1fr)_8rem_6.5rem_5rem_8rem_2.5rem] min-[87.5rem]:grid-cols-[minmax(14rem,1fr)_8rem_6.5rem_5rem_7.5rem_8rem_7rem_2.5rem]";
 
 /** The horizontal padding of a row, which the header repeats so its labels sit over the cells. */
 export const SURVEY_TABLE_ROW_PADDING = "border py-3 pr-3 pl-4";
@@ -20,7 +20,7 @@ export const SURVEY_TABLE_ROW_PADDING = "border py-3 pr-3 pl-4";
 /** Which columns a narrower screen leaves out (see SURVEY_TABLE_GRID). */
 export const SURVEY_TABLE_COLUMN = {
   lgOnly: "hidden lg:flex",
-  xlOnly: "hidden xl:flex",
+  wideOnly: "hidden min-[87.5rem]:flex",
 };
 
 /** The full date and time of a timestamp, for the title of a date cell whose text is shortened. */
@@ -134,7 +134,7 @@ export const SurveyCard = ({
       <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
         <SurveyTypeIndicator type={survey.type} />
       </div>
-      <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.xlOnly)}>
+      <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
         <time
           dateTime={survey.createdAt}
           title={formatFullDate(survey.createdAt, i18n.language)}
@@ -150,7 +150,7 @@ export const SurveyCard = ({
           {timeSince(survey.updatedAt, i18n.language)}
         </time>
       </div>
-      <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.xlOnly)}>
+      <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
         <span className="truncate" title={survey.creator?.name}>
           {survey.creator?.name ?? "-"}
         </span>

@@ -1,5 +1,5 @@
 import { ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
-import { type Dispatch, Fragment, type SetStateAction, useEffect, useState } from "react";
+import { type Dispatch, Fragment, type RefObject, type SetStateAction, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import {
@@ -101,11 +101,14 @@ export const SurveyFilters = ({
   setFilters,
   channel,
   onClear,
+  searchInputRef,
 }: {
   filters: Filters;
   setFilters: Dispatch<SetStateAction<Filters>>;
   channel: WorkspaceChannel;
   onClear: () => void;
+  /** The name search box, which the list focuses once Clear filters has removed the button that was pressed. */
+  searchInputRef?: RefObject<HTMLInputElement | null>;
 }) => {
   const { t } = useTranslation();
   const [name, setName] = useState(filters.name);
@@ -142,6 +145,7 @@ export const SurveyFilters = ({
           <SearchIcon className="size-4" aria-hidden="true" />
           <span className="sr-only">{t("workspace.surveys.search_by_survey_name")}</span>
           <input
+            ref={searchInputRef}
             type="search"
             className="w-full min-w-0 border-none bg-transparent text-sm focus:outline-hidden"
             placeholder={t("workspace.surveys.search_by_survey_name")}

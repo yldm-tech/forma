@@ -156,16 +156,16 @@ const SurveyTableHeader = () => {
         <div role="columnheader" className={cell}>
           {t("common.status")}
         </div>
-        <div role="columnheader" className={cn(cell, "items-center gap-1")}>
-          <span className="min-w-0 break-words">{t("workspace.surveys.completed_responses")}</span>
+        <div role="columnheader" className={cell}>
+          {/* The label is the tooltip's trigger, so the column is named by the label alone (a screen reader repeats it with every cell) and the hint is only the button's description. */}
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className="focus-visible:ring-ring shrink-0 rounded-full text-slate-500 hover:text-slate-800 focus-visible:ring-2 focus-visible:outline-hidden"
-                  aria-label={t("workspace.surveys.completed_responses_hint")}>
-                  <InfoIcon className="size-3.5" aria-hidden="true" />
+                  className="focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-sm text-center break-words focus-visible:ring-2 focus-visible:outline-hidden">
+                  {t("workspace.surveys.completed_responses")}
+                  <InfoIcon className="size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-64">
@@ -177,13 +177,13 @@ const SurveyTableHeader = () => {
         <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
           {t("common.type")}
         </div>
-        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.xlOnly)}>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
           {t("common.created_at")}
         </div>
         <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
           {t("common.updated_at")}
         </div>
-        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.xlOnly)}>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
           {t("common.created_by")}
         </div>
         <div role="columnheader">
@@ -231,6 +231,12 @@ export const SurveysList = ({
     setFilters(initialFilters);
     setFiltersResetCount((count) => count + 1);
   };
+
+  // Clear filters takes away the button that was pressed (the toolbar's and the empty state's both go once nothing is filtered), so the focus moves to the search box of the remounted toolbar rather than falling to the page.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (filtersResetCount > 0) searchInputRef.current?.focus();
+  }, [filtersResetCount]);
 
   const list = useSurveys({
     workspaceId,
@@ -396,6 +402,7 @@ export const SurveysList = ({
           setFilters={setFilters}
           channel={channel}
           onClear={clearFilters}
+          searchInputRef={searchInputRef}
         />
         <div>
           {/* Announced as it changes: how much of the filtered list is on the page. */}

@@ -190,6 +190,10 @@ describe("SurveysList filters", () => {
     const clear = screen.getAllByRole("button", { name: i18n.t("common.clear_filters") });
     fireEvent.click(clear.at(-1)!);
     await waitFor(() => expect(queries.at(-1)?.has("filter[status][in]")).toBe(false));
+    // The pressed button is gone; the focus is in the search box rather than on the page.
+    expect(document.activeElement).toBe(
+      screen.getByRole("searchbox", { name: i18n.t("workspace.surveys.search_by_survey_name") })
+    );
   });
 });
 
@@ -208,6 +212,10 @@ describe("SurveysList rows", () => {
       })
     ).toBeTruthy();
     expect(within(table).getAllByRole("columnheader").length).toBeGreaterThan(1);
+    // The completed column is named by its label; the hint is the tooltip, not part of the name a screen reader repeats with every cell.
+    expect(
+      within(table).getByRole("columnheader", { name: i18n.t("workspace.surveys.completed_responses") })
+    ).toBeTruthy();
     expect(within(table).getAllByRole("row")).toHaveLength(2);
   });
 
