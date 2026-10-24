@@ -14,9 +14,9 @@ func TestLegacyBetterAuthLinks(t *testing.T) {
 	r := gin.New()
 	registerLegacyLinks(r)
 	for link, want := range map[string]string{
-		"/api/auth/reset-password/tok123?callbackURL=https%3A%2F%2Fapp.example%2Fauth%2Fforgot-password%2Freset": "/auth/forgot-password/reset",
-		"/api/auth/verify-email?token=eyJhbGciOi.x.y&callbackURL=%2F":                                            "/auth/verify-email",
-		"/api/auth/delete-user/callback?token=tok123&callbackURL=%2Fauth%2Flogin":                                "/auth/delete-account",
+		"/api/auth/reset-password/tok123?callbackURL=https%3A%2F%2Fapp.example%2Fauth%2Fforgot-password%2Freset": "/app/auth/forgot-password/reset",
+		"/api/auth/verify-email?token=eyJhbGciOi.x.y&callbackURL=%2F":                                            "/app/auth/verify-email",
+		"/api/auth/delete-user/callback?token=tok123&callbackURL=%2Fauth%2Flogin":                                "/app/auth/delete-account",
 	} {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, link, nil))

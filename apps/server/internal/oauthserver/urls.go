@@ -30,7 +30,7 @@ type URLs struct {
 	UserInfo string
 	// JWKS is where the signing keys are published.
 	JWKS string
-	// WebApp is WEBAPP_URL without query, fragment or trailing slashes; the consent page lives under it.
+	// WebApp is the admin SPA's base, WEBAPP_URL without query, fragment or trailing slashes with the app's base path (/app) appended; the consent page lives under it.
 	WebApp string
 }
 
@@ -42,7 +42,7 @@ func NewURLs(cfg config.Config) URLs {
 		ProtectedResourceMetadata: appendPath(cfg.WebAppURL, "/.well-known/oauth-protected-resource/api/mcp"),
 		UserInfo:                  issuer + "/oauth2/userinfo",
 		JWKS:                      issuer + "/jwks",
-		WebApp:                    auth.URLOrigin(cfg.WebAppURL) + strings.TrimRight(cfg.WebAppURL.Path, "/"),
+		WebApp:                    auth.URLOrigin(cfg.WebAppURL) + strings.TrimRight(cfg.WebAppURL.Path, "/") + config.AppBasePath,
 	}
 }
 

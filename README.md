@@ -39,7 +39,7 @@ pnpm install
 cp .env.example .env
 make deps-up      # PostgreSQL in Docker
 make dev-server   # Go server on :3000
-make dev-web      # Vite dev server on :5173, proxying the API to :3000
+make dev-web      # Vite dev server, the app at http://localhost:5173/app/, proxying the API to :3000
 ```
 
 | Command      | What it does                                                   |

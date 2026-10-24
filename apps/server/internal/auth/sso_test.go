@@ -91,7 +91,7 @@ func expectRedirect(t *testing.T, r response, want string) {
 }
 
 func loginError(code string) string {
-	return webApp + "/auth/login?error=" + code
+	return appBase + "/auth/login?error=" + code
 }
 
 func googleProfile(sub, email string) map[string]any {
@@ -224,7 +224,7 @@ func TestSSOSignUpNames(t *testing.T) {
 			t.Parallel()
 			e, fake := ssoEnv(t, providerOpenID)
 			fake.set(func(f *fakeIdP) { f.profile = map[string]any{"sub": "o-1", "email": tc.email, "name": tc.name} })
-			expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), webApp+"/")
+			expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), appBase+"/")
 			if u := e.userByEmail(tc.email); u == nil || u.Name != tc.want {
 				t.Fatalf("user %+v, want name %q", u, tc.want)
 			}
@@ -240,7 +240,7 @@ func TestSSOSignUpUnverified(t *testing.T) {
 		f.profile = googleProfile("g-1", "ada@example.com")
 		f.profile["email_verified"] = false
 	})
-	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 	u := e.userByEmail("ada@example.com")
 	if u == nil || u.EmailVerified {
 		t.Fatalf("user %+v", u)
@@ -265,7 +265,7 @@ func TestSSOSignInLinked(t *testing.T) {
 	t.Parallel()
 	e, fake := ssoEnv(t, providerGoogle)
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
-	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 	u := e.userByEmail("ada@example.com")
 	e.exec(`UPDATE users SET email_verified = false WHERE id = ?`, u.ID)
 
@@ -274,7 +274,7 @@ func TestSSOSignInLinked(t *testing.T) {
 		f.profile["name"] = "Ada King (Countess)"
 	})
 	b := e.browser()
-	expectRedirect(t, b.ssoSignIn(fake, "google", ""), webApp+"/")
+	expectRedirect(t, b.ssoSignIn(fake, "google", ""), appBase+"/")
 	got := e.userByEmail("ada@example.com")
 	if got.ID != u.ID || got.Name != "Ada King (Countess)" || got.Email != "ada@example.com" || !got.EmailVerified {
 		t.Fatalf("user %+v", got)
@@ -282,7 +282,7 @@ func TestSSOSignInLinked(t *testing.T) {
 
 	t.Run("a different address from the provider leaves the account's", func(t *testing.T) {
 		fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@new.example.com") })
-		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 		if e.userByEmail("ada@new.example.com") != nil || e.userByEmail("ada@example.com") == nil {
 			t.Fatal("the address changed")
 		}
@@ -294,7 +294,7 @@ func TestSSOSignInLinked(t *testing.T) {
 			f.profile = googleProfile("g-1", "ada@example.com")
 			f.profile["name"] = "🦄"
 		})
-		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 		if got := e.userByEmail("ada@example.com"); got.Name != before {
 			t.Fatalf("name %q, want %q", got.Name, before)
 		}
@@ -336,7 +336,7 @@ func TestSSOCallbackState(t *testing.T) {
 		for k, v := range b.cookies {
 			jar[k] = v
 		}
-		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}}), webApp+"/")
+		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}}), appBase+"/")
 		b.cookies = jar
 		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}}), loginError("please_restart_the_process"))
 	})
@@ -376,7 +376,7 @@ func TestSSOCallbackState(t *testing.T) {
 		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}, "iss": {"https://attacker.example.com"}}), loginError("issuer_mismatch"))
 		b = e.browser()
 		code, q = fake.authorize(b.ssoStart("google", ""))
-		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}, "iss": {fake.URL()}}), webApp+"/")
+		expectRedirect(t, b.callback("/api/auth/callback/google", url.Values{"code": {code}, "state": {q.Get("state")}, "iss": {fake.URL()}}), appBase+"/")
 	})
 
 	t.Run("a callback for a provider that is not configured", func(t *testing.T) {
@@ -455,7 +455,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 				f.profile = tc.profile
 				f.idTokenClaims = tc.idToken
 			})
-			expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), webApp+"/")
+			expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), appBase+"/")
 			u := e.userByEmail("ada@example.com")
 			if u == nil || u.EmailVerified != tc.wantVerified || u.Name != tc.wantName {
 				t.Fatalf("user %+v", u)
@@ -480,7 +480,7 @@ func TestSSOGenericOIDC(t *testing.T) {
 			f.profile = map[string]any{"sub": "o-1", "email": "ada@example.com"}
 			f.omitIDToken = true
 		})
-		expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), webApp+"/")
+		expectRedirect(t, e.browser().ssoSignIn(fake, "openid", ""), appBase+"/")
 	})
 
 	t.Run("discovery failure", func(t *testing.T) {
@@ -508,7 +508,7 @@ func TestSSOAzureAD(t *testing.T) {
 		if q.Get("redirect_uri") != webApp+"/api/auth/oauth2/callback/azuread" {
 			t.Fatalf("redirect_uri %q", q.Get("redirect_uri"))
 		}
-		expectRedirect(t, b.callback("/api/auth/oauth2/callback/azuread", url.Values{"code": {code}, "state": {q.Get("state")}}), webApp+"/")
+		expectRedirect(t, b.callback("/api/auth/oauth2/callback/azuread", url.Values{"code": {code}, "state": {q.Get("state")}}), appBase+"/")
 		if u := e.userByEmail("ada@contoso.com"); u == nil || u.EmailVerified {
 			t.Fatalf("user %+v, want unverified from xms_edov", u)
 		}
@@ -524,7 +524,7 @@ func TestSSOAzureAD(t *testing.T) {
 			f.idTokenClaims = map[string]any{"sub": "token-sub", "email": "mallory@contoso.com"}
 		})
 		b := e.browser()
-		expectRedirect(t, b.ssoSignIn(fake, "azuread", ""), webApp+"/")
+		expectRedirect(t, b.ssoSignIn(fake, "azuread", ""), appBase+"/")
 		u := e.userByEmail("ada@contoso.com")
 		if u == nil || !u.EmailVerified || u.Name != "Ada Lovelace" || e.userByEmail("mallory@contoso.com") != nil {
 			t.Fatalf("user %+v", u)
@@ -561,7 +561,7 @@ func TestSSOAzureAD(t *testing.T) {
 		fake.set(func(f *fakeIdP) { f.profile = map[string]any{"sub": "graph-sub", "email": "ada@contoso.com"} })
 		b := e.browser()
 		code, q := fake.authorize(b.ssoStart("azure-ad", ""))
-		expectRedirect(t, b.callback("/api/auth/callback/azuread", url.Values{"code": {code}, "state": {q.Get("state")}}), webApp+"/")
+		expectRedirect(t, b.callback("/api/auth/callback/azuread", url.Values{"code": {code}, "state": {q.Get("state")}}), appBase+"/")
 	})
 }
 
@@ -599,7 +599,7 @@ func TestSSOGitHub(t *testing.T) {
 			if q.Get("scope") != "read:user user:email" || q.Has("nonce") || q.Get("redirect_uri") != webApp+"/api/auth/callback/github" {
 				t.Fatalf("authorization request %v", q)
 			}
-			expectRedirect(t, b.callback("/api/auth/callback/github", url.Values{"code": {code}, "state": {q.Get("state")}}), webApp+"/")
+			expectRedirect(t, b.callback("/api/auth/callback/github", url.Values{"code": {code}, "state": {q.Get("state")}}), appBase+"/")
 			u := e.userByEmail(tc.wantEmail)
 			if u == nil || u.Name != tc.wantName || u.EmailVerified != tc.wantVerified {
 				t.Fatalf("user %+v", u)
@@ -624,12 +624,12 @@ func TestSSOCloudDomainBlock(t *testing.T) {
 	e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) { cfg.IsFormaCloud = true })
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@Gmail.com.") })
 	b := e.browser()
-	expectRedirect(t, b.ssoSignIn(fake, "google", ""), webApp+"/auth/signup?error=email_domain_not_allowed")
+	expectRedirect(t, b.ssoSignIn(fake, "google", ""), appBase+"/auth/signup?error=email_domain_not_allowed")
 	if b.has("forma.session_token") || e.count(`SELECT count(*) FROM users`) != 0 {
 		t.Fatal("the sign-up went through")
 	}
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-2", "ada@company.example") })
-	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 }
 
 // forma2's gateSsoProvisioning: an invitee headed for their invite (the invite page signs in with callbackUrl=/invite?token=...) may use a personal address on Forma Cloud, unless SIGNUP_DOMAIN_CHECK_ON_INVITES is set; the invite must be live and issued to the address.
@@ -663,7 +663,7 @@ func TestSSOCloudDomainBlockExemptsInvitees(t *testing.T) {
 				}
 				return
 			}
-			expectRedirect(t, r, webApp+"/auth/signup?error=email_domain_not_allowed")
+			expectRedirect(t, r, appBase+"/auth/signup?error=email_domain_not_allowed")
 			if e.userByEmail("grace@gmail.com") != nil {
 				t.Fatal("the sign-up went through")
 			}
@@ -707,7 +707,7 @@ func TestSSODefaultOrganization(t *testing.T) {
 			for i, want := range []string{tc.wantFirst, tc.wantSecond} {
 				email := []string{"ada@acme.example", "grace@acme.example"}[i]
 				fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-"+email, email) })
-				expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/")
+				expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/")
 				u := e.userByEmail(email)
 				var role string
 				if err := e.db.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ? AND accepted`, u.ID, orgID).Scan(&role).Error; err != nil || role != want {
@@ -737,7 +737,7 @@ func (e *env) recoveryToken(to string) string {
 		e.t.Fatalf("no mail to %s", to)
 	}
 	html := msgs[len(msgs)-1].HTML
-	if !strings.Contains(html, webApp+ssoRecoveryPath+"?token=") {
+	if !strings.Contains(html, appBase+ssoRecoveryPath+"?token=") {
 		e.t.Fatalf("no recovery link in %q", msgs[len(msgs)-1].Subject)
 	}
 	return e.lastToken(to, subjectVerification)
@@ -752,7 +752,7 @@ func TestSSORecovery(t *testing.T) {
 
 	starter := e.browser()
 	r := starter.ssoSignIn(fake, "google", "/surveys")
-	expectRedirect(t, r, webApp+"/auth/verification-requested?purpose=sso_recovery")
+	expectRedirect(t, r, appBase+"/auth/verification-requested?purpose=sso_recovery")
 	if starter.has("forma.session_token") || e.count(`SELECT count(*) FROM user_identities WHERE provider = 'google'`) != 0 {
 		t.Fatal("the identity was linked or a session granted before the mailbox was proven")
 	}
@@ -795,7 +795,7 @@ func TestSSORecovery(t *testing.T) {
 
 	t.Run("the provider now signs the account in directly", func(t *testing.T) {
 		b := e.browser()
-		expectRedirect(t, b.ssoSignIn(fake, "google", ""), webApp+"/")
+		expectRedirect(t, b.ssoSignIn(fake, "google", ""), appBase+"/")
 		me := b.get("/auth/me")
 		if me.json()["id"] != id.String() {
 			t.Fatalf("me %s", me.Body.String())
@@ -822,11 +822,11 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'github', 'squatter-1')`, id)
 
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
-	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/auth/verification-requested?purpose=sso_recovery")
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
 	owner := e.browser()
 	done := owner.post("/auth/sso/recovery/complete", map[string]string{"token": e.recoveryToken("ada@example.com")})
 	expectStatus(t, done, http.StatusOK, "")
-	if done.json()["redirectUrl"] != webApp+"/" {
+	if done.json()["redirectUrl"] != appBase+"/" {
 		t.Fatalf("redirect %v", done.json()["redirectUrl"])
 	}
 
@@ -880,7 +880,7 @@ func TestSSORecoveryRefusals(t *testing.T) {
 		e, fake := ssoEnv(t, providerGoogle)
 		id := e.seedUser("ada@example.com", strongPassword, userOpts{})
 		fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
-		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), webApp+"/auth/verification-requested?purpose=sso_recovery")
+		expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
 		return e, id, e.recoveryToken("ada@example.com")
 	}
 	lastFailure := func(e *env) any {

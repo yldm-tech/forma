@@ -206,10 +206,8 @@ func (s *SSO) failure(code string) callbackResult {
 }
 
 func (s *SSO) pageWithQuery(path string, query url.Values) string {
-	u := *s.cfg.WebAppURL
-	u.Path = path
+	u := s.cfg.AppPageURL(path)
 	u.RawQuery = query.Encode()
-	u.Fragment = ""
 	return u.String()
 }
 

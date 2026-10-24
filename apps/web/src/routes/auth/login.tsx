@@ -25,6 +25,7 @@ import { type CallbackSearch, callbackSearch, stringParam } from "../../features
 import { emailError, signInPasswordError } from "../../features/auth/validation";
 import { type Validators, useForm } from "../../lib/form";
 import { pickAttributionParams } from "../../lib/attribution";
+import { appHref } from "../../lib/base-path";
 
 interface LoginSearch extends CallbackSearch {
   /** The code a failed SSO callback reports. */
@@ -67,8 +68,9 @@ function LoginPage() {
   const { data: options } = useSuspenseQuery(authOptionsQuery);
 
   const origin = window.location.origin;
-  // forma2 fell back to WEBAPP_URL itself, so an SSO sign-in without a callback lands on the root page.
-  const callbackUrl = validatedCallbackUrl(search.callbackUrl, origin) ?? new URL("/", origin).toString();
+  // forma2 fell back to WEBAPP_URL itself, so an SSO sign-in without a callback lands on the root page, here the app's.
+  const callbackUrl =
+    validatedCallbackUrl(search.callbackUrl, origin) ?? new URL(appHref("/"), origin).toString();
   const inviteToken = inviteTokenFromCallbackUrl(callbackUrl, origin);
   const errorVariant = oauthErrorVariant(search.error);
 

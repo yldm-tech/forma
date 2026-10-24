@@ -75,7 +75,7 @@ grep --fixed-strings 'forma authz schema check' <<<"${authzed_notes}" >/dev/null
 grep --fixed-strings 'forma authz outbox status' <<<"${authzed_notes}" >/dev/null
 grep --fixed-strings 'forma authz schema apply' <<<"${authzed_notes}" >/dev/null
 grep --fixed-strings 'forma authz backfill --apply' <<<"${authzed_notes}" >/dev/null
-grep --fixed-strings 'self-hosting/advanced/authzed-operations' <<<"${authzed_notes}" >/dev/null
+grep --fixed-strings 'apps/server/authzed/README.md' <<<"${authzed_notes}" >/dev/null
 assert_safe_authzed_notes authzed-external "${authzed_notes}"
 
 # AuthZed is the v6 authorization engine. Fresh installs render the initialization Job, while an

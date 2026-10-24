@@ -6,6 +6,7 @@ import { reportError } from "../../lib/telemetry/sentry";
 import { Button } from "../ui/button";
 import { ErrorComponent } from "../ui/error-component";
 import { LoadingBlock } from "../ui/page";
+import { appHref } from "../../lib/base-path";
 
 /** forma2's error boundary (app/error.tsx): a rate limit gets its own wording and no buttons, anything else the generic error with a retry and a way back to the dashboard. An error the app does not expect is reported to Sentry. */
 export const RouteError = ({ error, reset }: ErrorComponentProps) => {
@@ -35,7 +36,9 @@ export const RouteError = ({ error, reset }: ErrorComponentProps) => {
             {t("common.try_again")}
           </Button>
           {/* A full load, as forma2's window.location.href: whatever broke is not carried into the dashboard. */}
-          <Button onClick={() => globalThis.location.assign("/")}>{t("common.go_to_dashboard")}</Button>
+          <Button onClick={() => globalThis.location.assign(appHref("/"))}>
+            {t("common.go_to_dashboard")}
+          </Button>
         </div>
       )}
     </main>

@@ -328,7 +328,7 @@ func (e *env) signIn(user uuid.UUID) auth.AuthorizationCodeFetcher {
 			return nil, err
 		}
 		page, _ := url.Parse(next)
-		if page.Path == "/account/authorize" {
+		if page.Path == "/app/account/authorize" {
 			requestID := page.Query().Get("request_id")
 			view := e.get(e.browser, e.url("/api/app/oauth/authorization-requests/"+requestID), map[string]string{testUserHeader: user.String()})
 			if view.StatusCode != http.StatusOK {

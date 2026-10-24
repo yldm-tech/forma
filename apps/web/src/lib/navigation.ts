@@ -1,4 +1,4 @@
-/** The sign-in page for a signed-out visit to path, carrying where to return, as forma2's proxy built it: an absolute URL on this origin. */
+/** The sign-in page (an in-app path) for a signed-out visit to path, the page's browser path with the app's base path, carrying where to return as forma2's proxy built it: an absolute URL on this origin. */
 export const loginHref = (path: string, origin: string = globalThis.location.origin): string =>
   `/auth/login?callbackUrl=${encodeURIComponent(origin + path)}`;
 

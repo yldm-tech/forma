@@ -277,8 +277,9 @@ jobs:
           fi
 
           curl -fsS http://localhost:3000/health/ready | jq -e '.status == "ok" and .main_database == true'
-          # The SPA and the SDK bundles are embedded.
-          curl -fsS http://localhost:3000/ | grep -qi '<!doctype html>'
+          # The SPA (served under /app, which the root redirects to) and the SDK bundles are embedded.
+          curl -fsS http://localhost:3000/app/ | grep -qi '<!doctype html>'
+          test "$(curl -fsS -o /dev/null -w '%{redirect_url}' http://localhost:3000/)" = "http://localhost:3000/app/"
           curl -fsS -o /dev/null http://localhost:3000/js/forma.umd.cjs
           curl -fsS -o /dev/null http://localhost:3000/js/surveys.umd.cjs
 

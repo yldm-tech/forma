@@ -85,77 +85,28 @@ catalog:
 # Security overrides for transitive dependencies that still fail audit without a pin.
 # Remove each override once its upstream dependency chain adopts a patched version.
 #
-# Every entry below was re-verified on 2026-07-28 by resolving the workspace with the
-# override dropped (`pnpm install --lockfile-only`) and re-running `pnpm audit`: each one
-# is still load-bearing, i.e. the natural resolution is a version the advisory covers.
-# The `load-bearing:` notes record the consumer that keeps the vulnerable version in the
-# tree, so the next cleanup can check that single upstream instead of re-deriving it.
+# Every entry below was re-verified on 2026-07-28 by resolving the workspace with the override dropped (`pnpm install --lockfile-only`) and re-running `pnpm audit`: each one was load-bearing then, i.e. the natural resolution was a version the advisory covers.
+#
+# The `load-bearing:` notes name the packages in the current lockfile that depend on the pinned package (re-checked on 2026-10-24, after the documentation app's tooling was removed), so the next cleanup can check those upstreams instead of re-deriving them. On that date, dropping every override below against the lockfile still resolved lodash 4.17.23 and minimatch 10.2.1; the other pins were kept at their overridden versions by the existing lockfile, so whether they are still needed is only known by dropping them one at a time.
 overrides:
-  lodash: 4.18.1 # GHSA-r5fr-rjxr-66jc + GHSA-f23m-r3pf-42rh: <=4.17.23 vulnerable, patched in 4.17.24. load-bearing: @boxyhq/saml-jackson and @microsoft/api-extractor resolve 4.17.23.
+  lodash: 4.18.1 # GHSA-r5fr-rjxr-66jc + GHSA-f23m-r3pf-42rh: <=4.17.23 vulnerable, patched in 4.17.24. load-bearing: @microsoft/api-extractor (dev, via vite-plugin-dts) resolves 4.17.23.
   # Webpack / linting / schema validation chains.
-  minimatch@10: 10.2.5 # GHSA-7r86-cg39-jmmj + GHSA-23c5-xmqv-rm74: 10.0.0–10.2.2 vulnerable, patched in 10.2.3. load-bearing: @microsoft/api-extractor pins 10.2.1.
-  # GHSA-r28c-9q8g-f849 and GHSA-fxqj-rqcc-2cmp: postcss path traversal and parser
-  # denial-of-service findings are patched in 8.5.23.
-  # load-bearing: next pins 8.4.31 and @tailwindcss/postcss pins 8.5.15.
+  minimatch@10: 10.2.5 # GHSA-7r86-cg39-jmmj + GHSA-23c5-xmqv-rm74: 10.0.0–10.2.2 vulnerable, patched in 10.2.3. load-bearing: @microsoft/api-extractor pins 10.2.1; glob 13 (rimraf, storybook's react-docgen plugin) is on the same line.
+  # GHSA-r28c-9q8g-f849 and GHSA-fxqj-rqcc-2cmp: postcss path traversal and parser denial-of-service findings are patched in 8.5.23.
+  # load-bearing: @tailwindcss/postcss, autoprefixer and vite (vite-plus-core) depend on it.
   postcss: 8.5.28
-  # SDK and runtime transitive security pins.
-  # GHSA-55q2-fjhq-7xh7: DOMPurify <=3.4.12 can be bypassed with crafted HTML; patched in 3.4.13.
-  # load-bearing: isomorphic-dompurify, posthog-js and redoc resolve vulnerable 3.x versions.
-  dompurify: 3.4.15
-  fast-xml-parser: 5.7.0 # load-bearing: @aws-sdk/xml-builder pins 5.4.1 / 5.5.8, both <5.7.0 and vulnerable (GHSA-gh4j-gqv2-49f6 + GHSA-jp2q-39xq-3w4g)
   # ENG-2403 / GHSA-2v37-7h3g-55p8 (CVE-2026-67213): nanoid <3.3.18 customAlphabet/customRandom loop
   # indefinitely when called with size 0 (DoS). Raises the 3.x pin from 3.3.17 to 3.3.18 (still <4).
   # load-bearing: postcss resolves 3.3.17.
   nanoid@3: 3.3.18
   # ENG-1111 / GHSA-58qx-3vcg-4xpx: ws is patched in 8.20.1+. GHSA-96hv-2xvq-fx4p raises that to 8.21.0.
-  # load-bearing: socket.io-adapter resolves 8.17.1 and engine.io resolves 8.18.3.
+  # load-bearing: @vitest/browser, happy-dom and storybook (all dev) depend on it.
   ws@8: 8.21.0
   # Dependabot security batch (transitive-only; direct deps vite/ua-parser-js bumped in package.json).
-  "@opentelemetry/core": 2.8.0 # ENG-1355 / GHSA-8988-4f7v-96qf (<2.8.0). load-bearing: the 0.208.0/0.211.0/0.212.0/0.217.0 exporter lines resolve 2.2.0–2.7.1.
-  esbuild: 0.28.1 # ENG-1327 / GHSA-g7r4-m6w7-qqqr (>=0.27.3 <0.28.1). load-bearing: vite@7/tsx/storybook resolve 0.27.7 and react-email pins 0.27.4.
-  # ENG-1527-batch / GHSA-mh29-5h37-fv8m + GHSA-h67p-54hq-rp68: js-yaml <4.1.2 quadratic-complexity
-  # DoS via merge keys / repeated aliases (dev-only, via @redocly/cli). No 4.1.2 published; 4.2.0 is the
-  # lowest patched and stays <5. Scoped to the 4.x line so any 3.x consumer is untouched.
-  # ENG-1952 / GHSA-52cp-r559-cp3m (CVE-2026-59869): js-yaml 4.0.0–4.2.x can spend quadratic CPU on a
-  # merge-key mapping chain; patched in 4.3.0. Raises the 4.x pin from 4.2.0 to 4.3.0 (still <5).
-  # ENG-2278 / ENG-2279 / GHSA-5p4m-2wfm-xmqj (CVE-2026-59870): js-yaml 4.0.0–4.3.0 can spend quadratic
-  # CPU resolving a large !!omap (linear indexOf scan per entry); patched in 4.3.1. Raises the 4.x pin
-  # from 4.3.0 to 4.3.1 (still <5).
-  # ENG-3091 / GHSA-2883-xcg3-v3hh (CVE-2026-84375): js-yaml 4.0.0-4.3.1's merge-key handling doesn't
-  # bound CPU work for a mapping with no keys of its own (an empty `<<:` merge source), so a document
-  # built from many such empty merges still costs quadratic time; patched in 4.3.2. Raises the 4.x pin
-  # from 4.3.1 to 4.3.2 (still <5).
-  # load-bearing: @redocly/openapi-core and @redocly/respect-core pin 4.2.0.
-  js-yaml@4: 4.3.2
-  # GHSA-4cwx-7wf7-3272, GHSA-8xcm-r25x-g524, GHSA-jr45-8vmc-qm54,
-  # GHSA-m8rv-5g2x-5cg5 and GHSA-v3r7-h72x-cjcm: undici request handling findings are patched
-  # in 6.28.0 and 7.29.0 respectively.
-  # load-bearing: @redocly resolves the vulnerable 6.x line; apps/web uses the 7.x line directly.
-  undici@6: 6.28.0
+  esbuild: 0.28.1 # ENG-1327 / GHSA-g7r4-m6w7-qqqr (>=0.27.3 <0.28.1). load-bearing: vite (vite-plus-core), tsx, storybook, unplugin and terser-webpack-plugin (all dev) depend on it.
+  # GHSA-4cwx-7wf7-3272, GHSA-8xcm-r25x-g524, GHSA-jr45-8vmc-qm54, GHSA-m8rv-5g2x-5cg5 and GHSA-v3r7-h72x-cjcm: undici request handling findings, patched in 7.29.0 on the 7.x line.
+  # load-bearing: jsdom (dev, the Vitest DOM environment) resolves the 7.x line.
   undici@7: 7.29.0
-  # === Dependabot security batch (ENG-1988..ENG-1999) ===
-  # ENG-1992 / GHSA-45rx-2jwx-cxfr (CVE-2026-59892): @opentelemetry/propagator-jaeger <2.9.0 DoS via an
-  # unhandled decodeURIComponent() error on a malformed header; patched in 2.9.0. Coerces the transitive
-  # 1.26.0 line up to 2.9.0 (core is already pinned to 2.x above).
-  # load-bearing: @opentelemetry/sdk-node resolves 2.7.1 and @redocly/cli's sdk-trace-node pins 1.26.0.
-  "@opentelemetry/propagator-jaeger": 2.9.0
-  # === Dependabot high-risk batch (ENG-2205) ===
-  # ENG-2205 / GHSA-7p8r-x3mc-p8w7 (CVE-2026-18446): fast-uri >=3.0.0 <3.1.5 host confusion via a
-  # backslash authority introducer; patched in 3.1.5. Previously self-resolved, reopened by the new
-  # advisory. load-bearing: @redocly/ajv and ajv pull 3.1.4 (dev-only, API-docs tooling).
-  # ENG-2839 / GHSA-f65p-4m7j-42xc (CVE-2026-75975): a malformed bracketed IPv6 literal is silently
-  # truncated to a different valid address instead of rejected (e.g. `[::not-valid]` -> `[::]`),
-  # enabling SSRF past a host-policy check.
-  # ENG-2840 / GHSA-jqff-g426-hqxp (CVE-2026-76172): a percent-encoded scheme (`%2f%2fevil.example:/pwn`)
-  # is unescaped but never re-validated, so a scheme with no authority resolves into one with an
-  # attacker-chosen host (or an injected CRLF).
-  # ENG-2843 / GHSA-fph4-wmhf-6fwf (CVE-2026-75899): a hostname's percent escapes are decoded twice, so a
-  # nested-encoded host (e.g. `%256c%256f...`) survives the first decode and resolves live on the second.
-  # ENG-2844 / GHSA-5jgf-p345-68v8 (CVE-2026-75931): resolve() only canonicalizes a host to ASCII when the
-  # input carries an explicit scheme, so a scheme-relative reference resolved against a scheme-bearing
-  # base emits the host verbatim, letting it re-parse to a different host than resolve() returned.
-  # All four patched in 3.1.6.
-  fast-uri@3: 3.1.6
   # === Dependabot security batch (ENG-2821/ENG-2822, ENG-2823/ENG-2824, ENG-2839..ENG-2845) ===
   # ENG-2823 / GHSA-c83g-rgw3-j3cx (CVE-2026-73089): browserslist's query-result and AST caches grow
   # without eviction, so a stream of distinct queries (e.g. `since <year>-<month>-<day>`) accumulates
@@ -172,13 +123,6 @@ overrides:
   # sanitize-html's scheme check doesn't recognize, so a list starting with a safe fragment
   # (`#safe;javascript:...`) keeps its later `javascript:` destination; patched in 2.17.7. Bumped
   # directly in apps/web/package.json (direct dependency), no override needed.
-  # ENG-2845 / GHSA-qxc2-j82w-r537 (CVE-2026-73231): `faker.helpers.fake()`'s `resolveProperty` resolves
-  # a function property without recursing into it first, so a crafted fake-string template
-  # (`{{x.constructor(...)}}`) reaches arbitrary code execution instead of the documented
-  # faker-only substitution; patched in 10.5.0.
-  # load-bearing: dev-only — @redocly/cli's @redocly/respect-core (API-docs contract testing) resolves
-  # 7.6.0.
-  "@faker-js/faker": 10.5.0
   # ENG-2887 / GHSA-px8p-9vwx-vf98 (CVE-2026-45820): fflate's unzipSync() can loop indefinitely on a
   # malformed ZIP archive whose central-directory entry declares the ZIP64 sentinel
   # (compressed_size=0xFFFFFFFF) but omits the required ZIP64 extra field; the out-of-bounds read that
@@ -191,33 +135,21 @@ overrides:
   # `process.exit()` when it can't parse browserslist-stats.json, taking down the whole process instead
   # of throwing; patched in 2.11.0. Pinned to 2.11.20 (already resolved elsewhere in the tree, so this
   # coerces the vulnerable copy up rather than introducing a new version).
-  # load-bearing: next resolves the vulnerable 2.10.31 line as a transitive dependency.
+  # load-bearing: browserslist (dev, see above) depends on it.
   baseline-browser-mapping: 2.11.20
   # === Removed once upstream caught up (kept as a record of what no longer needs a pin) ===
   # ajv@6, @babel/core, body-parser, engine.io@6, linkify-it, protobufjs@7 and uuid@11
   # all resolve to the patched version on their own now.
+  # fast-xml-parser, @opentelemetry/core and brace-expansion@1 went with @redocly/cli too: their only consumers were its openapi-sampler (also redoc's), its OpenTelemetry 0.53 / 1.26 exporter chain and its glob 7 (via minimatch 3), so the tree resolves none of the three without them.
+  # dompurify, js-yaml@4, undici@6, @opentelemetry/propagator-jaeger, fast-uri@3, @faker-js/faker and brace-expansion@2 went with @redocly/cli (the v3 API reference tooling, removed with the documentation app): re-resolved without them, both against the lockfile and from scratch, the tree holds no @faker-js/faker, propagator-jaeger or undici 6 at all, js-yaml 4 is only the root's direct 4.3.2, and dompurify (isomorphic-dompurify, posthog-js), fast-uri (ajv) and brace-expansion 2 (minimatch 9) resolve patched versions on their own.
   # js-cookie, shell-quote and form-data@4 were retired by bumping react-use to 17.6.1 (js-cookie ^3),
   # concurrently to 9.2.4 (shell-quote 1.9.0) and @redocly/cli to 1.34.17 (form-data 4.0.6) instead.
-  # ENG-2234 / GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895: brace-expansion's recursive expansion has no
-  # bound on total output length, so a crafted `{a,b}{c,d}...` pattern grows the result set exponentially
-  # (DoS). GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays) bypasses the CVE-2026-14257 mitigation and
-  # covers all three lines we resolve; GHSA-mh99-v99m-4gvg covers only the 1.x and 2.x lines. Every line
-  # reaches brace-expansion via minimatch. Pinned to the lowest maintenance release closing both
-  # advisories on each line.
-  # load-bearing: @boxyhq/saml-jackson's typeorm>sqlite3>node-gyp chain (runtime) resolves the vulnerable
-  # 1.x line; the eslint plugin graph (dev) is on the same line.
-  brace-expansion@1: 1.1.18
-  # load-bearing: @boxyhq/saml-jackson resolves the vulnerable 2.x line both directly (typeorm>glob) and
-  # via googleapis/@googleapis/admin (runtime, apps/web and packages/ai `dependencies`); @redocly/cli and
-  # vite-plugin-dts>@vue/language-core (dev) are on the same line.
-  brace-expansion@2: 2.1.4
-  # load-bearing: @sentry/nextjs (runtime, apps/web `dependencies`, via @fastify/otel>@sentry/node) and
-  # react-email (runtime, @forma/email `dependencies`) resolve the vulnerable 5.x line, alongside
-  # vite-plugin-dts, typescript-eslint and storybook (dev).
+  # ENG-2234 / GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895: brace-expansion's recursive expansion has no bound on total output length, so a crafted `{a,b}{c,d}...` pattern grows the result set exponentially (DoS). GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays) bypasses the CVE-2026-14257 mitigation; GHSA-mh99-v99m-4gvg covers only the 1.x and 2.x lines. Every line reaches brace-expansion via minimatch. Pinned to the lowest maintenance release closing both advisories on the line. The 1.x and 2.x lines need no pin any more (see the record above).
+  # load-bearing: minimatch 10 depends on it, from @microsoft/api-extractor (via vite-plugin-dts) and glob 13 (rimraf, storybook's react-docgen plugin), all dev.
   brace-expansion@5: 5.0.9
   vite@*: "catalog:"
   vitest@*: "catalog:"
-  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the docs/storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
+  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
   react: "catalog:"
   react-dom: "catalog:"
   # === Closed by ENG-2343 (kept as a record, like the section above) ===

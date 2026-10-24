@@ -24,7 +24,7 @@ func decode(t *testing.T, buf *bytes.Buffer) []map[string]any {
 	return out
 }
 
-// Level labels are forma2's pino names in lower case, so a filter on level == "audit" (the audit logging guide's) or level == "error" written for forma2 keeps matching.
+// Level labels are forma2's pino names in lower case, so a filter on level == "audit" or level == "error" written for forma2 keeps matching.
 func TestJSONLevelLabels(t *testing.T) {
 	var buf bytes.Buffer
 	log := New(config.Config{LogLevel: config.LogLevel(slog.LevelDebug), LogFormat: "json"}, &buf)

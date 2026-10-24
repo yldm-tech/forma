@@ -10,6 +10,7 @@ import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../compo
 import { Badge } from "../../../components/ui/badge";
 import { Label } from "../../../components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
+import { appHref } from "../../../lib/base-path";
 
 interface HowToSendCardProps {
   localSurvey: TSurvey;
@@ -175,7 +176,10 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
                           </AlertDescription>
                           <AlertButton
                             onClick={() =>
-                              window.open(`${workspaceBasePath}/integrations/app-connection`, "_blank")
+                              window.open(
+                                appHref(`${workspaceBasePath}/integrations/app-connection`),
+                                "_blank"
+                              )
                             }>
                             {t("common.set_up_forma_sdk")}
                           </AlertButton>

@@ -24,9 +24,7 @@ describe("SURVEY_FOLLOW_UPS_SUNSET_DATE", () => {
 
 describe("formatSurveyFollowUpsSunsetDate", () => {
   test("renders the announced calendar day, not the viewer's local one", () => {
-    // Midnight UTC on 1 December is still 30 November west of UTC. Without an explicit `timeZone`
-    // the notice would tell a reader in New York the feature stops on Nov 30 while the docs and the
-    // announcement both say 1 December.
+    // Midnight UTC on 1 December is still 30 November west of UTC. Without an explicit `timeZone` the notice would tell a reader in New York the feature stops on Nov 30 while the announcement says 1 December.
     expect(formatSurveyFollowUpsSunsetDate("en-US")).toBe("Dec 1, 2026");
   });
 

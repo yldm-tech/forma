@@ -53,7 +53,7 @@ func TestCreateInvite(t *testing.T) {
 	}
 	msgs := e.sent("grace@example.com")
 	jaSubject, _, _ := e.svc.mailer.Render("ja-JP", mailer.Invite{})
-	if len(msgs) != 1 || msgs[0].Subject != jaSubject || !strings.Contains(msgs[0].HTML, "Olivia Owner") || !strings.Contains(msgs[0].HTML, webApp+"/invite?token=") {
+	if len(msgs) != 1 || msgs[0].Subject != jaSubject || !strings.Contains(msgs[0].HTML, "Olivia Owner") || !strings.Contains(msgs[0].HTML, webApp+"/app/invite?token=") {
 		t.Fatalf("invite mail %+v", msgs)
 	}
 	if ins := e.svc.mustInspect(t, e.lastLink("grace@example.com")); ins.Status != StatusValid || ins.Email != "grace@example.com" {

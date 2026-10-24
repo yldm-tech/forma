@@ -103,7 +103,6 @@ check: lint test lint-migrations
 	pnpm exec vp run tests:run-check
 	pnpm exec vp run bundle:check
 	pnpm exec vp run scan-translations
-	pnpm exec vp run api:v3:lint
 	pnpm exec vp run authzed:validate
 
 clean:

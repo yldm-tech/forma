@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// The SDK connection is a page inside Integrations in forma2; its old settings address, which the docs and bookmarks carry, still leads there.
+// The SDK connection is a page inside Integrations in forma2; its old settings address, which bookmarks carry, still leads there.
 export const Route = createFileRoute(
   "/_authenticated/workspaces/$workspaceId/settings/workspace/app-connection"
 )({

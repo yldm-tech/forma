@@ -50,12 +50,12 @@ export interface Onboarded extends OnboardedSurvey {
  */
 export const finishOnboarding = async (page: Page): Promise<Onboarded> => {
   await page.goto("/");
-  await page.waitForURL(/\/organizations\/[^/]+\/workspaces\/new\/survey/);
+  await page.waitForURL(/\/app\/organizations\/[^/]+\/workspaces\/new\/survey/);
   const organizationId = /\/organizations\/([^/]+)/.exec(page.url())![1];
   await page.getByRole("button", { name: /Start from scratch/ }).click();
-  await page.waitForURL(/\/surveys\/[^/]+\/edit/);
+  await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/edit/);
   await page.getByRole("button", { name: "Save & Close" }).click();
-  await page.waitForURL(/\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
+  await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
   return { organizationId, ...surveyFromURL(page.url()) };
 };
 
@@ -68,10 +68,10 @@ export const surveyFromURL = (url: string): OnboardedSurvey => {
 
 /** Opens the workspace's survey list and starts a survey from scratch in the full editor (with Settings and Publish). */
 export const startSurveyFromScratch = async (page: Page, workspaceId: string): Promise<void> => {
-  await page.goto(`/workspaces/${workspaceId}/surveys`);
+  await page.goto(`/app/workspaces/${workspaceId}/surveys`);
   await page.getByRole("button", { name: "New Survey" }).click();
   await page.getByRole("menuitem", { name: /Start from scratch/ }).click();
-  await page.waitForURL(/\/surveys\/[^/]+\/edit/);
+  await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/edit/);
   await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
 };
 
@@ -87,7 +87,7 @@ export const nameSurvey = async (page: Page, name: string): Promise<void> => {
 /** Publishes the survey open in the editor and waits for its summary. */
 export const publish = async (page: Page): Promise<OnboardedSurvey> => {
   await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await page.waitForURL(/\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
+  await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
   return surveyFromURL(page.url());
 };
 

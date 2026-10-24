@@ -28,7 +28,7 @@ import {
 import { meQuery } from "../../lib/queries/auth";
 import { formatDateTimeForDisplay, timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
-import { ACTION_DOCS_HREF, ActionFields, TabToggle } from "./action-form";
+import { ActionFields, TabToggle } from "./action-form";
 
 const ACTION_TYPE_ICONS: Record<string, ReactNode> = {
   code: <Code2Icon className="size-4" />,
@@ -406,11 +406,6 @@ const ActionSettingsTab = ({
                 {t("common.delete")}
               </Button>
             )}
-            <Button variant="secondary" asChild>
-              <a href={ACTION_DOCS_HREF} target="_blank" rel="noreferrer">
-                {t("common.read_docs")}
-              </a>
-            </Button>
           </div>
           {!isReadOnly && isKnownType && (
             <Button type="submit" loading={update.isPending} disabled={!isDirty}>

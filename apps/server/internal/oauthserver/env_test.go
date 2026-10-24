@@ -41,6 +41,8 @@ const (
 	issuer      = webApp + "/api/auth"
 	resource    = webApp + "/api/mcp"
 	redirectURI = "http://127.0.0.1:33418/callback"
+	// consentPagePath is the consent page's path in the browser, under the SPA's base path.
+	consentPagePath = config.AppBasePath + consentPath
 )
 
 // testUserHeader carries the signed-in user; headerSessions stands in for the credential module's sessions on it and otherwise defers to the real ones, whose session cookie RP-initiated logout reads and ends.
@@ -246,7 +248,7 @@ func (e *env) consent(requestID string, user uuid.UUID, accept bool) string {
 func (e *env) code(q url.Values, user uuid.UUID) string {
 	e.t.Helper()
 	next := e.startAuthorization(q, user)
-	if next.Path == consentPath {
+	if next.Path == consentPagePath {
 		cb, _ := url.Parse(e.consent(next.Query().Get("request_id"), user, true))
 		next = cb
 	}

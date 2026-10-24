@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { NoMobileOverlay } from "../components/shell/no-mobile-overlay";
 import { ApiError } from "../lib/api";
+import { appHref } from "../lib/base-path";
 import { changeLocale, isLocale } from "../lib/i18n";
 import { loginHref } from "../lib/navigation";
 import { meQuery } from "../lib/queries/auth";
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_authenticated")({
       await context.queryClient.ensureQueryData(meQuery);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        throw redirect({ href: loginHref(location.href), replace: true });
+        throw redirect({ href: loginHref(appHref(location.href)), replace: true });
       }
       throw error;
     }

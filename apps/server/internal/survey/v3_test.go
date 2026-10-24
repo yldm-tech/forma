@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
-// linkSurvey is a multilingual v3 create document in the shape of the spec's productFeedback example.
+// linkSurvey is a multilingual v3 create document: a product feedback link survey.
 func linkSurvey(ws uuid.UUID) string {
 	return fmt.Sprintf(`{
 	  "workspaceId": %q,

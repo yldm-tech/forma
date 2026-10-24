@@ -6,6 +6,7 @@ import { sessionQuery } from "../../features/auth/api";
 import { Button } from "../../components/ui/button";
 import { Alert, ButtonLink } from "../../features/auth/components/ui";
 import { tokenSearch } from "../../features/auth/search";
+import { appHref } from "../../lib/base-path";
 import { errorMessage } from "../../lib/errors";
 import { loginHref } from "../../lib/navigation";
 import { useConfirmAccountDeletion } from "../../lib/queries/auth";
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/auth/delete-account")({
   validateSearch: tokenSearch,
   beforeLoad: async ({ context, location }) => {
     const user = await context.queryClient.fetchQuery(sessionQuery);
-    if (!user) throw redirect({ href: loginHref(location.href), replace: true });
+    if (!user) throw redirect({ href: loginHref(appHref(location.href)), replace: true });
   },
   component: DeleteAccountPage,
 });

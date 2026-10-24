@@ -401,7 +401,7 @@ func TestCheckoutSessions(t *testing.T) {
 	})
 	e.stripe.on("GET /v1/subscriptions/sub_1", func(*http.Request) any { return map[string]any{"id": "sub_1", "currency": "eur"} })
 	e.stripe.on("POST /v1/billing_portal/sessions", func(*http.Request) any { return map[string]any{"id": "bps_1", "url": "https://billing.stripe.test/p"} })
-	billing := webApp + "/organizations/" + org.String() + "/settings/billing"
+	billing := webApp + "/app/organizations/" + org.String() + "/settings/billing"
 
 	if url, err := e.engine.PlanCheckoutURL(ctx, org, "cus_123", PlanScale, IntervalMonthly); err != nil || url != "https://checkout.stripe.test/cs_1" {
 		t.Fatalf("checkout %q %v", url, err)
@@ -411,7 +411,7 @@ func TestCheckoutSessions(t *testing.T) {
 		"mode": "subscription", "customer": "cus_123", "line_items[0][price]": "price_scale_monthly", "line_items[0][quantity]": "1", "line_items[1][price]": "price_scale_responses",
 		"client_reference_id": org.String(), "billing_address_collection": "required", "tax_id_collection[enabled]": "true", "tax_id_collection[required]": "if_supported",
 		"customer_update[address]": "auto", "customer_update[name]": "auto", "cancel_url": billing,
-		"success_url":          webApp + "/billing-confirmation?organizationId=" + org.String() + "&checkout_success=1&plan=scale",
+		"success_url":          webApp + "/app/billing-confirmation?organizationId=" + org.String() + "&checkout_success=1&plan=scale",
 		"metadata[targetPlan]": "scale", "metadata[targetInterval]": "monthly", "metadata[organizationId]": org.String(), "subscription_data[metadata][organizationId]": org.String(),
 	} {
 		if f.Get(k) != v {

@@ -50,6 +50,7 @@ describe("callbackPath", () => {
       "/invite?token=abc123&source=signin"
     );
     expect(callbackPath("/workspaces/1#settings", origin)).toBe("/workspaces/1#settings");
+    expect(callbackPath("http://localhost:3000/app/workspaces/1?x=1", origin)).toBe("/app/workspaces/1?x=1");
   });
 
   test("falls back to the root page for a missing or invalid callback", () => {
@@ -77,9 +78,9 @@ describe("inviteTokenFromCallbackUrl", () => {
   });
 });
 
-test("inviteUrl encodes the token", () => {
+test("inviteUrl is the invite page under the app's base path, the token encoded", () => {
   expect(inviteUrl("a+b/c=", "http://localhost:3000")).toBe(
-    "http://localhost:3000/invite?token=a%2Bb%2Fc%3D"
+    "http://localhost:3000/app/invite?token=a%2Bb%2Fc%3D"
   );
 });
 
@@ -92,6 +93,6 @@ describe("ssoReturnToUrl", () => {
 
   test("keeps a relative callback relative", () => {
     expect(ssoReturnToUrl("/workspaces/1", "signin")).toBe("/workspaces/1?source=signin");
-    expect(ssoReturnToUrl(undefined, "signin")).toBe("/?source=signin");
+    expect(ssoReturnToUrl(undefined, "signin")).toBe("/app/?source=signin");
   });
 });

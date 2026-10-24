@@ -2,11 +2,12 @@ import { useTranslation } from "react-i18next";
 import type { TSurveyFollowUp } from "@forma/types/surveys/follow-up";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TUserLocale } from "@forma/types/user";
-import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
 import { Button } from "../../../../components/ui/button";
 import type { TFollowUpEmailToUser } from "../../types/survey-follow-up";
-import { WORKFLOWS_DOCS_URL, formatSurveyFollowUpsSunsetDate } from "../lib/deprecation";
+import { formatSurveyFollowUpsSunsetDate } from "../lib/deprecation";
 import { FollowUpItem } from "./follow-up-item";
+import { appHref } from "../../../../lib/base-path";
 
 interface FollowUpsViewProps {
   localSurvey: TSurvey;
@@ -40,18 +41,13 @@ export const FollowUpsView = ({
         <AlertDescription>
           {t("workspace.surveys.edit.follow_ups_deprecation_description", { date: sunsetDate })}
         </AlertDescription>
-        <AlertButton asChild>
-          <a href={WORKFLOWS_DOCS_URL} target="_blank" rel="noopener noreferrer">
-            {t("common.learn_more")}
-          </a>
-        </AlertButton>
       </Alert>
 
       <div className="flex justify-end">
         <Button size="sm" asChild>
           {/* A new tab on purpose: the editor autosaves drafts only, so leaving a published survey here would drop what the author has not saved. */}
           <a
-            href={`/workspaces/${localSurvey.workspaceId}/workflows`}
+            href={appHref(`/workspaces/${localSurvey.workspaceId}/workflows`)}
             target="_blank"
             rel="noopener noreferrer">
             {t("common.new_workflow")}

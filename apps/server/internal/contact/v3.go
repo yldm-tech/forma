@@ -8,7 +8,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
-// V3Handler serves /api/v3/contact-attribute-keys (apps/docs/api-v3-reference/src/paths/api_v3_contact-attribute-keys.yml).
+// V3Handler serves /api/v3/contact-attribute-keys.
 type V3Handler struct {
 	svc *Service
 }

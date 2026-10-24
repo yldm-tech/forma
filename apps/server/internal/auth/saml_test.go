@@ -427,7 +427,7 @@ func TestSAMLSignUp(t *testing.T) {
 		f := b.samlStart("")
 		spec := f.spec()
 		spec.attributes = [][2]string{{"email", "ADA@example.com"}, {"name", "Ada King"}, {"firstName", "Ignored"}}
-		expectRedirect(t, f.complete(spec.signedResponse(t)), webApp+"/")
+		expectRedirect(t, f.complete(spec.signedResponse(t)), appBase+"/")
 		got := e.userByEmail("ada@example.com")
 		if got.ID != u.ID || got.Name != "Ada King" || got.EmailVerified || !b.has("forma.session_token") {
 			t.Fatalf("user %+v", got)
@@ -440,7 +440,7 @@ func TestSAMLSignUp(t *testing.T) {
 		ack := e.postACS(f.spec().signedResponse(t), f.relayState)
 		loc, _ := url.Parse(ack.Header().Get("Location"))
 		r := b.request(http.MethodGet, "/api/auth/oauth2/callback/saml?"+loc.RawQuery, nil, nil)
-		expectRedirect(t, r, webApp+"/")
+		expectRedirect(t, r, appBase+"/")
 		if !b.has("forma.session_token") {
 			t.Fatal("no session")
 		}
@@ -456,7 +456,7 @@ func TestSAMLRecovery(t *testing.T) {
 	f := b.samlStart("")
 	spec := f.spec()
 	spec.nameID, spec.attributes = "u-42", [][2]string{{samlAttributeEmailURI, "Grace@example.com"}}
-	expectRedirect(t, f.complete(spec.signedResponse(t)), webApp+"/auth/verification-requested?purpose=sso_recovery")
+	expectRedirect(t, f.complete(spec.signedResponse(t)), appBase+"/auth/verification-requested?purpose=sso_recovery")
 	if b.has("forma.session_token") || e.count(`SELECT count(*) FROM user_identities WHERE provider = 'saml'`) != 0 {
 		t.Fatal("the identity was linked before the mailbox was proven")
 	}
@@ -733,7 +733,7 @@ func TestSAMLReplay(t *testing.T) {
 		b := e.browser()
 		f := b.samlStart("")
 		ack := e.postACS(f.spec().signedResponse(t), f.relayState)
-		expectRedirect(t, b.follow(ack), webApp+"/")
+		expectRedirect(t, b.follow(ack), appBase+"/")
 		expectRedirect(t, b.follow(ack), loginError("please_restart_the_process"))
 		loc, _ := url.Parse(ack.Header().Get("Location"))
 		if n := e.count(`SELECT count(*) FROM verifications WHERE purpose = 'saml_assertion' AND token_hash = sha256(?::bytea) AND consumed_at IS NULL`, loc.Query().Get("code")); n != 0 {

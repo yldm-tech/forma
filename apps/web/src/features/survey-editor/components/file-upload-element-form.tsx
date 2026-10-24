@@ -18,6 +18,7 @@ import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-tog
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { TransLink } from "../../../components/ui/trans-link";
+import { appHref } from "../../../lib/base-path";
 
 interface FileUploadFormProps {
   localSurvey: TSurvey;
@@ -163,7 +164,7 @@ export const FileUploadElementForm = ({
                         className="underline"
                         target="_blank"
                         rel="noopener noreferrer"
-                        href={organizationSettingsPath(organizationId, "billing")}
+                        href={appHref(organizationSettingsPath(organizationId, "billing"))}
                       />
                     ),
                   }}

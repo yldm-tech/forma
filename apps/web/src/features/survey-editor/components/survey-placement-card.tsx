@@ -8,6 +8,7 @@ import { TSurvey, TSurveyWorkspaceOverwrites } from "@forma/types/surveys/types"
 import { Placement } from "./placement";
 import { Label } from "../../../components/ui/label";
 import { Switch } from "../../../components/ui/switch";
+import { appHref } from "../../../lib/base-path";
 
 interface SurveyPlacementCardProps {
   localSurvey: TSurvey;
@@ -138,7 +139,7 @@ export const SurveyPlacementCard = ({ localSurvey, setLocalSurvey }: SurveyPlace
                   components={{
                     lookFeelLink: (
                       <TransLink
-                        href={`${workspaceBasePath}/settings/workspace/look`}
+                        href={appHref(`${workspaceBasePath}/settings/workspace/look`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline"

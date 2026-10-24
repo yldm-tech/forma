@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,9 +16,6 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/seed"
 )
 
-// defaultFixturesPath is where `forma seed --contract` writes the contract tests' id map when run from the repository root, the directory apps/docs/api-v3-reference/contract-tests/hooks.py reads it from.
-const defaultFixturesPath = "apps/docs/api-v3-reference/contract-tests/fixtures.json"
-
 // seedEnv is what `forma seed` reads besides the database: forma2's ALLOW_SEED switch and SEED_API_KEY.
 type seedEnv struct {
 	AllowSeed  string `env:"ALLOW_SEED"`
@@ -28,9 +24,7 @@ type seedEnv struct {
 
 // seedFlags are the command line of `forma seed`.
 type seedFlags struct {
-	clear    bool
-	contract bool
-	out      string
+	clear bool
 }
 
 func parseSeedFlags(args []string) (seedFlags, error) {
@@ -38,16 +32,11 @@ func parseSeedFlags(args []string) (seedFlags, error) {
 	flags := flag.NewFlagSet("seed", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.BoolVar(&f.clear, "clear", false, "")
-	flags.BoolVar(&f.contract, "contract", false, "")
-	flags.StringVar(&f.out, "out", defaultFixturesPath, "")
 	if err := flags.Parse(args); err != nil {
 		return seedFlags{}, err
 	}
 	if flags.NArg() > 0 {
 		return seedFlags{}, fmt.Errorf("unexpected argument %q", flags.Arg(0))
-	}
-	if f.out == "" {
-		return seedFlags{}, errors.New("--out needs a path")
 	}
 	return f, nil
 }
@@ -64,7 +53,7 @@ func seedAllowed(v string) (bool, error) {
 	}
 }
 
-// runSeed is `forma seed [--clear] [--contract [--out path]]`: forma2's db:seed, db:seed:clear and db:seed:contract.
+// runSeed is `forma seed [--clear]`: forma2's db:seed and db:seed:clear.
 func runSeed(ctx context.Context, args []string) error {
 	f, err := parseSeedFlags(args)
 	if err != nil {
@@ -93,19 +82,8 @@ func runSeed(ctx context.Context, args []string) error {
 	}
 	defer closeDB()
 
-	fixtures, err := seed.Run(ctx, db, seed.Options{Clear: f.clear, APIKeySecret: e.SeedAPIKey, Contract: f.contract}, log)
-	if err != nil {
+	if err := seed.Run(ctx, db, seed.Options{Clear: f.clear, APIKeySecret: e.SeedAPIKey}, log); err != nil {
 		return err
-	}
-	if fixtures != nil {
-		b, err := json.MarshalIndent(fixtures, "", "  ")
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(f.out, append(b, '\n'), 0o600); err != nil {
-			return fmt.Errorf("write contract fixtures: %w", err)
-		}
-		log.InfoContext(ctx, "wrote the contract fixtures", "path", f.out)
 	}
 
 	fmt.Printf("Seeded. Sign in with any of these, password %q:\n", seed.Password)

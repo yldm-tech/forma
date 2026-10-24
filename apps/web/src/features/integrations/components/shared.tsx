@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon, RefreshCcwIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription } from "../../../components/ui/alert";
 import { Button } from "../../../components/ui/button";
 import { Checkbox } from "../../../components/ui/checkbox";
@@ -11,7 +11,6 @@ import { Label } from "../../../components/ui/label";
 import { FormaLogo } from "../../../components/ui/logo";
 import { Select } from "../../../components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../components/ui/tooltip";
-import { TransLink } from "../../../components/ui/trans-link";
 import { errorMessage } from "../../../lib/errors";
 import { timeSince } from "../../../lib/time";
 import { toast } from "../../../lib/toast";
@@ -51,31 +50,27 @@ export const useConnect = (workspaceId: string, type: IntegrationType) => {
 const DETAILS = {
   googleSheets: {
     text: "workspace.integrations.google_sheets.google_sheets_integration_description",
-    docsLink: "https://forma.yldm.ai/docs/integrations/google-sheets",
     connect: "workspace.integrations.google_sheets.connect_with_google_sheets",
     notConfigured: "workspace.integrations.google_sheets.google_sheet_integration_is_not_configured",
   },
   airtable: {
     text: "workspace.integrations.airtable.airtable_integration_description",
-    docsLink: "https://forma.yldm.ai/docs/integrations/airtable",
     connect: "workspace.integrations.airtable.connect_with_airtable",
     notConfigured: "workspace.integrations.airtable.airtable_integration_is_not_configured",
   },
   notion: {
     text: "workspace.integrations.notion.notion_integration_description",
-    docsLink: "https://forma.yldm.ai/docs/integrations/notion",
     connect: "workspace.integrations.notion.connect_with_notion",
     notConfigured: "workspace.integrations.notion.notion_integration_is_not_configured",
   },
   slack: {
     text: "workspace.integrations.slack.slack_integration_description",
-    docsLink: "https://forma.yldm.ai/docs/integrations/slack",
     connect: "workspace.integrations.slack.connect_with_slack",
     notConfigured: "workspace.integrations.slack.slack_integration_is_not_configured",
   },
 } as const;
 
-/** forma2's ConnectIntegration: what the integration does and the button that starts its OAuth flow, disabled with a pointer to the docs when the instance has no credentials for it. A callback that came back with ?error says so once. */
+/** forma2's ConnectIntegration: what the integration does and the button that starts its OAuth flow, disabled with a note when the instance has no credentials for it. A callback that came back with ?error says so once. */
 export const ConnectIntegration = ({
   type,
   isEnabled,
@@ -116,15 +111,6 @@ export const ConnectIntegration = ({
         {!isEnabled && (
           <p className="mb-8 rounded-sm border-slate-200 bg-slate-100 p-3 text-sm">
             {t(details.notConfigured)}
-            <br />
-            <Trans
-              i18nKey="workspace.integrations.follow_these_docs_to_configure_it"
-              components={{
-                docsLink: (
-                  <TransLink href={details.docsLink} target="_blank" rel="noreferrer" className="underline" />
-                ),
-              }}
-            />
           </p>
         )}
         <Button loading={isConnecting} onClick={onConnect} disabled={!isEnabled}>

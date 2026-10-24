@@ -40,6 +40,7 @@ import {
   removeLanguageKeysFromSurvey,
 } from "../lib/utils";
 import { ManageTranslationsModal } from "./manage-translations-modal";
+import { appHref } from "../../../../lib/base-path";
 
 interface LanguageViewProps {
   localSurvey: TSurvey;
@@ -478,7 +479,7 @@ export const LanguageView = ({
           {/* Manage workspace languages link */}
           <Button asChild size="sm" variant="secondary">
             <a
-              href={`/workspaces/${workspaceId}/settings/workspace/languages`}
+              href={appHref(`/workspaces/${workspaceId}/settings/workspace/languages`)}
               target="_blank"
               rel="noopener noreferrer">
               {t("workspace.surveys.edit.manage_languages")}
@@ -509,7 +510,7 @@ export const LanguageView = ({
           </p>
           <Button asChild size="sm" variant="secondary" className="mt-3">
             <a
-              href={`/workspaces/${workspaceId}/settings/workspace/languages`}
+              href={appHref(`/workspaces/${workspaceId}/settings/workspace/languages`)}
               target="_blank"
               rel="noopener noreferrer">
               {t("workspace.surveys.edit.manage_languages")}

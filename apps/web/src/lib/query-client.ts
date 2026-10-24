@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./api";
+import { appHref } from "./base-path";
 import { loginHref } from "./navigation";
 import { authKeys } from "./queries/auth";
 
@@ -18,7 +19,7 @@ export const isSessionEnded = (error: unknown): boolean =>
 /** Leaves for the sign-in page with the current page as where to return, as forma2's proxy redirected any request without a session. A full navigation, so nothing of the ended session survives in memory. */
 const goToSignIn = () => {
   const { pathname, search, hash } = globalThis.location;
-  globalThis.location.assign(loginHref(pathname + search + hash));
+  globalThis.location.assign(appHref(loginHref(pathname + search + hash)));
 };
 
 /**

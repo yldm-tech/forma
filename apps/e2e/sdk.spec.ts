@@ -109,7 +109,7 @@ test("shows an app survey through the SDK on a host page and records the answer"
   });
 
   await test.step("find the response", async () => {
-    await page.goto(`/workspaces/${workspaceId}/surveys/${surveyId}/responses`);
+    await page.goto(`/app/workspaces/${workspaceId}/surveys/${surveyId}/responses`);
     const row = page.getByRole("main").getByRole("table").getByRole("row").filter({ hasText: answer });
     await expect(row).toHaveCount(1);
   });

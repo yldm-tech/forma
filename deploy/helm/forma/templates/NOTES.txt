@@ -92,8 +92,8 @@ The following environment variables have been configured:
 {{- end }}
 - `NEXTAUTH_SECRET`: A random 32-character string (auto-generated)
 - `ENCRYPTION_KEY`: A random 32-character string (auto-generated)
-- `EMAIL_VERIFICATION_DISABLED`: 1 # By Default email verification is disabled, configure SMTP settings to enable(https://forma.yldm.ai/docs/self-hosting/configuration/smtp)
-- `PASSWORD_RESET_DISABLED`: 1 # By Default password reset is disabled, configure SMTP settings to enable(https://forma.yldm.ai/docs/self-hosting/configuration/smtp)
+- `EMAIL_VERIFICATION_DISABLED`: 1 # By Default email verification is disabled, configure SMTP settings to enable
+- `PASSWORD_RESET_DISABLED`: 1 # By Default password reset is disabled, configure SMTP settings to enable
 
 Retrieve them using:
 ```sh
@@ -208,9 +208,7 @@ AuthZed / SpiceDB Operations:
    kubectl exec -n {{ .Release.Namespace }} deployment/{{ include "forma.name" . }} -- forma authz backfill
    ```
 
-   Outside the release's initialization Job, schema replacement and relationship repair are explicit
-   operator actions. Read the safeguards and backup requirements before changing authorization state:
-   https://forma.yldm.ai/docs/self-hosting/advanced/authzed-operations
+   Outside the release's initialization Job, schema replacement and relationship repair are explicit operator actions. Read the safeguards and backup requirements in the repository's apps/server/authzed/README.md before changing authorization state.
 
 ---
 {{- end }}
@@ -226,12 +224,9 @@ Persistence:
 
 ---
 
-Forma Documentation and Support:
+Forma Support:
 
-For more information, advanced configurations, and support, visit:
+For more information and support, visit:
 - **Official Website**: https://forma.yldm.ai
-- **Documentation**: https://forma.yldm.ai/docs
-
-For troubleshooting, refer to the documentation or community support.
 
 ---

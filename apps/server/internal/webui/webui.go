@@ -1,4 +1,4 @@
-// Package webui serves the admin SPA that `pnpm --filter @forma/web build` writes into dist/.
+// Package webui serves the admin SPA that `pnpm --filter @forma/web build` writes into dist/. The SPA is built for config.AppBasePath (/app) and served only under it; the files of apps/web/public that surveys, emails and customer sites load keep their root URLs, the admin pages that lived at the root before answer with a permanent redirect to the same path under /app, and the root itself leads to the app.
 package webui
 
 import (
@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,12 @@ type Handler struct {
 
 // surveyShell is the survey page bundle's entry in the build (apps/web/survey.html).
 const surveyShell = "survey.html"
+
+// RootPublicPaths are the first path segments of the build's files that are served at their root URL as well as under /app: the files of apps/web/public that something outside the SPA loads by a root path. Surveys and workspaces store /image-backgrounds and /animated-bgs URLs as their backgrounds, the survey runtime and emails load /smiley-icons and /star-icons, forma2's emails embed /logo-transparent.png, customer sites load the SDK from /js, browsers ask for /favicon.ico, and the organization invite template is a download link at /sample-csv. A new top-level entry in apps/web/public needs a decision here (TestRootPublicPathsCoverThePublicDirectory) and, when it is listed, in the ingress that routes these paths to the server.
+var RootPublicPaths = []string{"animated-bgs", "favicon", "favicon.ico", "image-backgrounds", "js", "logo-transparent.png", "sample-csv", "smiley-icons", "star-icons"}
+
+// LegacyAdminPaths are the first path segments of the admin pages that were served at the root, by forma2 and by this SPA before it moved under /app. Links to them were mailed, bookmarked and registered as return URLs, so each answers with a permanent redirect (308) to the same path and query under /app.
+var LegacyAdminPaths = []string{"account", "auth", "billing-confirmation", "email-change-without-verification-success", "environments", "i", "invite", "organizations", "projects", "setup", "verify-email-change", "workspaces"}
 
 // publicContentTypes are the types of the static files in apps/web/public that Go's built-in table does not know, set explicitly because the distroless image has no system MIME database to fall back on; forma2 sent text/csv for its CSV templates and image/svg+xml for every SVG.
 var publicContentTypes = map[string]string{
@@ -131,53 +138,56 @@ func (h *Handler) serve(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"code": "not_found", "message": "Route not found"})
 		return
 	}
+	if rest, ok := strings.CutPrefix(p, config.AppBasePath); ok && (rest == "" || strings.HasPrefix(rest, "/")) {
+		h.serveApp(c, rest)
+		return
+	}
+	clean := path.Clean(p)
+	first, _, _ := strings.Cut(strings.TrimPrefix(clean, "/"), "/")
+	switch {
+	case slices.Contains(LegacyAdminPaths, first):
+		redirectToApp(c, http.StatusPermanentRedirect, c.Request.URL.EscapedPath())
+	case clean == "/":
+		// Temporary: a deployment that puts a website at the root later must not find browsers holding a cached redirect.
+		redirectToApp(c, http.StatusFound, "/")
+	case slices.Contains(RootPublicPaths, first):
+		if !allowedMethod(c) {
+			return
+		}
+		if !h.serveFile(c, strings.TrimPrefix(clean, "/")) {
+			c.Status(http.StatusNotFound)
+		}
+	default:
+		c.String(http.StatusNotFound, "404 page not found")
+	}
+}
+
+// redirectToApp sends the request to target under the app's base path, the query kept.
+func redirectToApp(c *gin.Context, status int, target string) {
+	target = config.AppBasePath + target
+	if q := c.Request.URL.RawQuery; q != "" {
+		target += "?" + q
+	}
+	c.Header("Cache-Control", "no-store")
+	c.Redirect(status, target)
+}
+
+func allowedMethod(c *gin.Context) bool {
 	if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
 		c.Status(http.StatusMethodNotAllowed)
-		return
+		return false
 	}
+	return true
+}
 
-	name := strings.TrimPrefix(path.Clean(p), "/")
-	if name == surveyShell {
-		c.Status(http.StatusNotFound)
+// serveApp answers a path under the app's base path, given without it: a file of the build, or index.html for a client route.
+func (h *Handler) serveApp(c *gin.Context, rest string) {
+	if !allowedMethod(c) {
 		return
 	}
+	name := strings.TrimPrefix(path.Clean("/"+rest), "/")
 	if name != "" && name != "index.html" {
-		if info, err := fs.Stat(h.files, name); err == nil && !info.IsDir() {
-			switch {
-			// Vite fingerprints everything under assets/, so those files never change under the same name.
-			case strings.HasPrefix(name, "assets/"):
-				c.Header("Cache-Control", "public, max-age=31536000, immutable")
-			// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly while a CDN may hold them for 30 days. Same headers forma2 sent.
-			case strings.HasPrefix(name, "js/"):
-				c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
-				c.Header("Access-Control-Allow-Origin", "*")
-				c.Header("Vary", "Accept-Encoding")
-				// Go has no MIME type for .cjs and would sniff text/plain, which browsers refuse to execute. The charset is spelled as forma2 sent it.
-				if ext := path.Ext(name); ext == ".js" || ext == ".cjs" {
-					c.Header("Content-Type", "application/javascript; charset=UTF-8")
-				}
-			// The favicons rarely change. Same headers forma2 sent (apps/web/next.config.mjs), as are the folders below.
-			case name == "favicon.ico" || strings.HasPrefix(name, "favicon/"):
-				c.Header("Cache-Control", "public, max-age=2592000, s-maxage=31536000, immutable")
-				c.Header("Access-Control-Allow-Origin", "*")
-			// Surveys and workspaces store these paths as their background; emails and customer pages load them cross-origin.
-			case strings.HasPrefix(name, "image-backgrounds/"):
-				c.Header("Cache-Control", "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400")
-				c.Header("Access-Control-Allow-Origin", "*")
-				c.Header("Vary", "Accept-Encoding")
-			case strings.HasPrefix(name, "animated-bgs/"):
-				c.Header("Cache-Control", "public, max-age=604800, s-maxage=31536000, immutable")
-				c.Header("Access-Control-Allow-Origin", "*")
-			case strings.HasPrefix(name, "sample-csv/"):
-				c.Header("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600")
-				c.Header("Access-Control-Allow-Origin", "*")
-			default:
-				c.Header("Cache-Control", "no-cache")
-			}
-			if ct, ok := publicContentTypes[path.Ext(name)]; ok {
-				c.Header("Content-Type", ct)
-			}
-			c.FileFromFS("/"+name, http.FS(h.files))
+		if h.serveFile(c, name) {
 			return
 		}
 		// A missing fingerprinted asset is a stale deploy, not a client route; returning index.html would make the browser parse HTML as JavaScript.
@@ -195,4 +205,51 @@ func (h *Handler) serve(c *gin.Context) {
 	// The SPA converts HEIC images with WebAssembly.
 	httpserver.AllowWebAssembly(c)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", h.index)
+}
+
+// serveFile writes the build's file name with the headers its folder gets, and reports whether there was one. The survey page bundle's HTML is a template, never a file.
+func (h *Handler) serveFile(c *gin.Context, name string) bool {
+	if name == surveyShell {
+		return false
+	}
+	info, err := fs.Stat(h.files, name)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	switch {
+	// Vite fingerprints everything under assets/, so those files never change under the same name.
+	case strings.HasPrefix(name, "assets/"):
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly while a CDN may hold them for 30 days. Same headers forma2 sent.
+	case strings.HasPrefix(name, "js/"):
+		c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Vary", "Accept-Encoding")
+		// Go has no MIME type for .cjs and would sniff text/plain, which browsers refuse to execute. The charset is spelled as forma2 sent it.
+		if ext := path.Ext(name); ext == ".js" || ext == ".cjs" {
+			c.Header("Content-Type", "application/javascript; charset=UTF-8")
+		}
+	// The favicons rarely change. Same headers forma2 sent (apps/web/next.config.mjs), as are the folders below.
+	case name == "favicon.ico" || strings.HasPrefix(name, "favicon/"):
+		c.Header("Cache-Control", "public, max-age=2592000, s-maxage=31536000, immutable")
+		c.Header("Access-Control-Allow-Origin", "*")
+	// Surveys and workspaces store these paths as their background; emails and customer pages load them cross-origin.
+	case strings.HasPrefix(name, "image-backgrounds/"):
+		c.Header("Cache-Control", "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400")
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Vary", "Accept-Encoding")
+	case strings.HasPrefix(name, "animated-bgs/"):
+		c.Header("Cache-Control", "public, max-age=604800, s-maxage=31536000, immutable")
+		c.Header("Access-Control-Allow-Origin", "*")
+	case strings.HasPrefix(name, "sample-csv/"):
+		c.Header("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600")
+		c.Header("Access-Control-Allow-Origin", "*")
+	default:
+		c.Header("Cache-Control", "no-cache")
+	}
+	if ct, ok := publicContentTypes[path.Ext(name)]; ok {
+		c.Header("Content-Type", ct)
+	}
+	c.FileFromFS("/"+name, http.FS(h.files))
+	return true
 }

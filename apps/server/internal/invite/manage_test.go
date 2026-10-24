@@ -149,7 +149,7 @@ func TestShareLink(t *testing.T) {
 	r := e.do(o.owner, http.MethodPost, "/invites/"+id.String()+"/link", nil)
 	expect(t, r, http.StatusOK, "")
 	token := r.json()["inviteToken"].(string)
-	if r.json()["inviteUrl"] != webApp+"/invite?token="+token {
+	if r.json()["inviteUrl"] != webApp+"/app/invite?token="+token {
 		t.Fatalf("link %s", r.Body.String())
 	}
 	if e.svc.mustInspect(t, token).Status != StatusValid || e.svc.mustInspect(t, mailed).Status != StatusValid {
