@@ -12,6 +12,7 @@ import { quotasQuery } from "../../../survey-editor/api";
 import {
   analysisApi,
   analysisKeys,
+  invalidateSurveyAnalysis,
   surveyResponseCountQuery,
   surveyResponsesQuery,
   toResponseTag,
@@ -23,7 +24,7 @@ import { useResponseFilter } from "../filter/response-filter-context";
 import { ResponseTable } from "./response-table";
 
 /**
- * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once; a tag change reads the response again. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
+ * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once, and the pages are then read again; a tag change reads the response again. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
  */
 export const ResponsePage = ({
   survey,
@@ -62,9 +63,10 @@ export const ResponsePage = ({
       predicate: (query) => JSON.stringify(query.queryKey) !== JSON.stringify(responsesQuery.queryKey),
     });
 
+  // The pages are offsets, so a delete leaves the next page's offset and whether there is one stale (a short page reads as the last): the loaded pages are read again as well, the same number of them.
   const onResponsesDeleted = (responseIds: string[]) => {
     updatePages((page) => page.filter((response) => !responseIds.includes(response.id)));
-    void invalidateOtherAnalysis();
+    void invalidateSurveyAnalysis(queryClient, survey.id);
   };
 
   const onResponseChanged = async (responseId: string) => {
@@ -105,7 +107,10 @@ export const ResponsePage = ({
   );
 
   const total = matchingCount.data;
-  const showCount = !responses.isPending && total !== undefined && total > 0;
+  // A delete that empties the loaded rows while responses remain shows the placeholder rows until the pages are read again, not an empty state that contradicts the count.
+  const isLoadingRows =
+    responses.isPending || (loaded.length === 0 && responses.isFetching && (total ?? 0) > 0);
+  const showCount = !isLoadingRows && total !== undefined && total > 0;
 
   const countSummary = showCount && (
     <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -137,7 +142,7 @@ export const ResponsePage = ({
           isReadOnly={isReadOnly}
           fetchNextPage={() => responses.fetchNextPage().then((result) => result.data?.pages.flat() ?? [])}
           hasMore={responses.hasNextPage}
-          isFetchingFirstPage={responses.isPending}
+          isFetchingFirstPage={isLoadingRows}
           totalCount={total}
           countSummary={countSummary}
           emptyState={emptyState}
