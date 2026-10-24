@@ -1,0 +1,36 @@
+{
+  "name": "@forma/website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build && vp build --ssr src/prerender/main.ts && node .prerender/main.js",
+    "test": "vp test run",
+    "og-images": "vp build --ssr src/prerender/og-images.ts && node .prerender/og-images.js",
+    "clean": "rimraf node_modules dist .prerender"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "three": "0.186.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@forma/config-typescript": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "catalog:",
+    "rimraf": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}

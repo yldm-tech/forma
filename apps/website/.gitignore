@@ -1,0 +1,2 @@
+# The prerender step's own build (src/prerender/main.ts for Node) and the nginx rules it writes; dist/ is ignored repository-wide.
+.prerender/

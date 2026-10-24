@@ -5,6 +5,7 @@
   "scripts": {
     "build": "vp run -r build",
     "dev": "vp run --filter @forma/web dev",
+    "dev:website": "vp run --filter @forma/website dev",
     "clean": "vp run -r clean && rimraf node_modules coverage",
     "check": "pnpm catalog:check && pnpm tests:run-check && vp check",
     "check:fix": "vp check --fix",
