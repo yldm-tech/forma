@@ -13,7 +13,6 @@ export const zh: SiteContent = {
       integrations: "集成",
       developers: "开发者",
       selfHosting: "私有化部署",
-      docs: "文档",
       github: "GitHub",
       openMenu: "打开菜单",
       closeMenu: "关闭菜单",
@@ -22,7 +21,6 @@ export const zh: SiteContent = {
     cta: {
       primary: { closed: "私有化部署 Forma", open: "开始使用" },
       signIn: "登录",
-      docs: "文档",
     },
     beta: "Beta",
     copy: { button: "复制", done: "已复制" },
@@ -39,8 +37,6 @@ export const zh: SiteContent = {
       product: "产品",
       developers: "开发者",
       project: "项目",
-      apiReference: "API 参考",
-      mcp: "MCP",
       reportIssue: "反馈问题",
       security: "安全",
       copyright: "© 2026 YLDM",
@@ -253,8 +249,7 @@ export const zh: SiteContent = {
       },
       automation: {
         title: "自动化工具",
-        body: "提供 Zapier、Make、n8n 和 Activepieces 的分步接入指南。",
-        link: "查看集成指南 →",
+        body: "Zapier、Make、n8n 和 Activepieces 通过 Webhook API 订阅回答。",
       },
       workflows: {
         title: "工作流（Workflows）",
@@ -275,13 +270,11 @@ export const zh: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "使用 API Key 管理问卷、回答、工作流和标签，API 以 OpenAPI 规范描述。",
-        link: "API 参考 →",
+        body: "使用 API Key 管理问卷、回答、工作流和标签。",
       },
       mcp: {
         title: "MCP 服务器",
         body: "把 MCP 客户端指向 `https://forma.yldm.ai/api/mcp`，用你自己的 Forma 账号通过 OAuth 登录并授权所需权限，Agent 就能查看、创建和编辑问卷与工作流。",
-        link: "MCP 指南 →",
       },
       webhooks: {
         title: "Webhook",
@@ -292,7 +285,7 @@ export const zh: SiteContent = {
     selfHosting: {
       meta: {
         title: "私有化部署 Forma · Docker / Helm",
-        description: "使用 Docker Compose、Ubuntu 一键脚本或 Helm Chart 部署 Forma，附硬件要求与部署指南。",
+        description: "使用 Docker Compose、Ubuntu 一键脚本或 Helm Chart 部署 Forma，附硬件要求与部署方式。",
       },
       // U+200B marks where the heading may wrap: headings in Chinese only wrap at punctuation and spaces (styles.css).
       title: "在自己的基础设施上\u200b运行 Forma",
@@ -301,17 +294,17 @@ export const zh: SiteContent = {
       docker: {
         title: "Docker Compose",
         body: "下载 Compose 文件，创建 `.env`，执行 `docker compose up`。",
-        link: "Docker 部署指南 →",
+        link: "在 GitHub 查看 Compose 文件 →",
       },
       oneClick: {
         title: "一键安装（Ubuntu）",
         body: "一个 Shell 脚本即可完成 Forma 的部署，并配置好 Traefik 与 HTTPS 证书。",
-        link: "一键安装指南 →",
+        link: "在 GitHub 查看安装脚本 →",
       },
       kubernetes: {
         title: "Kubernetes",
         body: "官方 Helm Chart，可按需对接托管的 PostgreSQL、Redis 和兼容 S3 的对象存储。",
-        link: "Kubernetes 部署指南 →",
+        link: "在 GitHub 查看 Helm Chart →",
       },
       requirements: {
         title: "硬件要求",

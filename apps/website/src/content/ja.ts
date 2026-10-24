@@ -13,7 +13,6 @@ export const ja: SiteContent = {
       integrations: "連携",
       developers: "開発者向け",
       selfHosting: "セルフホスト",
-      docs: "ドキュメント",
       github: "GitHub",
       openMenu: "メニューを開く",
       closeMenu: "メニューを閉じる",
@@ -22,7 +21,6 @@ export const ja: SiteContent = {
     cta: {
       primary: { closed: "セルフホストする", open: "はじめる" },
       signIn: "ログイン",
-      docs: "ドキュメント",
     },
     beta: "ベータ版",
     copy: { button: "コピー", done: "コピーしました" },
@@ -39,8 +37,6 @@ export const ja: SiteContent = {
       product: "製品",
       developers: "開発者向け",
       project: "プロジェクト",
-      apiReference: "API リファレンス",
-      mcp: "MCP",
       reportIssue: "問題を報告",
       security: "セキュリティ",
       copyright: "© 2026 YLDM",
@@ -261,8 +257,7 @@ export const ja: SiteContent = {
       },
       automation: {
         title: "自動化ツール",
-        body: "Zapier、Make、n8n、Activepieces との連携手順をガイドで紹介しています。",
-        link: "連携ガイドを見る →",
+        body: "Zapier、Make、n8n、Activepieces は Webhook API を通じて回答を受け取れます。",
       },
       workflows: {
         title: "ワークフロー",
@@ -284,13 +279,11 @@ export const ja: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "API キーで、アンケート・回答・ワークフロー・タグを管理できます。API は OpenAPI で定義されています。",
-        link: "API リファレンス →",
+        body: "API キーで、アンケート・回答・ワークフロー・タグを管理できます。",
       },
       mcp: {
         title: "MCP サーバー",
         body: "MCP クライアントの接続先を `https://forma.yldm.ai/api/mcp` に設定し、自分の Forma アカウントで OAuth ログインして権限を承認すると、エージェントがアンケートやワークフローの一覧表示・作成・編集を行えます。",
-        link: "MCP ガイド →",
       },
       webhooks: {
         title: "Webhook",
@@ -302,7 +295,7 @@ export const ja: SiteContent = {
       meta: {
         title: "Forma をセルフホスト｜Docker・Helm",
         description:
-          "Docker Compose、Ubuntu 用ワンクリックスクリプト、Helm チャートで Forma を導入。要件とセットアップ手順。",
+          "Docker Compose、Ubuntu 用ワンクリックスクリプト、Helm チャートで Forma を導入。要件と導入方法。",
       },
       title: "自社のインフラで Forma を動かす",
       sub: "コンテナで動く 1 つの Go バイナリと、PostgreSQL・Valkey・SpiceDB。チームに合った方法を選べます。",
@@ -310,17 +303,17 @@ export const ja: SiteContent = {
       docker: {
         title: "Docker Compose",
         body: "Compose ファイルをダウンロードし、`.env` を作成して `docker compose up` を実行します。",
-        link: "Docker ガイド →",
+        link: "GitHub で Compose ファイルを見る →",
       },
       oneClick: {
         title: "ワンクリック（Ubuntu）",
         body: "シェルスクリプト 1 本で、Traefik と HTTPS 証明書を含めて Forma をセットアップします。",
-        link: "ワンクリックガイド →",
+        link: "GitHub でインストールスクリプトを見る →",
       },
       kubernetes: {
         title: "Kubernetes",
         body: "公式 Helm チャート。必要に応じて、マネージドの PostgreSQL、Redis、S3 互換ストレージを利用できます。",
-        link: "Kubernetes ガイド →",
+        link: "GitHub で Helm チャートを見る →",
       },
       requirements: {
         title: "要件",

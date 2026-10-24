@@ -28,7 +28,7 @@ describe("routes", () => {
     for (const path of paths) expect(path.endsWith("/")).toBe(true);
   });
 
-  it("claims no path the app, the server or the docs own", () => {
+  it("claims no path the app or the server owns", () => {
     const owned = [
       ...ROUTES.map((route) => route.path),
       ...LOCALES.map(notFoundPath),

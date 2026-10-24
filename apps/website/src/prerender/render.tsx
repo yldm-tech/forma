@@ -41,7 +41,7 @@ export const buildSitemap = (): string => {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
 };
 
-// The app, its API and shared result pages are not for search engines. /docs/ stays crawlable (list its sitemap here if the docs export starts publishing one), and survey pages (/s/*) are left to the server, which owns their noindex.
+// The app, its API and shared result pages are not for search engines. Survey pages (/s/*) are left to the server, which owns their noindex.
 export const ROBOTS_TXT = `User-agent: *
 Allow: /
 Disallow: /app/

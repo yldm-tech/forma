@@ -46,6 +46,15 @@ describe("prerendered pages", () => {
     }
   );
 
+  // The documentation site is retired, so no page may link to /docs.
+  it.each([...ROUTES.map((route) => route.path), ...LOCALES.map(notFoundProbePath)])(
+    "%s links to no documentation",
+    async (path) => {
+      const html = await renderPath(path, assets);
+      expect(html).not.toMatch(/href="(https:\/\/forma\.yldm\.ai)?\/docs/);
+    }
+  );
+
   it("renders the home hero in each locale", async () => {
     for (const locale of LOCALES) {
       const route = ROUTES.find((r) => r.locale === locale && r.page === "home");

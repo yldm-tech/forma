@@ -25,13 +25,12 @@ const common = obj({
     integrations: text,
     developers: text,
     selfHosting: text,
-    docs: text,
     github: text,
     openMenu: text,
     closeMenu: text,
     language: text,
   }),
-  cta: obj({ primary: signupVariant, signIn: text, docs: text }),
+  cta: obj({ primary: signupVariant, signIn: text }),
   beta: text,
   copy: obj({ button: text, done: text }),
   ctaBand: obj({ title: text, body: signupVariant }),
@@ -40,8 +39,6 @@ const common = obj({
     product: text,
     developers: text,
     project: text,
-    apiReference: text,
-    mcp: text,
     reportIssue: text,
     security: text,
     copyright: text,
@@ -131,7 +128,7 @@ const integrations = obj({
   sub: text,
   native: section,
   webhooks: section,
-  automation: linkedSection,
+  automation: section,
   workflows: obj({ title: text, body: text, badgeNote: text }),
 });
 
@@ -140,8 +137,8 @@ const developers = obj({
   title: text,
   sub: text,
   snippet: section,
-  api: linkedSection,
-  mcp: linkedSection,
+  api: section,
+  mcp: section,
   webhooks: linkedSection,
 });
 

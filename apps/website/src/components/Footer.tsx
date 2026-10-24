@@ -1,4 +1,4 @@
-import { DOCS, DOCS_PATH, GITHUB_URL, localePrefix, pagePath } from "../site";
+import { GITHUB_URL, localePrefix, pagePath } from "../site";
 import { LanguageLinks } from "./Header";
 import { Icon } from "./icons";
 import { LogoMark } from "./Logo";
@@ -59,9 +59,7 @@ export const SiteFooter = () => {
         <Column
           title={footer.developers}
           links={[
-            { href: DOCS_PATH, label: nav.docs },
-            { href: DOCS.apiV3, label: footer.apiReference },
-            { href: DOCS.mcp, label: footer.mcp },
+            { href: pagePath(locale, "developers"), label: nav.developers },
             { href: pagePath(locale, "selfHosting"), label: nav.selfHosting },
           ]}
         />

@@ -1,4 +1,4 @@
-# The marketing site on forma.yldm.ai: static HTML for every page in en, zh and ja, served by nginx on :8080 next to the app (/app, the Go server) and the documentation (/docs, apps/docs/deploy). Build from the repository root, like the other images: `docker build -f apps/website/Dockerfile -t forma-website .`.
+# The marketing site on forma.yldm.ai: static HTML for every page in en, zh and ja, served by nginx on :8080 next to the app (/app, the Go server). Build from the repository root, like the other images: `docker build -f apps/website/Dockerfile -t forma-website .`.
 #
 # SIGNUP_OPEN=1 switches the primary call to action from self-hosting to sign-up; set it only once forma.yldm.ai runs with IS_FORMA_CLOUD=1, or /app/auth/signup is a 404 for visitors.
 #

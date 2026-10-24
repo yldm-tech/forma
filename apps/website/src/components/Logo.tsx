@@ -1,4 +1,4 @@
-// The tile mark from apps/web/public/logo-transparent.png, drawn on the 48-unit grid of apps/web/public/favicon/safari-pinned-tab.svg: a teal tile, a long mint bar, a short white bar and a mint dot. The old Formbricks wordmark in apps/docs/images is deliberately not used; "Forma" is set in type next to it.
+// The tile mark from apps/web/public/logo-transparent.png, drawn on the 48-unit grid of apps/web/public/favicon/safari-pinned-tab.svg: a teal tile, a long mint bar, a short white bar and a mint dot. "Forma" is set in type next to it.
 export const LogoMark = ({ size = 32 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="4 2 40 44" aria-hidden="true" focusable="false">
     <rect x="6" y="4" width="36" height="40" rx="10" fill="#038178" />

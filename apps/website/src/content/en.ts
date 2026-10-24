@@ -13,7 +13,6 @@ export const en: SiteContent = {
       integrations: "Integrations",
       developers: "Developers",
       selfHosting: "Self-hosting",
-      docs: "Docs",
       github: "GitHub",
       openMenu: "Open menu",
       closeMenu: "Close menu",
@@ -22,7 +21,6 @@ export const en: SiteContent = {
     cta: {
       primary: { closed: "Self-host Forma", open: "Get started" },
       signIn: "Sign in",
-      docs: "Docs",
     },
     beta: "Beta",
     copy: { button: "Copy", done: "Copied" },
@@ -39,8 +37,6 @@ export const en: SiteContent = {
       product: "Product",
       developers: "Developers",
       project: "Project",
-      apiReference: "API reference",
-      mcp: "MCP",
       reportIssue: "Report an issue",
       security: "Security",
       copyright: "© 2026 YLDM",
@@ -261,8 +257,7 @@ export const en: SiteContent = {
       },
       automation: {
         title: "Automation tools",
-        body: "Step-by-step guides for Zapier, Make, n8n and Activepieces.",
-        link: "Read the integration guides →",
+        body: "Zapier, Make, n8n and Activepieces subscribe to responses through the webhooks API.",
       },
       workflows: {
         title: "Workflows",
@@ -284,13 +279,11 @@ export const en: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "Manage surveys, responses, workflows and tags with API keys. The API is specified in OpenAPI.",
-        link: "API reference →",
+        body: "Manage surveys, responses, workflows and tags with API keys.",
       },
       mcp: {
         title: "MCP server",
         body: "Point an MCP client at `https://forma.yldm.ai/api/mcp`. You sign in with your own Forma account over OAuth, approve the scopes, and the agent can list, create and edit surveys and workflows.",
-        link: "MCP guide →",
       },
       webhooks: {
         title: "Webhooks",
@@ -302,7 +295,7 @@ export const en: SiteContent = {
       meta: {
         title: "Self-host Forma · Docker, Helm",
         description:
-          "Run Forma with Docker Compose, a one-click Ubuntu script or the Helm chart. Requirements and setup guides.",
+          "Run Forma with Docker Compose, a one-click Ubuntu script or the Helm chart. Requirements and setup options.",
       },
       title: "Run Forma on your own infrastructure",
       sub: "One Go binary in a container, PostgreSQL, Valkey and SpiceDB. Pick the setup that fits your team.",
@@ -310,17 +303,17 @@ export const en: SiteContent = {
       docker: {
         title: "Docker Compose",
         body: "Download the Compose file, create `.env`, run `docker compose up`.",
-        link: "Docker guide →",
+        link: "Compose file on GitHub →",
       },
       oneClick: {
         title: "One-click (Ubuntu)",
         body: "A shell script that sets up Forma with Traefik and HTTPS certificates.",
-        link: "One-click guide →",
+        link: "Install script on GitHub →",
       },
       kubernetes: {
         title: "Kubernetes",
         body: "The official Helm chart, with managed PostgreSQL, Redis and S3-compatible storage when you need them.",
-        link: "Kubernetes guide →",
+        link: "Helm chart on GitHub →",
       },
       requirements: {
         title: "Requirements",

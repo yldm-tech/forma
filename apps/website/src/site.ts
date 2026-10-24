@@ -69,7 +69,7 @@ export const localeOfPath = (path: string): Locale =>
   LOCALES.find((locale) => locale !== "en" && (path === `/${locale}` || path.startsWith(`/${locale}/`))) ??
   "en";
 
-// Paths the website must never serve on forma.yldm.ai: the app (/app) and the root admin paths the server redirects into it (webui.LegacyAdminPaths), the Go server's public pages, APIs, SDK bundles and well-known endpoints, the documentation, and the files the server serves from apps/web/public at their root URL (webui.RootPublicPaths) that stored surveys, emails, browsers and customer sites load. The ingress sends these to the server or the docs image, so a page here would be unreachable at best and would shadow a live URL at worst.
+// Paths the website must never serve on forma.yldm.ai: the app (/app) and the root admin paths the server redirects into it (webui.LegacyAdminPaths), the Go server's public pages, APIs, SDK bundles and well-known endpoints, and the files the server serves from apps/web/public at their root URL (webui.RootPublicPaths) that stored surveys, emails, browsers and customer sites load. The ingress sends these to the server, so a page here would be unreachable at best and would shadow a live URL at worst. /docs, where the retired documentation site was served, stays reserved so that the site never answers its old URLs with a page of its own.
 export const RESERVED_PREFIXES = [
   "/app",
   "/api",
@@ -122,7 +122,7 @@ export interface Redirect {
   status: 301 | 302;
 }
 
-// Inbound URLs on the root domain that docs, survey templates, the API reference and the app already link to. The nginx config in the image is generated from this list (src/prerender/nginx.ts).
+// Inbound URLs on the root domain that survey templates, emails and the app already link to. The nginx config in the image is generated from this list (src/prerender/nginx.ts).
 export const REDIRECTS: Redirect[] = [
   // "Open source" is not a claim the site makes while the license is undecided, so the old landing page goes to the neutral one.
   { from: "/open-source-form-builder", to: "/form-builder/", status: 301 },
@@ -137,23 +137,19 @@ export const NATIVE_INTEGRATIONS = ["Slack", "Notion", "Airtable", "Google Sheet
 
 export const APP_LOGIN_PATH = "/app/auth/login";
 export const APP_SIGNUP_PATH = "/app/auth/signup";
-export const DOCS_PATH = "/docs/";
 
-export const DOCS = {
-  apiV3: "/docs/api-v3-reference/introduction",
-  mcp: "/docs/platform/mcp/overview",
-  integrations: "/docs/platform/features/integrations/overview",
-  docker: "/docs/self-hosting/setup/docker",
-  oneClick: "/docs/self-hosting/setup/one-click",
-  kubernetes: "/docs/self-hosting/setup/kubernetes",
-  selfHosting: "/docs/self-hosting/overview",
+/** The self-hosting files in the repository, which the self-hosting page points at for each setup. */
+export const SELF_HOSTING_SOURCES = {
+  docker: `${GITHUB_URL}/tree/main/deploy/docker`,
+  oneClick: `${GITHUB_URL}/blob/main/deploy/docker/forma.sh`,
+  kubernetes: `${GITHUB_URL}/tree/main/deploy/helm/forma`,
 } as const;
 
 /** The primary call to action, which depends on whether public sign-up is open. */
 export const primaryCtaHref = (locale: Locale): string =>
   SIGNUP_OPEN ? APP_SIGNUP_PATH : pagePath(locale, "selfHosting");
 
-// The HTML snippet from apps/docs/surveys/website-app-surveys/framework-guides.mdx (§HTML), verbatim.
+// The HTML snippet that loads the SDK from a Forma instance (/js/forma.umd.cjs) and sets it up once the script has loaded.
 export const JS_SNIPPET = `<!-- START Forma Surveys -->
 <script type="text/javascript">
 !function(){

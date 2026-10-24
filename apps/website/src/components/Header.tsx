@@ -1,6 +1,5 @@
 import {
   APP_LOGIN_PATH,
-  DOCS_PATH,
   GITHUB_URL,
   HTML_LANG,
   LOCALES,
@@ -32,7 +31,6 @@ const useTopLinks = (): { href: string; label: string }[] => {
     { href: pagePath(locale, "integrations"), label: nav.integrations },
     { href: pagePath(locale, "developers"), label: nav.developers },
     { href: pagePath(locale, "selfHosting"), label: nav.selfHosting },
-    { href: DOCS_PATH, label: nav.docs },
   ];
 };
 

@@ -6,7 +6,6 @@ import {
   CheckList,
   CodeBlock,
   CtaBand,
-  DocsLink,
   FeatureCard,
   IconTile,
   PrimaryCta,
@@ -36,7 +35,6 @@ export const HomePage = () => {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <PrimaryCta />
               <SignInCta />
-              <DocsLink className="sm:ml-2" />
             </div>
             <p className="measure text-small text-ink-500 mt-6">
               {SIGNUP_OPEN ? home.hero.note.open : home.hero.note.closed}

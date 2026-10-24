@@ -110,7 +110,7 @@ const main = async (): Promise<void> => {
   const reserved = listFiles(DIST)
     .map((file) => `/${relative(DIST, file).split(sep).join("/")}`)
     .filter(isReservedPath);
-  for (const path of reserved) problems.push(`${path} is under a path the app or the docs own`);
+  for (const path of reserved) problems.push(`${path} is under a path the app or the server owns`);
 
   for (const line of report) console.log(`  ${line}`);
   if (problems.length > 0) {

@@ -15,10 +15,9 @@ import {
 import {
   APP_LOGIN_PATH,
   NATIVE_INTEGRATIONS,
-  DOCS,
-  DOCS_PATH,
   GITHUB_URL,
   JS_SNIPPET,
+  SELF_HOSTING_SOURCES,
   SECURITY_EMAIL,
   SECURITY_POLICY_URL,
   localePrefix,
@@ -49,13 +48,7 @@ export const IntegrationsPage = () => {
       <section className="section-pad">
         <div className="container-site grid gap-6 md:grid-cols-2">
           <FeatureCard icon="webhook" title={page.webhooks.title} body={page.webhooks.body} />
-          <FeatureCard
-            icon="plug"
-            title={page.automation.title}
-            body={page.automation.body}
-            href={DOCS.integrations}
-            linkLabel={page.automation.link}
-          />
+          <FeatureCard icon="plug" title={page.automation.title} body={page.automation.body} />
         </div>
       </section>
       <SplitSection
@@ -83,14 +76,9 @@ export const DevelopersPage = () => {
         title={page.title}
         sub={page.sub}
         actions={
-          <>
-            <a href={DOCS_PATH} className="btn btn-primary">
-              {content.common.cta.docs}
-            </a>
-            <a href={GITHUB_URL} className="btn btn-secondary">
-              {content.common.nav.github}
-            </a>
-          </>
+          <a href={GITHUB_URL} className="btn btn-primary">
+            {content.common.nav.github}
+          </a>
         }
       />
       <SplitSection
@@ -102,20 +90,8 @@ export const DevelopersPage = () => {
       />
       <section className="section-pad">
         <div className="container-site grid gap-6 lg:grid-cols-3">
-          <FeatureCard
-            icon="terminal"
-            title={page.api.title}
-            body={page.api.body}
-            href={DOCS.apiV3}
-            linkLabel={page.api.link}
-          />
-          <FeatureCard
-            icon="sparkle"
-            title={page.mcp.title}
-            body={page.mcp.body}
-            href={DOCS.mcp}
-            linkLabel={page.mcp.link}
-          />
+          <FeatureCard icon="terminal" title={page.api.title} body={page.api.body} />
+          <FeatureCard icon="sparkle" title={page.mcp.title} body={page.mcp.body} />
           <FeatureCard
             icon="webhook"
             title={page.webhooks.title}
@@ -139,14 +115,9 @@ export const SelfHostingPage = () => {
         title={page.title}
         sub={page.sub}
         actions={
-          <>
-            <a href={DOCS.selfHosting} className="btn btn-primary">
-              {content.common.cta.docs}
-            </a>
-            <a href={GITHUB_URL} className="btn btn-secondary">
-              {content.common.nav.github}
-            </a>
-          </>
+          <a href={GITHUB_URL} className="btn btn-primary">
+            {content.common.nav.github}
+          </a>
         }
       />
       <section aria-labelledby="options" className="section-pad bg-surface-muted">
@@ -157,21 +128,21 @@ export const SelfHostingPage = () => {
               icon="box"
               title={page.docker.title}
               body={page.docker.body}
-              href={DOCS.docker}
+              href={SELF_HOSTING_SOURCES.docker}
               linkLabel={page.docker.link}
             />
             <FeatureCard
               icon="terminal"
               title={page.oneClick.title}
               body={page.oneClick.body}
-              href={DOCS.oneClick}
+              href={SELF_HOSTING_SOURCES.oneClick}
               linkLabel={page.oneClick.link}
             />
             <FeatureCard
               icon="server"
               title={page.kubernetes.title}
               body={page.kubernetes.body}
-              href={DOCS.kubernetes}
+              href={SELF_HOSTING_SOURCES.kubernetes}
               linkLabel={page.kubernetes.link}
             />
           </div>
@@ -248,9 +219,6 @@ export const NotFoundPage = () => {
           </SmartLink>
           <a href={APP_LOGIN_PATH} className="btn btn-secondary">
             {content.common.cta.signIn}
-          </a>
-          <a href={DOCS_PATH} className="btn btn-ghost">
-            {content.common.cta.docs}
           </a>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { DOCS_PATH, SIGNUP_OPEN, primaryCtaHref } from "../site";
+import { APP_LOGIN_PATH, SIGNUP_OPEN, primaryCtaHref } from "../site";
 import { Icon, type IconName } from "./icons";
 import { useSite } from "./site-context";
 
@@ -33,7 +33,7 @@ export const SmartLink = ({
   lang?: string;
   hrefLang?: string;
 }) => {
-  const internal = href.startsWith("/") && !href.startsWith("/docs") && !href.startsWith("/app");
+  const internal = href.startsWith("/") && !href.startsWith("/app");
   if (internal) {
     const [path, hash] = href.split("#");
     return (
@@ -66,17 +66,8 @@ export const PrimaryCta = ({ className = "" }: { className?: string }) => {
 export const SignInCta = ({ className = "" }: { className?: string }) => {
   const { content } = useSite();
   return (
-    <a href="/app/auth/login" className={`btn btn-secondary ${className}`}>
+    <a href={APP_LOGIN_PATH} className={`btn btn-secondary ${className}`}>
       {content.common.cta.signIn}
-    </a>
-  );
-};
-
-export const DocsLink = ({ className = "" }: { className?: string }) => {
-  const { content } = useSite();
-  return (
-    <a href={DOCS_PATH} className={`link ${className}`}>
-      {content.common.cta.docs}
     </a>
   );
 };

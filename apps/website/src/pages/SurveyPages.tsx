@@ -5,7 +5,6 @@ import {
   CheckList,
   CodeBlock,
   CtaBand,
-  DocsLink,
   FeatureCard,
   PageHero,
   PrimaryCta,
@@ -19,7 +18,6 @@ const HeroActions = () => (
   <>
     <PrimaryCta />
     <SignInCta />
-    <DocsLink className="sm:ml-2" />
   </>
 );
 
