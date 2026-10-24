@@ -356,3 +356,44 @@ func TestRuntimeConfigIsWrittenIntoThePage(t *testing.T) {
 		t.Errorf("a configured value closed the script element: %s", got)
 	}
 }
+
+// Behind Compress, the SDK bundles, the SPA's assets and its document are gzipped for a client that accepts gzip, under the same names and with the same cache headers as uncompressed.
+func TestBuildIsCompressed(t *testing.T) {
+	bundle := []byte(strings.Repeat("window.formaSurveys={};", 100))
+	h, err := NewFromFS(fstest.MapFS{
+		"index.html":             {Data: []byte(indexHTML + strings.Repeat("<p>Forma</p>", 100))},
+		"assets/survey-1a2b.js":  {Data: bundle},
+		"assets/survey-1a2b.css": {Data: []byte(strings.Repeat("body{margin:0}", 100))},
+		"js/surveys.umd.js":      {Data: bundle},
+		"js/surveys.umd.cjs":     {Data: bundle},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httpserver.NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	h.Register(r)
+	server := httpserver.Compress(r)
+
+	sdk := "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400"
+	for path, cacheControl := range map[string]string{
+		"/js/surveys.umd.js":          sdk,
+		"/js/surveys.umd.cjs":         sdk,
+		"/app/assets/survey-1a2b.js":  "public, max-age=31536000, immutable",
+		"/app/assets/survey-1a2b.css": "public, max-age=31536000, immutable",
+		"/app/":                       "no-cache, no-transform",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br, zstd")
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK || rec.Header().Get("Content-Encoding") != "gzip" {
+			t.Errorf("%s: code %d, Content-Encoding %q, want 200 gzip", path, rec.Code, rec.Header().Get("Content-Encoding"))
+		}
+		if got := rec.Header().Get("Cache-Control"); got != cacheControl {
+			t.Errorf("%s: Cache-Control = %q, want %q", path, got, cacheControl)
+		}
+		if got := rec.Header().Get("Vary"); got != "Accept-Encoding" {
+			t.Errorf("%s: Vary = %q, want Accept-Encoding", path, got)
+		}
+	}
+}
