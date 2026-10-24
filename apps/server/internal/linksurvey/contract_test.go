@@ -61,10 +61,13 @@ func (f fixture) target() string {
 	return f.Request.Path + "?" + q.Encode()
 }
 
-// checkHeaders compares every header the fixture recorded, and requires the ones it recorded as absent (x-frame-options on an embeddable page) to be absent. Vary is compared as a set of tokens.
+// checkHeaders compares every header the fixture recorded, and requires the ones it recorded as absent (x-frame-options on an embeddable page) to be absent. Vary is compared as a set of tokens. One divergence from forma2 is intended: every HTML response ends its Cache-Control with no-transform (httpserver's noTransformHTML), so Cloudflare does not inject its Web Analytics beacon, which the Content-Security-Policy blocks.
 func checkHeaders(t *testing.T, got http.Header, want map[string]string) {
 	t.Helper()
 	for name, value := range want {
+		if name == "cache-control" && strings.HasPrefix(want["content-type"], "text/html") {
+			value += ", no-transform"
+		}
 		if got.Get(name) != value {
 			t.Errorf("header %s = %q, want %q", name, got.Get(name), value)
 		}

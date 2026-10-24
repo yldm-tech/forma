@@ -42,6 +42,7 @@ func NewEngine(cfg config.Config, log *slog.Logger, outer ...gin.HandlerFunc) *g
 	// outer middleware (the telemetry) wraps the panic recovery, so it sees a request that panicked with the 500 the recovery answered.
 	r.Use(outer...)
 	r.Use(securityHeaders(cfg), accessLog(log), recovery(log), reportServerErrors())
+	r.Use(noTransformHTML())
 	return r
 }
 
