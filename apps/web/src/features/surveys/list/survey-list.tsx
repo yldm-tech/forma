@@ -342,7 +342,8 @@ export const SurveysList = ({
   } else if (list.surveys.length > 0) {
     content = (
       <div>
-        <div ref={tableRef} role="table" aria-label={t("common.surveys")} className="space-y-3">
+        {/* Positioned, so the visually hidden labels inside it stay within the scrolling page instead of widening the document. */}
+        <div ref={tableRef} role="table" aria-label={t("common.surveys")} className="relative space-y-3">
           <SurveyTableHeader />
           <div role="rowgroup" className="space-y-3">
             {list.surveys.map((survey) => (

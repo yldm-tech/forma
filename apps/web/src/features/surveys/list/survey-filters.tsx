@@ -24,9 +24,9 @@ import {
 /** How long typing in the search box waits before the list is asked again (forma2's 800 ms). */
 const NAME_DEBOUNCE_MS = 800;
 
-/** The toolbar's dropdown triggers: a dark border, and a focus ring that stands apart from it. */
+/** The toolbar's dropdown triggers: a dark border, and a focus ring that stands apart from it. Positioned, so the visually hidden count inside stays within the scrolling page. */
 const triggerClass =
-  "flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden";
+  "relative flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden";
 
 interface FilterOption<T extends string> {
   label: string;
