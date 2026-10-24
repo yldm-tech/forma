@@ -1,13 +1,13 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { CheckIcon } from "lucide-react";
-import { KeyboardEventHandler, useEffect, useMemo, useState } from "react";
-import { toast } from "../../../lib/toast";
+import { SlidersHorizontalIcon } from "lucide-react";
+import { KeyboardEventHandler, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { cn } from "../../../lib/cn";
 import { type TSurveySchedulingConfig, getSurveySchedulingTimeLabel } from "../lib/scheduling-config";
 import { createSurveySchedulingDateUtils, toDateOnlySelection } from "../lib/scheduling-date-utils";
+import { SURVEY_PIN_PATTERN, generateSurveyPin } from "../lib/survey-pin";
 import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-toggle";
 import { Alert, AlertTitle } from "../../../components/ui/alert";
 import { DatePicker } from "../../../components/ui/date-picker/index";
@@ -77,28 +77,39 @@ export const ResponseOptionsCard = ({
   const isPinProtectionEnabled = localSurvey.pin !== null;
 
   const [verifyProtectWithPinError, setVerifyProtectWithPinError] = useState<string | null>(null);
+  const [responseLimitError, setResponseLimitError] = useState<string | null>(null);
+  const pinInputRef = useRef<HTMLInputElement>(null);
 
   const handleProtectSurveyWithPinToggle = () => {
-    setLocalSurvey((prevSurvey) => ({ ...prevSurvey, pin: isPinProtectionEnabled ? null : "1234" }));
+    setVerifyProtectWithPinError(null);
+    if (isPinProtectionEnabled) {
+      setLocalSurvey((prevSurvey) => ({ ...prevSurvey, pin: null }));
+      return;
+    }
+    // A random PIN, selected, so the author sees it and can type their own over it.
+    setLocalSurvey((prevSurvey) => ({ ...prevSurvey, pin: generateSurveyPin() }));
+    requestAnimationFrame(() => {
+      pinInputRef.current?.focus();
+      pinInputRef.current?.select();
+    });
   };
 
+  const pinError = (pin: string): string | null =>
+    SURVEY_PIN_PATTERN.test(pin) ? null : t("workspace.surveys.edit.pin_must_be_a_four_digit_number");
+
   const handleProtectSurveyPinChange = (pin: string) => {
-    //check if pin only contains numbers
-    const validation = /^\d+$/;
-    const isValidPin = validation.test(pin);
-    if (!isValidPin) return toast.error(t("workspace.surveys.edit.pin_can_only_contain_numbers"));
+    // Digits only; clearing the field is allowed, so a new PIN can be typed from scratch.
+    if (!/^\d*$/.test(pin)) {
+      setVerifyProtectWithPinError(t("workspace.surveys.edit.pin_can_only_contain_numbers"));
+      return;
+    }
     setLocalSurvey({ ...localSurvey, pin });
+    // Once an error shows, it follows the typing, so it goes away as soon as the PIN is valid.
+    if (verifyProtectWithPinError) setVerifyProtectWithPinError(pinError(pin));
   };
 
   const handleProtectSurveyPinBlurEvent = () => {
-    if (!localSurvey.pin) return setVerifyProtectWithPinError(null);
-
-    const regexPattern = /^\d{4}$/;
-    const isValidPin = regexPattern.test(`${localSurvey.pin}`);
-
-    if (!isValidPin)
-      return setVerifyProtectWithPinError(t("workspace.surveys.edit.pin_must_be_a_four_digit_number"));
-    setVerifyProtectWithPinError(null);
+    setVerifyProtectWithPinError(localSurvey.pin == null ? null : pinError(localSurvey.pin));
   };
 
   const handleSurveyPinInputKeyDown: KeyboardEventHandler<HTMLInputElement> = (e) => {
@@ -242,32 +253,31 @@ export const ResponseOptionsCard = ({
     }
   };
 
+  const responseLimitIssue = (limit: number): string | null => {
+    if (limit === 0) return t("workspace.surveys.edit.response_limit_can_t_be_set_to_0");
+    if (limit <= finishedResponseCount) {
+      return t("workspace.surveys.edit.response_limit_needs_to_exceed_number_of_received_responses", {
+        responseCount: finishedResponseCount,
+      });
+    }
+    return null;
+  };
+
   const handleInputResponse = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = Number.parseInt(e.target.value);
+
     if (Number.isNaN(value) || value < 1) {
       value = 1;
     }
 
     const updatedSurvey = { ...localSurvey, autoComplete: value };
     setLocalSurvey(updatedSurvey);
+    if (responseLimitError) setResponseLimitError(responseLimitIssue(value));
   };
 
+  // Shown under the field, like the PIN's error, rather than as a toast that disappears before it can be fixed.
   const handleInputResponseBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (Number.parseInt(e.target.value) === 0) {
-      toast.error(t("workspace.surveys.edit.response_limit_can_t_be_set_to_0"));
-      return;
-    }
-
-    if (Number.parseInt(e.target.value) <= finishedResponseCount) {
-      toast.error(
-        t("workspace.surveys.edit.response_limit_needs_to_exceed_number_of_received_responses", {
-          responseCount: finishedResponseCount,
-        }),
-        {
-          id: "response-limit-error",
-        }
-      );
-    }
+    setResponseLimitError(responseLimitIssue(Number.parseInt(e.target.value)));
   };
 
   const handleRecaptchaToggle = () => {
@@ -303,13 +313,13 @@ export const ResponseOptionsCard = ({
         open ? "" : "hover:bg-slate-50",
         "w-full space-y-2 rounded-lg border border-slate-300 bg-white"
       )}>
-      <Collapsible.CollapsibleTrigger asChild className="h-full w-full cursor-pointer">
+      <Collapsible.CollapsibleTrigger className="h-full w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700">
         <div className="inline-flex px-4 py-4">
           <div className="flex items-center pr-5 pl-2">
-            <CheckIcon
-              strokeWidth={3}
-              className="size-7 rounded-full border border-green-300 bg-green-100 p-1.5 text-green-600"
-            />{" "}
+            <SlidersHorizontalIcon
+              aria-hidden="true"
+              className="size-7 rounded-full border border-slate-200 bg-slate-100 p-1.5 text-slate-600"
+            />
           </div>
           <div>
             <p className="font-semibold text-slate-800">{t("workspace.surveys.edit.response_options")}</p>
@@ -418,12 +428,19 @@ export const ResponseOptionsCard = ({
                         value={localSurvey.autoComplete?.toString()}
                         onChange={handleInputResponse}
                         onBlur={handleInputResponseBlur}
+                        isInvalid={Boolean(responseLimitError)}
+                        aria-describedby={responseLimitError ? "autoCompleteResponsesError" : undefined}
                         className="mr-2 ml-2 inline w-20 bg-white text-center text-sm"
                       />
                     ),
                   }}
                 />
               </p>
+              {responseLimitError && (
+                <p id="autoCompleteResponsesError" className="pt-2 text-sm font-normal text-red-700">
+                  {responseLimitError}
+                </p>
+              )}
             </label>
           </AdvancedOptionToggle>
 
@@ -524,24 +541,29 @@ export const ResponseOptionsCard = ({
                 description={t("workspace.surveys.edit.protect_survey_with_pin_description")}
                 childBorder={true}>
                 <div className="p-4">
-                  <Label htmlFor="headline" className="sr-only">
+                  <Label htmlFor="pin" className="sr-only">
                     {t("workspace.surveys.edit.add_pin")}
                   </Label>
                   <Input
-                    autoFocus
+                    ref={pinInputRef}
                     id="pin"
                     isInvalid={Boolean(verifyProtectWithPinError)}
+                    aria-describedby={verifyProtectWithPinError ? "pinError" : undefined}
                     className="bg-white"
                     name="pin"
+                    inputMode="numeric"
+                    autoComplete="off"
                     placeholder={t("workspace.surveys.edit.add_a_four_digit_pin")}
                     onBlur={handleProtectSurveyPinBlurEvent}
-                    defaultValue={localSurvey.pin ? localSurvey.pin : undefined}
+                    value={localSurvey.pin ?? ""}
                     onKeyDown={handleSurveyPinInputKeyDown}
                     onChange={(e) => handleProtectSurveyPinChange(e.target.value)}
                     maxLength={4}
                   />
                   {verifyProtectWithPinError && (
-                    <p className="pt-1 text-sm text-red-700">{verifyProtectWithPinError}</p>
+                    <p id="pinError" className="pt-1 text-sm text-red-700">
+                      {verifyProtectWithPinError}
+                    </p>
                   )}
                 </div>
               </AdvancedOptionToggle>

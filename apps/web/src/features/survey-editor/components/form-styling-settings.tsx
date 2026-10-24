@@ -1,5 +1,5 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { CheckIcon, SparklesIcon } from "lucide-react";
+import { PaintbrushIcon, SparklesIcon } from "lucide-react";
 import React, { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -48,18 +48,18 @@ export const FormStylingSettings = ({
       }}
       className="w-full rounded-lg border border-slate-300 bg-white">
       <Collapsible.CollapsibleTrigger
-        asChild
         disabled={disabled}
         className={cn(
+          "text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700",
           "w-full cursor-pointer rounded-lg hover:bg-slate-50",
           disabled && "cursor-not-allowed opacity-60 hover:bg-white"
         )}>
         <div className="inline-flex px-4 py-4">
           {!isSettingsPage && (
             <div className="flex items-center pr-5 pl-2">
-              <CheckIcon
-                strokeWidth={3}
-                className="size-7 rounded-full border border-green-300 bg-green-100 p-1.5 text-green-600"
+              <PaintbrushIcon
+                aria-hidden="true"
+                className="size-7 rounded-full border border-slate-200 bg-slate-100 p-1.5 text-slate-600"
               />
             </div>
           )}
