@@ -660,8 +660,8 @@ checksums:
     s/survey_already_answered_subheading: 40cfe7e8680cd4fbb7318a05d3491c78
     s/survey_preview: 33644451073149383d3ace08be930739
     s/survey_sent_to: 192c2b0d27e01c35953b851d3875722e
-    s/this_looks_fishy: dd87624316d8b4f68230341d11c96a15
-    s/verify_email: f5ef78c2ac771d81846cfc33ccc5ccc1
+    s/this_looks_fishy: 17f82aa5dc04923390f4125dda1ac3aa
+    s/verify_email: 42dcab68d931f9145d9b6d76740a5c66
     s/verify_email_before_submission: 7dd154506492656ae48316de7c2cc62d
     s/verify_email_before_submission_button: 6ad4aad279b2411ee9bf24a43e37ae03
     s/verify_email_before_submission_description: 50a0638a3d0ff9d5910eea1b374e86b3
@@ -2557,7 +2557,7 @@ checksums:
     workspace/surveys/archive_survey_warning: 02f30c8901f34d627bdab15e0f68e71a
     workspace/surveys/archiving_survey: 08e4cc73698d79dc98c70df6849c7790
     workspace/surveys/change_status: abe7acd9be0d3e77c087a5459ef41059
-    workspace/surveys/completed_responses: 0e4bbce9985f25eb673d9a054c8d5334
+    workspace/surveys/completed_responses: 1e24af081bbc0604c2febbc4dcb21548
     workspace/surveys/copy_survey: de8142b45e7bca61f2dca0069a62b417
     workspace/surveys/copy_survey_description: 5d86af9371f45852b4d1afea4978166e
     workspace/surveys/copy_survey_error: 74cab7d84ea8b669e106d4c326cac005
@@ -2767,7 +2767,7 @@ checksums:
     workspace/surveys/edit/fallback_missing: 43dbedbe1a178d455e5f80783a7b6722
     workspace/surveys/edit/fieldId_is_used_in_logic_of_question_please_remove_it_from_logic_first: ad4afe2980e1dfeffb20aa78eb892350
     workspace/surveys/edit/fieldId_is_used_in_quota_please_remove_it_from_quota_first: 70d0e1bdd6336b2cfb92c0121416c8d4
-    workspace/surveys/edit/field_name_eg_score_price: 8984fbe243eb2184639749281193b7d6
+    workspace/surveys/edit/field_name_eg_score_price: cc457f86ac947efe778c1515b4febb22
     workspace/surveys/edit/first_name: cf040a5d6a9fd696be400380cc99f54b
     workspace/surveys/edit/five_points_recommended: e2c8118163da89284046638ca9832914
     workspace/surveys/edit/follow_ups: da3ee4c17c09ce376cb921b1f07ea9a3
