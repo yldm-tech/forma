@@ -1,13 +1,11 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "isolatedModules": true,
     "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
     },
     "resolveJsonModule": true,
-    "strict": true,
     "types": ["node"]
   },
   "extends": "@forma/config-typescript/js-library.json",
