@@ -112,6 +112,7 @@
     "value_must_contain": "តម្លៃត្រូវតែមាន {value}",
     "value_must_equal": "តម្លៃត្រូវតែស្មើ {value}",
     "value_must_not_contain": "តម្លៃមិនត្រូវមាន {value}",
-    "value_must_not_equal": "តម្លៃមិនត្រូវស្មើ {value}"
+    "value_must_not_equal": "តម្លៃមិនត្រូវស្មើ {value}",
+    "x_questions_need_an_answer": "{count, plural, other {សំណួរ {count} ត្រូវការចម្លើយ}}"
   }
 }

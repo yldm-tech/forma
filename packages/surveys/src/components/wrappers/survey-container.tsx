@@ -250,9 +250,7 @@ export function SurveyContainer({
   return (
     <div id="fbjs" className="forma-form" dir={dir} lang={lang ?? undefined}>
       <div
-        // In-dialog updates (question changes after a submit) should wait for the reader to finish
-        // speaking instead of interrupting it. A survey is never urgent enough for assertive speech.
-        aria-live="polite"
+        // Deliberately not a live region. Wrapping the dialog in one queued every DOM change in the survey (the next card, error text, hover fills, peeking cards) for announcement, on top of the open announcement (useNoOverlayModal) and of the focus move into each new card, which a screen reader already reads.
         className={getModalLayerClass(isModal, hasOverlay)}>
         <div
           className={cn(

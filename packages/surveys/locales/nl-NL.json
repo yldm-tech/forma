@@ -112,6 +112,7 @@
     "value_must_contain": "Waarde moet {value} bevatten",
     "value_must_equal": "Waarde moet gelijk zijn aan {value}",
     "value_must_not_contain": "Waarde mag {value} niet bevatten",
-    "value_must_not_equal": "Waarde mag niet gelijk zijn aan {value}"
+    "value_must_not_equal": "Waarde mag niet gelijk zijn aan {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} vraag moet nog worden beantwoord} other {{count} vragen moeten nog worden beantwoord}}"
   }
 }

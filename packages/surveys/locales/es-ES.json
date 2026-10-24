@@ -112,6 +112,7 @@
     "value_must_contain": "El valor debe contener {value}",
     "value_must_equal": "El valor debe ser igual a {value}",
     "value_must_not_contain": "El valor no debe contener {value}",
-    "value_must_not_equal": "El valor no debe ser igual a {value}"
+    "value_must_not_equal": "El valor no debe ser igual a {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} pregunta necesita una respuesta} other {{count} preguntas necesitan una respuesta}}"
   }
 }

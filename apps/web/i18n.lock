@@ -668,11 +668,16 @@ checksums:
     s/completed: 98a9cd97b409933edf1991e7d022bea9
     s/completed_heading: dae5ac4a02a886dc9d9fc40927091919
     s/create_your_own: 27976ec69029d6dd52d146a9b5765bc6
+    s/email_label: 3ba3f099b1b9be6c35ad797da660cb9f
+    s/email_placeholder: 3cbb854500cac63513492e7abbc5cff3
     s/enter_pin: 90bccdc2e51ee2550842287d1f02c999
+    s/invalid_email: 8de4bc8832b11b380bc4cbcedc16e48b
     s/just_curious: d5e5c40e97fcfdab563707ab0de10862
     s/link_invalid: bd63a73fa5eecad2dfd0687cfed02114
     s/paused: 65ec150837ca033f5a0fb5d4482e0e4b
     s/paused_heading: e5f2346fa2701218189e7d4f407fdbca
+    s/pin_incorrect: 6765bfca70f4a2108c22d8551eb853c4
+    s/pin_too_many_attempts: 0882d944644a5ad87556b41eedb7d0bb
     s/please_try_again_with_the_original_link: ff903c908d199ae654436972dc0576f9
     s/preview_survey_questions: 2cbdd526f6652d5ee0337e23477d3396
     s/question_preview: 9d8fbc0150fc10ba851beba2d4f4d9f3
@@ -680,6 +685,8 @@ checksums:
     s/scheduled: 0ec63111fd5efe2ac240912105c5f518
     s/survey_already_answered_heading: 4783c9c36ad0d4f8eec5dfeb14a04545
     s/survey_already_answered_subheading: 40cfe7e8680cd4fbb7318a05d3491c78
+    s/survey_not_available_description: 01034c68464ab42723b499a5c9b39548
+    s/survey_not_available_heading: 63bef9866bb86cce2f46cdc3782f14c3
     s/survey_preview: 33644451073149383d3ace08be930739
     s/survey_sent_to: 192c2b0d27e01c35953b851d3875722e
     s/this_looks_fishy: 17f82aa5dc04923390f4125dda1ac3aa

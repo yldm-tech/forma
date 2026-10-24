@@ -112,6 +112,7 @@
     "value_must_contain": "يجب أن تحتوي القيمة على {value}",
     "value_must_equal": "يجب أن تساوي القيمة {value}",
     "value_must_not_contain": "يجب ألا تحتوي القيمة على {value}",
-    "value_must_not_equal": "يجب ألا تساوي القيمة {value}"
+    "value_must_not_equal": "يجب ألا تساوي القيمة {value}",
+    "x_questions_need_an_answer": "{count, plural, zero {لا توجد أسئلة تحتاج إلى إجابة} one {سؤال واحد يحتاج إلى إجابة} two {سؤالان يحتاجان إلى إجابة} few {{count} أسئلة تحتاج إلى إجابة} many {{count} سؤالًا يحتاج إلى إجابة} other {{count} سؤال يحتاج إلى إجابة}}"
   }
 }

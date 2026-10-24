@@ -91,6 +91,11 @@ describe("shipped bundles", () => {
     expect([...SURVEY_RUNTIME_LANGUAGE_CODES].sort()).toEqual(shippedBundleCodes.sort());
   });
 
+  // The widget runs on customers' sites, so it must not print i18next's vendor notice in their console.
+  test("i18next's support notice is off", () => {
+    expect(i18n.options.showSupportNotice).toBe(false);
+  });
+
   test("survey strings resolve for the shipped languages", () => {
     for (const code of ["id-ID", "km-KH", "ne-NP", "ur-PK", "vi-VN", "zh-Hant-TW"]) {
       const required = i18n.getFixedT(code)("common.required");

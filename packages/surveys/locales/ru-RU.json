@@ -112,6 +112,7 @@
     "value_must_contain": "Значение должно содержать {value}",
     "value_must_equal": "Значение должно быть равно {value}",
     "value_must_not_contain": "Значение не должно содержать {value}",
-    "value_must_not_equal": "Значение не должно быть равно {value}"
+    "value_must_not_equal": "Значение не должно быть равно {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} вопрос требует ответа} few {{count} вопроса требуют ответа} many {{count} вопросов требуют ответа} other {{count} вопроса требуют ответа}}"
   }
 }

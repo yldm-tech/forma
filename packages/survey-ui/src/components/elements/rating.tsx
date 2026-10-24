@@ -248,11 +248,12 @@ function Rating({
         key={number}
         data-fb-scale-cell
         className={cn(
-          "text-input-text font-input font-input-weight relative flex w-full cursor-pointer items-center justify-center overflow-hidden transition-colors",
+          "font-input font-input-weight relative flex w-full cursor-pointer items-center justify-center overflow-hidden transition-colors",
           borderClasses,
+          // As in nps.tsx: a solid fill for the selection, distinct from the dashed focus outline and the neutral hover tint.
           isSelected
-            ? "bg-brand-20 border-brand z-10 -ml-[1px] border-2 first:ml-0"
-            : "border-input-border bg-input-bg",
+            ? "bg-button-bg border-button-bg text-button-text z-10 font-semibold"
+            : "border-input-border bg-input-bg text-input-text",
           borderRadiusClasses,
           isHovered && !isSelected && "bg-input-selected-bg",
           colorCoding ? "min-h-[47px]" : "min-h-[41px]",
@@ -292,8 +293,9 @@ function Rating({
   // Render star scale option
   const renderStarOption = (number: number): React.JSX.Element => {
     const isSelected = currentValue === number;
-    // Fill all stars up to the previewed value (pointer or arrow key) or the selected value
-    const activeValue = previewValue ?? currentValue ?? 0;
+    // Stars up to the selected value are solid. A previewed value (pointer or arrow key) only outlines its stars over a pale fill, so moving focus never looks like a choice.
+    const isPreviewing = previewValue !== null && previewValue !== currentValue;
+    const activeValue = isPreviewing ? previewValue : (currentValue ?? 0);
     const isActive = number <= activeValue;
 
     return (
@@ -328,7 +330,12 @@ function Rating({
           />
           <div className="pointer-events-none flex w-full items-center justify-center">
             {isActive ? (
-              <Star className="h-full w-full fill-yellow-400 text-yellow-400 transition-colors" />
+              <Star
+                className={cn(
+                  "h-full w-full text-yellow-400 transition-colors",
+                  isPreviewing ? "fill-yellow-100" : "fill-yellow-400"
+                )}
+              />
             ) : (
               <Star className="h-full w-full fill-slate-300 text-slate-300 transition-colors" />
             )}
@@ -341,7 +348,8 @@ function Rating({
   // Render smiley scale option
   const renderSmileyOption = (number: number, index: number): React.JSX.Element => {
     const isSelected = currentValue === number;
-    const isActive = isSelected || previewValue === number;
+    // Only the selection is coloured; a previewed smiley (pointer or arrow key) is just darker than the rest, so moving focus never looks like a choice.
+    const isPreviewed = !isSelected && previewValue === number;
 
     return (
       // The flex-1 wrapper keeps the even column layout; the label is sized to the icon so the
@@ -350,7 +358,9 @@ function Rating({
         <label
           className={cn(
             "relative flex max-h-16 min-h-9 w-full max-w-[74px] cursor-pointer justify-center rounded-lg transition-colors",
-            isActive ? "stroke-brand text-brand" : "stroke-muted-foreground text-muted-foreground",
+            isSelected && "stroke-brand text-brand",
+            isPreviewed && "stroke-input-text text-input-text",
+            !isSelected && !isPreviewed && "stroke-muted-foreground text-muted-foreground",
             disabled && "cursor-not-allowed opacity-50"
           )}
           onMouseEnter={() => {
@@ -375,7 +385,7 @@ function Rating({
             {...getRadioProps(String(number))}
           />
           <div className="text-input-text pointer-events-none h-full w-full object-contain">
-            <RatingSmiley active={isActive} idx={index} range={range} addColors={colorCoding} />
+            <RatingSmiley active={isSelected} idx={index} range={range} addColors={colorCoding} />
           </div>
         </label>
       </div>

@@ -3,6 +3,8 @@ package linksurvey
 import (
 	"strings"
 
+	"golang.org/x/text/language"
+
 	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
@@ -12,8 +14,55 @@ const defaultLanguage = "default"
 
 // resolveSurveyLanguageCode is forma2's resolveSurveyLanguageCode (modules/survey/link/lib/language.ts): a ?lang= value to one of the survey's stored language codes, matched first by exact code, then by alias, then by canonical tag, all case-insensitively. A value naming no language, a disabled one or the default one is "default".
 func resolveSurveyLanguageCode(lang string, languages []survey.SurveyLanguage) string {
-	if lang == "" {
+	selected := matchSurveyLanguage(lang, languages)
+	if selected == nil || selected.Default || !selected.Enabled {
 		return defaultLanguage
+	}
+	return selected.Language.Code
+}
+
+// negotiateSurveyLanguageCode picks the survey language for a visitor who asked for none (no ?lang=): the browser's Accept-Language tags, best weighted first, each matched as resolveSurveyLanguageCode matches ?lang=. The first tag that names one of the survey's languages decides: the default language, or an enabled translation. A tag naming nothing or a disabled translation is skipped. With no match the survey opens in its default language, as before.
+func negotiateSurveyLanguageCode(acceptLanguage string, languages []survey.SurveyLanguage) string {
+	if acceptLanguage == "" || len(languages) == 0 {
+		return defaultLanguage
+	}
+	tags, _, err := language.ParseAcceptLanguage(acceptLanguage)
+	if err != nil {
+		return defaultLanguage
+	}
+	for _, tag := range tags {
+		selected := matchSurveyLanguage(tag.String(), languages)
+		if selected == nil || (!selected.Default && !selected.Enabled) {
+			continue
+		}
+		if selected.Default {
+			return defaultLanguage
+		}
+		return selected.Language.Code
+	}
+	return defaultLanguage
+}
+
+// surveyLanguageCode is the survey language a page renders in: an explicit ?lang= always wins (resolveSurveyLanguageCode), otherwise the browser's languages are negotiated against the survey's.
+func surveyLanguageCode(langParam, acceptLanguage string, languages []survey.SurveyLanguage) string {
+	if langParam != "" {
+		return resolveSurveyLanguageCode(langParam, languages)
+	}
+	return negotiateSurveyLanguageCode(acceptLanguage, languages)
+}
+
+// metadataLanguage is the language basicSurveyMetadata titles the page in: the ?lang= value as forma2 passed it, or, without one, the language negotiated from the browser.
+func metadataLanguage(langParam, acceptLanguage string, languages []survey.SurveyLanguage) string {
+	if langParam != "" {
+		return langParam
+	}
+	return negotiateSurveyLanguageCode(acceptLanguage, languages)
+}
+
+// matchSurveyLanguage is the survey language lang names, by exact code, then alias, then canonical tag, all case-insensitively, whatever its state; nil when it names none.
+func matchSurveyLanguage(lang string, languages []survey.SurveyLanguage) *survey.SurveyLanguage {
+	if lang == "" {
+		return nil
 	}
 	lower := strings.ToLower(lang)
 	var selected *survey.SurveyLanguage
@@ -41,10 +90,7 @@ func resolveSurveyLanguageCode(lang string, languages []survey.SurveyLanguage) s
 			}
 		}
 	}
-	if selected == nil || selected.Default || !selected.Enabled {
-		return defaultLanguage
-	}
-	return selected.Language.Code
+	return selected
 }
 
 // metadataLanguageCode is getBasicSurveyMetadata's narrower rule (modules/survey/link/lib/metadata-utils.ts): the survey language whose code or alias equals lang case-insensitively, when it is enabled and not the default. Unlike resolveSurveyLanguageCode it has no canonical fallback.

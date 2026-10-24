@@ -17,6 +17,7 @@ interface AddressElementProps {
   autoFocusEnabled: boolean;
   dir?: "ltr" | "rtl" | "auto";
   errorMessage?: string;
+  formFieldErrors?: Record<string, string>;
 }
 
 export function AddressElement({
@@ -29,6 +30,7 @@ export function AddressElement({
   currentElementId,
   dir = "auto",
   errorMessage,
+  formFieldErrors,
 }: Readonly<AddressElementProps>) {
   const [startTime, setStartTime] = useState(performance.now());
   const isCurrent = element.id === currentElementId;
@@ -128,6 +130,7 @@ export function AddressElement({
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}
         errorMessage={errorMessage}
+        fieldErrors={formFieldErrors}
       />
     </form>
   );

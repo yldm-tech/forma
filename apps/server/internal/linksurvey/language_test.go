@@ -38,6 +38,40 @@ func TestResolveSurveyLanguageCode(t *testing.T) {
 	}
 }
 
+// A link without ?lang= opens in the browser's language when the survey has it (Onboarding Experience: en-US default, ja-JP, zh-Hans-CN, de-DE).
+func TestSurveyLanguageCodeNegotiatesAcceptLanguage(t *testing.T) {
+	languages := []survey.SurveyLanguage{
+		lang("en-US", "", true, true), lang("ja-JP", "", false, true), lang("zh-Hans-CN", "", false, true),
+		lang("de-DE", "", false, true), lang("fr-FR", "", false, false),
+	}
+	cases := []struct {
+		name, langParam, acceptLanguage, want string
+	}{
+		{"a Japanese browser gets the Japanese translation", "", "ja,en-US;q=0.9,en;q=0.8", "ja-JP"},
+		{"a regional tag the survey lacks falls to the broader one after it", "", "de-AT,de;q=0.9", "de-DE"},
+		{"weights decide, not header order", "", "en;q=0.5,zh-CN;q=0.9", "zh-Hans-CN"},
+		{"Traditional Chinese never takes the Simplified translation", "", "zh-TW", "default"},
+		{"a disabled translation is skipped for the next preference", "", "fr-FR,ja;q=0.8", "ja-JP"},
+		{"the default language preferred first stays the default", "", "en-US,ja;q=0.8", "default"},
+		{"no shared language opens the default", "", "ko-KR,it;q=0.8", "default"},
+		{"no header opens the default", "", "", "default"},
+		{"a malformed header opens the default", "", ";;;q=x", "default"},
+		{"an explicit ?lang= always wins", "en-US", "ja", "default"},
+		{"an explicit ?lang= for a translation wins over the browser", "de-DE", "ja", "de-DE"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := surveyLanguageCode(tc.langParam, tc.acceptLanguage, languages); got != tc.want {
+				t.Errorf("surveyLanguageCode(%q, %q) = %q, want %q", tc.langParam, tc.acceptLanguage, got, tc.want)
+			}
+		})
+	}
+	// A survey without languages has only its default.
+	if got := surveyLanguageCode("", "ja", nil); got != "default" {
+		t.Errorf("no languages: %q", got)
+	}
+}
+
 // forma2's metadata-utils.test.ts language cases: code or alias, case-insensitively, without the canonical fallback.
 func TestMetadataLanguageCode(t *testing.T) {
 	languages := []survey.SurveyLanguage{lang("en", "", true, true), lang("de", "deutsch", false, true), lang("fr", "", false, false)}

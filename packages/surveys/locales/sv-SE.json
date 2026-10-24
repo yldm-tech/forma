@@ -112,6 +112,7 @@
     "value_must_contain": "Värdet måste innehålla {value}",
     "value_must_equal": "Värdet måste vara {value}",
     "value_must_not_contain": "Värdet får inte innehålla {value}",
-    "value_must_not_equal": "Värdet får inte vara {value}"
+    "value_must_not_equal": "Värdet får inte vara {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} fråga behöver besvaras} other {{count} frågor behöver besvaras}}"
   }
 }

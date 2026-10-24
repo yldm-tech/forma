@@ -59,6 +59,8 @@ export default {
         "input-bg": "var(--fb-input-bg-color)",
         "input-border": "var(--fb-input-border-color, var(--fb-survey-brand-color))",
         "input-text": "var(--fb-input-text-color)",
+        // The ring of a radio or checkbox indicator: derived from the input text colour so it reaches 3:1 against the option background, which the field-border colour does not.
+        "control-border": "var(--fb-control-border-color)",
         "input-placeholder": "var(--fb-input-placeholder-color)",
         // Option CSS variables
         "option-bg": "var(--fb-option-bg-color)",

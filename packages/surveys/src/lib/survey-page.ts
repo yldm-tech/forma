@@ -1,7 +1,11 @@
 // Imported from the dependency-free constants module rather than from `./js`: a value import of
 // `@forma/types/js` pulls its zod schema graph into the widget bundle (+94 kB on the UMD build).
+import { type TI18nString } from "@forma/types/i18n";
 import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
+import { htmlToPlainText } from "@/lib/html-utils";
+import { getLocalizedValue } from "@/lib/i18n";
+import { replaceRecallInfo } from "@/lib/recall";
 
 /** Id of the visually-hidden region holding the survey's persistent instructions. */
 export const SURVEY_INSTRUCTIONS_ID = "fb__survey-instructions";
@@ -64,6 +68,35 @@ export const getSurveyPagePosition = (
 export const getSurveyDisplayName = (name: string | undefined): string | undefined => {
   if (!name || name === PUBLIC_API_SURVEY_NAME_PLACEHOLDER) return undefined;
   return name.trim().length > 0 ? name : undefined;
+};
+
+/** A survey as a link page renders it: the full survey document, so its link metadata travels with it. The JS widget's surveys carry none. */
+type TSurveyWithLinkMetadata = TJsWorkspaceStateSurvey & {
+  metadata?: { title?: TI18nString } | null;
+};
+
+/**
+ * The name a respondent sees for the survey (its single h1 and the form's accessible name), in the survey's active language.
+ *
+ * The survey's own name is internal: it can say "Churn interview screener" or name the segment the survey targets. A respondent should get what the author wrote for them instead, the same text the server puts in the link page's document title: the link metadata's title, else the welcome card's headline as plain text when the welcome card shows, and only then the survey's name.
+ */
+export const getSurveyRespondentName = (
+  survey: TSurveyWithLinkMetadata,
+  languageCode: string
+): string | undefined => {
+  const metadataTitle = getLocalizedValue(survey.metadata?.title, languageCode).trim();
+  if (metadataTitle) return metadataTitle;
+  if (survey.welcomeCard.enabled && survey.welcomeCard.headline) {
+    const headline = replaceRecallInfo(
+      getLocalizedValue(survey.welcomeCard.headline, languageCode),
+      {},
+      {},
+      languageCode
+    );
+    const text = htmlToPlainText(headline).trim();
+    if (text) return text;
+  }
+  return getSurveyDisplayName(survey.name);
 };
 
 /**

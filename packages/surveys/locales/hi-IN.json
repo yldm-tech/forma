@@ -112,6 +112,7 @@
     "value_must_contain": "मान में {value} होना चाहिए",
     "value_must_equal": "मान {value} के बराबर होना चाहिए",
     "value_must_not_contain": "मान में {value} नहीं होना चाहिए",
-    "value_must_not_equal": "मान {value} के बराबर नहीं होना चाहिए"
+    "value_must_not_equal": "मान {value} के बराबर नहीं होना चाहिए",
+    "x_questions_need_an_answer": "{count, plural, one {{count} प्रश्न का उत्तर देना आवश्यक है} other {{count} प्रश्नों का उत्तर देना आवश्यक है}}"
   }
 }

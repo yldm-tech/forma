@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Matrix, type MatrixOption } from "@forma/survey-ui";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import type { TSurveyMatrixElement } from "@forma/types/surveys/elements";
-import { htmlToPlainText } from "@/lib/html-utils";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 import { getShuffledRowIndices } from "@/lib/utils";
@@ -131,11 +130,7 @@ export function MatrixElement({
   };
 
   return (
-    <form
-      key={element.id}
-      onSubmit={handleSubmit}
-      className="w-full"
-      aria-label={htmlToPlainText(getLocalizedValue(element.headline, languageCode))}>
+    <form key={element.id} onSubmit={handleSubmit} className="w-full">
       <Matrix
         dir={dir}
         elementId={element.id}
