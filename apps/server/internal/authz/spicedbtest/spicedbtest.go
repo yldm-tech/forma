@@ -41,6 +41,8 @@ const (
 	datastoreHost     = "spicedb-datastore"
 	datastoreUser     = "spicedb"
 	datastorePassword = "spicedb"
+	// startupTimeout bounds each of the three containers a SpiceDB needs (datastore, migration, server). It is generous because they start one after another and test binaries start theirs side by side: on a slow Docker host four packages at once took the migration past 90 seconds.
+	startupTimeout = 3 * time.Minute
 )
 
 var (
@@ -69,7 +71,7 @@ func startDatastore() {
 		tcpostgres.WithUsername(datastoreUser),
 		tcpostgres.WithPassword(datastorePassword),
 		network.WithNetwork([]string{datastoreHost}, nw),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(60*time.Second)),
+		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(startupTimeout)),
 	)
 	if err != nil {
 		datastoreErr = fmt.Errorf("start datastore: %w", err)
@@ -110,7 +112,7 @@ func serve(ctx context.Context) (testcontainers.Container, string, error) {
 	migrate, err := testcontainers.Run(ctx, Image,
 		testcontainers.WithCmd(append([]string{"datastore", "migrate", "head"}, engine...)...),
 		network.WithNetwork(nil, datastore.network),
-		testcontainers.WithWaitStrategy(wait.ForExit().WithExitTimeout(90*time.Second)),
+		testcontainers.WithWaitStrategy(wait.ForExit().WithExitTimeout(startupTimeout)),
 	)
 	if migrate != nil {
 		defer func() { _ = testcontainers.TerminateContainer(migrate) }()
@@ -130,7 +132,7 @@ func serve(ctx context.Context) (testcontainers.Container, string, error) {
 		testcontainers.WithCmd(append([]string{"serve", "--grpc-preshared-key=" + Token, "--http-enabled=false", "--telemetry-endpoint="}, engine...)...),
 		network.WithNetwork(nil, datastore.network),
 		testcontainers.WithExposedPorts("50051/tcp"),
-		testcontainers.WithWaitStrategy(wait.ForLog("grpc server started serving").WithStartupTimeout(90*time.Second)),
+		testcontainers.WithWaitStrategy(wait.ForLog("grpc server started serving").WithStartupTimeout(startupTimeout)),
 	)
 	if err != nil {
 		return container, "", fmt.Errorf("start spicedb: %w", err)
