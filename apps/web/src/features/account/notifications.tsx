@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { HelpCircleIcon, SlackIcon, UsersIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
@@ -12,6 +13,7 @@ import { organizationSettingsPath } from "../../lib/navigation";
 import { type UnsubscribeLink, alertRows, unsubscribeTarget } from "../../lib/notifications";
 import {
   type NotificationOrganization,
+  authOptionsQuery,
   notificationsQuery,
   useSetNotification,
 } from "../../lib/queries/auth";
@@ -19,10 +21,11 @@ import { workspaceQuery } from "../../lib/queries/workspaces";
 import { WORKSPACE_ID_KEY, readStorage } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 
-/** forma2's notifications page: per organization, whether new surveys alert the user, and a per-response alert switch for every survey they can see. */
+/** forma2's notifications page: per organization, whether new surveys alert the user, and a per-response alert switch for every survey they can see. Where the instance has no SMTP the switches still save, and the page says no alert will be mailed until it does. */
 export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
   const { t } = useTranslation();
   const { data: organizations } = useSuspenseQuery(notificationsQuery);
+  const options = useQuery(authOptionsQuery);
   const setNotification = useSetNotification();
   const handledLink = useRef(false);
 
@@ -62,6 +65,11 @@ export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.notifications")} />
+      {options.data?.smtpConfigured === false && (
+        <Alert variant="warning" role="status">
+          <AlertDescription>{t("workspace.settings.notifications.email_not_configured")}</AlertDescription>
+        </Alert>
+      )}
       <SettingsCard
         width="full"
         title={t("workspace.settings.notifications.email_alerts_surveys")}

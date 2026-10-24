@@ -1,16 +1,42 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { type UseQueryResult, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
 import { Input } from "../../components/ui/input";
+import { LoadingBlock } from "../../components/ui/page";
 import { PasswordInput } from "../../components/ui/password-input";
-import { ApiError } from "../../lib/api";
+import { ApiError, api } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
-import { type Me, useDeleteAccount, useRequestAccountDeletion } from "../../lib/queries/auth";
+import { organizationSettingsPath } from "../../lib/navigation";
+import {
+  type Me,
+  authOptionsQuery,
+  useDeleteAccount,
+  useRequestAccountDeletion,
+} from "../../lib/queries/auth";
 import { forgetWorkspace } from "../../lib/storage";
 import { toast } from "../../lib/toast";
+
+/** An organization the caller is the only active owner of, which goes with their account. */
+export interface SoleOwnedOrganization {
+  id: string;
+  name: string;
+  workspaceCount: number;
+}
+
+/** GET /api/app/auth/deletion-preview: what deleting the account deletes besides the user, read from the same query the deletion runs. Never cached between openings, since ownership can change in the meantime. */
+export const deletionPreviewQuery = queryOptions({
+  queryKey: ["auth", "deletion-preview"] as const,
+  queryFn: ({ signal }) =>
+    api
+      .get<{ organizations: SoleOwnedOrganization[] }>("/api/app/auth/deletion-preview", { signal })
+      .then((res) => res.organizations),
+  staleTime: 0,
+  gcTime: 0,
+});
 
 /** forma2's DeleteAccount card. */
 export const DeleteAccount = ({ user }: { user: Me }) => {
@@ -30,7 +56,7 @@ export const DeleteAccount = ({ user }: { user: Me }) => {
 };
 
 /**
- * forma2's DeleteAccountModal, confirmed by typing the account's address. A password user also gives their password and the account goes at once, with the organizations only they own; anyone else is mailed a link that finishes the deletion.
+ * forma2's DeleteAccountModal, confirmed by typing the account's address. A password user also gives their password and the account goes at once, with the organizations only they own; anyone else is mailed a link that finishes the deletion, which needs SMTP. Before anything can be confirmed the modal names the organizations that would be deleted too, with the way to keep each: another owner.
  */
 export const DeleteAccountModal = ({ user, onClose }: { user: Me; onClose: () => void }) => {
   const { t } = useTranslation();
@@ -40,8 +66,14 @@ export const DeleteAccountModal = ({ user, onClose }: { user: Me; onClose: () =>
   const [emailSent, setEmailSent] = useState(false);
   const deleteAccount = useDeleteAccount();
   const requestDeletion = useRequestAccountDeletion();
+  const preview = useQuery(deletionPreviewQuery);
+  const options = useQuery(authOptionsQuery);
   const requiresPassword = user.identityProvider === "email";
+  // The emailed link is the only way an SSO user can confirm, so without SMTP their deletion cannot start.
+  const emailUnavailable = !requiresPassword && options.data?.smtpConfigured === false;
   const confirmed =
+    preview.isSuccess &&
+    !emailUnavailable &&
     confirmation.trim().toLowerCase() === user.email.toLowerCase() &&
     (!requiresPassword || password.length > 0);
 
@@ -97,6 +129,14 @@ export const DeleteAccountModal = ({ user, onClose }: { user: Me; onClose: () =>
               </li>
               <li>{t("workspace.settings.profile.warning_cannot_undo")}</li>
             </ul>
+            <SoleOwnedOrganizations preview={preview} />
+            {emailUnavailable && (
+              <Alert variant="warning" role="status" className="mb-6">
+                <AlertDescription>
+                  {t("workspace.settings.profile.account_deletion_email_not_configured")}
+                </AlertDescription>
+              </Alert>
+            )}
             <form
               onSubmit={(e: FormEvent) => {
                 e.preventDefault();
@@ -111,7 +151,6 @@ export const DeleteAccountModal = ({ user, onClose }: { user: Me; onClose: () =>
                 id="deleteAccountConfirmation"
                 value={confirmation}
                 onChange={(e) => setConfirmation(e.target.value)}
-                placeholder={user.email}
                 className="mt-2"
                 autoComplete="off"
               />
@@ -135,5 +174,50 @@ export const DeleteAccountModal = ({ user, onClose }: { user: Me; onClose: () =>
         )}
       </div>
     </DeleteDialog>
+  );
+};
+
+/** The organizations that go with the account, each with a link to its members, where another owner can be made first; nothing while there are none. The deletion stays disabled until this has loaded. */
+const SoleOwnedOrganizations = ({ preview }: { preview: UseQueryResult<SoleOwnedOrganization[]> }) => {
+  const { t } = useTranslation();
+  if (preview.isPending) return <LoadingBlock className="mb-6" />;
+  if (preview.isError) {
+    return (
+      <div role="alert" className="mb-6 flex flex-col items-start gap-2 text-sm text-red-700">
+        <p>{errorMessage(t, preview.error)}</p>
+        <Button variant="secondary" size="sm" onClick={() => void preview.refetch()}>
+          {t("common.try_again")}
+        </Button>
+      </div>
+    );
+  }
+  if (preview.data.length === 0) return null;
+  return (
+    <Alert variant="error" role="status" className="mb-6">
+      <AlertDescription>
+        <p>
+          <Trans
+            i18nKey="workspace.settings.profile.organizations_delete_message"
+            components={{ b: <strong /> }}
+          />
+        </p>
+        <ul className="mt-2 list-disc pl-5">
+          {preview.data.map((organization) => (
+            <li key={organization.id}>
+              {t("workspace.settings.profile.sole_owned_organization_item", {
+                name: organization.name,
+                count: organization.workspaceCount,
+              })}{" "}
+              <Link
+                to={organizationSettingsPath(organization.id, "teams")}
+                className="font-medium underline underline-offset-2">
+                {t("common.members_and_teams")}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2">{t("workspace.settings.profile.sole_owned_organizations_hint")}</p>
+      </AlertDescription>
+    </Alert>
   );
 };

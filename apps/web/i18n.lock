@@ -344,6 +344,7 @@ checksums:
     common/manage: a3d40c0267b81ae53c9598eaeb05087d
     common/marketing: fcf0f06f8b64b458c7ca6d95541a3cc8
     common/members: 0932e80cba1e3e0a7f52bb67ff31da32
+    common/members_and_teams: 52adf357956837ca761f38ea17781a8a
     common/membership: 83c856bbc2af99d8c3d860959d1d2a85
     common/membership_not_found: 7ac63584af23396aace9992ad919ffd4
     common/meta: 842eac888f134f3525f8ea613d933687
@@ -1612,6 +1613,8 @@ checksums:
     workspace/api_keys/organization_access: 96a92fa907b15e0c0e47e33cac15be88
     workspace/api_keys/organization_access_cloud_note: 7fa313f79b98a749dd2ca557f92a71f8
     workspace/api_keys/organization_access_description: e9b856a868875efbee35016d9c5986f2
+    workspace/api_keys/organization_read: 2494ca23d10e5b6381eb271aceeb5270
+    workspace/api_keys/organization_write: 0c8cd5e85bbf4a4ef271c6df37736df3
     workspace/api_keys/permissions: 2160be68b1d6b6577e64634e9feba2ed
     workspace/api_keys/secret: f041e5eb96121c8b4f2b8af7e0f83a9b
     workspace/api_keys/unable_to_copy_api_key: 148506832e31d033fa3569ce292d2120
@@ -1872,11 +1875,13 @@ checksums:
     workspace/integrations/include_metadata: 750091d965d7cc8d02468b5239816dc5
     workspace/integrations/include_variables: 614ac01349fd9badae3c0095164da690
     workspace/integrations/integration_added_successfully: 1fd54475071dfd9eedd96a74186e18e5
+    workspace/integrations/integration_count: e4f9e1103026ecd73b15aee67a222578
     workspace/integrations/integration_removed_successfully: 8c41a39359b7c88ae7a0d6163bd85012
     workspace/integrations/integration_updated_successfully: ba8bf561d94ad26f8cc822a837c658c3
     workspace/integrations/make_integration_description: 1dee7fcd0b2464ea012d86570724830c
     workspace/integrations/manage_webhooks: eaff72d6b087dcaabf785c79e1e315b4
     workspace/integrations/n8n_integration_description: b39a63ad2344d6194ecae0698809002b
+    workspace/integrations/not_available_on_this_instance: d74e1f84ade40ec68d845f48810364cb
     workspace/integrations/notion/col_name_of_type_is_not_supported: 2dcdbba79c40d25abf9a8da3095fd6fa
     workspace/integrations/notion/connect_with_notion: 9fe47c7180ef4083cdeb6cf39c8c6ff6
     workspace/integrations/notion/connected_with_workspace: c63bd5c91245b85ba433cea58a8accd1
@@ -1925,12 +1930,14 @@ checksums:
     workspace/integrations/slack/slack_reconnect_button: 8992a0f250278c116cb26be448b68ba2
     workspace/integrations/slack/slack_reconnect_button_description: e5a4e7f868f76b8892998025f9dd032a
     workspace/integrations/slack_integration_description: 4f897f6b31a6a9c8bddbebc7a9c69625
+    workspace/integrations/webhook_count: 2d264c6c94424f6c1c54307b73620b9f
     workspace/integrations/webhook_integration_description: 9d02de29b3f2c836e14510f961cbb9cc
     workspace/integrations/webhooks/add_webhook: 20ba6e981d4237490d9da86dade7f7d2
     workspace/integrations/webhooks/add_webhook_description: 85466a73d6a55476319c0c980b6f2aff
     workspace/integrations/webhooks/all_current_and_new_surveys: 4c0e0e94bf2dea0cf58568d11cfbb71d
     workspace/integrations/webhooks/copy_secret_now: 23d6da66a541e7c22eb06729b6eac376
     workspace/integrations/webhooks/created_by_third_party: b40197eabbbce500b80b44268b8b1ee9
+    workspace/integrations/webhooks/created_by_third_party_no: 8c708225830b06df2d1141c536f2a0d6
     workspace/integrations/webhooks/discord_webhook_not_supported: 23432534f908b2ba63a517fb1f9bbe0e
     workspace/integrations/webhooks/empty_webhook_message: 4c4d8709576a38cb8eb59866331d2405
     workspace/integrations/webhooks/endpoint_bad_gateway_error: 48ab17e9a77030b289ec22f497f50b63
@@ -1961,6 +1968,7 @@ checksums:
     workspace/integrations/webhooks/webhook_updated_successfully: d67dc42810694fd1344a9a9545aca1e7
     workspace/integrations/webhooks/webhook_url_placeholder: 5f2f7c074f6797e1506e21ce865219c1
     workspace/integrations/website_or_app_integration_description: 0e45d89adf5e568f429e9da9f342a464
+    workspace/integrations/zap_count: c9f3c3168e8528bbe389ea43465ccc53
     workspace/integrations/zapier_integration_description: f1e7ea38943c3e3b599fc1a33c9f64b8
     workspace/languages/add_language: bf0407850be7b8a56901533bceb4bc64
     workspace/languages/alias: 87e592cc48d819d7fdcf4597c1c63e7a
@@ -2474,9 +2482,12 @@ checksums:
     workspace/settings/general/security_list_tip_link: ccdb1a21610ebf5a626d813b155be4ba
     workspace/settings/general/share_invite_link: b40b7ffbcf02d7464be52fb562df5e3a
     workspace/settings/general/share_this_link_to_let_your_organization_member_join_your_organization: 6eb43d5b1c855572b7ab35f527ba953c
+    workspace/settings/general/test_email_requires_smtp: c34e017b4b69f73956de4fd5d12c65c3
     workspace/settings/general/test_email_sent_successfully: aa68214f5e0707c9615e01343640ab32
+    workspace/settings/general/view_only_access: 8ae4d16a37227c72ee7989c6c7bc84ff
     workspace/settings/notifications/auto_subscribe_to_new_surveys: 8102c9ce2fbcae53bd8d979c42932fa9
     workspace/settings/notifications/email_alerts_surveys: 12be5a073d74453a531167debd947bd6
+    workspace/settings/notifications/email_not_configured: 7bdd1fd0b84e3d48504c1738fd5cc6bd
     workspace/settings/notifications/every_response: 526988e9015f37bc2d32414d7dc05c7c
     workspace/settings/notifications/every_response_tooltip: 44cdd6c8352d67a37f2ec30f6bc17ea8
     workspace/settings/notifications/need_slack_or_discord_notifications: a18009dcb3ff19ec9b60e1497cbbec93
@@ -2487,6 +2498,7 @@ checksums:
     workspace/settings/notifications/you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore: e158e20fc4fa511ce457d99d0c865c3c
     workspace/settings/notifications/you_will_not_receive_any_more_emails_for_responses_on_this_survey: 7e2a88fe0d0489ebdc8f2621584b1c29
     workspace/settings/profile/account_deletion_consequences_warning: b87b9eebe0a373eb6debe52db73e5aba
+    workspace/settings/profile/account_deletion_email_not_configured: 3f224eea1e80fb5aaea1575ba1fc4cba
     workspace/settings/profile/account_deletion_email_sent: cc52d5d4f64cc0bfe6a00a679769027d
     workspace/settings/profile/backup_code: 41b15061acd32f7f3512d5a27dcc34b9
     workspace/settings/profile/confirm_delete_account: 9dfb6b4c94c3f4d91c965435c95be340
@@ -2497,6 +2509,7 @@ checksums:
     workspace/settings/profile/disable_two_factor_authentication_description: f81ac20c3864f1a252a4813b5f9b719a
     workspace/settings/profile/each_backup_code_can_be_used_exactly_once_to_grant_access_without_your_authenticator: ecf77d8d17ccf64e1effc6ab131fea56
     workspace/settings/profile/email_change_initiated: b9a69748076f2860d9124f745b75d392
+    workspace/settings/profile/email_change_needs_email: 776823ff41e1488fbf3ff1d01bd43529
     workspace/settings/profile/enable_two_factor_authentication: 476d45754f584b25cc66ab00eccbefaa
     workspace/settings/profile/enter_the_code_from_your_authenticator_app_below: 9bae7024a84c2be6e2725b187e2244f9
     workspace/settings/profile/lost_access: 70292321ff8232218d2261b11c40bc0a
@@ -2509,6 +2522,8 @@ checksums:
     workspace/settings/profile/save_the_following_backup_codes_in_a_safe_place: a5b9d38083770375f2372f93ac9a7b2b
     workspace/settings/profile/scan_the_qr_code_below_with_your_authenticator_app: 5a6b60928590ce3b6be1bdf1d34cd45e
     workspace/settings/profile/security_description: e833adde4e3e26795e61a93619c6caec
+    workspace/settings/profile/sole_owned_organization_item: 69589b0e98c72996e41c30fed3e0a578
+    workspace/settings/profile/sole_owned_organizations_hint: aa6ab22de77235e34611b6b063d80ed3
     workspace/settings/profile/two_factor_authentication: 97a428a54e41d68810a12dbae075f371
     workspace/settings/profile/two_factor_authentication_description: 1429e4eeaea193f15fb508875d4fb601
     workspace/settings/profile/two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app: 308ba145b3dc485ff4f17387e977b1f9
@@ -2532,6 +2547,10 @@ checksums:
     workspace/settings/teams/empty_teams_state: 785c1a638eb62211224fae951217fe3c
     workspace/settings/teams/enter_team_name: c324ef4c0ca524496a25a4afffda4f37
     workspace/settings/teams/individual: 52ebce389ed97a13b6089802055ed667
+    workspace/settings/teams/invite_created_email_not_configured: 78a16b02551aa3805a48f52d8fb6f1b9
+    workspace/settings/teams/invite_created_email_not_configured_ask_admin: db86c48ccc82a9b2d09c4cb88b881f04
+    workspace/settings/teams/invite_email_not_configured_hint: 7154fb6d3f640601be31bf24d5a05e24
+    workspace/settings/teams/invite_email_not_configured_team_admin_hint: b6c33dd0e5cf29a76dd0ec1b535c91e4
     workspace/settings/teams/invite_member: ade922db1be6b26bc979565ce5de2bc7
     workspace/settings/teams/invite_member_description: 5d05259a8cd46f24834cad0860f7a2f9
     workspace/settings/teams/manage: a3d40c0267b81ae53c9598eaeb05087d
@@ -2547,6 +2566,10 @@ checksums:
     workspace/settings/teams/please_fill_all_workspace_fields: 190fc5d3c63cc5ec49d77f587e619ed8
     workspace/settings/teams/read: 2494ca23d10e5b6381eb271aceeb5270
     workspace/settings/teams/read_write: 278a90dade128198d4c93ac00c345320
+    workspace/settings/teams/role_billing: b01dbdd049ebbd4a349fa64d6ce65a3b
+    workspace/settings/teams/role_manager: 8c0b172e24887a9af27134be98ee79b9
+    workspace/settings/teams/role_member: 1606dc30b369856b9dba1fe9aec425d2
+    workspace/settings/teams/role_owner: 9c0b3aeca046c3ebd3bdc352edc83e88
     workspace/settings/teams/team_admin: 5df68214685738029af678ae1d5912bb
     workspace/settings/teams/team_created_successfully: 5b0cc007e18053508fdebc9545cc2c05
     workspace/settings/teams/team_deleted_successfully: d0729ad8d982cc5d542f89291bf57c50

@@ -16,7 +16,7 @@ import notionLogo from "../integrations/images/notion.png";
 import slackLogo from "../integrations/images/slack.png";
 import webhookLogo from "../integrations/images/webhook.png";
 import zapierLogo from "../integrations/images/zapier.png";
-import { countStatusText, webhookCounts } from "../integrations/webhooks";
+import { connectionCountText, webhookCounts } from "../integrations/webhooks";
 
 interface CardProps {
   label: string;
@@ -27,9 +27,11 @@ interface CardProps {
   connected: boolean;
   statusText: string;
   disabled: boolean;
+  /** The integration cannot be set up on this instance (its OAuth app is not configured); the card then only leads to the page that explains it. */
+  unavailable?: boolean;
 }
 
-/** forma2's integration Card: what the integration does, whether it is connected, and where to set it up. */
+/** forma2's integration Card: what the integration does, whether it is connected, and where to set it up; an integration the instance cannot offer gets a secondary button to the page explaining why. */
 const IntegrationCard = ({
   label,
   description,
@@ -38,6 +40,7 @@ const IntegrationCard = ({
   connected,
   statusText,
   disabled,
+  unavailable = false,
 }: CardProps) => {
   return (
     <div className="relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs">
@@ -57,11 +60,11 @@ const IntegrationCard = ({
       <p className="text-xs text-slate-500">{description}</p>
       <div className="mt-4 flex gap-x-2">
         {disabled ? (
-          <Button size="sm" disabled>
+          <Button size="sm" variant={unavailable ? "secondary" : "default"} disabled>
             {connect.text}
           </Button>
         ) : (
-          <Button size="sm" asChild>
+          <Button size="sm" variant={unavailable ? "secondary" : "default"} asChild>
             {"to" in connect ? (
               <Link to={connect.to}>{connect.text}</Link>
             ) : (
@@ -89,6 +92,9 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
 
   const isConnected = (type: IntegrationType) =>
     !!integrations.data?.integrations.some((integration) => integration.type === type);
+  // An integration whose OAuth app the instance lacks cannot be connected; one already connected is still managed.
+  const isUnavailable = (type: IntegrationType) =>
+    integrations.data?.enabled[type] === false && !isConnected(type);
   const oauthCard = (
     type: IntegrationType,
     slug: string,
@@ -99,10 +105,22 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
     label,
     description,
     icon,
-    connect: { to: `${base}/${slug}`, text: isConnected(type) ? t("common.manage") : t("common.connect") },
+    connect: {
+      to: `${base}/${slug}`,
+      text: isConnected(type)
+        ? t("common.manage")
+        : isUnavailable(type)
+          ? t("common.learn_more")
+          : t("common.connect"),
+    },
     connected: isConnected(type),
-    statusText: isConnected(type) ? t("common.connected") : t("common.not_connected"),
+    statusText: isConnected(type)
+      ? t("common.connected")
+      : isUnavailable(type)
+        ? t("workspace.integrations.not_available_on_this_instance")
+        : t("common.not_connected"),
     disabled: isReadOnly,
+    unavailable: isUnavailable(type),
   });
 
   const cards: CardProps[] = [
@@ -110,7 +128,10 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Javascript SDK",
       description: t("workspace.integrations.website_or_app_integration_description"),
       icon: logo(javascriptLogo, "Javascript Logo"),
-      connect: { to: `${base}/app-connection`, text: t("common.connect") },
+      connect: {
+        to: `${base}/app-connection`,
+        text: workspace.appSetupCompleted ? t("common.manage") : t("common.connect"),
+      },
       connected: workspace.appSetupCompleted,
       statusText: workspace.appSetupCompleted ? t("common.connected") : t("common.not_connected"),
       disabled: false,
@@ -121,7 +142,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(zapierLogo, "Zapier Logo"),
       connect: { href: "https://zapier.com/apps/forma/integrations", text: t("common.connect") },
       connected: counts.zapier > 0,
-      statusText: countStatusText(t, counts.zapier, "zap"),
+      statusText: connectionCountText(t, counts.zapier, "zap"),
       disabled: isReadOnly,
     },
     {
@@ -130,7 +151,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(webhookLogo, "Webhook Logo"),
       connect: { to: `${base}/webhooks`, text: t("workspace.integrations.manage_webhooks") },
       connected: counts.user > 0,
-      statusText: countStatusText(t, counts.user, "webhook"),
+      statusText: connectionCountText(t, counts.user, "webhook"),
       disabled: false,
     },
     oauthCard(
@@ -161,7 +182,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       // forma2 labelled this card from an n8n integration row that nothing ever creates, so it always read Connect.
       connect: { href: "https://n8n.io", text: t("common.connect") },
       connected: counts.n8n > 0,
-      statusText: countStatusText(t, counts.n8n, t("common.integration")),
+      statusText: connectionCountText(t, counts.n8n, "integration"),
       disabled: isReadOnly,
     },
     {
@@ -170,7 +191,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(makeLogo, "Make Logo"),
       connect: { href: "https://www.make.com/en/integrations/forma", text: t("common.connect") },
       connected: counts.make > 0,
-      statusText: countStatusText(t, counts.make, t("common.integration")),
+      statusText: connectionCountText(t, counts.make, "integration"),
       disabled: isReadOnly,
     },
     oauthCard(
@@ -186,7 +207,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(activepiecesLogo, "ActivePieces Logo"),
       connect: { href: "https://www.activepieces.com/pieces/forma", text: t("common.connect") },
       connected: counts.activepieces > 0,
-      statusText: countStatusText(t, counts.activepieces, t("common.integration")),
+      statusText: connectionCountText(t, counts.activepieces, "integration"),
       disabled: isReadOnly,
     },
   ];

@@ -1,4 +1,6 @@
-import { describe, expect, test } from "vite-plus/test";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
+import type { i18n as I18n } from "i18next";
+import { changeLocale, initI18n } from "./i18n";
 import {
   type OrganizationRole,
   accessFlags,
@@ -8,6 +10,7 @@ import {
   defaultTeamRole,
   hasMoreThanOneActiveOwner,
   isRoleEditDisabled,
+  roleLabel,
 } from "./roles";
 
 const ME = "me";
@@ -113,4 +116,24 @@ test("defaultTeamRole: owners and managers join teams as admins", () => {
   expect(defaultTeamRole("manager")).toBe("admin");
   expect(defaultTeamRole("member")).toBe("contributor");
   expect(defaultTeamRole(undefined)).toBe("contributor");
+});
+
+describe("roleLabel", () => {
+  let i18n: I18n;
+  beforeAll(async () => {
+    i18n = await initI18n("en-US");
+  });
+
+  test("names every role in the user's language, never by its enum value", async () => {
+    const roles: OrganizationRole[] = ["owner", "manager", "member", "billing"];
+    expect(roles.map((role) => roleLabel(i18n.t, role))).toEqual(["Owner", "Manager", "Member", "Billing"]);
+    await changeLocale(i18n, "ja-JP");
+    for (const role of roles) {
+      const label = roleLabel(i18n.t, role);
+      expect(label).not.toBe(role);
+      expect(label).not.toMatch(/^workspace\./);
+    }
+    await changeLocale(i18n, "zh-Hans-CN");
+    expect(roleLabel(i18n.t, "owner")).not.toMatch(/[A-Za-z]/);
+  });
 });

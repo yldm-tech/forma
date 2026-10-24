@@ -328,6 +328,33 @@ func (r *Repository) soleOwnedOrganizations(ctx context.Context, userID uuid.UUI
 	return ids, nil
 }
 
+// soleOwnedOrganization is one organization that would go with the account, as the deletion preview names it.
+type soleOwnedOrganization struct {
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	WorkspaceCount int       `json:"workspaceCount"`
+}
+
+// soleOwnedOrganizationSummaries names the organizations soleOwnedOrganizations finds, with how many workspaces each holds, by name. It reads the same set the deletion removes, so the preview and the deletion cannot drift apart.
+func (r *Repository) soleOwnedOrganizationSummaries(ctx context.Context, userID uuid.UUID) ([]soleOwnedOrganization, error) {
+	ids, err := r.soleOwnedOrganizations(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	orgs := []soleOwnedOrganization{}
+	if len(ids) == 0 {
+		return orgs, nil
+	}
+	if err := r.db.WithContext(ctx).Raw(
+		`SELECT o.id, o.name, (SELECT count(*) FROM workspaces w WHERE w.organization_id = o.id) AS workspace_count
+		 FROM organizations o WHERE o.id IN ? ORDER BY o.name, o.id`,
+		ids,
+	).Scan(&orgs).Error; err != nil {
+		return nil, fmt.Errorf("load sole-owned organizations: %w", err)
+	}
+	return orgs, nil
+}
+
 // stripeCustomers are the Stripe customers of the organizations.
 func (r *Repository) stripeCustomers(ctx context.Context, organizationIDs []uuid.UUID) ([]string, error) {
 	if len(organizationIDs) == 0 {
