@@ -15,6 +15,7 @@ import { PasswordChecks } from "./password-checks";
 import { SSOButtons } from "./sso-buttons";
 import { Turnstile } from "./turnstile";
 import { Alert, Button, Field, PasswordInput, TextInput, textLinkClasses } from "./ui";
+import { appHref } from "../../../lib/base-path";
 
 interface SignupValues {
   name: string;
@@ -46,7 +47,7 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
   const origin = window.location.origin;
   const inviteToken = search.inviteToken;
   // An invited visitor returns to the invite after signing in; everyone else to the root page.
-  const returnToUrl = inviteToken ? inviteUrl(inviteToken, origin) : new URL("/", origin).toString();
+  const returnToUrl = inviteToken ? inviteUrl(inviteToken, origin) : new URL(appHref("/"), origin).toString();
   // The marketing attribution of this page's address travels to the sign-in page with the link, as forma2 forwarded it.
   const loginSearch: CallbackSearch = {
     ...(inviteToken ? { callbackUrl: returnToUrl } : {}),

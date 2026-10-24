@@ -23,6 +23,7 @@ import {
   FormProvider,
 } from "../../../components/ui/form";
 import { Switch } from "../../../components/ui/switch";
+import { appHref } from "../../../lib/base-path";
 
 interface StylingViewProps {
   workspace: Workspace;
@@ -275,7 +276,7 @@ export const StylingView = ({
                   components={{
                     lookFeelLink: (
                       <TransLink
-                        href={`${workspaceBasePath}/settings/workspace/look`}
+                        href={appHref(`${workspaceBasePath}/settings/workspace/look`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-semibold underline"

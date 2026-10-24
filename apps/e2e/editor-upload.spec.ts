@@ -18,7 +18,7 @@ test("uploads an image to a question and serves it from storage", async ({ page,
   await signUpAndSignIn(page, baseURL!, "upload");
   const { workspaceId, surveyId } = await finishOnboarding(page);
 
-  await page.goto(`/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
+  await page.goto(`/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
   await page.getByRole("button", { name: "Toggle image uploader" }).click();
   const appOrigin = new URL(baseURL!).origin;
   const bucketUpload = page.waitForResponse(

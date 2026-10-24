@@ -1,4 +1,6 @@
-// Where the auth screens send the browser afterwards. The SPA is served from WEBAPP_URL, so the page's own origin is the origin forma2 validated callback URLs against.
+import { appHref } from "../../lib/base-path";
+
+// Where the auth screens send the browser afterwards. The SPA is served from WEBAPP_URL, so the page's own origin is the origin forma2 validated callback URLs against. The URLs the SPA builds carry the app's base path, as the address bar does; a callback without it (an older link, a root-relative path) still lands in the app, since the router adds the base to a path that lacks it and the server redirects the old root paths.
 
 const ABSOLUTE_URL = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
 
@@ -22,7 +24,7 @@ export const validatedCallbackUrl = (url: string | null | undefined, origin: str
   return parsed.toString();
 };
 
-/** The in-app path a validated callback URL points at, or "/" when there is none: forma2's getRelativeCallbackUrl. */
+/** The path a validated callback URL points at, or "/" when there is none: forma2's getRelativeCallbackUrl. It is for the router, which takes it with or without the app's base path. */
 export const callbackPath = (url: string | null | undefined, origin: string): string => {
   const validated = validatedCallbackUrl(url, origin);
   if (!validated) return "/";
@@ -38,14 +40,14 @@ export const inviteTokenFromCallbackUrl = (url: string | null | undefined, origi
 
 /** The page that accepts an invite. */
 export const inviteUrl = (inviteToken: string, origin: string): string => {
-  const url = new URL("/invite", origin);
+  const url = new URL(appHref("/invite"), origin);
   url.searchParams.set("token", inviteToken);
   return url.toString();
 };
 
 /** forma2's getSsoReturnToUrl: the callback an SSO sign-in lands on, tagged with the page it started from. */
 export const ssoReturnToUrl = (returnToUrl: string | undefined, source: "signin" | "signup"): string => {
-  const url = new URL(returnToUrl ?? "/", "http://localhost");
+  const url = new URL(returnToUrl ?? appHref("/"), "http://localhost");
   url.searchParams.set("source", source);
   if (!returnToUrl || returnToUrl.startsWith("/")) return `${url.pathname}${url.search}${url.hash}`;
   return url.toString();

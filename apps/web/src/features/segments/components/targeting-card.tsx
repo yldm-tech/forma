@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { AddFilterModal } from "./add-filter-modal";
 import { SegmentEditor } from "./segment-editor";
+import { appHref } from "../../../lib/base-path";
 
 interface TargetingCardProps {
   localSurvey: TSurvey;
@@ -339,7 +340,7 @@ export function TargetingCard({
                         segmentsLink: (
                           <TransLink
                             className="ml-1 underline"
-                            href={`${workspaceBasePath}/segments`}
+                            href={appHref(`${workspaceBasePath}/segments`)}
                             target="_blank"
                             rel="noopener noreferrer"
                           />
