@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes the container image the cluster deploys, as forma2's release workflow did: same image names, the same tag scheme (<version>, sha-<commit>, latest) and the same labels, now built from the repository's deploy/docker/Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64.
+# Publishes the container image the cluster deploys, as forma2's release workflow did: the same tag scheme (<version>, sha-<commit>, latest) and the same labels, now built from the repository's deploy/docker/Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64. The images have names of their own, ghcr.io/yldm-tech/forma-server and ghcr.io/yldm-tech/forma-docs-site: ghcr.io/yldm-tech/forma and ghcr.io/yldm-tech/forma-docs belong to forma2's release workflow, which is the only one their packages accept pushes from, and keep forma2's last release.
 #
 # Triggered on the push rather than chained off a successful CI run, because no workflow in this repository runs on pushes to main — the gate in `pr.yml` is `pull_request` and `merge_group`, so the merge commit has already been through it by the time it lands here.
 on:
@@ -25,12 +25,12 @@ jobs:
       contents: write
       packages: write
     env:
-      # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. forma2 published 0.1.<run> from its own repository into the same image repository; this repository's run numbers start again at 1, so its versions are 0.2.<run>, which can never collide with an image forma2 published.
+      # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. forma2 published 0.1.<run> from its own repository as ghcr.io/yldm-tech/forma; this repository's run numbers start again at 1, and its versions are 0.2.<run>, so a version names one build of one product whichever of the two image names it is looked up under.
       VERSION: 0.2.${{ github.run_number }}
-      IMAGE: ghcr.io/yldm-tech/forma
-      DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs
+      IMAGE: ghcr.io/yldm-tech/forma-server
+      DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs-site
       RELEASE_SHA: ${{ github.sha }}
-      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, and only once the upgrade guide (apps/docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: deploy/docker/forma.sh and the self-hosting guides download deploy/docker/ from it, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so it always describes the image `latest` names.
+      # `latest` is what deploy/docker/docker-compose.yml pulls, and it moves together with the `stable` branch: deploy/docker/forma.sh and the self-hosting guides download deploy/docker/ from `stable`, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so `stable` always describes the image `latest` names. forma2's compose file pulls ghcr.io/yldm-tech/forma:latest, which this workflow never touches, but the compose file forma2's installer and guides download once `stable` has moved pulls this server instead. Moving both is therefore opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover (with the data migration), and only once the upgrade guide (apps/docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published.
       MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -47,7 +47,7 @@ jobs:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
-      # `packages: write` is not enough on its own: both image repositories were created by forma2's release workflow, and an organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access". yldm-tech/forma needs the Write role there on both ghcr.io/yldm-tech/forma and ghcr.io/yldm-tech/forma-docs (github.com/orgs/yldm-tech/packages/container/<name>/settings); without it the push fails with `denied: permission_denied: write_package`.
+      # An organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access" (github.com/orgs/yldm-tech/packages/container/<name>/settings). forma-server and forma-docs-site are created by this workflow's first push, which links them to this repository and grants it access; ghcr.io/yldm-tech/forma and forma-docs were created by forma2's workflow and refuse this one with `denied: permission_denied: write_package`, which is why the images are published under new names.
       - name: Log in to ghcr.io
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
         with:
