@@ -1,10 +1,10 @@
-import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authApi } from "../../../../features/auth/api";
 import { PasswordChecks } from "../../../../features/auth/components/password-checks";
 import { Alert, Button, ButtonLink, Field, PasswordInput } from "../../../../features/auth/components/ui";
-import { resetPasswordFailure } from "../../../../features/auth/errors";
+import { isInvalidResetToken, resetPasswordFailure } from "../../../../features/auth/errors";
 import { redirectIfSignedIn } from "../../../../features/auth/guards";
 import { tokenSearch } from "../../../../features/auth/search";
 import { passwordError, translatedRules } from "../../../../features/auth/validation";
@@ -33,6 +33,8 @@ function ResetPasswordPage() {
   const { t } = useTranslation();
   const { token } = Route.useSearch();
   const navigate = useNavigate();
+  // A link the server no longer accepts is reported on its first use, and from then on the page offers a new one instead of the form.
+  const [linkExpired, setLinkExpired] = useState(false);
   const rules = useMemo(() => translatedRules(t, RULES), [t]);
   const form = useForm<ResetValues>({
     defaultValues: { password: "", confirmPassword: "" },
@@ -49,6 +51,10 @@ function ResetPasswordPage() {
       try {
         await authApi.resetPassword(token, password);
       } catch (error) {
+        if (isInvalidResetToken(error)) {
+          setLinkExpired(true);
+          return;
+        }
         const failure = resetPasswordFailure(t, error);
         if (failure.fields.password) form.setFieldError("password", failure.fields.password);
         form.setFormError(failure.message);
@@ -59,7 +65,7 @@ function ResetPasswordPage() {
   });
 
   // Without a token the link is no longer valid: the server's redirect of a pre-cutover Better Auth reset link lands here (apps/server/internal/auth/legacy_links.go). A new one is requested from the forgot-password page.
-  if (!token) {
+  if (!token || linkExpired) {
     return (
       <div className="space-y-6 text-center">
         <h1 className="font-bold text-red-600">{t("c.link_expired_heading")}</h1>
@@ -75,6 +81,9 @@ function ResetPasswordPage() {
 
   return (
     <form onSubmit={(event) => void form.handleSubmit(event)} className="space-y-6" noValidate>
+      <h1 className="text-center text-xl font-semibold text-balance text-slate-800">
+        {t("auth.forgot-password.reset_password")}
+      </h1>
       {form.formError && <Alert variant="error">{form.formError}</Alert>}
       <div className="space-y-4">
         <Field

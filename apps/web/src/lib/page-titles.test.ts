@@ -23,9 +23,22 @@ const title = (routeIds: string[], params: Record<string, string> = {}, queryCli
   );
 
 describe("documentTitle", () => {
-  test("is the page's literal title in the template", () => {
-    expect(title(["__root__", "/auth", "/auth/login"])).toBe("Login | Forma");
-    expect(title(["__root__", "/_authenticated", WS, `${WS}/surveys/`])).toBe("Your Surveys | Forma");
+  test("translates the page's own heading in the template", () => {
+    expect(title(["__root__", "/auth", "/auth/login"])).toBe("auth.login.login_to_your_account | Forma");
+    expect(title(["__root__", "/_authenticated", WS, `${WS}/surveys/`])).toBe("common.surveys | Forma");
+  });
+
+  test("names the auth, invite, onboarding and account pages forma2 left untitled", () => {
+    const ORG = "/_authenticated/organizations/$organizationId";
+    expect(title(["__root__", "/auth", "/auth/signup"])).toBe("auth.signup.title | Forma");
+    expect(title(["__root__", "/auth", "/auth/forgot-password/"])).toBe("auth.forgot-password.title | Forma");
+    expect(title(["__root__", "/invite"])).toBe("common.invite | Forma");
+    expect(title(["__root__", "/_authenticated", ORG, `${ORG}/workspaces/new`, `${ORG}/workspaces/new/survey`])).toBe(
+      "organizations.workspaces.new.survey.title | Forma"
+    );
+    expect(title(["__root__", "/_authenticated", "/_authenticated/account/settings/profile"])).toBe(
+      "common.profile | Forma"
+    );
   });
 
   test("translates a settings page's heading", () => {
@@ -35,7 +48,7 @@ describe("documentTitle", () => {
   });
 
   test("is Forma for a page without a title", () => {
-    expect(title(["__root__", "/_authenticated", "/_authenticated/account/settings/profile"])).toBe("Forma");
+    expect(title(["__root__", "/auth", "/auth/verify-email"])).toBe("Forma");
   });
 
   test("names a survey's results from its loaded survey, under every analysis view", () => {

@@ -69,6 +69,9 @@ export const signupFailure = (t: TFunction, error: unknown): Failure<"name" | "e
   return genericFailure(t, error, ["name", "email", "password"] as const);
 };
 
+/** The reset link was used, has expired or was never issued; the server answers the same for all three. */
+export const isInvalidResetToken = (error: unknown): boolean => isCode(error, "invalid_password_reset_token");
+
 /** The new-password form of a reset link. */
 export const resetPasswordFailure = (t: TFunction, error: unknown): Failure<"password"> => {
   if (isCode(error, "password_compromised")) return { fields: {}, message: t("auth.password_compromised") };
