@@ -11,7 +11,9 @@ import { type Validators, useForm } from "../../../lib/form";
 
 export const Route = createFileRoute("/auth/forgot-password/")({
   // The sign-in page passes on what was typed in its email field.
-  validateSearch: (search: Record<string, unknown>): { email?: string } => ({ email: stringParam(search.email) }),
+  validateSearch: (search: Record<string, unknown>): { email?: string } => ({
+    email: stringParam(search.email),
+  }),
   beforeLoad: redirectIfSignedIn,
   component: ForgotPasswordPage,
 });

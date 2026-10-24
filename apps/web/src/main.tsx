@@ -35,7 +35,10 @@ if (!rootElement) throw new Error("#root element missing from index.html");
 
 // The catalogue loads before the first render so no screen ever shows raw keys. A ?lang= hint in the address, then the browser's languages, pick it until the signed-in user's saved locale is known (see changeLocale). Sentry, where the server configured it, starts alongside, so errors thrown while rendering are reported.
 const bootstrap = async () => {
-  const [i18n] = await Promise.all([initI18n(initialLocale(window.location.search, navigator.languages)), initSentry()]);
+  const [i18n] = await Promise.all([
+    initI18n(initialLocale(window.location.search, navigator.languages)),
+    initSentry(),
+  ]);
   createRoot(rootElement).render(
     <StrictMode>
       <I18nextProvider i18n={i18n}>

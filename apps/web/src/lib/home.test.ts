@@ -38,7 +38,9 @@ describe("a skipped onboarding", () => {
     skipOnboarding("o9");
     expect(isOnboardingSkipped("o9")).toBe(true);
     expect(isOnboardingSkipped("o8")).toBe(false);
-    expect(homeTarget({ ...onboarding, path: "/organizations/o9/workspaces/new/plan" }, null)).toBe("/workspaces/w1/");
+    expect(homeTarget({ ...onboarding, path: "/organizations/o9/workspaces/new/plan" }, null)).toBe(
+      "/workspaces/w1/"
+    );
     globalThis.localStorage.removeItem("forma.onboardingSkipped.o9");
   });
 });

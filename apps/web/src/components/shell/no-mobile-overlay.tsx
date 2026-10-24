@@ -84,7 +84,9 @@ export const NoMobileOverlay = ({ email }: { email: string }) => {
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_app_works_best_on_desktop")}</p>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_surveys_look_good")}</p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-          <p className="text-sm break-all text-zinc-600">{t("common.mobile_overlay_signed_in_as", { email })}</p>
+          <p className="text-sm break-all text-zinc-600">
+            {t("common.mobile_overlay_signed_in_as", { email })}
+          </p>
           <Button variant="secondary" onClick={() => void copyLink()}>
             <LinkIcon className="mr-2 size-4" aria-hidden="true" />
             {t("common.mobile_overlay_copy_link")}

@@ -91,7 +91,10 @@ test("the root not-found page carries the wordmark and the signed-in user's lang
 });
 
 test("the root not-found page keeps the browser's language without a session", async () => {
-  vi.stubGlobal("fetch", vi.fn(async () => json(401, { code: "not_authenticated", message: "Not authenticated" })));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => json(401, { code: "not_authenticated", message: "Not authenticated" }))
+  );
   await renderInRouter(<RootNotFound />);
   expect(await screen.findByRole("heading", { name: i18n.t("common.page_not_found") })).toBeTruthy();
   expect(i18n.language).toBe("en-US");
@@ -107,7 +110,9 @@ test("the mobile overlay is a modal dialog that names the account and lets the u
   expect(document.activeElement).toBe(dialog);
   // The page's own h1 lives in the inert app behind; the overlay adds none.
   expect(screen.queryAllByRole("heading", { level: 1 })).toHaveLength(0);
-  expect(screen.getByText(i18n.t("common.mobile_overlay_signed_in_as", { email: "ada@example.com" }))).toBeTruthy();
+  expect(
+    screen.getByText(i18n.t("common.mobile_overlay_signed_in_as", { email: "ada@example.com" }))
+  ).toBeTruthy();
 
   const writeText = vi.fn(async () => {});
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });

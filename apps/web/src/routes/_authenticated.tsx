@@ -34,13 +34,13 @@ function AuthenticatedLayout() {
     if (isLocale(me.locale) && i18n.language !== me.locale) void changeLocale(i18n, me.locale);
   }, [me.locale, i18n]);
 
-  // forma2's app layout covered every signed-in page on a phone-sized screen. The app stays mounted under the overlay, inert, so nothing behind it takes focus or reaches a screen reader.
+  // forma2's app layout covered every signed-in page on a phone-sized screen. The app stays mounted under the overlay, inert, so nothing behind it takes focus or reaches a screen reader, and clipped to the screen, so a page wider than the phone cannot widen the layout viewport and push the overlay's text off its edge.
   const isPhone = useIsPhone();
   return (
     <>
       {isPhone && <NoMobileOverlay email={me.email} />}
       <PostHogIdentify userId={me.id} email={me.email} />
-      <div inert={isPhone || undefined} className="contents">
+      <div inert={isPhone || undefined} className={isPhone ? "h-dvh overflow-hidden" : "contents"}>
         <Outlet />
       </div>
     </>

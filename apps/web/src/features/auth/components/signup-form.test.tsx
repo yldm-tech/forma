@@ -180,7 +180,7 @@ describe("the email form", () => {
     await waitFor(() => expect(document.activeElement).toBe(email));
     expect(email.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText(i18n.t("auth.validation.invalid_email"))).toBeTruthy();
-    expect(screen.getByText(i18n.t("auth.validation.password_too_short"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("auth.validation.password_too_short", { min: 8 }))).toBeTruthy();
     expect(bodies).toHaveLength(0);
   });
 

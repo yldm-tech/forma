@@ -33,9 +33,9 @@ describe("documentTitle", () => {
     expect(title(["__root__", "/auth", "/auth/signup"])).toBe("auth.signup.title | Forma");
     expect(title(["__root__", "/auth", "/auth/forgot-password/"])).toBe("auth.forgot-password.title | Forma");
     expect(title(["__root__", "/invite"])).toBe("common.invite | Forma");
-    expect(title(["__root__", "/_authenticated", ORG, `${ORG}/workspaces/new`, `${ORG}/workspaces/new/survey`])).toBe(
-      "organizations.workspaces.new.survey.title | Forma"
-    );
+    expect(
+      title(["__root__", "/_authenticated", ORG, `${ORG}/workspaces/new`, `${ORG}/workspaces/new/survey`])
+    ).toBe("organizations.workspaces.new.survey.title | Forma");
     expect(title(["__root__", "/_authenticated", "/_authenticated/account/settings/profile"])).toBe(
       "common.profile | Forma"
     );

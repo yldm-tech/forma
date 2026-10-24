@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
@@ -84,7 +84,7 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
   );
   fireEvent.click(screen.getByRole("switch"));
   const dialog = await screen.findByRole("dialog");
-  const description = () => dialog.querySelector(`#${CSS.escape(dialog.getAttribute("aria-describedby") ?? "")}`);
+  const description = () => document.getElementById(dialog.getAttribute("aria-describedby") ?? "");
   expect(description()?.textContent).toBe(
     i18n.t("workspace.settings.profile.confirm_your_current_password_to_get_started")
   );
@@ -118,7 +118,13 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
       i18n.t("workspace.settings.profile.save_the_following_backup_codes_in_a_safe_place")
     )
   );
-  expect(within(dialog).queryByRole("button", { name: i18n.t("common.close") })).toBeNull();
+  // The success toast carries a close button of its own; with it gone, no close button may be left.
+  act(() => {
+    for (const shown of toast.getSnapshot()) toast.dismiss(shown.id);
+  });
+  await waitFor(() =>
+    expect(within(dialog).queryByRole("button", { name: i18n.t("common.close") })).toBeNull()
+  );
   // Escape is the dialog's cancel event; it must leave the codes on screen.
   fireEvent(dialog, new Event("cancel", { cancelable: true }));
   expect(screen.getByRole("dialog")).toBe(dialog);

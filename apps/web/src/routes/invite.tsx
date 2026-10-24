@@ -156,7 +156,10 @@ function InvitePage() {
           description={
             <p>
               {email
-                ? t("auth.invite.email_does_not_match_for", { email, currentEmail: session.data?.email ?? "" })
+                ? t("auth.invite.email_does_not_match_for", {
+                    email,
+                    currentEmail: session.data?.email ?? "",
+                  })
                 : t("auth.invite.email_does_not_match_description")}
             </p>
           }>
@@ -178,7 +181,9 @@ function InvitePage() {
           }
           description={<p>{t("auth.invite.welcome_to_organization_description")}</p>}>
           {joined?.organizationId ? (
-            <ButtonLink to="/organizations/$organizationId" params={{ organizationId: joined.organizationId }}>
+            <ButtonLink
+              to="/organizations/$organizationId"
+              params={{ organizationId: joined.organizationId }}>
               {t("auth.invite.go_to_app")}
             </ButtonLink>
           ) : (

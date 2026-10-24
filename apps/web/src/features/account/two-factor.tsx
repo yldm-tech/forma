@@ -224,7 +224,10 @@ const EnterCodeStep = ({ onCancel, onDone }: { onCancel: () => void; onDone: () 
   };
   return (
     <form className="flex flex-col gap-y-10" onSubmit={submit}>
-      <fieldset ref={digits} className="flex flex-col gap-2" aria-describedby={error ? "enable-two-factor-error" : undefined}>
+      <fieldset
+        ref={digits}
+        className="flex flex-col gap-2"
+        aria-describedby={error ? "enable-two-factor-error" : undefined}>
         <legend className="mb-2 text-sm font-medium text-slate-700">{t("common.code")}</legend>
         <OTPInput value={code} onChange={setCode} valueLength={6} className="justify-start" />
         <FormError id="enable-two-factor-error">{error}</FormError>
