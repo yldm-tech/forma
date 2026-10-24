@@ -37,7 +37,7 @@ You need [Go](https://go.dev/) (see `apps/server/go.mod`), [Node.js](https://nod
 ```bash
 pnpm install
 cp .env.example .env
-make deps-up      # PostgreSQL in Docker
+make deps-up      # PostgreSQL, Valkey, SpiceDB, RustFS and Mailpit in Docker
 make dev-server   # Go server on :3000
 make dev-web      # Vite dev server, the app at http://localhost:5173/app/, proxying the API to :3000
 ```
@@ -47,7 +47,7 @@ make dev-web      # Vite dev server, the app at http://localhost:5173/app/, prox
 | `make build` | Build the SPA and SDK bundles, embed them, compile `bin/forma` |
 | `make test`  | `go test -race` and the Vitest suites                          |
 | `make lint`  | golangci-lint and `vp check` (Oxfmt, Oxlint, type-check)       |
-| `make check` | Everything CI runs                                             |
+| `make check` | The lint, test and generated-file checks CI runs               |
 
 `AGENTS.md` is the working reference for this repository: layout, conventions, the API contracts that must not change, and testing policy. Read it before your first change.
 
