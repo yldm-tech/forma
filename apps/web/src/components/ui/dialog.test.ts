@@ -14,11 +14,16 @@ const event = (target: EventTarget) => {
   return e;
 };
 
-const handlers = (disableCloseOnOutsideClick = false) => {
+const handlers = (disableCloseOnOutsideClick = false, allowEscapeClose?: boolean) => {
   const changes: boolean[] = [];
   return {
     changes,
-    ...dialogEventHandlers({ open: true, onOpenChange: (o) => changes.push(o), disableCloseOnOutsideClick }),
+    ...dialogEventHandlers({
+      open: true,
+      onOpenChange: (o) => changes.push(o),
+      disableCloseOnOutsideClick,
+      allowEscapeClose,
+    }),
   };
 };
 
@@ -47,4 +52,30 @@ test("Escape is ignored when the dialog holds unsaved input", () => {
   h.onCancel(cancel);
   expect(h.changes).toEqual([]);
   expect(cancel.prevented).toBe(true);
+});
+
+test.each([
+  // [disableCloseOnOutsideClick, allowEscapeClose, Escape closes]
+  [false, false, true],
+  [false, true, true],
+  [true, false, false],
+  [true, true, true],
+])(
+  "Escape with disableCloseOnOutsideClick=%s and allowEscapeClose=%s closes the dialog: %s",
+  (disableCloseOnOutsideClick, allowEscapeClose, closes) => {
+    const h = handlers(disableCloseOnOutsideClick, allowEscapeClose);
+    const cancel = event(outer);
+    h.onCancel(cancel);
+    expect(h.changes).toEqual(closes ? [false] : []);
+    // The native close is always cancelled; the dialog closes through onOpenChange, so React state stays the source of truth.
+    expect(cancel.prevented).toBe(true);
+  }
+);
+
+test("allowEscapeClose still ignores a nested dialog's Escape", () => {
+  const h = handlers(true, true);
+  const cancel = event(inner);
+  h.onCancel(cancel);
+  expect(h.changes).toEqual([]);
+  expect(cancel.prevented).toBe(false);
 });

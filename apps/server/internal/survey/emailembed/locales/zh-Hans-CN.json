@@ -2,8 +2,8 @@
   "common.continue": "继续",
   "common.powered_by_forma": "由 Forma 提供支持",
   "emails.accept": "接受",
-  "emails.click_or_drag_to_upload_files": "点击 或 拖动 上传 文件",
+  "emails.click_or_drag_to_upload_files": "点击或拖动文件以上传。",
   "emails.reject": "拒绝",
   "emails.schedule_your_meeting": "安排你的会议",
-  "emails.select_a_date": "选择 日期"
+  "emails.select_a_date": "选择日期"
 }

@@ -173,6 +173,18 @@ test("Cmd+K and Ctrl+K open and close the palette", async () => {
   await waitFor(() => expect(screen.queryByPlaceholderText(i18n.t("common.search"))).toBeNull());
 });
 
+test("opening the palette puts the focus in its search field, so typing filters at once", async () => {
+  await renderPalette();
+  fireEvent.click(await screen.findByRole("button", { name: i18n.t("common.search") }));
+  const input = await screen.findByPlaceholderText(i18n.t("common.search"));
+  expect(input.hasAttribute("cmdk-input")).toBe(true);
+  expect(document.activeElement).toBe(input);
+  fireEvent.keyDown(document, { key: "k", metaKey: true });
+  await waitFor(() => expect(screen.queryByPlaceholderText(i18n.t("common.search"))).toBeNull());
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  expect(document.activeElement).toBe(await screen.findByPlaceholderText(i18n.t("common.search")));
+});
+
 test("typing filters the destinations, and choosing one navigates there", async () => {
   stubSurveys();
   const router = await renderPalette();
