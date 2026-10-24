@@ -718,7 +718,7 @@ export const ElementsView = ({
         title: t("workspace.surveys.edit.delete_block_confirm_title"),
         body:
           t("workspace.surveys.edit.delete_block_confirm_text", {
-            name: block.name.trim() || t("workspace.surveys.edit.block_number", { number: blockIdx + 1 }),
+            name: block.name.trim() || t("workspace.surveys.edit.block_n", { blockNumber: blockIdx + 1 }),
             count: block.elements.length,
           }) + withResponses,
       };
@@ -947,6 +947,7 @@ export const ElementsView = ({
                   addEndingCard={addEndingCard}
                   locale={locale}
                   quotas={quotas}
+                  responseCount={responseCount}
                 />
               );
             })}
@@ -981,6 +982,12 @@ export const ElementsView = ({
           if (!open) setPendingDeletion(null);
         }}
         title={pendingDeletionText?.title ?? ""}
+        // Only a draft that autosaves loses the deletion for good on its own; anywhere else it waits for Save, and Back with Discard undoes it.
+        description={
+          localSurvey.status === "draft" && localSurvey.publishOn === null
+            ? undefined
+            : t("workspace.surveys.edit.delete_applies_on_save")
+        }
         body={pendingDeletionText?.body ?? ""}
         buttonText={t("common.delete")}
         onConfirm={() => {

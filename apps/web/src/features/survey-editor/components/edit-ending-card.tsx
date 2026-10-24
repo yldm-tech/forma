@@ -37,6 +37,7 @@ interface EditEndingCardProps {
   addEndingCard: (index: number) => void;
   locale: TUserLocale;
   quotas: TSurveyQuota[];
+  responseCount: number;
 }
 
 export const EditEndingCard = ({
@@ -50,6 +51,7 @@ export const EditEndingCard = ({
   addEndingCard,
   locale,
   quotas,
+  responseCount,
 }: EditEndingCardProps) => {
   const selectedLanguageCode = "default";
   const { t } = useTranslation();
@@ -103,6 +105,33 @@ export const EditEndingCard = ({
     });
   };
 
+  const endScreenHeadline =
+    endingCard.type === "endScreen" && endingCard.headline
+      ? recallToHeadline(endingCard.headline, localSurvey, true, selectedLanguageCode)[selectedLanguageCode]
+      : undefined;
+
+  const isEndingCardUsedInFollowUps = localSurvey.followUps.some(
+    (followUp) =>
+      followUp.trigger.type === "endings" &&
+      (followUp.trigger.properties?.endingIds?.includes(endingCard.id) ?? false)
+  );
+
+  /** What the delete confirmation says: the follow-ups that lose the ending, or the ending's name, then the caution for a survey with responses. */
+  const deleteConfirmationBody = () => {
+    const endingName =
+      endingCard.type === "endScreen"
+        ? getTextContent(endScreenHeadline ?? "").trim() || t("workspace.surveys.edit.ending_card")
+        : endingCard.label?.trim() || t("workspace.surveys.edit.redirect_to_url");
+    const removed = isEndingCardUsedInFollowUps
+      ? t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_text")
+      : t("workspace.surveys.edit.delete_question_confirm_text", { name: endingName });
+    return responseCount > 0
+      ? `${removed}\n\n${t("workspace.surveys.edit.caution_explanation_new_responses_separated")}`
+      : removed;
+  };
+  // Only a draft that autosaves loses the ending for good on its own; anywhere else the deletion waits for Save, and Back with Discard brings the ending back.
+  const isAutoSaved = localSurvey.status === "draft" && localSurvey.publishOn === null;
+
   const deleteEndingCard = () => {
     const quota = quotas.find((quota) => isUsedInQuota(quota, { endingCardId: endingCard.id }));
     if (quota) {
@@ -113,16 +142,6 @@ export const EditEndingCard = ({
       );
       return;
     }
-    const isEndingCardUsedInFollowUps = localSurvey.followUps.some((followUp) => {
-      if (followUp.trigger.type === "endings") {
-        if (followUp.trigger.properties?.endingIds?.includes(endingCard.id)) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-
     // checking if this ending card is used in logic
     const quesIdx = findEndingCardUsedInLogic(localSurvey, endingCard.id);
 
@@ -131,7 +150,8 @@ export const EditEndingCard = ({
       return;
     }
 
-    if (isEndingCardUsedInFollowUps) {
+    // Responses record the ending they reached, so in a survey with responses an ending goes only once the author confirms, as blocks and questions do.
+    if (isEndingCardUsedInFollowUps || responseCount > 0) {
       setOpenDeleteConfirmationModal(true);
       return;
     }
@@ -141,11 +161,6 @@ export const EditEndingCard = ({
       return { ...prevSurvey, endings: updatedEndings };
     });
   };
-
-  const endScreenHeadline =
-    endingCard.type === "endScreen" && endingCard.headline
-      ? recallToHeadline(endingCard.headline, localSurvey, true, selectedLanguageCode)[selectedLanguageCode]
-      : undefined;
 
   const style = {
     transition: transition ?? "transform 100ms ease",
@@ -310,7 +325,8 @@ export const EditEndingCard = ({
         }}
         open={openDeleteConfirmationModal}
         setOpen={setOpenDeleteConfirmationModal}
-        body={t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_text")}
+        description={isAutoSaved ? undefined : t("workspace.surveys.edit.delete_applies_on_save")}
+        body={deleteConfirmationBody()}
         title={t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_title")}
       />
     </div>
