@@ -283,6 +283,18 @@ jobs:
           curl -fsS -o /dev/null http://localhost:3000/js/forma.umd.cjs
           curl -fsS -o /dev/null http://localhost:3000/js/surveys.umd.cjs
 
+          # The server gzips the survey runtime and the SPA's scripts for a client that accepts gzip, under the same names and cache headers. A GET, not a HEAD: the server decides on the body it writes.
+          headers="$(curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' http://localhost:3000/js/surveys.umd.js)"
+          grep -iF 'content-encoding: gzip' <<<"$headers"
+          grep -iF 'cache-control: public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400' <<<"$headers"
+          grep -iE '^vary: .*accept-encoding' <<<"$headers"
+          page="$(curl -fsS http://localhost:3000/app/)"
+          [[ "$page" =~ (/app/assets/[^\"]+\.js) ]] || { echo "No script under /app/assets/ in /app/"; exit 1; }
+          asset="${BASH_REMATCH[1]}"
+          headers="$(curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:3000$asset")"
+          grep -iF 'content-encoding: gzip' <<<"$headers" || { echo "$asset is not gzipped:"; echo "$headers"; exit 1; }
+          grep -iF 'cache-control: public, max-age=31536000, immutable' <<<"$headers"
+
           # The image's own HEALTHCHECK turns healthy too.
           for _ in $(seq 1 30); do
             [ "$(docker inspect -f '{{.State.Health.Status}}' forma-test)" = "healthy" ] && break
