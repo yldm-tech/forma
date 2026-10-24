@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NATIVE_INTEGRATIONS } from "../site";
+import { INTEGRATION_LOGO, NATIVE_INTEGRATIONS } from "../site";
 import { Icon, type IconName } from "./icons";
 import { useSite } from "./site-context";
 
@@ -135,11 +135,12 @@ const DESTINATION_GAP = 12;
 export const DestinationsArt = () => {
   const { content } = useSite();
   const t = content.common.illustrations;
-  const destinations = [...NATIVE_INTEGRATIONS, "Webhook"];
+  const destinations = [...NATIVE_INTEGRATIONS, "Webhook" as const];
   const height = destinations.length * DESTINATION_ROW + (destinations.length - 1) * DESTINATION_GAP;
   return (
     <Frame className="mx-auto w-full max-w-lg">
-      <div className="grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] items-center sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]">
+      {/* Below sm the question card gets the wider share, so a phrase such as どのくらいですか？ fits its line rather than breaking mid-phrase. */}
+      <div className="grid grid-cols-[minmax(0,1.3fr)_2rem_minmax(0,1fr)] items-center sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]">
         <div className="card shadow-raised p-4">
           <p className="flex items-center gap-2 text-xs font-semibold text-teal-700">
             <span className="bg-mint-500 size-2 rounded-full" />
@@ -175,9 +176,21 @@ export const DestinationsArt = () => {
         <ul className="flex flex-col gap-3">
           {destinations.map((name) => (
             <li key={name} className="card shadow-raised flex h-12 items-center gap-3 px-3">
-              <span className="bg-mint-100 text-small inline-flex size-8 flex-none items-center justify-center rounded-[22%] font-bold text-teal-900">
-                {name === "Webhook" ? <Icon name="webhook" size={16} /> : name.charAt(0)}
-              </span>
+              {name === "Webhook" ? (
+                <span className="bg-mint-100 inline-flex size-8 flex-none items-center justify-center rounded-[22%] text-teal-900">
+                  <Icon name="webhook" size={16} />
+                </span>
+              ) : (
+                <span className="border-line inline-flex size-8 flex-none items-center justify-center rounded-[22%] border bg-white">
+                  <img
+                    src={INTEGRATION_LOGO[name]}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="size-5 object-contain"
+                  />
+                </span>
+              )}
               <span className="text-small leading-5 font-semibold">{name}</span>
             </li>
           ))}

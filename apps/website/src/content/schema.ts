@@ -132,14 +132,29 @@ const integrations = obj({
   workflows: obj({ title: text, body: text, badgeNote: text }),
 });
 
+/** A term of the developer reference and what it says about it. */
+const fact = obj({ term: text, body: text });
+
 const developers = obj({
   meta,
   title: text,
   sub: text,
   snippet: section,
-  api: section,
-  mcp: section,
+  api: linkedSection,
+  mcp: linkedSection,
   webhooks: linkedSection,
+  // The short API and MCP reference on the page itself: there is no separate documentation site (/docs is reserved and retired).
+  reference: obj({
+    title: text,
+    lead: text,
+    rest: obj({
+      title: text,
+      facts: z.tuple([fact, fact, fact]),
+      resourcesTitle: text,
+      resources: z.tuple([text, text, text, text, text]),
+    }),
+    mcp: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
+  }),
 });
 
 const selfHosting = obj({
