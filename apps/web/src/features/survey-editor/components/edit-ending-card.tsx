@@ -206,7 +206,7 @@ export const EditEndingCard = ({
         </div>
         <GripIcon
           aria-hidden="true"
-          className="size-4 opacity-0 transition-all duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
+          className="size-4 opacity-0 transition-all duration-300 group-focus-within:opacity-100 group-hover:opacity-100"
         />
       </div>
       <Collapsible.Root

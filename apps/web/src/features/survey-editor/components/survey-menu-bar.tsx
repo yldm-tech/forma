@@ -92,6 +92,8 @@ export const SurveyMenuBar = ({
   const [isNameInvalid, setIsNameInvalid] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoSaveFailuresRef = useRef(0);
+  // When the draft was last saved, kept so a single quiet failure does not wipe "Saved at" from the bar.
+  const lastSavedAtRef = useRef<Date | null>(null);
   const isSuccessfullySavedRef = useRef(false);
   const isAutoSavingRef = useRef(false);
   const isSurveyPublishingRef = useRef(false);
@@ -311,6 +313,14 @@ export const SurveyMenuBar = ({
     toast.error(fallback);
   };
 
+  /** Records a successful draft save for the autosave indicator. */
+  const markSaved = () => {
+    const at = new Date();
+    lastSavedAtRef.current = at;
+    autoSaveFailuresRef.current = 0;
+    setAutoSaveStatus({ state: "saved", at });
+  };
+
   /** One autosave of the draft as it stands, with no checks: the interval below decides when one is due, and Retry runs one at once. */
   const autoSave = async () => {
     isAutoSavingRef.current = true;
@@ -338,8 +348,7 @@ export const SurveyMenuBar = ({
       isSuccessfullySavedRef.current = true;
       // The cached survey is the baseline the editor reopens on within gcTime; left behind, it would bring back the version before this autosave, and the next save would conflict with, or overwrite, what was autosaved.
       queryClient.setQueryData(surveyEditorKeys.survey(savedData.id), savedData);
-      autoSaveFailuresRef.current = 0;
-      setAutoSaveStatus({ state: "saved", at: new Date() });
+      markSaved();
     } catch (error) {
       if (recordSaveConflict(error)) {
         // A concurrent edit is not transient: it stops the loop, so it is reported once, here.
@@ -348,11 +357,12 @@ export const SurveyMenuBar = ({
       } else {
         // A single failure is retried quietly in ten seconds; failures in a row are shown, with Retry, so work is never lost without the author knowing.
         autoSaveFailuresRef.current += 1;
-        setAutoSaveStatus(
-          autoSaveFailuresRef.current >= AUTOSAVE_FAILURES_BEFORE_WARNING
-            ? { state: "failed", failures: autoSaveFailuresRef.current }
-            : { state: "idle" }
-        );
+        if (autoSaveFailuresRef.current >= AUTOSAVE_FAILURES_BEFORE_WARNING) {
+          setAutoSaveStatus({ state: "failed", failures: autoSaveFailuresRef.current });
+        } else {
+          const at = lastSavedAtRef.current;
+          setAutoSaveStatus(at ? { state: "saved", at } : { state: "idle" });
+        }
       }
     } finally {
       isAutoSavingRef.current = false;
@@ -402,8 +412,7 @@ export const SurveyMenuBar = ({
       setIsSurveySaving(false);
       setLocalSurvey(updatedSurvey);
       adoptSavedSurvey(updatedSurvey);
-      autoSaveFailuresRef.current = 0;
-      setAutoSaveStatus({ state: "saved", at: new Date() });
+      markSaved();
       toast.success(t("workspace.surveys.edit.changes_saved"));
       return true;
     } catch (error) {
