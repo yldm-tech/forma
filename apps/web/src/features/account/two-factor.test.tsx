@@ -72,6 +72,13 @@ const stubTwoFactor = () => {
 const digitBoxes = () =>
   screen.getAllByRole("textbox", { name: /digit/i }).filter((box) => box instanceof HTMLInputElement);
 
+/** Presses Escape on the focused element and tells whether something held back its default action, the browser's close request. */
+const pressEscape = (): boolean => {
+  const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+  (document.activeElement ?? document.body).dispatchEvent(event);
+  return event.defaultPrevented;
+};
+
 test("enrolment walks the steps with focus, inline errors and backup codes that only an explicit choice closes", async () => {
   stubTwoFactor();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -98,6 +105,9 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
   );
   // One heading only: the dialog's title, no second one inside the step.
   expect(within(dialog).queryAllByRole("heading")).toHaveLength(1);
+
+  // Before the codes exist, Escape is left to close the dialog.
+  expect(pressEscape()).toBe(false);
 
   fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.next") }));
   await waitFor(() => expect(document.activeElement).toBe(digitBoxes()[0]));
@@ -128,6 +138,11 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
   // Escape is the dialog's cancel event; it must leave the codes on screen.
   fireEvent(dialog, new Event("cancel", { cancelable: true }));
   expect(screen.getByRole("dialog")).toBe(dialog);
+  // Chromium closes a dialog regardless after repeated Escapes, so the key itself is held back, however often it is pressed.
+  expect([pressEscape(), pressEscape(), pressEscape()]).toEqual([true, true, true]);
+  expect(screen.getByRole("dialog")).toBe(dialog);
   fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("auth.two_factor.i_saved_my_codes") }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  // Gone with the dialog: Escape works as usual again.
+  expect(pressEscape()).toBe(false);
 });

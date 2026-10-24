@@ -65,6 +65,15 @@ const EnableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
 
   // The backup codes are shown once: neither Escape, the backdrop nor a close button may dismiss them before the user confirms they kept them.
   const showingBackupCodes = step === "backupCodes";
+  // The Dialog cancels the <dialog>'s cancel event, but Chromium stops letting a page cancel it after a second Escape with no other input in between and then closes the dialog, which would unmount the codes. Holding back the Escape keydown keeps the browser from raising that close request at all.
+  useEffect(() => {
+    if (!showingBackupCodes) return;
+    const holdEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") e.preventDefault();
+    };
+    document.addEventListener("keydown", holdEscape, true);
+    return () => document.removeEventListener("keydown", holdEscape, true);
+  }, [showingBackupCodes]);
   const description = {
     confirmPassword: t("workspace.settings.profile.confirm_your_current_password_to_get_started"),
     scanQRCode: t("workspace.settings.profile.scan_the_qr_code_below_with_your_authenticator_app"),
