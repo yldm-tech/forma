@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides which of the jobs below this change needs. On a pull request it classifies the files the merge commit changes against its first parent, the base branch; on merge_group and workflow_dispatch it turns every output on, so nothing reaches main without the full suite. Each gated job skips itself when its output is false, and the summary at the end accepts that skip only then. Validate Translations and Validate CodeRabbit Config always run (their workflows say why).
+  # Decides which of the jobs below this change needs. On a pull request it classifies the files the merge commit changes against its first parent, the base branch; on merge_group and workflow_dispatch it turns every output on. Each gated job skips itself when its output is false, and the summary at the end accepts that skip only then. Validate Translations and Validate CodeRabbit Config always run (their workflows say why).
   #
-  # A Go test that reads a file outside apps/server, or a TypeScript check that reads one inside it, must add that path to the matching case below, or a change to it alone would skip the check that reads it.
+  # Nothing runs the skipped jobs later: the repository has no merge queue, so merge_group never fires, no workflow runs this suite on pushes to main, and release.yml publishes the images from the merge commit as it lands. A job skipped here has not run on the change at all before it ships, so the cases below must list every path a gated job reads. A Go job that reads a file outside apps/server, or a TypeScript check that reads one inside it, must add that path to the matching case, or a change to it alone would skip the check that reads it.
   changes:
     name: Classify changes
     runs-on: ubuntu-latest
@@ -63,9 +63,9 @@ jobs:
               case "$path" in
                 .github/* | pnpm-lock.yaml | pnpm-workspace.yaml | tooling/*) all ;;
               esac
-              # The Go module, and what its tests read outside it: the Docker deployment (forma.sh, the compose files, the Dockerfile), the language tables in packages/i18n-utils, the survey runtime's locales, and apps/web's locales, public files and survey page.
+              # The Go module; the Makefile, whose GOLANGCI_LINT_VERSION the Go server job lints with; and what the Go tests read outside the module: the Docker deployment (forma.sh, the compose files, the Dockerfile), the language tables in packages/i18n-utils, the survey runtime's locales, and apps/web's locales, public files and survey page.
               case "$path" in
-                apps/server/* | go.work | go.work.sum | deploy/docker/* | packages/i18n-utils/src/* | packages/surveys/locales/* | apps/web/locales/* | apps/web/public/* | apps/web/survey.html) on[go]=1 ;;
+                apps/server/* | Makefile | go.work | go.work.sum | deploy/docker/* | packages/i18n-utils/src/* | packages/surveys/locales/* | apps/web/locales/* | apps/web/public/* | apps/web/survey.html) on[go]=1 ;;
               esac
               # `vp check` formats and lints every file outside apps/server, so any of them; inside it, the migrations and Squawk config the migration lint reads, the JSON Schemas the export check compares, the tag handler a website test reads, and any TypeScript test file, which the orphaned test check exists to catch.
               case "$path" in
