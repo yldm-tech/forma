@@ -2635,6 +2635,7 @@ checksums:
     workspace/surveys/edit/automatically_close_the_survey_if_the_user_does_not_respond_after_certain_number_of_seconds: 1be3819ffa1db67385357ae933d69a7b
     workspace/surveys/edit/automatically_mark_complete_after_n_responses: b9145087d7a01b261dc03204347f118c
     workspace/surveys/edit/autosave_failed: ad7dd61eacc8ccbbf686fa630a6d8aa6
+    workspace/surveys/edit/autosave_not_saved: 6ddaa1c3c362d0b685a82d4e4dde91dc
     workspace/surveys/edit/autosave_saved_at: 17bfe5562ad0e57735864a4a3b4cc287
     workspace/surveys/edit/autosave_saving: ee98ff32f9a585a9108c8cd961d6077e
     workspace/surveys/edit/back_button_label: 504551d78645d968fcee95e3dfa5586f
@@ -2643,7 +2644,6 @@ checksums:
     workspace/surveys/edit/block_n: 7bfcbe9919e7826127f93a005c5852a6
     workspace/surveys/edit/block_name: df519e7fa53c3c20e2f25da6cc00244d
     workspace/surveys/edit/block_name_required_for: 066ef44bb57f625a0b4975f613e6a1ee
-    workspace/surveys/edit/block_number: b34cb8148f453a72a20a778de1e110be
     workspace/surveys/edit/bold: 4d7306bc355ed2befd6a9237c5452ee6
     workspace/surveys/edit/brand_color: 84ddb5736deb9f5c081ffe4962a6c63e
     workspace/surveys/edit/brand_color_description: 1cd10092621d375a37e297cc6353bce7
@@ -2727,6 +2727,7 @@ checksums:
     workspace/surveys/edit/default: d9c6dc5c412fe94143dfd1d332ec81d4
     workspace/surveys/edit/default_language: 06d01d2598419e36ba97d2d8719f849b
     workspace/surveys/edit/delete_anyways: cc8683ab625280eefc9776bd381dc2e8
+    workspace/surveys/edit/delete_applies_on_save: 7e7b85984c9c95ae5258c62bed80fe09
     workspace/surveys/edit/delete_block: c00617cb0724557e486304276063807a
     workspace/surveys/edit/delete_block_confirm_text: e4f1b5e240a58bf82da066a3e8cfa112
     workspace/surveys/edit/delete_block_confirm_title: b808e2df6b0e71ae2cd88273a0900dce
@@ -2878,7 +2879,7 @@ checksums:
     workspace/surveys/edit/is_set: 1c66019bd162201db83aef305ab2a161
     workspace/surveys/edit/is_skipped: 9fb90b6578f603cca37d4e6c912bb401
     workspace/surveys/edit/is_submitted: 13e774a97ad5f5609555e6f99514e70f
-    workspace/surveys/edit/issue_logic_rule_invalid: 60d168fc6dcae20a577dcdaca45e541b
+    workspace/surveys/edit/issue_logic_rule_incomplete: 60d168fc6dcae20a577dcdaca45e541b
     workspace/surveys/edit/issue_option_label_missing: f866b01f486f100632da4381922f6b20
     workspace/surveys/edit/issue_question_text_missing: c13fdf6eb8f2505dec3971d48dd0dcf3
     workspace/surveys/edit/italic: 555c60fb1d12ae305136202afa6deb3d
