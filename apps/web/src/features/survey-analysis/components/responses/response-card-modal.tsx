@@ -43,7 +43,8 @@ export const ResponseCardModal = ({
 }: {
   responses: TResponseWithQuotas[];
   hasMore: boolean;
-  fetchNextPage: () => Promise<unknown>;
+  /** Loads the next page and resolves to every loaded response, the new page included. */
+  fetchNextPage: () => Promise<TResponseWithQuotas[]>;
   /** The filtered response count; the loaded count stands in until it is known. */
   totalCount: number | undefined;
   selectedResponseId: string | null;
@@ -57,9 +58,12 @@ export const ResponseCardModal = ({
 }) => {
   const { t } = useTranslation();
   const [isLoadingNext, setIsLoadingNext] = useState(false);
-  // Set when Next asked for the next page: once it arrives, the response after the one that was last moves in.
-  const [pendingAfterId, setPendingAfterId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  // The response on screen as of the last render: a page that arrives after the modal closed or moved on does not move it.
+  const shownIdRef = useRef(selectedResponseId);
+  useEffect(() => {
+    shownIdRef.current = selectedResponseId;
+  });
   const currentIndex =
     selectedResponseId === null ? -1 : responses.findIndex((response) => response.id === selectedResponseId);
   // A deleted response leaves the list before the selection is cleared; an index past the end shows nothing rather than a card for no response.
@@ -69,16 +73,8 @@ export const ResponseCardModal = ({
   const canGoNext = !isLast || hasMore;
   const total = Math.max(totalCount ?? 0, responses.length);
 
-  useEffect(() => {
-    if (pendingAfterId === null) return;
-    const index = responses.findIndex((candidate) => candidate.id === pendingAfterId);
-    const next = index >= 0 ? responses[index + 1] : undefined;
-    if (next && selectedResponseId === pendingAfterId) setSelectedResponseId(next.id);
-    if (next || !hasMore) setPendingAfterId(null);
-  }, [responses, pendingAfterId, hasMore, selectedResponseId, setSelectedResponseId]);
-
   const goBack = () => {
-    if (canGoBack) setSelectedResponseId(responses[currentIndex - 1]?.id ?? null);
+    if (canGoBack && !isLoadingNext) setSelectedResponseId(responses[currentIndex - 1]?.id ?? null);
   };
 
   const goNext = async () => {
@@ -89,9 +85,11 @@ export const ResponseCardModal = ({
     }
     if (!hasMore) return;
     setIsLoadingNext(true);
-    setPendingAfterId(response.id);
     try {
-      await fetchNextPage();
+      const loaded = await fetchNextPage();
+      const index = loaded.findIndex((candidate) => candidate.id === response.id);
+      const next = index >= 0 ? loaded[index + 1] : undefined;
+      if (next && shownIdRef.current === response.id) setSelectedResponseId(next.id);
     } finally {
       setIsLoadingNext(false);
     }
@@ -151,7 +149,7 @@ export const ResponseCardModal = ({
         </p>
         <Button
           onClick={goBack}
-          disabled={!canGoBack}
+          disabled={!canGoBack || isLoadingNext}
           variant="outline"
           size="icon"
           aria-label={t("common.back")}

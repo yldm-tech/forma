@@ -135,7 +135,7 @@ export const ResponsePage = ({
           responses={loaded}
           environmentTags={environmentTags}
           isReadOnly={isReadOnly}
-          fetchNextPage={() => responses.fetchNextPage()}
+          fetchNextPage={() => responses.fetchNextPage().then((result) => result.data?.pages.flat() ?? [])}
           hasMore={responses.hasNextPage}
           isFetchingFirstPage={responses.isPending}
           totalCount={total}

@@ -148,7 +148,8 @@ export const ResponseTable = ({
   responses: TResponseWithQuotas[];
   environmentTags: TTag[];
   isReadOnly: boolean;
-  fetchNextPage: () => Promise<unknown>;
+  /** Loads the next page and resolves to every loaded response, the new page included. */
+  fetchNextPage: () => Promise<TResponseWithQuotas[]>;
   hasMore: boolean;
   isFetchingFirstPage: boolean;
   /** How many responses match the current filter, when known: the response card's position reads "n of total". */
