@@ -24,14 +24,14 @@ import { type InviteForm, type InviteFormErrors, validateInviteForm } from "../.
 import { inviteFailureMessage, inviteFailureReason } from "../../lib/invites";
 import { useCreateInvite } from "../../lib/queries/invites";
 import { teamsQuery } from "../../lib/queries/teams";
-import { type OrganizationRole, accessFlags, assignableRoles } from "../../lib/roles";
+import { type OrganizationRole, accessFlags, assignableRoles, roleLabel } from "../../lib/roles";
 import { toast } from "../../lib/toast";
 import { BulkInviteTab } from "./bulk-invite-tab";
 
 const EMPTY: InviteForm = { name: "", email: "", role: "member", teamIds: [] };
 
 /**
- * forma2's invite member modal: one member at a time, or a CSV of them (the bulk tab). A team admin who is not an owner or manager gets the individual form only and invites members, into the teams they administer.
+ * forma2's invite member modal: one member at a time, or a CSV of them (the bulk tab). A team admin who is not an owner or manager gets the individual form only and invites members, into the teams they administer. Where the instance sends no email the modal says so, and a new invite is handed to onCreatedWithoutEmail so its link can be shared by hand.
  */
 export const InviteMemberModal = ({
   open,
@@ -40,6 +40,8 @@ export const InviteMemberModal = ({
   membershipRole,
   adminTeamIds,
   billingRoleAllowed,
+  emailConfigured,
+  onCreatedWithoutEmail,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -47,6 +49,9 @@ export const InviteMemberModal = ({
   membershipRole: OrganizationRole;
   adminTeamIds: string[];
   billingRoleAllowed: boolean;
+  /** Whether the instance has SMTP; without it no invitation email goes out. */
+  emailConfigured: boolean;
+  onCreatedWithoutEmail: (inviteId: string) => void;
 }) => {
   const { t } = useTranslation();
   const [form, setForm] = useState<InviteForm>(EMPTY);
@@ -77,13 +82,19 @@ export const InviteMemberModal = ({
     if (Object.keys(found).length > 0) return;
     const toastId = toast.loading(t("workspace.settings.general.inviting_member", { count: 1 }));
     try {
-      await create.mutateAsync({
+      const created = await create.mutateAsync({
         ...invitee,
         name: invitee.name.trim(),
         email: invitee.email.trim().toLowerCase(),
       });
-      toast.success(t("workspace.settings.general.member_invited_successfully"), { id: toastId });
+      toast.success(
+        emailConfigured
+          ? t("workspace.settings.general.member_invited_successfully")
+          : t("workspace.settings.teams.invite_created_email_not_configured"),
+        { id: toastId }
+      );
       close();
+      if (!emailConfigured) onCreatedWithoutEmail(created.id);
     } catch (error) {
       const reason = error instanceof ApiError ? inviteFailureReason(error.code) : "unknown";
       toast.error(
@@ -106,6 +117,13 @@ export const InviteMemberModal = ({
         <DialogTitle>{t("workspace.settings.teams.invite_member")}</DialogTitle>
         <DialogDescription>{t("workspace.settings.teams.invite_member_description")}</DialogDescription>
       </DialogHeader>
+      {!emailConfigured && (
+        <Alert variant="warning" role="status" className="mb-4">
+          <AlertDescription>
+            {t("workspace.settings.teams.invite_email_not_configured_hint")}
+          </AlertDescription>
+        </Alert>
+      )}
       {!teamAdminOnly && (
         <TabToggle
           id="invite-type"
@@ -161,13 +179,12 @@ export const InviteMemberModal = ({
                 <>
                   <Select
                     id="memberRoleSelect"
-                    className="capitalize"
                     value={form.role}
                     aria-describedby="memberRoleDescription"
                     onChange={(e) => setForm({ ...form, role: e.target.value as OrganizationRole })}>
                     {assignableRoles(membershipRole, billingRoleAllowed).map((role) => (
                       <option key={role} value={role}>
-                        {role}
+                        {roleLabel(t, role)}
                       </option>
                     ))}
                   </Select>

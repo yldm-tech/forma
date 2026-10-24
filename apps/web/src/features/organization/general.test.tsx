@@ -15,6 +15,7 @@ import { initI18n } from "../../lib/i18n";
 import { billingKeys } from "../../lib/queries/billing";
 import { instanceKeys } from "../../lib/queries/instance";
 import type { OrganizationDetail } from "../../lib/queries/organizations";
+import type { OrganizationRole } from "../../lib/roles";
 import { OrganizationGeneralPage } from "./general";
 
 const ORG = "0190a000-0000-7000-8000-000000000001";
@@ -55,6 +56,7 @@ const stubServer = () =>
         [`GET ${API}/ai`]: { isInstanceConfigured: false },
         [`GET ${API}/workspaces`]: { workspaces: [] },
         "GET /api/app/auth/me": { id: "u1", name: "Grace" },
+        "GET /api/app/auth/options": { smtpConfigured: true },
       };
       if (!(key in answers)) throw new Error(`unexpected ${key}`);
       return new Response(JSON.stringify(answers[key]), {
@@ -68,9 +70,11 @@ const stubServer = () =>
 const renderPage = ({
   storageConfigured,
   isFormaCloud,
+  role = "owner",
 }: {
   storageConfigured: boolean;
   isFormaCloud: boolean;
+  role?: OrganizationRole;
 }) => {
   stubServer();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -82,7 +86,11 @@ const renderPage = ({
       createRoute({
         getParentRoute: () => rootRoute,
         path: "/",
-        component: () => <OrganizationGeneralPage organization={organization} />,
+        component: () => (
+          <OrganizationGeneralPage
+            organization={{ ...organization, membership: { ...organization.membership, role } }}
+          />
+        ),
       }),
     ]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
@@ -111,5 +119,31 @@ describe("OrganizationGeneralPage", () => {
     expect(await screen.findByText("0.2.42")).toBeTruthy();
     expect(screen.queryByText(t("common.storage_not_configured"))).toBeNull();
     expect(screen.queryByText(t("workspace.settings.general.security_list_tip_link"))).toBeNull();
+  });
+
+  test.each(["member", "billing"] as const)(
+    "a %s, who can change nothing, is told so once at the top instead of in every card",
+    async (role) => {
+      renderPage({ storageConfigured: true, isFormaCloud: true, role });
+      expect(await screen.findByText(t("workspace.settings.general.view_only_access"))).toBeTruthy();
+      expect(
+        screen.queryByText(t("common.only_owners_managers_and_manage_access_members_can_perform_this_action"))
+      ).toBeNull();
+      expect(
+        screen.queryByText(t("workspace.settings.general.only_org_owner_can_perform_action"))
+      ).toBeNull();
+      expect(
+        (screen.getByLabelText(t("workspace.settings.general.organization_name")) as HTMLInputElement)
+          .disabled
+      ).toBe(true);
+    }
+  );
+
+  test("a manager edits the page and is told only owners delete the organization", async () => {
+    renderPage({ storageConfigured: true, isFormaCloud: true, role: "manager" });
+    expect(
+      await screen.findByText(t("workspace.settings.general.only_org_owner_can_perform_action"))
+    ).toBeTruthy();
+    expect(screen.queryByText(t("workspace.settings.general.view_only_access"))).toBeNull();
   });
 });

@@ -188,7 +188,8 @@ const EditProfileDetailsForm = ({ user }: { user: Me }) => {
             ))}
           </Select>
         </div>
-        {options.data?.passwordResetEnabled && isPasswordUser && (
+        {/* The reset link is mailed, so without SMTP the button could only fail. */}
+        {options.data?.passwordResetEnabled && options.data.smtpConfigured && isPasswordUser && (
           <div className="mt-4 space-y-2">
             <Label htmlFor="reset-password">{t("auth.forgot-password.reset_password")}</Label>
             <p className="mt-1 text-sm text-slate-500">

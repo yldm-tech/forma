@@ -63,16 +63,32 @@ export const triggersText = (t: TFunction, triggers: readonly WebhookTrigger[]):
     .map((trigger) => triggerLabel(t, trigger))
     .join(", ");
 
-/** The names of the surveys a webhook sends for: every survey when it is scoped to all of them, otherwise the ones it lists that still exist (a survey that is gone drops out). */
+/** The names of the surveys a webhook lists that still exist (a survey that is gone drops out); null for a webhook scoped to all surveys, which covers surveys created later too and so is described rather than listed. */
 export const webhookSurveyNames = (
   webhook: Pick<Webhook, "surveyIds" | "allSurveys">,
   surveys: readonly { id: string; name: string }[]
-): string[] => {
-  if (webhook.allSurveys) return surveys.map((survey) => survey.name);
+): string[] | null => {
+  if (webhook.allSurveys) return null;
   return webhook.surveyIds.flatMap((id) => {
     const survey = surveys.find((s) => s.id === id);
     return survey ? [survey.name] : [];
   });
+};
+
+/** Who created a webhook, as the list shows it: the automation platforms by their product names, which are not translated, and a webhook added on this page as the user's. */
+export const webhookSourceLabel = (t: TFunction, source: WebhookSource): string => {
+  switch (source) {
+    case "user":
+      return t("common.user");
+    case "zapier":
+      return "Zapier";
+    case "make":
+      return "Make";
+    case "n8n":
+      return "n8n";
+    case "activepieces":
+      return "Activepieces";
+  }
 };
 
 /** How many webhooks of each source a workspace has, for the integrations page's cards. */
@@ -84,11 +100,21 @@ export const webhookCounts = (
   return counts;
 };
 
-/** forma2's getStatusText on the integrations page: "1 webhook", "3 webhooks", or not connected. */
-export const countStatusText = (t: TFunction, count: number, noun: string): string => {
-  if (count === 1) return `1 ${noun}`;
+/** forma2's getStatusText on the integrations page: "1 webhook", "3 webhooks", or not connected, counted in the user's language. */
+export const connectionCountText = (
+  t: TFunction,
+  count: number,
+  noun: "webhook" | "zap" | "integration"
+): string => {
   if (count === 0) return t("common.not_connected");
-  return `${count} ${noun}s`;
+  switch (noun) {
+    case "webhook":
+      return t("workspace.integrations.webhook_count", { count });
+    case "zap":
+      return t("workspace.integrations.zap_count", { count });
+    case "integration":
+      return t("workspace.integrations.integration_count", { count });
+  }
 };
 
 /** The endpoint test's refusals forma2 translated; the server sends the key as the code. */

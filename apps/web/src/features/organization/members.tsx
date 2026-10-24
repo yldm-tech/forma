@@ -35,7 +35,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
 import { isInviteExpired } from "../../lib/invites";
-import { meQuery } from "../../lib/queries/auth";
+import { authOptionsQuery, meQuery } from "../../lib/queries/auth";
 import { combinedQueryState } from "../../lib/query-state";
 import {
   type Invite,
@@ -63,6 +63,7 @@ import {
   canDeleteRow,
   hasMoreThanOneActiveOwner,
   isRoleEditDisabled,
+  roleLabel,
 } from "../../lib/roles";
 import { forgetWorkspace } from "../../lib/storage";
 import { toast } from "../../lib/toast";
@@ -78,6 +79,9 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
   const invites = useQuery(invitesQuery(organization.id));
   const access = useQuery(userManagementQuery(organization.id));
   const { data: me } = useSuspenseQuery(meQuery);
+  const options = useQuery(authOptionsQuery);
+  // Without SMTP an invite is created but never mailed, so sending it again is not offered; the link is shared by hand instead.
+  const emailConfigured = options.data?.smtpConfigured ?? true;
   const role = organization.membership.role;
 
   // forma2 offered user management to anyone USER_MANAGEMENT_MINIMUM_ROLE admits, and to team admins for their own teams.
@@ -106,6 +110,7 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
           canInvite={!!access.data && !access.data.inviteDisabled && userManagementEnabled}
           adminTeamIds={access.data?.adminTeamIds ?? []}
           billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
+          emailConfigured={emailConfigured}
         />
       </div>
       {state.status === "error" ? (
@@ -144,6 +149,7 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
                 userManagementEnabled={userManagementEnabled}
                 billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
                 doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
+                emailConfigured={emailConfigured}
               />
             ))}
           </TableBody>
@@ -161,6 +167,7 @@ const MemberTableRow = ({
   userManagementEnabled,
   billingRoleAllowed,
   doesOrgHaveMoreThanOneOwner,
+  emailConfigured,
 }: {
   row: MemberRow;
   organizationId: string;
@@ -169,6 +176,7 @@ const MemberTableRow = ({
   userManagementEnabled: boolean;
   billingRoleAllowed: boolean;
   doesOrgHaveMoreThanOneOwner: boolean;
+  emailConfigured: boolean;
 }) => {
   const name = row.kind === "member" ? row.member.name : (row.invite.name ?? "");
   const email = row.kind === "member" ? row.member.email : row.invite.email;
@@ -203,6 +211,7 @@ const MemberTableRow = ({
             row={row}
             organizationId={organizationId}
             name={name}
+            emailConfigured={emailConfigured}
             canDelete={canDeleteRow(
               row.kind === "invite"
                 ? { kind: "invite" }
@@ -257,7 +266,7 @@ const RoleCell = ({
   const pending = changeMemberRole.isPending || changeInviteRole.isPending;
 
   if (!accessFlags(currentUserRole).isOwnerOrManager) {
-    return <Badge size="tiny" type="gray" text={memberRole} className="capitalize" />;
+    return <Badge size="tiny" type="gray" text={roleLabel(t, memberRole)} />;
   }
 
   const change = async (role: OrganizationRole) => {
@@ -277,7 +286,7 @@ const RoleCell = ({
           loading={pending}
           size="sm"
           variant="secondary">
-          <span className="ml-1 capitalize">{memberRole}</span>
+          <span className="ml-1">{roleLabel(t, memberRole)}</span>
           <ChevronDownIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -286,8 +295,8 @@ const RoleCell = ({
           value={memberRole}
           onValueChange={(value) => void change(value as OrganizationRole)}>
           {assignableRoles(currentUserRole, billingRoleAllowed).map((role) => (
-            <DropdownMenuRadioItem key={role} value={role} className="capitalize">
-              {role}
+            <DropdownMenuRadioItem key={role} value={role}>
+              {roleLabel(t, role)}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
@@ -296,17 +305,19 @@ const RoleCell = ({
   );
 };
 
-/** forma2's MemberActions: remove, and for an invite share its link or send it again. */
+/** forma2's MemberActions: remove, and for an invite share its link or, where the instance sends email, send it again. A membership row has nothing to share or resend, so it shows neither button. */
 const MemberActions = ({
   row,
   organizationId,
   name,
   canDelete,
+  emailConfigured,
 }: {
   row: MemberRow;
   organizationId: string;
   name: string;
   canDelete: boolean;
+  emailConfigured: boolean;
 }) => {
   const { t } = useTranslation();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -363,26 +374,28 @@ const MemberActions = ({
         onClick={() => setDeleteOpen(true)}>
         <TrashIcon />
       </Button>
-      <Button
-        variant="secondary"
-        size="icon"
-        disabled={!invite}
-        loading={link.isPending}
-        title={invite ? t("workspace.settings.general.share_invite_link") : undefined}
-        aria-label={t("workspace.settings.general.share_invite_link")}
-        onClick={() => void share()}>
-        <ShareIcon />
-      </Button>
-      <Button
-        variant="secondary"
-        size="icon"
-        disabled={!invite}
-        loading={resend.isPending}
-        title={invite ? t("workspace.settings.general.resend_invitation_email") : undefined}
-        aria-label={t("workspace.settings.general.resend_invitation_email")}
-        onClick={() => void sendAgain()}>
-        <SendHorizonalIcon />
-      </Button>
+      {invite && (
+        <Button
+          variant="secondary"
+          size="icon"
+          loading={link.isPending}
+          title={t("workspace.settings.general.share_invite_link")}
+          aria-label={t("workspace.settings.general.share_invite_link")}
+          onClick={() => void share()}>
+          <ShareIcon />
+        </Button>
+      )}
+      {invite && emailConfigured && (
+        <Button
+          variant="secondary"
+          size="icon"
+          loading={resend.isPending}
+          title={t("workspace.settings.general.resend_invitation_email")}
+          aria-label={t("workspace.settings.general.resend_invitation_email")}
+          onClick={() => void sendAgain()}>
+          <SendHorizonalIcon />
+        </Button>
+      )}
       <DeleteDialog
         open={deleteOpen}
         setOpen={setDeleteOpen}
@@ -430,17 +443,19 @@ const ShareInviteModal = ({ url, onClose }: { url: string | null; onClose: () =>
   );
 };
 
-/** forma2's OrganizationActions: leave (not for owners, and not your only organization) and invite. */
+/** forma2's OrganizationActions: leave (not for owners, and not your only organization) and invite. Where the instance sends no email, a new invite's link opens at once for sharing by hand. */
 const OrganizationActions = ({
   organization,
   canInvite,
   adminTeamIds,
   billingRoleAllowed,
+  emailConfigured,
 }: {
   organization: OrganizationDetail;
   canInvite: boolean;
   adminTeamIds: string[];
   billingRoleAllowed: boolean;
+  emailConfigured: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -449,8 +464,19 @@ const OrganizationActions = ({
   const [inviteOpen, setInviteOpen] = useState(false);
   const organizations = useQuery({ ...organizationsQuery, enabled: leaveOpen });
   const leave = useLeaveOrganization(organization.id);
+  const link = useInviteLink(organization.id);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const role = organization.membership.role;
   const isOnlyOrganization = (organizations.data?.length ?? 0) <= 1;
+
+  const shareNewInvite = async (inviteId: string) => {
+    try {
+      const result = await link.mutateAsync(inviteId);
+      setShareUrl(result.inviteUrl);
+    } catch (error) {
+      toast.error(errorMessage(t, error));
+    }
+  };
 
   const leaveOrganization = async () => {
     try {
@@ -489,7 +515,10 @@ const OrganizationActions = ({
         membershipRole={role}
         adminTeamIds={adminTeamIds}
         billingRoleAllowed={billingRoleAllowed}
+        emailConfigured={emailConfigured}
+        onCreatedWithoutEmail={(inviteId) => void shareNewInvite(inviteId)}
       />
+      <ShareInviteModal url={shareUrl} onClose={() => setShareUrl(null)} />
       <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
         <DialogHeader>
           <DialogTitle>{t("workspace.settings.general.leave_organization_title")}</DialogTitle>

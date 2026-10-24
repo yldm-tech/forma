@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { RepeatIcon, Trash2Icon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Button } from "../../../components/ui/button";
 import { Uploader, useIsStorageConfigured } from "../../../components/ui/file-input/components/uploader";
 import { FormaLogo } from "../../../components/ui/logo";
@@ -10,7 +9,7 @@ import { SettingsCard } from "../../../components/ui/page";
 import { showStorageNotConfiguredToast } from "../../../components/ui/storage-not-configured-toast";
 import { Muted, Small } from "../../../components/ui/typography";
 import { errorMessage } from "../../../lib/errors";
-import { meQuery } from "../../../lib/queries/auth";
+import { authOptionsQuery, meQuery } from "../../../lib/queries/auth";
 import type { OrganizationDetail } from "../../../lib/queries/organizations";
 import { accessFlags } from "../../../lib/roles";
 import { toast } from "../../../lib/toast";
@@ -20,13 +19,15 @@ import { useEmailLogoUrl, useSendTestEmail, useUploadWorkspaceId } from "./api";
 const allowedFileExtensions = ["jpeg", "png", "jpg", "webp"];
 
 /**
- * forma2's EmailCustomizationSettings: the logo the organization's emails carry in place of Forma's, uploaded, replaced or removed, previewed beside a sample email, and sent to the caller as a test email. Owners and managers only.
+ * forma2's EmailCustomizationSettings: the logo the organization's emails carry in place of Forma's, uploaded, replaced or removed, previewed beside a sample email, and sent to the caller as a test email where the instance has SMTP. Owners and managers only; the page says once, above every card, that others only look.
  */
 export const EmailCustomizationCard = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const isReadOnly = !accessFlags(organization.membership.role).isOwnerOrManager;
   const savedLogoUrl = organization.whitelabel?.logoUrl || null;
   const { data: me } = useQuery(meQuery);
+  const { data: options } = useQuery(authOptionsQuery);
+  const emailUnavailable = options?.smtpConfigured === false;
   const workspaceId = useUploadWorkspaceId(organization.id);
   const isStorageConfigured = useIsStorageConfigured();
   const setLogo = useEmailLogoUrl(organization.id);
@@ -103,11 +104,12 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
     }
   };
 
-  const logo = (className: string) =>
+  // Forma's mark is an <svg> with no size of its own, so it needs one where its box only caps the size; an uploaded <img> keeps its intrinsic size.
+  const logo = (className: string, svgClassName: string) =>
     logoUrl ? (
       <img src={logoUrl} alt={t("common.logo")} className={className} />
     ) : (
-      <FormaLogo className={className} />
+      <FormaLogo className={svgClassName} />
     );
 
   return (
@@ -122,7 +124,7 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
             {logoUrl !== "" && (
               <div className="flex flex-col gap-2">
                 <div className="flex w-max items-center justify-center rounded-lg border border-slate-200 px-4 py-2">
-                  {logo("max-h-24 max-w-full object-contain")}
+                  {logo("max-h-24 max-w-full object-contain", "h-16 w-16")}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -165,7 +167,8 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
             <Button
               data-testid="send-test-email-button"
               variant="secondary"
-              disabled={isReadOnly || isSaving}
+              aria-describedby={emailUnavailable ? "test-email-unavailable" : undefined}
+              disabled={isReadOnly || isSaving || emailUnavailable}
               loading={sendTest.isPending}
               onClick={() => void sendTestEmail()}>
               {t("common.send_test_email")}
@@ -177,10 +180,15 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
               {t("common.save")}
             </Button>
           </div>
+          {emailUnavailable && (
+            <p id="test-email-unavailable" className="mt-2 max-w-sm text-sm text-slate-600">
+              {t("workspace.settings.general.test_email_requires_smtp")}
+            </p>
+          )}
         </div>
         <div className="min-h-52 w-[446px] max-w-full rounded-t-lg border border-slate-100 px-10 pt-10 pb-4 shadow-xl">
           <div data-testid="email-customization-preview" className="mb-4 flex justify-center">
-            {logo("mx-auto max-h-[100px] max-w-full object-contain")}
+            {logo("mx-auto max-h-[100px] max-w-full object-contain", "mx-auto max-h-[100px] max-w-full")}
           </div>
           <p className="font-bold">
             {t("workspace.settings.general.email_customization_preview_email_heading", {
@@ -190,13 +198,6 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
           <Muted>{t("workspace.settings.general.email_customization_preview_email_text")}</Muted>
         </div>
       </div>
-      {isReadOnly && (
-        <Alert variant="warning" className="mt-4 mb-6" role="status">
-          <AlertDescription>
-            {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
-          </AlertDescription>
-        </Alert>
-      )}
     </SettingsCard>
   );
 };

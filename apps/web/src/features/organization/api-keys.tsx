@@ -45,7 +45,7 @@ export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail
     return (
       <PageContentWrapper>
         <PageHeader pageTitle={t("common.api_keys")} />
-        <Alert variant="warning" role="status" className="max-w-4xl">
+        <Alert variant="warning" role="status">
           <AlertDescription>{t("common.you_are_not_authorized_to_perform_this_action")}</AlertDescription>
         </Alert>
       </PageContentWrapper>
@@ -73,7 +73,7 @@ export const ConnectAppBanner = ({ organizationId }: { organizationId: string })
   const first = workspaces?.[0];
   if (!first) return null;
   return (
-    <Alert variant="info" role="status" className="max-w-4xl rounded-xl">
+    <Alert variant="info" role="status" className="rounded-xl">
       <AlertTitle>{t("workspace.settings.api_keys.connect_app_banner_title")}</AlertTitle>
       <AlertDescription>{t("workspace.settings.api_keys.connect_app_banner_description")}</AlertDescription>
       <AlertButton asChild>
