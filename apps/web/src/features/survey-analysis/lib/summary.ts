@@ -122,6 +122,20 @@ export const satisfactionColor = (percentage: number): string => {
   return "bg-rose-500";
 };
 
+/** The colour of an NPS score's dot: below 0 rose, up to 29 amber, from 30 emerald, the usual reading of an NPS. The promoters' share is not the score, so satisfactionColor does not apply. */
+export const npsScoreColor = (score: number): string => {
+  const rounded = Math.round(score);
+  if (rounded < 0) return "bg-rose-500";
+  if (rounded < 30) return "bg-amber-500";
+  return "bg-emerald-500";
+};
+
+/** An NPS score as its badge prints it: rounded, with its sign ("+16", "-5", "0"). */
+export const formatNpsScore = (score: number, locale: string): string =>
+  new Intl.NumberFormat(locale, { maximumFractionDigits: 0, signDisplay: "exceptZero" }).format(
+    Math.round(score)
+  );
+
 /** An average as the score cards print it, to two decimals. An element with no numeric answer has no average: forma2 printed JavaScript's NaN, which the server sends as null. */
 export const formatAverage = (average: number | null): string =>
   average === null || Number.isNaN(average) ? "NaN" : average.toFixed(2);

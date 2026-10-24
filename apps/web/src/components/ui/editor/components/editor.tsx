@@ -63,6 +63,8 @@ export type TextEditorProps = {
   addFallback?: () => void;
   autoFocus?: boolean;
   id?: string;
+  /** Id of the element that names the editor; `id` when not given. */
+  ariaLabelledBy?: string;
 };
 
 const editorConfig = {
@@ -150,7 +152,7 @@ export const Editor = (props: TextEditorProps) => {
                   <ContentEditable
                     style={{ height: props.height }}
                     className="editor-input"
-                    aria-labelledby={props.id}
+                    aria-labelledby={props.ariaLabelledBy ?? props.id}
                     aria-invalid={props.isInvalid ? true : undefined}
                     aria-describedby={props.ariaDescribedBy}
                     dir="auto"

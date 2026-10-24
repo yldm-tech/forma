@@ -33,7 +33,7 @@ import {
   useDeleteOrganization,
   useUpdateOrganization,
 } from "../../lib/queries/organizations";
-import { accessFlags } from "../../lib/roles";
+import { type OrganizationRole, accessFlags } from "../../lib/roles";
 import { forgetWorkspace } from "../../lib/storage";
 import { UTC_DEFAULT, ianaTimeZones, organizationSettingsChanges } from "../../lib/time-zones";
 import { toast } from "../../lib/toast";
@@ -45,39 +45,41 @@ import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 const SecurityListTip = () => {
   const { t } = useTranslation();
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-x-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs">
-        <ShieldCheckIcon className="size-5 shrink-0 text-blue-400" />
-        <p className="text-sm">
-          {t("workspace.settings.general.security_list_tip")}{" "}
-          <a
-            href="https://forma.yldm.ai/security?utm_source=forma-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-forma-security-updates"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-blue-700">
-            {t("workspace.settings.general.security_list_tip_link")}
-          </a>
-        </p>
-      </div>
+    <div className="flex items-center gap-x-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs">
+      <ShieldCheckIcon className="size-5 shrink-0 text-blue-400" />
+      <p className="text-sm">
+        {t("workspace.settings.general.security_list_tip")}{" "}
+        <a
+          href="https://forma.yldm.ai/security?utm_source=forma-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-forma-security-updates"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-blue-700">
+          {t("workspace.settings.general.security_list_tip_link")}
+        </a>
+      </p>
     </div>
   );
 };
 
-/** forma2's organization general settings page: on top a warning without file storage and, self-hosted, the security list tip; at the foot the organization's id and the Forma version. */
+/** forma2's organization general settings page: on top a warning without file storage and, self-hosted, the security list tip; at the foot the organization's id and the Forma version. A member or billing user, who can change nothing here, is told so once at the top rather than in every card. */
 export const OrganizationGeneralPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const role = organization.membership.role;
+  const { isOwnerOrManager } = accessFlags(role);
   const { data: instance } = useQuery(instanceQuery);
   const { data: billing } = useQuery(billingSummaryQuery(organization.id));
   return (
     <PageContentWrapper>
       <PageHeader pageTitle={t("workspace.settings.general.organization_settings")} />
+      {!isOwnerOrManager && (
+        <Alert variant="info" role="status">
+          <AlertDescription>{t("workspace.settings.general.view_only_access")}</AlertDescription>
+        </Alert>
+      )}
       {instance?.storageConfigured === false && (
-        <div className="max-w-4xl">
-          <Alert variant="warning" role="status">
-            <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
-          </Alert>
-        </div>
+        <Alert variant="warning" role="status">
+          <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
+        </Alert>
       )}
       {billing?.isFormaCloud === false && <SecurityListTip />}
       <SettingsCard
@@ -97,7 +99,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
         width="full"
         title={t("workspace.settings.general.delete_organization")}
         description={t("workspace.settings.general.delete_organization_description")}>
-        <DeleteOrganization organization={organization} isOwner={role === "owner"} />
+        <DeleteOrganization organization={organization} role={role} />
       </SettingsCard>
       <CreateOrganizationCard />
       <div className="space-y-2">
@@ -192,13 +194,6 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
           {t("common.update")}
         </Button>
       </form>
-      {!canEditTimeZone && (
-        <Alert variant="warning" role="status" className="mb-4">
-          <AlertDescription>
-            {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
-          </AlertDescription>
-        </Alert>
-      )}
     </>
   );
 };
@@ -255,24 +250,17 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
           </p>
         </div>
       </div>
-      {!canEdit && (
-        <Alert variant="warning" role="status">
-          <AlertDescription>
-            {t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")}
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 };
 
-/** forma2's DeleteOrganization: owners only, confirmed by typing the organization's exact name. */
+/** forma2's DeleteOrganization: owners only, confirmed by typing the organization's exact name. A manager, who can change the rest of the page, is told only owners may delete; for a member or billing user the page's view-only notice already says it, so the button just stays disabled. */
 const DeleteOrganization = ({
   organization,
-  isOwner,
+  role,
 }: {
   organization: OrganizationDetail;
-  isOwner: boolean;
+  role: OrganizationRole;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -281,13 +269,24 @@ const DeleteOrganization = ({
   const [confirmation, setConfirmation] = useState("");
   const remove = useDeleteOrganization(organization.id);
 
-  if (!isOwner) {
+  const { isOwner, isManager } = accessFlags(role);
+
+  if (isManager) {
     return (
       <Alert variant="warning" role="status" className="mb-4">
         <AlertDescription>
           {t("workspace.settings.general.only_org_owner_can_perform_action")}
         </AlertDescription>
       </Alert>
+    );
+  }
+  if (!isOwner) {
+    return (
+      <div className="pb-4">
+        <Button size="sm" variant="destructive" disabled>
+          {t("common.delete")}
+        </Button>
+      </div>
     );
   }
 

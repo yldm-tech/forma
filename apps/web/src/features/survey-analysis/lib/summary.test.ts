@@ -8,9 +8,11 @@ import {
   convertFloatTo2Decimal,
   convertFloatToNDecimal,
   formatAverage,
+  formatNpsScore,
   formatTimeToComplete,
   getElementDenominator,
   getSampleTruncation,
+  npsScoreColor,
   satisfactionColor,
   visiblePercentage,
 } from "./summary";
@@ -345,5 +347,24 @@ describe("formatAverage", () => {
   test("an average of no answers prints as forma2 printed NaN", () => {
     expect(formatAverage(null)).toBe("NaN");
     expect(formatAverage(Number.NaN)).toBe("NaN");
+  });
+});
+
+describe("npsScoreColor", () => {
+  test("reads the NPS itself: negative rose, below 30 amber, from 30 emerald", () => {
+    expect(npsScoreColor(-12)).toBe("bg-rose-500");
+    expect(npsScoreColor(0)).toBe("bg-amber-500");
+    expect(npsScoreColor(16)).toBe("bg-amber-500");
+    expect(npsScoreColor(29.4)).toBe("bg-amber-500");
+    expect(npsScoreColor(30)).toBe("bg-emerald-500");
+  });
+});
+
+describe("formatNpsScore", () => {
+  test("rounds and signs the score", () => {
+    expect(formatNpsScore(16.07, "en-US")).toBe("+16");
+    expect(formatNpsScore(-4.6, "en-US")).toBe("-5");
+    expect(formatNpsScore(0.2, "en-US")).toBe("0");
+    expect(formatNpsScore(-0.2, "en-US")).toBe("0");
   });
 });

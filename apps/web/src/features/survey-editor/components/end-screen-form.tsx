@@ -56,7 +56,7 @@ export const EndScreenForm = ({
     <form>
       <ElementFormInput
         id="headline"
-        label={t("common.note") + "*"}
+        label={t("common.headline") + "*"}
         value={endingCard.headline}
         localSurvey={localSurvey}
         elementIdx={questions.length + endingCardIndex}

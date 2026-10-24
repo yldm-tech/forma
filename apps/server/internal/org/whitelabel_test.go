@@ -2,6 +2,7 @@ package org
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -178,6 +179,17 @@ func TestWhitelabelTestEmail(t *testing.T) {
 		t.Fatalf("emails = %+v", sent)
 	}
 	e.fails(e.do(owner, http.MethodPost, orgPath(uuid.New(), "/whitelabel/test-email"), nil), http.StatusNotFound, apperr.CodeNotFound, "")
+
+	// Without SMTP the mailer sends nothing, and the request says so instead of reporting success.
+	unconfigured, err := mailer.NewWithTransport(e.cfg, nil, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.svc.mailer = unconfigured
+	e.fails(e.do(owner, http.MethodPost, orgPath(c.ID, "/whitelabel/test-email"), nil), http.StatusBadRequest, CodeEmailSendFailed, "")
+	if sent := e.mail.Messages(); len(sent) != 2 {
+		t.Fatalf("%d emails sent", len(sent))
+	}
 }
 
 func TestPrettyURLs(t *testing.T) {

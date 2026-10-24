@@ -1,2 +1,40 @@
 @import "tailwindcss";
 @import "./theme.css";
+
+/* Chinese and Japanese typesetting, as the website sets it (apps/website/src/styles.css). These follow <html lang>, which lib/i18n.ts keeps on the UI's locale; :lang(zh-Hans) matches zh-Hans-CN by prefix. They live here rather than in theme.css so the public survey page, whose text is the survey author's, keeps the browser's defaults. */
+@layer base {
+  html:lang(zh-Hans) body {
+    font-family:
+      system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+      "Source Han Sans SC", sans-serif;
+  }
+
+  html:lang(zh-Hant) body {
+    font-family:
+      system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Source Han Sans TC",
+      sans-serif;
+  }
+
+  html:lang(ja) body {
+    font-family:
+      system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo",
+      "Noto Sans JP", sans-serif;
+  }
+
+  /* No line starts with a closing bracket, a small kana or an iteration mark. */
+  html:lang(zh) body,
+  html:lang(ja) body {
+    line-break: strict;
+  }
+
+  /* Japanese wraps between phrases, not inside a word (間違ったメ|ールアドレス). Chromium supports auto-phrase; other browsers ignore it and keep their normal breaking. */
+  html:lang(ja) :is(h1, h2, h3, p) {
+    word-break: auto-phrase;
+  }
+
+  /* Browsers have no phrase segmentation for Chinese (auto-phrase is Japanese-only), so a heading would split wherever the line runs out, 问|卷 included. keep-all wraps headings at punctuation and spaces only; anywhere still breaks a phrase too long for its line, and lets a heading in a narrow flex column shrink rather than overflow. */
+  html:lang(zh) :is(h1, h2, h3) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}

@@ -11,6 +11,10 @@ interface AlertDialogProps {
   declineBtnVariant?: "destructive" | "ghost" | "outline";
   onDecline?: () => void;
   onConfirm?: () => void;
+  /** Adds a ghost button that backs out of the choice ("Keep editing"), for a dialog whose other two buttons both act. */
+  cancelBtnLabel?: string;
+  /** What the cancel button does; it closes the dialog by default. */
+  onCancel?: () => void;
 }
 
 export const AlertDialog = ({
@@ -23,6 +27,8 @@ export const AlertDialog = ({
   confirmBtnLabel,
   declineBtnVariant = "ghost",
   onConfirm,
+  cancelBtnLabel,
+  onCancel,
 }: AlertDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen} className="max-w-lg" hideCloseButton={true}>
@@ -31,6 +37,11 @@ export const AlertDialog = ({
       </DialogHeader>
       <DialogBody>{mainText}</DialogBody>
       <DialogFooter>
+        {cancelBtnLabel && (
+          <Button variant="ghost" className="sm:mr-auto" onClick={onCancel ?? (() => setOpen(false))}>
+            {cancelBtnLabel}
+          </Button>
+        )}
         {declineBtnLabel && onDecline && (
           <Button variant={declineBtnVariant} onClick={onDecline}>
             {declineBtnLabel}

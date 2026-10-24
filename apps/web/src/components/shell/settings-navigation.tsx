@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
+  BellIcon,
   BrushIcon,
   Building2Icon,
   ChevronDownIcon,
@@ -10,6 +11,7 @@ import {
   GlobeIcon,
   KeyIcon,
   LanguagesIcon,
+  UserCircleIcon,
   UsersIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +31,7 @@ import { NavigationLink } from "./navigation-link";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
 /**
- * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, and the organization's settings, each section with a switcher beside its label. Entries are disabled for the billing role; API keys are offered to owners and managers only, domain settings self-hosted only, and billing on Forma Cloud only.
+ * forma2's settings sidebar (SettingsSidebarContent): back to the workspace, the workspace's own settings when there is a current workspace, the organization's settings, each section with a switcher beside its label, and the user's own account settings. Organization entries are disabled for the billing role; API keys are offered to owners and managers only, domain settings self-hosted only, and billing on Forma Cloud only. The account section follows the user menu: notifications are left out for the billing role, which sees no survey activity.
  */
 export const SettingsNavigation = ({
   organizationId,
@@ -99,7 +101,7 @@ export const SettingsNavigation = ({
     },
     {
       id: "teams",
-      label: t("common.teams"),
+      label: t("common.members_and_teams"),
       href: organizationSettingsPath(organizationId, "teams"),
       icon: <UsersIcon className={iconClassName} />,
       disabledReason,
@@ -139,9 +141,28 @@ export const SettingsNavigation = ({
       : []),
   ];
 
+  const accountItems = [
+    {
+      id: "profile",
+      label: t("common.profile"),
+      href: "/account/settings/profile",
+      icon: <UserCircleIcon className={iconClassName} />,
+    },
+    ...(isBilling
+      ? []
+      : [
+          {
+            id: "notifications",
+            label: t("common.notifications"),
+            href: "/account/settings/notifications",
+            icon: <BellIcon className={iconClassName} />,
+          },
+        ]),
+  ];
+
   return (
     <aside className="w-sidebar-collapsed z-40 flex shrink-0 flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md">
-      <div className="flex flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-col overflow-y-auto">
         <div className="mb-2 px-3">
           <Link
             to={backUrl}
@@ -225,6 +246,27 @@ export const SettingsNavigation = ({
                 label={item.label}
                 icon={item.icon}
                 disabledReason={item.disabledReason}
+                indent
+              />
+            ))}
+          </ul>
+        </nav>
+        <div className="mt-4 mb-1 px-4">
+          <span
+            id="settings-navigation-account"
+            className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            {t("common.account")}
+          </span>
+        </div>
+        <nav aria-labelledby="settings-navigation-account">
+          <ul className="space-y-0.5">
+            {accountItems.map((item) => (
+              <NavigationLink
+                key={item.id}
+                href={item.href}
+                isActive={pathname.includes(item.href)}
+                label={item.label}
+                icon={item.icon}
                 indent
               />
             ))}

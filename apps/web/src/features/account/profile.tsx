@@ -71,9 +71,9 @@ export const ProfilePage = () => {
 };
 
 /**
- * forma2's EditProfileDetailsForm. An identity provider owns an SSO user's name and address, so those fields are read-only for them. A new address needs the current password and, where the instance verifies addresses, confirmation from the new mailbox; without verification it applies at once and the user signs in again.
+ * forma2's EditProfileDetailsForm. An identity provider owns an SSO user's name and address, so those fields are read-only for them. A new address needs the current password and, where the instance verifies addresses, confirmation from the new mailbox; without verification it applies at once and the user signs in again. Where the instance verifies addresses but sends no email, the address stays read-only and says why.
  */
-const EditProfileDetailsForm = ({ user }: { user: Me }) => {
+export const EditProfileDetailsForm = ({ user }: { user: Me }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -87,6 +87,11 @@ const EditProfileDetailsForm = ({ user }: { user: Me }) => {
   const changeEmail = useRequestEmailChange();
   const resetLink = useRequestPasswordResetLink();
   const isPasswordUser = user.identityProvider === "email";
+  // A new address is confirmed from the new mailbox where the instance verifies addresses; without SMTP that mail never goes out, so the address cannot be changed here.
+  const emailChangeUnavailable =
+    isPasswordUser &&
+    options.data?.emailVerificationRequired === true &&
+    options.data.smtpConfigured === false;
   const changes = profileChanges(user, { name, email, locale });
   const languages = APP_LANGUAGES.some((language) => language.code === user.locale)
     ? sortedAppLanguages
@@ -173,9 +178,16 @@ const EditProfileDetailsForm = ({ user }: { user: Me }) => {
             onChange={(e) => setEmail(e.target.value)}
             required
             isInvalid={!!errors.email}
-            aria-describedby={errors.email ? "profile-email-error" : undefined}
-            disabled={!isPasswordUser}
+            aria-describedby={
+              errors.email ? "profile-email-error" : emailChangeUnavailable ? "profile-email-hint" : undefined
+            }
+            disabled={!isPasswordUser || emailChangeUnavailable}
           />
+          {emailChangeUnavailable && (
+            <p id="profile-email-hint" className="text-sm text-slate-500">
+              {t("workspace.settings.profile.email_change_needs_email")}
+            </p>
+          )}
           <FormError id="profile-email-error">{errors.email}</FormError>
         </div>
         <div className="mt-4 space-y-2">
@@ -188,7 +200,8 @@ const EditProfileDetailsForm = ({ user }: { user: Me }) => {
             ))}
           </Select>
         </div>
-        {options.data?.passwordResetEnabled && isPasswordUser && (
+        {/* The reset link is mailed, so without SMTP the button could only fail. */}
+        {options.data?.passwordResetEnabled && options.data.smtpConfigured && isPasswordUser && (
           <div className="mt-4 space-y-2">
             <Label htmlFor="reset-password">{t("auth.forgot-password.reset_password")}</Label>
             <p className="mt-1 text-sm text-slate-500">

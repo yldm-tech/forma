@@ -14,7 +14,8 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { HalfCircle, ProgressBar } from "../../../../components/ui/progress-bar";
 import { TooltipRenderer } from "../../../../components/ui/tooltip";
-import { convertFloatToNDecimal, formatAverage } from "../../lib/summary";
+import { cn } from "../../../../lib/cn";
+import { convertFloatToNDecimal, formatAverage, formatNpsScore, npsScoreColor } from "../../lib/summary";
 import { RatingResponse } from "../response-values/rating-response";
 import {
   ClickableBarSegment,
@@ -34,7 +35,17 @@ const calculateNPSOpacity = (rating: number): number => {
 
 const NPS_GROUPS = ["promoters", "passives", "detractors", "dismissed"] as const;
 
-/** forma2's NPSSummary: the score dial, the groups and the 0 to 10 bars, a click filtering by the group or the rating. */
+type NpsGroup = (typeof NPS_GROUPS)[number];
+
+/** Each group's bar colour: promoters emerald, passives slate, detractors rose, the dismissed neutral, so the composition reads at a glance. */
+const NPS_GROUP_BAR_COLORS: Record<NpsGroup, string> = {
+  promoters: "bg-emerald-500",
+  passives: "bg-slate-400",
+  detractors: "bg-rose-500",
+  dismissed: "bg-slate-600",
+};
+
+/** forma2's NPSSummary: the score (in the header badge and the dial above the groups), the groups and the 0 to 10 bars, a click filtering by the group or the rating. */
 export const NPSSummary = ({
   elementSummary,
   survey,
@@ -44,14 +55,17 @@ export const NPSSummary = ({
   survey: TSurvey;
   setFilter: SetSummaryFilter;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<"aggregated" | "individual">("aggregated");
   const promotersPercentage = convertFloatToNDecimal(elementSummary.promoters.percentage, 2);
+  const groupLabels: Record<NpsGroup, string> = {
+    promoters: t("workspace.surveys.summary.promoters"),
+    passives: t("workspace.surveys.summary.passives"),
+    detractors: t("workspace.surveys.summary.detractors"),
+    dismissed: t("workspace.surveys.summary.nps_dismissed"),
+  };
 
-  const groupFilters: Record<
-    (typeof NPS_GROUPS)[number],
-    { comparison: string; values: string | string[] | undefined }
-  > = {
+  const groupFilters: Record<NpsGroup, { comparison: string; values: string | string[] | undefined }> = {
     promoters: { comparison: t("workspace.surveys.summary.includes_either"), values: ["9", "10"] },
     passives: { comparison: t("workspace.surveys.summary.includes_either"), values: ["7", "8"] },
     detractors: { comparison: t("workspace.surveys.summary.is_less_than"), values: "7" },
@@ -70,14 +84,22 @@ export const NPSSummary = ({
             })}
             delayDuration={150}>
             <div className="flex items-center gap-x-2 rounded-lg bg-slate-100 p-2">
-              <SatisfactionIndicator percentage={elementSummary.promoters.percentage} />
+              <div
+                aria-hidden="true"
+                className={cn("h-3 w-3 rounded-full", npsScoreColor(elementSummary.score))}
+              />
               <div>
-                {t("workspace.surveys.summary.promoters")}: {promotersPercentage}%
+                {t("workspace.surveys.summary.nps_score_badge", {
+                  score: formatNpsScore(elementSummary.score, i18n.resolvedLanguage ?? i18n.language),
+                })}
               </div>
             </div>
           </TooltipRenderer>
         }
       />
+      <div className="flex justify-center pt-2">
+        <HalfCircle value={elementSummary.score} />
+      </div>
       <ViewToggle value={activeTab} onChange={setActiveTab} />
       {activeTab === "aggregated" ? (
         <div className="mt-4 px-4 pt-4 pb-6 md:px-6">
@@ -99,7 +121,7 @@ export const NPSSummary = ({
                 <div
                   className={`mb-2 flex justify-between ${group === "dismissed" ? "border-t bg-white pt-4 text-sm md:text-base" : ""}`}>
                   <div className="mr-8 flex gap-x-1">
-                    <p className="font-semibold text-slate-700 capitalize">{group}</p>
+                    <p className="font-semibold text-slate-700">{groupLabels[group]}</p>
                     <p className="rounded-lg bg-slate-100 px-2 text-slate-700">
                       {convertFloatToNDecimal(elementSummary[group].percentage, 2)}%
                     </p>
@@ -109,7 +131,7 @@ export const NPSSummary = ({
                   </p>
                 </div>
                 <ProgressBar
-                  barColor={group === "dismissed" ? "bg-slate-600" : "bg-brand-dark"}
+                  barColor={NPS_GROUP_BAR_COLORS[group]}
                   progress={elementSummary[group].percentage / 100}
                 />
               </button>
@@ -153,9 +175,6 @@ export const NPSSummary = ({
           ))}
         </div>
       )}
-      <div className="flex justify-center pt-4 pb-4">
-        <HalfCircle value={elementSummary.score} />
-      </div>
     </div>
   );
 };
@@ -451,16 +470,16 @@ export const CTASummary = ({
           <>
             <div className="flex items-center rounded-lg bg-slate-100 p-2">
               <InboxIcon className="mr-2 size-4" />
-              {`${elementSummary.impressionCount} ${t("common.impressions")}`}
+              {t("workspace.surveys.summary.count_impressions", { count: elementSummary.impressionCount })}
             </div>
             <div className="flex items-center rounded-lg bg-slate-100 p-2">
               <InboxIcon className="mr-2 size-4" />
-              {`${elementSummary.clickCount} ${t("common.clicks")}`}
+              {t("workspace.surveys.summary.count_clicks", { count: elementSummary.clickCount })}
             </div>
             {!elementSummary.element.required && (
               <div className="flex items-center rounded-lg bg-slate-100 p-2">
                 <InboxIcon className="mr-2 size-4" />
-                {`${elementSummary.skipCount} ${t("common.skips")}`}
+                {t("workspace.surveys.summary.count_skips", { count: elementSummary.skipCount })}
               </div>
             )}
           </>
@@ -470,7 +489,7 @@ export const CTASummary = ({
         <ShareRow
           title="CTR"
           percentage={elementSummary.ctr.percentage}
-          footer={`${elementSummary.ctr.count} ${elementSummary.ctr.count === 1 ? t("common.click") : t("common.clicks")}`}
+          footer={t("workspace.surveys.summary.count_clicks", { count: elementSummary.ctr.count })}
         />
       </div>
     </div>

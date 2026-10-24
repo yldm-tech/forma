@@ -29,7 +29,7 @@ const usePendingSurveyRemovals = (): string[] =>
     select: (mutation) => removedSurveyId(mutation.state.variables),
   }).filter((id): id is string => id !== undefined);
 
-/** forma2's useSurveys: the list's pages under the given filters, with surveys being removed left out and the workspace's survey count read from page one. */
+/** forma2's useSurveys: the list's pages under the given filters, with surveys being removed left out, and from page one the number of surveys matching the filters and the workspace's survey count. */
 export const useSurveys = ({
   workspaceId,
   limit,
@@ -53,8 +53,9 @@ export const useSurveys = ({
   });
   const pending = usePendingSurveyRemovals();
   const surveys = flattenSurveyPages(query.data).filter((survey) => !pending.includes(survey.id));
+  const totalCount = query.data?.pages[0]?.meta.totalCount ?? null;
   const workspaceSurveyCount = query.data?.pages[0]?.meta.workspaceSurveyCount ?? null;
-  return { ...query, queryKey, surveys, workspaceSurveyCount };
+  return { ...query, queryKey, surveys, totalCount, workspaceSurveyCount };
 };
 
 /** An action that takes the survey out of the current view (delete, archive, restore): dropped from the cache at once, put back if the server refuses, and every list refetched once it settles so mixed-filter views reconcile. */

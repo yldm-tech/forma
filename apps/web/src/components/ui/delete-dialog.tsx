@@ -16,7 +16,7 @@ interface DeleteDialogProps {
   buttonLabel?: string;
 }
 
-/** forma2's DeleteDialog: a confirmation that cannot be dismissed by a stray click. */
+/** forma2's DeleteDialog: a confirmation that a stray click cannot dismiss. Escape cancels it like the Cancel button, except while the delete is in flight. */
 export const DeleteDialog = ({
   open,
   setOpen,
@@ -30,7 +30,14 @@ export const DeleteDialog = ({
 }: DeleteDialogProps) => {
   const { t } = useTranslation();
   return (
-    <Dialog open={open} onOpenChange={setOpen} width="narrow" hideCloseButton disableCloseOnOutsideClick>
+    <Dialog
+      open={open}
+      onOpenChange={setOpen}
+      width="narrow"
+      role="alertdialog"
+      hideCloseButton
+      disableCloseOnOutsideClick
+      allowEscapeClose={!isDeleting}>
       <DialogHeader>
         <div className="flex items-center gap-2">
           <CircleAlert className="size-4" />

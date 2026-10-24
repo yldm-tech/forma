@@ -168,6 +168,7 @@ export const EditorCardMenu = ({
           variant="ghost"
           size="icon"
           disabled={cardIdx === 0}
+          aria-label={t("common.move_up")}
           onClick={(e) => {
             if (cardIdx !== 0) {
               e.stopPropagation();
@@ -183,6 +184,7 @@ export const EditorCardMenu = ({
           variant="ghost"
           size="icon"
           disabled={lastCard}
+          aria-label={t("common.move_down")}
           onClick={(e) => {
             if (!lastCard) {
               e.stopPropagation();
@@ -199,6 +201,7 @@ export const EditorCardMenu = ({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={t("workspace.surveys.edit.duplicate_question")}
           onClick={(e) => {
             e.stopPropagation();
             duplicateCard(cardIdx);
@@ -212,6 +215,7 @@ export const EditorCardMenu = ({
           variant="ghost"
           size="icon"
           disabled={isDeleteDisabled}
+          aria-label={t("common.delete")}
           onClick={(e) => {
             e.stopPropagation();
             if (isDeleteDisabled) return;
@@ -222,8 +226,10 @@ export const EditorCardMenu = ({
         </Button>
       </TooltipRenderer>
       <DropdownMenu>
-        <DropdownMenuTrigger className="size-10 rounded-lg border border-transparent p-2 hover:border-slate-200">
-          <EllipsisIcon className="mx-auto size-4 text-slate-700 hover:text-slate-600" />
+        <DropdownMenuTrigger
+          aria-label={t("workspace.surveys.edit.more_actions")}
+          className="size-10 rounded-lg border border-transparent p-2 hover:border-slate-200">
+          <EllipsisIcon className="mx-auto size-4 text-slate-700 hover:text-slate-600" aria-hidden="true" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent>

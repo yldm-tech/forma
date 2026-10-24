@@ -155,10 +155,10 @@ const webhook = (overrides: Partial<Webhook> = {}): Webhook => ({
 });
 
 describe("integrations page", () => {
-  const workspace = (isReadOnly: boolean) =>
+  const workspace = (isReadOnly: boolean, appSetupCompleted = false) =>
     ({
       id: WS,
-      appSetupCompleted: false,
+      appSetupCompleted,
       access: { role: "member", canWrite: !isReadOnly, canManage: false, isReadOnly },
     }) as unknown as WorkspaceDetail;
 
@@ -188,6 +188,31 @@ describe("integrations page", () => {
         .getAttribute("href")
     ).toBe(`/workspaces/${WS}/integrations/slack`);
     expect(card("Slack").getByText(t("common.not_connected"))).toBeTruthy();
+  });
+
+  test("an integration the instance cannot offer says so and only leads to its explanation; a set-up SDK is managed", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([], false) }),
+      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+        body: { webhooks: [], allowInternalUrls: false },
+      }),
+    });
+    renderPage(<IntegrationsPage workspace={workspace(false, true)} />);
+
+    await screen.findAllByText(t("workspace.integrations.not_available_on_this_instance"));
+    for (const label of ["Google Sheets", "Airtable", "Slack", "Notion"]) {
+      const integration = card(label);
+      expect(integration.getByText(t("workspace.integrations.not_available_on_this_instance"))).toBeTruthy();
+      expect(integration.queryByRole("link", { name: t("common.connect") })).toBeNull();
+      expect(integration.getByRole("link", { name: t("common.learn_more") }).getAttribute("href")).toMatch(
+        new RegExp(`^/workspaces/${WS}/integrations/`)
+      );
+    }
+    const sdk = card("Javascript SDK");
+    expect(sdk.getByText(t("common.connected"))).toBeTruthy();
+    expect(sdk.getByRole("link", { name: t("common.manage") }).getAttribute("href")).toBe(
+      `/workspaces/${WS}/integrations/app-connection`
+    );
   });
 
   test("a read-only member cannot open the integrations, but still sees the webhooks", async () => {
@@ -660,6 +685,30 @@ describe("webhooks", () => {
     expect(calls.some((call) => call.method === "POST")).toBe(false);
   });
 
+  test("a webhook on every survey says so, in the list and in its details, instead of listing today's surveys", async () => {
+    stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({
+        body: { webhooks: [webhook({ allSurveys: true })], allowInternalUrls: false },
+      }),
+      "GET /api/v3/surveys": surveysList,
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    const row = await screen.findByRole("button", { name: /Orders/ });
+    await waitFor(() =>
+      expect(
+        within(row).getByText(t("workspace.integrations.webhooks.all_current_and_new_surveys"))
+      ).toBeTruthy()
+    );
+    expect(within(row).queryByText("Feedback")).toBeNull();
+    expect(within(row).getByText(t("common.user"))).toBeTruthy();
+    expect(within(row).getByTitle(webhook().url)).toBeTruthy();
+    fireEvent.click(row);
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText(t("workspace.integrations.webhooks.all_current_and_new_surveys"))).toBeTruthy();
+    expect(dialog.queryByText("Feedback")).toBeNull();
+  });
+
   test("editing tests the endpoint with the stored secret, which the browser never sees", async () => {
     const existing = webhook({ surveyIds: [survey.id], allSurveys: false });
     const calls = stubServer({
@@ -734,7 +783,8 @@ describe("webhooks", () => {
       screen.queryByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
     ).toBeNull();
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("zapier")).toBeTruthy();
+    // A platform is shown by its product name.
+    expect(dialog.getByText("Zapier")).toBeTruthy();
     fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
     expect(dialog.getByLabelText(t("common.url"))).toHaveProperty("readOnly", true);
     expect(

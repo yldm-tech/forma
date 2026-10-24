@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { FilesIcon, Trash2Icon, TrashIcon } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
@@ -38,6 +39,18 @@ import { toast } from "../../lib/toast";
 const PERMISSIONS: ApiKeyPermission[] = ["read", "write", "manage"];
 const NO_ACCESS: OrganizationAccess = { accessControl: { read: false, write: false } };
 
+/** A workspace permission as the pages name it, in the user's language; the enum value itself is never shown. Write includes read on the server, so it reads as the teams page's "Read & Write". */
+export const permissionLabel = (t: TFunction, permission: ApiKeyPermission): string => {
+  switch (permission) {
+    case "read":
+      return t("workspace.settings.teams.read");
+    case "write":
+      return t("workspace.settings.teams.read_write");
+    case "manage":
+      return t("workspace.settings.teams.manage");
+  }
+};
+
 /** forma2's API keys page: owners and managers (organization.manage_api_keys) list, create, relabel and revoke the organization's keys. */
 export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
@@ -45,7 +58,7 @@ export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail
     return (
       <PageContentWrapper>
         <PageHeader pageTitle={t("common.api_keys")} />
-        <Alert variant="warning" role="status" className="max-w-4xl">
+        <Alert variant="warning" role="status">
           <AlertDescription>{t("common.you_are_not_authorized_to_perform_this_action")}</AlertDescription>
         </Alert>
       </PageContentWrapper>
@@ -73,7 +86,7 @@ export const ConnectAppBanner = ({ organizationId }: { organizationId: string })
   const first = workspaces?.[0];
   if (!first) return null;
   return (
-    <Alert variant="info" role="status" className="max-w-4xl rounded-xl">
+    <Alert variant="info" role="status" className="rounded-xl">
       <AlertTitle>{t("workspace.settings.api_keys.connect_app_banner_title")}</AlertTitle>
       <AlertDescription>{t("workspace.settings.api_keys.connect_app_banner_description")}</AlertDescription>
       <AlertButton asChild>
@@ -314,7 +327,6 @@ const AddApiKeyModal = ({
                 <div className="w-1/2">
                   <Select
                     aria-label={t("workspace.api_keys.permissions")}
-                    className="capitalize"
                     value={row.permission}
                     onChange={(e) =>
                       setRows(
@@ -325,7 +337,7 @@ const AddApiKeyModal = ({
                     }>
                     {PERMISSIONS.map((permission) => (
                       <option key={permission} value={permission}>
-                        {permission}
+                        {permissionLabel(t, permission)}
                       </option>
                     ))}
                   </Select>
@@ -389,12 +401,13 @@ const OrganizationAccessSwitches = ({
   readDisabled?: boolean;
   disabled?: boolean;
 }) => {
+  const { t } = useTranslation();
   const id = useId();
   return (
     <div className="mt-2 flex items-center gap-6">
       <div className="flex items-center gap-2">
         <span id={`${id}-read`} className="text-sm font-medium text-slate-800">
-          Read
+          {t("workspace.api_keys.organization_read")}
         </span>
         <Switch
           aria-labelledby={`${id}-read`}
@@ -405,7 +418,7 @@ const OrganizationAccessSwitches = ({
       </div>
       <div className="flex items-center gap-2">
         <span id={`${id}-write`} className="text-sm font-medium text-slate-800">
-          Write
+          {t("workspace.api_keys.organization_write")}
         </span>
         <Switch
           aria-labelledby={`${id}-write`}
@@ -473,8 +486,8 @@ const ViewPermissionModal = ({
                     <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2">
                       {permission.workspaceName}
                     </span>
-                    <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2 capitalize">
-                      {permission.permission}
+                    <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2">
+                      {permissionLabel(t, permission.permission)}
                     </span>
                   </li>
                 ))}

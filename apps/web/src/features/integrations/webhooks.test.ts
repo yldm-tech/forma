@@ -1,14 +1,16 @@
 import type { TFunction } from "i18next";
 import { describe, expect, test } from "vite-plus/test";
 import { ApiError } from "../../lib/api";
+import { changeLocale, initI18n } from "../../lib/i18n";
 import {
-  countStatusText,
+  connectionCountText,
   endpointTestFailure,
   isDiscordWebhook,
   triggersText,
   validWebHookURL,
   webhookCounts,
   webhookErrorMessage,
+  webhookSourceLabel,
   webhookSurveyNames,
 } from "./webhooks";
 
@@ -61,18 +63,19 @@ test("triggers are listed in the order they happen", () => {
   );
 });
 
-test("a webhook on every survey lists them all; a gone survey drops out and never widens the scope", () => {
+test("a webhook on every survey lists none, since it covers surveys not created yet; a gone survey drops out and never widens the scope", () => {
   const surveys = [
     { id: "s1", name: "NPS" },
     { id: "s2", name: "CSAT" },
   ];
-  expect(webhookSurveyNames({ surveyIds: [], allSurveys: true }, surveys)).toEqual(["NPS", "CSAT"]);
+  expect(webhookSurveyNames({ surveyIds: [], allSurveys: true }, surveys)).toBeNull();
+  expect(webhookSurveyNames({ surveyIds: ["s1"], allSurveys: true }, surveys)).toBeNull();
   expect(webhookSurveyNames({ surveyIds: ["s2", "gone"], allSurveys: false }, surveys)).toEqual(["CSAT"]);
   expect(webhookSurveyNames({ surveyIds: ["gone"], allSurveys: false }, surveys)).toEqual([]);
   expect(webhookSurveyNames({ surveyIds: [], allSurveys: false }, surveys)).toEqual([]);
 });
 
-test("the integrations page counts webhooks by source", () => {
+test("the integrations page counts webhooks by source, in the user's language", async () => {
   expect(
     webhookCounts([
       { source: "user" },
@@ -81,9 +84,23 @@ test("the integrations page counts webhooks by source", () => {
       { source: "activepieces" },
     ])
   ).toEqual({ user: 1, zapier: 2, make: 0, n8n: 0, activepieces: 1 });
-  expect(countStatusText(t, 0, "webhook")).toBe("common.not_connected");
-  expect(countStatusText(t, 1, "webhook")).toBe("1 webhook");
-  expect(countStatusText(t, 3, "zap")).toBe("3 zaps");
+  const i18n = await initI18n("en-US");
+  expect(connectionCountText(i18n.t, 0, "webhook")).toBe(i18n.t("common.not_connected"));
+  expect(connectionCountText(i18n.t, 1, "webhook")).toBe("1 webhook");
+  expect(connectionCountText(i18n.t, 3, "zap")).toBe("3 zaps");
+  expect(connectionCountText(i18n.t, 2, "integration")).toBe("2 integrations");
+  await changeLocale(i18n, "ja-JP");
+  for (const noun of ["webhook", "zap", "integration"] as const) {
+    const text = connectionCountText(i18n.t, 2, noun);
+    expect(text).toContain("2");
+    expect(text).not.toMatch(/webhooks|zaps|integrations|workspace\./);
+  }
+});
+
+test("a webhook's source is the user's in their language, or a platform by its product name", () => {
+  expect(webhookSourceLabel(t, "user")).toBe("common.user");
+  expect(webhookSourceLabel(t, "n8n")).toBe("n8n");
+  expect(webhookSourceLabel(t, "activepieces")).toBe("Activepieces");
 });
 
 test("an endpoint refusal forma2 translated is shown in the user's language, anything else as the server says", () => {

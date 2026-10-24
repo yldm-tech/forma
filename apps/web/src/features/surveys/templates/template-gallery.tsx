@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { CreateWithAICard } from "../ai-create/create-with-ai-card";
@@ -25,6 +25,12 @@ export const TemplateGallery = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  // Clearing the search from the no-match message removes that message's button, so the focus goes back to the search box.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const clearSearch = () => {
+    setSearch("");
+    searchInputRef.current?.focus();
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -43,10 +49,11 @@ export const TemplateGallery = ({
               ? t("workspace.surveys.templates.create_a_new_survey")
               : t("workspace.surveys.all_set_time_to_create_first_survey")}
           </h1>
-          <label className="mx-6 flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-white px-4 text-slate-800">
+          <label className="focus-within:ring-ring mx-6 flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-white px-4 text-slate-800 focus-within:ring-2 focus-within:ring-offset-1">
             <SearchIcon className="size-4" aria-hidden="true" />
             <span className="sr-only">{t("common.search")}</span>
             <input
+              ref={searchInputRef}
               type="search"
               className="w-full border-none bg-transparent text-sm focus:outline-hidden"
               placeholder={t("common.search")}
@@ -60,6 +67,7 @@ export const TemplateGallery = ({
           surveyType={surveyType}
           defaultLanguage={defaultLanguage}
           search={search}
+          onClearSearch={clearSearch}
           aiCard={
             isTemplatePage ? undefined : (
               <CreateWithAICard

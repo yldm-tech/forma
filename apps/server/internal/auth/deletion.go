@@ -64,13 +64,24 @@ func (s *Service) requestAccountDeletion(ctx context.Context, actor httpapi.Acto
 	if err != nil {
 		return err
 	}
-	if _, err := s.mailer.SendTemplate(ctx, acc.Email, acc.Locale, mailer.DeleteAccountConfirmation{
+	// A mailer without SMTP sends nothing; that is a failed send too, so the page never claims a link went out.
+	sent, err := s.mailer.SendTemplate(ctx, acc.Email, acc.Locale, mailer.DeleteAccountConfirmation{
 		DeleteLink:            s.link(deleteAccountPath, token.Value),
 		LinkValidityInMinutes: accountDeletionTTLMinutes,
-	}); err != nil {
+	})
+	if err != nil || !sent {
 		return errEmailSendFailed()
 	}
 	return nil
+}
+
+// deletionPreview lists the organizations that would be deleted with the caller's account: those removeAccount takes, read through the same query. It names only the caller's own organizations.
+func (s *Service) deletionPreview(ctx context.Context, actor httpapi.Actor) ([]soleOwnedOrganization, error) {
+	acc, err := s.currentAccount(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.soleOwnedOrganizationSummaries(ctx, acc.ID)
 }
 
 // confirmAccountDeletion redeems an emailed deletion link. It must be redeemed from a session of the same user, so a forwarded or intercepted link alone deletes nothing.

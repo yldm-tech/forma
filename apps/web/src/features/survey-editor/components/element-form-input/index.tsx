@@ -396,6 +396,7 @@ export const ElementFormInput = ({
   );
 
   const useRichTextEditor = id === "headline" || id === "subheader" || id === "html";
+  const richTextLabelId = `${elementId}-${id}-label`;
 
   // For rich text editor fields, we need either updateElement or updateSurvey
   if (useRichTextEditor && !updateElement && !updateSurvey) {
@@ -407,14 +408,17 @@ export const ElementFormInput = ({
       <div className="w-full">
         {label && (
           <div className="mt-3 mb-2 flex items-center justify-between">
-            <Label htmlFor={id}>{label}</Label>
+            {/* The rich-text box is a contenteditable, which a <label for> does not name: it points back here through aria-labelledby. */}
+            <Label htmlFor={id} id={richTextLabelId}>
+              {label}
+            </Label>
             {id === "headline" && currentElement && updateElement && (
               <div className="flex items-center gap-x-2">
-                <Label htmlFor="required-toggle" className="text-sm">
+                <Label htmlFor={`${elementId}-required-toggle`} className="text-sm">
                   {t("workspace.surveys.edit.required")}
                 </Label>
                 <Switch
-                  id="required-toggle"
+                  id={`${elementId}-required-toggle`}
                   checked={currentElement.required}
                   disabled={getIsRequiredToggleDisabled()}
                   onCheckedChange={(checked) => {
@@ -459,6 +463,7 @@ export const ElementFormInput = ({
                 localSurvey={localSurvey}
                 elementIdx={elementIdx}
                 isInvalid={isInvalid}
+                labelId={label ? richTextLabelId : undefined}
                 updateElement={updateElement}
                 updateSurvey={updateSurvey}
                 selectedLanguageCode={selectedLanguageCode}
@@ -479,7 +484,7 @@ export const ElementFormInput = ({
                 <Button
                   variant="secondary"
                   size="icon"
-                  aria-label="Toggle image uploader"
+                  aria-label={t("workspace.surveys.edit.add_photo_or_video")}
                   data-testid="toggle-image-uploader-button"
                   onClick={(e) => {
                     e.preventDefault();
@@ -495,7 +500,7 @@ export const ElementFormInput = ({
                 <Button
                   variant="secondary"
                   size="icon"
-                  aria-label="Remove description"
+                  aria-label={t("workspace.surveys.edit.remove_description")}
                   onClick={(e) => {
                     e.preventDefault();
 

@@ -56,7 +56,8 @@ test("publishes a link survey, collects a response, filters and exports it", asy
 
   await test.step("filter by completion", async () => {
     const applyCompletion = async (option: string) => {
-      await page.getByRole("button", { name: "Filter" }).click();
+      // The trigger reads "Filter" or "Filter (n)"; the applied-filter chips and Clear filters also contain the word.
+      await page.getByRole("button", { name: /^Filter( \(\d+\))?$/ }).click();
       const filter = page.getByRole("dialog");
       await filter
         .getByRole("combobox", { name: "Show all responses that match" })

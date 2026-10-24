@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 import { AddFilterModal } from "./add-filter-modal";
+import { SegmentConnector } from "./segment-connector";
 import { SegmentFilter } from "./segment-filter";
 
 interface TSegmentEditorProps {
@@ -91,16 +92,6 @@ export function SegmentEditor({
     setSegment(localSegmentCopy);
   };
 
-  const onConnectorChange = (groupId: string, connector: TSegmentConnector) => {
-    if (!connector) return;
-
-    if (connector === "and") {
-      handleToggleGroupConnector(groupId, "or");
-    } else {
-      handleToggleGroupConnector(groupId, "and");
-    }
-  };
-
   const handleAddFilterInGroup = (groupId: string, filter: TBaseFilter) => {
     const localSegmentCopy = structuredClone(segment);
 
@@ -142,21 +133,11 @@ export function SegmentEditor({
         return (
           <div key={groupId}>
             <div className="flex items-start gap-2">
-              <div className="w-auto" key={connector}>
-                <button
-                  type="button"
-                  className={cn(
-                    Boolean(connector) && "cursor-pointer underline",
-                    "text-sm",
-                    viewOnly && "cursor-not-allowed"
-                  )}
-                  onClick={() => {
-                    if (viewOnly) return;
-                    onConnectorChange(groupId, connector);
-                  }}>
-                  {connector ?? t("workspace.segments.where")}
-                </button>
-              </div>
+              <SegmentConnector
+                connector={connector}
+                viewOnly={viewOnly}
+                onToggle={(next) => handleToggleGroupConnector(groupId, next)}
+              />
 
               <div className="rounded-lg border-2 border-slate-300 bg-white p-4">
                 <SegmentEditor

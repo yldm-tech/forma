@@ -36,6 +36,8 @@ export const UserDropdown = ({
       toast.error(errorMessage(t, error));
       return;
     }
+    // Messages about the session just ended, such as a 2FA confirmation, must not follow the user onto the sign-in page.
+    for (const shown of toast.getSnapshot()) toast.dismiss(shown.id);
     await navigate({ href: "/auth/login" });
   };
 

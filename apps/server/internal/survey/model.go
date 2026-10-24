@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 )
 
 // Statuses and types, forma2's ZSurveyStatus and ZSurveyType.
@@ -133,6 +135,8 @@ type Survey struct {
 	CustomHeadScripts           *string          `json:"customHeadScripts"`
 	CustomHeadScriptsMode       *string          `json:"customHeadScriptsMode"`
 	InlineTriggers              json.RawMessage  `json:"inlineTriggers"`
+	// EmbeddedFields are the survey's variables and hidden fields as linked embedded-data rows, forma2's inlined TSurvey.embeddedFields, which the response table, card and filter read. Never nil, so it serializes as [].
+	EmbeddedFields []embeddeddata.LinkedField `json:"embeddedFields"`
 }
 
 // DefaultLanguageCode is the code of the survey's default language, or "" when it has none.

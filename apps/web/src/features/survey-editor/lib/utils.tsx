@@ -36,14 +36,18 @@ import { TLogicRuleOption, getLogicRules } from "./logic-rule-engine";
 
 export const MAX_STRING_LENGTH = 2000;
 
-export const scrollElementCardIntoView = (elementId: string, block: ScrollLogicalPosition = "center") => {
+export const scrollElementCardIntoView = (
+  elementId: string,
+  block: ScrollLogicalPosition = "center",
+  fallbackId?: string | null
+) => {
   if (typeof window === "undefined") return;
-  // Double rAF: first frame flushes React state + DOM mutations (new card mounted, Collapsible opened);
-  // second frame waits for layout/paint so scrollIntoView computes the final position.
-  // The target's scroll-mt clears the fixed tabs bar; use block "start" to land the card top below it.
+  // Double rAF: first frame flushes React state + DOM mutations (new card mounted, Collapsible opened); second frame waits for layout/paint so scrollIntoView computes the final position. The target's scroll-mt clears the fixed tabs bar; use block "start" to land the card top below it.
+  // fallbackId is scrolled to when the target is not in the DOM, as with a rule or question inside a collapsed block.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const node = document.getElementById(elementId);
+      const node =
+        document.getElementById(elementId) ?? (fallbackId ? document.getElementById(fallbackId) : null);
       node?.scrollIntoView({ behavior: "smooth", block });
     });
   });

@@ -16,13 +16,13 @@ import type {
   TSegmentPersonFilter,
   TSegmentSurveyInteractionFilter,
 } from "@forma/types/segment";
-import { cn } from "../../../lib/cn";
 import { getContactAttributeDataTypeIcon } from "../lib/contact-utils";
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { TabBar } from "../../../components/ui/tab-bar";
 import AttributeTabContent from "./attribute-tab-content";
 import FilterButton from "./filter-button";
+import { FilterSection, ScrollFadeList } from "./scroll-fade-list";
 
 interface TAddFilterModalProps {
   open: boolean;
@@ -292,138 +292,152 @@ export function AddFilterModal({
 
         {allFiltersFiltered.map((filters, index) => (
           <div key={index}>
-            {filters.attributes.map((attributeKey) => {
-              const icon = getContactAttributeDataTypeIcon(attributeKey.dataType);
+            {filters.attributes.length + filters.contactAttributeFiltered.length > 0 && (
+              <FilterSection label={t("workspace.segments.person_and_attributes")}>
+                {filters.attributes.map((attributeKey) => {
+                  const icon = getContactAttributeDataTypeIcon(attributeKey.dataType);
 
-              return (
+                  return (
+                    <FilterButton
+                      key={attributeKey.id}
+                      data-testid={`filter-btn-attribute-${attributeKey.key}`}
+                      icon={icon}
+                      label={attributeKey.name ?? attributeKey.key}
+                      onClick={() => {
+                        handleAddFilter({
+                          type: "attribute",
+                          onAddFilter,
+                          setOpen,
+                          contactAttributeKey: attributeKey.key,
+                          attributeDataType: attributeKey.dataType,
+                        });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleAddFilter({
+                            type: "attribute",
+                            onAddFilter,
+                            setOpen,
+                            contactAttributeKey: attributeKey.key,
+                            attributeDataType: attributeKey.dataType,
+                          });
+                        }
+                      }}
+                    />
+                  );
+                })}
+
+                {filters.contactAttributeFiltered.map((personAttribute) => (
+                  <FilterButton
+                    key={personAttribute.id}
+                    data-testid={`filter-btn-person-${personAttribute.id}`}
+                    icon={<FingerprintIcon className="size-4" />}
+                    label={personAttribute.label}
+                    onClick={() => {
+                      handleAddFilter({
+                        type: "person",
+                        onAddFilter,
+                        setOpen,
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleAddFilter({
+                          type: "person",
+                          onAddFilter,
+                          setOpen,
+                        });
+                      }
+                    }}
+                  />
+                ))}
+              </FilterSection>
+            )}
+
+            {filters.surveyInteraction ? (
+              <FilterSection label={t("workspace.segments.filter_group_behavior")}>
                 <FilterButton
-                  key={attributeKey.id}
-                  data-testid={`filter-btn-attribute-${attributeKey.key}`}
-                  icon={icon}
-                  label={attributeKey.name ?? attributeKey.key}
+                  data-testid="filter-btn-survey-interaction"
+                  icon={<MousePointerClickIcon className="size-4" />}
+                  label={surveyInteractionLabel}
                   onClick={() => {
-                    handleAddFilter({
-                      type: "attribute",
-                      onAddFilter,
-                      setOpen,
-                      contactAttributeKey: attributeKey.key,
-                      attributeDataType: attributeKey.dataType,
-                    });
+                    handleAddFilter({ type: "surveyInteraction", onAddFilter, setOpen });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      handleAddFilter({
-                        type: "attribute",
-                        onAddFilter,
-                        setOpen,
-                        contactAttributeKey: attributeKey.key,
-                        attributeDataType: attributeKey.dataType,
-                      });
+                      handleAddFilter({ type: "surveyInteraction", onAddFilter, setOpen });
                     }
                   }}
                 />
-              );
-            })}
-
-            {filters.contactAttributeFiltered.map((personAttribute) => (
-              <FilterButton
-                key={personAttribute.id}
-                data-testid={`filter-btn-person-${personAttribute.id}`}
-                icon={<FingerprintIcon className="size-4" />}
-                label={personAttribute.label}
-                onClick={() => {
-                  handleAddFilter({
-                    type: "person",
-                    onAddFilter,
-                    setOpen,
-                  });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleAddFilter({
-                      type: "person",
-                      onAddFilter,
-                      setOpen,
-                    });
-                  }
-                }}
-              />
-            ))}
-
-            {filters.surveyInteraction ? (
-              <FilterButton
-                data-testid="filter-btn-survey-interaction"
-                icon={<MousePointerClickIcon className="size-4" />}
-                label={surveyInteractionLabel}
-                onClick={() => {
-                  handleAddFilter({ type: "surveyInteraction", onAddFilter, setOpen });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleAddFilter({ type: "surveyInteraction", onAddFilter, setOpen });
-                  }
-                }}
-              />
+              </FilterSection>
             ) : null}
 
-            {filters.segments.map((segment) => (
-              <FilterButton
-                key={segment.id}
-                data-testid={`filter-btn-segment-${segment.id}`}
-                icon={<Users2Icon className="size-4" />}
-                label={segment.title}
-                onClick={() => {
-                  handleAddFilter({
-                    type: "segment",
-                    onAddFilter,
-                    setOpen,
-                    segmentId: segment.id,
-                  });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleAddFilter({
-                      type: "segment",
-                      onAddFilter,
-                      setOpen,
-                      segmentId: segment.id,
-                    });
-                  }
-                }}
-              />
-            ))}
+            {filters.segments.length > 0 && (
+              <FilterSection label={t("common.segments")}>
+                {filters.segments.map((segment) => (
+                  <FilterButton
+                    key={segment.id}
+                    data-testid={`filter-btn-segment-${segment.id}`}
+                    icon={<Users2Icon className="size-4" />}
+                    label={segment.title}
+                    onClick={() => {
+                      handleAddFilter({
+                        type: "segment",
+                        onAddFilter,
+                        setOpen,
+                        segmentId: segment.id,
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleAddFilter({
+                          type: "segment",
+                          onAddFilter,
+                          setOpen,
+                          segmentId: segment.id,
+                        });
+                      }
+                    }}
+                  />
+                ))}
+              </FilterSection>
+            )}
 
-            {filters.devices.map((deviceType) => (
-              <FilterButton
-                key={deviceType.id}
-                data-testid={`filter-btn-device-${deviceType.id}`}
-                icon={<MonitorSmartphoneIcon className="size-4" />}
-                label={deviceType.name}
-                onClick={() => {
-                  handleAddFilter({
-                    type: "device",
-                    onAddFilter,
-                    setOpen,
-                    deviceType: deviceType.id,
-                  });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleAddFilter({
-                      type: "device",
-                      onAddFilter,
-                      setOpen,
-                      deviceType: deviceType.id,
-                    });
-                  }
-                }}
-              />
-            ))}
+            {filters.devices.length > 0 && (
+              <FilterSection label={t("workspace.segments.devices")}>
+                {filters.devices.map((deviceType) => (
+                  <FilterButton
+                    key={deviceType.id}
+                    data-testid={`filter-btn-device-${deviceType.id}`}
+                    icon={<MonitorSmartphoneIcon className="size-4" />}
+                    label={deviceType.name}
+                    onClick={() => {
+                      handleAddFilter({
+                        type: "device",
+                        onAddFilter,
+                        setOpen,
+                        deviceType: deviceType.id,
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleAddFilter({
+                          type: "device",
+                          onAddFilter,
+                          setOpen,
+                          deviceType: deviceType.id,
+                        });
+                      }
+                    }}
+                  />
+                ))}
+              </FilterSection>
+            )}
           </div>
         ))}
       </>
@@ -547,15 +561,18 @@ export function AddFilterModal({
           <div className="flex w-auto flex-col">
             <Input
               autoFocus
+              aria-label={t("common.search")}
               onChange={(e) => {
                 setSearchValue(e.target.value);
               }}
-              placeholder="Browse filters..."
+              placeholder={t("workspace.segments.browse_filters")}
             />
             <TabBar activeId={activeTabId} className="bg-white" setActiveId={setActiveTabId} tabs={tabs} />
           </div>
 
-          <div className={cn("mt-2 flex flex-col gap-1 overflow-y-auto")}>{getTabContent()}</div>
+          <ScrollFadeList className="mt-2 flex max-h-96 flex-col gap-1 overflow-y-auto">
+            {getTabContent()}
+          </ScrollFadeList>
         </div>
       </DialogBody>
     </Dialog>

@@ -8,6 +8,7 @@ import type {
   TSurveyRedirectUrlCard,
   TSurveyWelcomeCard,
 } from "@forma/types/surveys/types";
+import { getTextContent } from "@forma/types/surveys/validation";
 import { md } from "../../../../lib/survey/markdown-it";
 import { getElementsFromBlocks } from "../../lib/client-utils";
 import { Editor } from "../../../../components/ui/editor/index";
@@ -17,6 +18,8 @@ interface LocalizedEditorProps {
   value: TI18nString | undefined;
   localSurvey: TSurvey;
   isInvalid: boolean;
+  /** Id of the visible label that names the field. */
+  labelId?: string;
   /** Writes an element's field. */
   updateElement?: (elementIdx: number, data: Partial<TSurveyElement>) => void;
   /** Writes a field of the welcome card or of an ending, when isCard. */
@@ -39,6 +42,8 @@ export function LocalizedEditor({
   id,
   value,
   localSurvey,
+  isInvalid,
+  labelId,
   updateElement,
   updateSurvey,
   selectedLanguageCode = "default",
@@ -53,11 +58,15 @@ export function LocalizedEditor({
   const elements = useMemo(() => getElementsFromBlocks(localSurvey.blocks), [localSurvey.blocks]);
 
   const [, startTransition] = useTransition();
+  // The card is invalid as a whole; only the field that is actually empty is marked, so the author sees which one to fill.
+  const isEmpty = value !== undefined && getTextContent(value[selectedLanguageCode] ?? "").trim() === "";
 
   return (
     <div className="relative w-full">
       <Editor
         id={id}
+        ariaLabelledBy={labelId}
+        isInvalid={isInvalid && isEmpty}
         disableLists
         excludedToolbarItems={["blockType"]}
         firstRender={firstRender}

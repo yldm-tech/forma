@@ -1,4 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { CheckIcon, CopyIcon, TrashIcon, WebhookIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,6 +41,7 @@ import {
   triggersText,
   validWebHookURL,
   webhookErrorMessage,
+  webhookSourceLabel,
   webhookSurveyNames,
 } from "../webhooks";
 import { BackToIntegrations } from "./shared";
@@ -103,45 +105,65 @@ export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
   );
 };
 
+// Below lg the source and surveys columns give way, so the name, triggers and update time keep their room: 3 + 2 + 2 of 7 columns, and 3 + 1 + 4 + 2 + 2 of 12 from lg.
 const WebhookTableHeading = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid h-12 grid-cols-12 content-center rounded-lg bg-slate-100 text-left text-sm font-semibold text-slate-900">
+    <div className="grid h-12 grid-cols-7 content-center rounded-lg bg-slate-100 text-left text-sm font-semibold text-slate-900 lg:grid-cols-12">
       <span className="sr-only">{t("common.edit")}</span>
       <div className="col-span-3 pl-6">{t("common.webhook")}</div>
-      <div className="col-span-1 text-center">{t("workspace.integrations.webhooks.source")}</div>
-      <div className="col-span-4 text-center">{t("common.surveys")}</div>
+      <div className="hidden text-center lg:col-span-1 lg:block">
+        {t("workspace.integrations.webhooks.source")}
+      </div>
+      <div className="hidden text-center lg:col-span-4 lg:block">{t("common.surveys")}</div>
       <div className="col-span-2 text-center">{t("workspace.integrations.webhooks.triggers")}</div>
       <div className="col-span-2 text-center">{t("common.updated")}</div>
     </div>
   );
 };
 
+/** The surveys a webhook sends for: all of them, present and future, or the ones it names. */
+const webhookSurveysText = (
+  t: TFunction,
+  webhook: Webhook,
+  surveys: readonly SurveyOption[]
+): string | null => {
+  const names = webhookSurveyNames(webhook, surveys);
+  if (names === null) return t("workspace.integrations.webhooks.all_current_and_new_surveys");
+  return names.length === 0 ? null : names.join(", ");
+};
+
 const WebhookRow = ({ webhook, surveys }: { webhook: Webhook; surveys: readonly SurveyOption[] }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? "en-US";
-  const surveyNames = webhookSurveyNames(webhook, surveys);
+  const surveysText = webhookSurveysText(t, webhook, surveys);
   return (
-    <div className="mt-2 grid h-auto grid-cols-12 content-center rounded-lg py-2 hover:bg-slate-100">
-      <div className="col-span-3 flex items-center truncate pl-6 text-left text-sm">
+    <div className="mt-2 grid h-auto grid-cols-7 content-center rounded-lg py-2 hover:bg-slate-100 lg:grid-cols-12">
+      <div className="col-span-3 flex min-w-0 items-center pl-6 text-left text-sm">
         {webhook.name ? (
-          <div>
-            <div className="font-medium text-slate-900">{webhook.name}</div>
-            <div className="text-xs text-slate-400">{webhook.url}</div>
+          <div className="min-w-0">
+            <div className="truncate font-medium text-slate-900" title={webhook.name}>
+              {webhook.name}
+            </div>
+            <div className="truncate text-xs text-slate-400" title={webhook.url}>
+              {webhook.url}
+            </div>
           </div>
         ) : (
-          <div className="font-medium text-slate-900">{webhook.url}</div>
+          <div className="min-w-0 truncate font-medium text-slate-900" title={webhook.url}>
+            {webhook.url}
+          </div>
         )}
       </div>
-      <div className="col-span-1 my-auto text-center text-sm text-slate-800">
-        <Badge type="gray" size="tiny" text={webhook.source || t("common.user")} className="capitalize" />
+      <div className="my-auto hidden text-center text-sm text-slate-800 lg:col-span-1 lg:block">
+        <Badge type="gray" size="tiny" text={webhookSourceLabel(t, webhook.source)} />
       </div>
-      <div className="col-span-4 my-auto text-center text-sm text-slate-800">
-        {surveyNames.length === 0 ? (
+      <div className="my-auto hidden min-w-0 px-2 text-center text-sm text-slate-800 lg:col-span-4 lg:block">
+        {surveysText === null ? (
           <p className="text-slate-400">-</p>
         ) : (
-          <p className="truncate text-slate-400" title={surveyNames.join(", ")}>
-            {surveyNames.join(", ")}
+          <p className="truncate text-slate-400" title={surveysText}>
+            {surveysText}
           </p>
         )}
       </div>
@@ -556,7 +578,7 @@ export const WebhookDetailModal = ({
                 role="tab"
                 aria-selected={tab === item.id}
                 className={cn(
-                  "mr-4 px-1 pb-3 focus:outline-hidden",
+                  "mr-4 rounded-sm px-1 pb-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
                   tab === item.id
                     ? "border-b-2 border-brand-dark font-semibold text-slate-900"
                     : "text-slate-500 hover:text-slate-700"
@@ -599,8 +621,10 @@ const WebhookOverview = ({ webhook, surveys }: { webhook: Webhook; surveys: read
           <Label className="text-slate-500">
             {t("workspace.integrations.webhooks.created_by_third_party")}
           </Label>
-          <p className="text-sm text-slate-900 capitalize">
-            {webhook.source === "user" ? "No" : webhook.source}
+          <p className="text-sm text-slate-900">
+            {webhook.source === "user"
+              ? t("workspace.integrations.webhooks.created_by_third_party_no")
+              : webhookSourceLabel(t, webhook.source)}
           </p>
         </div>
         <div>
@@ -609,7 +633,11 @@ const WebhookOverview = ({ webhook, surveys }: { webhook: Webhook; surveys: read
         </div>
         <div>
           <Label className="text-slate-500">{t("common.surveys")}</Label>
-          {webhookSurveyNames(webhook, surveys).map((name, index) => (
+          {(
+            webhookSurveyNames(webhook, surveys) ?? [
+              t("workspace.integrations.webhooks.all_current_and_new_surveys"),
+            ]
+          ).map((name, index) => (
             <p key={index} className="text-sm text-slate-900">
               {name}
             </p>

@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authApi, authOptionsQuery, sessionQuery } from "../../features/auth/api";
 import { validatedCallbackUrl } from "../../features/auth/callback-url";
@@ -9,7 +9,7 @@ import { emailFormFailure } from "../../features/auth/errors";
 import { redirectIfSignedIn } from "../../features/auth/guards";
 import { signupEmailFrom } from "../../features/auth/history-state";
 import { type CallbackSearch, callbackSearch, stringParam } from "../../features/auth/search";
-import { emailError } from "../../features/auth/validation";
+import { emailError, translatedRules } from "../../features/auth/validation";
 import { type Validators, useForm } from "../../lib/form";
 
 interface VerificationRequestedSearch extends CallbackSearch {
@@ -56,9 +56,11 @@ function VerificationRequestedPage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [navigate, queryClient]);
 
+  const rules = useMemo(() => translatedRules(t, EMAIL_RULES), [t]);
+
   const form = useForm({
     defaultValues: { email: signupEmail ?? "" },
-    validators: EMAIL_RULES,
+    validators: rules,
     onSubmit: async ({ email }) => {
       setResent(false);
       try {
