@@ -89,7 +89,9 @@
     letter-spacing: 0;
   }
 
-  html:lang(ja) :is(h1, h2, h3) {
+  /* Headings, and the short questions inside the illustrations (all aria-hidden), whose narrow cards would otherwise leave a lone さい or か？ on the last line. */
+  html:lang(ja) :is(h1, h2, h3),
+  html:lang(ja) [aria-hidden="true"] p {
     word-break: auto-phrase;
   }
 
