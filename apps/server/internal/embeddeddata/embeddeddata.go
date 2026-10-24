@@ -118,7 +118,7 @@ func validateDesired(fields []Field) error {
 	return nil
 }
 
-// isoDateTime is zod's z.iso.datetime(): a UTC date and time with optional seconds and fraction.
+// isoDateTime is the datetime half of packages/types' ZIsoDateOrDateTime, z.iso.datetime() or z.iso.datetime({ precision: -1 }): a UTC date and time with optional seconds and fraction.
 var isoDateTime = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?Z$`)
 
 // defaultMatchesType is ZEmbeddedData's default value rule: a default has its field's type, and a date default is an ISO 8601 date or UTC datetime string.

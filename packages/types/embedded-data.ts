@@ -55,8 +55,8 @@ export type TEmbeddedDataDefaultValue = z.infer<typeof ZEmbeddedDataDefaultValue
  */
 const ZEmbeddedDataName = z.string().refine((value) => value.trim().length > 0, "Name must not be blank");
 
-/** A `date` default is stored as a string, so pin it to ISO 8601 — either a date or a datetime. */
-const ZIsoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime()]);
+/** A `date` default is stored as a string, so pin it to ISO 8601 — either a date or a UTC datetime with optional seconds, the rule the Go server applies. zod 4.5+ `z.iso.datetime()` requires seconds before a `Z`, hence the separate minute-precision arm. */
+const ZIsoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime(), z.iso.datetime({ precision: -1 })]);
 
 /** Runtime type each non-date `dataType` expects its default value to have. */
 const DEFAULT_VALUE_TYPE_BY_DATA_TYPE = {

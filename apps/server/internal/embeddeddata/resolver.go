@@ -140,7 +140,7 @@ func ReservedPrivacy(name string) string {
 	return ""
 }
 
-// isISODateOrDateTime is z.union([z.iso.date(), z.iso.datetime()]): a calendar date, or a UTC date and time.
+// isISODateOrDateTime is packages/types' ZIsoDateOrDateTime, z.union([z.iso.date(), z.iso.datetime(), z.iso.datetime({ precision: -1 })]): a calendar date, or a UTC date and time with optional seconds.
 func isISODateOrDateTime(s string) bool {
 	if len(s) == len(time.DateOnly) {
 		_, err := time.Parse(time.DateOnly, s)

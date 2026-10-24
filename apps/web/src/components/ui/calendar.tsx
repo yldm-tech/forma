@@ -1,7 +1,7 @@
 import * as React from "react";
 import { type DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 import { cn } from "../../lib/cn";
-import { getDateFnsLocale } from "../../lib/survey/datetime";
+import { getDateFnsLocale } from "../../lib/survey/date-fns-locale";
 import { Button, buttonVariants } from "./button";
 
 /**

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// noTransformHTML adds no-transform to the Cache-Control of every text/html response, after whatever caching its handler chose, or alone when the handler chose none. Cloudflare's Web Analytics injects its beacon script into every proxied HTML response that does not say no-transform, and the Content-Security-Policy blocks that script, so each page logged a CSP violation in the browser. no-transform also stops Cloudflare from compressing a response, which is why nothing but HTML gets it. The header is added when the response's headers are flushed, so every HTML responder is covered, the SPA document, the public survey pages, redirects and error pages alike, including ones added later.
+// noTransformHTML adds no-transform to the Cache-Control of every text/html response, after whatever caching its handler chose, or alone when the handler chose none. Cloudflare's Web Analytics injects its beacon script into every proxied HTML response that does not say no-transform, and the Content-Security-Policy blocks that script, so each page logged a CSP violation in the browser. no-transform also stops Cloudflare from compressing a response, which is why nothing but HTML gets it, and why the server gzips HTML itself (Compress). The header is added when the response's headers are flushed, so every HTML responder is covered, the SPA document, the public survey pages, redirects and error pages alike, including ones added later.
 func noTransformHTML() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer = &noTransformWriter{ResponseWriter: c.Writer}

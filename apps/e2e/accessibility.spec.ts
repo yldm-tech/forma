@@ -102,6 +102,8 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
         const survey = await respondent.newPage();
         await survey.goto(`/s/${surveyId}`);
         await expect(survey.getByRole("textbox", { name: DEFAULT_QUESTION })).toBeVisible();
+        // The question renders under the loading overlay, which then fades out over 300 ms; axe measures contrast against whatever is painted, so a scan mid-fade reports the overlay's half-transparent "powered by". Scan once the overlay is display: none.
+        await expect(survey.getByText("powered by", { exact: true })).toBeHidden();
         await expectOnlyKnownViolations(survey, "survey", viewport);
         // The ending card, after an answer.
         await survey.getByRole("textbox", { name: DEFAULT_QUESTION }).fill("Accessible enough");

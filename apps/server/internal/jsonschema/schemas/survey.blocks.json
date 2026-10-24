@@ -17,13 +17,13 @@
         "$ref": "#/$defs/__schema37"
       },
       "logicFallback": {
-        "$ref": "#/$defs/__schema47"
+        "$ref": "#/$defs/__schema46"
       },
       "buttonLabel": {
-        "$ref": "#/$defs/__schema48"
+        "$ref": "#/$defs/__schema47"
       },
       "backButtonLabel": {
-        "$ref": "#/$defs/__schema49"
+        "$ref": "#/$defs/__schema48"
       }
     },
     "required": [
@@ -321,6 +321,7 @@
               "$ref": "#/$defs/__schema6"
             },
             "isColorCodingEnabled": {
+              "default": false,
               "type": "boolean"
             }
           },
@@ -452,6 +453,7 @@
               "$ref": "#/$defs/__schema6"
             },
             "isColorCodingEnabled": {
+              "default": false,
               "type": "boolean"
             }
           },
@@ -499,6 +501,7 @@
               "$ref": "#/$defs/__schema16"
             },
             "allowMulti": {
+              "default": false,
               "type": "boolean"
             },
             "choices": {
@@ -1017,6 +1020,7 @@
               "$ref": "#/$defs/__schema6"
             },
             "isColorCodingEnabled": {
+              "default": false,
               "type": "boolean"
             }
           },
@@ -1084,6 +1088,7 @@
               "$ref": "#/$defs/__schema6"
             },
             "isColorCodingEnabled": {
+              "default": false,
               "type": "boolean"
             }
           },
@@ -1188,6 +1193,7 @@
       ]
     },
     "__schema20": {
+      "default": false,
       "type": "boolean"
     },
     "__schema21": {
@@ -1197,6 +1203,7 @@
       "type": "object",
       "properties": {
         "enabled": {
+          "default": false,
           "type": "boolean"
         },
         "min": {
@@ -1708,6 +1715,7 @@
       "const": "cta"
     },
     "__schema31": {
+      "default": false,
       "type": "boolean"
     },
     "__schema32": {
@@ -1789,10 +1797,10 @@
                           "$ref": "#/$defs/__schema0"
                         },
                         "objective": {
-                          "$ref": "#/$defs/__schema43"
+                          "$ref": "#/$defs/__schema42"
                         },
                         "variableId": {
-                          "$ref": "#/$defs/__schema44"
+                          "$ref": "#/$defs/__schema43"
                         },
                         "operator": {
                           "type": "string",
@@ -1821,7 +1829,7 @@
                               ]
                             },
                             {
-                              "$ref": "#/$defs/__schema41"
+                              "$ref": "#/$defs/__schema40"
                             }
                           ]
                         }
@@ -1841,16 +1849,16 @@
                           "$ref": "#/$defs/__schema0"
                         },
                         "objective": {
-                          "$ref": "#/$defs/__schema43"
+                          "$ref": "#/$defs/__schema42"
                         },
                         "variableId": {
-                          "$ref": "#/$defs/__schema44"
+                          "$ref": "#/$defs/__schema43"
                         },
                         "operator": {
-                          "$ref": "#/$defs/__schema45"
+                          "$ref": "#/$defs/__schema44"
                         },
                         "value": {
-                          "$ref": "#/$defs/__schema46"
+                          "$ref": "#/$defs/__schema45"
                         }
                       },
                       "required": [
@@ -1917,21 +1925,34 @@
       }
     },
     "conditionGroup": {
-      "id": "conditionGroup",
+      "$ref": "#/$defs/__schema38"
+    },
+    "__schema38": {
       "type": "object",
       "properties": {
         "id": {
           "$ref": "#/$defs/__schema0"
         },
         "connector": {
-          "$ref": "#/$defs/__schema38"
+          "type": "string",
+          "enum": [
+            "and",
+            "or"
+          ]
         },
         "conditions": {
           "type": "array",
           "items": {
             "anyOf": [
               {
-                "$ref": "#/$defs/__schema39"
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/__schema39"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema41"
+                  }
+                ]
               },
               {
                 "$ref": "#/$defs/conditionGroup"
@@ -1946,31 +1967,14 @@
         "conditions"
       ]
     },
-    "__schema38": {
-      "type": "string",
-      "enum": [
-        "and",
-        "or"
-      ]
-    },
     "__schema39": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/__schema40"
-        },
-        {
-          "$ref": "#/$defs/__schema42"
-        }
-      ]
-    },
-    "__schema40": {
       "type": "object",
       "properties": {
         "id": {
           "$ref": "#/$defs/__schema0"
         },
         "leftOperand": {
-          "$ref": "#/$defs/__schema41"
+          "$ref": "#/$defs/__schema40"
         },
         "operator": {
           "type": "string",
@@ -2041,7 +2045,7 @@
               ]
             },
             {
-              "$ref": "#/$defs/__schema41"
+              "$ref": "#/$defs/__schema40"
             }
           ]
         }
@@ -2052,7 +2056,7 @@
         "operator"
       ]
     },
-    "__schema41": {
+    "__schema40": {
       "anyOf": [
         {
           "type": "object",
@@ -2135,20 +2139,20 @@
         }
       ]
     },
-    "__schema42": {
+    "__schema41": {
       "type": "object",
       "properties": {
         "connector": {}
       }
     },
-    "__schema43": {
+    "__schema42": {
       "type": "string",
       "const": "calculate"
     },
-    "__schema44": {
+    "__schema43": {
       "type": "string"
     },
-    "__schema45": {
+    "__schema44": {
       "type": "string",
       "enum": [
         "add",
@@ -2158,7 +2162,7 @@
         "assign"
       ]
     },
-    "__schema46": {
+    "__schema45": {
       "anyOf": [
         {
           "type": "object",
@@ -2177,17 +2181,17 @@
           ]
         },
         {
-          "$ref": "#/$defs/__schema41"
+          "$ref": "#/$defs/__schema40"
         }
       ]
     },
-    "__schema47": {
+    "__schema46": {
       "$ref": "#/$defs/__schema0"
     },
-    "__schema48": {
+    "__schema47": {
       "$ref": "#/$defs/__schema6"
     },
-    "__schema49": {
+    "__schema48": {
       "$ref": "#/$defs/__schema6"
     }
   },

@@ -43,13 +43,9 @@
       ]
     },
     "fontFamily": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "null"
       ]
     },
     "buttonBgColor": {
@@ -73,105 +69,45 @@
       ]
     },
     "buttonBorderRadius": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "buttonHeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "buttonFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "buttonFontWeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "number",
+        "null"
       ]
     },
     "buttonPaddingX": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "buttonPaddingY": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputBgColor": {
@@ -195,37 +131,17 @@
       ]
     },
     "inputBorderRadius": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputHeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputTextColor": {
@@ -239,20 +155,10 @@
       ]
     },
     "inputFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputPlaceholderOpacity": {
@@ -268,47 +174,23 @@
       ]
     },
     "inputPaddingX": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputPaddingY": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "inputShadow": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "null"
       ]
     },
     "optionBgColor": {
@@ -342,105 +224,45 @@
       ]
     },
     "optionBorderRadius": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "optionPaddingX": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "optionPaddingY": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "optionFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "elementHeadlineFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "elementHeadlineFontWeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "number",
+        "null"
       ]
     },
     "elementHeadlineColor": {
@@ -454,37 +276,17 @@
       ]
     },
     "elementDescriptionFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "elementDescriptionFontWeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "number",
+        "null"
       ]
     },
     "elementDescriptionColor": {
@@ -498,20 +300,10 @@
       ]
     },
     "elementUpperLabelFontSize": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "elementUpperLabelColor": {
@@ -525,37 +317,17 @@
       ]
     },
     "elementUpperLabelFontWeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "number",
+        "null"
       ]
     },
     "progressTrackHeight": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "progressTrackBgColor": {
@@ -609,30 +381,16 @@
       ]
     },
     "isDarkModeEnabled": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "boolean",
+        "null"
       ]
     },
     "roundness": {
-      "anyOf": [
-        {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "string",
+        "null"
       ]
     },
     "cardArrangement": {
@@ -705,23 +463,15 @@
       ]
     },
     "hideProgressBar": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "boolean",
+        "null"
       ]
     },
     "isLogoHidden": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "boolean",
+        "null"
       ]
     },
     "logo": {
@@ -743,13 +493,9 @@
       ]
     },
     "overwriteThemeStyling": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "boolean",
+        "null"
       ]
     }
   },
@@ -780,13 +526,9 @@
       "pattern": "^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
     },
     "__schema2": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "string",
+        "null"
       ]
     },
     "__schema3": {
@@ -806,13 +548,9 @@
       ]
     },
     "__schema4": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "null"
-        }
+      "type": [
+        "number",
+        "null"
       ]
     }
   },
