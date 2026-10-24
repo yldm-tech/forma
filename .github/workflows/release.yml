@@ -2,7 +2,7 @@ name: Release
 
 # Publishes the container image the cluster deploys, as forma2's release workflow did: the same tag scheme (<version>, sha-<commit>, latest) and the same labels, now built from the repository's deploy/docker/Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64. The image has a name of its own, ghcr.io/yldm-tech/forma-server: ghcr.io/yldm-tech/forma belongs to forma2's release workflow, which is the only one its package accepts pushes from, and keeps forma2's last release. The marketing site on forma.yldm.ai's root is a second image, ghcr.io/yldm-tech/forma-website, published by a job of its own so that it never holds back a release.
 #
-# Triggered on the push rather than chained off a successful CI run, because no workflow in this repository runs on pushes to main — the gate in `pr.yml` is `pull_request` and `merge_group`, so the merge commit has already been through it by the time it lands here.
+# Triggered on the push rather than chained off a successful CI run, because no workflow in this repository runs on pushes to main. The gate is the `main: required checks` ruleset: a pull request merges only once `PR Check Summary` (pr.yml) and `PR title` pass on it. The ruleset does not require the branch to be up to date and there is no merge queue (pr.yml's `merge_group` trigger never fires), so what was checked is the pull request merged into main as main stood at its last run, not the merge commit that lands here.
 on:
   push:
     branches:
@@ -84,6 +84,9 @@ jobs:
           file: ./deploy/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          # The layers this push builds seed the next release and, since a pull request's cache can read its base branch's, Docker Build Validation's builds of the same Dockerfile under the same scope. mode=max keeps the web and server stages too, which is where the time goes; only layers are exported, not the contents of RUN --mount=type=cache.
+          cache-from: type=gha,scope=forma-image
+          cache-to: type=gha,mode=max,scope=forma-image
           # Stamped into the binary (buildinfo.Version), so telemetry, Sentry and the usage report name the release.
           build-args: |
             VERSION=${{ env.VERSION }}
@@ -226,6 +229,8 @@ jobs:
           context: .
           file: ./apps/website/Dockerfile
           push: true
+          cache-from: type=gha,scope=forma-website
+          cache-to: type=gha,mode=max,scope=forma-website
           tags: |
             ${{ env.WEBSITE_IMAGE }}:${{ env.VERSION }}
             ${{ env.WEBSITE_IMAGE }}:sha-${{ github.sha }}
