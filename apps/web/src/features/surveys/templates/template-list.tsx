@@ -274,7 +274,7 @@ const TemplateCard = ({
   return (
     <div
       className={cn(
-        "group relative flex flex-col rounded-lg bg-white p-6 text-left shadow-sm transition-all duration-150 focus-within:ring-2 focus-within:ring-ring hover:ring-2 hover:ring-slate-300",
+        "group relative flex flex-col rounded-lg bg-white p-6 text-left shadow-sm transition-all duration-150 hover:ring-2 has-focus-visible:ring-2 has-focus-visible:ring-ring hover:ring-slate-300",
         isActive ? "ring-2 ring-slate-400" : "cursor-pointer",
         className
       )}>
