@@ -20,7 +20,7 @@
     },
     "forgot-password": {
       "back_to_login": "返回 登录",
-      "description": "输入您的邮箱，我们会向您发送重置密码的链接。",
+      "description": "输入你的邮箱，我们会向你发送重置密码的链接。",
       "email-sent": {
         "heading": "密码 重置 成功 请求",
         "text": "如果 这个 邮箱 存在 账户，您 将 很快 收到 密码 重置 说明。"
@@ -40,11 +40,11 @@
       "title": "忘记密码了？"
     },
     "invite": {
-      "already_used_signed_in": "如果您是通过此邀请创建的账户，您已经是成员了。",
+      "already_used_signed_in": "如果你是通过此邀请创建的账户，你已经是成员了。",
       "create_account": "创建一个帐户",
       "email_does_not_match": "糟糕！ 邮箱错误 🤦",
       "email_does_not_match_description": "邀请中的电子邮件与您的不匹配。",
-      "email_does_not_match_for": "此邀请发送给{email}，但您当前登录的是{currentEmail}。请使用受邀的邮箱登录以接受邀请。",
+      "email_does_not_match_for": "此邀请发送给{email}，但你当前登录的是{currentEmail}。请使用受邀的邮箱登录以接受邀请。",
       "go_to_app": "进入 应用",
       "happy_to_have_you": "很高兴有 你 🤗",
       "happy_to_have_you_description": "请创建一个帐户或登录。",
@@ -52,13 +52,13 @@
       "invite_expired_description": "邀请 有效期为 7 天。 请 请求 新 的邀请。",
       "invite_not_found": "邀请 未 找到 😥",
       "invite_not_found_description": "邀请码无法找到或已被使用。",
-      "invited_you_to_join": "{inviterName}邀请您加入{organizationName}。",
+      "invited_you_to_join": "{inviterName}邀请你加入{organizationName}。",
       "login": "登录",
       "switch_account": "退出并切换账户",
       "welcome_to_organization": "你 已 进入 🎉",
       "welcome_to_organization_description": "欢迎 进入 组织",
-      "you_are_invited_to_join": "您受邀加入{organizationName}。",
-      "you_joined": "您已加入{organizationName}"
+      "you_are_invited_to_join": "你受邀加入{organizationName}。",
+      "you_joined": "你已加入{organizationName}"
     },
     "last_used": "最近使用",
     "login": {
@@ -151,7 +151,7 @@
       "captcha_required": "请完成人机验证。",
       "invalid_email": "请输入有效的邮箱地址。",
       "name_invalid": "姓名中包含不允许使用的字符。",
-      "name_required": "请输入您的姓名。",
+      "name_required": "请输入你的姓名。",
       "password_needs_upper_and_digit": "请至少包含一个大写字母和一个数字。",
       "password_too_long": "请使用不超过{max}个字符。",
       "password_too_short": "请至少使用{min}个字符。"
