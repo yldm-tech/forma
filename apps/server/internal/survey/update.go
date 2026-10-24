@@ -191,11 +191,13 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 	if err := draftVersionConflict(current, &in, draft); err != nil {
 		return nil, err
 	}
-	// A draft save reports a missing name with the rest of its shape issues.
+	// A draft save reports a missing name with the rest of its shape issues; a full save is refused here, and audited as a failed update like every other refused save. The check stays out of update(), which the v1 API shares under forma2's rule.
+	var updated *Survey
 	if nameIssue := editorNameIssue(in.Name); !draft && nameIssue != nil {
-		return nil, ValidationError([]surveydoc.Issue{*nameIssue})
+		err = ValidationError([]surveydoc.Issue{*nameIssue})
+	} else {
+		updated, err = s.update(ctx, current, &in, draft)
 	}
-	updated, err := s.update(ctx, current, &in, draft)
 	org := s.organizationOf(ctx, current.WorkspaceID)
 	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, in.ID.String(), org, err, current, updated)
 	if err == nil {

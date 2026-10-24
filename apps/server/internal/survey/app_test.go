@@ -130,6 +130,8 @@ func TestEditorSaveRequiresAName(t *testing.T) {
 			if len(issues) == 0 || fmt.Sprint(issues[0].(map[string]any)["path"]) != "[name]" {
 				t.Fatalf("save %q to %q: issues %v", rest, name, body.Details["issues"])
 			}
+			// Refused like any other invalid save, so audited as a failed update.
+			e.expectAudit(audit.ActionUpdated, audit.StatusFailure, audit.ActorUser, owner.String(), audit.TargetSurvey, id)
 		}
 	}
 	if got := e.editorSurvey(owner, id)["name"]; got != stored {
