@@ -35,7 +35,7 @@ make deps-up      # PostgreSQL, Valkey, SpiceDB, RustFS and Mailpit in Docker
 make migrate      # the goose schema, then the job queue's tables
 make seed         # optional: a demo organization to sign in to (admin@forma.yldm.ai / Password#123)
 make dev-server   # the Go server on :3000
-make dev-web      # the Vite dev server on :5173, proxying the API to :3000
+make dev-web      # the Vite dev server, the app at http://localhost:5173/app/, proxying the API to :3000
 ```
 
 If something goes wrong, [GitHub Discussions](https://github.com/yldm-tech/forma/discussions) is the fastest way to get help from people who have hit the same thing.

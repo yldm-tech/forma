@@ -5,7 +5,7 @@ icon: "link"
 ---
 
 <Warning>
-  The Go server does not support a custom subpath. It serves the admin app, the survey pages, the APIs, OAuth and MCP from the root of its origin (`/`, `/s/...`, `/api/...`, `/.well-known/...`), and there is no `BASE_PATH` setting: forma2's build-time `BASE_PATH`, a Next.js base path, has no counterpart, and building your own image with it has no effect.
+  The Go server does not support a custom subpath. It serves the admin app under `/app` and the survey pages, the APIs, OAuth and MCP from the root of its origin (`/s/...`, `/api/...`, `/.well-known/...`), and there is no `BASE_PATH` setting: forma2's build-time `BASE_PATH`, a Next.js base path, has no counterpart, and building your own image with it has no effect.
 </Warning>
 
 ### What to do instead

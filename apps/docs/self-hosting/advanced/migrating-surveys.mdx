@@ -82,9 +82,7 @@ is enough to keep every answer readable and correctly dated, but it is not a byt
     </Warning>
   </Step>
   <Step title="Note both workspace IDs">
-    The workspace ID is in the app URL: `https://your-instance.com/workspaces/<workspaceId>/surveys`.
-    (`GET /api/v2/me` also lists them, but only for keys that additionally have Organization read
-    access.)
+    The workspace ID is in the app URL: `https://your-instance.com/app/workspaces/<workspaceId>/surveys`. (`GET /api/v2/me` also lists them, but only for keys that additionally have Organization read access.)
   </Step>
   <Step title="Install curl and jq">
     The scripts below use nothing else. `jq` 1.6 or newer.
@@ -243,8 +241,7 @@ echo "responses: ${ok} imported, ${failed} failed"
 echo "link:      ${TARGET_URL}/s/${new_id}"
 ```
 
-The survey ID is the last path segment of the survey's URL in the app,
-`/workspaces/<workspaceId>/surveys/<surveyId>/edit`.
+The survey ID is the last path segment of the survey's URL in the app, `/app/workspaces/<workspaceId>/surveys/<surveyId>/edit`.
 
 ```bash
 SOURCE_URL=https://old.forma.example.com \

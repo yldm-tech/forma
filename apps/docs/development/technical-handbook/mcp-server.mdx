@@ -233,8 +233,7 @@ curl -sS -X POST http://localhost:3000/api/auth/oauth2/register \
   failed its first connect with `invalid_scope` and only succeeded on retry.
 </Note>
 
-The consent screen is served at `/account/authorize`. Users can revoke approved MCP clients from
-`/account/settings/authorized-apps`.
+The consent screen is served at `/app/account/authorize`. Users can revoke approved MCP clients from `/app/account/settings/authorized-apps`.
 
 For API-key fallback, create an API key in the Forma app with access to the target workspace.
 Use the least privileged permission needed by the agent workflow.
