@@ -40,7 +40,7 @@ jobs:
           # - Test files (*.test.ts, *.spec.tsx, Go's *_test.go) and Go test fixtures (testdata/)
           # - Locale files (locales/*.json, i18n/*.json)
           # - Lock files (pnpm-lock.yaml, go.sum, go.work.sum)
-          # - Committed generated files (TanStack Router's *.gen.ts, Wire's *_gen.go, the JSON schemas generated from the Go types, *.tsbuildinfo)
+          # - Committed generated files (TanStack Router's *.gen.ts, Wire's *_gen.go, the JSON schemas exported from @forma/types (apps/server/internal/jsonschema/schemas/), *.tsbuildinfo)
           # - Storybook stories (*.stories.tsx)
           # Build output (dist/, coverage/ and the like) is gitignored, so it never shows up in the diff.
 
