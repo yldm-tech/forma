@@ -1,4 +1,6 @@
-import { describe, expect, test } from "vite-plus/test";
+import type { TFunction } from "i18next";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
+import { initI18n } from "../../lib/i18n";
 import {
   MESSAGES,
   emailError,
@@ -7,6 +9,8 @@ import {
   passwordError,
   serverFieldMessage,
   signInPasswordError,
+  translatedRules,
+  validationMessage,
 } from "./validation";
 
 describe("emailError", () => {
@@ -103,8 +107,33 @@ describe("serverFieldMessage", () => {
     [{ field: "newPassword", rule: "max", param: "128" }, MESSAGES.passwordTooLong],
     [{ field: "password", rule: "password_composition" }, MESSAGES.passwordPattern],
     [{ field: "turnstileToken", rule: "required" }, MESSAGES.captchaRequired],
-    [{ field: "userLocale", rule: "oneof" }, "userLocale: oneof"],
+    [{ field: "userLocale", rule: "oneof" }, undefined],
   ])("%j", (error, expected) => {
     expect(serverFieldMessage(error)).toBe(expected);
+  });
+});
+
+describe("the messages", () => {
+  let t: TFunction;
+  beforeAll(async () => {
+    t = (await initI18n("ja-JP")).t;
+  });
+
+  test("are translated, never the raw pattern forma2 showed", async () => {
+    const en = (await initI18n("en-US")).t;
+    expect(validationMessage(en, MESSAGES.passwordPattern)).toBe(
+      "Use at least one uppercase letter and one number."
+    );
+    expect(validationMessage(en, MESSAGES.passwordTooShort)).toBe("Use at least 8 characters.");
+    for (const key of Object.values(MESSAGES)) {
+      expect(validationMessage(t, key)).not.toBe(key);
+      expect(validationMessage(t, key)).not.toBe(validationMessage(en, key));
+    }
+  });
+
+  test("replace each rule's key in translatedRules and leave a passing value alone", () => {
+    const rules = translatedRules<{ email: string }>(t, { email: emailError });
+    expect(rules.email?.("bad", { email: "bad" })).toBe(validationMessage(t, MESSAGES.invalidEmail));
+    expect(rules.email?.("ada@example.com", { email: "ada@example.com" })).toBeUndefined();
   });
 });

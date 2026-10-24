@@ -6,7 +6,9 @@ import {
   type TranslationKeys,
   detectKeysWithSpaces,
   extractKeysFromContent,
+  findCjkSpacing,
   flattenKeys,
+  hasCjkSpacing,
   parseLockfile,
   stripComments,
   validateLockfile,
@@ -756,6 +758,33 @@ describe("Translation Scanner", () => {
         fs.rmdirSync(localesDir);
         fs.rmdirSync(tempBaseDir);
       }
+    });
+  });
+
+  describe("CJK spacing", () => {
+    test("finds runs of spaces between CJK characters and CJK punctuation", () => {
+      expect(hasCjkSpacing("邀请 未 找到 😥")).toBe(true);
+      expect(hasCjkSpacing("您没有收到电子邮件或者链接已过期  ？")).toBe(true);
+      expect(hasCjkSpacing("この リソース は 存在 しない")).toBe(true);
+      expect(hasCjkSpacing("糟糕 ，偵測到小螢幕！")).toBe(true);
+    });
+
+    test("keeps spaces next to Latin words, digits, emoji and placeholders", () => {
+      expect(hasCjkSpacing("第一次使用 Forma？")).toBe(false);
+      expect(hasCjkSpacing("至少包含 1 个数字")).toBe(false);
+      expect(hasCjkSpacing("邀请已失效 😥")).toBe(false);
+      expect(hasCjkSpacing("删除 {count} 条回复")).toBe(false);
+      expect(hasCjkSpacing("{value, plural, other { 件の回答があります}}")).toBe(false);
+      expect(hasCjkSpacing("Survey sent to {email}")).toBe(false);
+    });
+
+    test("findCjkSpacing lists the nested keys of spaced values", () => {
+      expect(
+        findCjkSpacing({
+          auth: { invite: { invite_not_found: "邀请 未 找到", go_to_app: "进入应用" } },
+          common: { created_by: "创建者", restart: "重新 开始" },
+        })
+      ).toEqual(["auth.invite.invite_not_found", "common.restart"]);
     });
   });
 });

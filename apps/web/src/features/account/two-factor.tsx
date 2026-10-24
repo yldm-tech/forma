@@ -1,5 +1,5 @@
 import { CopyIcon } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import {
@@ -63,13 +63,33 @@ const EnableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
   const [step, setStep] = useState<EnableStep>("confirmPassword");
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
 
+  // The backup codes are shown once: neither Escape, the backdrop nor a close button may dismiss them before the user confirms they kept them.
+  const showingBackupCodes = step === "backupCodes";
+  // The Dialog cancels the <dialog>'s cancel event, but Chromium stops letting a page cancel it after a second Escape with no other input in between and then closes the dialog, which would unmount the codes. Holding back the Escape keydown keeps the browser from raising that close request at all.
+  useEffect(() => {
+    if (!showingBackupCodes) return;
+    const holdEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") e.preventDefault();
+    };
+    document.addEventListener("keydown", holdEscape, true);
+    return () => document.removeEventListener("keydown", holdEscape, true);
+  }, [showingBackupCodes]);
+  const description = {
+    confirmPassword: t("workspace.settings.profile.confirm_your_current_password_to_get_started"),
+    scanQRCode: t("workspace.settings.profile.scan_the_qr_code_below_with_your_authenticator_app"),
+    enterCode: t("workspace.settings.profile.enter_the_code_from_your_authenticator_app_below"),
+    backupCodes: t("workspace.settings.profile.save_the_following_backup_codes_in_a_safe_place"),
+  }[step];
+
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open
+      onOpenChange={(open) => !open && onClose()}
+      disableCloseOnOutsideClick={showingBackupCodes}
+      hideCloseButton={showingBackupCodes}>
       <DialogHeader>
-        <DialogTitle>{t("workspace.settings.profile.two_factor_authentication")}</DialogTitle>
-        <DialogDescription>
-          {t("workspace.settings.profile.confirm_your_current_password_to_get_started")}
-        </DialogDescription>
+        <DialogTitle>{t("workspace.settings.profile.enable_two_factor_authentication")}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogBody>
         {step === "confirmPassword" && (
@@ -151,14 +171,6 @@ const ScanQRCodeStep = ({
   const { t } = useTranslation();
   return (
     <div>
-      <div className="p-6">
-        <h3 className="text-lg font-semibold">
-          {t("workspace.settings.profile.enable_two_factor_authentication")}
-        </h3>
-        <p className="text-sm text-slate-700">
-          {t("workspace.settings.profile.scan_the_qr_code_below_with_your_authenticator_app")}
-        </p>
-      </div>
       <div className="mb-4 flex flex-col items-center justify-center gap-y-4">
         <img src={setup.dataUri} alt="QR code" width={200} height={200} />
         <p className="text-sm text-slate-700">
@@ -188,47 +200,56 @@ const ScanQRCodeStep = ({
   );
 };
 
+/** Focuses the first box of the OTP input inside `container` when `when` turns true, so the user can type the code at once. */
+const useFocusFirstDigit = (container: RefObject<HTMLElement | null>, when: unknown) => {
+  useEffect(() => {
+    if (when) container.current?.querySelector("input")?.focus();
+  }, [container, when]);
+};
+
 const EnterCodeStep = ({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) => {
   const { t } = useTranslation();
   const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  // Bumped on every refused code, which empties the boxes and puts the cursor back in the first.
+  const [attempt, setAttempt] = useState(1);
+  const digits = useRef<HTMLFieldSetElement>(null);
+  useFocusFirstDigit(digits, attempt);
   const enable = useEnableTwoFactor();
   const complete = /^\d{6}$/.test(code);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!complete) return;
+    setError(null);
     try {
       const result = await enable.mutateAsync(code);
       toast.success(result.message);
       onDone();
-    } catch (error) {
-      toast.error(errorMessage(t, error));
+    } catch (failure) {
+      setError(errorMessage(t, failure));
+      setCode("");
+      setAttempt((n) => n + 1);
     }
   };
   return (
-    <div>
-      <div className="p-6">
-        <h3 className="text-lg font-semibold">
-          {t("workspace.settings.profile.enable_two_factor_authentication")}
-        </h3>
-        <p className="text-sm text-slate-700">
-          {t("workspace.settings.profile.enter_the_code_from_your_authenticator_app_below")}
-        </p>
+    <form className="flex flex-col gap-y-10" onSubmit={submit}>
+      <fieldset
+        ref={digits}
+        className="flex flex-col gap-2"
+        aria-describedby={error ? "enable-two-factor-error" : undefined}>
+        <legend className="mb-2 text-sm font-medium text-slate-700">{t("common.code")}</legend>
+        <OTPInput value={code} onChange={setCode} valueLength={6} className="justify-start" />
+        <FormError id="enable-two-factor-error">{error}</FormError>
+      </fieldset>
+      <div className="flex w-full items-center justify-end gap-x-4">
+        <Button variant="secondary" size="sm" type="button" onClick={onCancel}>
+          {t("common.cancel")}
+        </Button>
+        <Button size="sm" type="submit" loading={enable.isPending} disabled={!complete}>
+          {t("common.confirm")}
+        </Button>
       </div>
-      <form className="flex flex-col gap-y-10" onSubmit={submit}>
-        <fieldset className="flex flex-col gap-2 px-6">
-          <legend className="text-sm font-medium text-slate-700">{t("common.code")}</legend>
-          <OTPInput value={code} onChange={setCode} valueLength={6} className="justify-start" />
-        </fieldset>
-        <div className="flex w-full items-center justify-end gap-x-4">
-          <Button variant="secondary" size="sm" type="button" onClick={onCancel}>
-            {t("common.cancel")}
-          </Button>
-          <Button size="sm" type="submit" loading={enable.isPending} disabled={!complete}>
-            {t("common.confirm")}
-          </Button>
-        </div>
-      </form>
-    </div>
+    </form>
   );
 };
 
@@ -247,14 +268,6 @@ const BackupCodesStep = ({ codes, onClose }: { codes: string[]; onClose: () => v
   };
   return (
     <div>
-      <div className="p-6">
-        <h3 className="text-lg font-semibold">
-          {t("workspace.settings.profile.enable_two_factor_authentication")}
-        </h3>
-        <p className="text-sm text-slate-700">
-          {t("workspace.settings.profile.save_the_following_backup_codes_in_a_safe_place")}
-        </p>
-      </div>
       <ul className="mx-auto mb-6 grid max-w-[60%] grid-cols-2 gap-1 text-center font-mono">
         {codes.map((code) => (
           <li key={code} className="text-sm font-medium text-slate-700">
@@ -264,7 +277,7 @@ const BackupCodesStep = ({ codes, onClose }: { codes: string[]; onClose: () => v
       </ul>
       <div className="flex w-full items-center justify-end gap-x-4 border-t border-slate-300 p-4">
         <Button variant="secondary" type="button" size="sm" onClick={onClose}>
-          {t("common.close")}
+          {t("auth.two_factor.i_saved_my_codes")}
         </Button>
         <Button size="sm" type="button" onClick={() => void copyText(formatted, t)}>
           {t("common.copy")}
@@ -286,12 +299,20 @@ const DisableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [factorError, setFactorError] = useState<string | null>(null);
   const disable = useDisableTwoFactor();
+  // Switching between the authenticator code and a backup code moves focus to the field just shown; the password, first in the form, takes it when the dialog opens.
+  const [switched, setSwitched] = useState(0);
+  const digits = useRef<HTMLFieldSetElement>(null);
+  const backupInput = useRef<HTMLInputElement>(null);
+  useFocusFirstDigit(digits, switched > 0 && !useBackupCode);
+  useEffect(() => {
+    if (switched > 0 && useBackupCode) backupInput.current?.focus();
+  }, [switched, useBackupCode]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const factor = disableTwoFactorFactor(useBackupCode ? "" : code, useBackupCode ? backupCode : "");
     if (!factor) {
-      setFactorError("Please provide either the code OR the backup code");
+      setFactorError(t("auth.two_factor.provide_code_or_backup_code"));
       return;
     }
     setFactorError(null);
@@ -327,34 +348,41 @@ const DisableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="disable-two-factor-backup" className="text-sm font-medium text-slate-700">
-              {useBackupCode
-                ? t("workspace.settings.profile.backup_code")
-                : t("workspace.settings.profile.two_factor_code")}
-            </label>
-            <p className="text-sm text-slate-700">
-              {useBackupCode
-                ? t(
-                    "workspace.settings.profile.each_backup_code_can_be_used_exactly_once_to_grant_access_without_your_authenticator"
-                  )
-                : t(
-                    "workspace.settings.profile.two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app"
-                  )}
-            </p>
-            {useBackupCode ? (
+          {useBackupCode ? (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="disable-two-factor-backup" className="text-sm font-medium text-slate-700">
+                {t("workspace.settings.profile.backup_code")}
+              </label>
+              <p id="disable-two-factor-backup-hint" className="text-sm text-slate-700">
+                {t(
+                  "workspace.settings.profile.each_backup_code_can_be_used_exactly_once_to_grant_access_without_your_authenticator"
+                )}
+              </p>
               <Input
                 id="disable-two-factor-backup"
+                ref={backupInput}
                 placeholder="XXXXX-XXXXX"
                 value={backupCode}
                 autoComplete="off"
+                aria-describedby="disable-two-factor-backup-hint"
                 onChange={(e) => setBackupCode(e.target.value)}
               />
-            ) : (
+              <FormError>{factorError}</FormError>
+            </div>
+          ) : (
+            <fieldset ref={digits} className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-medium text-slate-700">
+                {t("workspace.settings.profile.two_factor_code")}
+              </legend>
+              <p className="text-sm text-slate-700">
+                {t(
+                  "workspace.settings.profile.two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app"
+                )}
+              </p>
               <OTPInput value={code} valueLength={6} onChange={setCode} className="mt-2 justify-start" />
-            )}
-            <FormError>{factorError}</FormError>
-          </div>
+              <FormError>{factorError}</FormError>
+            </fieldset>
+          )}
         </DialogBody>
         <DialogFooter className="flex w-full items-center sm:justify-between">
           <Button
@@ -363,6 +391,7 @@ const DisableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
             onClick={() => {
               setUseBackupCode(!useBackupCode);
               setFactorError(null);
+              setSwitched((n) => n + 1);
             }}>
             {useBackupCode ? t("common.go_back") : t("workspace.settings.profile.lost_access")}
           </Button>
