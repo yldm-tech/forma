@@ -1,7 +1,7 @@
 import { CalendarClockIcon, CheckCircle2Icon, HelpCircleIcon, PauseCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
-import footerLogo from "../assets/footerlogo.svg";
+import { Wordmark } from "../../components/ui/logo";
 import type { TInactiveState } from "../lib/state";
 
 const CREATE_YOUR_OWN_URL =
@@ -47,7 +47,7 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     !(status === "completed" && surveyClosedMessage);
 
   return (
-    <div className="flex h-full flex-col items-center justify-between bg-linear-to-br from-slate-200 to-slate-50 px-4 py-8 text-center">
+    <main className="flex h-full flex-col items-center justify-between bg-linear-to-br from-slate-200 to-slate-50 px-4 py-8 text-center">
       <div className="my-auto flex flex-col items-center gap-y-3 text-slate-300">
         {icons[status]}
         <h1 className="text-4xl font-bold text-slate-800">{title}</h1>
@@ -60,11 +60,11 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
       </div>
       {(!workspace || workspace.linkSurveyBranding) && (
         <div>
-          <a href={POWERED_BY_URL}>
-            <img src={footerLogo} alt="Brand logo" className="mx-auto w-40" />
+          <a href={POWERED_BY_URL} className="inline-flex rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
+            <Wordmark className="text-2xl" />
           </a>
         </div>
       )}
-    </div>
+    </main>
   );
 };

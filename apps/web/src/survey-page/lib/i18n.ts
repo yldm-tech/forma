@@ -46,6 +46,8 @@ export const initSurveyPageI18n = async (locale: string): Promise<I18n> => {
       keySeparator: ".",
       interpolation: { escapeValue: false },
       react: { useSuspense: false },
+      // i18next otherwise logs an advertisement for its vendor's product in the respondent's console.
+      showSupportNotice: false,
     });
   return instance;
 };

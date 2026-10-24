@@ -1,7 +1,7 @@
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { ArrowLeft, MailIcon } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button } from "../../components/ui/button";
@@ -40,6 +40,8 @@ export const VerifyEmail = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreviewQuestions, setShowPreviewQuestions] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const emailInputId = useId();
+  const emailErrorId = useId();
 
   const localSurvey = useMemo(() => replaceHeadlineRecall(survey as unknown as TSurvey, "default"), [survey]);
   const questions = useMemo(() => getElementsFromSurveyBlocks(localSurvey.blocks), [localSurvey.blocks]);
@@ -53,7 +55,8 @@ export const VerifyEmail = ({
     event.preventDefault();
     const parsed = ZEmail.safeParse(email);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message);
+      // Zod's own message is English whatever the respondent reads.
+      setError(t("s.invalid_email"));
       return;
     }
     setError(undefined);
@@ -85,18 +88,20 @@ export const VerifyEmail = ({
 
   if (fishy) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50">
-        <span className="size-24 rounded-full bg-slate-300 p-6 text-5xl">🤔</span>
-        <p className="mt-8 text-4xl font-bold">{t("s.this_looks_fishy")}</p>
+      <main className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
+        <span aria-hidden="true" className="size-24 rounded-full bg-slate-300 p-6 text-5xl">
+          🤔
+        </span>
+        <h1 className="mt-8 text-4xl font-bold">{t("s.this_looks_fishy")}</h1>
         <Button variant="ghost" className="mt-4" onClick={handleGoBackClick}>
           {t("s.please_try_again_with_the_original_link")}
         </Button>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div
+    <main
       className={cn(
         "flex h-full w-full flex-col items-center justify-center text-center",
         isCardless ? "px-4 py-12 sm:px-6" : "p-2"
@@ -109,20 +114,25 @@ export const VerifyEmail = ({
               <div className="mx-auto rounded-full border bg-slate-200 p-6">
                 <MailIcon strokeWidth={1.5} className="mx-auto size-12 text-white" />
               </div>
-              <p className="mt-8 text-2xl font-bold lg:text-4xl">{t("s.verify_email_before_submission")}</p>
+              <h1 className="mt-8 text-2xl font-bold lg:text-4xl">{t("s.verify_email_before_submission")}</h1>
               <p className="mt-4 text-sm text-slate-500 lg:text-base">
                 {t("s.verify_email_before_submission_description")}
               </p>
-              <div className="my-4 w-full space-y-4">
+              <div className="my-4 w-full space-y-2 text-left">
+                <label htmlFor={emailInputId} className="block text-sm font-medium text-slate-700">
+                  {t("s.email_label")}
+                </label>
                 <div className="flex gap-x-2">
                   <Input
+                    id={emailInputId}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
-                    aria-label={t("s.verify_email")}
+                    autoComplete="email"
                     aria-invalid={Boolean(error)}
-                    placeholder="engineering@acme.com"
-                    className="h-10 bg-white"
+                    aria-describedby={error ? emailErrorId : undefined}
+                    placeholder={t("s.email_placeholder")}
+                    className="h-10 min-w-0 bg-white"
                   />
                   <Button
                     type="submit"
@@ -132,7 +142,11 @@ export const VerifyEmail = ({
                     {t("s.verify_email_before_submission_button")}
                   </Button>
                 </div>
-                {error && <FormError className="mt-2">{error}</FormError>}
+                {error && (
+                  <FormError id={emailErrorId} className="mt-2">
+                    {error}
+                  </FormError>
+                )}
               </div>
               <Button
                 type="button"
@@ -146,7 +160,7 @@ export const VerifyEmail = ({
         </form>
         {!emailSent && showPreviewQuestions && (
           <div>
-            <p className="text-2xl font-bold">{t("s.question_preview")}</p>
+            <h1 className="text-2xl font-bold">{t("s.question_preview")}</h1>
             <div className="mt-4 flex max-h-[50vh] w-full flex-col overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/20 p-4 text-slate-700">
               {questions.map((question, index) => (
                 <p key={question.id} className="my-1 text-sm">{`${(index + 1).toString()}. ${getTextContent(
@@ -172,6 +186,6 @@ export const VerifyEmail = ({
           </div>
         )}
       </StackedCardsContainer>
-    </div>
+    </main>
   );
 };

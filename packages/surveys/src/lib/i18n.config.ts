@@ -84,6 +84,8 @@ i18n
     },
 
     interpolation: { escapeValue: false },
+    // i18next otherwise logs an advertisement for its vendor's product in the console of every customer site that loads the widget.
+    showSupportNotice: false,
   });
 
 export default i18n;
