@@ -346,7 +346,11 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		rec.IsCaptureIPEnabled, rec.IsAnonymizeResponsesEnabled, rec.ShowLanguageSwitch = in.IsCaptureIPEnabled, in.IsAnonymizeResponsesEnabled, in.ShowLanguageSwitch
 		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
 		storedStatus := stored.Status
-		if rec.PublishOn, rec.CloseOn, err = s.schedule.normalize(&storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
+		schedule, err := s.scheduleOf(ctx, tx, stored.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, &storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
 			return err
 		}
 

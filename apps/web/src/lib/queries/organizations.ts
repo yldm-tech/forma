@@ -10,6 +10,8 @@ export interface Organization {
   isAISmartToolsEnabled: boolean;
   /** An IANA zone; null means UTC. */
   displayTimeZone: string | null;
+  /** The IANA zone the organization's scheduled surveys open and close in; null means the instance's default. */
+  surveySchedulingTimeZone: string | null;
   /** The email logo and survey favicon that replace Forma's, forma2's TOrganizationWhitelabel. */
   whitelabel?: { logoUrl?: string | null; faviconUrl?: string | null } | null;
 }
@@ -26,10 +28,21 @@ export interface Membership {
   role: OrganizationRole;
 }
 
+/** When scheduled surveys open and close: on the selected day at the instance's local time, in the organization's zone or, without one, the instance's (SURVEY_SCHEDULING_TIME_ZONE). */
+export interface SurveyScheduling {
+  /** The zone in effect. */
+  timeZone: string;
+  localHour: number;
+  localMinute: number;
+  /** The instance's zone, what an organization without its own uses. */
+  instanceTimeZone: string;
+}
+
 export interface OrganizationDetail extends Organization {
   membership: Membership;
   /** Whether the caller's role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. */
   userManagementAllowed: boolean;
+  surveyScheduling: SurveyScheduling;
 }
 
 export interface Member {
@@ -111,6 +124,7 @@ export const useCreateOrganization = () => {
 export interface OrganizationUpdate {
   name?: string;
   displayTimeZone?: string | null;
+  surveySchedulingTimeZone?: string | null;
   isAISmartToolsEnabled?: boolean;
 }
 

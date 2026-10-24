@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -60,7 +61,7 @@ type Service struct {
 	audit     *audit.Emitter
 	docs      *surveydoc.Validator
 	scheduler *Scheduler
-	schedule  Schedule
+	schedule  scheduling.Schedule
 	cipher    *secret.Cipher
 	catalog   *Catalog
 	ai        *ai.Service
@@ -71,7 +72,7 @@ type Service struct {
 func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, docs *surveydoc.Validator, cipher *secret.Cipher, catalog *Catalog, aiService *ai.Service, log *slog.Logger) *Service {
 	return &Service{
 		cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, docs: docs, cipher: cipher, catalog: catalog, ai: aiService, log: log, now: time.Now,
-		scheduler: NewScheduler(repo, emitter, log), schedule: NewSchedule(cfg),
+		scheduler: NewScheduler(repo, emitter, log), schedule: scheduling.Instance(cfg),
 	}
 }
 

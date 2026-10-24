@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 // Service holds the workspace rules. Every method takes the acting user and authorizes through authz before it reads or writes anything a caller could not already see.
@@ -122,6 +123,8 @@ type Access struct {
 type Detail struct {
 	*Workspace
 	Access Access `json:"access"`
+	// SurveyScheduling is when the workspace's scheduled surveys open and close, the zone of its organization or the instance's, for the survey editor.
+	SurveyScheduling scheduling.Settings `json:"surveyScheduling"`
 }
 
 // CodeBillingRole is the error code of a billing-role member asking for workspace product data; Details.redirect is where forma2 sent them instead.
@@ -156,7 +159,12 @@ func (s *Service) Get(ctx context.Context, userID, workspaceID uuid.UUID) (*Deta
 	if err != nil {
 		return nil, err
 	}
-	return &Detail{Workspace: ws, Access: Access{Role: role, CanWrite: canWrite, CanManage: canManage, IsReadOnly: role == "member" && !canWrite && !canManage}}, nil
+	zone, err := s.repo.surveySchedulingTimeZone(ctx, ws.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	return &Detail{Workspace: ws, Access: Access{Role: role, CanWrite: canWrite, CanManage: canManage, IsReadOnly: role == "member" && !canWrite && !canManage},
+		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(zone).Settings()}, nil
 }
 
 // readDenied explains a refused read to a billing member of the workspace's organization, and to anyone else is the plain refusal.

@@ -173,9 +173,10 @@ func (n *nullableString) UnmarshalJSON(b []byte) error {
 }
 
 type updateRequest struct {
-	Name                  *string        `json:"name"`
-	DisplayTimeZone       nullableString `json:"displayTimeZone"`
-	IsAISmartToolsEnabled *bool          `json:"isAISmartToolsEnabled"`
+	Name                     *string        `json:"name"`
+	DisplayTimeZone          nullableString `json:"displayTimeZone"`
+	SurveySchedulingTimeZone nullableString `json:"surveySchedulingTimeZone"`
+	IsAISmartToolsEnabled    *bool          `json:"isAISmartToolsEnabled"`
 }
 
 func (r *updateRequest) validate() error {
@@ -188,6 +189,9 @@ func (r *updateRequest) validate() error {
 	}
 	if tz := r.DisplayTimeZone.value; tz != nil && !ValidTimeZone(*tz) {
 		return apperr.Validation([]apperr.FieldError{{Field: "displayTimeZone", Rule: "timezone"}})
+	}
+	if tz := r.SurveySchedulingTimeZone.value; tz != nil && !ValidTimeZone(*tz) {
+		return apperr.Validation([]apperr.FieldError{{Field: "surveySchedulingTimeZone", Rule: "timezone"}})
 	}
 	return nil
 }
@@ -204,6 +208,9 @@ func (h *Handler) update(c *gin.Context) {
 	in := UpdateInput{Name: req.Name, IsAISmartToolsEnabled: req.IsAISmartToolsEnabled}
 	if req.DisplayTimeZone.set {
 		in.DisplayTimeZone = &TimeZone{Value: req.DisplayTimeZone.value}
+	}
+	if req.SurveySchedulingTimeZone.set {
+		in.SurveySchedulingTimeZone = &TimeZone{Value: req.SurveySchedulingTimeZone.value}
 	}
 	res, err := h.svc.Update(c.Request.Context(), userID(c), id, in)
 	if err != nil {

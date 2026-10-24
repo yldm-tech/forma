@@ -11,6 +11,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
@@ -162,6 +163,27 @@ func TestGetWorkspace(t *testing.T) {
 				e.fails(e.do(outsider, http.MethodGet, wsPath(id, ""), nil), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
 			}
 		})
+	}
+}
+
+// The survey editor reads when scheduled surveys open and close from the workspace: the organization's zone, or the instance's.
+func TestWorkspaceSurveyScheduling(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) {
+		c.SurveySchedulingTimeZone, c.SurveySchedulingLocalHour, c.SurveySchedulingLocalMinute = "Europe/Berlin", 6, 30
+	})
+	owner := e.user()
+	org, ws := e.organization(owner)
+	var d Detail
+	e.ok(e.do(owner, http.MethodGet, wsPath(ws, ""), nil), http.StatusOK, &d)
+	want := scheduling.Settings{TimeZone: "Europe/Berlin", LocalHour: 6, LocalMinute: 30, InstanceTimeZone: "Europe/Berlin"}
+	if d.SurveyScheduling != want {
+		t.Fatalf("instance default %+v", d.SurveyScheduling)
+	}
+	e.exec(`UPDATE organizations SET survey_scheduling_time_zone = 'Asia/Tokyo' WHERE id = ?`, org)
+	e.ok(e.do(owner, http.MethodGet, wsPath(ws, ""), nil), http.StatusOK, &d)
+	want.TimeZone = "Asia/Tokyo"
+	if d.SurveyScheduling != want {
+		t.Fatalf("organization zone %+v", d.SurveyScheduling)
 	}
 }
 

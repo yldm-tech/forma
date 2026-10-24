@@ -574,7 +574,11 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if mode := optString(body["customHeadScriptsMode"]); mode != nil {
 		rec.CustomHeadScriptsMode = mode
 	}
-	if rec.PublishOn, rec.CloseOn, err = s.schedule.normalize(nil, rec.Status, optTime(body["publishOn"]), optTime(body["closeOn"])); err != nil {
+	schedule, err := s.scheduleOf(ctx, s.repo, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, nil, rec.Status, optTime(body["publishOn"]), optTime(body["closeOn"])); err != nil {
 		return nil, err
 	}
 	return s.insertSurvey(ctx, newSurvey{WorkspaceID: workspaceID, Record: rec, Languages: links, TriggerIDs: triggerIDs, FollowUps: writes, SegmentID: segmentID, PrivateSegmentFilters: json.RawMessage(`[]`)}, *org)

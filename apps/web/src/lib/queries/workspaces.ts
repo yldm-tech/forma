@@ -3,7 +3,7 @@ import type { TLogo, TWorkspaceConfig, TWorkspaceStyling } from "@forma/types/wo
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import type { OrganizationRole } from "../roles";
-import { organizationKeys } from "./organizations";
+import { type SurveyScheduling, organizationKeys } from "./organizations";
 
 /** One of a workspace's survey languages. */
 export interface WorkspaceLanguage {
@@ -85,6 +85,8 @@ export interface WorkspaceAccess {
 /** The workspace with its settings (forma2's TWorkspace, timestamps as sent) and the caller's access to it. */
 export interface WorkspaceDetail extends Workspace {
   access: WorkspaceAccess;
+  /** When the workspace's scheduled surveys open and close, for the survey editor. */
+  surveyScheduling?: SurveyScheduling;
 }
 
 /** The SPA's own error code for a billing member asking for a workspace; details.redirect is where to send them. */

@@ -330,7 +330,11 @@ func (s *Service) applyPatchV3(ctx context.Context, tx *Repository, current *Sur
 		codes[i] = r.Code
 	}
 	currentStatus := current.Status
-	publishOn, closeOn, err := s.schedule.normalize(&currentStatus, d.Status, current.PublishOn, current.CloseOn)
+	schedule, err := s.scheduleOf(ctx, tx, current.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	publishOn, closeOn, err := normalizeDates(schedule, &currentStatus, d.Status, current.PublishOn, current.CloseOn)
 	if err != nil {
 		return err
 	}

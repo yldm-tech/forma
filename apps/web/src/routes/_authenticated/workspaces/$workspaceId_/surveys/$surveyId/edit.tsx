@@ -14,10 +14,8 @@ import {
   toEditorWorkspace,
 } from "../../../../../../features/survey-editor/api";
 import { SurveyEditor } from "../../../../../../features/survey-editor/components/survey-editor";
-import {
-  SURVEY_BG_COLORS,
-  SURVEY_SCHEDULING_CONFIG,
-} from "../../../../../../features/survey-editor/lib/constants";
+import { SURVEY_BG_COLORS } from "../../../../../../features/survey-editor/lib/constants";
+import { resolveSurveySchedulingConfig } from "../../../../../../features/survey-editor/lib/scheduling-config";
 import { meQuery } from "../../../../../../lib/queries/auth";
 import { workspaceQuery } from "../../../../../../lib/queries/workspaces";
 import { guardPageError } from "../../../../../../lib/route-guards";
@@ -92,7 +90,7 @@ function SurveyEditorPage() {
         // The Go server does not tell the SPA whether reCAPTCHA keys are configured, so spam protection is not offered.
         isSpamProtectionAllowed={false}
         isCxMode={mode === "cx"}
-        surveySchedulingConfig={SURVEY_SCHEDULING_CONFIG}
+        surveySchedulingConfig={resolveSurveySchedulingConfig(workspaceDetail.surveyScheduling)}
         locale={ZUserLocale.safeParse(me.locale).data ?? "en-US"}
         userEmail={me.email}
         teamMemberDetails={teamMemberDetails}

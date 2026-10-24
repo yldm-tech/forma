@@ -2489,6 +2489,10 @@ checksums:
     workspace/settings/general/security_list_tip_link: ccdb1a21610ebf5a626d813b155be4ba
     workspace/settings/general/share_invite_link: b40b7ffbcf02d7464be52fb562df5e3a
     workspace/settings/general/share_this_link_to_let_your_organization_member_join_your_organization: 6eb43d5b1c855572b7ab35f527ba953c
+    workspace/settings/general/survey_scheduling_time_zone: 1c9fecdb5f565d2916ce97a95baffab5
+    workspace/settings/general/survey_scheduling_time_zone_description: 720c0434c1e2e276a1e3f8db25ecdb3d
+    workspace/settings/general/survey_scheduling_time_zone_instance_default: 3dc7efd8480fd416b557e1aeaf0d79ca
+    workspace/settings/general/survey_scheduling_time_zone_updated_successfully: a85fda2859e96052d59059270936e5da
     workspace/settings/general/test_email_requires_smtp: c34e017b4b69f73956de4fd5d12c65c3
     workspace/settings/general/test_email_sent_successfully: aa68214f5e0707c9615e01343640ab32
     workspace/settings/general/view_only_access: 8ae4d16a37227c72ee7989c6c7bc84ff
@@ -3116,6 +3120,8 @@ checksums:
     workspace/surveys/edit/save_and_close: 6ede705b3f82f30269ff3054a5049e34
     workspace/surveys/edit/scale: 5f55a30a5bdf8f331b56bad9c073473c
     workspace/surveys/edit/schedule_survey: aa9d0a74a96c325e3202bf1efbc4611a
+    workspace/surveys/edit/scheduled_moment: 80246b6e22ea2a41e8d9a38a328f6fea
+    workspace/surveys/edit/scheduled_moment_in_your_time_zone: 53c76a9d49b57d1e7e505c6fcc5cfd1c
     workspace/surveys/edit/search_for_images: 8b1bc3561d126cc49a1ee185c07e7aaf
     workspace/surveys/edit/select_field: 45665a44f7d5707506364f17f28db3bf
     workspace/surveys/edit/select_or_type_value: a99c307b2cc3f9f6f893babd546d7296

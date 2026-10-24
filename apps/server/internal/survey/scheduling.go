@@ -10,40 +10,15 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 // schedulingBatchSize is forma2's SURVEY_SCHEDULING_RECONCILIATION_BATCH_SIZE.
 const schedulingBatchSize = 250
 
-// Schedule is when the daily scheduling run happens, forma2's SURVEY_SCHEDULING_* configuration.
-type Schedule struct {
-	loc          *time.Location
-	hour, minute int
-}
-
-// NewSchedule reads the scheduling time from the configuration, which validated the zone at startup.
-func NewSchedule(cfg config.Config) Schedule {
-	loc, err := time.LoadLocation(cfg.SurveySchedulingTimeZone)
-	if err != nil {
-		loc = time.UTC
-	}
-	return Schedule{loc: loc, hour: cfg.SurveySchedulingLocalHour, minute: cfg.SurveySchedulingLocalMinute}
-}
-
-// snap is forma2's normalizeDateOnlySelectionToSurveySchedulingDateTime: the instant's calendar day in the scheduling zone, at the scheduling time of day.
-func (s Schedule) snap(t *time.Time) *time.Time {
-	if t == nil {
-		return nil
-	}
-	local := t.In(s.loc)
-	out := time.Date(local.Year(), local.Month(), local.Day(), s.hour, s.minute, 0, 0, s.loc).UTC()
-	return &out
-}
-
-// normalize is forma2's normalizeSurveyScheduling: both dates are snapped to the scheduling time; a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
-func (s Schedule) normalize(current *string, status string, publishOn, closeOn *time.Time) (*time.Time, *time.Time, error) {
-	closeOn, publishOn = s.snap(closeOn), s.snap(publishOn)
+// normalizeDates is forma2's normalizeSurveyScheduling: both dates are snapped to the schedule of the survey's organization; a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
+func normalizeDates(s scheduling.Schedule, current *string, status string, publishOn, closeOn *time.Time) (*time.Time, *time.Time, error) {
+	closeOn, publishOn = s.Snap(closeOn), s.Snap(publishOn)
 	manual := current == nil || *current != status
 	if manual && status == StatusInProgress {
 		publishOn = nil
@@ -60,14 +35,25 @@ func (s Schedule) normalize(current *string, status string, publishOn, closeOn *
 	return publishOn, closeOn, nil
 }
 
-// next is the first scheduling run strictly after t.
-func (s Schedule) next(t time.Time, hour, minute int) time.Time {
-	local := t.In(s.loc)
-	run := time.Date(local.Year(), local.Month(), local.Day(), hour, minute, 0, 0, s.loc)
-	if !run.After(local) {
-		run = time.Date(local.Year(), local.Month(), local.Day()+1, hour, minute, 0, 0, s.loc)
+// scheduleOf is the schedule of a workspace's organization: its own time zone, or the instance's.
+func (s *Service) scheduleOf(ctx context.Context, repo *Repository, workspaceID uuid.UUID) (scheduling.Schedule, error) {
+	zone, err := repo.schedulingTimeZone(ctx, workspaceID)
+	if err != nil {
+		return scheduling.Schedule{}, err
 	}
-	return run
+	return s.schedule.ForOrganization(zone), nil
+}
+
+// schedulingTimeZone is the scheduling time zone of a workspace's organization, nil when it has none (or the workspace does not exist).
+func (r *Repository) schedulingTimeZone(ctx context.Context, workspaceID uuid.UUID) (*string, error) {
+	var rows []struct{ SurveySchedulingTimeZone *string }
+	if err := r.db.WithContext(ctx).Raw(`SELECT o.survey_scheduling_time_zone FROM workspaces w JOIN organizations o ON o.id = w.organization_id WHERE w.id = ?`, workspaceID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("load organization scheduling time zone: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return rows[0].SurveySchedulingTimeZone, nil
 }
 
 func isDue(t *time.Time, now time.Time) bool { return t != nil && !t.After(now) }

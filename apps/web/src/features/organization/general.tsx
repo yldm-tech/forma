@@ -17,6 +17,7 @@ import {
 import { FormError } from "../../components/ui/form-error";
 import { IdBadge } from "../../components/ui/id-badge";
 import { Input } from "../../components/ui/input";
+import { InputCombobox } from "../../components/ui/input-combo-box";
 import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
@@ -35,9 +36,16 @@ import {
 } from "../../lib/queries/organizations";
 import { type OrganizationRole, accessFlags } from "../../lib/roles";
 import { forgetWorkspace } from "../../lib/storage";
-import { UTC_DEFAULT, ianaTimeZones, organizationSettingsChanges } from "../../lib/time-zones";
+import {
+  INSTANCE_DEFAULT,
+  UTC_DEFAULT,
+  ianaTimeZones,
+  organizationSettingsChanges,
+  schedulingTimeZones,
+} from "../../lib/time-zones";
 import { toast } from "../../lib/toast";
 import { aiKeys, organizationAIQuery } from "../ai/availability";
+import { getSurveySchedulingTimeLabel } from "../survey-editor/lib/scheduling-config";
 import { organizationNameError } from "../../lib/validation";
 import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 
@@ -114,14 +122,36 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
   const { t } = useTranslation();
   const role = organization.membership.role;
   const { isOwner, isOwnerOrManager: canEditTimeZone } = accessFlags(role);
-  const initial = { name: organization.name, displayTimeZone: organization.displayTimeZone };
+  const initial = {
+    name: organization.name,
+    displayTimeZone: organization.displayTimeZone,
+    surveySchedulingTimeZone: organization.surveySchedulingTimeZone,
+  };
   const [name, setName] = useState(initial.name);
   const [displayTimeZone, setDisplayTimeZone] = useState(initial.displayTimeZone);
+  const [surveySchedulingTimeZone, setSurveySchedulingTimeZone] = useState(initial.surveySchedulingTimeZone);
   const [nameError, setNameError] = useState<string | null>(null);
   const update = useUpdateOrganization(organization.id);
   const queryClient = useQueryClient();
   const zones = useMemo(() => ianaTimeZones(), []);
-  const changes = organizationSettingsChanges(initial, { name, displayTimeZone }, role);
+  const { instanceTimeZone } = organization.surveyScheduling;
+  const schedulingZoneOptions = useMemo(
+    () => [
+      {
+        value: INSTANCE_DEFAULT,
+        label: t("workspace.settings.general.survey_scheduling_time_zone_instance_default", {
+          timeZone: instanceTimeZone,
+        }),
+      },
+      ...schedulingTimeZones().map((zone) => ({ value: zone, label: zone })),
+    ],
+    [t, instanceTimeZone]
+  );
+  const changes = organizationSettingsChanges(
+    initial,
+    { name, displayTimeZone, surveySchedulingTimeZone },
+    role
+  );
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -142,6 +172,10 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
       if (changes.displayTimeZone !== undefined) {
         await update.mutateAsync({ displayTimeZone: changes.displayTimeZone });
         toast.success(t("workspace.settings.general.display_time_zone_updated_successfully"));
+      }
+      if (changes.surveySchedulingTimeZone !== undefined) {
+        await update.mutateAsync({ surveySchedulingTimeZone: changes.surveySchedulingTimeZone });
+        toast.success(t("workspace.settings.general.survey_scheduling_time_zone_updated_successfully"));
       }
     } catch (error) {
       toast.error(errorMessage(t, error));
@@ -189,6 +223,29 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
               </option>
             ))}
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label id="survey-scheduling-time-zone-label" htmlFor="survey-scheduling-time-zone">
+            {t("workspace.settings.general.survey_scheduling_time_zone")}
+          </Label>
+          <p id="survey-scheduling-time-zone-description" className="text-sm text-slate-500">
+            {t("workspace.settings.general.survey_scheduling_time_zone_description", {
+              time: getSurveySchedulingTimeLabel(organization.surveyScheduling),
+            })}
+          </p>
+          <InputCombobox
+            id="survey-scheduling-time-zone"
+            aria-labelledby="survey-scheduling-time-zone-label"
+            options={schedulingZoneOptions}
+            value={surveySchedulingTimeZone ?? INSTANCE_DEFAULT}
+            onChangeValue={(value) =>
+              setSurveySchedulingTimeZone(
+                typeof value === "string" && value !== INSTANCE_DEFAULT && value !== "" ? value : null
+              )
+            }
+            showCheckIcon
+            disabled={!canEditTimeZone}
+          />
         </div>
         <Button type="submit" size="sm" loading={update.isPending} disabled={!changes}>
           {t("common.update")}
