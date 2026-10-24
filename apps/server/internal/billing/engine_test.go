@@ -345,10 +345,10 @@ func TestReadThrough(t *testing.T) {
 	if !strings.Contains(e.logs.String(), "Failed to refresh billing snapshot from Stripe") {
 		t.Error("the failed refresh was not logged")
 	}
-	// The failed attempt holds the lock until it expires, so the next caller serves the stored row without asking Stripe.
-	calls := e.stripe.count()
+	// The failed attempt holds the lock until it expires, so the next caller serves the stored row without asking Stripe. Counted by the subscription reads alone: the failed sync cancelled its parallel entitlements request, which the fake may still record after ReadThrough has returned, while any sync starts with a subscription read whose answer it waits for.
+	subscriptionReads := len(e.stripe.requests(http.MethodGet, "/v1/subscriptions"))
 	fail = false
-	if rec, err := e.engine.ReadThrough(ctx, stale); err != nil || rec.Stripe.Plan != PlanPro || e.stripe.count() != calls {
+	if rec, err := e.engine.ReadThrough(ctx, stale); err != nil || rec.Stripe.Plan != PlanPro || len(e.stripe.requests(http.MethodGet, "/v1/subscriptions")) != subscriptionReads {
 		t.Fatalf("locked refresh %+v %v", rec, err)
 	}
 	if err := e.rdb.Del(ctx, syncLockKey(stale)).Err(); err != nil {
