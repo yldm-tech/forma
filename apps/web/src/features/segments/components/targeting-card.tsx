@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { AddFilterModal } from "./add-filter-modal";
 import { SegmentEditor } from "./segment-editor";
+import { SegmentPreviewCount } from "./segment-preview-count";
 import { appHref } from "../../../lib/base-path";
 
 interface TargetingCardProps {
@@ -208,6 +209,9 @@ export function TargetingCard({
                     />
                   </div>
                 )}
+                {Boolean(segment?.filters.length) && (
+                  <SegmentPreviewCount workspaceId={localSurvey.workspaceId} filters={segment.filters} />
+                )}
 
                 <div
                   className={cn(
@@ -294,6 +298,9 @@ export function TargetingCard({
                       viewOnly={segmentEditorViewOnly}
                     />
                   </div>
+                ) : null}
+                {segmentEditorViewOnly && segment.filters.length > 0 ? (
+                  <SegmentPreviewCount workspaceId={localSurvey.workspaceId} filters={segment.filters} />
                 ) : null}
 
                 <div className="mt-3 flex items-center gap-3">

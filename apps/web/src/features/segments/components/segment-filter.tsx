@@ -133,7 +133,7 @@ export function SegmentFilterItemContextMenu({
     <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={viewOnly}>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" aria-label={t("common.actions")}>
             <MoreVertical className="size-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -171,6 +171,7 @@ export function SegmentFilterItemContextMenu({
 
       <Button
         size="icon"
+        aria-label={t("common.delete")}
         disabled={viewOnly}
         onClick={() => {
           if (viewOnly) return;
@@ -224,7 +225,8 @@ function AttributeSegmentFilter({
   }, [resource.qualifier, resource.value, t]);
 
   const attributeKey = contactAttributeKeys.find((attrKey) => attrKey.key === contactAttributeKey);
-  const attrKeyValue = attributeKey?.name ?? attributeKey?.key ?? "";
+  // A filter on a key the workspace no longer has still shows the key it names.
+  const attrKeyValue = attributeKey?.name ?? attributeKey?.key ?? contactAttributeKey;
   // Default to 'string' if dataType is undefined (for backwards compatibility)
   const attributeDataType = attributeKey?.dataType ?? "string";
   const isDateAttribute = attributeDataType === "date";
@@ -368,8 +370,9 @@ function AttributeSegmentFilter({
         onValueChange={(value) => {
           updateAttributeClassNameInLocalSurvey(resource.id, value);
         }}
-        value={attrKeyValue}>
+        value={contactAttributeKey}>
         <SelectTrigger
+          aria-label={t("common.attributes")}
           className="flex w-auto items-center justify-center bg-white whitespace-nowrap"
           hideArrow>
           <SelectValue>
@@ -398,7 +401,10 @@ function AttributeSegmentFilter({
           updateOperatorInLocalSurvey(resource.id, operator);
         }}
         value={operatorText}>
-        <SelectTrigger className="flex w-auto items-center justify-center bg-white text-center" hideArrow>
+        <SelectTrigger
+          aria-label={t("common.select")}
+          className="flex w-auto items-center justify-center bg-white text-center"
+          hideArrow>
           <SelectValue>
             <p>{operatorText}</p>
           </SelectValue>
@@ -560,7 +566,10 @@ function PersonSegmentFilter({
           updateOperatorInLocalSurvey(resource.id, operator);
         }}
         value={operatorText}>
-        <SelectTrigger className="flex w-auto items-center justify-center bg-white text-center" hideArrow>
+        <SelectTrigger
+          aria-label={t("common.select")}
+          className="flex w-auto items-center justify-center bg-white text-center"
+          hideArrow>
           <SelectValue>
             <p>{operatorText}</p>
           </SelectValue>
@@ -690,11 +699,12 @@ function SegmentSegmentFilter({
         }}
         value={currentSegment?.id}>
         <SelectTrigger
+          aria-label={t("common.segments")}
           className="flex w-auto items-center justify-center bg-white whitespace-nowrap"
           hideArrow>
           <div className="flex items-center gap-1">
             <Users2Icon className="size-4 text-sm" />
-            <SelectValue />
+            <SelectValue placeholder={segmentId} />
           </div>
         </SelectTrigger>
 
@@ -785,6 +795,7 @@ function DeviceFilter({
         }}
         value={operatorText}>
         <SelectTrigger
+          aria-label={t("common.select")}
           className="flex w-auto max-w-[40px] items-center justify-center bg-white text-center"
           hideArrow>
           <SelectValue>
@@ -807,7 +818,10 @@ function DeviceFilter({
           updateValueInSegment(resource.id, value);
         }}
         value={value as "phone" | "desktop"}>
-        <SelectTrigger className="flex w-auto items-center justify-center bg-white text-center" hideArrow>
+        <SelectTrigger
+          aria-label={t("workspace.segments.devices")}
+          className="flex w-auto items-center justify-center bg-white text-center"
+          hideArrow>
           <SelectValue />
         </SelectTrigger>
 
