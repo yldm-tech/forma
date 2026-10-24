@@ -143,7 +143,7 @@ export const Document = ({
         <SiteContext.Provider value={{ locale, page, content }}>
           <a
             href="#main"
-            className="rounded-button sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+            className="rounded-button focus:shadow-raised sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2">
             {content.common.skipToContent}
           </a>
           <SiteHeader />
