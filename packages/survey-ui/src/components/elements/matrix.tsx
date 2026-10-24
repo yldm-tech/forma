@@ -157,25 +157,23 @@ function Matrix({
         <div className="relative" data-element-input>
           <ElementError errorMessage={errorMessage} dir={dir} id={errorAria.errorId} />
 
-          {/* The table fits its container: fixed layout shares the width between the columns after a capped row-label column, and the labels wrap instead of pushing the last column out of view. Only many columns on a narrow card still overflow, and then a fade at the end edge says so. */}
+          {/* The table fits its container: the labels wrap between words (wrap-break-word, which unlike wrap-anywhere leaves a column's minimum width at its longest word), so a column is never narrower than a whole word and the row labels take the width the columns leave. A fixed layout with a forced row-label share split words mid-word on a phone. Only when whole words cannot fit (many columns on a narrow card) does the table scroll, and then a fade at the end edge says so. */}
           <div className="relative">
             <div ref={scrollRef} className="overflow-x-auto">
-              <table
-                className="w-full table-fixed border-collapse"
-                style={{ minWidth: `${(columns.length * 2.75 + 6).toString()}rem` }}>
+              <table className="w-full border-collapse">
                 {/* Column headers */}
                 <thead>
                   <tr>
                     {/* Empty top-left corner: a plain data cell (not a header), so it is neither an
                       empty <th> nor announced. Each cell radio is named by its row + column header. */}
-                    <td className="w-[35%] p-2" />
+                    <td className="p-2" />
                     {columns.map((column) => {
                       const columnHeaderId = `${inputId}-col-${column.id}`;
                       return (
                         <th
                           key={column.id}
                           id={columnHeaderId}
-                          className="p-1 text-center align-bottom font-normal wrap-anywhere hyphens-auto">
+                          className="p-1 text-center align-bottom font-normal wrap-break-word">
                           <Label className="justify-center leading-5">{column.label}</Label>
                         </th>
                       );
@@ -197,7 +195,7 @@ function Matrix({
                           scope="row"
                           id={rowHeaderId}
                           className={cn(
-                            "rounded-s-input p-2 text-start align-middle wrap-anywhere hyphens-auto"
+                            "rounded-s-input py-2 ps-2 pe-1 text-start align-middle wrap-break-word"
                           )}>
                           <div className="flex flex-col gap-0 leading-none">
                             <Label className="leading-5">{row.label}</Label>
