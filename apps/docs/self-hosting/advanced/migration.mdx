@@ -12,7 +12,7 @@ icon: "arrow-right"
 
 ## forma2 to the Go server
 
-Forma now runs as a Go server instead of forma2's Next.js application. The image keeps its name, `ghcr.io/yldm-tech/forma`, and its versions continue at `0.2.<n>`; `latest` moves to the Go server only after this guide is published. An installation that pulls `latest` (forma2's compose file and one-click installer do) must follow the steps below before it pulls again: forma2's compose file starts its containers with `sh`, `node` and `forma-authzed` entrypoints the new image does not have.
+Forma now runs as a Go server instead of forma2's Next.js application. Its image has a new name, `ghcr.io/yldm-tech/forma-server`, with versions `0.2.<n>`; `ghcr.io/yldm-tech/forma`, the image forma2's compose file, one-click installer and Helm chart pull, keeps forma2's last release. Pulling again leaves an installation on forma2; it moves to the Go server by taking the new compose file or chart, as the steps below describe. forma2's compose file cannot run the new image: it starts its containers with `sh`, `node` and `forma-authzed` entrypoints the new image does not have.
 
 ### What changes
 
@@ -37,7 +37,7 @@ Forma now runs as a Go server instead of forma2's Next.js application. The image
 
 The Go server keeps its data in tables of its own (`users`, `surveys`, ...), next to forma2's tables (`"User"`, `"Survey"`, ...) in the same database: `forma migrate` creates them without touching forma2's, and `forma import-forma2` copies forma2's data into them (see [Import forma2's data](#import-forma2s-data)). Started on a database where only forma2's tables hold data, the Go server would serve an empty instance whose first sign-up becomes its owner, so it refuses to start (`forma start`, `serve` and `worker` all check) while forma2's `User` table has rows and no import has been recorded. It also refuses when forma2's tables changed after the latest import, as they do when forma2 runs again after a [roll back](#roll-back): started then, it would serve without what forma2 wrote since. `./forma.sh update` runs the same checks before it starts the new stack.
 
-Before anything else, back up the database (both `forma` and SpiceDB's `spicedb`), `.env` and your compose file or Helm values, and note the image your forma2 containers run, so you can return to it: `latest` will no longer name it.
+Before anything else, back up the database (both `forma` and SpiceDB's `spicedb`), `.env` and your compose file or Helm values, and note the image your forma2 containers run, by digest, so you can return to exactly that release.
 
 ```bash
 umask 077
@@ -124,7 +124,7 @@ Every step is idempotent. After the stack is up, `docker compose --profile authz
 
 The chart in this repository (`deploy/helm/forma`) replaces forma2's and keeps its values, Secrets and resource names; its [README](https://github.com/yldm-tech/forma/blob/main/deploy/helm/forma/README.md#forma-on-the-go-server-what-changed-in-this-chart) lists the differences. In short:
 
-- Set `deployment.image.tag` to the release you deploy. The server runs `forma start` with `BULLMQ_WORKER_ENABLED=0`, and the new `worker` Deployment runs `forma worker` (`worker.enabled=false` returns to one Deployment).
+- Set `deployment.image.tag` to the release you deploy, and remove `deployment.image.repository` from your values if it names forma2's `ghcr.io/yldm-tech/forma` (the chart's default is `ghcr.io/yldm-tech/forma-server`). The server runs `forma start` with `BULLMQ_WORKER_ENABLED=0`, and the new `worker` Deployment runs `forma worker` (`worker.enabled=false` returns to one Deployment).
 - The migration Job runs `forma wait-for-database` and `forma migrate`; the AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare`. An upgrade still needs `authzed.migrationAcknowledged=true` once `forma authz schema apply`, `outbox drain` and `backfill --apply` have succeeded.
 - Remove `enterprise.enabled`, `enterprise.licenseKey` and `authzed.systemKey`; the generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
 - The bundled PostgreSQL is 18; a release whose bundled database still runs forma2's 17 is refused until its data has been moved, as the README describes.

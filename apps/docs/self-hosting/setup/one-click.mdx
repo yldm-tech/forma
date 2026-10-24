@@ -26,13 +26,13 @@ For other operating systems or a more customized installation, see the [Docker](
 
 ### Deployment
 
-Download the script from the `stable` branch, the release that `ghcr.io/yldm-tech/forma:latest` names, and run it:
+Download the script from the `stable` branch, the release that `ghcr.io/yldm-tech/forma-server:latest` names, and run it:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yldm-tech/forma/stable/deploy/docker/forma.sh -o forma.sh && chmod +x forma.sh && ./forma.sh install
 ```
 
-The script downloads `docker-compose.yml` and its helper scripts from the same branch. To install a specific release, set `FORMA_REF=v0.2.<n>` (the release's tag) when running it, and pin the image with `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `forma/.env`.
+The script downloads `docker-compose.yml` and its helper scripts from the same branch. To install a specific release, set `FORMA_REF=v0.2.<n>` (the release's tag) when running it, and pin the image with `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma-server:0.2.<n>` in `forma/.env`.
 
 ### Script Prompts
 

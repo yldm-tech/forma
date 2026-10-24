@@ -71,6 +71,14 @@ esac
 const DOCKER = `#!/usr/bin/env bash
 echo "docker $*" >> "$CALLS"
 `;
+// Answers the anonymous registry calls as ghcr.io does: a public package hands out a pull token and the manifest, a private one refuses the token with 403 (curl -f exits 22).
+const CURL = `#!/usr/bin/env bash
+echo "curl $*" >> "$CALLS"
+[ "$STUB_PACKAGE_PRIVATE" != true ] || { echo "curl: (56) The requested URL returned error: 403" >&2; exit 22; }
+case "$*" in
+  *"https://ghcr.io/token?"*) echo '{"token":"anonymous"}' ;;
+esac
+`;
 
 let dir: string;
 let repo: string;
@@ -120,6 +128,7 @@ beforeEach(() => {
   for (const [tool, body] of [
     ["gh", GH],
     ["docker", DOCKER],
+    ["curl", CURL],
   ]) {
     writeFileSync(join(bin, tool), body);
     chmodSync(join(bin, tool), 0o755);
@@ -167,8 +176,8 @@ const run = (stub: Record<string, string> = {}) => {
       GITHUB_STEP_SUMMARY: summary,
       STUB_REPO: repo,
       VERSION: "0.2.7",
-      IMAGE: "ghcr.io/yldm-tech/forma",
-      DOCS_IMAGE: "ghcr.io/yldm-tech/forma-docs",
+      IMAGE: "ghcr.io/yldm-tech/forma-server",
+      DOCS_IMAGE: "ghcr.io/yldm-tech/forma-docs-site",
       RELEASE_SHA: release,
       GH_REPO: REPO,
       GH_TOKEN: "job-token",
@@ -180,6 +189,7 @@ const run = (stub: Record<string, string> = {}) => {
   });
   return {
     status: result.status,
+    stdout: result.stdout,
     stderr: result.stderr,
     calls: readFileSync(calls, "utf8").trim().split("\n").filter(Boolean),
     summary: readFileSync(summary, "utf8"),
@@ -301,6 +311,30 @@ describe(`release.yml "${STEP}"`, () => {
     expect(stableSha()).toBe(elsewhere);
     expect(calls.filter(movesStable)).toEqual([]);
     expect(calls.filter(movesLatest)).toEqual([]);
+  });
+
+  test("moves neither and fails while an anonymous client cannot pull the release, since self-hosters pull without credentials", () => {
+    const { status, calls, stdout } = run({ STUB_PACKAGE_PRIVATE: "true" });
+    expect(status).not.toBe(0);
+    expect(stdout).toContain("::error::An anonymous client cannot pull ghcr.io/yldm-tech/forma-server:0.2.7");
+    expect(stdout).toContain("https://github.com/orgs/yldm-tech/packages/container/forma-server/settings");
+    expect(stableSha()).toBe("");
+    expect(calls.filter(writesGitData)).toEqual([]);
+    expect(calls.filter(movesLatest)).toEqual([]);
+    expect(calls.some((call) => call.includes(`release create v0.2.7`))).toBe(true);
+  });
+
+  test("checks the release's own manifest anonymously before moving stable", () => {
+    const { status, calls } = run();
+    expect(status).toBe(0);
+    const manifest = calls.findIndex(
+      (call) =>
+        call.startsWith("curl ") &&
+        call.includes("https://ghcr.io/v2/yldm-tech/forma-server/manifests/0.2.7") &&
+        call.includes("Authorization: Bearer anonymous")
+    );
+    expect(manifest).toBeGreaterThanOrEqual(0);
+    expect(manifest).toBeLessThan(calls.findIndex(movesStable));
   });
 
   test("moves neither when main has moved on", () => {

@@ -93,7 +93,7 @@ Modify the configuration to enforce SSL. The rest of the configuration should re
   services:
     forma:
       restart: always
-      image: ghcr.io/yldm-tech/forma:latest
+      image: ghcr.io/yldm-tech/forma-server:latest
       depends_on:
         - postgres
       labels:

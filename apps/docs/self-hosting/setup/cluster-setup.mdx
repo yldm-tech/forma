@@ -141,14 +141,15 @@ Docker Compose and Helm deployment paths bundle it by default. You can replace t
 
 ## Kubernetes Setup
 
-The current Kubernetes deployment path uses the OCI chart published from
-[`deploy/helm/forma`](https://github.com/yldm-tech/forma/tree/main/deploy/helm/forma):
+The Kubernetes deployment path uses the chart in [`deploy/helm/forma`](https://github.com/yldm-tech/forma/tree/main/deploy/helm/forma), installed from a checkout of the release you deploy (it is not published to a chart registry):
 
 ```sh
-helm install forma oci://ghcr.io/yldm-tech/helm-charts/forma \
+git clone --depth 1 --branch v0.2.<n> https://github.com/yldm-tech/forma.git forma-0.2.<n>
+helm install forma ./forma-0.2.<n>/deploy/helm/forma \
   -n forma \
   --create-namespace \
-  -f values.yaml
+  -f values.yaml \
+  --set deployment.image.tag=0.2.<n>
 ```
 
 [Kubernetes deployment guide](/self-hosting/setup/kubernetes).

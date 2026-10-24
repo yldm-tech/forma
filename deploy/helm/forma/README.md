@@ -6,12 +6,13 @@ A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valke
 
 **Homepage:** <https://forma.yldm.ai/docs/self-hosting/setup/kubernetes>
 
-The chart is installed from this repository (`helm install forma ./deploy/helm/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
+The chart is installed from this repository (`helm install forma ./deploy/helm/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma-server:<version>` as the release workflow publishes it.
 
 ## Forma on the Go server: what changed in this chart
 
 The chart keeps forma2's values, Secrets and resource names; these are the differences. The whole move from forma2, including the job queue and the database, is in the [upgrade guide](https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server).
 
+- The image is `ghcr.io/yldm-tech/forma-server`, the default of `deployment.image.repository`; `ghcr.io/yldm-tech/forma` keeps forma2's releases. Values that set the repository to forma2's image must change it, or drop it to take the default.
 - One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
 - The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
 - The AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare` (see below).
@@ -378,7 +379,7 @@ externalSecret:
 | deployment.extraVolumes                                            | list   | `[]`                                                                        | Additional app pod volumes.                               |
 | deployment.image.digest                                            | string | `""`                                                                        | When set, takes precedence over tag.                      |
 | deployment.image.pullPolicy                                        | string | `"IfNotPresent"`                                                            |                                                           |
-| deployment.image.repository                                        | string | `"ghcr.io/yldm-tech/forma"`                                           |                                                           |
+| deployment.image.repository                                        | string | `"ghcr.io/yldm-tech/forma-server"`                                    |                                                           |
 | deployment.image.tag | string | `""` | Required unless `deployment.image.digest` is set: the release to deploy, `0.2.<run>` or `sha-<commit>` as the release workflow publishes it. |
 | deployment.imagePullSecrets                                        | string | `""`                                                                        |                                                           |
 | deployment.lifecycle                                               | object | `{}`                                                                        | Optional app container lifecycle hooks.                   |

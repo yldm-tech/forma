@@ -136,10 +136,10 @@ if ! grep --quiet 'deployment.image.tag' <<<"${untagged}"; then
   printf '%s\n' "The refusal must name deployment.image.tag." "${untagged}" >&2
   exit 1
 fi
-assert_contains "$(render_deployment hardening-tagged)" '          image: ghcr.io/yldm-tech/forma:0.2.0' \
+assert_contains "$(render_deployment hardening-tagged)" '          image: ghcr.io/yldm-tech/forma-server:0.2.0' \
   "deployment.image.tag must name the image."
 assert_contains "$(render_deployment hardening-digest --set deployment.image.digest=sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef)" \
-  '          image: ghcr.io/yldm-tech/forma@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
+  '          image: ghcr.io/yldm-tech/forma-server@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
   "deployment.image.digest must take precedence over the tag."
 
 printf '%s\n' "Forma app container hardening contracts are valid."

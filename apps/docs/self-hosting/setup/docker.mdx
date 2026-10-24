@@ -6,7 +6,7 @@ icon: "docker"
 
 Use this guide for a manual Docker Compose setup. It downloads the production Compose file and starts the baseline stack: the Forma server (`forma serve`), its job worker (`forma worker`), the one-shot migration (`forma migrate`), PostgreSQL 18, Valkey and SpiceDB. Optional services, S3-compatible storage with RustFS and a local Qwen model with vLLM, are documented after the baseline stack is running.
 
-Every Forma container runs the same image, `ghcr.io/yldm-tech/forma`: a single `forma` binary on a distroless base, running as uid 1001, with no shell. Its default command is `forma start`; the Compose file gives each service its own subcommand instead.
+Every Forma container runs the same image, `ghcr.io/yldm-tech/forma-server`: a single `forma` binary on a distroless base, running as uid 1001, with no shell. Its default command is `forma start`; the Compose file gives each service its own subcommand instead.
 
 ### Requirements
 
@@ -35,7 +35,7 @@ Docker and Docker Compose are usually included in tools like Docker Desktop and 
 
 1. **Download the Docker Files**
 
-   Get the Compose file and the two helper scripts it mounts. `stable` is the branch the release that `ghcr.io/yldm-tech/forma:latest` names was built from; to pin a release, replace it with that release's tag (`v0.2.<n>`) and set `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma:0.2.<n>` in `.env`.
+   Get the Compose file and the two helper scripts it mounts. `stable` is the branch the release that `ghcr.io/yldm-tech/forma-server:latest` names was built from; to pin a release, replace it with that release's tag (`v0.2.<n>`) and set `FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma-server:0.2.<n>` in `.env`.
 
    ```bash
    for file in docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh; do
