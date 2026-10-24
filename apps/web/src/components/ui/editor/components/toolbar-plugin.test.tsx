@@ -28,14 +28,24 @@ const CaptureEditor = ({ onEditor }: { onEditor: (editor: LexicalEditor) => void
 };
 
 /** A rich-text field as the survey editor mounts one: seeded from the stored text on first render. */
-const Field = ({ stored, setText, onEditor }: {
+const Field = ({
+  stored,
+  setText,
+  onEditor,
+}: {
   stored: string;
   setText: (text: string) => void;
   onEditor: (editor: LexicalEditor) => void;
 }) => {
   const [firstRender, setFirstRender] = useState(true);
   return (
-    <LexicalComposer initialConfig={{ namespace: "test", onError: (error: Error) => { throw error; } }}>
+    <LexicalComposer
+      initialConfig={{
+        namespace: "test",
+        onError: (error: Error) => {
+          throw error;
+        },
+      }}>
       <ToolbarPlugin
         getText={() => stored}
         setText={setText}
