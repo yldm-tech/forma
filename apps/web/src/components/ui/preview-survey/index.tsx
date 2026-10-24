@@ -580,12 +580,14 @@ export const PreviewSurvey = ({
         <div className="mt-2 flex rounded-full border-2 border-slate-300 p-1">
           <TabOption
             active={previewMode === "mobile"}
-            icon={<SmartphoneIcon className="mx-4 my-2 size-4 text-slate-700" />}
+            label={t("workspace.surveys.edit.preview_mobile")}
+            icon={<SmartphoneIcon className="mx-4 my-2 size-4 text-slate-700" aria-hidden="true" />}
             onClick={() => handlePreviewModeChange("mobile")}
           />
           <TabOption
             active={previewMode === "desktop"}
-            icon={<MonitorIcon className="mx-4 my-2 size-4 text-slate-700" />}
+            label={t("workspace.surveys.edit.preview_desktop")}
+            icon={<MonitorIcon className="mx-4 my-2 size-4 text-slate-700" aria-hidden="true" />}
             onClick={() => handlePreviewModeChange("desktop")}
           />
         </div>

@@ -186,12 +186,15 @@ export const EditEndingCard = ({
       ref={setNodeRef}
       style={style}
       id={endingCard.id}>
+      {/* The rail is the drag handle, as on the blocks; the grip only shows it. */}
       <div
         {...listeners}
         {...attributes}
+        aria-label={t("workspace.surveys.edit.reorder_ending_card", { number: endingCardIndex + 1 })}
         className={cn(
           open ? "bg-slate-50" : "",
           "flex w-10 flex-col items-center justify-between rounded-l-lg border-t border-b border-l py-2 group-aria-expanded:rounded-bl-none",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700",
           isInvalid ? "bg-red-400" : "bg-white group-hover:bg-slate-50"
         )}>
         <div className="mt-3 flex w-full justify-center">
@@ -201,11 +204,10 @@ export const EditEndingCard = ({
             <Undo2 className="size-4 rotate-180" />
           )}
         </div>
-        <button
-          type="button"
-          className="opacity-0 transition-all duration-300 group-hover:opacity-100 hover:cursor-move">
-          <GripIcon className="size-4" />
-        </button>
+        <GripIcon
+          aria-hidden="true"
+          className="size-4 opacity-0 transition-all duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
+        />
       </div>
       <Collapsible.Root
         open={open}
