@@ -37,7 +37,10 @@ describe("prerendered pages", () => {
       const html = await renderPath(path, assets);
       const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((match) => Number(match[1]));
       expect(levels[0]).toBe(1);
-      const skips = levels.flatMap((level, i) => (i > 0 && level > levels[i - 1] + 1 ? [`h${levels[i - 1]} → h${level}`] : []));
+      const skips = levels.flatMap((level, i) => {
+        const previous = levels[i - 1];
+        return previous !== undefined && level > previous + 1 ? [`h${previous} → h${level}`] : [];
+      });
       expect(skips).toEqual([]);
       expect(html).not.toMatch(/<section[^>]* aria-label=/);
     }
