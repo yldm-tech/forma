@@ -31,7 +31,7 @@ import { cn } from "../../../../lib/cn";
 import { readStorage, writeStorage } from "../../../../lib/storage";
 import { toast } from "../../../../lib/toast";
 import { type ExportFormat, analysisApi } from "../../api";
-import { reconcileColumnOrder, seedColumnVisibility } from "../../lib/column-state";
+import { reconcileColumnOrder, recordVisibilityChange, seedColumnVisibility } from "../../lib/column-state";
 import { saveExport } from "../../lib/download";
 import { mapResponsesToTableData } from "../../lib/response-table";
 import {
@@ -203,10 +203,10 @@ export const ResponseTable = ({
   useEffect(() => {
     if (savedOrder.length > 0) writeStorage(orderKey, JSON.stringify(columnOrder));
   }, [columnOrder, orderKey, savedOrder.length]);
+  // Only the author's own choices are stored: a stored default would read as a choice on the next visit and stop following the survey (the single-use id once single-use links are on).
   useEffect(() => {
-    if (Object.keys(columnVisibility).length > 0)
-      writeStorage(visibilityKey, JSON.stringify(columnVisibility));
-  }, [columnVisibility, visibilityKey]);
+    if (Object.keys(savedVisibility).length > 0) writeStorage(visibilityKey, JSON.stringify(savedVisibility));
+  }, [savedVisibility, visibilityKey]);
   useEffect(() => {
     writeStorage(expandKey, JSON.stringify(isExpanded));
   }, [isExpanded, expandKey]);
@@ -241,8 +241,10 @@ export const ResponseTable = ({
     columns: tableColumns,
     getRowId: (row) => row.responseId,
     getCoreRowModel: getCoreRowModel(),
-    onColumnVisibilityChange: (updater) =>
-      setSavedVisibility(typeof updater === "function" ? updater(columnVisibility) : updater),
+    onColumnVisibilityChange: (updater) => {
+      const next = typeof updater === "function" ? updater(columnVisibility) : updater;
+      setSavedVisibility((saved) => recordVisibilityChange(saved, columnVisibility, next));
+    },
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: (updater) =>
       setSavedOrder((current) =>

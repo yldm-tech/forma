@@ -78,3 +78,19 @@ export const seedColumnVisibility = (
   }
   return seeded;
 };
+
+/**
+ * Records a visibility change as the author's choices: the saved choices plus every column whose visibility went from `shown` (the seeded state the table rendered) to `next`. Only these choices are persisted, not the seeded defaults, so a column the author has never shown or hidden keeps following its default: the single-use id appears once the survey turns single-use links on. A column absent from either state is visible, as in TanStack.
+ */
+export const recordVisibilityChange = (
+  saved: VisibilityState,
+  shown: VisibilityState,
+  next: VisibilityState
+): VisibilityState => {
+  const recorded: VisibilityState = { ...saved };
+  for (const columnId of new Set([...Object.keys(shown), ...Object.keys(next)])) {
+    const isVisible = next[columnId] ?? true;
+    if ((shown[columnId] ?? true) !== isVisible) recorded[columnId] = isVisible;
+  }
+  return recorded;
+};

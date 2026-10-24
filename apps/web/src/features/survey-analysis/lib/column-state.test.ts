@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
 import { RESERVED_FIELD_CATALOG } from "@forma/types/embedded-data-resolver";
-import { reconcileColumnOrder, seedColumnVisibility, seedReservedColumnVisibility } from "./column-state";
+import {
+  reconcileColumnOrder,
+  recordVisibilityChange,
+  seedColumnVisibility,
+  seedReservedColumnVisibility,
+} from "./column-state";
 import { reservedColumnId } from "./response-table";
 
 /**
@@ -157,5 +162,35 @@ describe("seedColumnVisibility", () => {
     const secondary = RESERVED_FIELD_CATALOG.find((entry) => entry.display === "secondary");
     expect(secondary).toBeDefined();
     expect(seedColumnVisibility({}, [])[reservedColumnId(secondary?.name ?? "")]).toBe(false);
+  });
+});
+
+describe("recordVisibilityChange", () => {
+  test("records only the column the author toggled, not the seeded defaults", () => {
+    // The seeded singleUseId: false must not become a stored choice, or the column stays hidden after the survey turns single-use links on.
+    const shown = seedColumnVisibility({}, ["singleUseId", "ELEMENT_q1optionIds"]);
+    const recorded = recordVisibilityChange({}, shown, { ...shown, tags: false });
+
+    expect(recorded).toStrictEqual({ tags: false });
+    expect(seedColumnVisibility(recorded, [])).not.toHaveProperty("singleUseId");
+  });
+
+  test("records showing a column that was hidden by default", () => {
+    const shown = seedColumnVisibility({}, ["singleUseId"]);
+
+    expect(recordVisibilityChange({}, shown, { ...shown, singleUseId: true })).toStrictEqual({
+      singleUseId: true,
+    });
+  });
+
+  test("keeps the earlier choices and treats a dropped id as shown", () => {
+    // Showing every column can come back as an empty state: an id missing from it is visible.
+    const saved = { tags: false };
+    const shown = seedColumnVisibility(saved, ["singleUseId"]);
+
+    const recorded = recordVisibilityChange(saved, shown, {});
+
+    expect(recorded.tags).toBe(true);
+    expect(recorded.singleUseId).toBe(true);
   });
 });
