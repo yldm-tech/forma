@@ -7,6 +7,8 @@ allowBuilds:
   core-js: true
   esbuild: true
   protobufjs: true
+  # Reached through lingo.dev (packages/surveys' i18n:generate) via @openrouter/ai-sdk-provider. Its postinstall (`node scripts/check-types.js || true`, reviewed for 0.3.16) only fetches openrouter.ai's model list to warn that its bundled model types are stale, and exits 0 either way; nothing it does is needed, so it is denied rather than left unreviewed, which pnpm treats as an install failure.
+  "@openrouter/sdk": false
 
 # Single source of truth for the version of every dependency used by two or more workspaces. Packages reference these as `"typescript": "catalog:"` and never as a literal version, so a shared dependency cannot drift between packages: bumping one means editing the entry here, which changes every consumer at once.
 #
@@ -129,6 +131,9 @@ overrides:
   # ENG-2234 / GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895: brace-expansion's recursive expansion has no bound on total output length, so a crafted `{a,b}{c,d}...` pattern grows the result set exponentially (DoS). GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays) bypasses the CVE-2026-14257 mitigation; GHSA-mh99-v99m-4gvg covers only the 1.x and 2.x lines. Every line reaches brace-expansion via minimatch. Pinned to the lowest maintenance release closing both advisories on the line. The 1.x and 2.x lines need no pin any more (see the record above).
   # load-bearing: minimatch 10 depends on it, from @microsoft/api-extractor (via vite-plugin-dts) and glob 13 (rimraf, storybook's react-docgen plugin), all dev.
   brace-expansion@5: 5.0.12
+  # GHSA-mrhx-c7xc-m3w5: zod <4.6.6 can exhaust memory while validating oversized constrained collections; patched in 4.6.6. Points at the catalog entry, so the override and every workspace's zod are the same (patched, see patchedDependencies) 4.6.7.
+  # load-bearing: lingo.dev 0.138.10 (packages/surveys, dev) pins zod 4.4.3 exactly, and its @ai-sdk/* providers and @lingo.dev/_spec resolve that copy.
+  "zod@<4.6.6": "catalog:"
   vite@*: "catalog:"
   vitest@*: "catalog:"
   # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the storybook tooling get an auto-installed React of their own, at whatever version pnpm picks for the unmet peer. Pinning both keeps one React version in the lockfile, so no package renders with one React while its hooks come from another (under the hoisted linker that nested copy broke react-i18next's hooks in apps/web/).
