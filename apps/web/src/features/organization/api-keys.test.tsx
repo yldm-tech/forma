@@ -12,7 +12,7 @@ import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../lib/i18n";
-import { ConnectAppBanner } from "./api-keys";
+import { ConnectAppBanner, permissionLabel } from "./api-keys";
 
 // forma2's API keys page (modules/organization/settings/api-keys/page.tsx): a website or app survey needs no key, so the page points to the first workspace's SDK page while there is a workspace.
 
@@ -75,4 +75,20 @@ test("is absent while the organization has no workspace", async () => {
   await renderBanner([]);
   await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
   expect(screen.queryByText(i18n.t("workspace.settings.api_keys.connect_app_banner_title"))).toBeNull();
+});
+
+test("names a workspace permission in the user's language, never by its enum value", async () => {
+  expect((["read", "write", "manage"] as const).map((p) => permissionLabel(i18n.t, p))).toEqual([
+    "Read",
+    "Read & Write",
+    "Manage",
+  ]);
+  const ja = await initI18n("ja-JP");
+  const labels = (["read", "write", "manage"] as const).map((p) => permissionLabel(ja.t, p));
+  expect(labels).toEqual([
+    ja.t("workspace.settings.teams.read"),
+    ja.t("workspace.settings.teams.read_write"),
+    ja.t("workspace.settings.teams.manage"),
+  ]);
+  for (const label of labels) expect(label).not.toMatch(/^(read|write|manage)$/i);
 });

@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDownIcon, LayoutTemplateIcon, PlusCircleIcon, SparklesIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronDownIcon,
+  InfoIcon,
+  LayoutTemplateIcon,
+  PlusCircleIcon,
+  SparklesIcon,
+  XIcon,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import {
@@ -10,7 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
+import { EmptyState } from "../../../components/ui/empty-state";
 import { PageContentWrapper, PageHeader } from "../../../components/ui/page";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../components/ui/tooltip";
+import { cn } from "../../../lib/cn";
 import { readStorage, writeStorage } from "../../../lib/storage";
 import { workspaceAIQuery } from "../../ai/availability";
 import { CreateWithAIDialog } from "../ai-create/create-with-ai-dialog";
@@ -19,12 +29,14 @@ import { TemplateGallery } from "../templates/template-gallery";
 import { useCreateSurveyFromTemplate } from "../templates/use-create-survey";
 import {
   SURVEYS_PER_PAGE,
-  SURVEY_FILTERS_KEY,
   type SurveyFilters as Filters,
   type WorkspaceChannel,
+  hasActiveFilters,
   initialFilters,
   normalizeSurveyFilters,
-  parseStoredSurveyFilters,
+  restoredSurveyFilters,
+  storableSurveyFilters,
+  surveyFiltersKey,
 } from "./filters";
 import {
   useArchiveSurvey,
@@ -35,7 +47,7 @@ import {
   useSurveys,
   useUpdateSurveyStatus,
 } from "./hooks";
-import { SurveyCard } from "./survey-card";
+import { SURVEY_TABLE_COLUMN, SURVEY_TABLE_GRID, SURVEY_TABLE_ROW_PADDING, SurveyCard } from "./survey-card";
 import type { SurveyActions } from "./survey-dropdown-menu";
 import { SurveyFilters } from "./survey-filters";
 
@@ -125,8 +137,65 @@ const SurveyLoading = () => (
   </div>
 );
 
+/** The survey table's header row; the completed column explains what it counts, since its label is also a status. */
+const SurveyTableHeader = () => {
+  const { t } = useTranslation();
+  const cell = "flex min-w-0 justify-self-center text-center";
+  return (
+    <div role="rowgroup">
+      <div
+        role="row"
+        className={cn(
+          SURVEY_TABLE_GRID,
+          SURVEY_TABLE_ROW_PADDING,
+          "border-transparent text-sm text-slate-800"
+        )}>
+        <div role="columnheader" className="min-w-0">
+          {t("common.name")}
+        </div>
+        <div role="columnheader" className={cell}>
+          {t("common.status")}
+        </div>
+        <div role="columnheader" className={cell}>
+          {/* The label is the tooltip's trigger, so the column is named by the label alone (a screen reader repeats it with every cell) and the hint is only the button's description. */}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-sm text-center break-words focus-visible:ring-2 focus-visible:outline-hidden">
+                  {t("workspace.surveys.completed_responses")}
+                  <InfoIcon className="size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                {t("workspace.surveys.completed_responses_hint")}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
+          {t("common.type")}
+        </div>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
+          {t("common.created_at")}
+        </div>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
+          {t("common.updated_at")}
+        </div>
+        <div role="columnheader" className={cn(cell, SURVEY_TABLE_COLUMN.wideOnly)}>
+          {t("common.created_by")}
+        </div>
+        <div role="columnheader">
+          <span className="sr-only">{t("common.actions")}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /**
- * forma2's SurveysList: the workspace's surveys under the filters this browser last used, a page at a time, with their actions. A workspace without any survey shows the template gallery instead (or, to a read-only member, that they cannot create one).
+ * forma2's SurveysList: the workspace's surveys under the filters this browser last used in this workspace, a page at a time, with their actions. A workspace without any survey shows the template gallery instead (or, to a read-only member, that they cannot create one).
  */
 export const SurveysList = ({
   workspaceId,
@@ -144,14 +213,30 @@ export const SurveysList = ({
   defaultLanguage: string;
 }) => {
   const { t } = useTranslation();
-  // The filters this browser used last; a stored value that cannot be read gives way to the defaults, which the write below then stores over it.
-  const [filters, setFilters] = useState<Filters>(
-    () => parseStoredSurveyFilters(readStorage(SURVEY_FILTERS_KEY), channel) ?? initialFilters
+  // The filters this browser used last in this workspace, without a name search; a stored value that cannot be read gives way to the defaults, which the write below then stores over it.
+  const [filters, setFilters] = useState<Filters>(() =>
+    restoredSurveyFilters(readStorage(surveyFiltersKey(workspaceId)), channel)
   );
+  // Bumped by "Clear filters" to remount the toolbar, which holds the search text still being typed.
+  const [filtersResetCount, setFiltersResetCount] = useState(0);
   const publicDomain = useQuery(publicDomainQuery).data;
   const normalized = useMemo(() => normalizeSurveyFilters(filters, channel), [filters, channel]);
 
-  useEffect(() => writeStorage(SURVEY_FILTERS_KEY, JSON.stringify(normalized)), [normalized]);
+  useEffect(
+    () => writeStorage(surveyFiltersKey(workspaceId), JSON.stringify(storableSurveyFilters(normalized))),
+    [workspaceId, normalized]
+  );
+
+  const clearFilters = () => {
+    setFilters(initialFilters);
+    setFiltersResetCount((count) => count + 1);
+  };
+
+  // Clear filters takes away the button that was pressed (the toolbar's and the empty state's both go once nothing is filtered), so the focus moves to the search box of the remounted toolbar rather than falling to the page.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (filtersResetCount > 0) searchInputRef.current?.focus();
+  }, [filtersResetCount]);
 
   const list = useSurveys({
     workspaceId,
@@ -175,6 +260,23 @@ export const SurveysList = ({
 
   // Only a workspace without a single survey gets the empty states; any other empty list keeps the toolbar, so the filter that emptied it stays reachable.
   const isWorkspaceEmpty = !list.isError && list.workspaceSurveyCount === 0;
+
+  // "Load more" hands the focus to the first survey it added; without one (the page held only surveys being removed), to the count above the table. The button itself is gone once the last page is in.
+  const tableRef = useRef<HTMLDivElement>(null);
+  const countRef = useRef<HTMLParagraphElement>(null);
+  const focusRowAfterLoad = useRef<number | null>(null);
+  const loadMore = async () => {
+    focusRowAfterLoad.current = list.surveys.length;
+    await list.fetchNextPage();
+  };
+  const loadedCount = list.surveys.length;
+  useEffect(() => {
+    const index = focusRowAfterLoad.current;
+    if (index === null || list.isFetchingNextPage) return;
+    focusRowAfterLoad.current = null;
+    const names = tableRef.current?.querySelectorAll<HTMLElement>("[data-survey-name]");
+    (names?.[index] ?? countRef.current)?.focus();
+  }, [loadedCount, list.isFetchingNextPage]);
 
   if (list.isLoading && list.surveys.length === 0) {
     return (
@@ -220,13 +322,19 @@ export const SurveysList = ({
     );
   }
 
-  let content = (
-    <div className="flex w-full flex-col items-center justify-center text-slate-600">
-      <span className="size-24 p-4 text-center text-5xl" aria-hidden="true">
-        🕵️
-      </span>
-      {t("common.no_surveys_found")}
+  // An empty list under filters says so and offers to clear them; one without (a workspace whose surveys are all archived) only that there is nothing to show.
+  let content = hasActiveFilters(normalized) ? (
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-full">
+        <EmptyState variant="simple" text={t("workspace.surveys.no_surveys_match_filters")} />
+      </div>
+      <Button variant="secondary" size="sm" onClick={clearFilters}>
+        {t("common.clear_filters")}
+        <XIcon />
+      </Button>
     </div>
+  ) : (
+    <EmptyState variant="simple" text={t("common.no_surveys_found")} />
   );
   if (list.isError && list.surveys.length === 0) {
     content = (
@@ -240,27 +348,22 @@ export const SurveysList = ({
   } else if (list.surveys.length > 0) {
     content = (
       <div>
-        <div className="flex-col space-y-3">
-          <div className="mt-6 grid w-full grid-cols-8 place-items-center gap-3 px-6 pr-8 text-sm text-slate-800">
-            <div className="col-span-2 place-self-start">{t("common.name")}</div>
-            <div className="col-span-1">{t("common.status")}</div>
-            <div className="col-span-1">{t("workspace.surveys.completed_responses")}</div>
-            <div className="col-span-1">{t("common.type")}</div>
-            <div className="col-span-1">{t("common.created_at")}</div>
-            <div className="col-span-1">{t("common.updated_at")}</div>
-            <div className="col-span-1">{t("common.created_by")}</div>
+        {/* Positioned, so the visually hidden labels inside it stay within the scrolling page instead of widening the document. */}
+        <div ref={tableRef} role="table" aria-label={t("common.surveys")} className="relative space-y-3">
+          <SurveyTableHeader />
+          <div role="rowgroup" className="space-y-3">
+            {list.surveys.map((survey) => (
+              <SurveyCard
+                key={survey.id}
+                survey={survey}
+                workspaceId={workspaceId}
+                organizationId={organizationId}
+                isReadOnly={isReadOnly}
+                publicDomain={publicDomain}
+                actions={actions}
+              />
+            ))}
           </div>
-          {list.surveys.map((survey) => (
-            <SurveyCard
-              key={survey.id}
-              survey={survey}
-              workspaceId={workspaceId}
-              organizationId={organizationId}
-              isReadOnly={isReadOnly}
-              publicDomain={publicDomain}
-              actions={actions}
-            />
-          ))}
         </div>
         {list.hasNextPage && (
           <div className="flex justify-center py-5">
@@ -268,7 +371,7 @@ export const SurveysList = ({
               variant="secondary"
               size="sm"
               loading={list.isFetchingNextPage}
-              onClick={() => void list.fetchNextPage()}>
+              onClick={() => void loadMore()}>
               {t("common.load_more")}
             </Button>
           </div>
@@ -293,8 +396,30 @@ export const SurveysList = ({
         }
       />
       <div className="space-y-6">
-        <SurveyFilters filters={normalized} setFilters={setFilters} channel={channel} />
-        {content}
+        <SurveyFilters
+          key={filtersResetCount}
+          filters={normalized}
+          setFilters={setFilters}
+          channel={channel}
+          onClear={clearFilters}
+          searchInputRef={searchInputRef}
+        />
+        <div>
+          {/* Announced as it changes: how much of the filtered list is on the page. */}
+          <p
+            ref={countRef}
+            tabIndex={-1}
+            aria-live="polite"
+            className="min-h-5 text-sm text-slate-500 outline-hidden">
+            {list.totalCount !== null &&
+              list.totalCount > 0 &&
+              t("workspace.surveys.showing_count", {
+                shown: Math.min(loadedCount, list.totalCount),
+                total: list.totalCount,
+              })}
+          </p>
+          <div className="mt-3">{content}</div>
+        </div>
       </div>
     </PageContentWrapper>
   );

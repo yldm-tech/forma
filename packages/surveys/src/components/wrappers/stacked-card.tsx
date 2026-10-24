@@ -5,6 +5,7 @@ import React from "react";
 import { type TPlacement } from "@forma/types/common";
 import { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { TCardArrangementOptions } from "@forma/types/styling";
+import { stackedCardTransition } from "@/lib/motion";
 
 interface StackedCardProps {
   cardRefs: MutableRef<(HTMLDivElement | null)[]>;
@@ -137,7 +138,7 @@ export const StackedCard = ({
         transform: calculateCardTransform(offset),
         opacity: isHidden ? 0 : (100 - 20 * offset) / 100,
         height: fullSizeCards ? "100%" : currentCardHeight,
-        transition: "transform 600ms ease-in-out, opacity 600ms ease-in-out, width 600ms ease-in-out",
+        transition: stackedCardTransition(),
         pointerEvents: offset === 0 ? "auto" : "none",
         ...borderStyles,
         ...straightCardArrangementStyles,

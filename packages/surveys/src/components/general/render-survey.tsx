@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SurveyContainerProps } from "@forma/types/forma-surveys";
-import { getSurveyDisplayName, hasSurveyInstructions } from "@/lib/survey-page";
+import { getSurveyRespondentName, hasSurveyInstructions } from "@/lib/survey-page";
 import { getSurveyLanguageTag, isRTLLanguage } from "@/lib/utils";
 import { SurveyContainer } from "../wrappers/survey-container";
 import { Survey } from "./survey";
@@ -106,7 +106,7 @@ export function RenderSurvey(props: Readonly<SurveyContainerProps>) {
       onClose={close}
       isOpen={isOpen}
       dir={dir}
-      surveyName={getSurveyDisplayName(props.survey.name)}
+      surveyName={getSurveyRespondentName(props.survey, activeLanguageCode)}
       hasInstructions={hasSurveyInstructions(props.survey)}
       lang={languageTag}>
       <Survey

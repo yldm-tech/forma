@@ -2,6 +2,7 @@ import { type ButtonHTMLAttributes } from "preact";
 import { useRef } from "preact/compat";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
+import { canMoveFocusInto } from "@/lib/focus-guard";
 import { Button } from "./button";
 
 interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -82,7 +83,9 @@ export function SubmitButton({
   useEffect(() => {
     if (buttonRef.current && focus) {
       const timeoutId = setTimeout(() => {
-        buttonRef.current?.focus({ preventScroll: true });
+        const button = buttonRef.current;
+        // As for a block's first control: never pull focus out of the page around the survey.
+        if (button && canMoveFocusInto(button)) button.focus({ preventScroll: true });
       }, 200);
 
       return () => {

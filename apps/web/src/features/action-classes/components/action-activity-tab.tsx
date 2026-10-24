@@ -6,7 +6,8 @@ import { ErrorComponent } from "../../../components/ui/error-component";
 import { Label } from "../../../components/ui/label";
 import { LoadingSpinner } from "../../../components/ui/loading-spinner";
 import { actionClassSurveysQuery } from "../api";
-import { ACTION_TYPE_ICON_LOOKUP } from "../lib/action-icon";
+import { actionTypeLabel } from "../../../lib/action-classes";
+import { ActionClassIcon } from "../lib/action-icon";
 
 interface ActivityTabProps {
   actionClass: TActionClass;
@@ -55,8 +56,8 @@ export const ActionActivityTab = ({ actionClass }: ActivityTabProps) => {
         <div>
           <Label className="block text-xs font-normal text-slate-500">{t("common.type")}</Label>
           <div className="mt-1 flex items-center">
-            <div className="mr-1.5 size-4 text-slate-600">{ACTION_TYPE_ICON_LOOKUP[actionClass.type]}</div>
-            <p className="text-sm text-slate-700 capitalize">{actionClass.type}</p>
+            <ActionClassIcon actionClass={actionClass} className="mr-1.5 size-4 text-slate-600" />
+            <p className="text-sm text-slate-700">{actionTypeLabel(actionClass.type, t)}</p>
           </div>
         </div>
       </div>

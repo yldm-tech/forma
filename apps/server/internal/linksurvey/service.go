@@ -186,7 +186,9 @@ type renderInput struct {
 	allowURLUserID    bool
 	workspace         workspaceContext
 	locale            string
-	responseCount     *int
+	// acceptLanguage is the browser's Accept-Language header, which picks the survey language when the link names none.
+	acceptLanguage string
+	responseCount  *int
 }
 
 // surveyPage is forma2's LinkSurveyPage with its generateMetadata.
@@ -207,7 +209,8 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 	if err != nil {
 		return page{}, err
 	}
-	md := basicSurveyMetadata(sv, q.get("lang"), s.cfg.IsFormaCloud)
+	// The title follows the language the survey opens in, negotiated from the browser when the link names none.
+	md := basicSurveyMetadata(sv, metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages), s.cfg.IsFormaCloud)
 	h := pageHead(s.publicDomain(), sv, md, brandColor(wc.Workspace.Styling, sv.Styling), wc.whitelabel().FaviconURL, linkViewport, true)
 
 	singleUseID := ""
@@ -230,7 +233,7 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 	}
 	p, err := s.render(renderInput{
 		survey: sv, fields: fields, linkSurveyID: rawID, q: q, singleUseID: singleUseID, singleUseResponse: singleUseResponse,
-		allowURLUserID: true, workspace: wc, locale: locale, responseCount: count,
+		allowURLUserID: true, workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
 	if p.Status == http.StatusNotFound {
 		return notFound, err
@@ -260,7 +263,7 @@ func (s *Service) welcomeCardCount(ctx context.Context, sv *survey.Survey) (*int
 func (s *Service) render(in renderInput) (page, error) {
 	sv, q := in.survey, in.q
 	langParam := q.get("lang")
-	languageCode := resolveSurveyLanguageCode(langParam, sv.Languages)
+	languageCode := surveyLanguageCode(langParam, in.acceptLanguage, sv.Languages)
 	gate := gateLocale(langParam, languageCode, sv.Languages, in.locale)
 	if sv.Status == survey.StatusDraft || sv.Type != survey.TypeLink || sv.ArchivedAt != nil {
 		return page{Status: http.StatusNotFound}, nil
@@ -470,7 +473,7 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 	// forma2 passed the contact's existing response here, which the check above has already ruled out.
 	p, err := s.render(renderInput{
 		survey: sv, fields: fields, linkSurveyID: surveyRaw, q: q, singleUseID: singleUseID, contactID: contactID.String(),
-		workspace: wc, locale: locale, responseCount: count,
+		workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
 	if p.Status == http.StatusNotFound {
 		return notFound, err

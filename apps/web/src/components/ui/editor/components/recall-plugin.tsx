@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { getFallbackValues, getRecallItemLabel, getRecallItems } from "../../../../lib/survey/recall";
 import { RecallItemSelect } from "../../../../features/survey-editor/components/element-form-input/components/recall-item-select";
+import { EDITOR_SEED_TAG, isSeedUpdate } from "../lib/seed-tag";
 import { $createRecallNode, RecallNode } from "./recall-node";
 
 interface RecallPluginProps {
@@ -170,7 +171,7 @@ export const RecallPlugin = ({
 
   // Monitor editor content for recall patterns
   const handleEditorUpdate = useCallback(
-    ({ editorState }: { editorState: EditorState }) => {
+    ({ editorState, tags }: { editorState: EditorState; tags: Set<string> }) => {
       editorState.read(() => {
         const root = $getRoot();
         const fullText = root.getTextContent();
@@ -211,10 +212,13 @@ export const RecallPlugin = ({
           setRecallItems(mergedItems);
           setFallbacks(mergedFallbacks);
 
-          // Convert any raw recall text to visual nodes
-          editor.update(() => {
-            convertTextToRecallNodes();
-          });
+          // Convert any raw recall text to visual nodes. Converting the text an editor was just loaded with is still part of loading it, not an edit.
+          editor.update(
+            () => {
+              convertTextToRecallNodes();
+            },
+            isSeedUpdate(tags) ? { tag: EDITOR_SEED_TAG } : undefined
+          );
         } else {
           // No raw recall patterns, sync state with existing RecallNodes only
           setRecallItems(currentRecallItems);
@@ -296,10 +300,13 @@ export const RecallPlugin = ({
 
   // Initial conversion of existing recall text and state sync on plugin load
   useEffect(() => {
-    // Run initial conversion to handle any existing recall text
-    editor.update(() => {
-      convertTextToRecallNodes();
-    });
+    // Run initial conversion to handle any existing recall text; it reshapes stored text and records no edit.
+    editor.update(
+      () => {
+        convertTextToRecallNodes();
+      },
+      { tag: EDITOR_SEED_TAG }
+    );
   }, [editor, convertTextToRecallNodes]);
 
   // Sync recall node labels when the survey data changes (e.g. headline edited in translations modal)

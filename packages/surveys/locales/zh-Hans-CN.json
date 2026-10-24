@@ -112,6 +112,7 @@
     "value_must_contain": "值必须包含{value}",
     "value_must_equal": "值必须等于{value}",
     "value_must_not_contain": "值不能包含{value}",
-    "value_must_not_equal": "值不能等于{value}"
+    "value_must_not_equal": "值不能等于{value}",
+    "x_questions_need_an_answer": "{count, plural, other {{count}个问题需要回答}}"
   }
 }

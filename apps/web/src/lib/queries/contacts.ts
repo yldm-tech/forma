@@ -225,6 +225,14 @@ export const useUpdateContactAttributes = (workspaceId: string, contactId: strin
   });
 };
 
+/** What an import did: the contacts it created or changed, and how many of the file's rows were created, updated (merged or overwritten) and skipped as duplicates. */
+export interface ImportContactsResult {
+  contacts: Contact[];
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
 export const useImportContacts = (workspaceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -241,7 +249,7 @@ export const useImportContacts = (workspaceId: string) => {
       form.append("file", file);
       form.append("duplicateContactsAction", duplicateContactsAction);
       form.append("attributeMap", JSON.stringify(attributeMap));
-      return api.post<{ contacts: Contact[] }>(`/api/app/workspaces/${workspaceId}/contacts/import`, form);
+      return api.post<ImportContactsResult>(`/api/app/workspaces/${workspaceId}/contacts/import`, form);
     },
     onSuccess: () =>
       Promise.all([

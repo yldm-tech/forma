@@ -273,6 +273,35 @@ func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
 	}
 }
 
+// Behind the server's middleware the SPA's document and the root redirect say no-transform, so Cloudflare does not inject its Web Analytics beacon into them; the bundles and API answers keep their caching as it was, so Cloudflare still compresses them.
+func TestOnlyHTMLIsNoTransform(t *testing.T) {
+	h, err := NewFromFS(fstest.MapFS{
+		"index.html":         {Data: []byte(indexHTML)},
+		"assets/app-1a2b.js": {Data: []byte("console.log(1)")},
+		"js/surveys.umd.cjs": {Data: []byte("window.formaSurveys={}")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httpserver.NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	h.Register(r)
+	for path, want := range map[string]string{
+		"/app/":                   "no-cache, no-transform",
+		"/app/workspaces/1":       "no-cache, no-transform",
+		"/":                       "no-store, no-transform",
+		"/app/assets/app-1a2b.js": "public, max-age=31536000, immutable",
+		"/js/surveys.umd.cjs":     "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
+	} {
+		if got := get(r, http.MethodGet, path).Header().Get("Cache-Control"); got != want {
+			t.Errorf("%s: Cache-Control = %q, want %q", path, got, want)
+		}
+	}
+	api := get(r, http.MethodGet, "/api/v3/nope")
+	if !strings.HasPrefix(api.Header().Get("Content-Type"), "application/") || strings.Contains(api.Header().Get("Cache-Control"), "no-transform") {
+		t.Errorf("/api/v3/nope: Content-Type %q, Cache-Control %q", api.Header().Get("Content-Type"), api.Header().Get("Cache-Control"))
+	}
+}
+
 func TestServeWithoutBuild(t *testing.T) {
 	r := newEngine(t, fstest.MapFS{".gitkeep": {}})
 

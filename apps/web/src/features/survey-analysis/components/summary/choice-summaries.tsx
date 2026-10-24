@@ -254,17 +254,16 @@ export const RankingSummary = ({
         {results.map((result, index) => {
           const choiceId = getChoiceIdByValue(result.value, elementSummary.element);
           return (
-            <div key={result.value} className="group cursor-pointer">
+            <div key={result.value}>
               <div className="text flex flex-col justify-between px-2 pb-2 sm:flex-row">
                 <div className="mr-8 flex w-full items-center gap-x-2">
                   <span className="mr-2 text-slate-400">#{index + 1}</span>
                   <div className="rounded-sm bg-slate-100 px-2 py-1">{result.value}</div>
                   {choiceId && <IdBadge id={choiceId} />}
-                  <span className="ml-auto flex items-center gap-x-1">
-                    <span className="font-bold text-slate-600">
-                      #{convertFloatToNDecimal(result.avgRanking, 2)}
-                    </span>
-                    <span>{t("workspace.surveys.summary.average")}</span>
+                  <span className="ml-auto font-semibold text-slate-600">
+                    {t("workspace.surveys.summary.avg_rank", {
+                      value: convertFloatToNDecimal(result.avgRanking, 2),
+                    })}
                   </span>
                 </div>
               </div>

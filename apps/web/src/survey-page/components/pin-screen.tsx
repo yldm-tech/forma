@@ -1,9 +1,10 @@
 import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";
 import { cn } from "../../lib/cn";
 import { validateSurveyPin } from "../lib/api";
+import { type TPinError, pinErrorKind } from "../lib/pin-error";
 import type { TPublicSurvey, TSurveyProps } from "../lib/state";
 import { useAppLocale } from "../lib/use-app-locale";
 import { SurveyClientWrapper } from "./survey-client-wrapper";
@@ -23,6 +24,9 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   const [loading, setLoading] = useState(false);
   // Whether the last PIN was refused (wrong, or the attempt limit reached): the boxes turn red and clear shortly after.
   const [rejected, setRejected] = useState(false);
+  // Why it was refused; the message stays until the respondent types again, after the boxes have cleared.
+  const [pinError, setPinError] = useState<TPinError>();
+  const boxesRef = useRef<HTMLDivElement>(null);
   const [unlocked, setUnlocked] = useState<{ survey: TPublicSurvey; pinAuthToken: string }>();
   const isCardless = styling.cardArrangement?.linkSurveys === "cardless";
   const linkSurveyCardMaxWidth = getLinkSurveyCardMaxWidth(styling.linkSurveyCardWidth);
@@ -39,40 +43,60 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
     return () => clearTimeout(timeout);
   }, [rejected, resetState]);
 
+  // The gate exists only to take the PIN, so the first box has focus as soon as it shows, and again once a refused PIN has cleared and the boxes are enabled again.
+  useEffect(() => {
+    if (!isLocaleReady || rejected || unlocked) return;
+    boxesRef.current?.querySelector<HTMLInputElement>("input:not(:disabled)")?.focus();
+  }, [isLocaleReady, rejected, unlocked]);
+
   // The PIN is checked as soon as all four digits are in.
   const handlePinChange = (value: string) => {
     setPinEntry(value);
+    setPinError(undefined);
     if (!PIN_PATTERN.test(value)) return;
     setLoading(true);
     validateSurveyPin(surveyId, value)
       .then(setUnlocked)
-      .catch(() => setRejected(true))
+      .catch((error: unknown) => {
+        setPinError(pinErrorKind(error));
+        setRejected(true);
+      })
       .finally(() => setLoading(false));
+  };
+
+  const pinErrorMessages: Record<TPinError, string> = {
+    incorrect: t("s.pin_incorrect"),
+    rateLimited: t("s.pin_too_many_attempts"),
+    failed: t("common.something_went_wrong_please_try_again"),
   };
 
   if (!unlocked) {
     // The gate is nothing but translated chrome, so it waits for its locale instead of painting in another first.
     if (!isLocaleReady) return null;
     return (
-      <div
+      <main
         className={cn(
           "mx-auto flex h-full w-full items-center justify-center",
           isCardless && "px-4 py-12 sm:px-6"
         )}
         style={{ maxWidth: linkSurveyCardMaxWidth }}>
-        <div className="flex flex-col items-center justify-center">
-          <div className="my-4 font-semibold">
-            <h4>{t("s.enter_pin")}</h4>
+        <div className="flex flex-col items-center justify-center px-4 text-center">
+          <h1 className="my-4 font-semibold">{t("s.enter_pin")}</h1>
+          <div ref={boxesRef} className="w-full">
+            <OTPInput
+              disabled={rejected || loading}
+              value={pinEntry}
+              onChange={handlePinChange}
+              valueLength={4}
+              inputBoxClassName={cn({ "border-red-400": rejected })}
+            />
           </div>
-          <OTPInput
-            disabled={rejected || loading}
-            value={pinEntry}
-            onChange={handlePinChange}
-            valueLength={4}
-            inputBoxClassName={cn({ "border-red-400": rejected })}
-          />
+          {/* Always rendered, so a screen reader announces the message when it appears. */}
+          <p role="status" className="mt-3 min-h-5 text-sm text-red-700">
+            {pinError ? pinErrorMessages[pinError] : null}
+          </p>
         </div>
-      </div>
+      </main>
     );
   }
 

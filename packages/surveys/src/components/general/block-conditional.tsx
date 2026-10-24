@@ -16,11 +16,18 @@ import {
   shouldHideSubmitButtonForAutoProgress,
   shouldTriggerAutoProgress,
 } from "@/lib/auto-progress";
-import { getLocalizedValue } from "@/lib/i18n";
+import { scrollToFailedElement } from "@/lib/error-scroll";
+import { canMoveFocusInto } from "@/lib/focus-guard";
+import { getLocalizedValue, getTranslations } from "@/lib/i18n";
+import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { getFirstErrorMessage, validateBlockResponses } from "@/lib/validation/evaluator";
+import { getFirstErrorMessage, getFormFieldErrors, validateBlockResponses } from "@/lib/validation/evaluator";
 
 const AUTO_PROGRESS_SUBMIT_DELAY_MS = 350;
+
+const STICKY_ROW_SIDE_FILL = {
+  boxShadow: "-1rem 0 0 0 var(--fb-survey-background-color), 1rem 0 0 0 var(--fb-survey-background-color)",
+};
 
 /**
  * Anchors are deliberately absent: they are focusable, but a link is never what a card asks of the
@@ -88,6 +95,8 @@ interface BlockConditionalProps {
   onOpenExternalURL?: (url: string) => void | Promise<void>;
   dir?: "ltr" | "rtl" | "auto";
   fullSizeCards: boolean;
+  /** The host's cap on the card's scrolling area; with it, the Back/Next row sticks to the card's bottom. */
+  cardMaxHeight?: string;
   isCardless?: boolean;
   surveyLanguages: TSurveyLanguage[];
 }
@@ -114,6 +123,7 @@ export function BlockConditional({
   onOpenExternalURL,
   dir,
   fullSizeCards,
+  cardMaxHeight,
   isCardless = false,
   surveyLanguages,
 }: Readonly<BlockConditionalProps>) {
@@ -122,6 +132,8 @@ export function BlockConditional({
 
   // State to store validation errors from centralized validation
   const [elementErrors, setElementErrors] = useState<TValidationErrorMap>({});
+  // The failing sub-fields of each address or contact-info element in elementErrors
+  const [formFieldErrors, setFormFieldErrors] = useState<Record<string, Record<string, string>>>({});
 
   // Refs to store form elements for each element so we can trigger their validation
   const elementFormRefs = useRef<Map<string, HTMLFormElement>>(new Map());
@@ -130,6 +142,17 @@ export function BlockConditional({
   const ttcCollectorRef = useRef<TResponseTtc>({});
   const autoProgressingInFlightRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The one announcement a failed submit makes. The per-element messages are not live: focus moves to the first invalid control, which reads its own message through aria-describedby.
+  const [errorSummary, setErrorSummary] = useState("");
+  const announceErrorCount = (count: number) => {
+    // Cleared first, so a second failed submit with the same count is a change a screen reader announces again.
+    setErrorSummary("");
+    requestAnimationFrame(() => {
+      // In the survey's language, like the element messages the evaluator produces.
+      const t = getTranslations(languageCode);
+      setErrorSummary(t("errors.x_questions_need_an_answer", { count }));
+    });
+  };
 
   // Screen-reader/keyboard users continue right where they act: when the card
   // appears after user navigation (or on an autofocus-allowed initial render),
@@ -141,7 +164,10 @@ export function BlockConditional({
     // Defer so the card's content (and any card transition) has rendered.
     const timeoutId = setTimeout(() => {
       requestAnimationFrame(() => {
-        if (containerRef.current) focusFirstControl(containerRef.current);
+        // Never pull focus out of the page around the survey, such as the editor field the author is typing in beside the live preview.
+        if (containerRef.current && canMoveFocusInto(containerRef.current)) {
+          focusFirstControl(containerRef.current);
+        }
       });
     }, 0);
 
@@ -150,6 +176,8 @@ export function BlockConditional({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run once when the block mounts
   }, []);
+  // On the link page the Back/Next row stays in view at the bottom of the card's scrolling area, so it is never under the fade or the scroll button.
+  const hasStickyButtonRow = Boolean(cardMaxHeight) && !isCardless;
   const autoProgressElement = getAutoProgressElement(block.elements, isAutoProgressingEnabled);
   const shouldHideSubmitButton = shouldHideSubmitButtonForAutoProgress(
     block.elements,
@@ -166,6 +194,11 @@ export function BlockConditional({
     // Clear error for this element when user makes a change
     if (elementErrors[elementId]) {
       setElementErrors((prev: TValidationErrorMap) => {
+        const updated = { ...prev };
+        delete updated[elementId];
+        return updated;
+      });
+      setFormFieldErrors((prev) => {
         const updated = { ...prev };
         delete updated[elementId];
         return updated;
@@ -331,18 +364,18 @@ export function BlockConditional({
     return true;
   };
 
-  // Find the first invalid form
-  const findFirstInvalidForm = (): HTMLFormElement | null => {
-    let firstInvalidForm: HTMLFormElement | null = null;
+  // Validate every element's form, in order, and return the invalid ones
+  const findInvalidForms = (): HTMLFormElement[] => {
+    const invalidForms: HTMLFormElement[] = [];
 
     for (const element of block.elements) {
       const form = elementFormRefs.current.get(element.id);
       if (form && !validateElementForm(element, form)) {
-        firstInvalidForm ??= form;
+        invalidForms.push(form);
       }
     }
 
-    return firstInvalidForm;
+    return invalidForms;
   };
 
   // Collect TTC values from forms
@@ -395,14 +428,20 @@ export function BlockConditional({
 
     if (hasValidationErrors) {
       setElementErrors(errorMap);
+      setFormFieldErrors(
+        Object.fromEntries(
+          block.elements
+            .filter((element) => errorMap[element.id])
+            .map((element) => [element.id, getFormFieldErrors(element, value[element.id], languageCode)])
+        )
+      );
+      announceErrorCount(Object.keys(errorMap).length);
 
-      // Find the first element with an error, scroll to its input area (not the headline)
-      // and move focus to its first invalid control so keyboard users can fix it directly.
+      // Find the first element with an error, scroll it into view (by its headline when the error fits under it) and move focus to its first invalid control so keyboard users can fix it directly.
       const firstErrorElementId = Object.keys(errorMap)[0];
       const form = elementFormRefs.current.get(firstErrorElementId);
       if (form) {
-        const scrollTarget = form.querySelector("[data-element-input]") ?? form;
-        scrollTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+        scrollToFailedElement(form, scrollBehavior());
         // Defer so aria-invalid from the new error state is in the DOM.
         requestAnimationFrame(() => {
           focusFirstControl(form, true);
@@ -412,10 +451,11 @@ export function BlockConditional({
     }
 
     // Also run legacy validation for elements not yet migrated to centralized validation
-    const firstInvalidForm = findFirstInvalidForm();
+    const invalidForms = findInvalidForms();
+    const firstInvalidForm = invalidForms[0];
     if (firstInvalidForm) {
-      const scrollTarget = firstInvalidForm.querySelector("[data-element-input]") ?? firstInvalidForm;
-      scrollTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      announceErrorCount(invalidForms.length);
+      scrollToFailedElement(firstInvalidForm, scrollBehavior());
       requestAnimationFrame(() => {
         focusFirstControl(firstInvalidForm, true);
       });
@@ -424,6 +464,8 @@ export function BlockConditional({
 
     // Clear any previous errors
     setElementErrors({});
+    setFormFieldErrors({});
+    setErrorSummary("");
 
     // Collect TTC and responses, then submit
     const blockTtc = collectTtcValues();
@@ -433,8 +475,15 @@ export function BlockConditional({
 
   return (
     <div ref={containerRef} className={cn("space-y-6", fullSizeCards ? "h-full" : "")}>
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {errorSummary}
+      </div>
       {/* Scrollable container for the entire block */}
-      <ScrollableContainer fullSizeCards={fullSizeCards} disableInternalScroll={isCardless}>
+      <ScrollableContainer
+        fullSizeCards={fullSizeCards}
+        disableInternalScroll={isCardless}
+        maxHeight={cardMaxHeight}
+        hasStickyFooter={hasStickyButtonRow && !fullSizeCards}>
         <div className="space-y-6">
           <div className="space-y-6">
             {block.elements.map((element, index) => {
@@ -465,6 +514,7 @@ export function BlockConditional({
                   }}
                   onTtcCollect={handleTtcCollect}
                   errorMessage={getFirstErrorMessage(elementErrors, element.id)}
+                  formFieldErrors={formFieldErrors[element.id]}
                 />
               );
             })}
@@ -473,8 +523,12 @@ export function BlockConditional({
           <div
             className={cn(
               "flex w-full flex-row-reverse justify-between",
-              fullSizeCards && !isCardless ? "bg-survey-bg sticky bottom-0" : ""
-            )}>
+              fullSizeCards && !isCardless ? "bg-survey-bg sticky bottom-0" : "",
+              // Above the answers that raise themselves (a selected or focused scale cell), and with room so the row does not sit flush on the content scrolling under it.
+              hasStickyButtonRow && !fullSizeCards ? "bg-survey-bg sticky bottom-0 z-30 py-2" : ""
+            )}
+            // The scroller's side padding is painted too, so an answer's error bar there does not run on beside the row.
+            style={hasStickyButtonRow && !fullSizeCards ? STICKY_ROW_SIDE_FILL : undefined}>
             <div>
               {shouldHideSubmitButton ? (
                 // Keep layout symmetry for Back button positioning (LTR/RTL).

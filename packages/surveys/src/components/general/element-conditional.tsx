@@ -38,6 +38,8 @@ interface ElementConditionalProps {
   formRef?: (ref: HTMLFormElement | null) => void; // Callback to expose the form element
   onTtcCollect?: (elementId: string, ttc: number) => void; // Callback to collect TTC synchronously
   errorMessage?: string; // Validation error message from centralized validation
+  /** The failing sub-fields of an address or contact-info element, each with its own message. */
+  formFieldErrors?: Record<string, string>;
   surveyLanguages: TSurveyLanguage[];
 }
 
@@ -58,6 +60,7 @@ export function ElementConditional({
   onTtcCollect,
   surveyLanguages,
   errorMessage,
+  formFieldErrors,
 }: Readonly<ElementConditionalProps>) {
   // Ref to the container div, used to find and expose the form element inside
   const containerRef = useRef<HTMLDivElement>(null);
@@ -314,6 +317,7 @@ export function ElementConditional({
             autoFocusEnabled={autoFocusEnabled}
             dir={dir}
             errorMessage={errorMessage}
+            formFieldErrors={formFieldErrors}
           />
         );
       case TSurveyElementTypeEnum.Ranking:
@@ -360,6 +364,7 @@ export function ElementConditional({
             autoFocusEnabled={autoFocusEnabled}
             dir={dir}
             errorMessage={errorMessage}
+            formFieldErrors={formFieldErrors}
           />
         );
       default:

@@ -308,7 +308,8 @@ function FileUpload({
       />
 
       <div className="relative" data-element-input>
-        <ElementError errorMessage={errorMessage} dir={dir} id={errorAria.errorId} />
+        {/* Upload failures appear without a submit moving focus here, so this one is announced. */}
+        <ElementError errorMessage={errorMessage} dir={dir} id={errorAria.errorId} live />
 
         <div
           className={cn(

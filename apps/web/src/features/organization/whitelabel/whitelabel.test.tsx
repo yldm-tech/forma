@@ -63,8 +63,8 @@ interface Call {
   body?: string;
 }
 
-/** The server: the instance, the caller, the organization's workspaces, file uploads and the whitelabel writes. Requests are recorded. */
-const stubServer = (storageConfigured = true) => {
+/** The server: the instance, the caller, the instance's options, the organization's workspaces, file uploads and the whitelabel writes. Requests are recorded. */
+const stubServer = (storageConfigured = true, smtpConfigured = true) => {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -78,6 +78,8 @@ const stubServer = (storageConfigured = true) => {
           return json({ storageConfigured, version: "0.2.10" });
         case "GET /api/app/auth/me":
           return json({ id: "u1", name: "Grace", email: "grace@example.com", locale: "en-US" });
+        case "GET /api/app/auth/options":
+          return json({ smtpConfigured });
         case `GET ${API}/workspaces`:
           return json({ workspaces: [{ id: WS, name: "Main" }] });
         case "POST /api/v1/management/storage": {
@@ -193,14 +195,33 @@ describe("EmailCustomizationCard", () => {
     renderAt(
       <EmailCustomizationCard organization={organization(role, { logoUrl: "/storage/a/public/l.png" })} />
     );
-    expect(
-      await screen.findByText(
-        t("common.only_owners_managers_and_manage_access_members_can_perform_this_action")
-      )
-    ).toBeTruthy();
+    await screen.findByTestId("send-test-email-button");
     for (const id of ["replace-logo-button", "remove-logo-button", "send-test-email-button"]) {
       expect((screen.getByTestId(id) as HTMLButtonElement).disabled).toBe(true);
     }
+    // The page says once, above every card, that the user only looks; the card does not repeat it.
+    expect(
+      screen.queryByText(t("common.only_owners_managers_and_manage_access_members_can_perform_this_action"))
+    ).toBeNull();
+  });
+
+  test("without SMTP no test email is offered, and the card says why", async () => {
+    stubServer(true, false);
+    renderAt(
+      <EmailCustomizationCard organization={organization("owner", { logoUrl: "/storage/a/public/l.png" })} />
+    );
+    const hint = await screen.findByText(t("workspace.settings.general.test_email_requires_smtp"));
+    const button = screen.getByTestId("send-test-email-button") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("aria-describedby")).toBe(hint.id);
+  });
+
+  test("Forma's own logo is drawn at a fixed size in the thumbnail, which would otherwise collapse it", async () => {
+    stubServer();
+    renderAt(<EmailCustomizationCard organization={organization("owner")} />);
+    const replace = await screen.findByTestId("replace-logo-button");
+    const thumbnail = replace.closest(".flex-col")?.querySelector("svg");
+    expect(thumbnail?.getAttribute("class")).toContain("h-16 w-16");
   });
 });
 

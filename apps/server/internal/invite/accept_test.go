@@ -37,9 +37,10 @@ func TestInspectInvite(t *testing.T) {
 		token string
 		want  string
 	}{
-		{"signed out", user{}, valid, `{"status":"valid","email":"grace@example.com"}`},
-		{"the invitee, in another case", grace, valid, `{"status":"valid","email":"grace@example.com"}`},
-		{"someone else", o.member, valid, `{"status":"email_mismatch"}`},
+		{"signed out", user{}, valid, `{"status":"valid","email":"grace@example.com","organizationName":"Acme","inviterName":"Owner"}`},
+		{"the invitee, in another case", grace, valid, `{"status":"valid","email":"grace@example.com","organizationName":"Acme","inviterName":"Owner"}`},
+		// The page names the invited address, so the visitor knows which account to sign in with.
+		{"someone else", o.member, valid, `{"status":"email_mismatch","email":"grace@example.com","organizationName":"Acme","inviterName":"Owner"}`},
 		{"an expired invite", user{}, expired, `{"status":"expired"}`},
 		{"an unknown link", user{}, "bm90LWEtbGluaw", `{"status":"not_found"}`},
 	}

@@ -2,7 +2,7 @@ import type { TDisplayWithContact } from "@forma/types/displays";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
 import { Link } from "@tanstack/react-router";
-import { AlertCircleIcon, InfoIcon, TimerIcon } from "lucide-react";
+import { AlertCircleIcon, InfoIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
 import { ProgressBar } from "../../../../components/ui/progress-bar";
@@ -31,12 +31,18 @@ export const SummaryDropOffs = ({
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs">
       <div className="grid min-h-10 grid-cols-6 items-center rounded-t-xl border-b border-slate-200 bg-slate-100 text-sm font-semibold text-slate-600">
         <div className="col-span-3 px-4 md:px-6">{t("common.questions")}</div>
-        <div className="flex justify-end px-4 md:px-6">
+        <div className="flex items-center justify-end gap-1 px-4 md:px-6">
+          <span>{t("workspace.surveys.summary.avg_time")}</span>
           <TooltipRenderer
             tooltipContent={
               <p className="text-center font-normal">{t("workspace.surveys.summary.ttc_tooltip")}</p>
             }>
-            <TimerIcon className="size-5" aria-label={t("workspace.surveys.summary.ttc_tooltip")} />
+            <button
+              type="button"
+              className="focus-visible:ring-ring flex cursor-help items-center rounded-full text-slate-500 hover:text-slate-700 focus-visible:ring-2 focus-visible:outline-hidden"
+              aria-label={t("workspace.surveys.summary.ttc_tooltip")}>
+              <InfoIcon className="size-4" />
+            </button>
           </TooltipRenderer>
         </div>
         <div className="px-4 text-right md:px-6">{t("workspace.surveys.summary.impressions")}</div>

@@ -122,6 +122,7 @@ export function Survey({
   hiddenFieldsRecord,
   shouldResetQuestionId,
   fullSizeCards = false,
+  cardMaxHeight,
   autoFocus,
   action,
   singleUseId,
@@ -534,6 +535,8 @@ export function Survey({
   useEffect(() => {
     if (getSetBlockId) {
       getSetBlockId((value: string) => {
+        // A card chosen from outside (the editor selecting a question, the preview's reset) is not the respondent navigating, so the card it opens must not take focus.
+        hasUserNavigatedRef.current = false;
         setBlockId(value);
       });
     }
@@ -1394,6 +1397,7 @@ export function Survey({
             variablesData={currentVariables}
             isPreviewMode={isPreviewMode}
             fullSizeCards={fullSizeCards}
+            cardMaxHeight={cardMaxHeight}
             isCardless={isCardless}
           />
         );
@@ -1416,6 +1420,7 @@ export function Survey({
               onOpenExternalURL={onOpenExternalURL}
               isPreviewMode={isPreviewMode}
               fullSizeCards={fullSizeCards}
+              cardMaxHeight={cardMaxHeight}
               isCardless={isCardless}
               isOfflineWithPending={offlinePersistEnabled && !isOnline && isSurveyFinished}
             />
@@ -1454,6 +1459,7 @@ export function Survey({
               onOpenExternalURL={onOpenExternalURL}
               dir={dir}
               fullSizeCards={fullSizeCards}
+              cardMaxHeight={cardMaxHeight}
               isCardless={isCardless}
             />
           )

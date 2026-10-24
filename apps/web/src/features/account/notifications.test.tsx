@@ -48,8 +48,8 @@ const organizations: NotificationOrganization[] = [
   },
 ];
 
-/** The Go server: the notification settings, a PATCH that answers 204, and the remembered workspace. */
-const stubServer = () => {
+/** The Go server: the notification settings, a PATCH that answers 204, the remembered workspace, and the instance's options. */
+const stubServer = (smtpConfigured = true) => {
   const patches: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -62,6 +62,7 @@ const stubServer = () => {
       }
       if (path === "/api/app/auth/me/notifications") return json({ organizations });
       if (path === `/api/app/workspaces/${WS}`) return json({ id: WS, name: "Website" });
+      if (path === "/api/app/auth/options") return json({ smtpConfigured });
       return new Response(JSON.stringify({ code: "not_found", message: path }), {
         status: 404,
         headers: { "content-type": "application/json" },
@@ -148,4 +149,12 @@ test("Slack and Discord notifications point to the integrations of the workspace
     name: i18n.t("workspace.settings.notifications.use_the_integration"),
   });
   expect(link.getAttribute("href")).toBe(`/workspaces/${WS}/integrations`);
+});
+
+test("says no alert is mailed while the instance has no SMTP", async () => {
+  stubServer(false);
+  renderPage({});
+  expect(
+    await screen.findByText(i18n.t("workspace.settings.notifications.email_not_configured"))
+  ).toBeTruthy();
 });

@@ -127,6 +127,8 @@
   /* ── Inputs ────────────────────────────────────────────────────────── */
   --fb-input-bg-color: #edf0f9;
   --fb-input-border-color: #a5b3df;
+  /* Radio and checkbox indicator rings (WCAG 1.4.11 needs 3:1 against the option background; #a5b3df on #edf0f9 is about 1.9:1). Derived from the input text colour, so an author's theme carries it; the field-border colour above stays for text fields. */
+  --fb-control-border-color: color-mix(in srgb, var(--fb-input-text-color, var(--fb-input-color)) 65%, white);
   --fb-input-border-radius: 8px;
   --fb-input-font-family: inherit;
   --fb-input-font-size: 14px;
@@ -352,14 +354,21 @@
   }
 
   /* Scale cells (NPS / rating numbers) sit flush together and against the card's
-     scroll edge, so the default outer ring is clipped (WCAG 2.4.11). Paint a single
-     brand ring inset instead and raise the focused cell. The negative outline-offset
-     keeps it inset under forced-colors too, where box-shadows drop and the base
-     rule's positive-offset outline would otherwise reintroduce the clipping. */
+     scroll edge, so the default outer ring is clipped (WCAG 2.4.11). Paint the ring inset
+     instead and raise the focused cell. It is a dashed outline, not a solid brand border:
+     the selected cell is a solid fill, and focus (the card's mount focus, or arrow keys,
+     which move focus without selecting) must never look like a choice. On the selected
+     cell the outline takes the button text colour so it stays visible on the fill. An
+     outline also stays visible under forced-colors, where box-shadows drop. */
   #fbjs label[data-fb-scale-cell]:has(input[type="radio"]:focus-visible) {
     z-index: 20;
-    outline-offset: calc(-1 * var(--fb-focus-ring-outer-width)) !important;
-    box-shadow: inset 0 0 0 var(--fb-focus-ring-outer-width) var(--fb-focus-ring-outer-color) !important;
+    box-shadow: none !important;
+    outline: var(--fb-focus-ring-outer-width) dashed var(--fb-focus-ring-outer-color) !important;
+    outline-offset: calc(-2 * var(--fb-focus-ring-outer-width)) !important;
+  }
+
+  #fbjs label[data-fb-scale-cell]:has(input[type="radio"]:checked:focus-visible) {
+    outline-color: var(--fb-button-text-color) !important;
   }
 
   /* Dropdown menu options: the menu content clips overflowing shadows (overflow-hidden

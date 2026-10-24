@@ -112,6 +112,7 @@
     "value_must_contain": "Az értéknek tartalmaznia kell ezt: {value}",
     "value_must_equal": "Az értéknek egyenlőnek kell lennie ezzel: {value}",
     "value_must_not_contain": "Az érték nem tartalmazhatja ezt: {value}",
-    "value_must_not_equal": "Az érték nem lehet egyenlő ezzel: {value}"
+    "value_must_not_equal": "Az érték nem lehet egyenlő ezzel: {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} kérdésre válaszolni kell} other {{count} kérdésre válaszolni kell}}"
   }
 }

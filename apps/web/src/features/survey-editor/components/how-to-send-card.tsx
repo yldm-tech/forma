@@ -1,5 +1,5 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { CheckIcon, LinkIcon, MonitorIcon } from "lucide-react";
+import { SendIcon, LinkIcon, MonitorIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TSegment } from "@forma/types/segment";
@@ -92,14 +92,13 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
         "w-full space-y-2 rounded-lg border border-slate-300 bg-white"
       )}>
       <Collapsible.CollapsibleTrigger
-        asChild
-        className="h-full w-full cursor-pointer"
+        className="h-full w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700"
         id="howToSendCardTrigger">
         <div className="inline-flex px-4 py-4">
           <div className="flex items-center pr-5 pl-2">
-            <CheckIcon
-              strokeWidth={3}
-              className="size-7 rounded-full border border-green-300 bg-green-100 p-1.5 text-green-600"
+            <SendIcon
+              aria-hidden="true"
+              className="size-7 rounded-full border border-slate-200 bg-slate-100 p-1.5 text-slate-600"
             />
           </div>
           <div>

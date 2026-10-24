@@ -112,6 +112,7 @@
     "value_must_contain": "Väärtus peab sisaldama {value}",
     "value_must_equal": "Väärtus peab võrduma {value}",
     "value_must_not_contain": "Väärtus ei tohi sisaldada {value}",
-    "value_must_not_equal": "Väärtus ei tohi võrduda {value}"
+    "value_must_not_equal": "Väärtus ei tohi võrduda {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} küsimus vajab vastust} other {{count} küsimust vajavad vastust}}"
   }
 }

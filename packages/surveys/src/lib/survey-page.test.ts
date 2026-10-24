@@ -1,7 +1,13 @@
+// @vitest-environment happy-dom
 import { describe, expect, test } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { PUBLIC_API_SURVEY_NAME_PLACEHOLDER } from "@forma/types/js-constants";
-import { getSurveyDisplayName, getSurveyPagePosition, hasSurveyInstructions } from "./survey-page";
+import {
+  getSurveyDisplayName,
+  getSurveyPagePosition,
+  getSurveyRespondentName,
+  hasSurveyInstructions,
+} from "./survey-page";
 
 const block = (id: string) => ({ id, name: id, elements: [] });
 
@@ -148,6 +154,54 @@ describe("getSurveyDisplayName", () => {
     // Only an exact match is the API's substitution; anything else is a name someone chose.
     expect(getSurveyDisplayName(`Re: ${PUBLIC_API_SURVEY_NAME_PLACEHOLDER}`)).toBe(
       `Re: ${PUBLIC_API_SURVEY_NAME_PLACEHOLDER}`
+    );
+  });
+});
+
+describe("getSurveyRespondentName", () => {
+  const named = (overrides: Record<string, unknown>) =>
+    ({
+      name: "Churn Interview Screener",
+      welcomeCard: { enabled: false },
+      ...overrides,
+    }) as unknown as TJsWorkspaceStateSurvey;
+
+  test("the link metadata's title wins, in the active language", () => {
+    const survey = named({
+      metadata: { title: { default: "Help us shape Forma", ja: "Formaの改善にご協力ください" } },
+      welcomeCard: { enabled: true, headline: { default: "Welcome" } },
+    });
+    expect(getSurveyRespondentName(survey, "default")).toBe("Help us shape Forma");
+    expect(getSurveyRespondentName(survey, "ja")).toBe("Formaの改善にご協力ください");
+    // A language the title has no translation for reads the default title.
+    expect(getSurveyRespondentName(survey, "de")).toBe("Help us shape Forma");
+  });
+
+  test("without a title, the welcome card's headline as plain text, with recall fallbacks", () => {
+    const survey = named({
+      welcomeCard: {
+        enabled: true,
+        headline: {
+          default: "<p>Hi <b>#recall:name/fallback:there#</b>, help us out</p>",
+          ja: "<p>ご協力ください</p>",
+        },
+      },
+    });
+    expect(getSurveyRespondentName(survey, "default")).toBe("Hi there, help us out");
+    expect(getSurveyRespondentName(survey, "ja")).toBe("ご協力ください");
+  });
+
+  test("a disabled welcome card is not shown, so its headline is not the name", () => {
+    const survey = named({ welcomeCard: { enabled: false, headline: { default: "Welcome" } } });
+    expect(getSurveyRespondentName(survey, "default")).toBe("Churn Interview Screener");
+  });
+
+  test("an empty title falls through, and the widget's placeholder name is no name", () => {
+    expect(getSurveyRespondentName(named({ metadata: { title: { default: " " } } }), "default")).toBe(
+      "Churn Interview Screener"
+    );
+    expect(getSurveyRespondentName(named({ name: PUBLIC_API_SURVEY_NAME_PLACEHOLDER }), "default")).toBe(
+      undefined
     );
   });
 });

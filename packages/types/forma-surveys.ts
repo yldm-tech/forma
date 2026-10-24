@@ -44,6 +44,10 @@ export interface SurveyBaseProps {
   hiddenFieldsRecord?: TResponseHiddenFieldValue;
   shouldResetQuestionId?: boolean;
   fullSizeCards?: boolean;
+  /**
+   * The tallest a card's content may grow before it scrolls inside the card, as a CSS length. The link survey page derives it from the viewport, so a card uses the page instead of a fixed share of it, and keeps the card's Back/Next row in view at the card's bottom. Unset, a card keeps 60dvh (42dvh in the editor preview), which is what the in-app widget gets.
+   */
+  cardMaxHeight?: string;
   showCardlessPreviewLogoSlot?: boolean;
 }
 

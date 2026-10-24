@@ -112,6 +112,7 @@
     "value_must_contain": "Giá trị phải chứa {value}",
     "value_must_equal": "Giá trị phải bằng {value}",
     "value_must_not_contain": "Giá trị không được chứa {value}",
-    "value_must_not_equal": "Giá trị không được bằng {value}"
+    "value_must_not_equal": "Giá trị không được bằng {value}",
+    "x_questions_need_an_answer": "{count, plural, other {{count} câu hỏi cần được trả lời}}"
   }
 }

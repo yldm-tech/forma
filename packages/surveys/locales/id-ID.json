@@ -112,6 +112,7 @@
     "value_must_contain": "Nilai harus mengandung {value}",
     "value_must_equal": "Nilai harus sama dengan {value}",
     "value_must_not_contain": "Nilai tidak boleh mengandung {value}",
-    "value_must_not_equal": "Nilai tidak boleh sama dengan {value}"
+    "value_must_not_equal": "Nilai tidak boleh sama dengan {value}",
+    "x_questions_need_an_answer": "{count, plural, other {{count} pertanyaan perlu dijawab}}"
   }
 }

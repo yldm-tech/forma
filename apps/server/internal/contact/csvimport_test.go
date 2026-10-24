@@ -106,6 +106,14 @@ func TestImportDuplicates(t *testing.T) {
 	if len(res.Contacts) != 1 || res.Contacts[0].Attributes["email"] != "new@example.com" {
 		t.Fatalf("skip: %+v", res.Contacts)
 	}
+	if res.Created != 1 || res.Updated != 0 || res.Skipped != 1 {
+		t.Fatalf("skip counts: created %d, updated %d, skipped %d", res.Created, res.Updated, res.Skipped)
+	}
+	// A file of nothing but known contacts changes nothing, and the counts say so.
+	res = importResult(t, e, owner, ws, "email,plan\nada@example.com,pro\ngrace@example.com,pro\n", DuplicateSkip, nil)
+	if len(res.Contacts) != 0 || res.Created != 0 || res.Updated != 0 || res.Skipped != 2 {
+		t.Fatalf("all duplicates: %+v", res)
+	}
 	if got := e.values(existing); got["plan"] != "free" {
 		t.Fatalf("a skipped duplicate is untouched: %v", got)
 	}
@@ -114,6 +122,9 @@ func TestImportDuplicates(t *testing.T) {
 	if len(res.Contacts) != 1 || res.Contacts[0].ID != existing {
 		t.Fatalf("update: %+v", res.Contacts)
 	}
+	if res.Created != 0 || res.Updated != 1 || res.Skipped != 0 {
+		t.Fatalf("update counts: created %d, updated %d, skipped %d", res.Created, res.Updated, res.Skipped)
+	}
 	if got := e.values(existing); got["plan"] != "pro" || got["userId"] != "ada" || got["lastName"] != "Lovelace" {
 		t.Fatalf("update merges, and a userId another contact holds gives way to the contact's own: %v", got)
 	}
@@ -121,7 +132,10 @@ func TestImportDuplicates(t *testing.T) {
 		t.Fatalf("the other contact keeps its userId: %v", got)
 	}
 
-	importResult(t, e, owner, ws, "email,plan\nada@example.com,team\n", DuplicateOverwrite, nil)
+	res = importResult(t, e, owner, ws, "email,plan\nada@example.com,team\n", DuplicateOverwrite, nil)
+	if res.Created != 0 || res.Updated != 1 || res.Skipped != 0 {
+		t.Fatalf("overwrite counts: created %d, updated %d, skipped %d", res.Created, res.Updated, res.Skipped)
+	}
 	if got := e.values(existing); len(got) != 2 || got["plan"] != "team" || got["email"] != "ada@example.com" {
 		t.Fatalf("overwrite replaces every value: %v", got)
 	}

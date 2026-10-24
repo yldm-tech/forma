@@ -118,14 +118,18 @@ function NPS({
         key={number}
         data-fb-scale-cell
         className={cn(
-          "text-input-text font-input font-input-weight relative flex w-full cursor-pointer items-center justify-center overflow-hidden transition-colors",
+          "font-input font-input-weight relative flex w-full cursor-pointer items-center justify-center overflow-hidden transition-colors",
           borderClasses,
+          // Selected is a solid fill in the button's own colour pair, so it can never be mistaken for the focus outline (dashed, see globals.css) or for the neutral tint of a hovered or arrowed-to cell.
           isSelected
-            ? "bg-brand-20 border-brand z-10 -ml-[1px] border-2 first:ml-0"
-            : "border-input-border bg-input-bg",
+            ? "bg-button-bg border-button-bg text-button-text z-10 font-semibold"
+            : "border-input-border bg-input-bg text-input-text",
           borderRadiusClasses,
           isHovered && !isSelected && "bg-input-selected-bg",
           colorCoding ? "min-h-[47px]" : "min-h-[41px]",
+          // A narrow container (a phone, the in-app widget) wraps the scale into two rows of separate, taller cells: 0-5 above and 6-10 centred below. The DOM order stays 0-10, so arrow keys and RTL work as before.
+          "@max-[420px]:col-span-2 @max-[420px]:min-h-11 @max-[420px]:rounded-(--fb-input-border-radius) @max-[420px]:border",
+          number === 6 && "@max-[420px]:col-start-2",
           disabled && "cursor-not-allowed opacity-50"
         )}
         onMouseEnter={() => {
@@ -184,14 +188,16 @@ function NPS({
             untranslated <legend> that omitted the question. The roving-tabindex model lives on the
             inputs, so the container role does not touch it. */}
         <fieldset
-          className="w-full px-[2px]"
+          className="@container w-full px-[2px]"
           dir={dir}
           role="radiogroup"
           aria-labelledby={`${inputId}-headline`}
           aria-required={required}
           aria-invalid={errorAria.ariaInvalid}
           aria-describedby={errorAria.ariaDescribedBy}>
-          <div className="flex w-full">{npsOptions.map((number) => renderNPSOption(number))}</div>
+          <div className="flex w-full @max-[420px]:grid @max-[420px]:grid-cols-12 @max-[420px]:gap-1.5">
+            {npsOptions.map((number) => renderNPSOption(number))}
+          </div>
 
           {/* Labels */}
           {(lowerLabel ?? upperLabel) ? (

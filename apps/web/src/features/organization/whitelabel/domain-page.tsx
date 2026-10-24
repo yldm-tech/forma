@@ -66,11 +66,9 @@ export const DomainSettingsPage = ({
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.domain")} />
       {instance?.storageConfigured === false && (
-        <div className="max-w-4xl">
-          <Alert variant="warning" role="status">
-            <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
-          </Alert>
-        </div>
+        <Alert variant="warning" role="status">
+          <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
+        </Alert>
       )}
       <FaviconCustomizationCard key={organization.updatedAt} organization={organization} />
       <SettingsCard

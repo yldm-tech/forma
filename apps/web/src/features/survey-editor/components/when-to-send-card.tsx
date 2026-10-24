@@ -175,8 +175,7 @@ export const WhenToSendCard = ({
           showError ? "border-red-400" : "border-slate-300"
         )}>
         <Collapsible.CollapsibleTrigger
-          asChild
-          className="h-full w-full cursor-pointer rounded-lg hover:bg-slate-50"
+          className="h-full w-full cursor-pointer rounded-lg text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700"
           id="whenToSendCardTrigger"
           aria-invalid={showError}>
           <div className="inline-flex px-4 py-4">

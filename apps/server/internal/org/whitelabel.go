@@ -97,8 +97,22 @@ func (s *Service) SendTestEmail(ctx context.Context, userID, organizationID uuid
 	if logo != "" {
 		content.LogoURL = responsemail.ResolveStorageURL(responsemail.PublicBase(s.cfg), logo)
 	}
-	_, err = s.mailer.SendTemplate(ctx, u.Email, u.Locale, content)
-	return err
+	sent, err := s.mailer.SendTemplate(ctx, u.Email, u.Locale, content)
+	if err != nil {
+		return err
+	}
+	if !sent {
+		return errMailNotSent()
+	}
+	return nil
+}
+
+// CodeEmailSendFailed is the auth and invite modules' code for a mail that did not go out.
+const CodeEmailSendFailed = "email_send_failed"
+
+// errMailNotSent refuses a test email the mailer skipped because no SMTP server is configured, so the page reports a failure instead of a delivery that never happened.
+func errMailNotSent() error {
+	return apperr.InvalidInput(CodeEmailSendFailed, "Failed to send email")
 }
 
 // setWhitelabel sets one key of the organization's whitelabel settings, null for a nil value, keeping the others.

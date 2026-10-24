@@ -417,6 +417,9 @@ jobs:
 
           asset="$(curl -s http://localhost:8080/ | grep -o '/_site/assets/main-[^"]*\.js' | head -n 1)"
           curl -sI "http://localhost:8080$asset" | grep -iF 'cache-control: public, max-age=31536000, immutable'
-          curl -sI http://localhost:8080/zh/ | grep -iF 'cache-control: no-cache'
+          curl -sI http://localhost:8080/zh/ | grep -iF 'cache-control: no-cache, no-transform'
+          curl -sI http://localhost:8080/no-such-page | grep -iF 'cache-control: no-cache, no-transform'
+          # no-transform keeps Cloudflare's Web Analytics beacon out of the HTML, but also its compression, so the assets must not carry it. (`set -e` ignores a `!` pipeline, hence the if.)
+          if curl -sI "http://localhost:8080$asset" | grep -qiF 'no-transform'; then echo "$asset: no-transform"; exit 1; fi
           curl -sI http://localhost:8080/zh/ | grep -iF "content-security-policy: default-src 'self'"
           curl -sI -H 'Accept-Encoding: gzip' "http://localhost:8080$asset" | grep -iF 'content-encoding: gzip'

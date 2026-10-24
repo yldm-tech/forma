@@ -1,11 +1,26 @@
 import type { TSurvey } from "@forma/types/surveys/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useRouter } from "@tanstack/react-router";
-import { BellRing, Eye, ListRestart, RefreshCcwIcon, SparklesIcon, SquarePenIcon } from "lucide-react";
+import {
+  BellRing,
+  Eye,
+  ListRestart,
+  MoreHorizontalIcon,
+  RefreshCcwIcon,
+  SparklesIcon,
+  SquarePenIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { ConfirmationModal } from "../../../components/ui/confirmation-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 import { IconBar, type IconAction } from "../../../components/ui/icon-bar";
 import { ApiError } from "../../../lib/api";
 import { errorMessage } from "../../../lib/errors";
@@ -213,7 +228,7 @@ export const SurveyAnalysisCTA = ({
     }
   };
 
-  const iconActions = [
+  const iconActions: IconAction[] = [
     {
       icon: RefreshCcwIcon,
       tooltip: t("common.refresh"),
@@ -249,12 +264,6 @@ export const SurveyAnalysisCTA = ({
     },
     exampleResponsesAction,
     {
-      icon: ListRestart,
-      tooltip: t("workspace.surveys.summary.reset_survey"),
-      onClick: () => setIsResetModalOpen(true),
-      isVisible: !isReadOnly && !survey.archivedAt,
-    },
-    {
       icon: SquarePenIcon,
       tooltip: t("common.edit"),
       onClick: () => {
@@ -266,13 +275,53 @@ export const SurveyAnalysisCTA = ({
     },
   ];
 
+  // Reset deletes every response, so it is a labelled, destructive item of the More menu rather than an icon beside Edit. Below lg the menu also holds the icon actions, so the status, the menu and Share fit a tablet's header.
+  const canReset = !isReadOnly && !survey.archivedAt;
+  const visibleIconActions = iconActions.filter((action) => action.isVisible);
+
   return (
-    <div className="hidden justify-end gap-x-1.5 sm:flex">
+    <div className="hidden items-center justify-end gap-x-1.5 sm:flex">
       {!isReadOnly && (appSetupCompleted || survey.type === "link") && survey.status !== "draft" && (
         <SurveyStatusDropdown survey={survey} />
       )}
 
-      <IconBar actions={iconActions} ariaLabel={t("common.actions")} />
+      <div className="hidden lg:flex">
+        <IconBar actions={iconActions} ariaLabel={t("common.actions")} />
+      </div>
+      {(canReset || visibleIconActions.length > 0) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className={canReset ? undefined : "lg:hidden"}
+              aria-label={t("workspace.surveys.summary.more_actions")}>
+              <MoreHorizontalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            {visibleIconActions.map((action) => (
+              <DropdownMenuItem
+                key={action.tooltip}
+                className="lg:hidden"
+                disabled={action.disabled}
+                icon={<action.icon className="size-4" />}
+                onClick={action.onClick}>
+                {action.tooltip}
+              </DropdownMenuItem>
+            ))}
+            {canReset && visibleIconActions.length > 0 && <DropdownMenuSeparator className="lg:hidden" />}
+            {canReset && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                icon={<ListRestart className="size-4" />}
+                onClick={() => setIsResetModalOpen(true)}>
+                {t("workspace.surveys.summary.reset_survey")}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {!survey.archivedAt && (
         <Button onClick={() => setIsShareOpen(true)}>{t("workspace.surveys.summary.share_survey")}</Button>
       )}
@@ -314,7 +363,7 @@ export const SurveyAnalysisCTA = ({
         open={isResetModalOpen}
         setOpen={setIsResetModalOpen}
         title={t("workspace.surveys.summary.delete_all_existing_responses_and_displays")}
-        body={t("workspace.surveys.summary.reset_survey_warning")}
+        body={t("workspace.surveys.summary.reset_survey_warning_count", { count: responseCount })}
         buttonText={t("workspace.surveys.summary.reset_survey")}
         onConfirm={() => void handleResetSurvey()}
         buttonVariant="destructive"

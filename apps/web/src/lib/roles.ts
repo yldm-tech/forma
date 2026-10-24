@@ -1,6 +1,22 @@
 // forma2's organization and team role rules as the members and teams pages apply them. The server enforces every one of them again; these decide what the pages offer.
 
+import type { TFunction } from "i18next";
+
 export type OrganizationRole = "owner" | "manager" | "member" | "billing";
+
+/** An organization role as the pages name it, in the user's language; the enum value itself is never shown. */
+export const roleLabel = (t: TFunction, role: OrganizationRole): string => {
+  switch (role) {
+    case "owner":
+      return t("workspace.settings.teams.role_owner");
+    case "manager":
+      return t("workspace.settings.teams.role_manager");
+    case "member":
+      return t("workspace.settings.teams.role_member");
+    case "billing":
+      return t("workspace.settings.teams.role_billing");
+  }
+};
 
 export interface AccessFlags {
   isOwner: boolean;

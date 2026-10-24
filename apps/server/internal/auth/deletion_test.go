@@ -162,6 +162,70 @@ func TestDeleteAccountLinkRules(t *testing.T) {
 	expectStatus(t, b.post("/auth/account/delete/request", nil), http.StatusBadRequest, CodeEmailSendFailed)
 }
 
+// Without SMTP nothing is mailed, so the request fails rather than claiming the link went out.
+func TestDeleteAccountByEmailLinkWithoutSMTP(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, func(c *config.Config) { c.SMTPHost = "" })
+	sso := e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true})
+	expectStatus(t, e.sessionFor(sso).post("/auth/account/delete/request", nil), http.StatusBadRequest, CodeEmailSendFailed)
+}
+
+// previewNames reads the deletion preview as "name:workspaces" pairs, in the order the server lists them.
+func previewNames(t *testing.T, r response) []string {
+	t.Helper()
+	expectStatus(t, r, http.StatusOK, "")
+	orgs, ok := r.json()["organizations"].([]any)
+	if !ok {
+		t.Fatalf("organizations is not a list: %s", r.Body.String())
+	}
+	names := []string{}
+	for _, o := range orgs {
+		m := o.(map[string]any)
+		names = append(names, fmt.Sprintf("%v:%v", m["name"], m["workspaceCount"]))
+	}
+	return names
+}
+
+// The deletion preview names exactly the organizations the deletion then removes, and only the caller's own.
+func TestDeletionPreview(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{})
+	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	beta := e.orgWith(map[uuid.UUID]string{id: "owner", other: "member"})
+	alpha := e.orgWith(map[uuid.UUID]string{id: "owner"})
+	shared := e.orgWith(map[uuid.UUID]string{id: "owner", other: "owner"})
+	membership := e.orgWith(map[uuid.UUID]string{other: "owner", id: "member"})
+	e.exec(`UPDATE organizations SET name = 'Beta' WHERE id = ?`, beta)
+	e.exec(`UPDATE organizations SET name = 'Alpha' WHERE id = ?`, alpha)
+	e.exec(`UPDATE organizations SET name = 'Grace Org' WHERE id = ?`, membership)
+	e.exec(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'One'), (?, 'Two')`, beta, beta)
+
+	expectStatus(t, e.browser().get("/auth/deletion-preview"), http.StatusUnauthorized, apperr.CodeNotAuthenticated)
+
+	b := e.browser()
+	b.signIn("ada@example.com", strongPassword)
+	if got := previewNames(t, b.get("/auth/deletion-preview")); strings.Join(got, ",") != "Alpha:0,Beta:2" {
+		t.Fatalf("ada's preview %v", got)
+	}
+	// Another user sees their own organizations only.
+	if got := previewNames(t, e.sessionFor(other).get("/auth/deletion-preview")); strings.Join(got, ",") != "Grace Org:0" {
+		t.Fatalf("grace's preview %v", got)
+	}
+	// A user who owns nothing gets an empty list, not null.
+	if got := previewNames(t, e.sessionFor(e.seedUser("alan@example.com", strongPassword, userOpts{})).get("/auth/deletion-preview")); len(got) != 0 {
+		t.Fatalf("alan's preview %v", got)
+	}
+
+	expectStatus(t, b.post("/auth/account/delete", map[string]string{"password": strongPassword}), http.StatusOK, "")
+	if n := e.count(`SELECT count(*) FROM organizations WHERE id IN (?, ?)`, alpha, beta); n != 0 {
+		t.Errorf("%d previewed organizations survived", n)
+	}
+	if n := e.count(`SELECT count(*) FROM organizations WHERE id IN (?, ?)`, shared, membership); n != 2 {
+		t.Errorf("an organization the preview did not name was deleted (%d left)", n)
+	}
+}
+
 // action:account-delete allows five deletion mails per user per hour; Better Auth's /delete-user allowed five password attempts per address per hour.
 func TestDeleteAccountRateLimits(t *testing.T) {
 	e := newEnv(t)

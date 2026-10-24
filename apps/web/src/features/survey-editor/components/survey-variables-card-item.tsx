@@ -228,7 +228,7 @@ export const SurveyVariablesCardItem = ({
                       form.setValue("value", value === "number" ? 0 : "");
                       field.onChange(value);
                     }}>
-                    <SelectTrigger className="h-10 w-24">
+                    <SelectTrigger className="h-10 w-28 shrink-0">
                       <SelectValue placeholder={t("workspace.surveys.edit.select_type")} />
                     </SelectTrigger>
                     <SelectContent>

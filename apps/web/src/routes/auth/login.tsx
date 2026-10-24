@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authApi, authOptionsQuery, resetSession } from "../../features/auth/api";
 import {
@@ -22,7 +22,7 @@ import { redirectIfSignedIn } from "../../features/auth/guards";
 import { readLastUsed, rememberLastUsed } from "../../features/auth/last-used";
 import { oauthErrorVariant } from "../../features/auth/oauth-error";
 import { type CallbackSearch, callbackSearch, stringParam } from "../../features/auth/search";
-import { emailError, signInPasswordError } from "../../features/auth/validation";
+import { emailError, signInPasswordError, translatedRules } from "../../features/auth/validation";
 import { type Validators, useForm } from "../../lib/form";
 import { pickAttributionParams } from "../../lib/attribution";
 import { appHref } from "../../lib/base-path";
@@ -74,23 +74,31 @@ function LoginPage() {
   const inviteToken = inviteTokenFromCallbackUrl(callbackUrl, origin);
   const errorVariant = oauthErrorVariant(search.error);
 
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [lastUsed] = useState(readLastUsed);
+  // The fields show at once when email is the only way in, when the address is already known (a link that carries it, such as the sign-up success page's), or when the visitor used email last time; otherwise one click reveals them beside the SSO buttons.
+  const [showEmailForm, setShowEmailForm] = useState(
+    () =>
+      options.emailAuthEnabled &&
+      (options.ssoProviders.length === 0 || search.email !== undefined || lastUsed === "Email")
+  );
   const [step, setStep] = useState<Step>("credentials");
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string>();
   const [verifyingCode, setVerifyingCode] = useState(false);
-  const [lastUsed] = useState(readLastUsed);
   const [ssoError, setSsoError] = useState<string>();
   const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const finishSignIn = async () => {
     resetSession(queryClient);
     await navigate({ href: callbackPath(callbackUrl, origin) });
   };
 
+  const rules = useMemo(() => translatedRules(t, CREDENTIAL_RULES), [t]);
+
   const form = useForm<Credentials>({
     defaultValues: { email: search.email ?? "", password: "" },
-    validators: CREDENTIAL_RULES,
+    validators: rules,
     onSubmit: async ({ email, password }) => {
       rememberLastUsed("Email");
       try {
@@ -112,9 +120,12 @@ function LoginPage() {
     },
   });
 
+  // With the address already filled in, the password is what is left to type.
+  const emailPrefilled = search.email !== undefined;
   useEffect(() => {
-    if (showEmailForm && step === "credentials") emailRef.current?.focus();
-  }, [showEmailForm, step]);
+    if (!showEmailForm || step !== "credentials") return;
+    (emailPrefilled ? passwordRef : emailRef).current?.focus();
+  }, [showEmailForm, step, emailPrefilled]);
 
   const submitCode = async (event: FormEvent) => {
     event.preventDefault();
@@ -215,11 +226,14 @@ function LoginPage() {
                     value={form.values.email}
                     error={form.errors.email}
                     onChange={(event) => form.setValue("email", event.target.value)}
+                    // A pasted address often carries a trailing space, which the email rule rejects.
+                    onBlur={(event) => form.setValue("email", event.target.value.trim())}
                   />
                 </Field>
                 <Field id="login-password" label={t("common.password")} error={form.errors.password}>
                   <PasswordInput
                     id="login-password"
+                    ref={passwordRef}
                     name="password"
                     autoComplete="current-password"
                     placeholder="*******"
@@ -233,7 +247,8 @@ function LoginPage() {
                   <div className="text-right">
                     <Link
                       to="/auth/forgot-password"
-                      className="inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-slate-500 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden">
+                      search={{ email: form.values.email.trim() || undefined }}
+                      className="focus-visible:ring-ring inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-slate-500 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
                       {t("auth.login.forgot_your_password")}
                     </Link>
                   </div>
@@ -243,7 +258,15 @@ function LoginPage() {
             {options.emailAuthEnabled && (
               <Button
                 type={showEmailForm ? "submit" : "button"}
-                onClick={showEmailForm ? undefined : () => setShowEmailForm(true)}
+                onClick={
+                  showEmailForm
+                    ? undefined
+                    : (event) => {
+                        // React re-renders this button as type=submit before the click's default action runs, which would then submit the empty form and show every field's error; cancelling the click keeps the reveal a reveal.
+                        event.preventDefault();
+                        setShowEmailForm(true);
+                      }
+                }
                 className="w-full"
                 loading={form.isSubmitting}>
                 <span className="truncate">{t("auth.login.login_with_email")}</span>

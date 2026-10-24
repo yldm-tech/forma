@@ -23,7 +23,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Maximize2Icon } from "lucide-react";
-import { memo, useEffect, useMemo, useState } from "react";
+import { type ReactNode, memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
 import { TableCell, TableRow } from "../../../../components/ui/table";
@@ -31,17 +31,19 @@ import { cn } from "../../../../lib/cn";
 import { readStorage, writeStorage } from "../../../../lib/storage";
 import { toast } from "../../../../lib/toast";
 import { type ExportFormat, analysisApi } from "../../api";
-import { reconcileColumnOrder, seedReservedColumnVisibility } from "../../lib/column-state";
+import { reconcileColumnOrder, recordVisibilityChange, seedColumnVisibility } from "../../lib/column-state";
 import { saveExport } from "../../lib/download";
 import { mapResponsesToTableData } from "../../lib/response-table";
 import {
   DataTableHeader,
   DataTableSettingsModal,
   DataTableToolbar,
+  PINNED_COLUMN_IDS,
   getCommonPinningStyles,
+  isPinnedColumn,
 } from "./data-table-parts";
 import { ResponseCardModal } from "./response-card-modal";
-import { generateResponseTableColumns } from "./response-table-columns";
+import { generateResponseTableColumns, getDefaultHiddenColumnIds } from "./response-table-columns";
 import { SelectedRowSettings } from "./selected-row-settings";
 
 /** Keeps a dragged column on its row, as dnd-kit's restrictToHorizontalAxis did in forma2. */
@@ -61,41 +63,54 @@ const ResponseTableCell = memo(
   ({
     cell,
     row,
+    isSelected,
     isExpanded,
     onOpen,
     expandLabel,
   }: {
     cell: Cell<TResponseTableData, unknown>;
     row: Row<TResponseTableData>;
+    /** The row's selection, passed so the memo re-renders the checkbox: the cell and row objects stay the same when only the selection changes. */
+    isSelected: boolean;
     isExpanded: boolean;
     onOpen: (responseId: string) => void;
     expandLabel: string;
   }) => {
+    const isSelect = cell.column.id === "select";
     const open = () => {
-      if (cell.column.id !== "select") onOpen(row.id);
+      if (!isSelect) onOpen(row.id);
     };
     return (
       <TableCell
         className={cn(
-          "border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
-          row.getIsSelected() && "bg-slate-100",
+          "border-b border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
+          isSelected && "bg-slate-100",
           !cell.column.getIsLastColumn() && "border-r",
-          !cell.column.getIsFirstColumn() && "border-l"
+          isSelect && "px-2"
         )}
         style={{
           width: `${cell.column.getSize()}px`,
-          ...(cell.column.id === "select" ? getCommonPinningStyles(cell.column) : {}),
+          ...(isPinnedColumn(cell.column.id) ? getCommonPinningStyles(cell.column) : {}),
         }}
         onClick={open}>
         <div className="flex w-full items-center">
-          <div className={cn("flex flex-1 items-center truncate", isExpanded ? "h-full" : "h-10")}>
+          {/* The selection cell is not truncated: overflow hidden would clip the checkbox's border. */}
+          <div
+            className={cn(
+              "flex flex-1 items-center",
+              !isSelect && "min-w-0 truncate",
+              isExpanded ? "h-full" : "h-10"
+            )}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </div>
+          {/* A mouse affordance only: the date itself is the row's keyboard stop that opens the response. */}
           {cell.column.id === "createdAt" && (
             <button
               type="button"
-              aria-label={expandLabel}
-              className="hidden shrink-0 cursor-pointer items-center rounded-md border border-slate-200 bg-white p-2 group-hover:flex hover:border-slate-300 focus:outline-hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+              title={expandLabel}
+              className="hidden shrink-0 cursor-pointer items-center rounded-md border border-slate-200 bg-white p-2 group-focus-within:flex group-hover:flex hover:border-slate-300 focus:outline-hidden"
               onClick={(event) => {
                 event.stopPropagation();
                 open();
@@ -121,6 +136,9 @@ export const ResponseTable = ({
   fetchNextPage,
   hasMore,
   isFetchingFirstPage,
+  totalCount,
+  countSummary,
+  emptyState,
   showQuotasColumn,
   locale,
   onResponseChanged,
@@ -130,9 +148,16 @@ export const ResponseTable = ({
   responses: TResponseWithQuotas[];
   environmentTags: TTag[];
   isReadOnly: boolean;
-  fetchNextPage: () => void;
+  /** Loads the next page and resolves to every loaded response, the new page included. */
+  fetchNextPage: () => Promise<TResponseWithQuotas[]>;
   hasMore: boolean;
   isFetchingFirstPage: boolean;
+  /** How many responses match the current filter, when known: the response card's position reads "n of total". */
+  totalCount: number | undefined;
+  /** How many responses are loaded of those matching, shown in the toolbar while no row is selected. */
+  countSummary: ReactNode;
+  /** What shows under the header row when no response matches: it sits outside the table, which is as wide as all its columns, so it stays in view. */
+  emptyState: ReactNode;
   showQuotasColumn: boolean;
   locale: string;
   onResponseChanged: (responseId: string) => void;
@@ -142,8 +167,8 @@ export const ResponseTable = ({
   const orderKey = `${survey.id}-columnOrder`;
   const visibilityKey = `${survey.id}-columnVisibility`;
   const expandKey = `${survey.id}-rowExpand`;
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
-    seedReservedColumnVisibility(readJson<VisibilityState>(visibilityKey) ?? {})
+  const [savedVisibility, setSavedVisibility] = useState<VisibilityState>(
+    () => readJson<VisibilityState>(visibilityKey) ?? {}
   );
   const [rowSelection, setRowSelection] = useState({});
   const [isTableSettingsModalOpen, setIsTableSettingsModalOpen] = useState(false);
@@ -163,6 +188,11 @@ export const ResponseTable = ({
       ),
     [columns]
   );
+  // A column the saved state has never seen gets its default visibility; one the author has shown or hidden keeps that choice.
+  const columnVisibility = useMemo(
+    () => seedColumnVisibility(savedVisibility, getDefaultHiddenColumnIds(survey, defaultColumnOrder)),
+    [savedVisibility, survey, defaultColumnOrder]
+  );
   const [savedOrder, setSavedOrder] = useState<string[]>(() => readJson<string[]>(orderKey) ?? []);
   // A saved order is reconciled with the table's real columns: stale ids drop, new ones take their default place.
   const columnOrder = useMemo(
@@ -173,10 +203,10 @@ export const ResponseTable = ({
   useEffect(() => {
     if (savedOrder.length > 0) writeStorage(orderKey, JSON.stringify(columnOrder));
   }, [columnOrder, orderKey, savedOrder.length]);
+  // Only the author's own choices are stored: a stored default would read as a choice on the next visit and stop following the survey (the single-use id once single-use links are on).
   useEffect(() => {
-    if (Object.keys(columnVisibility).length > 0)
-      writeStorage(visibilityKey, JSON.stringify(columnVisibility));
-  }, [columnVisibility, visibilityKey]);
+    if (Object.keys(savedVisibility).length > 0) writeStorage(visibilityKey, JSON.stringify(savedVisibility));
+  }, [savedVisibility, visibilityKey]);
   useEffect(() => {
     writeStorage(expandKey, JSON.stringify(isExpanded));
   }, [isExpanded, expandKey]);
@@ -211,7 +241,10 @@ export const ResponseTable = ({
     columns: tableColumns,
     getRowId: (row) => row.responseId,
     getCoreRowModel: getCoreRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: (updater) => {
+      const next = typeof updater === "function" ? updater(columnVisibility) : updater;
+      setSavedVisibility((saved) => recordVisibilityChange(saved, columnVisibility, next));
+    },
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: (updater) =>
       setSavedOrder((current) =>
@@ -223,7 +256,7 @@ export const ResponseTable = ({
     columnResizeDirection: "ltr",
     manualPagination: true,
     defaultColumn: { size: 300 },
-    state: { columnOrder, columnVisibility, rowSelection, columnPinning: { left: ["select", "createdAt"] } },
+    state: { columnOrder, columnVisibility, rowSelection, columnPinning: { left: PINNED_COLUMN_IDS } },
   });
 
   const sensors = useSensors(
@@ -254,6 +287,7 @@ export const ResponseTable = ({
   };
 
   const rows = table.getRowModel().rows;
+  const isEmpty = !isFetchingFirstPage && rows.length === 0;
 
   return (
     <div>
@@ -265,7 +299,7 @@ export const ResponseTable = ({
         sensors={sensors}>
         <DataTableToolbar
           selection={
-            table.getFilteredSelectedRowModel().rows.length > 0 && (
+            table.getFilteredSelectedRowModel().rows.length > 0 ? (
               <SelectedRowSettings
                 table={table}
                 onDeleted={handleDeleted}
@@ -274,16 +308,20 @@ export const ResponseTable = ({
                 }
                 downloadResponses={downloadSelectedRows}
               />
+            ) : (
+              countSummary
             )
           }
           setIsExpanded={setIsExpanded}
           setIsTableSettingsModalOpen={setIsTableSettingsModalOpen}
           isExpanded={isExpanded}
         />
-        <div className="w-fit max-w-full overflow-hidden overflow-x-auto rounded-xl border border-slate-200">
-          <div className="w-full overflow-x-auto">
+        {/* The one scroll container of the table, both ways, at most a viewport tall: the header row sticks to its top and the horizontal scrollbar stays in view. */}
+        <div className="max-h-[max(20rem,calc(100dvh-22rem))] w-fit max-w-full overflow-auto rounded-xl border border-slate-200">
+          <div className="w-full">
             <table
-              className="w-full caption-bottom text-sm"
+              // Separate borders belong to their cells, so the pinned columns carry theirs when the table scrolls sideways; collapsed borders stay behind and let the scrolled cells show through.
+              className="w-full caption-bottom border-separate border-spacing-0 text-sm"
               style={{ tableLayout: "fixed" }}
               id="response-table">
               <thead className="text-slate-800 [&_tr]:border-b">
@@ -302,7 +340,9 @@ export const ResponseTable = ({
                 ))}
               </thead>
               {/* Auto animation is off past 200 responses: animating that many rows costs more than it shows. */}
-              <tbody ref={responses.length > 200 ? undefined : parent} className="[&_tr:last-child]:border-0">
+              <tbody
+                ref={responses.length > 200 ? undefined : parent}
+                className="[&_tr:last-child_td]:border-b-0">
                 {rows.map((row) => (
                   <TableRow
                     key={row.id}
@@ -313,6 +353,7 @@ export const ResponseTable = ({
                         key={cell.id}
                         cell={cell}
                         row={row}
+                        isSelected={row.getIsSelected()}
                         isExpanded={isExpanded}
                         onOpen={setSelectedResponseId}
                         expandLabel={t("workspace.surveys.summary.open_response_details")}
@@ -320,21 +361,15 @@ export const ResponseTable = ({
                     ))}
                   </TableRow>
                 ))}
-                {rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      {t("common.no_results")}
-                    </TableCell>
-                  </TableRow>
-                )}
               </tbody>
             </table>
           </div>
+          {isEmpty && <div className="sticky left-0">{emptyState}</div>}
         </div>
 
         {hasMore && data.length > 0 && (
           <div className="mt-4 flex justify-center">
-            <Button onClick={fetchNextPage}>{t("common.load_more")}</Button>
+            <Button onClick={() => void fetchNextPage()}>{t("common.load_more")}</Button>
           </div>
         )}
 
@@ -349,6 +384,9 @@ export const ResponseTable = ({
         <ResponseCardModal
           survey={survey}
           responses={responses}
+          hasMore={hasMore}
+          fetchNextPage={fetchNextPage}
+          totalCount={totalCount}
           environmentTags={environmentTags}
           isReadOnly={isReadOnly}
           onResponseChanged={onResponseChanged}
