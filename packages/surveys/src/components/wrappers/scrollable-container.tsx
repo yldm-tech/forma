@@ -8,6 +8,12 @@ interface ScrollableContainerProps {
   children: JSX.Element;
   fullSizeCards: boolean;
   disableInternalScroll?: boolean;
+  /** The host's cap on the scrolling area (SurveyBaseProps.cardMaxHeight), in place of the default share of the viewport. */
+  maxHeight?: string;
+  /**
+   * The content keeps its submit row stuck to the bottom of the scrolling area. The row then is the next action, so the floating scroll-to-bottom button (which sat over answers and over the row itself) and the bottom fade (which faded the row) are left out.
+   */
+  hasStickyFooter?: boolean;
 }
 
 export interface ScrollableContainerHandle {
@@ -16,7 +22,13 @@ export interface ScrollableContainerHandle {
 
 export const ScrollableContainer = forwardRef<ScrollableContainerHandle, ScrollableContainerProps>(
   (
-    { children, fullSizeCards = false, disableInternalScroll = false }: Readonly<ScrollableContainerProps>,
+    {
+      children,
+      fullSizeCards = false,
+      disableInternalScroll = false,
+      maxHeight: hostMaxHeight,
+      hasStickyFooter = false,
+    }: Readonly<ScrollableContainerProps>,
     ref: Ref<ScrollableContainerHandle>
   ) => {
     const [isAtBottom, setIsAtBottom] = useState(false);
@@ -72,6 +84,8 @@ export const ScrollableContainer = forwardRef<ScrollableContainerHandle, Scrolla
       maxHeight = undefined;
     } else if (fullSizeCards) {
       maxHeight = "calc(100vh - 6rem)";
+    } else if (hostMaxHeight) {
+      maxHeight = hostMaxHeight;
     } else if (isSurveyPreview) {
       maxHeight = "42dvh";
     } else {
@@ -91,7 +105,7 @@ export const ScrollableContainer = forwardRef<ScrollableContainerHandle, Scrolla
           className={cn(disableInternalScroll ? "overflow-visible" : "bg-survey-bg overflow-auto px-4 pt-4")}>
           {children}
         </div>
-        {!disableInternalScroll && !isAtBottom && (
+        {!disableInternalScroll && !isAtBottom && !hasStickyFooter && (
           <>
             <div className="from-survey-bg absolute right-4 bottom-0 left-4 h-4 bg-linear-to-t to-transparent" />
             <ScrollToBottomButton onClick={scrollToBottom} />

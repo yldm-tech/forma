@@ -122,6 +122,7 @@ export function Survey({
   hiddenFieldsRecord,
   shouldResetQuestionId,
   fullSizeCards = false,
+  cardMaxHeight,
   autoFocus,
   action,
   singleUseId,
@@ -1396,6 +1397,7 @@ export function Survey({
             variablesData={currentVariables}
             isPreviewMode={isPreviewMode}
             fullSizeCards={fullSizeCards}
+            cardMaxHeight={cardMaxHeight}
             isCardless={isCardless}
           />
         );
@@ -1418,6 +1420,7 @@ export function Survey({
               onOpenExternalURL={onOpenExternalURL}
               isPreviewMode={isPreviewMode}
               fullSizeCards={fullSizeCards}
+              cardMaxHeight={cardMaxHeight}
               isCardless={isCardless}
               isOfflineWithPending={offlinePersistEnabled && !isOnline && isSurveyFinished}
             />
@@ -1456,6 +1459,7 @@ export function Survey({
               onOpenExternalURL={onOpenExternalURL}
               dir={dir}
               fullSizeCards={fullSizeCards}
+              cardMaxHeight={cardMaxHeight}
               isCardless={isCardless}
             />
           )

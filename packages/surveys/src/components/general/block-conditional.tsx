@@ -95,6 +95,8 @@ interface BlockConditionalProps {
   onOpenExternalURL?: (url: string) => void | Promise<void>;
   dir?: "ltr" | "rtl" | "auto";
   fullSizeCards: boolean;
+  /** The host's cap on the card's scrolling area; with it, the Back/Next row sticks to the card's bottom. */
+  cardMaxHeight?: string;
   isCardless?: boolean;
   surveyLanguages: TSurveyLanguage[];
 }
@@ -121,6 +123,7 @@ export function BlockConditional({
   onOpenExternalURL,
   dir,
   fullSizeCards,
+  cardMaxHeight,
   isCardless = false,
   surveyLanguages,
 }: Readonly<BlockConditionalProps>) {
@@ -172,6 +175,8 @@ export function BlockConditional({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run once when the block mounts
   }, []);
+  // On the link page the Back/Next row stays in view at the bottom of the card's scrolling area, so it is never under the fade or the scroll button.
+  const hasStickyButtonRow = Boolean(cardMaxHeight) && !isCardless;
   const autoProgressElement = getAutoProgressElement(block.elements, isAutoProgressingEnabled);
   const shouldHideSubmitButton = shouldHideSubmitButtonForAutoProgress(
     block.elements,
@@ -476,7 +481,11 @@ export function BlockConditional({
         {errorSummary}
       </div>
       {/* Scrollable container for the entire block */}
-      <ScrollableContainer fullSizeCards={fullSizeCards} disableInternalScroll={isCardless}>
+      <ScrollableContainer
+        fullSizeCards={fullSizeCards}
+        disableInternalScroll={isCardless}
+        maxHeight={cardMaxHeight}
+        hasStickyFooter={hasStickyButtonRow && !fullSizeCards}>
         <div className="space-y-6">
           <div className="space-y-6">
             {block.elements.map((element, index) => {
@@ -516,7 +525,9 @@ export function BlockConditional({
           <div
             className={cn(
               "flex w-full flex-row-reverse justify-between",
-              fullSizeCards && !isCardless ? "bg-survey-bg sticky bottom-0" : ""
+              fullSizeCards && !isCardless ? "bg-survey-bg sticky bottom-0" : "",
+              // Above the answers that raise themselves (a selected or focused scale cell), and with room so the row does not sit flush on the content scrolling under it.
+              hasStickyButtonRow && !fullSizeCards ? "bg-survey-bg sticky bottom-0 z-30 py-2" : ""
             )}>
             <div>
               {shouldHideSubmitButton ? (

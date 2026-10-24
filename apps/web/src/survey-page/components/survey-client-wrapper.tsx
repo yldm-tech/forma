@@ -24,6 +24,11 @@ type SurveyClientWrapperProps = Omit<TSurveyProps, "survey"> & {
   pinAuthToken?: string;
 };
 
+/**
+ * How tall a card's content may grow before it scrolls inside the card, on the full link page. The rest of the viewport is the page's chrome around the card: the stacked cards peeking above it, the progress bar, the "Powered by" line, the legal footer and the page's margins. The runtime's default (60dvh) suits a widget on someone else's page, not a page of its own.
+ */
+const LINK_PAGE_CARD_MAX_HEIGHT = "calc(100dvh - 12rem)";
+
 // The runtime hands these setters out once it renders; the preview bar's reset button calls them.
 let setBlockId = (_: string) => {};
 let setResponseData = (_: TResponseData) => {};
@@ -218,6 +223,7 @@ export const SurveyClientWrapper = ({
           }}
           startAtQuestionId={startAt && isStartAtValid ? startAt : undefined}
           fullSizeCards={isEmbed}
+          cardMaxHeight={isEmbed ? undefined : LINK_PAGE_CARD_MAX_HEIGHT}
           hiddenFieldsRecord={{ ...hiddenFieldsRecord, ...verifiedEmailField }}
           singleUseId={singleUseId}
           singleUseResponseId={singleUseResponseId}
