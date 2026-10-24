@@ -579,8 +579,10 @@ export interface TLinkedEmbeddedField {
 /**
  * Mirrors the date rule `ZEmbeddedData` pins for `date` default values (kept private there on
  * purpose — this module owns read-side semantics, that one owns the row schema).
+ *
+ * The datetime takes seconds optionally, as the Go server's rule does (`isoDateTime` in apps/server/internal/embeddeddata). Since zod 4.5, `z.iso.datetime()` alone requires seconds whenever the value ends in `Z`, so the minute-precision form (`2026-08-06T10:30Z`) is its own arm; without it a value the server stored would no longer resolve here.
  */
-const ZIsoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime()]);
+const ZIsoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime(), z.iso.datetime({ precision: -1 })]);
 
 /**
  * Coerces a raw stored value to a field's `dataType`, returning `undefined` when the value cannot
