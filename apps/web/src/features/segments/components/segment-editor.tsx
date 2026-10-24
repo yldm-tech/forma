@@ -42,8 +42,8 @@ export function SegmentEditor({
   viewOnly = false,
 }: TSegmentEditorProps) {
   const { t } = useTranslation();
-  const [addFilterModalOpen, setAddFilterModalOpen] = useState(false);
-  const [addFilterModalOpenedFromBelow, setAddFilterModalOpenedFromBelow] = useState(false);
+  // The group whose add-filter modal is open, and whether the filter goes inside the group or below it. One per editor level, so a level with several groups opens the modal of the group asked, not of every group.
+  const [addFilterTarget, setAddFilterTarget] = useState<{ groupId: string; below: boolean } | null>(null);
 
   const handleAddFilterBelow = (resourceId: string, filter: TBaseFilter) => {
     const localSegmentCopy = structuredClone(segment);
@@ -155,7 +155,7 @@ export function SegmentEditor({
                     disabled={viewOnly}
                     onClick={() => {
                       if (viewOnly) return;
-                      setAddFilterModalOpen(true);
+                      setAddFilterTarget({ groupId, below: false });
                     }}
                     size="sm"
                     variant="secondary">
@@ -166,30 +166,37 @@ export function SegmentEditor({
                 <AddFilterModal
                   contactAttributeKeys={contactAttributeKeys}
                   onAddFilter={(filter) => {
-                    if (addFilterModalOpenedFromBelow) {
+                    if (addFilterTarget?.below) {
                       handleAddFilterBelow(groupId, filter);
-                      setAddFilterModalOpenedFromBelow(false);
                     } else {
                       handleAddFilterInGroup(groupId, filter);
                     }
+                    setAddFilterTarget(null);
                   }}
-                  open={addFilterModalOpen}
+                  open={addFilterTarget?.groupId === groupId}
                   segments={segments}
-                  setOpen={setAddFilterModalOpen}
+                  setOpen={(open) => {
+                    if (!open) setAddFilterTarget(null);
+                  }}
                 />
               </div>
 
               <div className="flex items-center gap-2 p-4">
                 <DropdownMenu>
-                  <DropdownMenuTrigger data-testid="segment-editor-group-menu-trigger" disabled={viewOnly}>
-                    <MoreVertical className="size-4" />
+                  <DropdownMenuTrigger asChild disabled={viewOnly}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label={t("common.actions")}
+                      data-testid="segment-editor-group-menu-trigger">
+                      <MoreVertical className="size-4" />
+                    </Button>
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent>
                     <DropdownMenuItem
                       onClick={() => {
-                        setAddFilterModalOpenedFromBelow(true);
-                        setAddFilterModalOpen(true);
+                        setAddFilterTarget({ groupId, below: true });
                       }}>
                       {t("workspace.segments.add_filter_below")}
                     </DropdownMenuItem>
@@ -221,14 +228,15 @@ export function SegmentEditor({
                 </DropdownMenu>
 
                 <Button
-                  className="p-0"
+                  size="icon"
+                  aria-label={t("common.delete")}
                   data-testid="delete-resource"
                   disabled={viewOnly}
                   onClick={() => {
                     if (viewOnly) return;
                     handleDeleteResource(groupId);
                   }}
-                  variant="ghost">
+                  variant="outline">
                   <Trash2 className={cn("h-4 w-4 cursor-pointer", viewOnly && "cursor-not-allowed")} />
                 </Button>
               </div>

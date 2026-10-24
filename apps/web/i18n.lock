@@ -2186,6 +2186,9 @@ checksums:
     workspace/segments/phone: b9537ee90fc5b0116942e0af29d926cc
     workspace/segments/please_remove_the_segment_from_these_surveys_in_order_to_delete_it: 1858a8ae40bed3a8c06c3bb518e0b8aa
     workspace/segments/pre_segment_users: 98d0e04d155d64c136a9065619676674
+    workspace/segments/preview_count: 101c3acc7c9bd0ab13075d832a942723
+    workspace/segments/preview_count_approximate: 97cc515a17cf34a754cc07850dd1db4c
+    workspace/segments/preview_count_failed: e76fafe459058aac8051ad0c886c44e4
     workspace/segments/remove_all_filters: 115828cbda8a4733df1e9e2661bf7e55
     workspace/segments/reset_all_filters: 0de0d7962a1179fac358cb1cf9546df3
     workspace/segments/save_as_new_segment: d9d42bdeabf936d4ec97325dbdca0012

@@ -2,7 +2,7 @@ import type { TBaseFilters } from "@forma/types/segment";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { FilterIcon, PlusIcon, Trash2, UsersIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { DataTable } from "../../components/ui/data-table";
@@ -33,7 +33,10 @@ import { appendFilter, canSaveSegment, segmentActivitySummary } from "../../lib/
 import { formatDateForDisplay, formatDateTimeForDisplay, timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
 import { ContactsPageLayout } from "../contacts/contacts-layout";
-import { AddFilterButton, SegmentEditor } from "./segment-editor";
+import { AddFilterModal } from "./components/add-filter-modal";
+import { SegmentEditor } from "./components/segment-editor";
+import { SegmentPreviewCount } from "./components/segment-preview-count";
+import { formSegment, formSetSegment, toContactAttributeKey, toEditorSegment } from "./lib/editor-adapter";
 
 const column = createColumnHelper<Segment>();
 
@@ -67,6 +70,16 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
             )}
           </div>
         </div>
+      ),
+    }),
+    column.accessor("contactCount", {
+      header: t("common.contacts"),
+      cell: (info) => (
+        <SegmentContactCount
+          count={info.getValue()}
+          approximate={info.row.original.contactCountApproximate ?? false}
+          locale={me.locale}
+        />
       ),
     }),
     column.accessor("updatedAt", {
@@ -128,9 +141,34 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
   );
 };
 
-/** The title, description and filter tree shared by the create and settings forms. */
+/** A segment's contact count in the list; an approximate one is marked and says why. */
+const SegmentContactCount = ({
+  count,
+  approximate,
+  locale,
+}: {
+  count: number | undefined;
+  approximate: boolean;
+  locale: string;
+}) => {
+  const { t } = useTranslation();
+  if (count === undefined) return <span className="text-sm text-slate-500">-</span>;
+  const formatted = new Intl.NumberFormat(locale).format(count);
+  if (!approximate) return <span className="text-sm text-slate-900 tabular-nums">{formatted}</span>;
+  const note = t("workspace.segments.preview_count_approximate");
+  return (
+    <span className="text-sm text-slate-900 tabular-nums" title={note}>
+      <span aria-hidden>≈ </span>
+      {formatted}
+      <span className="sr-only"> ({note})</span>
+    </span>
+  );
+};
+
+/** The title, description and filter tree shared by the create and settings forms. The tree is edited with the survey editor's segment editor, through a segment whose filters are the form's. */
 const SegmentForm = ({
   workspaceId,
+  segmentId,
   title,
   setTitle,
   description,
@@ -143,6 +181,7 @@ const SegmentForm = ({
   viewOnly,
 }: {
   workspaceId: string;
+  segmentId?: string;
   title: string;
   setTitle: (title: string) => void;
   description: string;
@@ -155,18 +194,10 @@ const SegmentForm = ({
   viewOnly: boolean;
 }) => {
   const { t } = useTranslation();
-  const context = {
-    workspaceId,
-    attributeKeys,
-    segments,
-    linkedSurveyIds,
-    viewOnly,
-    edit: (change: (tree: TBaseFilters) => void) => {
-      const copy = structuredClone(filters);
-      change(copy);
-      setFilters(copy);
-    },
-  };
+  const [addFilterOpen, setAddFilterOpen] = useState(false);
+  const contactAttributeKeys = useMemo(() => attributeKeys.map(toContactAttributeKey), [attributeKeys]);
+  const editorSegments = useMemo(() => segments.map(toEditorSegment), [segments]);
+  const segment = formSegment({ segmentId, workspaceId, filters, linkedSurveyIds });
   return (
     <>
       <div className="flex w-full items-center gap-4">
@@ -202,15 +233,33 @@ const SegmentForm = ({
               </h3>
             </div>
           )}
-          <SegmentEditor group={filters} context={context} />
+          <SegmentEditor
+            group={filters}
+            segment={segment}
+            segments={editorSegments}
+            contactAttributeKeys={contactAttributeKeys}
+            setSegment={formSetSegment(segment, setFilters)}
+            viewOnly={viewOnly}
+          />
           <div>
-            <AddFilterButton
+            <Button
+              size="sm"
+              variant="secondary"
               className="w-fit"
-              context={context}
-              onAdd={(filter) => setFilters(appendFilter(filters, filter))}
-            />
+              disabled={viewOnly}
+              onClick={() => setAddFilterOpen(true)}>
+              {t("common.add_filter")}
+            </Button>
           </div>
+          <AddFilterModal
+            open={addFilterOpen}
+            setOpen={setAddFilterOpen}
+            contactAttributeKeys={contactAttributeKeys}
+            segments={editorSegments}
+            onAddFilter={(filter) => setFilters(appendFilter(filters, filter))}
+          />
         </div>
+        {filters.length > 0 && <SegmentPreviewCount workspaceId={workspaceId} filters={filters} />}
       </div>
     </>
   );
@@ -454,6 +503,7 @@ const SegmentSettings = ({
     <div>
       <SegmentForm
         workspaceId={workspaceId}
+        segmentId={segment.id}
         title={title}
         setTitle={setTitle}
         description={description}

@@ -43,6 +43,7 @@ func (h *Handler) Register(r gin.IRouter) {
 
 	g.GET("/workspaces/:workspaceId/segments", h.segments)
 	g.POST("/workspaces/:workspaceId/segments", h.createSegment)
+	g.POST("/workspaces/:workspaceId/segments/preview-count", h.previewSegmentCount)
 	g.GET("/workspaces/:workspaceId/segment-surveys", h.surveyRefs)
 	g.GET("/segments/:segmentId", h.segment)
 	g.PATCH("/segments/:segmentId", h.updateSegment)
@@ -341,6 +342,25 @@ func (h *Handler) segments(c *gin.Context) {
 	}
 	segs, err := h.svc.Segments(c.Request.Context(), userID(c), ws)
 	respond(c, http.StatusOK, segs, err)
+}
+
+// previewSegmentCountRequest is a filter tree being edited, not yet saved.
+type previewSegmentCountRequest struct {
+	Filters json.RawMessage `json:"filters" binding:"required"`
+}
+
+func (h *Handler) previewSegmentCount(c *gin.Context) {
+	ws, ok := pathID(c, "workspaceId")
+	if !ok {
+		return
+	}
+	var req previewSegmentCountRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	count, err := h.svc.PreviewSegmentCount(c.Request.Context(), userID(c), ws, req.Filters)
+	respond(c, http.StatusOK, count, err)
 }
 
 func (h *Handler) surveyRefs(c *gin.Context) {

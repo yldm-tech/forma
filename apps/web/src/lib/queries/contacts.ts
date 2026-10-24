@@ -63,6 +63,10 @@ export interface Segment {
   surveys: string[];
   activeSurveys: SurveyRef[];
   inactiveSurveys: SurveyRef[];
+  /** How many of the workspace's contacts the segment matches: set on the public segments of the list, absent on private ones and on a segment that could not be evaluated. */
+  contactCount?: number;
+  /** The count left out device or survey-interaction filters. */
+  contactCountApproximate?: boolean;
 }
 
 /** A survey offered by the survey-interaction filter. */
