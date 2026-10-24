@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vp test run"
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage"
   },
   "devDependencies": {
     "@forma/config-typescript": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "vite-plus": "catalog:"
   }
 }

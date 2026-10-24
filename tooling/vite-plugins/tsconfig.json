@@ -2,6 +2,7 @@
   "exclude": ["node_modules", "dist"],
   "extends": "@forma/config-typescript/js-library.json",
   "compilerOptions": {
+    "noEmit": true,
     "types": ["node"]
   }
 }
