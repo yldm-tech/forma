@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -787,5 +788,35 @@ func TestLoadersAcceptProductionForma2URLs(t *testing.T) {
 	}
 	if _, err := SourceDatabaseURL(prodDirectURL + "&schema=tenant"); err == nil || !strings.Contains(err.Error(), "--source") {
 		t.Errorf("SourceDatabaseURL accepted another schema: %v", err)
+	}
+}
+
+// The admin pages live under /app on WEBAPP_URL, whatever path, query or trailing slash WEBAPP_URL was written with.
+func TestAppURL(t *testing.T) {
+	cases := []struct {
+		webApp, app, page string
+	}{
+		{"https://forma.example.com", "https://forma.example.com/app", "https://forma.example.com/app/auth/login"},
+		{"https://forma.example.com/", "https://forma.example.com/app", "https://forma.example.com/app/auth/login"},
+		{"http://localhost:3000/?x=1#y", "http://localhost:3000/app", "http://localhost:3000/app/auth/login"},
+		{"https://example.com/forma/", "https://example.com/forma/app", "https://example.com/forma/app/auth/login"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.webApp, func(t *testing.T) {
+			u, err := url.Parse(tc.webApp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg := Config{WebAppURL: u}
+			if got := cfg.AppURL().String(); got != tc.app {
+				t.Errorf("AppURL = %s, want %s", got, tc.app)
+			}
+			if got := cfg.AppPageURL("/auth/login").String(); got != tc.page {
+				t.Errorf("AppPageURL = %s, want %s", got, tc.page)
+			}
+			if cfg.WebAppURL.String() != tc.webApp {
+				t.Errorf("WEBAPP_URL changed to %s", cfg.WebAppURL)
+			}
+		})
 	}
 }

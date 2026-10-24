@@ -44,7 +44,7 @@ func errNotAllowed(code string) *apperr.Error {
 
 // billingURL is where Stripe sends the browser back to, the organization's billing settings.
 func (e *Engine) billingURL(organizationID uuid.UUID) string {
-	return e.cfg.WebAppURL.JoinPath("organizations", organizationID.String(), "settings", "billing").String()
+	return e.cfg.AppURL().JoinPath("organizations", organizationID.String(), "settings", "billing").String()
 }
 
 // PortalURL is forma2's createCustomerPortalSession: a Stripe customer portal session returning to the billing page.
@@ -89,7 +89,7 @@ func (e *Engine) PlanCheckoutURL(ctx context.Context, organizationID uuid.UUID, 
 	for _, it := range item.lineItems() {
 		lines = append(lines, &stripe.CheckoutSessionCreateLineItemParams{Price: stripe.String(it.Price), Quantity: it.Quantity})
 	}
-	success := e.cfg.WebAppURL.JoinPath("billing-confirmation")
+	success := e.cfg.AppURL().JoinPath("billing-confirmation")
 	success.RawQuery = "organizationId=" + organizationID.String() + "&checkout_success=1&plan=" + plan
 	params := &stripe.CheckoutSessionCreateParams{
 		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)), Customer: stripe.String(customerID), LineItems: lines,

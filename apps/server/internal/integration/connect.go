@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
@@ -78,7 +79,7 @@ func (s *Service) Authorize(ctx context.Context, actor httpapi.Actor, workspaceI
 	return s.p.slackAuthorizeURL(state), nil
 }
 
-// callbackPaths are where each callback sends the browser back to, under WEBAPP_URL: forma2's paths, the Airtable, Notion and Slack ones through the old settings location the SPA forwards.
+// callbackPaths are where each callback sends the browser back to, under the app's base path on WEBAPP_URL: forma2's paths, the Airtable, Notion and Slack ones through the old settings location the SPA forwards.
 var callbackPaths = map[string]string{
 	TypeGoogleSheets: "/integrations/google-sheets",
 	TypeAirtable:     "/settings/workspace/integrations/airtable",
@@ -87,7 +88,7 @@ var callbackPaths = map[string]string{
 }
 
 func (s *Service) pageURL(typ string, workspaceID uuid.UUID, errorCode string) string {
-	u := s.p.webApp + "/workspaces/" + workspaceID.String() + callbackPaths[typ]
+	u := s.p.webApp + config.AppBasePath + "/workspaces/" + workspaceID.String() + callbackPaths[typ]
 	if errorCode != "" {
 		u += "?error=" + url.QueryEscape(errorCode)
 	}

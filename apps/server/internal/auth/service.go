@@ -133,20 +133,14 @@ func (s *Service) issueVerification(ctx context.Context, repo *Repository, purpo
 
 // link is an absolute URL to an SPA page carrying a token.
 func (s *Service) link(path, token string) string {
-	u := *s.cfg.WebAppURL
-	u.Path = path
+	u := s.cfg.AppPageURL(path)
 	u.RawQuery = url.Values{"token": {token}}.Encode()
-	u.Fragment = ""
 	return u.String()
 }
 
 // pageURL is an absolute URL to an SPA page.
 func (s *Service) pageURL(path string) string {
-	u := *s.cfg.WebAppURL
-	u.Path = path
-	u.RawQuery = ""
-	u.Fragment = ""
-	return u.String()
+	return s.cfg.AppPageURL(path).String()
 }
 
 // sendVerificationEmail mails a fresh verification link and reports whether it went out. A failure, including a mailer with no SMTP server, is logged with the user id and the address's domain only, never the address or the link.

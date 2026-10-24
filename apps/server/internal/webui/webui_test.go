@@ -5,6 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -48,14 +51,21 @@ func TestServe(t *testing.T) {
 		wantBody           string
 		wantCache          string
 	}{
-		{"root serves index", http.MethodGet, "/", http.StatusOK, indexHTML, "no-cache"},
-		{"client route falls back to index", http.MethodGet, "/workspaces/abc/surveys", http.StatusOK, indexHTML, "no-cache"},
-		{"fingerprinted asset is immutable", http.MethodGet, "/assets/app-1a2b.js", http.StatusOK, "console.log(1)", "public, max-age=31536000, immutable"},
-		{"other static file revalidates", http.MethodGet, "/robots.txt", http.StatusOK, "User-agent", "no-cache"},
-		{"missing asset is 404, not index", http.MethodGet, "/assets/app-old.js", http.StatusNotFound, "", ""},
+		{"the app's root serves index", http.MethodGet, "/app/", http.StatusOK, indexHTML, "no-cache"},
+		{"the app's base without a slash serves index", http.MethodGet, "/app", http.StatusOK, indexHTML, "no-cache"},
+		{"client route falls back to index", http.MethodGet, "/app/workspaces/abc/surveys", http.StatusOK, indexHTML, "no-cache"},
+		{"fingerprinted asset is immutable", http.MethodGet, "/app/assets/app-1a2b.js", http.StatusOK, "console.log(1)", "public, max-age=31536000, immutable"},
+		{"other static file revalidates", http.MethodGet, "/app/robots.txt", http.StatusOK, "User-agent", "no-cache"},
+		{"missing asset is 404, not index", http.MethodGet, "/app/assets/app-old.js", http.StatusNotFound, "", ""},
+		{"assets are not served at the root", http.MethodGet, "/assets/app-1a2b.js", http.StatusNotFound, "", ""},
+		{"a file outside the root list is not served at the root", http.MethodGet, "/robots.txt", http.StatusNotFound, "", ""},
+		{"index is not served at the root", http.MethodGet, "/index.html", http.StatusNotFound, "", ""},
+		{"an unknown root path is 404, not the app", http.MethodGet, "/pricing", http.StatusNotFound, "", ""},
+		{"a path that only starts like the base is not the app", http.MethodGet, "/apple", http.StatusNotFound, "", ""},
 		{"unknown API route is JSON 404", http.MethodGet, "/api/v3/nope", http.StatusNotFound, `"code":"not_found"`, ""},
-		{"POST to a page is rejected", http.MethodPost, "/workspaces", http.StatusMethodNotAllowed, "", ""},
-		{"path traversal stays inside the build", http.MethodGet, "/../../etc/passwd", http.StatusOK, indexHTML, "no-cache"},
+		{"POST to a page is rejected", http.MethodPost, "/app/workspaces", http.StatusMethodNotAllowed, "", ""},
+		{"path traversal stays inside the build", http.MethodGet, "/app/../../etc/passwd", http.StatusOK, indexHTML, "no-cache"},
+		{"path traversal at the root finds nothing", http.MethodGet, "/../../etc/passwd", http.StatusNotFound, "", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -70,6 +80,68 @@ func TestServe(t *testing.T) {
 				t.Errorf("Cache-Control = %q, want %q", rec.Header().Get("Cache-Control"), tc.wantCache)
 			}
 		})
+	}
+}
+
+// The admin pages forma2 and this SPA served at the root answer with a permanent redirect to the same path under /app, keeping the query and the method; the root leads to the app with a redirect browsers do not cache for good.
+func TestRedirectsToTheApp(t *testing.T) {
+	r := newEngine(t, fstest.MapFS{"index.html": {Data: []byte(indexHTML)}})
+
+	cases := []struct {
+		method, path string
+		code         int
+		location     string
+	}{
+		{http.MethodGet, "/", http.StatusFound, "/app/"},
+		{http.MethodGet, "/?utm_source=x", http.StatusFound, "/app/?utm_source=x"},
+		{http.MethodGet, "/auth/login?callbackUrl=https%3A%2F%2Fforma.example%2Fworkspaces%2Fw1", http.StatusPermanentRedirect, "/app/auth/login?callbackUrl=https%3A%2F%2Fforma.example%2Fworkspaces%2Fw1"},
+		{http.MethodGet, "/workspaces/w1/surveys/s1/summary", http.StatusPermanentRedirect, "/app/workspaces/w1/surveys/s1/summary"},
+		{http.MethodGet, "/workspaces/w1/", http.StatusPermanentRedirect, "/app/workspaces/w1/"},
+		{http.MethodGet, "/invite?token=abc", http.StatusPermanentRedirect, "/app/invite?token=abc"},
+		{http.MethodGet, "/environments/e1/surveys", http.StatusPermanentRedirect, "/app/environments/e1/surveys"},
+		{http.MethodGet, "/i/workspaces?ref=mail", http.StatusPermanentRedirect, "/app/i/workspaces?ref=mail"},
+		{http.MethodGet, "/setup", http.StatusPermanentRedirect, "/app/setup"},
+		{http.MethodGet, "/billing-confirmation?organizationId=o1&checkout_success=1", http.StatusPermanentRedirect, "/app/billing-confirmation?organizationId=o1&checkout_success=1"},
+		{http.MethodGet, "/verify-email-change?token=t", http.StatusPermanentRedirect, "/app/verify-email-change?token=t"},
+		{http.MethodGet, "/workspaces/caf%C3%A9%2Fx", http.StatusPermanentRedirect, "/app/workspaces/caf%C3%A9%2Fx"},
+		{http.MethodHead, "/account/settings/profile", http.StatusPermanentRedirect, "/app/account/settings/profile"},
+		{http.MethodPost, "/organizations/o1/settings", http.StatusPermanentRedirect, "/app/organizations/o1/settings"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			rec := get(r, tc.method, tc.path)
+			if rec.Code != tc.code || rec.Header().Get("Location") != tc.location {
+				t.Fatalf("%d %s, want %d %s", rec.Code, rec.Header().Get("Location"), tc.code, tc.location)
+			}
+		})
+	}
+	for _, first := range LegacyAdminPaths {
+		if rec := get(r, http.MethodGet, "/"+first+"/x?y=1"); rec.Code != http.StatusPermanentRedirect || rec.Header().Get("Location") != "/app/"+first+"/x?y=1" {
+			t.Errorf("/%s/x?y=1 = %d %s", first, rec.Code, rec.Header().Get("Location"))
+		}
+	}
+}
+
+// Every top-level entry of apps/web/public is either served at the root or deliberately left to /app, and every root path names something the build has; the SDK bundles under js/ are copied in by the package builds and are not committed.
+func TestRootPublicPathsCoverThePublicDirectory(t *testing.T) {
+	entries, err := os.ReadDir(filepath.FromSlash("../../../web/public"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	present := map[string]bool{"js": true}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		present[e.Name()] = true
+		if !slices.Contains(RootPublicPaths, e.Name()) {
+			t.Errorf("apps/web/public/%s is served under /app only; add it to RootPublicPaths (and the ingress) if anything outside the SPA loads it", e.Name())
+		}
+	}
+	for _, p := range RootPublicPaths {
+		if !present[p] {
+			t.Errorf("RootPublicPaths lists %s, which apps/web/public does not have", p)
+		}
 	}
 }
 
@@ -190,7 +262,7 @@ func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
 	}
 	r := httpserver.NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	h.Register(r)
-	for path, want := range map[string]bool{"/": true, "/workspaces/1/surveys/2/edit": true, "/assets/app-1a2b.js": false, "/js/surveys.umd.cjs": false, "/api/v3/nope": false} {
+	for path, want := range map[string]bool{"/app/": true, "/app/workspaces/1/surveys/2/edit": true, "/app/assets/app-1a2b.js": false, "/js/surveys.umd.cjs": false, "/api/v3/nope": false} {
 		csp := get(r, http.MethodGet, path).Header().Get("Content-Security-Policy")
 		if !strings.HasPrefix(csp, "default-src 'self'; ") {
 			t.Fatalf("%s: Content-Security-Policy = %q, want forma2's policy", path, csp)
@@ -204,7 +276,7 @@ func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
 func TestServeWithoutBuild(t *testing.T) {
 	r := newEngine(t, fstest.MapFS{".gitkeep": {}})
 
-	if rec := get(r, http.MethodGet, "/"); rec.Code != http.StatusNotFound {
+	if rec := get(r, http.MethodGet, "/app/"); rec.Code != http.StatusNotFound {
 		t.Fatalf("code = %d, want 404 when no index.html is embedded", rec.Code)
 	}
 }
@@ -222,8 +294,10 @@ func TestSurveyShell(t *testing.T) {
 	if string(h.SurveyShell()) != "<!doctype html><!--forma:head--><!--forma:state-->" {
 		t.Fatalf("SurveyShell = %q", h.SurveyShell())
 	}
-	if rec := get(newEngine(t, files), http.MethodGet, "/survey.html"); rec.Code != http.StatusNotFound {
-		t.Fatalf("/survey.html answered %d", rec.Code)
+	for _, p := range []string{"/survey.html", "/app/survey.html"} {
+		if rec := get(newEngine(t, files), http.MethodGet, p); rec.Code != http.StatusNotFound {
+			t.Fatalf("%s answered %d", p, rec.Code)
+		}
 	}
 	without, err := NewFromFS(fstest.MapFS{"index.html": {Data: []byte(indexHTML)}})
 	if err != nil || without.SurveyShell() != nil {

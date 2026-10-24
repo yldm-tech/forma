@@ -6,6 +6,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
@@ -136,10 +137,10 @@ func (s *Service) logDeletion(ctx context.Context, acc *account) {
 	})
 }
 
-// afterDeletionURL is where the SPA goes once the account is gone: Forma Cloud asks why in a survey.
+// afterDeletionURL is where the SPA goes once the account is gone, with a full page load: Forma Cloud asks why in a survey, anywhere else it is the sign-in page under the app's base path.
 func (s *Service) afterDeletionURL() string {
 	if s.cfg.IsFormaCloud {
 		return cloudAccountDeletionSurveyURL
 	}
-	return loginPath
+	return config.AppBasePath + loginPath
 }

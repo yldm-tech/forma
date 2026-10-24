@@ -14,6 +14,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gin-gonic/gin"
 	"go.yaml.in/yaml/v3"
 
 	"github.com/yldm-tech/forma/apps/server/internal/actionclass"
@@ -167,12 +168,33 @@ func openAPIPath(path string) string {
 	return ginParam.ReplaceAllString(path, "{$1}")
 }
 
-// servedV3Operations builds the production router (NewRouter, the graph `forma serve` mounts) with handlers that have no dependencies behind them, which is enough to register every route, and lists its /api/v3 operations. HEAD and OPTIONS are gin's and CORS's, never documented.
+// servedV3Operations lists the /api/v3 operations of the production router. HEAD and OPTIONS are gin's and CORS's, never documented.
 func servedV3Operations(t *testing.T) []string {
 	t.Helper()
 	webURL, _ := url.Parse("https://app.example.com")
+	r := newProductionRouter(t, config.Config{WebAppURL: webURL, SessionMaxAge: 86400})
+
+	var ops []string
+	for _, route := range r.Routes() {
+		if route.Method == http.MethodHead || route.Method == http.MethodOptions || !strings.HasPrefix(route.Path, "/api/v3/") {
+			continue
+		}
+		op := route.Method + " " + openAPIPath(route.Path)
+		if !slices.Contains(ops, op) {
+			ops = append(ops, op)
+		}
+	}
+	if len(ops) == 0 {
+		t.Fatal("the router serves no /api/v3 operation; the parity check would prove nothing")
+	}
+	sort.Strings(ops)
+	return ops
+}
+
+// newProductionRouter builds the production router (NewRouter, the graph `forma serve` mounts) with handlers that have no dependencies behind them, which is enough to register every route.
+func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
+	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	cfg := config.Config{WebAppURL: webURL, SessionMaxAge: 86400}
 	p := &Platform{Config: cfg, Log: log, ClientIP: httpapi.NewClientIPResolver(cfg, log)}
 	sessions := auth.NewSessions(cfg, nil, log)
 	guard := surveyv3.NewGuard(cfg, sessions, nil, nil, log)
@@ -193,7 +215,7 @@ func servedV3Operations(t *testing.T) []string {
 	}
 	v1 := mgmtv1.New(cfg, nil, nil, nil, nil, nil, log)
 
-	r := NewRouter(p, sessions, nil,
+	return NewRouter(p, sessions, nil,
 		health.NewHandler(nil, log),
 		auth.NewHandler(cfg, nil, sessions, nil),
 		auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log)),
@@ -233,22 +255,6 @@ func servedV3Operations(t *testing.T) []string {
 		emailembed.NewHandler(nil, sessions),
 		plain.NewHandler(cfg, nil, sessions),
 	)
-
-	var ops []string
-	for _, route := range r.Routes() {
-		if route.Method == http.MethodHead || route.Method == http.MethodOptions || !strings.HasPrefix(route.Path, "/api/v3/") {
-			continue
-		}
-		op := route.Method + " " + openAPIPath(route.Path)
-		if !slices.Contains(ops, op) {
-			ops = append(ops, op)
-		}
-	}
-	if len(ops) == 0 {
-		t.Fatal("the router serves no /api/v3 operation; the parity check would prove nothing")
-	}
-	sort.Strings(ops)
-	return ops
 }
 
 // documentedV3Operations lists the operations of the committed bundle.

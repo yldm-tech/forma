@@ -75,7 +75,7 @@ func TestSignupCreatesTheAccount(t *testing.T) {
 	if len(msgs) != 1 || msgs[0].Subject != jaSubject {
 		t.Fatalf("want one verification mail in the chosen locale, got %+v", msgs)
 	}
-	if !strings.Contains(msgs[0].HTML, webApp+verifyEmailPath+"?token=") {
+	if !strings.Contains(msgs[0].HTML, appBase+verifyEmailPath+"?token=") {
 		t.Fatal("verification mail has no link to the verify page")
 	}
 	intent := r.cookie(signupIntentCookieName)

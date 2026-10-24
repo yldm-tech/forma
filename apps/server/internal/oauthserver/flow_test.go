@@ -24,7 +24,7 @@ func TestAuthorizationCodeFlow(t *testing.T) {
 	q := authorizeQuery(clientID, p, "openid profile email offline_access surveys:read surveys:write")
 
 	consentPage := e.startAuthorization(q, user)
-	if consentPage.Path != consentPath || consentPage.Query().Get("client_id") != clientID || consentPage.Query().Get("redirect_uri") != redirectURI ||
+	if consentPage.Path != consentPagePath || consentPage.Query().Get("client_id") != clientID || consentPage.Query().Get("redirect_uri") != redirectURI ||
 		consentPage.Query().Get("scope") != "openid profile email offline_access surveys:read surveys:write" {
 		t.Fatalf("consent page %s", consentPage)
 	}
@@ -104,16 +104,16 @@ func TestConsentIsReused(t *testing.T) {
 	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path != "/api/auth/oauth2/authorize/callback" {
 		t.Fatalf("an approved request went to %s", next)
 	}
-	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read surveys:write"), user); next.Path != consentPath {
+	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read surveys:write"), user); next.Path != consentPagePath {
 		t.Fatalf("a wider request went to %s", next)
 	}
 	q := authorizeQuery(clientID, newPKCE(), "surveys:read")
 	q.Set("prompt", "consent")
-	if next := e.startAuthorization(q, user); next.Path != consentPath {
+	if next := e.startAuthorization(q, user); next.Path != consentPagePath {
 		t.Fatalf("prompt=consent went to %s", next)
 	}
 	// Without a session the consent page signs the user in first.
-	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), uuid.Nil); next.Path != consentPath {
+	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), uuid.Nil); next.Path != consentPagePath {
 		t.Fatalf("a signed-out user went to %s", next)
 	}
 	// prompt=none cannot show anything.
@@ -222,7 +222,7 @@ func TestRevocation(t *testing.T) {
 		t.Fatalf("refresh after consent revoked: %d %v", status, out)
 	}
 	// The next authorization asks again.
-	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path != consentPath {
+	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path != consentPagePath {
 		t.Fatalf("went to %s", next)
 	}
 }
@@ -268,7 +268,7 @@ func TestAuthorizationRequestIsChecked(t *testing.T) {
 	// Without a resource indicator the MCP resource is meant.
 	q := authorizeQuery(clientID, newPKCE(), "surveys:read")
 	q.Del("resource")
-	if next := e.startAuthorization(q, e.user("ada@example.com")); next.Path != consentPath {
+	if next := e.startAuthorization(q, e.user("ada@example.com")); next.Path != consentPagePath {
 		t.Fatalf("went to %s", next)
 	}
 }

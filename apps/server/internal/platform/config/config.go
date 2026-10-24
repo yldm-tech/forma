@@ -425,6 +425,26 @@ func (c Config) TurnstileConfigured() bool {
 	return c.TurnstileSiteKey != "" && c.TurnstileSecretKey != ""
 }
 
+// AppBasePath is the path the admin SPA is served under on WEBAPP_URL. Every page a signed-in or signing-in user navigates lives below it; the APIs, the public survey pages, the SDK bundles, stored files and the OAuth and health endpoints keep their root paths, because links already sent and snippets embedded on customer sites carry them.
+const AppBasePath = "/app"
+
+// AppURL is the admin SPA's base URL: WEBAPP_URL with AppBasePath appended to its path, without query, fragment or trailing slash. Every absolute link to an admin page (emails, redirects after a sign-in, an integration's or Stripe's return) is built on it; API, storage and SDK URLs stay on WEBAPP_URL.
+func (c Config) AppURL() *url.URL {
+	u := *c.WebAppURL
+	u.Path = strings.TrimRight(u.Path, "/") + AppBasePath
+	u.RawPath = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	return &u
+}
+
+// AppPageURL is the absolute URL of the admin page at path, a path inside the app such as "/auth/login".
+func (c Config) AppPageURL(path string) *url.URL {
+	u := c.AppURL()
+	u.Path += path
+	return u
+}
+
 // SecureCookies reports whether cookies get the Secure attribute and the __Secure- name prefix, which browsers only accept over HTTPS.
 func (c Config) SecureCookies() bool {
 	return c.WebAppURL != nil && c.WebAppURL.Scheme == "https"
