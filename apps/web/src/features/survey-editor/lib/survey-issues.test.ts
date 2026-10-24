@@ -41,6 +41,7 @@ describe("getInvalidCards", () => {
     ).toEqual({
       invalidIds: ["q2"],
       firstInvalidScrollId: "q2",
+      fallbackScrollId: "blockone0000000000000000",
     });
   });
 
@@ -48,15 +49,17 @@ describe("getInvalidCards", () => {
     expect(getInvalidCards(survey, [{ path: ["blocks", 1, "name"], message: "x" }])).toEqual({
       invalidIds: ["blocktwo0000000000000000"],
       firstInvalidScrollId: "blocktwo0000000000000000",
+      fallbackScrollId: null,
     });
   });
 
-  test("flags the logic rule of a rule issue, scrolling to the rule itself", () => {
+  test("flags the logic rule of a rule issue, scrolling to the rule itself, or to its block while the block is collapsed", () => {
     expect(
       getInvalidCards(survey, [{ path: ["blocks", 0, "logic", 1, "conditions"], message: "x" }])
     ).toEqual({
       invalidIds: ["logic-b"],
       firstInvalidScrollId: logicRuleDomId("logic-b"),
+      fallbackScrollId: "blockone0000000000000000",
     });
   });
 
@@ -73,7 +76,7 @@ describe("getInvalidCards", () => {
         { path: ["welcomeCard", "headline"], message: "x" },
         { path: ["endings", 0, "buttonLink"], message: "y" },
       ])
-    ).toEqual({ invalidIds: ["start", "ending1"], firstInvalidScrollId: "start" });
+    ).toEqual({ invalidIds: ["start", "ending1"], firstInvalidScrollId: "start", fallbackScrollId: null });
   });
 
   test("lists each card once and keeps the first issue's card as the scroll target", () => {
@@ -83,7 +86,11 @@ describe("getInvalidCards", () => {
         { path: ["blocks", 0, "elements", 0, "subheader"], message: "y" },
         { path: ["blocks", 0, "elements", 1, "headline"], message: "z" },
       ])
-    ).toEqual({ invalidIds: ["q1", "q2"], firstInvalidScrollId: "q1" });
+    ).toEqual({
+      invalidIds: ["q1", "q2"],
+      firstInvalidScrollId: "q1",
+      fallbackScrollId: "blockone0000000000000000",
+    });
   });
 
   test("ignores issues outside the cards and indexes that point nowhere", () => {
@@ -93,7 +100,7 @@ describe("getInvalidCards", () => {
         { path: ["blocks", 7, "elements", 0, "headline"], message: "y" },
         { path: ["endings", 3], message: "z" },
       ])
-    ).toEqual({ invalidIds: [], firstInvalidScrollId: null });
+    ).toEqual({ invalidIds: [], firstInvalidScrollId: null, fallbackScrollId: null });
   });
 });
 
@@ -104,7 +111,7 @@ describe("describeFirstIssue", () => {
     questionTextMissing: (block, question) => `Question ${question} in block ${block} needs a question text`,
     optionLabelMissing: (block, question, option) =>
       `Option ${option} of question ${question} in block ${block} is empty`,
-    logicRuleInvalid: (block, rule) => `Rule ${rule} in block ${block} is incomplete`,
+    logicRuleIncomplete: (block, rule) => `Rule ${rule} in block ${block} is incomplete`,
     languageLabel: (code) => ({ de: "German", fr: "French" })[code] ?? code,
   };
   const choiceSurvey = {
@@ -173,18 +180,74 @@ describe("describeFirstIssue", () => {
     ).toBe(message);
   });
 
-  test("words a logic rule issue by rule and block, whatever the rule broke", () => {
-    expect(
-      describeFirstIssue(
-        survey,
-        {
-          path: ["blocks", 0, "logic", 1, "conditions"],
-          message:
-            'Conditional Logic: right operand is required for operator "equals" in logic no: 2 of block 1',
-        },
-        messages
-      ).message
-    ).toBe("Rule 2 in block 1 is incomplete");
+  describe("a logic rule issue", () => {
+    const condition = (rightOperand?: unknown) => ({
+      id: "c1",
+      leftOperand: { type: "element", value: "q2" },
+      operator: "equals",
+      ...(rightOperand === undefined ? {} : { rightOperand }),
+    });
+    const ruleSurvey = (conditions: unknown[], actions: unknown[]) =>
+      ({
+        blocks: [
+          {
+            ...choiceSurvey.blocks[0],
+            logic: [{ id: "rule1", conditions: { id: "g", connector: "and", conditions }, actions }],
+          },
+        ],
+        endings: [],
+      }) as unknown as TSurvey;
+    const jump = (target: string) => ({ id: "a1", objective: "jumpToBlock", target });
+    const describeRule = (survey: TSurvey, message: string) =>
+      describeFirstIssue(survey, { path: ["blocks", 0, "logic", 0, "conditions"], message }, messages)
+        .message;
+
+    test("calls a rule with a blank left incomplete, by rule and block", () => {
+      const missingValue =
+        'Conditional Logic: Right operand should be a static value for "equals" in logic no: 1 of block 1';
+      expect(describeRule(ruleSurvey([condition()], [jump("blocktwo0000000000000000")]), missingValue)).toBe(
+        "Rule 1 in block 1 is incomplete"
+      );
+      expect(
+        describeRule(
+          ruleSurvey([condition({ type: "static", value: "" })], [jump("blocktwo0000000000000000")]),
+          missingValue
+        )
+      ).toBe("Rule 1 in block 1 is incomplete");
+      expect(
+        describeRule(
+          ruleSurvey(
+            [{ id: "g2", connector: "or", conditions: [condition({ type: "static", value: [] })] }],
+            []
+          ),
+          missingValue
+        )
+      ).toBe("Rule 1 in block 1 is incomplete");
+      expect(
+        describeRule(
+          ruleSurvey([condition({ type: "static", value: "a" })], [jump("")]),
+          "Conditional Logic: Target block id cannot be empty"
+        )
+      ).toBe("Rule 1 in block 1 is incomplete");
+    });
+
+    test("keeps the reason of a complete rule that is refused", () => {
+      const complete = ruleSurvey(
+        [condition({ type: "static", value: "gone" }), { ...condition(), id: "c2", operator: "isSubmitted" }],
+        [
+          jump("blocktwo0000000000000000"),
+          {
+            id: "a2",
+            objective: "calculate",
+            variableId: "v",
+            operator: "add",
+            value: { type: "static", value: 0 },
+          },
+        ]
+      );
+      const reason = 'Conditional Logic: Choice "gone" does not exist in element 2 of block 1';
+      expect(describeRule(complete, reason)).toBe(reason);
+    });
   });
 
   test("lists the languages of a translation issue by name and sends the author to the Language tab", () => {
