@@ -67,6 +67,36 @@ function MatrixRadioIndicator(): React.JSX.Element {
   );
 }
 
+/**
+ * Whether the element scrolls horizontally and has more content past its end edge (the right in LTR, the left in RTL, where scrollLeft runs negative), kept current on scroll and resize.
+ */
+function useHorizontalOverflow(): {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  hasMoreAtEnd: boolean;
+} {
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [hasMoreAtEnd, setHasMoreAtEnd] = React.useState(false);
+
+  React.useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const update = (): void => {
+      const maxScroll = element.scrollWidth - element.clientWidth;
+      setHasMoreAtEnd(maxScroll > 1 && Math.abs(element.scrollLeft) < maxScroll - 1);
+    };
+    update();
+    element.addEventListener("scroll", update, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(element);
+    return () => {
+      element.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, []);
+
+  return { scrollRef, hasMoreAtEnd };
+}
+
 function Matrix({
   elementId,
   headline,
@@ -85,6 +115,7 @@ function Matrix({
   videoUrl,
 }: Readonly<MatrixProps>): React.JSX.Element {
   const errorAria = getElementErrorAria(inputId, errorMessage);
+  const { scrollRef, hasMoreAtEnd } = useHorizontalOverflow();
 
   // Ensure value is always an object (value already has default of {})
   const selectedValues = value;
@@ -126,20 +157,26 @@ function Matrix({
         <div className="relative" data-element-input>
           <ElementError errorMessage={errorMessage} dir={dir} id={errorAria.errorId} />
 
-          {/* Table container with overflow for mobile */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+          {/* The table fits its container: fixed layout shares the width between the columns after a capped row-label column, and the labels wrap instead of pushing the last column out of view. Only many columns on a narrow card still overflow, and then a fade at the end edge says so. */}
+          <div className="relative">
+            <div ref={scrollRef} className="overflow-x-auto">
+              <table
+                className="w-full table-fixed border-collapse"
+                style={{ minWidth: `${(columns.length * 2.75 + 6).toString()}rem` }}>
               {/* Column headers */}
               <thead>
                 <tr>
                   {/* Empty top-left corner: a plain data cell (not a header), so it is neither an
                       empty <th> nor announced. Each cell radio is named by its row + column header. */}
-                  <td className="p-2" />
+                  <td className="w-[35%] p-2" />
                   {columns.map((column) => {
                     const columnHeaderId = `${inputId}-col-${column.id}`;
                     return (
-                      <th key={column.id} id={columnHeaderId} className="p-2 text-center font-normal">
-                        <Label className="justify-center">{column.label}</Label>
+                      <th
+                        key={column.id}
+                        id={columnHeaderId}
+                        className="p-1 text-center align-bottom font-normal break-words hyphens-auto">
+                        <Label className="justify-center leading-5">{column.label}</Label>
                       </th>
                     );
                   })}
@@ -156,9 +193,12 @@ function Matrix({
                   return (
                     <tr key={row.id} className={cn("relative", baseBgColor)} dir={dir}>
                       {/* Row label */}
-                      <th scope="row" id={rowHeaderId} className={cn("rounded-s-input p-2 align-middle")}>
+                      <th
+                        scope="row"
+                        id={rowHeaderId}
+                        className={cn("rounded-s-input p-2 text-start align-middle break-words hyphens-auto")}>
                         <div className="flex flex-col gap-0 leading-none">
-                          <Label>{row.label}</Label>
+                          <Label className="leading-5">{row.label}</Label>
                         </div>
                       </th>
                       {/* Column options for this row */}
@@ -207,7 +247,14 @@ function Matrix({
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
+            {hasMoreAtEnd ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 end-0 w-8 bg-linear-to-l from-(--fb-survey-background-color) to-transparent rtl:bg-linear-to-r"
+              />
+            ) : null}
           </div>
         </div>
       </fieldset>
