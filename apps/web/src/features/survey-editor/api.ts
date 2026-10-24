@@ -87,8 +87,11 @@ export const editorSurveyQuery = (surveyId: string) =>
     refetchOnReconnect: false,
   });
 
-/** A survey as the editor sends it: forma2's TSurvey, with updatedAt as the version the save is based on. */
-export type SurveySaveInput = Omit<TSurvey, "updatedAt"> & { updatedAt: Date | null };
+/** A survey as the editor sends it: forma2's TSurvey, with updatedAt as the version the save is based on, and the scheduling time zone its publish and close dates were picked in. The server keeps those dates on their days in its organization's zone, which may have changed since the editor loaded it. */
+export type SurveySaveInput = Omit<TSurvey, "updatedAt"> & {
+  updatedAt: Date | null;
+  schedulingTimeZone?: string;
+};
 
 /** The editor's full save (forma2's updateSurveyAction) and, with draft, its draft save (updateSurveyDraftAction), which the server refuses with survey_modified_elsewhere:<iso> when the stored survey is newer than updatedAt. */
 export const saveSurvey = (input: SurveySaveInput, draft: boolean): Promise<TSurvey> =>

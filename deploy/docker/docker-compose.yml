@@ -53,7 +53,7 @@ x-forma-app: &forma-app
     # AI: AI_PROVIDER, AI_MODEL and the provider's AI_* settings (see the `qwen` profile below for a local model).
     # MCP: MCP_OAUTH_JWKS_URL, only to verify tokens against another instance's keys.
     # Legal: PRIVACY_URL, TERMS_URL, IMPRINT_URL, IMPRINT_ADDRESS.
-    # Server: LOG_LEVEL, LOG_FORMAT, RATE_LIMITING_DISABLED, GATEWAY_RATE_LIMITING (only with a gateway in front), AUDIT_LOG_ENABLED, AUDIT_LOG_GET_USER_IP, DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS, WORKER_CONCURRENCY, SURVEY_SCHEDULING_TIME_ZONE, SURVEY_SCHEDULING_LOCAL_HOUR, SURVEY_SCHEDULING_LOCAL_MINUTE.
+    # Server: LOG_LEVEL, LOG_FORMAT, RATE_LIMITING_DISABLED, GATEWAY_RATE_LIMITING (only with a gateway in front), AUDIT_LOG_ENABLED, AUDIT_LOG_GET_USER_IP, DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS, WORKER_CONCURRENCY, SURVEY_SCHEDULING_TIME_ZONE (the default zone of scheduled surveys; an organization can choose its own), SURVEY_SCHEDULING_LOCAL_HOUR, SURVEY_SCHEDULING_LOCAL_MINUTE.
   depends_on: &forma-app-dependencies
     postgres:
       condition: service_healthy

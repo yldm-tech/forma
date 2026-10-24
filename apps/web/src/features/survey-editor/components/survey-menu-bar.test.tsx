@@ -231,6 +231,7 @@ const renderMenuBar = (persisted: TSurvey) => {
         isCxMode={false}
         locale="en-US"
         setIsCautionDialogOpen={() => {}}
+        schedulingTimeZone="Pacific/Auckland"
       />
     );
   };
@@ -373,7 +374,12 @@ describe("SurveyMenuBar", () => {
     expect(router.state.location.pathname).toBe(SUMMARY_PATH);
     expect(saves).toHaveLength(1);
     expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}`);
-    expect(saves[0]?.body).toMatchObject({ name: "Feedback 2026", status: "inProgress" });
+    // The zone the dates were picked in goes with the save, so the server keeps them on their days if the organization's zone has changed since.
+    expect(saves[0]?.body).toMatchObject({
+      name: "Feedback 2026",
+      status: "inProgress",
+      schedulingTimeZone: "Pacific/Auckland",
+    });
     expect(queryClient.getQueryData<TSurvey>(surveyEditorKeys.survey(SURVEY_ID))?.name).toBe("Feedback 2026");
   });
 
@@ -403,7 +409,11 @@ describe("SurveyMenuBar", () => {
     expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
     expect(saves).toHaveLength(1);
     expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}/draft`);
-    expect(saves[0]?.body).toMatchObject({ name: "Feedback 2026", updatedAt: LOADED_AT.toISOString() });
+    expect(saves[0]?.body).toMatchObject({
+      name: "Feedback 2026",
+      updatedAt: LOADED_AT.toISOString(),
+      schedulingTimeZone: "Pacific/Auckland",
+    });
     const cached = queryClient.getQueryData<TSurvey>(surveyEditorKeys.survey(SURVEY_ID));
     expect(cached?.name).toBe("Feedback 2026");
     expect(cached?.updatedAt).toEqual(new Date(SAVED_AT));

@@ -13,6 +13,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 // Archive retention, forma2's ARCHIVED_SURVEY_RETENTION_DAYS and purge batching.
@@ -23,19 +24,19 @@ const (
 	purgeHour, purgeMins = 1, 30
 )
 
-// dailyAt is a River schedule that fires once a day at a local time of the scheduling zone, forma2's "<minute> <hour> * * *" cron in SURVEY_SCHEDULING_TIME_ZONE.
+// dailyAt is a River schedule that fires once a day at a local time of the instance's scheduling zone, forma2's "<minute> <hour> * * *" cron in SURVEY_SCHEDULING_TIME_ZONE.
 type dailyAt struct {
-	schedule     Schedule
+	schedule     scheduling.Schedule
 	hour, minute int
 }
 
 func (d dailyAt) Next(current time.Time) time.Time {
-	return d.schedule.next(current, d.hour, d.minute)
+	return d.schedule.NextAt(current, d.hour, d.minute)
 }
 
 // SchedulingArgs is forma2's survey-scheduling.reconcile job.
 type SchedulingArgs struct {
-	// Slot is the daily slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
+	// Slot is the slot the run belongs to (jobs.Daily), which makes a caught-up slot run once.
 	Slot time.Time `json:"slot"`
 }
 
@@ -135,13 +136,13 @@ func (w *purgeWorker) Work(ctx context.Context, _ *river.Job[ArchivePurgeArgs]) 
 	return err
 }
 
-// RegisterJobs adds the survey module's background work to `forma worker`: the daily publish and close run at the configured local time, and the daily archive purge at 01:30, both in the scheduling time zone; a slot missed while no worker ran is caught up at the next start.
+// RegisterJobs adds the survey module's background work to `forma worker`: the publish and close run every quarter hour at the configured local minute, the instants at which the configured local time arrives in any organization's zone (scheduling.Runs), and the daily archive purge at 01:30 in the instance's scheduling time zone; a slot missed while no worker ran is caught up at the next start.
 func RegisterJobs(reg *jobs.Registry, cfg config.Config, db *gorm.DB, emitter *audit.Emitter, log *slog.Logger) {
 	repo := NewRepository(db)
-	schedule := NewSchedule(cfg)
+	schedule := scheduling.Instance(cfg)
 	jobs.Add(reg, &schedulingWorker{scheduler: NewScheduler(repo, emitter, log)})
 	jobs.Add(reg, &purgeWorker{purger: NewPurger(repo, emitter, log)})
-	reg.AddPeriodic(jobs.Daily("survey-scheduling", dailyAt{schedule, cfg.SurveySchedulingLocalHour, cfg.SurveySchedulingLocalMinute}, func(slot time.Time) river.JobArgs {
+	reg.AddPeriodic(jobs.Daily("survey-scheduling", scheduling.RunsFor(schedule), func(slot time.Time) river.JobArgs {
 		return SchedulingArgs{Slot: slot}
 	}))
 	reg.AddPeriodic(jobs.Daily("survey-archive-purge", dailyAt{schedule, purgeHour, purgeMins}, func(slot time.Time) river.JobArgs {
