@@ -23,7 +23,7 @@ export function FormWrapper({ children }: { children: ReactNode }) {
           <a
             href="/"
             aria-label={t("common.forma_homepage")}
-            className="inline-block rounded-md text-3xl focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:outline-hidden sm:text-4xl">
+            className="focus-visible:ring-ring inline-block rounded-md text-3xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden sm:text-4xl">
             <Wordmark />
           </a>
         </div>
@@ -64,7 +64,7 @@ const VARIANTS: Record<Variant, string> = {
 
 const buttonClasses = (variant: Variant, className?: string) =>
   join(
-    "inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 sm:h-9",
+    "inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 sm:h-9",
     VARIANTS[variant],
     className
   );
@@ -106,7 +106,7 @@ export function ButtonLink({
 }
 
 export const textLinkClasses =
-  "inline-flex min-h-6 items-center justify-center rounded-sm py-1 font-semibold text-slate-600 underline hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden";
+  "inline-flex min-h-6 items-center justify-center rounded-sm py-1 font-semibold text-slate-600 underline hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden";
 
 /** A labelled input with its error under it. The input gets `id`, and `aria-describedby` points at the error when there is one. */
 export function Field({
@@ -177,7 +177,7 @@ export function PasswordInput({
       />
       <button
         type="button"
-        className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden"
+        className="focus-visible:ring-ring absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
         aria-label={visible ? t("common.hide_password") : t("common.show_password")}
         aria-pressed={visible}
         onClick={() => setVisible((v) => !v)}>

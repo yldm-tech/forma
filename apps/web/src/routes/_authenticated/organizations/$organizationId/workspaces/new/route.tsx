@@ -46,7 +46,7 @@ function OnboardingLayout() {
             to="/organizations/$organizationId"
             params={{ organizationId }}
             onClick={() => skipOnboarding(organizationId)}
-            className="rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden">
+            className="focus-visible:ring-ring rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
             {t("organizations.workspaces.new.skip_for_now")}
           </Link>
           {/* The flow is for owners and managers only, never the billing role. */}

@@ -31,7 +31,7 @@ const OptionCard = ({ option }: { option: OnboardingOption }) => {
           "flex h-full w-80 flex-col items-center rounded-xl border border-slate-200 bg-white p-6 shadow-lg transition-transform duration-200",
           unavailable
             ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer hover:scale-[1.03] hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+            : "cursor-pointer hover:scale-[1.03] hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
         )}>
         <span className="flex h-full w-full flex-col items-center gap-y-4 text-center">
           <span className="flex h-16 w-16 shrink-0 items-center justify-center">
@@ -62,7 +62,7 @@ export const OnboardingBackLink = ({ organizationId }: { organizationId: string 
     <Link
       to="/organizations/$organizationId/workspaces/new/survey"
       params={{ organizationId }}
-      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden">
+      className="focus-visible:ring-ring inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
       <ArrowLeftIcon className="size-4" aria-hidden="true" />
       {t("common.back")}
     </Link>

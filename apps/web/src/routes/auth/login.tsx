@@ -248,7 +248,7 @@ function LoginPage() {
                     <Link
                       to="/auth/forgot-password"
                       search={{ email: form.values.email.trim() || undefined }}
-                      className="inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-slate-500 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:outline-hidden">
+                      className="focus-visible:ring-ring inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-slate-500 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
                       {t("auth.login.forgot_your_password")}
                     </Link>
                   </div>
