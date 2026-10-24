@@ -7,6 +7,7 @@
     "dev": "vp dev",
     "build": "vp build && vp build --ssr src/prerender/main.ts && node .prerender/main.js",
     "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
     "og-images": "vp build --ssr src/prerender/og-images.ts && node .prerender/og-images.js",
     "clean": "rimraf node_modules dist .prerender"
   },
@@ -26,6 +27,7 @@
     "@types/react-dom": "catalog:",
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
-import type { TJsWorkspaceStateSurvey } from "../../../types/js";
-import { type TAllowedFileExtension, mimeTypes } from "../../../types/storage";
-import type { TSurveyLanguage } from "../../../types/surveys/types";
+import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { type TAllowedFileExtension, mimeTypes } from "@forma/types/storage";
+import type { TSurveyLanguage } from "@forma/types/surveys/types";
 import {
   cn,
   findBlockByElementId,

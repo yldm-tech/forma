@@ -13,11 +13,7 @@
 //      half, a new shared dependency simply never gets catalogued and rule 1 has
 //      nothing to say about it.
 //
-// peerDependencies are treated differently on purpose: a peer *range* is a
-// compatibility declaration for consumers, not an install pin, so it is legitimately
-// looser than the catalog (packages/survey-ui declares react "^19.0.0" while pinning
-// 19.2.6 to build against). Ranges are therefore exempt from both rules; an
-// exact-pinned peer is not, since that is a version like any other.
+// peerDependencies are treated differently on purpose: a peer *range* is a compatibility declaration for consumers, not an install pin, so it is legitimately looser than the catalog (packages/survey-ui declares react "^19.0.0" as a peer while building against the catalog's exact react). Ranges are therefore exempt from both rules; an exact-pinned peer is not, since that is a version like any other.
 //
 // The workspace list is derived from pnpm-workspace.yaml's own globs — never hardcode
 // it, or a newly added package silently escapes both rules.

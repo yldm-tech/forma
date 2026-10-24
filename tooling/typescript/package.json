@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "rimraf": "catalog:",
     "typescript": "catalog:"
   }
 }
