@@ -309,11 +309,11 @@ describe("the survey", () => {
     expect(document.getElementById("forma-survey-container")).toBeTruthy();
   });
 
-  // An embedded survey fills its frame; on its own page a card may use the viewport rather than the runtime's 60dvh widget default.
+  // An embedded survey fills its frame; on its own page a card may use the viewport rather than the runtime's 60dvh widget default, which stays the floor on a short (landscape) viewport.
   test("caps a card by the viewport on its own page, not when embedded", async () => {
     renderPage({ view: "survey", locale: "en-US", survey: surveyProps({ isEmbed: false }) });
     await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
-    expect(lastRender().cardMaxHeight).toBe("calc(100dvh - 12rem)");
+    expect(lastRender().cardMaxHeight).toBe("max(60dvh, 100dvh - 12rem)");
     expect(lastRender().fullSizeCards).toBe(false);
     cleanup();
     renderSurvey.mockReset();
