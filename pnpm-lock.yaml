@@ -163,7 +163,9 @@ overrides:
   fflate: 0.4.9
   baseline-browser-mapping: 2.11.20
   brace-expansion@5: 5.0.12
-  zod@<4.6.6: 4.6.7
+  lingo.dev>zod: 4.6.7
+  '@lingo.dev/_spec>zod': 4.6.7
+  '@lingo.dev/_sdk>zod': 4.6.7
   vite@*: npm:@voidzero-dev/vite-plus-core@1.3.0
   vitest@*: 5.0.5
   react: 19.3.0
@@ -951,43 +953,43 @@ packages:
     resolution: {integrity: sha512-ZdcpT3tWRifu93DPL5jSGvx9QmRi4zi0H7JiCKp76dH6dytQKYdg12Jpl1HHamCT3KgxSrNMOPKCv8q+gXqAVw==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/gateway@3.0.191':
     resolution: {integrity: sha512-7f9h+Vb/kmBTiqj6wtoKZbOuckvnpRp/eoxzYZg0GOAfYkdnixs+8JTGW3+nlHZXza17riNL5FpC0pEuh8aV1Q==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/google@3.0.122':
     resolution: {integrity: sha512-GntcGIfRviU9ZhORN2yoQcp9Hy5cv0w6iqRLaX0/BNdTogG5JX7g7l/Tv6Uev379iJizcHBd+U0cLB78KDrMxw==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/mistral@3.0.64':
     resolution: {integrity: sha512-DpniMzLr/MT5Pt3kqMJCkNFeEFgO41DDaXEyJmsoV38ku8Rjl16eWQanL3WgC/0MmL8DDi4bbumDCp51JkJ5rw==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/openai@3.0.112':
     resolution: {integrity: sha512-0ho3a9CJ+3KCcrPdBQx8fX7/gyUxFHsfs1M6++SpunYk8+pgGOPMskr0GVOOxY+94jsJbuGxksKfMuSYhYHcxw==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/provider-utils@4.0.51':
     resolution: {integrity: sha512-ukLTs9x1Xm6lxSIwbJIxYQxbZHmVeIczNntARZrBcOa6pjdBhqeZnATNnJMHa7M9dZ8Ji5NJbpKpvz7o5XyBtg==}
     engines: {node: '>=18.17'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/provider-utils@4.0.62':
     resolution: {integrity: sha512-+FXkZ2e169zASBHP5HAakP0Iai3Eoa8zgh7bnuZExsek3N9HgGt/c7l1Oibdxb79vvsn5Mrg2Sjam80mR6bL8A==}
     engines: {node: '>=18.17'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/provider@3.0.16':
     resolution: {integrity: sha512-9Av6kg0t/IN/dcYAAmEJ4B9OPhcEJqwSR+GfHEA8olRkindXpUHadc3p3cyvgFUQFTVm1G5thtsmgZ9yVb2w3A==}
@@ -1592,7 +1594,7 @@ packages:
       valibot: '>=0.31.0 || ^1.0.0-beta.4 || ^1.0.0-rc'
       vest: '>=6.0.0'
       yup: ^1.0.0
-      zod: 4.6.7
+      zod: ^3.25.0 || ^4.0.0
     peerDependenciesMeta:
       '@sinclair/typebox':
         optional: true
@@ -2071,7 +2073,7 @@ packages:
     resolution: {integrity: sha512-N91glWtq6XFl8Kvgft14BiDeCLABHatylAVKHOWMRJHnBl6iKblI4iZgcipnF9Pj8ZRUO752qpPoZVC+L2C6tA==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^4.3.5
 
   '@openrouter/sdk@0.3.16':
     resolution: {integrity: sha512-WEBlrXdc5R8I7o2temkMV65tIRGkzg9ct4DMNZ/FHS/hiRscLRS5EpcuORnAgjzZAh9X2dSsBpgygM8T7KiNAw==}
@@ -4389,7 +4391,7 @@ packages:
     resolution: {integrity: sha512-Fx45QI6+HDeqpDQsqNJXxOnH26ye0LRRbrDGNDqlBb9UrqOpkh6Z9mvCtnq2HVSeRWFF8FFtFGMnaUzLAJeA1g==}
     engines: {node: '>=18'}
     peerDependencies:
-      zod: 4.6.7
+      zod: ^3.25.76 || ^4.1.8
 
   ajv-draft-04@1.0.0:
     resolution: {integrity: sha512-mv00Te6nmYbRp5DCwclxtt7yV/joXJPGS7nM+97GdxvuttCOfgI3K4U25zboyeX0O+myI8ERluxQe5wljMmVIw==}
@@ -6222,7 +6224,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       ai: ^5.0.0 || ^6.0.0
-      zod: 4.6.7
+      zod: ^4.0.16
 
   onetime@7.0.0:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
