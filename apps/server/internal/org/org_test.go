@@ -147,6 +147,7 @@ func TestSurveySchedulingTimeZone(t *testing.T) {
 	// A survey closing at midnight UTC on May 2 (the instance's zone), and one without dates.
 	ws := c.WorkspaceID
 	scheduled := e.insert(`INSERT INTO surveys (workspace_id, name, status, publish_on, close_on) VALUES (?, 'S', 'paused', '2030-05-01T00:00:00Z', '2030-05-02T00:00:00Z') RETURNING id`, ws)
+	closing := e.insert(`INSERT INTO surveys (workspace_id, name, status, close_on) VALUES (?, 'C', 'inProgress', '2030-06-01T00:00:00Z') RETURNING id`, ws)
 	e.survey(ws)
 	dates := func() (publishOn, closeOn string) {
 		e.scalar(&publishOn, `SELECT to_char(publish_on AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') FROM surveys WHERE id = ?`, scheduled)
@@ -171,6 +172,11 @@ func TestSurveySchedulingTimeZone(t *testing.T) {
 	if p, cl := dates(); p != "2030-04-30T15:00" || cl != "2030-05-01T15:00" {
 		t.Fatalf("moved to Tokyo: %s %s", p, cl)
 	}
+	var closeOn string
+	e.scalar(&closeOn, `SELECT to_char(close_on AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') FROM surveys WHERE id = ?`, closing)
+	if closeOn != "2030-05-31T15:00" {
+		t.Fatalf("the second survey moved to Tokyo: %s", closeOn)
+	}
 	// Back to the instance's zone, and setting the same zone again changes nothing.
 	e.ok(e.do(owner, http.MethodPatch, path, map[string]any{"surveySchedulingTimeZone": nil}), http.StatusOK, &o)
 	if o.SurveySchedulingTimeZone != nil {
@@ -182,6 +188,14 @@ func TestSurveySchedulingTimeZone(t *testing.T) {
 	}
 	if e.count(`SELECT count(*) FROM surveys WHERE workspace_id = ? AND publish_on IS NULL AND close_on IS NULL`, ws) != 1 {
 		t.Fatal("a survey without dates was given some")
+	}
+	// Another name for the same zone moves no date, so no survey reads as changed to an open editor.
+	var before, after string
+	e.scalar(&before, `SELECT updated_at::text FROM surveys WHERE id = ?`, scheduled)
+	e.ok(e.do(owner, http.MethodPatch, path, map[string]any{"surveySchedulingTimeZone": "Etc/UTC"}), http.StatusOK, &o)
+	e.scalar(&after, `SELECT updated_at::text FROM surveys WHERE id = ?`, scheduled)
+	if p, cl := dates(); p != "2030-05-01T00:00" || cl != "2030-05-02T00:00" || before != after {
+		t.Fatalf("Etc/UTC touched the survey: %s %s, updated_at %s -> %s", p, cl, before, after)
 	}
 
 	e.fails(e.do(member, http.MethodPatch, path, map[string]any{"surveySchedulingTimeZone": "Asia/Tokyo"}), http.StatusForbidden, apperr.CodeForbidden, "")

@@ -3,6 +3,7 @@ package org
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -312,19 +313,7 @@ func (r *Repository) deleteMembership(ctx context.Context, userID, organizationI
 	return nil
 }
 
-// surveySchedulingTimeZone is the organization's own survey scheduling zone, nil when it has none.
-func (r *Repository) surveySchedulingTimeZone(ctx context.Context, organizationID uuid.UUID) (*string, error) {
-	var rows []struct{ SurveySchedulingTimeZone *string }
-	if err := r.db.WithContext(ctx).Raw(`SELECT survey_scheduling_time_zone FROM organizations WHERE id = ?`, organizationID).Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("load organization scheduling time zone: %w", err)
-	}
-	if len(rows) == 0 {
-		return nil, nil
-	}
-	return rows[0].SurveySchedulingTimeZone, nil
-}
-
-// resnapSchedules moves the publish and close dates of the organization's surveys, archived ones included, from one schedule to another, keeping each date's calendar day, and reports how many surveys changed. The rows are locked first, so a concurrent save of one of them either lands before and is moved, or waits and snaps in the new zone.
+// resnapSchedules moves the publish and close dates of the organization's surveys, archived ones included, from one schedule to another, keeping each date's calendar day, and reports how many surveys changed. Surveys whose dates are the same instants in both zones (Europe/Berlin and Europe/Paris, or Asia/Calcutta and Asia/Kolkata) are left alone, so an open editor is not told the survey changed. The rows are locked first; a concurrent save that gives a survey its first dates holds the organization's row in share mode (survey.Repository.schedulingTimeZone), so it either committed before this lock and is moved here, or waits for this change and snaps in the new zone.
 func (r *Repository) resnapSchedules(ctx context.Context, organizationID uuid.UUID, from, to scheduling.Schedule) (int, error) {
 	var rows []struct {
 		ID        uuid.UUID
@@ -335,11 +324,36 @@ func (r *Repository) resnapSchedules(ctx context.Context, organizationID uuid.UU
 		WHERE w.organization_id = ? AND (s.publish_on IS NOT NULL OR s.close_on IS NOT NULL) ORDER BY s.id FOR NO KEY UPDATE OF s`, organizationID).Scan(&rows).Error; err != nil {
 		return 0, fmt.Errorf("load scheduled surveys: %w", err)
 	}
-	for _, row := range rows {
-		if err := r.db.WithContext(ctx).Exec(`UPDATE surveys SET publish_on = ?, close_on = ?, updated_at = now() WHERE id = ?`,
-			to.Resnap(from, row.PublishOn), to.Resnap(from, row.CloseOn), row.ID).Error; err != nil {
-			return 0, fmt.Errorf("move survey schedule: %w", err)
-		}
+	type move struct {
+		ID        uuid.UUID  `json:"id"`
+		PublishOn *time.Time `json:"publish_on"`
+		CloseOn   *time.Time `json:"close_on"`
 	}
-	return len(rows), nil
+	var moves []move
+	for _, row := range rows {
+		publishOn, closeOn := to.Resnap(from, row.PublishOn), to.Resnap(from, row.CloseOn)
+		if sameInstant(publishOn, row.PublishOn) && sameInstant(closeOn, row.CloseOn) {
+			continue
+		}
+		moves = append(moves, move{ID: row.ID, PublishOn: publishOn, CloseOn: closeOn})
+	}
+	if len(moves) == 0 {
+		return 0, nil
+	}
+	payload, err := json.Marshal(moves)
+	if err != nil {
+		return 0, fmt.Errorf("encode survey schedules: %w", err)
+	}
+	if err := r.db.WithContext(ctx).Exec(`UPDATE surveys s SET publish_on = m.publish_on, close_on = m.close_on, updated_at = now()
+		FROM jsonb_to_recordset(?::jsonb) AS m(id uuid, publish_on timestamptz, close_on timestamptz) WHERE s.id = m.id`, string(payload)).Error; err != nil {
+		return 0, fmt.Errorf("move survey schedules: %w", err)
+	}
+	return len(moves), nil
+}
+
+func sameInstant(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Equal(*b)
 }

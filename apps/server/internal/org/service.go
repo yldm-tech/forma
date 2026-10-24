@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	// Display time zones are validated against the IANA database; embedding it keeps validation independent of the host's zoneinfo.
 	_ "time/tzdata"
@@ -259,12 +258,15 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 
 // resnapSchedules moves the organization's scheduled dates to the schedule of its new zone, keeping each date's calendar day. It runs under the organization's row lock, and reads the current zone there, so two concurrent changes re-snap one after the other.
 func (s *Service) resnapSchedules(ctx context.Context, tx *Repository, organizationID uuid.UUID, zone *string) error {
-	current, err := tx.surveySchedulingTimeZone(ctx, organizationID)
+	current, err := tx.byID(ctx, organizationID, s.cfg.IsFormaCloud)
 	if err != nil {
 		return err
 	}
+	if current == nil {
+		return apperr.NotFound("Organization", organizationID.String())
+	}
 	instance := scheduling.Instance(s.cfg)
-	from, to := instance.ForOrganization(current), instance.ForOrganization(zone)
+	from, to := instance.ForOrganization(current.SurveySchedulingTimeZone), instance.ForOrganization(zone)
 	if from.Location().String() == to.Location().String() {
 		return nil
 	}
@@ -276,13 +278,9 @@ func (s *Service) resnapSchedules(ctx context.Context, tx *Repository, organizat
 	return nil
 }
 
-// ValidTimeZone is forma2's isValidIanaTimeZone.
+// ValidTimeZone is forma2's isValidIanaTimeZone, for both the display and the survey scheduling time zone.
 func ValidTimeZone(name string) bool {
-	if name == "" || name == "Local" {
-		return false
-	}
-	_, err := time.LoadLocation(name)
-	return err == nil
+	return scheduling.ValidZone(name)
 }
 
 // Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check; a user left without one is sent to create one by the root page. Everything the organization holds cascades, the SpiceDB cleanup follows from the triggers, and on Forma Cloud its Stripe subscriptions are cancelled.
