@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   type ActionFormValues,
   NEW_ACTION_VALUES,
+  type UrlFilter,
   actionFormErrors,
   actionTriggerSummary,
   buildActionInput,
@@ -197,7 +198,7 @@ describe("actionTriggerSummary", () => {
         },
         t
       )
-    ).toEqual({ kind: "Click", target: "#upgrade", pages: "on /pricing" });
+    ).toEqual({ kind: "Click", target: "#upgrade", pages: "URL contains /pricing" });
     expect(
       actionTriggerSummary(
         {
@@ -225,5 +226,33 @@ describe("actionTriggerSummary", () => {
       target: "",
       pages: "",
     });
+  });
+
+  test("keeps each URL filter's rule and joins the filters with their connector", () => {
+    const pages = (urlFilters: UrlFilter[], urlFiltersConnector?: "or" | "and") =>
+      actionTriggerSummary(
+        { type: "noCode", key: null, noCodeConfig: { type: "pageView", urlFilters, urlFiltersConnector } },
+        t
+      ).pages;
+    expect(pages([{ rule: "notContains", value: "/admin" }])).toBe("URL does not contain /admin");
+    expect(pages([{ rule: "notMatch", value: "https://x.test/checkout" }])).toBe(
+      "URL is not https://x.test/checkout"
+    );
+    expect(
+      pages(
+        [
+          { rule: "startsWith", value: "/docs" },
+          { rule: "notContains", value: "/internal" },
+        ],
+        "and"
+      )
+    ).toBe("URL starts with /docs AND URL does not contain /internal");
+    expect(
+      pages([
+        { rule: "exactMatch", value: "/a" },
+        { rule: "endsWith", value: ".pdf" },
+        { rule: "matchesRegex", value: "^/b/\\d+$" },
+      ])
+    ).toBe("URL is /a OR URL ends with .pdf OR URL matches ^/b/\\d+$");
   });
 });

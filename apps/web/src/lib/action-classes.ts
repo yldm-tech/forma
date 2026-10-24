@@ -234,12 +234,18 @@ export const actionTriggerSummary = (
       : config.type === "pageDwell" && config.timeInSeconds
         ? t("workspace.actions.time_in_seconds_with_unit", { seconds: config.timeInSeconds })
         : "";
+  // Each filter keeps its rule, so an excluding rule ("does not contain /admin") never reads as if it included the page, and the filters are joined by their own connector.
+  const connector = t(
+    config.urlFiltersConnector === "and" ? "workspace.actions.and" : "workspace.actions.or"
+  );
   const pages =
     config.urlFilters.length === 0
       ? t("workspace.actions.on_all_pages")
-      : t("workspace.actions.trigger_on_pages", {
-          pages: config.urlFilters.map((filter) => filter.value).join(", "),
-        });
+      : config.urlFilters
+          .map((filter) =>
+            t("workspace.actions.trigger_url_rule", { rule: filter.rule, value: filter.value })
+          )
+          .join(` ${connector} `);
   return { kind, target, pages };
 };
 
