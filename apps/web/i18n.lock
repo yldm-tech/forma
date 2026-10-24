@@ -1566,7 +1566,7 @@ checksums:
     workspace/actions/track_user_action_to_display_surveys_or_create_user_segment: 2794a2dc51e48f1178d5d759db68029c
     workspace/actions/trigger: 25f7594d1ac2f32a3d2774dcd11dddfe
     workspace/actions/trigger_automatic: d477ad57b6ffec9fb6b2676b9433ec0c
-    workspace/actions/trigger_on_pages: 1027d096e373a4cd4e0d257611c9ce09
+    workspace/actions/trigger_url_rule: 810e786c76ba30246cf9b06e367b8b13
     workspace/actions/url: ca97457614226960d41dd18c3c29c86b
     workspace/actions/url_value_required: 4db2d72024b7e003ba370d78389e65c9
     workspace/actions/user_actions: 568ddeca3c5969341af83ff43f162233
@@ -1705,8 +1705,8 @@ checksums:
     workspace/contacts/delete_attribute_anyway: 0c4ddf13f2ec04d9be5fb98f322bc84b
     workspace/contacts/delete_attribute_confirmation: 01d99b89eb3d27ff468d0db1b4aeb394
     workspace/contacts/delete_attribute_in_use: c4787ec6a618aecd31af8dec8c0fc902
-    workspace/contacts/delete_attribute_used_by_segments: 868439783492b80eb782717319220185
-    workspace/contacts/delete_attribute_used_by_surveys: cd1c23726dad13ee92b33642c4f5d866
+    workspace/contacts/delete_attribute_used_by_segments: 326b21ca2ec8f600ba5478f1080597b7
+    workspace/contacts/delete_attribute_used_by_surveys: 69b31a1a1b9f55f1091c1466b8c38c9c
     workspace/contacts/delete_contact_confirmation: 2d45579e0bb4bc40fb1ee75b43c0e7a4
     workspace/contacts/delete_contact_confirmation_with_quotas: d3d17f13ae46ce04c126c82bf01299ac
     workspace/contacts/displays: fcc4527002bd045021882be463b8ac72
