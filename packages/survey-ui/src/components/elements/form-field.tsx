@@ -47,6 +47,10 @@ interface FormFieldProps {
   requiredLabel?: string;
   /** Error message to display */
   errorMessage?: string;
+  /**
+   * The failing fields, by field id, each with its own message. When given, only these inputs are marked invalid and each is described by its own message; without it every input is marked invalid.
+   */
+  fieldErrors?: Record<string, string>;
   /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'auto' (auto-detect from content) */
   dir?: "ltr" | "rtl" | "auto";
   /** Whether the controls are disabled */
@@ -67,6 +71,7 @@ function FormField({
   required = false,
   requiredLabel,
   errorMessage,
+  fieldErrors,
   dir = "auto",
   disabled = false,
   imageUrl,
@@ -105,14 +110,9 @@ function FormField({
   // This element has no single `inputId` — its inputs are keyed off `elementId` — so the error
   // region id follows the same `${elementId}-...` scheme the field ids already use.
   //
-  // The region is deliberately NOT referenced by the individual inputs via aria-describedby. This
-  // element receives one already-flattened message for the whole element, and for contact-info and
-  // address that message is field-scoped ("Email: ..." — the evaluator prefixes the field
-  // placeholder for rules that carry a `field`). Pointing every visible input at that single node
-  // would make a screen reader read "Email: ..." as the description of "First name" or "Company" —
-  // a confidently wrong description, which is worse than none. The inputs still expose
-  // aria-invalid, so the state is conveyed, and the live region announces the message itself.
+  // The element-level message is deliberately NOT referenced by the individual inputs via aria-describedby: it is one already-flattened message for the whole element, field-scoped for contact-info and address ("Email: ..."), so pointing every input at it would describe "First name" with the email's problem. With `fieldErrors`, each failing input is marked invalid and described by its own message instead, and the other inputs are left alone; without it, every input is marked invalid as before.
   const errorAria = getElementErrorAria(elementId, errorMessage);
+  const hasFieldErrors = Boolean(errorMessage) && Object.keys(fieldErrors ?? {}).length > 0;
 
   return (
     <div className="w-full space-y-4" id={elementId} dir={dir}>
@@ -145,6 +145,9 @@ function FormField({
 
             // An explicit token wins; otherwise the built-in field ids carry a known subject.
             const autocomplete = field.autocomplete ?? getFormFieldAutocomplete(field.id);
+            const fieldError = hasFieldErrors ? fieldErrors?.[field.id] : undefined;
+            const fieldErrorId = `${fieldInputId}-error`;
+            const isFieldInvalid = hasFieldErrors ? Boolean(fieldError) : errorAria.ariaInvalid;
 
             return (
               <div key={field.id} className="space-y-2">
@@ -162,8 +165,14 @@ function FormField({
                   disabled={disabled}
                   dir={dir}
                   autoComplete={autocomplete}
-                  aria-invalid={errorAria.ariaInvalid || undefined}
+                  aria-invalid={isFieldInvalid || undefined}
+                  aria-describedby={fieldError ? fieldErrorId : undefined}
                 />
+                {fieldError ? (
+                  <p id={fieldErrorId} className="text-destructive text-sm" dir={dir}>
+                    {fieldError}
+                  </p>
+                ) : null}
               </div>
             );
           })}

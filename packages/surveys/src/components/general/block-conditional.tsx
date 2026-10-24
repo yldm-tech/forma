@@ -21,7 +21,11 @@ import { canMoveFocusInto } from "@/lib/focus-guard";
 import { getLocalizedValue } from "@/lib/i18n";
 import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { getFirstErrorMessage, validateBlockResponses } from "@/lib/validation/evaluator";
+import {
+  getFirstErrorMessage,
+  getFormFieldErrors,
+  validateBlockResponses,
+} from "@/lib/validation/evaluator";
 
 const AUTO_PROGRESS_SUBMIT_DELAY_MS = 350;
 
@@ -126,6 +130,8 @@ export function BlockConditional({
 
   // State to store validation errors from centralized validation
   const [elementErrors, setElementErrors] = useState<TValidationErrorMap>({});
+  // The failing sub-fields of each address or contact-info element in elementErrors
+  const [formFieldErrors, setFormFieldErrors] = useState<Record<string, Record<string, string>>>({});
 
   // Refs to store form elements for each element so we can trigger their validation
   const elementFormRefs = useRef<Map<string, HTMLFormElement>>(new Map());
@@ -182,6 +188,11 @@ export function BlockConditional({
     // Clear error for this element when user makes a change
     if (elementErrors[elementId]) {
       setElementErrors((prev: TValidationErrorMap) => {
+        const updated = { ...prev };
+        delete updated[elementId];
+        return updated;
+      });
+      setFormFieldErrors((prev) => {
         const updated = { ...prev };
         delete updated[elementId];
         return updated;
@@ -411,6 +422,13 @@ export function BlockConditional({
 
     if (hasValidationErrors) {
       setElementErrors(errorMap);
+      setFormFieldErrors(
+        Object.fromEntries(
+          block.elements
+            .filter((element) => errorMap[element.id])
+            .map((element) => [element.id, getFormFieldErrors(element, value[element.id], languageCode)])
+        )
+      );
       announceErrorCount(Object.keys(errorMap).length);
 
       // Find the first element with an error, scroll to its input area (not the headline)
@@ -443,6 +461,7 @@ export function BlockConditional({
 
     // Clear any previous errors
     setElementErrors({});
+    setFormFieldErrors({});
     setErrorSummary("");
 
     // Collect TTC and responses, then submit
@@ -488,6 +507,7 @@ export function BlockConditional({
                   }}
                   onTtcCollect={handleTtcCollect}
                   errorMessage={getFirstErrorMessage(elementErrors, element.id)}
+                  formFieldErrors={formFieldErrors[element.id]}
                 />
               );
             })}

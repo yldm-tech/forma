@@ -355,6 +355,43 @@ const addImplicitContactInfoRules = (
   return rules;
 };
 
+const ADDRESS_FIELD_ORDER: TAddressField[] = ["addressLine1", "addressLine2", "city", "state", "zip", "country"];
+const CONTACT_INFO_FIELD_ORDER: TContactInfoField[] = ["firstName", "lastName", "email", "phone", "company"];
+
+interface TFormFieldConfig {
+  show?: boolean;
+  required?: boolean;
+}
+
+/** The sub-fields of an address or contact-info element in their response order, with their show/required configuration; empty for any other element. */
+const getFormFields = (element: TSurveyElement): { id: TAddressField | TContactInfoField; config: TFormFieldConfig }[] => {
+  if (element.type === TSurveyElementTypeEnum.Address) {
+    return ADDRESS_FIELD_ORDER.map((id) => ({ id, config: element[id] as TFormFieldConfig }));
+  }
+  if (element.type === TSurveyElementTypeEnum.ContactInfo) {
+    return CONTACT_INFO_FIELD_ORDER.map((id) => ({ id, config: element[id] as TFormFieldConfig }));
+  }
+  return [];
+};
+
+/**
+ * The visible sub-fields of an address or contact-info element that must be filled, as the form renders them (FormField in survey-ui): a field marked required, or every visible field when the element is required and none is marked.
+ */
+const getRequiredFormFields = (element: TSurveyElement): Set<string> => {
+  const visible = getFormFields(element).filter(({ config }) => config?.show !== false);
+  const noneMarked = visible.every(({ config }) => !config?.required);
+  return new Set(
+    visible.filter(({ config }) => config?.required || (noneMarked && element.required)).map(({ id }) => id)
+  );
+};
+
+const getFormFieldValue = (element: TSurveyElement, value: TResponseDataValue, fieldId: string): string => {
+  if (!Array.isArray(value)) return "";
+  const index = getFormFields(element).findIndex(({ id }) => id === fieldId);
+  const fieldValue = index >= 0 ? value[index] : undefined;
+  return typeof fieldValue === "string" ? fieldValue : "";
+};
+
 /**
  * Get field value for address/contact info elements
  */
@@ -368,23 +405,14 @@ const getFieldValue = (
   }
 
   if (element.type === TSurveyElementTypeEnum.Address && Array.isArray(elementValue)) {
-    const addressFieldOrder: TAddressField[] = [
-      "addressLine1",
-      "addressLine2",
-      "city",
-      "state",
-      "zip",
-      "country",
-    ];
-    const fieldIndex = addressFieldOrder.indexOf(rule.field as TAddressField);
+    const fieldIndex = ADDRESS_FIELD_ORDER.indexOf(rule.field as TAddressField);
     if (fieldIndex >= 0 && fieldIndex < elementValue.length) {
       return elementValue[fieldIndex] ?? "";
     }
   }
 
   if (element.type === TSurveyElementTypeEnum.ContactInfo && Array.isArray(elementValue)) {
-    const contactFieldOrder: TContactInfoField[] = ["firstName", "lastName", "email", "phone", "company"];
-    const fieldIndex = contactFieldOrder.indexOf(rule.field as TContactInfoField);
+    const fieldIndex = CONTACT_INFO_FIELD_ORDER.indexOf(rule.field as TContactInfoField);
     if (fieldIndex >= 0 && fieldIndex < elementValue.length) {
       return elementValue[fieldIndex] ?? "";
     }
@@ -493,6 +521,9 @@ export const validateElementResponse = (
   const requiredError = checkRequiredField(element, value, t);
   if (requiredError) {
     errors.push(requiredError);
+  } else if (getEmptyRequiredFormFields(element, value).length > 0) {
+    // A started address or contact form with a required sub-field left empty; the form's own required attributes caught this only after every other rule had passed.
+    errors.push(createRequiredError(t));
   }
 
   const singleSelectOtherError = validateSingleSelectOtherValue(element, value, languageCode, t);
@@ -554,6 +585,50 @@ export const validateElementResponse = (
     valid: authorResult.valid && implicitResult.valid,
     errors: [...authorResult.errors, ...implicitResult.errors],
   };
+};
+
+const getEmptyRequiredFormFields = (element: TSurveyElement, value: TResponseDataValue): string[] =>
+  [...getRequiredFormFields(element)].filter(
+    (fieldId) => getFormFieldValue(element, value, fieldId).trim() === ""
+  );
+
+/**
+ * The failing sub-fields of an address or contact-info element, each with its own message, so the form marks and describes only those fields instead of every input. Empty for any other element, and for an element whose response is valid.
+ *
+ * A required field left empty gets the required message; a field whose rule fails gets that rule's message, without the field-name prefix the element-level message carries.
+ */
+export const getFormFieldErrors = (
+  element: TSurveyElement,
+  value: TResponseDataValue,
+  languageCode: string
+): Record<string, string> => {
+  if (getFormFields(element).length === 0) return {};
+  if (validateElementResponse(element, value, languageCode).valid) return {};
+
+  const t: TFunction = getTranslations(languageCode);
+  const fieldErrors: Record<string, string> = {};
+  for (const fieldId of getEmptyRequiredFormFields(element, value)) {
+    fieldErrors[fieldId] = t("errors.please_fill_out_this_field");
+  }
+
+  const validation = (
+    element as TSurveyElement & { validation?: { rules?: TValidationRule[]; logic?: "and" | "or" } }
+  ).validation;
+  const authorRules = validation?.rules ?? [];
+  const passes = (rule: TValidationRule) =>
+    validators[rule.type]?.check(getFieldValue(rule, element, value), rule.params, element).valid ?? true;
+  // Under "or" one passing author rule satisfies them all, so none of them marks a field.
+  const authorRulesSatisfied = validation?.logic === "or" && authorRules.some(passes);
+  const implicitRules = addImplicitContactInfoRules(element, [...authorRules]).slice(authorRules.length);
+  const rules = authorRulesSatisfied ? implicitRules : [...authorRules, ...implicitRules];
+  for (const rule of rules) {
+    const validator = validators[rule.type];
+    if (!rule.field || !validator || fieldErrors[rule.field]) continue;
+    if (!passes(rule)) {
+      fieldErrors[rule.field] = validator.getDefaultMessage(rule.params, element, t);
+    }
+  }
+  return fieldErrors;
 };
 
 /**

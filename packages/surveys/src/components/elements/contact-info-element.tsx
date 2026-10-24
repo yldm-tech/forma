@@ -18,6 +18,7 @@ interface ContactInfoElementProps {
   autoFocusEnabled: boolean;
   dir?: "ltr" | "rtl" | "auto";
   errorMessage?: string;
+  formFieldErrors?: Record<string, string>;
 }
 
 export function ContactInfoElement({
@@ -30,6 +31,7 @@ export function ContactInfoElement({
   currentElementId,
   dir = "auto",
   errorMessage,
+  formFieldErrors,
 }: Readonly<ContactInfoElementProps>) {
   const [startTime, setStartTime] = useState(performance.now());
   const isCurrent = element.id === currentElementId;
@@ -124,6 +126,7 @@ export function ContactInfoElement({
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}
         errorMessage={errorMessage}
+        fieldErrors={formFieldErrors}
       />
     </form>
   );

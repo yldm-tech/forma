@@ -10,7 +10,12 @@ import type {
   TSurveyOpenTextElement,
   TSurveyRankingElement,
 } from "@forma/types/surveys/elements";
-import { getFirstErrorMessage, validateBlockResponses, validateElementResponse } from "./evaluator";
+import {
+  getFirstErrorMessage,
+  getFormFieldErrors,
+  validateBlockResponses,
+  validateElementResponse,
+} from "./evaluator";
 
 // Mock translation function
 const mockT = vi.fn((key: string) => {
@@ -982,5 +987,99 @@ describe("getFirstErrorMessage", () => {
     const errorMap = {};
     const message = getFirstErrorMessage(errorMap, "text1");
     expect(message).toBeUndefined();
+  });
+});
+
+describe("getFormFieldErrors", () => {
+  // Kitchen Sink's contact question: first and last name and email required, phone and company optional.
+  const contactInfo = (overrides: Record<string, unknown> = {}) =>
+    ({
+      id: "contact",
+      type: TSurveyElementTypeEnum.ContactInfo,
+      headline: { default: "How can we reach you?" },
+      firstName: { show: true, required: true, placeholder: { default: "First Name" } },
+      lastName: { show: true, required: true, placeholder: { default: "Last Name" } },
+      email: { show: true, required: true, placeholder: { default: "Email" } },
+      phone: { show: true, required: false, placeholder: { default: "Phone" } },
+      company: { show: true, required: false, placeholder: { default: "Company" } },
+      required: true,
+      ...overrides,
+    }) as unknown as TSurveyContactInfoElement;
+
+  test("marks only the failing fields, each with its own message", () => {
+    expect(getFormFieldErrors(contactInfo(), ["A", "", "abc", "xyz", ""], "en")).toEqual({
+      lastName: "errors.please_fill_out_this_field",
+      email: "errors.please_enter_a_valid_email_address",
+      phone: "errors.please_enter_a_valid_phone_number",
+    });
+  });
+
+  test("a started form with an empty required field is invalid as a whole", () => {
+    const result = validateElementResponse(contactInfo(), ["A", "", "a@example.com", "", ""], "en");
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]?.message).toBe("errors.please_fill_out_this_field");
+  });
+
+  test("a valid response has no field errors", () => {
+    expect(getFormFieldErrors(contactInfo(), ["A", "B", "a@example.com", "", ""], "en")).toEqual({});
+  });
+
+  test("a required element with no field marked required requires every visible field", () => {
+    const element = contactInfo({
+      firstName: { show: true, required: false, placeholder: { default: "First Name" } },
+      lastName: { show: false, required: false, placeholder: { default: "Last Name" } },
+      email: { show: true, required: false, placeholder: { default: "Email" } },
+      phone: { show: false, required: false, placeholder: { default: "Phone" } },
+      company: { show: false, required: false, placeholder: { default: "Company" } },
+    });
+    expect(getFormFieldErrors(element, ["A", "", "", "", ""], "en")).toEqual({
+      email: "errors.please_fill_out_this_field",
+    });
+  });
+
+  test("an author's field rule names its own field, without the prefix the element message carries", () => {
+    const address = {
+      id: "address",
+      type: TSurveyElementTypeEnum.Address,
+      headline: { default: "Address" },
+      addressLine1: { show: true, required: false, placeholder: { default: "Address Line 1" } },
+      addressLine2: { show: false, required: false, placeholder: { default: "Address Line 2" } },
+      city: { show: true, required: false, placeholder: { default: "City" } },
+      state: { show: true, required: false, placeholder: { default: "State" } },
+      zip: { show: true, required: false, placeholder: { default: "ZIP" } },
+      country: { show: true, required: false, placeholder: { default: "Country" } },
+      required: false,
+      validation: { rules: [{ id: "rule1", type: "minLength", field: "city", params: { min: 3 } }] },
+    } as unknown as TSurveyAddressElement;
+    expect(getFormFieldErrors(address, ["123 Main St", "", "NY", "", "", ""], "en")).toEqual({
+      city: "errors.min_length",
+    });
+  });
+
+  test("under or-logic a passing author rule leaves every author rule's field unmarked", () => {
+    const element = contactInfo({
+      validation: {
+        logic: "or",
+        rules: [
+          { id: "r1", type: "minLength", field: "firstName", params: { min: 3 } },
+          { id: "r2", type: "minLength", field: "company", params: { min: 1 } },
+        ],
+      },
+    });
+    // The empty last name keeps the element invalid; firstName's rule fails but company's passes.
+    expect(getFormFieldErrors(element, ["Al", "", "a@example.com", "", "Acme"], "en")).toEqual({
+      lastName: "errors.please_fill_out_this_field",
+    });
+  });
+
+  test("any other element has no field errors", () => {
+    const openText = {
+      id: "q",
+      type: TSurveyElementTypeEnum.OpenText,
+      headline: { default: "Q" },
+      required: true,
+      inputType: "text",
+    } as unknown as TSurveyOpenTextElement;
+    expect(getFormFieldErrors(openText, "", "en")).toEqual({});
   });
 });
