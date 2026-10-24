@@ -63,6 +63,8 @@ catalog:
   tailwind-merge: 3.7.0
   class-variance-authority: 0.7.1
   lucide-react: 0.577.0
+  # Shared by apps/web (the admin SPA) and apps/website (rendered to static HTML at build time).
+  "@tanstack/react-router": 1.170.41
   date-fns: 4.4.0
   isomorphic-dompurify: 3.9.0
   "@formkit/auto-animate": 0.9.0

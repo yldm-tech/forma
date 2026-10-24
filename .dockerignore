@@ -1,9 +1,10 @@
-# Docker builds use the repository root as context (the Forma image in deploy/docker/Dockerfile and the documentation in apps/docs/deploy/Dockerfile). Keep secrets, dependencies and build output out of it.
+# Docker builds use the repository root as context (the Forma image in deploy/docker/Dockerfile, the documentation in apps/docs/deploy/Dockerfile and the website in apps/website/Dockerfile). Keep secrets, dependencies and build output out of it.
 
 # dependencies and build output; images install and build their own
 **/node_modules
 .pnpm-store/
 **/dist/
+**/.prerender/
 **/coverage/
 /bin/
 apps/web/public/js

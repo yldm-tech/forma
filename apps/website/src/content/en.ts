@@ -1,0 +1,365 @@
+import type { SiteContent } from "./schema";
+
+export const en: SiteContent = {
+  common: {
+    skipToContent: "Skip to content",
+    homeLabel: "Forma home",
+    nav: {
+      label: "Main",
+      product: "Product",
+      linkSurveys: "Link surveys",
+      websiteSurveys: "Website surveys",
+      inAppSurveys: "In-app surveys",
+      integrations: "Integrations",
+      developers: "Developers",
+      selfHosting: "Self-hosting",
+      docs: "Docs",
+      github: "GitHub",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+      language: "Language",
+    },
+    cta: {
+      primary: { closed: "Self-host Forma", open: "Get started" },
+      signIn: "Sign in",
+      docs: "Docs",
+    },
+    beta: "Beta",
+    copy: { button: "Copy", done: "Copied" },
+    ctaBand: {
+      title: "Start with one question",
+      body: {
+        closed:
+          "Self-host Forma in minutes with Docker Compose, or sign in if your team already uses forma.yldm.ai.",
+        open: "Create an account or self-host Forma.",
+      },
+    },
+    footer: {
+      label: "Footer",
+      product: "Product",
+      developers: "Developers",
+      project: "Project",
+      apiReference: "API reference",
+      mcp: "MCP",
+      reportIssue: "Report an issue",
+      security: "Security",
+      copyright: "© 2026 YLDM",
+    },
+    localeHint: { text: "This page is also available in English.", dismiss: "Dismiss" },
+    illustrations: {
+      surveyTitle: "Customer feedback",
+      ratingQuestion: "How would you rate your experience?",
+      npsQuestion: "How likely are you to recommend us?",
+      npsLow: "Not likely",
+      npsHigh: "Very likely",
+      textPlaceholder: "Tell us more…",
+      submit: "Submit",
+      popoverQuestion: "Did you find what you were looking for?",
+      popoverYes: "Yes",
+      popoverNo: "Not yet",
+      summaryTitle: "What do you value most?",
+      summaryOptions: ["Ease of use", "Speed", "Integrations", "Support"],
+      workflowTrigger: "Trigger",
+      workflowTriggerValue: "Response completed",
+      workflowFilter: "Filter",
+      workflowFilterValue: "Ending: Thank you",
+      workflowAction: "Action",
+      workflowActionValue: "Send email",
+      segmentLabel: "Segment",
+      segmentValue: "Plan is Trial",
+      eventLabel: "Action",
+      eventValue: "Exported a report",
+    },
+  },
+  pages: {
+    home: {
+      meta: {
+        title: "Forma: link, website and in-app surveys",
+        description:
+          "Build surveys in a no-code editor, target who answers, read the results and send them to Slack, Notion, Google Sheets or a webhook. Hosted or self-hosted.",
+      },
+      hero: {
+        eyebrow: "Surveys and feedback",
+        title: "Ask the right people. Act on what they tell you.",
+        sub: "Forma is a survey platform for link, website and in-app surveys. Build in a no-code editor, choose exactly who should answer, read the results, and send them to the tools your team already uses.",
+        note: {
+          closed:
+            "Use the hosted service at forma.yldm.ai (invitation only for now), or run Forma on your own servers.",
+          open: "Create an account at forma.yldm.ai, or run Forma on your own servers.",
+        },
+      },
+      ways: {
+        title: "Three ways to ask",
+        cards: [
+          {
+            title: "Link surveys",
+            body: "Share a link, embed it on a page, or send personal and single-use links. Add a PIN or email verification when answers need to be trusted.",
+          },
+          {
+            title: "Website surveys",
+            body: "Show a survey to visitors when they click, scroll, stay on a page or are about to leave. Once the snippet is installed, you set the triggers in Forma, not in your code.",
+          },
+          {
+            title: "In-app surveys",
+            body: "Identify signed-in users, attach attributes, and ask exactly the segment you care about, at the moment it matters.",
+          },
+        ],
+      },
+      build: {
+        title: "Build the survey you actually need",
+        body: "Start from one of more than 50 templates or from a blank survey. Combine 17 question types with conditional logic, hidden fields, variables and recall, and style it to match your brand.",
+        checklist: [
+          "Free text, single and multiple choice, picture choice, rating, NPS, CSAT, CES, ranking, matrix, date, address, contact info, file upload, consent, statement, and meeting scheduling with Cal.com",
+          "One survey in many languages",
+          "Partial submissions, quotas, scheduling and response limits",
+        ],
+      },
+      understand: {
+        title: "Read the results where they were collected",
+        body: "Every survey has its own summary and response views. Filter responses, tag them, export to CSV or Excel, or share the results with a public link.",
+      },
+      act: {
+        title: "Turn responses into next steps",
+        body: "Send responses to Slack, Notion, Airtable or Google Sheets, or to any endpoint with webhooks. Workflows (Beta) send an email when a response is completed, optionally only for the endings you choose.",
+        link: "See integrations →",
+      },
+      ai: {
+        title: "AI, only when you turn it on",
+        body: "Describe a survey and get an editable draft, translate a survey into your enabled languages, or generate example responses to preview the analysis. AI stays off until an owner or manager enables it for the organization.",
+      },
+      developers: {
+        title: "Built to be wired in",
+        body: "Add one script tag to show website and in-app surveys. Manage surveys, responses and workflows over the v3 REST API, or connect an AI agent to the MCP server with your own Forma login.",
+        link: "Developer overview →",
+      },
+      hosting: {
+        title: "On our servers or yours",
+        hostedTitle: "Hosted",
+        hosted: [
+          "forma.yldm.ai",
+          "We run the service and its upgrades",
+          { closed: "Invitation only for now", open: "Sign up with email" },
+        ],
+        selfHostedTitle: "Self-hosted",
+        selfHosted: [
+          "Docker Compose, a one-click script for Ubuntu, or the Helm chart",
+          "Your database, your object storage",
+          "SSO with Google, Microsoft Entra ID, OIDC or SAML",
+        ],
+        footer: "The source code is public on GitHub.",
+      },
+    },
+    formBuilder: {
+      meta: {
+        title: "Link surveys and forms · Forma",
+        description:
+          "Create link surveys with 17 question types, conditional logic, hidden fields and multiple languages. Share by link, embed on a page or send single-use links.",
+      },
+      title: "Link surveys and forms",
+      sub: "Build a survey once and send it anywhere a link can go: email, chat, QR code, or embedded on your own page.",
+      share: {
+        title: "Share it your way",
+        items: [
+          "Custom URL slugs",
+          "Embed with an iframe",
+          "Personal links per contact",
+          "Single-use links",
+          "Source tracking via URL parameters",
+          "Prefill answers from the URL",
+        ],
+      },
+      control: {
+        title: "Control who answers",
+        body: "Protect a survey with a PIN, require email verification before it starts, add reCAPTCHA spam protection, and cap or schedule submissions.",
+      },
+      logic: {
+        title: "Logic and data",
+        body: "Branch with conditional logic, carry context in hidden fields and variables, quote earlier answers with recall, and keep partial submissions.",
+      },
+      languages: {
+        title: "One survey, many languages",
+        body: "Add translations to a single survey instead of copying it. Respondents pick a language or arrive with `?lang=`, and every answer lands in the same results.",
+      },
+      templates: {
+        title: "Templates",
+        body: "More than 50 templates, available in English, Japanese and Chinese.",
+      },
+    },
+    websiteSurvey: {
+      meta: {
+        title: "Website surveys · Forma",
+        description:
+          "Show surveys to visitors on click, page view, scroll, time on page or exit intent, configured without code after one script tag.",
+      },
+      title: "Surveys on your website",
+      sub: "Ask visitors at the right moment, without asking them to leave the page.",
+      install: {
+        title: "Install once",
+        body: "Paste one script tag into your site, or add it through Google Tag Manager. Everything else is configured in Forma.",
+      },
+      triggers: {
+        title: "No-code triggers",
+        items: [
+          "Click on an element (by text or CSS selector)",
+          "Page view",
+          "Exit intent",
+          "50% scroll",
+          "Time on page",
+        ],
+        body: "Limit any trigger to URLs that match, contain, start or end with a value, or a regular expression.",
+      },
+      considerate: {
+        title: "Be considerate",
+        body: "Set how often the same visitor can be asked, add a cooldown between surveys, and show a survey to only a percentage of visitors.",
+      },
+      style: {
+        title: "Match your site",
+        body: "Workspace themes, per-survey style overrides and custom CSS.",
+      },
+    },
+    inAppSurvey: {
+      meta: {
+        title: "In-app surveys for known users · Forma",
+        description:
+          "Identify users, add attributes, build segments and trigger surveys from actions in your product.",
+      },
+      title: "In-app surveys for known users",
+      sub: "Identify users, enrich them with attributes, and ask the people whose answers matter for the decision in front of you.",
+      identify: {
+        title: "Identify and enrich",
+        body: "Set a user ID and attributes from your app through the SDK. Contacts and their attributes live in Forma.",
+      },
+      segments: {
+        title: "Target with segments",
+        body: "Build segments from attributes and show a survey only to that segment, triggered by actions in your product.",
+      },
+      codeActions: {
+        title: "Code actions",
+        body: "Track any event from your code and use it as a trigger, alongside the no-code actions.",
+      },
+      language: {
+        title: "Language",
+        body: "Set the user's language through the SDK. If a survey has no translation for it, Forma does not show that survey to the user.",
+      },
+    },
+    integrations: {
+      meta: {
+        title: "Integrations and Workflows · Forma",
+        description:
+          "Send responses to Slack, Notion, Airtable, Google Sheets or webhooks, and email on completed responses with Workflows (Beta).",
+      },
+      title: "Integrations and Workflows",
+      sub: "Responses are only useful once someone sees them. Send them where your team works.",
+      native: {
+        title: "Native integrations",
+        body: "Connect an account and choose where new responses go.",
+      },
+      webhooks: {
+        title: "Webhooks",
+        body: "Get an HTTP request at your endpoint when responses are created, updated or finished.",
+      },
+      automation: {
+        title: "Automation tools",
+        body: "Step-by-step guides for Zapier, Make, n8n and Activepieces.",
+        link: "Read the integration guides →",
+      },
+      workflows: {
+        title: "Workflows",
+        body: "Trigger: a response is completed. Filter: only the endings you choose. Action: send an email. Every run is recorded with its status and step logs.",
+        badgeNote: "Beta: the set of triggers and actions will grow.",
+      },
+    },
+    developers: {
+      meta: {
+        title: "Forma for developers",
+        description:
+          "A JavaScript snippet for in-product surveys, the v3 REST API and an MCP server for AI agents.",
+      },
+      title: "For developers",
+      sub: "A script tag for surveys in your product, a REST API for everything else.",
+      snippet: {
+        title: "JavaScript snippet",
+        body: "Loads `/js/forma.umd.cjs` from your Forma instance and renders surveys on your pages.",
+      },
+      api: {
+        title: "REST API v3",
+        body: "Manage surveys, responses, workflows and tags with API keys. The API is specified in OpenAPI.",
+        link: "API reference →",
+      },
+      mcp: {
+        title: "MCP server",
+        body: "Point an MCP client at `https://forma.yldm.ai/api/mcp`. You sign in with your own Forma account over OAuth, approve the scopes, and the agent can list, create and edit surveys and workflows.",
+        link: "MCP guide →",
+      },
+      webhooks: {
+        title: "Webhooks",
+        body: "Receive responses at your own endpoint as they are created, updated and finished.",
+        link: "See integrations →",
+      },
+    },
+    selfHosting: {
+      meta: {
+        title: "Self-host Forma · Docker, Helm",
+        description:
+          "Run Forma with Docker Compose, a one-click Ubuntu script or the Helm chart. Requirements and setup guides.",
+      },
+      title: "Run Forma on your own infrastructure",
+      sub: "One Go binary in a container, PostgreSQL, Valkey and SpiceDB. Pick the setup that fits your team.",
+      optionsTitle: "Choose a setup",
+      docker: {
+        title: "Docker Compose",
+        body: "Download the Compose file, create `.env`, run `docker compose up`.",
+        link: "Docker guide →",
+      },
+      oneClick: {
+        title: "One-click (Ubuntu)",
+        body: "A shell script that sets up Forma with Traefik and HTTPS certificates.",
+        link: "One-click guide →",
+      },
+      kubernetes: {
+        title: "Kubernetes",
+        body: "The official Helm chart, with managed PostgreSQL, Redis and S3-compatible storage when you need them.",
+        link: "Kubernetes guide →",
+      },
+      requirements: {
+        title: "Requirements",
+        body: "For evaluation: 2 vCPU, 4 GB memory, 20 GB SSD. For low load on one server: 4 vCPU, 8 GB, 50 GB SSD. HTTPS is required.",
+      },
+      signIn: {
+        title: "Sign-in options",
+        body: "Email and password with two-factor authentication, plus Google, Microsoft Entra ID, OpenID Connect and SAML single sign-on.",
+      },
+      ai: {
+        title: "Optional AI",
+        body: "AI features need a model endpoint you configure. Leave it unset and Forma runs without AI.",
+      },
+      source: {
+        title: "Source code",
+        body: "The full source is on GitHub.",
+        link: "View on GitHub →",
+      },
+    },
+    security: {
+      meta: {
+        title: "Security · Forma",
+        description: "How to report a vulnerability and the account security features Forma provides.",
+      },
+      title: "Security",
+      report: {
+        title: "Report a vulnerability",
+        body: "Email security@yldm.ai instead of opening a public issue. We do not run a bug bounty; public credit is available on request.",
+      },
+      account: {
+        title: "Account security",
+        body: "Two-factor authentication, organizations with teams and per-workspace roles, audit logging, and SSO on self-hosted instances.",
+      },
+      policyLink: "Read the full policy on GitHub →",
+    },
+  },
+  notFound: {
+    meta: { title: "Page not found · Forma", description: "The page may have moved." },
+    title: "Page not found",
+    body: "The page may have moved. If you were looking for the app, it now lives at /app.",
+    home: "Home",
+  },
+};
