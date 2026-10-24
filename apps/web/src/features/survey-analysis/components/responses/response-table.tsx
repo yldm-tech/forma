@@ -63,12 +63,15 @@ const ResponseTableCell = memo(
   ({
     cell,
     row,
+    isSelected,
     isExpanded,
     onOpen,
     expandLabel,
   }: {
     cell: Cell<TResponseTableData, unknown>;
     row: Row<TResponseTableData>;
+    /** The row's selection, passed so the memo re-renders the checkbox: the cell and row objects stay the same when only the selection changes. */
+    isSelected: boolean;
     isExpanded: boolean;
     onOpen: (responseId: string) => void;
     expandLabel: string;
@@ -81,7 +84,7 @@ const ResponseTableCell = memo(
       <TableCell
         className={cn(
           "border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
-          row.getIsSelected() && "bg-slate-100",
+          isSelected && "bg-slate-100",
           !cell.column.getIsLastColumn() && "border-r",
           !cell.column.getIsFirstColumn() && "border-l",
           isSelect && "px-2"
@@ -135,6 +138,7 @@ export const ResponseTable = ({
   hasMore,
   isFetchingFirstPage,
   totalCount,
+  countSummary,
   emptyState,
   showQuotasColumn,
   locale,
@@ -150,6 +154,8 @@ export const ResponseTable = ({
   isFetchingFirstPage: boolean;
   /** How many responses match the current filter, when known: the response card's position reads "n of total". */
   totalCount: number | undefined;
+  /** How many responses are loaded of those matching, shown in the toolbar while no row is selected. */
+  countSummary: ReactNode;
   /** What shows under the header row when no response matches: it sits outside the table, which is as wide as all its columns, so it stays in view. */
   emptyState: ReactNode;
   showQuotasColumn: boolean;
@@ -291,7 +297,7 @@ export const ResponseTable = ({
         sensors={sensors}>
         <DataTableToolbar
           selection={
-            table.getFilteredSelectedRowModel().rows.length > 0 && (
+            table.getFilteredSelectedRowModel().rows.length > 0 ? (
               <SelectedRowSettings
                 table={table}
                 onDeleted={handleDeleted}
@@ -300,6 +306,8 @@ export const ResponseTable = ({
                 }
                 downloadResponses={downloadSelectedRows}
               />
+            ) : (
+              countSummary
             )
           }
           setIsExpanded={setIsExpanded}
@@ -340,6 +348,7 @@ export const ResponseTable = ({
                         key={cell.id}
                         cell={cell}
                         row={row}
+                        isSelected={row.getIsSelected()}
                         isExpanded={isExpanded}
                         onOpen={setSelectedResponseId}
                         expandLabel={t("workspace.surveys.summary.open_response_details")}

@@ -284,11 +284,11 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   );
 };
 
-/** What one applied condition reads as on its chip: the target, the operator and the value. */
-const describeFilterRow = (row: SelectedFilterValue["filter"][number]): string => {
+/** What one applied condition reads as on its chip: the operator and the value, shown after the target. */
+const describeCondition = (row: SelectedFilterValue["filter"][number]): string => {
   const value = row.filterType.filterComboBoxValue;
   const values = Array.isArray(value) ? value.join(", ") : (value ?? "");
-  return [row.elementType.label, row.filterType.filterValue, values].filter(Boolean).join(" ");
+  return [row.filterType.filterValue, values].filter(Boolean).join(" ");
 };
 
 /** The applied conditions as chips beside the filter bar, each removable on its own, so a filtered view says what it is filtered by. */
@@ -303,7 +303,8 @@ export const AppliedFilterChips = () => {
   const chips = [
     ...selectedFilter.filter.map((row, index) => ({
       key: `${row.elementType.id ?? ""}-${index}`,
-      label: describeFilterRow(row),
+      label: row.elementType.label ?? "",
+      condition: describeCondition(row),
       remove: () =>
         setSelectedFilter((current) => ({
           ...current,
@@ -315,6 +316,7 @@ export const AppliedFilterChips = () => {
           {
             key: "responseStatus",
             label: statusLabel[selectedFilter.responseStatus] ?? "",
+            condition: "",
             remove: () => setSelectedFilter((current) => ({ ...current, responseStatus: "all" })),
           },
         ]
@@ -328,14 +330,18 @@ export const AppliedFilterChips = () => {
       {chips.map((chip) => (
         <li
           key={chip.key}
-          className="flex h-9 max-w-72 items-center gap-1 rounded-md border border-slate-200 bg-slate-50 pr-1 pl-2.5 text-sm text-slate-700">
-          <span className="truncate" title={chip.label}>
+          className="flex h-9 max-w-96 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 pr-1 pl-2.5 text-sm text-slate-700">
+          {/* A long question is cut, never the condition after it. */}
+          <span className="min-w-0 truncate" title={chip.label}>
             {chip.label}
           </span>
+          {chip.condition && <span className="shrink-0 font-medium text-slate-900">{chip.condition}</span>}
           <button
             type="button"
             className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-sm p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-800 focus-visible:ring-2 focus-visible:outline-hidden"
-            aria-label={t("workspace.surveys.summary.remove_filter", { filter: chip.label })}
+            aria-label={t("workspace.surveys.summary.remove_filter", {
+              filter: [chip.label, chip.condition].filter(Boolean).join(" "),
+            })}
             onClick={chip.remove}>
             <XIcon className="size-3.5" />
           </button>

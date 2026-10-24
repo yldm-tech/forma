@@ -107,22 +107,23 @@ export const ResponsePage = ({
   const total = matchingCount.data;
   const showCount = !responses.isPending && total !== undefined && total > 0;
 
+  const countSummary = showCount && (
+    <div className="flex items-center gap-3 text-sm text-slate-600">
+      <p aria-live="polite">
+        {t("workspace.surveys.responses.showing_count", {
+          loaded: Math.min(loaded.length, total),
+          total,
+        })}
+      </p>
+      {isFiltered && clearFiltersButton}
+    </div>
+  );
+
   return (
     <>
       <div className="flex min-h-9 gap-1.5">
         <CustomFilter survey={surveyWithRecall} />
       </div>
-      {showCount && (
-        <div className="flex items-center gap-3 text-sm text-slate-600">
-          <p aria-live="polite">
-            {t("workspace.surveys.responses.showing_count", {
-              loaded: Math.min(loaded.length, total),
-              total,
-            })}
-          </p>
-          {isFiltered && clearFiltersButton}
-        </div>
-      )}
       {responses.isError && (
         <p role="alert" className="text-sm text-red-600">
           {errorMessage(t, responses.error)}
@@ -138,6 +139,7 @@ export const ResponsePage = ({
           hasMore={responses.hasNextPage}
           isFetchingFirstPage={responses.isPending}
           totalCount={total}
+          countSummary={countSummary}
           emptyState={emptyState}
           showQuotasColumn={(quotas.data?.length ?? 0) > 0}
           locale={locale}
