@@ -135,11 +135,20 @@ func scalarIssues(surveyType, status, displayOption string, autoComplete, recont
 	return out
 }
 
+// editorNameIssue is the editor's rule that a survey has a name: forma2's ZSurveyDraft required one for a draft save only, which let a full save (Publish, Save on a live survey) store an empty name. The editor saves both ways under this rule, and a name of only spaces counts as empty. The v1 management API keeps forma2's rule, so this is not in scalarIssues.
+func editorNameIssue(name string) *surveydoc.Issue {
+	if strings.TrimSpace(name) != "" {
+		return nil
+	}
+	nameIssue := issue("name", "Survey name is required")
+	return &nameIssue
+}
+
 // draftShapeIssues are what a draft save must still satisfy to be storable: forma2's ZSurveyDraft (a name, the draft status) and the columns' own constraints.
 func draftShapeIssues(in *UpdateInput) []surveydoc.Issue {
 	var out []surveydoc.Issue
-	if in.Name == "" {
-		out = append(out, issue("name", "Survey name is required"))
+	if nameIssue := editorNameIssue(in.Name); nameIssue != nil {
+		out = append(out, *nameIssue)
 	}
 	if in.Status != StatusDraft {
 		out = append(out, issue("status", `Invalid input: expected "draft"`))
@@ -181,6 +190,10 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 	}
 	if err := draftVersionConflict(current, &in, draft); err != nil {
 		return nil, err
+	}
+	// A draft save reports a missing name with the rest of its shape issues.
+	if nameIssue := editorNameIssue(in.Name); !draft && nameIssue != nil {
+		return nil, ValidationError([]surveydoc.Issue{*nameIssue})
 	}
 	updated, err := s.update(ctx, current, &in, draft)
 	org := s.organizationOf(ctx, current.WorkspaceID)
