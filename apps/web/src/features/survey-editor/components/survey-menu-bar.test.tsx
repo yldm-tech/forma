@@ -549,6 +549,41 @@ describe("SurveyMenuBar", () => {
     expect(saves).toHaveLength(2);
   });
 
+  test("an autosave refusal clears once the change it carried is undone, with nothing to save", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const saves: SaveRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit) => {
+        saves.push({ path, body: JSON.parse(init.body as string) as Record<string, unknown> });
+        return Response.json(
+          {
+            code: "validation_error",
+            message: "Survey name is required",
+            details: { issues: [{ path: ["name"], message: "Survey name is required" }] },
+          },
+          { status: 400 }
+        );
+      })
+    );
+    renderMenuBar(survey());
+
+    const nameField = await screen.findByRole("textbox", { name: "Survey name" });
+    fireEvent.change(nameField, { target: { value: "" } });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText("Not saved: Please enter a survey name.")).toBeTruthy();
+
+    fireEvent.change(nameField, { target: { value: "Feedback" } });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText("Auto-save on")).toBeTruthy();
+    expect(screen.queryByText(/^Not saved/)).toBeNull();
+    expect(saves).toHaveLength(1);
+  });
+
   test("while Save in the unsaved-changes dialog runs, Keep editing does not close it, and the save still leaves when it lands", async () => {
     let answerSave: (() => void) | undefined;
     vi.stubGlobal(

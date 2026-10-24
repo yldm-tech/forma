@@ -412,8 +412,15 @@ export const SurveyMenuBar = ({
       if (localSurveyRef.current === refusedDraftRef.current) return;
 
       // Check for changes using refs (avoids re-creating interval on every change), and skip if there are none
-      if (!hasUnsavedSurveyChanges(localSurveyRef.current, [surveyRef.current, lastSavedSurveyRef.current]))
+      if (!hasUnsavedSurveyChanges(localSurveyRef.current, [surveyRef.current, lastSavedSurveyRef.current])) {
+        // Undoing the change a refused draft carried leaves nothing unsaved, so the refusal no longer applies.
+        setAutoSaveStatus((status) => {
+          if (status.state !== "invalid") return status;
+          const at = lastSavedAtRef.current;
+          return at ? { state: "saved", at } : { state: "idle" };
+        });
         return;
+      }
 
       void autoSaveRef.current();
     }, 10000);
