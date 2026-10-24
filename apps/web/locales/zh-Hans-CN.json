@@ -2587,12 +2587,12 @@
         "share_this_link_to_let_your_organization_member_join_your_organization": "分享此链接，邀请成员加入你的组织：",
         "test_email_requires_smtp": "此实例未配置邮件，无法发送测试邮件。",
         "test_email_sent_successfully": "测试邮件发送成功",
-        "view_only_access": "您只能查看这些设置，只有所有者和管理员可以更改。"
+        "view_only_access": "你只能查看这些设置，只有所有者和管理员可以更改。"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "自动订阅新问卷",
         "email_alerts_surveys": "邮件提醒（问卷）",
-        "email_not_configured": "此实例未配置邮件，在管理员完成配置之前不会发送任何提醒邮件。您在此处的设置仍会保存。",
+        "email_not_configured": "此实例未配置邮件，在管理员完成配置之前不会发送任何提醒邮件。你在此处的设置仍会保存。",
         "every_response": "每次回复",
         "every_response_tooltip": "仅发送完整回复，不含部分回复。",
         "need_slack_or_discord_notifications": "需要 Slack 或 Discord 通知",
