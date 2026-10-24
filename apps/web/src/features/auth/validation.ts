@@ -1,19 +1,57 @@
-// forma2's input rules for the auth forms, with their messages. forma2 wrote these messages in English inside its zod schemas (packages/types/user.ts and the forms' own schemas) rather than in the locale catalogues, and zod supplied the rest, so they are carried over verbatim and are not translated.
+// forma2's input rules for the auth forms. forma2 wrote their messages in English inside its zod schemas; here each rule returns the key of its message (auth.validation.*), and the forms show it through validationMessage in the user's language.
 
+import type { TFunction } from "i18next";
 import type { FieldError } from "../../lib/api";
+import type { Validators } from "../../lib/form";
 
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 export const MESSAGES = {
-  invalidEmail: "Invalid email address",
-  passwordTooShort: "Password must be at least 8 characters long",
-  passwordTooLong: "Password must be 128 characters or less",
-  passwordPattern: "Invalid string: must match pattern /^(?=.*[A-Z])(?=.*\\d).*$/",
-  nameTooShort: "Name should be at least 1 character long",
-  nameFormat: "Invalid name format",
-  captchaRequired: "CAPTCHA verification required",
+  invalidEmail: "auth.validation.invalid_email",
+  passwordTooShort: "auth.validation.password_too_short",
+  passwordTooLong: "auth.validation.password_too_long",
+  passwordPattern: "auth.validation.password_needs_upper_and_digit",
+  nameTooShort: "auth.validation.name_required",
+  nameFormat: "auth.validation.name_invalid",
+  captchaRequired: "auth.validation.captcha_required",
 } as const;
+
+export type ValidationKey = (typeof MESSAGES)[keyof typeof MESSAGES];
+
+/** The user-facing message of a rule's key. Each key is spelled out so the translation scan sees it read. */
+export const validationMessage = (t: TFunction, key: ValidationKey): string => {
+  switch (key) {
+    case "auth.validation.invalid_email":
+      return t("auth.validation.invalid_email");
+    case "auth.validation.password_too_short":
+      return t("auth.validation.password_too_short", { min: PASSWORD_MIN_LENGTH });
+    case "auth.validation.password_too_long":
+      return t("auth.validation.password_too_long", { max: PASSWORD_MAX_LENGTH });
+    case "auth.validation.password_needs_upper_and_digit":
+      return t("auth.validation.password_needs_upper_and_digit");
+    case "auth.validation.name_required":
+      return t("auth.validation.name_required");
+    case "auth.validation.name_invalid":
+      return t("auth.validation.name_invalid");
+    case "auth.validation.captcha_required":
+      return t("auth.validation.captcha_required");
+  }
+};
+
+/** A form's rules with their keys turned into messages, for useForm. Build it with useMemo on `t`, so the rules stay stable until the language changes. */
+export const translatedRules = <V>(t: TFunction, rules: Validators<V>): Validators<V> => {
+  const translated: Validators<V> = {};
+  for (const name of Object.keys(rules) as (keyof V)[]) {
+    const rule = rules[name];
+    if (!rule) continue;
+    translated[name] = (value, values) => {
+      const key = rule(value, values);
+      return key && validationMessage(t, key as ValidationKey);
+    };
+  }
+  return translated;
+};
 
 // zod 4's z.email() pattern, which the Go server's userinput.ValidEmailFormat reproduces.
 const EMAIL_PATTERN =
@@ -26,22 +64,22 @@ const NAME_PATTERN = /^[\p{L}\p{M} ',.&()\d-]+$/u;
 const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d).*$/;
 
 /** z.email(): the address is not trimmed, surrounding whitespace fails. */
-export const emailError = (email: string): string | undefined =>
+export const emailError = (email: string): ValidationKey | undefined =>
   EMAIL_PATTERN.test(email) ? undefined : MESSAGES.invalidEmail;
 
 /** The sign-in form's password rule: length only, so an older password that predates the composition rule can still sign in. Lengths are UTF-16 code units, as zod counts them. */
-export const signInPasswordError = (password: string): string | undefined => {
+export const signInPasswordError = (password: string): ValidationKey | undefined => {
   if (password.length < PASSWORD_MIN_LENGTH) return MESSAGES.passwordTooShort;
   if (password.length > PASSWORD_MAX_LENGTH) return MESSAGES.passwordTooLong;
   return undefined;
 };
 
 /** ZUserPassword: 8 to 128 characters with at least one uppercase letter and one digit. */
-export const passwordError = (password: string): string | undefined =>
+export const passwordError = (password: string): ValidationKey | undefined =>
   signInPasswordError(password) ?? (PASSWORD_PATTERN.test(password) ? undefined : MESSAGES.passwordPattern);
 
 /** ZUserName, which validates the trimmed value. */
-export const nameError = (name: string): string | undefined => {
+export const nameError = (name: string): ValidationKey | undefined => {
   const trimmed = name.trim();
   if (trimmed.length < 1) return MESSAGES.nameTooShort;
   if (!NAME_PATTERN.test(trimmed)) return MESSAGES.nameFormat;
@@ -71,8 +109,8 @@ export const passwordChecks = (password: string): PasswordCheck[] => [
   { key: "auth.signup.password_validation_contain_at_least_1_number", passed: /\d/.test(password) },
 ];
 
-/** The message for a constraint the server reported on a field, worded as the matching client rule words it. */
-export const serverFieldMessage = (error: FieldError): string => {
+/** The message key for a constraint the server reported on a field, the one the matching client rule returns; undefined for a constraint no rule words. */
+export const serverFieldMessage = (error: FieldError): ValidationKey | undefined => {
   const field = error.field.toLowerCase();
   if (field === "email") return MESSAGES.invalidEmail;
   if (field === "name") return error.rule === "name_format" ? MESSAGES.nameFormat : MESSAGES.nameTooShort;
@@ -82,5 +120,5 @@ export const serverFieldMessage = (error: FieldError): string => {
     if (error.rule === "max") return MESSAGES.passwordTooLong;
     if (error.rule === "password_composition") return MESSAGES.passwordPattern;
   }
-  return `${error.field}: ${error.rule}`;
+  return undefined;
 };

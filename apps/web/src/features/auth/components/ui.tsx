@@ -7,12 +7,13 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { Wordmark } from "../../../components/ui/logo";
 
 // The building blocks of the signed-out screens, after forma2's FormWrapper, Button, Input, PasswordInput, Alert and invite ContentLayout.
 
 const join = (...classes: (string | false | undefined)[]) => classes.filter(Boolean).join(" ");
 
-/** The card every signed-out form renders in. Mobile first: min-h-dvh, because 100vh on a phone is the large viewport and pushes a centred card under the browser chrome. */
+/** The card every signed-out form renders in. Mobile first: min-h-dvh, because 100vh on a phone is the large viewport and pushes a centred card under the browser chrome. The logo is the website's mark and wordmark and leads to the instance's own root in this tab: the website on forma.yldm.ai, the operator's page on a self-hosted instance. */
 export function FormWrapper({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   return (
@@ -20,12 +21,10 @@ export function FormWrapper({ children }: { children: ReactNode }) {
       <main className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl sm:p-8">
         <div className="mb-8 text-center">
           <a
-            href="https://forma.yldm.ai?utm_source=forma-app&utm_medium=webapp&utm_campaign=auth_logo"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/"
             aria-label={t("common.forma_homepage")}
-            className="inline-block rounded-md text-3xl font-bold tracking-tight text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:outline-hidden sm:text-4xl">
-            <span aria-hidden="true">Forma</span>
+            className="inline-block rounded-md text-3xl focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:outline-hidden sm:text-4xl">
+            <Wordmark />
           </a>
         </div>
         {children}
@@ -34,24 +33,24 @@ export function FormWrapper({ children }: { children: ReactNode }) {
   );
 }
 
-/** The full-screen message layout of the invite page. */
+/** The invite page's message, in the same card as every other signed-out screen: a headline, what it means, and the actions under it, stacked. */
 export function ContentLayout({
   headline,
   description,
   children,
 }: {
   headline: string;
-  description?: string;
+  description?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-slate-100 px-4 py-8">
-      <main className="flex w-full max-w-md flex-col gap-6 text-center text-slate-700 sm:gap-7">
-        <h1 className="text-2xl font-bold text-balance sm:text-3xl">{headline}</h1>
-        {description && <p className="text-lg text-pretty sm:text-2xl">{description}</p>}
-        {children && <div className="flex flex-wrap justify-center gap-3 text-xs sm:gap-5">{children}</div>}
-      </main>
-    </div>
+    <FormWrapper>
+      <div className="text-center">
+        <h1 className="mb-3 text-xl font-semibold text-balance text-slate-800">{headline}</h1>
+        {description && <div className="space-y-2 text-sm text-pretty text-slate-600">{description}</div>}
+        {children && <div className="mt-6 flex flex-col gap-2">{children}</div>}
+      </div>
+    </FormWrapper>
   );
 }
 
@@ -161,13 +160,15 @@ export function TextInput({
 
 export function PasswordInput({
   error,
+  ref,
   ...rest
-}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { error?: string }) {
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { error?: string; ref?: Ref<HTMLInputElement> }) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   return (
     <div className="relative">
       <input
+        ref={ref}
         type={visible ? "text" : "password"}
         className={join(inputClasses, "pr-11")}
         aria-invalid={error ? true : undefined}
@@ -224,11 +225,14 @@ export function Alert({
   );
 }
 
-/** The "Log in" button of the notice pages, returning to callbackUrl afterwards when there is one. */
-export function BackToLoginButton({ callbackUrl }: { callbackUrl?: string | null }) {
+/** The "Log in" button of the notice pages, returning to callbackUrl afterwards when there is one, with the email field filled in when the page knows the address. */
+export function BackToLoginButton({ callbackUrl, email }: { callbackUrl?: string | null; email?: string }) {
   const { t } = useTranslation();
   return (
-    <ButtonLink to="/auth/login" search={callbackUrl ? { callbackUrl } : {}} className="w-full">
+    <ButtonLink
+      to="/auth/login"
+      search={{ ...(callbackUrl ? { callbackUrl } : {}), ...(email ? { email } : {}) }}
+      className="w-full">
       {t("auth.signup.log_in")}
     </ButtonLink>
   );

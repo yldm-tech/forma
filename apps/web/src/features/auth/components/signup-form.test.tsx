@@ -87,16 +87,15 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
 };
 
 const fillAndSubmit = async (optIn: string) => {
-  fireEvent.click(await screen.findByRole("button", { name: i18n.t("auth.continue_with_email") }));
+  // With email the only way in, the fields show at once.
+  await screen.findByLabelText(i18n.t("common.full_name"));
   fireEvent.change(screen.getByLabelText(i18n.t("common.full_name")), { target: { value: "Ada Lovelace" } });
   fireEvent.change(screen.getByLabelText(i18n.t("common.email")), { target: { value: "Ada@Example.com" } });
   fireEvent.change(screen.getByLabelText(i18n.t("common.password")), {
     target: { value: "Correct-Horse-1" },
   });
   fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(optIn) }));
-  const submit = screen.getByRole("button", { name: i18n.t("auth.continue_with_email") });
-  await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
-  fireEvent.click(submit);
+  fireEvent.click(screen.getByRole("button", { name: i18n.t("auth.continue_with_email") }));
 };
 
 describe("the mailing list opt-in", () => {
@@ -155,4 +154,41 @@ test("the sign-in link carries the page's marketing attribution", async () => {
   renderForm();
   const login = await screen.findByRole("link", { name: i18n.t("auth.signup.log_in") });
   expect(login.getAttribute("href")).toBe("/auth/login?utm_source=newsletter");
+});
+
+describe("the email form", () => {
+  test("is revealed beside SSO by a click that submits nothing", async () => {
+    renderForm({ ssoProviders: ["google"] });
+    const reveal = await screen.findByRole("button", { name: i18n.t("auth.continue_with_email") });
+    expect(screen.queryByLabelText(i18n.t("common.full_name"))).toBeNull();
+    fireEvent.click(reveal);
+    await screen.findByLabelText(i18n.t("common.full_name"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("says what is wrong on a refused submit and focuses the first field it names", async () => {
+    const bodies = stubSignup();
+    renderForm();
+    fireEvent.change(await screen.findByLabelText(i18n.t("common.full_name")), {
+      target: { value: "Ada Lovelace" },
+    });
+    fireEvent.change(screen.getByLabelText(i18n.t("common.email")), { target: { value: "bad-email" } });
+    const submit = screen.getByRole("button", { name: i18n.t("auth.continue_with_email") });
+    expect((submit as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(submit);
+    const email = screen.getByLabelText(i18n.t("common.email"));
+    await waitFor(() => expect(document.activeElement).toBe(email));
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText(i18n.t("auth.validation.invalid_email"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("auth.validation.password_too_short"))).toBeTruthy();
+    expect(bodies).toHaveLength(0);
+  });
+
+  test("trims the email when the field is left", async () => {
+    renderForm();
+    const email = await screen.findByLabelText(i18n.t("common.email"));
+    fireEvent.change(email, { target: { value: " ada@example.com " } });
+    fireEvent.blur(email);
+    await waitFor(() => expect((email as HTMLInputElement).value).toBe("ada@example.com"));
+  });
 });

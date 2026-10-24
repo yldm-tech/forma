@@ -1,10 +1,11 @@
+import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { authApi } from "../../../features/auth/api";
 import { Alert, Button, ButtonLink, Field, TextInput } from "../../../features/auth/components/ui";
 import { emailFormFailure } from "../../../features/auth/errors";
 import { redirectIfSignedIn } from "../../../features/auth/guards";
-import { emailError } from "../../../features/auth/validation";
+import { emailError, translatedRules } from "../../../features/auth/validation";
 import { type Validators, useForm } from "../../../lib/form";
 
 export const Route = createFileRoute("/auth/forgot-password/")({
@@ -18,9 +19,10 @@ const RULES: Validators<{ email: string }> = { email: emailError };
 function ForgotPasswordPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const rules = useMemo(() => translatedRules(t, RULES), [t]);
   const form = useForm({
     defaultValues: { email: "" },
-    validators: RULES,
+    validators: rules,
     onSubmit: async ({ email }) => {
       try {
         await authApi.forgotPassword(email);

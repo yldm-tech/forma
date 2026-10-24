@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { authApi } from "../../../../features/auth/api";
@@ -6,7 +7,7 @@ import { Alert, Button, ButtonLink, Field, PasswordInput } from "../../../../fea
 import { resetPasswordFailure } from "../../../../features/auth/errors";
 import { redirectIfSignedIn } from "../../../../features/auth/guards";
 import { tokenSearch } from "../../../../features/auth/search";
-import { passwordError } from "../../../../features/auth/validation";
+import { passwordError, translatedRules } from "../../../../features/auth/validation";
 import { type Validators, useForm } from "../../../../lib/form";
 
 // The link in the password reset email.
@@ -21,7 +22,7 @@ interface ResetValues {
   confirmPassword: string;
 }
 
-// Both fields follow the password policy and the submit button stays disabled until they do; whether they match is checked on submit, as forma2 did.
+// Both fields follow the password policy; a submit that breaks it says so under the field. Whether they match is checked on submit, as forma2 did.
 const RULES: Validators<ResetValues> = {
   password: passwordError,
   confirmPassword: passwordError,
@@ -32,9 +33,10 @@ function ResetPasswordPage() {
   const { t } = useTranslation();
   const { token } = Route.useSearch();
   const navigate = useNavigate();
+  const rules = useMemo(() => translatedRules(t, RULES), [t]);
   const form = useForm<ResetValues>({
     defaultValues: { password: "", confirmPassword: "" },
-    validators: RULES,
+    validators: rules,
     onSubmit: async ({ password, confirmPassword }) => {
       if (password !== confirmPassword) {
         form.setFormError(t("auth.forgot-password.reset.passwords_do_not_match"));
@@ -107,7 +109,7 @@ function ResetPasswordPage() {
         </Field>
         <PasswordChecks password={form.values.password} />
       </div>
-      <Button type="submit" className="w-full" disabled={!form.isValid} loading={form.isSubmitting}>
+      <Button type="submit" className="w-full" loading={form.isSubmitting}>
         {t("auth.forgot-password.reset_password")}
       </Button>
     </form>
