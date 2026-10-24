@@ -108,8 +108,10 @@ test("the mobile overlay is a modal dialog that names the account and lets the u
   expect(dialog.getAttribute("aria-modal")).toBe("true");
   expect(dialog.className).toContain("sm:hidden");
   expect(document.activeElement).toBe(dialog);
-  // The page's own h1 lives in the inert app behind; the overlay adds none.
-  expect(screen.queryAllByRole("heading", { level: 1 })).toHaveLength(0);
+  // The overlay's title is the one h1 left to assistive technology, the app behind being inert.
+  expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+    i18n.t("common.mobile_overlay_title"),
+  ]);
   expect(
     screen.getByText(i18n.t("common.mobile_overlay_signed_in_as", { email: "ada@example.com" }))
   ).toBeTruthy();

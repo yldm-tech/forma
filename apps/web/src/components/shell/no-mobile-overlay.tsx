@@ -77,10 +77,10 @@ export const NoMobileOverlay = ({ email }: { email: string }) => {
             aria-hidden="true"
           />
         </div>
-        {/* An h2: the page's own h1 stays in the inert app behind. */}
-        <h2 id={titleId} className="mt-2 text-2xl font-bold text-zinc-900">
+        {/* The page's only h1 for assistive technology: the app behind, with its own h1, is inert while the overlay shows, and the overlay is hidden from sm up. */}
+        <h1 id={titleId} className="mt-2 text-2xl font-bold text-zinc-900">
           {t("common.mobile_overlay_title")}
-        </h2>
+        </h1>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_app_works_best_on_desktop")}</p>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_surveys_look_good")}</p>
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
