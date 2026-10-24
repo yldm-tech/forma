@@ -56,50 +56,59 @@ const flatten = (catalogue: Catalogue, prefix = ""): [string, string][] =>
 
 const unspacedCatalogues = { "ja-JP": jaJP, "zh-Hans-CN": zhHansCN, "zh-Hant-TW": zhHantTW };
 
-// CJK ideographs, kana, and CJK / full-width punctuation: text written without spaces between words.
-const isCjk = (char: string): boolean => {
-  const code = char.codePointAt(0) ?? 0;
-  return (
-    (code >= 0x3000 && code <= 0x30ff) ||
-    (code >= 0x31f0 && code <= 0x31ff) ||
-    (code >= 0x3400 && code <= 0x4dbf) ||
-    (code >= 0x4e00 && code <= 0x9fff) ||
-    (code >= 0xf900 && code <= 0xfaff) ||
-    (code >= 0xff00 && code <= 0xffef) ||
-    (code >= 0x20000 && code <= 0x2ffff)
-  );
+// Spaces between CJK characters ("这 将 删除") are rejected by scan-translations (packages/i18n-utils), which CI runs on every catalogue; the checks below cover what it does not.
+
+const isIdeograph = (char: string | undefined): boolean => {
+  const code = char?.codePointAt(0) ?? 0;
+  return (code >= 0x3400 && code <= 0x9fff) || (code >= 0xf900 && code <= 0xfaff);
 };
 
-// Scans character by character for a run of spaces with a CJK character on each side ("这 将 删除"). Spaces next to Latin words, digits and {placeholders} stay.
-const hasCjkSpacing = (value: string): boolean => {
+// Half-width , ? ! ( ) touching a Chinese character, scanned character by character. A ? or , followed by an ASCII letter or digit (a URL query, code) is left alone.
+const halfWidthPunctuation = (value: string): boolean => {
   const chars = Array.from(value);
-  for (let i = 1; i < chars.length; i++) {
-    if (chars[i] !== " " || !isCjk(chars[i - 1] ?? "")) continue;
-    let end = i;
-    while (chars[end] === " ") end++;
-    if (end < chars.length && isCjk(chars[end] ?? "")) return true;
-    i = end;
-  }
-  return false;
+  return chars.some((char, i) => {
+    const prev = chars[i - 1];
+    const next = chars[i + 1];
+    if (char === "(") return isIdeograph(prev) || isIdeograph(next);
+    if (char === ")") return isIdeograph(prev) || isIdeograph(next);
+    if (char !== "," && char !== "?" && char !== "!") return false;
+    if (next !== undefined && /[A-Za-z0-9]/.test(next)) return false;
+    return isIdeograph(prev) || isIdeograph(next);
+  });
 };
 
-test("the CJK spacing check finds spaces between CJK characters only", () => {
-  expect(hasCjkSpacing("这 将 删除")).toBe(true);
-  expect(hasCjkSpacing("糟糕 ，偵測到小螢幕！")).toBe(true);
-  expect(hasCjkSpacing("リソース の 読み込み")).toBe(true);
-  expect(hasCjkSpacing("第一次使用 Forma？")).toBe(false);
-  expect(hasCjkSpacing("将删除 {count} 个回复")).toBe(false);
-  expect(hasCjkSpacing("{value, plural, other { 件の回答}}")).toBe(false);
+test("the punctuation check finds half-width punctuation next to Chinese text only", () => {
+  expect(halfWidthPunctuation("你确定要删除这个团队吗?这也会移除")).toBe(true);
+  expect(halfWidthPunctuation("例如：score, price")).toBe(false);
+  expect(halfWidthPunctuation("部署 Forma,无需修改")).toBe(true);
+  expect(halfWidthPunctuation("UTC(默认)")).toBe(true);
+  expect(halfWidthPunctuation("动态 (弹出窗口)")).toBe(true);
+  expect(halfWidthPunctuation("第一次使用 Forma？")).toBe(false);
+  expect(halfWidthPunctuation("将 mavenCentral() 添加到你的仓库中")).toBe(false);
+  expect(halfWidthPunctuation("{count, plural, other {已选择{count}项}}")).toBe(false);
 });
 
-// Machine translation split zh-Hans-CN into words with spaces ("邀请 未 找到"); a later lingo.dev run must not bring that back.
-test("zh and ja catalogues have no spaces between CJK characters", () => {
-  const spaced = Object.entries(unspacedCatalogues).flatMap(([locale, catalogue]) =>
-    flatten(catalogue)
-      .filter(([, value]) => hasCjkSpacing(value))
-      .map(([key, value]) => `${locale}: ${key} = ${value}`)
+// zh-Hans-CN writes full-width punctuation in Chinese sentences; the machine translation left "吗?" and "Forma,无需".
+test("zh-Hans-CN uses full-width punctuation next to Chinese text", () => {
+  expect(flatten(zhHansCN).filter(([, value]) => halfWidthPunctuation(value))).toEqual([]);
+});
+
+// zh-Hans-CN addresses Forma users (the admin UI and its emails) as 你 and respondents (the survey pages, contact links, survey content) as 您. Template gallery descriptions are admin text and template questions are survey content, so templates.* is left to review.
+const RESPONDENT_CONTENT = new Set([
+  "workspace.surveys.edit.follow_ups_modal_action_subject",
+  "workspace.workflows.email_subject_placeholder",
+]);
+
+test("zh-Hans-CN uses 你 in the admin UI and 您 on respondent pages", () => {
+  const values = flatten(zhHansCN);
+  const admin = values.filter(
+    ([key, value]) =>
+      /^(auth|setup|organizations|workspace)\./.test(key) &&
+      !RESPONDENT_CONTENT.has(key) &&
+      value.includes("您")
   );
-  expect(spaced).toEqual([]);
+  const respondent = values.filter(([key, value]) => /^(s|c)\./.test(key) && /你(?!们)/.test(value));
+  expect({ admin, respondent }).toEqual({ admin: [], respondent: [] });
 });
 
 // zh-Hans-CN writes 账户 (the 帐户 variant is the older and Taiwan form).
