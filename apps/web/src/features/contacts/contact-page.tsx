@@ -170,7 +170,8 @@ const AttributesSection = ({
           <TagIcon className="size-4 text-slate-400" />
           <span>{t("workspace.contacts.contact_id")}</span>
         </dt>
-        <dd className="mt-1 text-sm text-slate-900">
+        {/* A UUID does not fit the column on one line; it wraps anywhere and stays left-aligned. */}
+        <dd className="mt-1 text-sm text-slate-900 [&_button]:text-left [&_button>span]:break-all">
           <IdBadge id={contactId} />
         </dd>
       </div>

@@ -80,9 +80,13 @@ export const UserActionsPage = ({
         return (
           <div className="min-w-0 text-left">
             <div className="text-sm text-slate-900">{trigger.kind}</div>
-            {trigger.detail && (
-              <div className="truncate font-mono text-xs text-slate-500" title={trigger.detail}>
-                {trigger.detail}
+            {(trigger.target || trigger.pages) && (
+              <div
+                className="truncate text-xs text-slate-500"
+                title={[trigger.target, trigger.pages].filter(Boolean).join(" · ")}>
+                {trigger.target && <span className="font-mono">{trigger.target}</span>}
+                {trigger.target && trigger.pages && " · "}
+                {trigger.pages}
               </div>
             )}
           </div>

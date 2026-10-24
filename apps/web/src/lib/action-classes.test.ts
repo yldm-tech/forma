@@ -181,7 +181,8 @@ describe("actionTriggerSummary", () => {
   test("names the trigger kind and what it watches, on which pages", () => {
     expect(actionTriggerSummary({ type: "code", key: "checkout", noCodeConfig: null }, t)).toEqual({
       kind: "Code",
-      detail: "checkout",
+      target: "checkout",
+      pages: "",
     });
     expect(
       actionTriggerSummary(
@@ -196,7 +197,7 @@ describe("actionTriggerSummary", () => {
         },
         t
       )
-    ).toEqual({ kind: "Click", detail: "#upgrade · on /pricing" });
+    ).toEqual({ kind: "Click", target: "#upgrade", pages: "on /pricing" });
     expect(
       actionTriggerSummary(
         {
@@ -206,13 +207,13 @@ describe("actionTriggerSummary", () => {
         },
         t
       )
-    ).toEqual({ kind: "Click", detail: "“Buy now” · On all pages" });
+    ).toEqual({ kind: "Click", target: "“Buy now”", pages: "On all pages" });
     expect(
       actionTriggerSummary(
         { type: "noCode", key: null, noCodeConfig: { type: "pageDwell", timeInSeconds: 30, urlFilters: [] } },
         t
       )
-    ).toEqual({ kind: "Time on Page", detail: "30s · On all pages" });
+    ).toEqual({ kind: "Time on Page", target: "30s", pages: "On all pages" });
     expect(
       actionTriggerSummary(
         { type: "noCode", key: null, noCodeConfig: { type: "exitIntent", urlFilters: [] } },
@@ -221,7 +222,8 @@ describe("actionTriggerSummary", () => {
     ).toBe("Exit Intent");
     expect(actionTriggerSummary({ type: "automatic", key: null, noCodeConfig: null }, t)).toEqual({
       kind: "Automatic",
-      detail: "",
+      target: "",
+      pages: "",
     });
   });
 });

@@ -208,13 +208,15 @@ export const urlPassesFilters = (testUrl: string, config: NoCodeConfig, t: TFunc
     : config.urlFilters.some(passes);
 };
 
-/** The trigger column of the actions list: what kind of trigger an action is, and what it watches (the selector or text clicked, the code key, the time on page) and on which pages. */
+/** The trigger column of the actions list: what kind of trigger an action is, what it watches (the selector or text clicked, the code key, the time on page) and on which pages. */
 export const actionTriggerSummary = (
   actionClass: Pick<ActionClass, "type" | "key" | "noCodeConfig">,
   t: TFunction
-): { kind: string; detail: string } => {
-  if (actionClass.type === "code") return { kind: t("common.code"), detail: actionClass.key ?? "" };
-  if (actionClass.type === "automatic") return { kind: t("workspace.actions.trigger_automatic"), detail: "" };
+): { kind: string; target: string; pages: string } => {
+  if (actionClass.type === "code")
+    return { kind: t("common.code"), target: actionClass.key ?? "", pages: "" };
+  if (actionClass.type === "automatic")
+    return { kind: t("workspace.actions.trigger_automatic"), target: "", pages: "" };
   const config = actionClass.noCodeConfig;
   const kinds: Record<NoCodeType, string> = {
     click: t("workspace.actions.click"),
@@ -224,7 +226,7 @@ export const actionTriggerSummary = (
     pageDwell: t("workspace.actions.time_on_page"),
   };
   const kind = kinds[config?.type ?? "click"] ?? t("common.no_code");
-  if (!config) return { kind, detail: "" };
+  if (!config) return { kind, target: "", pages: "" };
   const target =
     config.type === "click"
       ? config.elementSelector?.cssSelector?.trim() ||
@@ -238,7 +240,7 @@ export const actionTriggerSummary = (
       : t("workspace.actions.trigger_on_pages", {
           pages: config.urlFilters.map((filter) => filter.value).join(", "),
         });
-  return { kind, detail: target ? `${target} · ${pages}` : pages };
+  return { kind, target, pages };
 };
 
 /** The translated name of an action's type, rather than the raw enum ("noCode"). */

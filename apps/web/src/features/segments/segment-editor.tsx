@@ -78,9 +78,9 @@ import { SegmentConnector } from "./components/segment-connector";
 const DATA_TYPE_ICONS = { date: CalendarIcon, number: HashIcon, string: TagIcon } as const;
 
 // Fixed column widths, so the fields of every row line up and each select's arrow sits at its own edge. Select's own wrapper fills its container, so a select is sized by the box around it.
-const SUBJECT_WIDTH = "w-44 shrink-0";
-const OPERATOR_WIDTH = "w-40 shrink-0";
-const VALUE_WIDTH = "w-48 shrink-0";
+const SUBJECT_WIDTH = "w-40 shrink-0";
+const OPERATOR_WIDTH = "w-36 shrink-0";
+const VALUE_WIDTH = "w-40 shrink-0";
 const UNIT_WIDTH = "w-28 shrink-0";
 
 /** Everything a node of the editor needs: the workspace's keys and segments, the segment's linked surveys, and a way to change the tree. */
