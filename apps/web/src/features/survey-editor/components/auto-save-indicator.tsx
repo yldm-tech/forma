@@ -4,12 +4,13 @@ import { cn } from "../../../lib/cn";
 import { Button } from "../../../components/ui/button";
 import { TooltipRenderer } from "../../../components/ui/tooltip";
 
-/** Where the draft's autosave stands: nothing saved yet this session, a save under way, the last success, or failures in a row (shown once the editor stops retrying quietly). */
+/** Where the draft's autosave stands: nothing saved yet this session, a save under way, the last success, failures in a row (shown once the editor stops retrying quietly), or a draft the server refused as invalid, with the editor's wording of why. */
 export type AutoSaveStatus =
   | { state: "idle" }
   | { state: "saving" }
   | { state: "saved"; at: Date }
-  | { state: "failed"; failures: number };
+  | { state: "failed"; failures: number }
+  | { state: "invalid"; reason: string };
 
 interface AutoSaveIndicatorProps {
   isDraft: boolean;
@@ -22,6 +23,7 @@ interface AutoSaveIndicatorProps {
 export const AutoSaveIndicator = ({ isDraft, status, locale, onRetry }: AutoSaveIndicatorProps) => {
   const { t } = useTranslation();
   const isFailed = isDraft && status.state === "failed";
+  const isInvalid = isDraft && status.state === "invalid";
   const isSaved = isDraft && status.state === "saved";
 
   const text = useMemo(() => {
@@ -35,6 +37,8 @@ export const AutoSaveIndicator = ({ isDraft, status, locale, onRetry }: AutoSave
         });
       case "failed":
         return t("workspace.surveys.edit.autosave_failed");
+      case "invalid":
+        return t("workspace.surveys.edit.autosave_not_saved", { reason: status.reason });
       default:
         return t("workspace.surveys.edit.auto_save_on");
     }
@@ -43,19 +47,23 @@ export const AutoSaveIndicator = ({ isDraft, status, locale, onRetry }: AutoSave
   const badge = (
     <span
       className={cn(
-        "inline-flex cursor-default items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors duration-300",
-        isFailed && "border-amber-500 bg-amber-50 text-amber-800",
+        "inline-flex max-w-72 cursor-default items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors duration-300",
+        (isFailed || isInvalid) && "border-amber-500 bg-amber-50 text-amber-800",
         isSaved && "border-green-600 bg-green-50 text-green-800",
-        !isFailed && !isSaved && "border-slate-200 bg-slate-100 text-slate-600"
-      )}>
+        !isFailed && !isInvalid && !isSaved && "border-slate-200 bg-slate-100 text-slate-600"
+      )}
+      // A long reason is cut short in the bar; the whole of it stays on hover and in the live region.
+      title={isInvalid ? text : undefined}>
       {/* Announced politely, so a screen reader hears the save land or fail without losing its place. */}
-      <span aria-live="polite">{text}</span>
+      <span aria-live="polite" className="truncate">
+        {text}
+      </span>
     </span>
   );
 
   return (
     // The quiet states give way below lg, where the bar needs the room for Save and Publish; a failure always shows.
-    <div className={cn("items-center gap-1", isFailed ? "flex" : "hidden lg:flex")}>
+    <div className={cn("min-w-0 items-center gap-1", isFailed || isInvalid ? "flex" : "hidden lg:flex")}>
       <TooltipRenderer
         shouldRender={!isDraft}
         tooltipContent={t("workspace.surveys.edit.auto_save_disabled_tooltip")}

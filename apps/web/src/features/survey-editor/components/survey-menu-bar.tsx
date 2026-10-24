@@ -92,6 +92,8 @@ export const SurveyMenuBar = ({
   const [isNameInvalid, setIsNameInvalid] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoSaveFailuresRef = useRef(0);
+  // The draft as it stood when the server refused it as invalid; every edit replaces the editor's survey object, so autosave tries again only after one.
+  const refusedDraftRef = useRef<TSurvey | null>(null);
   // When the draft was last saved, kept so a single quiet failure does not wipe "Saved at" from the bar.
   const lastSavedAtRef = useRef<Date | null>(null);
   const isSuccessfullySavedRef = useRef(false);
@@ -247,29 +249,27 @@ export const SurveyMenuBar = ({
     });
   };
 
-  /** Marks the cards the issues concern, scrolls to the first and reports it, as forma2 did for both its own zod check and a refused save. */
-  const reportIssues = (issues: readonly SurveyIssue[]) => {
-    const { invalidIds, firstInvalidScrollId } = getInvalidCards(localSurvey, issues);
-    if (invalidIds.length > 0) {
+  /** Marks the cards the issues concern, and the name field when the name is one of them, without moving the page or the focus. */
+  const markIssues = (issues: readonly SurveyIssue[]) => {
+    const marked = getInvalidCards(localSurveyRef.current, issues);
+    if (marked.invalidIds.length > 0) {
       setInvalidElements((prev) => {
         const merged = [...(prev ?? [])];
-        for (const id of invalidIds) {
+        for (const id of marked.invalidIds) {
           if (!merged.includes(id)) merged.push(id);
         }
         return merged;
       });
     }
-    if (firstInvalidScrollId) {
-      scrollElementCardIntoView(firstInvalidScrollId, "start");
-    }
-    const [firstIssue] = issues;
-    if (!firstIssue) return;
-    // The survey name sits in this bar, outside every card: it is marked and focused here.
-    if (issues.some((issue) => issue.path.length === 1 && issue.path[0] === "name")) {
-      setIsNameInvalid(true);
-      nameInputRef.current?.focus();
-    }
-    const report = describeFirstIssue(localSurvey, firstIssue, {
+    // The survey name sits in this bar, outside every card: it is marked here.
+    const isNameIssue = issues.some((issue) => issue.path.length === 1 && issue.path[0] === "name");
+    if (isNameIssue) setIsNameInvalid(true);
+    return { ...marked, isNameIssue };
+  };
+
+  /** The first issue as the editor words it. */
+  const describeIssue = (issue: SurveyIssue) =>
+    describeFirstIssue(localSurveyRef.current, issue, {
       surveyNameRequired: () => t("workspace.surveys.survey_name_required"),
       blockNameRequired: (blockNumber) =>
         t("workspace.surveys.edit.block_name_required_for", { blockNumber }),
@@ -277,10 +277,21 @@ export const SurveyMenuBar = ({
         t("workspace.surveys.edit.issue_question_text_missing", { blockNumber, questionNumber }),
       optionLabelMissing: (blockNumber, questionNumber, optionNumber) =>
         t("workspace.surveys.edit.issue_option_label_missing", { blockNumber, questionNumber, optionNumber }),
-      logicRuleInvalid: (blockNumber, ruleNumber) =>
-        t("workspace.surveys.edit.issue_logic_rule_invalid", { blockNumber, ruleNumber }),
+      logicRuleIncomplete: (blockNumber, ruleNumber) =>
+        t("workspace.surveys.edit.issue_logic_rule_incomplete", { blockNumber, ruleNumber }),
       languageLabel: (code) => getLanguageLabel(code, locale) ?? code,
     });
+
+  /** Marks the cards the issues concern, scrolls to the first and reports it, as forma2 did for both its own zod check and a refused save. */
+  const reportIssues = (issues: readonly SurveyIssue[]) => {
+    const { firstInvalidScrollId, fallbackScrollId, isNameIssue } = markIssues(issues);
+    if (firstInvalidScrollId) {
+      scrollElementCardIntoView(firstInvalidScrollId, "start", fallbackScrollId);
+    }
+    const [firstIssue] = issues;
+    if (!firstIssue) return;
+    if (isNameIssue) nameInputRef.current?.focus();
+    const report = describeIssue(firstIssue);
     toast.error(report.message);
     if (report.showLanguageTab) setActiveId("language");
   };
@@ -326,8 +337,8 @@ export const SurveyMenuBar = ({
     isAutoSavingRef.current = true;
     setAutoSaveStatus({ state: "saving" });
 
+    const currentSurvey = localSurveyRef.current;
     try {
-      const currentSurvey = localSurveyRef.current;
       const savedData = await saveSurvey(
         {
           ...currentSurvey,
@@ -350,10 +361,18 @@ export const SurveyMenuBar = ({
       queryClient.setQueryData(surveyEditorKeys.survey(savedData.id), savedData);
       markSaved();
     } catch (error) {
+      const issues = error instanceof ApiError ? issuesFromDetails(error.details) : [];
+      const [firstIssue] = issues;
       if (recordSaveConflict(error)) {
         // A concurrent edit is not transient: it stops the loop, so it is reported once, here.
         toast.error(t("workspace.surveys.edit.error_saving_changes"));
         setAutoSaveStatus({ state: "idle" });
+      } else if (firstIssue) {
+        // A draft the server refuses to store (a blank name, say) is refused again until the author fixes it, so retrying cannot help: the fields are marked and the bar says what to fix, without a toast every ten seconds and without taking the focus or the page. The next autosave after the fix goes through.
+        autoSaveFailuresRef.current = 0;
+        refusedDraftRef.current = currentSurvey;
+        markIssues(issues);
+        setAutoSaveStatus({ state: "invalid", reason: describeIssue(firstIssue).message });
       } else {
         // A single failure is retried quietly in ten seconds; failures in a row are shown, with Retry, so work is never lost without the author knowing.
         autoSaveFailuresRef.current += 1;
@@ -388,6 +407,9 @@ export const SurveyMenuBar = ({
 
       // Paused while a concurrent edit is outstanding: resolving it means overwriting somebody else's work, which is the user's call to make from the Save button, not a decision to take every ten seconds without telling them.
       if (saveConflictVersionRef.current) return;
+
+      // A draft the server refused as invalid is not sent again until the author changes something.
+      if (localSurveyRef.current === refusedDraftRef.current) return;
 
       // Check for changes using refs (avoids re-creating interval on every change), and skip if there are none
       if (!hasUnsavedSurveyChanges(localSurveyRef.current, [surveyRef.current, lastSavedSurveyRef.current]))
@@ -659,7 +681,13 @@ export const SurveyMenuBar = ({
       <ConfirmationModal
         title={t("workspace.surveys.edit.confirm_survey_changes")}
         open={isConfirmDialogOpen}
-        setOpen={setConfirmDialogOpen}
+        // While Save runs, the dialog stays: closing it (Keep editing, Escape, the backdrop) would not stop the save, which then leaves the editor anyway.
+        setOpen={(open) => {
+          if (!open && isLeaving) return;
+          setConfirmDialogOpen(open);
+        }}
+        closeOnOutsideClick={!isLeaving}
+        hideCloseButton={isLeaving}
         description={t("workspace.surveys.edit.unsaved_changes_warning")}
         body={null}
         Icon={TriangleAlertIcon}

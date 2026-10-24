@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -495,6 +495,88 @@ describe("SurveyMenuBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
     expect(screen.queryByText("Autosave failed")).toBeNull();
+  });
+
+  test("an autosave refused as invalid marks the field and says why, offers no Try again, and is not sent again until the draft changes", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const saves: SaveRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string) as Record<string, unknown>;
+        saves.push({ path, body });
+        if (String(body.name).trim() === "") {
+          return Response.json(
+            {
+              code: "validation_error",
+              message: "Survey name is required",
+              details: { issues: [{ path: ["name"], message: "Survey name is required" }] },
+            },
+            { status: 400 }
+          );
+        }
+        return Response.json({ ...body, updatedAt: SAVED_AT });
+      })
+    );
+    renderMenuBar(survey());
+
+    const nameField = await screen.findByRole("textbox", { name: "Survey name" });
+    fireEvent.change(nameField, { target: { value: "" } });
+    nameField.blur();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(await screen.findByText("Not saved: Please enter a survey name.")).toBeTruthy();
+    expect(nameField.getAttribute("aria-invalid")).toBe("true");
+    // Autosave does not take the focus.
+    expect(document.activeElement).not.toBe(nameField);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByText("Autosave failed")).toBeNull();
+
+    // Unchanged, the refused draft is not sent again.
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(saves).toHaveLength(1);
+
+    fireEvent.change(nameField, { target: { value: "Feedback 2026" } });
+    expect(nameField.getAttribute("aria-invalid")).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
+    expect(saves).toHaveLength(2);
+  });
+
+  test("while Save in the unsaved-changes dialog runs, Keep editing does not close it, and the save still leaves when it lands", async () => {
+    let answerSave: (() => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_path: string, init: RequestInit) =>
+          new Promise<Response>((resolve) => {
+            const body = JSON.parse(init.body as string) as Record<string, unknown>;
+            answerSave = () => resolve(Response.json({ ...body, updatedAt: SAVED_AT }));
+          })
+      )
+    );
+    const { router } = renderMenuBar(survey());
+
+    fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(answerSave).toBeDefined());
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Discard" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+
+    await act(async () => {
+      answerSave?.();
+    });
+    expect(await screen.findByRole("heading", { name: "Survey list" })).toBeTruthy();
   });
 
   test.each([
