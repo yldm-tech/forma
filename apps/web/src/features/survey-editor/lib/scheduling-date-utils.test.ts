@@ -84,6 +84,25 @@ describe("survey scheduling date utils", () => {
     expect(normalize(storedDate)?.toISOString()).toBe("2026-01-17T23:45:00.000Z");
   });
 
+  // At UTC+12 and beyond, noon UTC is already the next day, so a picked day has to be sent as that day's run time in the zone itself.
+  test.each([
+    ["Pacific/Auckland", "2026-04-30T12:00:00.000Z"],
+    ["Pacific/Chatham", "2026-04-30T11:15:00.000Z"],
+    ["Pacific/Kiritimati", "2026-04-30T10:00:00.000Z"],
+    ["America/Los_Angeles", "2026-05-01T07:00:00.000Z"],
+  ])("keeps the picked day in %s", (timeZone, expected) => {
+    const utils = createSurveySchedulingDateUtils({ timeZone, localHour: 0, localMinute: 0 });
+    // The calendar hands back the picked day as a browser-local date.
+    const picked = new Date(2026, 4, 1, 12, 0, 0, 0);
+    const sent = utils.toSurveySchedulingDateTime(picked);
+
+    expect(sent.toISOString()).toBe(expected);
+    // The calendar shows the day that was picked, and the server's snap leaves the instant where it is.
+    const shown = utils.toCalendarDate(sent);
+    expect([shown.getFullYear(), shown.getMonth(), shown.getDate()]).toEqual([2026, 4, 1]);
+    expect(utils.normalizeDateOnlySelectionToSurveySchedulingDateTime(sent)?.toISOString()).toBe(expected);
+  });
+
   test("documents the default scheduling configuration", () => {
     expect(SURVEY_SCHEDULING_CONFIG.timeZone).toBe("Europe/Berlin");
     expect(SURVEY_SCHEDULING_CONFIG.localHour).toBe(0);

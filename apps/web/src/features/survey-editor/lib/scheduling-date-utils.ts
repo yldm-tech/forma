@@ -146,6 +146,14 @@ export const createSurveySchedulingDateUtils = (config: TSurveySchedulingConfig)
     return nextSchedulingDate;
   };
 
+  /** The instant a day picked in the editor's calendar (a browser-local date) stands for: that day at the scheduling time in the scheduling zone, which is what the server stores. Noon UTC, what toDateOnlySelection gives, is already the next day in zones at UTC+12 and beyond (Auckland, Fiji, Kiritimati). */
+  const toSurveySchedulingDateTime = (calendarDate: Date): Date =>
+    createSurveySchedulingDateTime(
+      calendarDate.getFullYear(),
+      calendarDate.getMonth(),
+      calendarDate.getDate()
+    );
+
   const normalizeDateOnlySelectionToSurveySchedulingDateTime = (date: Date | null): Date | null => {
     if (!date) {
       return null;
@@ -160,5 +168,6 @@ export const createSurveySchedulingDateUtils = (config: TSurveySchedulingConfig)
     toCalendarDate,
     getMinimumSurveySchedulingCalendarDate,
     normalizeDateOnlySelectionToSurveySchedulingDateTime,
+    toSurveySchedulingDateTime,
   };
 };
