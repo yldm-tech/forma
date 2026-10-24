@@ -8,10 +8,14 @@ interface ElementErrorProps {
   /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'auto' (auto-detect from content) */
   dir?: "ltr" | "rtl" | "auto";
   /**
-   * Id placed on the live region so the invalid control can point at it with aria-describedby.
+   * Id placed on the message so the invalid control can point at it with aria-describedby.
    * Call sites use the `${inputId}-error` convention.
    */
   id: string;
+  /**
+   * Announce the message as it appears. Off by default: a failed submit moves focus to the first invalid control, which reads this message through aria-describedby, and the block announces one summary; ten live regions changing at once queued ten identical phrases. Only an error that appears without a submit (a file that failed to upload) needs announcing on its own.
+   */
+  live?: boolean;
 }
 
 interface ElementErrorAria {
@@ -29,7 +33,12 @@ const getElementErrorAria = (inputId: string, errorMessage?: string): ElementErr
   };
 };
 
-function ElementError({ errorMessage, dir = "auto", id }: Readonly<ElementErrorProps>): React.JSX.Element {
+function ElementError({
+  errorMessage,
+  dir = "auto",
+  id,
+  live = false,
+}: Readonly<ElementErrorProps>): React.JSX.Element {
   return (
     <>
       {/* Error indicator bar: decorative, so it stays outside the live region (a live region must
@@ -42,14 +51,14 @@ function ElementError({ errorMessage, dir = "auto", id }: Readonly<ElementErrorP
           )}
         />
       ) : null}
-      {/* Error message - shown at top. The live region is always mounted, even with no message:
-          screen readers only reliably announce content inserted into a region that already
-          existed, and an aria-describedby target must never be a missing id. While empty it has no
-          children and no classes, so it paints nothing and takes no space. */}
+      {/* Error message - shown at top. Always mounted, even with no message: a live region only
+          reliably announces content inserted into a region that already existed, and an
+          aria-describedby target must never be a missing id. While empty it has no children and no
+          classes, so it paints nothing and takes no space. */}
       <div
         id={id}
-        aria-live="polite"
-        aria-atomic="true"
+        aria-live={live ? "polite" : undefined}
+        aria-atomic={live ? "true" : undefined}
         className={errorMessage ? "text-destructive mb-2 flex items-center gap-1 text-sm" : undefined}
         dir={dir}>
         {errorMessage ? (

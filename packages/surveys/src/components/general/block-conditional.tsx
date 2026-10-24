@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useTranslation } from "react-i18next";
 import { type TJsFileUploadParams } from "@forma/types/js";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import { type TUploadFileConfig } from "@forma/types/storage";
@@ -119,6 +120,7 @@ export function BlockConditional({
   isCardless = false,
   surveyLanguages,
 }: Readonly<BlockConditionalProps>) {
+  const { t } = useTranslation();
   // Track the current element being filled (for TTC tracking)
   const [currentElementId, setCurrentElementId] = useState(block.elements[0]?.id);
 
@@ -132,6 +134,15 @@ export function BlockConditional({
   const ttcCollectorRef = useRef<TResponseTtc>({});
   const autoProgressingInFlightRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The one announcement a failed submit makes. The per-element messages are not live: focus moves to the first invalid control, which reads its own message through aria-describedby.
+  const [errorSummary, setErrorSummary] = useState("");
+  const announceErrorCount = (count: number) => {
+    // Cleared first, so a second failed submit with the same count is a change a screen reader announces again.
+    setErrorSummary("");
+    requestAnimationFrame(() => {
+      setErrorSummary(t("errors.x_questions_need_an_answer", { count }));
+    });
+  };
 
   // Screen-reader/keyboard users continue right where they act: when the card
   // appears after user navigation (or on an autofocus-allowed initial render),
@@ -336,18 +347,18 @@ export function BlockConditional({
     return true;
   };
 
-  // Find the first invalid form
-  const findFirstInvalidForm = (): HTMLFormElement | null => {
-    let firstInvalidForm: HTMLFormElement | null = null;
+  // Validate every element's form, in order, and return the invalid ones
+  const findInvalidForms = (): HTMLFormElement[] => {
+    const invalidForms: HTMLFormElement[] = [];
 
     for (const element of block.elements) {
       const form = elementFormRefs.current.get(element.id);
       if (form && !validateElementForm(element, form)) {
-        firstInvalidForm ??= form;
+        invalidForms.push(form);
       }
     }
 
-    return firstInvalidForm;
+    return invalidForms;
   };
 
   // Collect TTC values from forms
@@ -400,6 +411,7 @@ export function BlockConditional({
 
     if (hasValidationErrors) {
       setElementErrors(errorMap);
+      announceErrorCount(Object.keys(errorMap).length);
 
       // Find the first element with an error, scroll to its input area (not the headline)
       // and move focus to its first invalid control so keyboard users can fix it directly.
@@ -417,8 +429,10 @@ export function BlockConditional({
     }
 
     // Also run legacy validation for elements not yet migrated to centralized validation
-    const firstInvalidForm = findFirstInvalidForm();
+    const invalidForms = findInvalidForms();
+    const firstInvalidForm = invalidForms[0];
     if (firstInvalidForm) {
+      announceErrorCount(invalidForms.length);
       const scrollTarget = firstInvalidForm.querySelector("[data-element-input]") ?? firstInvalidForm;
       scrollTarget.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
       requestAnimationFrame(() => {
@@ -429,6 +443,7 @@ export function BlockConditional({
 
     // Clear any previous errors
     setElementErrors({});
+    setErrorSummary("");
 
     // Collect TTC and responses, then submit
     const blockTtc = collectTtcValues();
@@ -438,6 +453,9 @@ export function BlockConditional({
 
   return (
     <div ref={containerRef} className={cn("space-y-6", fullSizeCards ? "h-full" : "")}>
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {errorSummary}
+      </div>
       {/* Scrollable container for the entire block */}
       <ScrollableContainer fullSizeCards={fullSizeCards} disableInternalScroll={isCardless}>
         <div className="space-y-6">
