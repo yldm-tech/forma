@@ -1,26 +1,38 @@
 name: Docker Build Validation
 
-# Builds the image the release publishes, for both platforms it publishes, then boots it: alone (`forma start`, forma2's entrypoint contract) and as the production compose stack in deploy/docker/.
+# Builds the image the release publishes, for both platforms it publishes, then boots it: alone (`forma start`, forma2's entrypoint contract) and as the production compose stack in deploy/docker/. Also builds and serves the website image.
+#
+# Called by pr.yml, so it is part of the PR Check Summary and runs behind its changes job: each input says whether something that image is built from changed, and a merge group run builds both. There is no concurrency group here: in a called workflow `github.workflow` is the caller's name, so a group spelled like pr.yml's would be the caller's own group and deadlock it; pr.yml's group already cancels a superseded run.
 
 on:
-  pull_request:
-    branches:
-      - main
-  merge_group:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      forma-image:
+        description: Build and boot the Forma image (deploy/docker/Dockerfile)
+        type: boolean
+        default: true
+      website-image:
+        description: Build and serve the website image (apps/website/Dockerfile)
+        type: boolean
+        default: true
   workflow_dispatch:
+    inputs:
+      forma-image:
+        description: Build and boot the Forma image (deploy/docker/Dockerfile)
+        type: boolean
+        default: true
+      website-image:
+        description: Build and serve the website image (apps/website/Dockerfile)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   validate-docker-build:
     name: Validate Docker Build
+    if: inputs.forma-image
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -82,7 +94,7 @@ jobs:
             any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
           ' <<<"$manifest"
 
-      # The release publishes linux/amd64 and linux/arm64. Both build stages run natively and Go cross-compiles, so this costs one extra link, and the next step reuses every other layer from the builder's cache.
+      # The release publishes linux/amd64 and linux/arm64. Both build stages run natively and Go cross-compiles, so this costs one extra link, and the next step reuses every other layer from the builder's cache. The layers also go to the Actions cache, so a change to the server alone reuses the web stage of the last run; the RUN cache mounts (pnpm store, Go modules and build cache) are not exported, only layers are.
       - name: Build for every released platform
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -91,6 +103,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           provenance: false
+          cache-from: type=gha,scope=forma-image
+          cache-to: type=gha,mode=max,scope=forma-image
 
       - name: Build Docker Image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -360,6 +374,7 @@ jobs:
   # The website image (apps/website/Dockerfile): built from the repository root like the release would, then run as production runs it, non-root on a read-only root filesystem with only /tmp writable, and asked for its pages, 404s, redirects and cache headers.
   validate-website-image:
     name: Validate Website Image
+    if: inputs.website-image
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -390,6 +405,8 @@ jobs:
           load: true
           tags: ${{ env.IMAGE }}
           provenance: false
+          cache-from: type=gha,scope=forma-website
+          cache-to: type=gha,mode=max,scope=forma-website
 
       - name: Serve and check the website
         shell: bash
