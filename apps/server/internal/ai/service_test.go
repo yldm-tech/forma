@@ -289,16 +289,11 @@ func TestServiceAssertOnUnconfiguredInstance(t *testing.T) {
 	expectCode(t, err, http.StatusForbidden, CodeInstanceNotConfigured)
 	off, _ := e.organization(e.user(), false)
 	cfg, err := e.svc.OrganizationConfig(t.Context(), off)
-	// The instance is reported first: the organization's toggle cannot make an unconfigured instance work.
-	if err != nil || cfg.UnavailableReason() != ReasonInstanceNotConfigured {
+	if err != nil || cfg.UnavailableReason() != ReasonNotEnabled {
 		t.Fatalf("%+v %v", cfg, err)
 	}
 	cfg.IsAISmartToolsEnabled = true
 	if cfg.UnavailableReason() != ReasonInstanceNotConfigured {
-		t.Fatal(cfg.UnavailableReason())
-	}
-	cfg.IsAISmartToolsEnabled, cfg.IsInstanceConfigured = false, true
-	if cfg.UnavailableReason() != ReasonNotEnabled {
 		t.Fatal(cfg.UnavailableReason())
 	}
 	cfg.IsAISmartToolsEntitled = false

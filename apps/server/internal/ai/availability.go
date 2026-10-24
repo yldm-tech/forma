@@ -21,8 +21,12 @@ type OrganizationAvailability struct {
 	Availability
 }
 
+// availability is what the SPA's AI surfaces are told. Unlike forma2's reason order, which generation and the v3 API keep (UnavailableReason), an instance without a provider is reported ahead of the organization's toggle: turning the toggle on cannot fix it, so naming the toggle sent users to a setting that does nothing.
 func availability(cfg *OrganizationConfig) Availability {
 	reason := cfg.UnavailableReason()
+	if reason == ReasonNotEnabled && !cfg.IsInstanceConfigured {
+		reason = ReasonInstanceNotConfigured
+	}
 	return Availability{Available: reason == "", Reason: reason}
 }
 

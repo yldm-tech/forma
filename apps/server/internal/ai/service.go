@@ -52,15 +52,15 @@ type OrganizationConfig struct {
 	IsInstanceConfigured   bool      `json:"isInstanceConfigured"`
 }
 
-// UnavailableReason is forma2's getAISmartToolsUnavailableReason, empty when AI is available. An instance without a provider is reported before the organization's toggle, since turning the toggle on cannot fix it and only an operator can.
+// UnavailableReason is forma2's getAISmartToolsUnavailableReason; empty when AI is available.
 func (c OrganizationConfig) UnavailableReason() string {
 	switch {
 	case !c.IsAISmartToolsEntitled:
 		return ReasonNotInPlan
-	case !c.IsInstanceConfigured:
-		return ReasonInstanceNotConfigured
 	case !c.IsAISmartToolsEnabled:
 		return ReasonNotEnabled
+	case !c.IsInstanceConfigured:
+		return ReasonInstanceNotConfigured
 	}
 	return ""
 }
