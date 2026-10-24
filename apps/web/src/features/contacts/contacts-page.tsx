@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   type ColumnDef,
   type RowSelectionState,
@@ -9,9 +9,11 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ExpandIcon, RefreshCwIcon, SettingsIcon, ShrinkIcon, Trash2Icon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type MouseEvent, useMemo, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
+import { isFromInteractiveElement } from "../../components/ui/data-table";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { HighlightedText } from "../../components/ui/highlighted-text";
@@ -24,6 +26,7 @@ import {
   contactTableRows,
   defaultColumnVisibility,
   formatAttributeValue,
+  hiddenColumnMatches,
 } from "../../lib/contacts";
 import { errorMessage } from "../../lib/errors";
 import { meQuery } from "../../lib/queries/auth";
@@ -50,12 +53,15 @@ export const ContactsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
   );
 };
 
-const selectionColumn: ColumnDef<ContactTableRow> = {
+/** How a row names its contact: the email, else the user id, else the contact id. */
+const rowName = (row: ContactTableRow) => row.email || row.userId || row.id;
+
+const selectionColumn = (t: TFunction): ColumnDef<ContactTableRow> => ({
   id: "select",
   header: ({ table }) => (
     <input
       type="checkbox"
-      aria-label="Select all"
+      aria-label={t("workspace.contacts.select_all_rows")}
       className="size-4 cursor-pointer"
       checked={table.getIsAllPageRowsSelected()}
       onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
@@ -64,13 +70,16 @@ const selectionColumn: ColumnDef<ContactTableRow> = {
   cell: ({ row }) => (
     <input
       type="checkbox"
-      aria-label="Select row"
+      aria-label={t("workspace.contacts.select_row_named", { name: rowName(row.original) })}
       className="size-4 cursor-pointer"
       checked={row.getIsSelected()}
       onChange={(e) => row.toggleSelected(e.target.checked)}
     />
   ),
-};
+});
+
+/** The text columns, in order, whose cell can carry the link to the contact; the user id column holds a copy button, which cannot sit inside a link. */
+const LINK_COLUMN_IDS = ["email", "firstName", "lastName", "contactsTableUser"];
 
 /** The persisted table preferences forma2 kept per workspace. */
 const visibilityStorageKey = (workspaceId: string) => `${workspaceId}-columnVisibility`;
@@ -152,7 +161,7 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
         },
       })),
     ];
-    return isReadOnly ? base : [selectionColumn, ...base];
+    return isReadOnly ? base : [selectionColumn(t), ...base];
   }, [rows, t, search, isReadOnly, me.locale]);
 
   const columnIds = columns.map((column) => column.id as string);
@@ -186,13 +195,39 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
     try {
       await remove.mutateAsync(selectedIds);
       setRowSelection({});
-      toast.success(t("common.table_items_deleted_successfully", { type: "Contact" }));
+      toast.success(t("workspace.contacts.contacts_deleted_successfully", { count: selectedIds.length }));
     } catch (error) {
       toast.error(errorMessage(t, error));
     } finally {
       setConfirmDelete(false);
     }
   };
+
+  const contactHref = (contactId: string) => `/workspaces/${workspaceId}/contacts/${contactId}`;
+  // The first visible text column carries a real link to the contact, for the keyboard, screen readers and opening in a new tab.
+  const linkColumnId = LINK_COLUMN_IDS.find((id) => columnVisibility[id] !== false && columnIds.includes(id));
+  const linkText = (row: ContactTableRow): string => {
+    const texts: Record<string, string> = {
+      email: row.email,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      contactsTableUser: row.id,
+    };
+    return linkColumnId ? (texts[linkColumnId] ?? "") : "";
+  };
+  // Every searchable value of a row with its column's label, to explain a search hit in a hidden column.
+  const searchCells = (row: ContactTableRow) => [
+    { id: "contactsTableUser", label: t("common.id"), value: row.id },
+    { id: "userId", label: t("common.user_id"), value: row.userId },
+    { id: "email", label: t("common.email"), value: row.email },
+    { id: "firstName", label: t("common.first_name"), value: row.firstName },
+    { id: "lastName", label: t("common.last_name"), value: row.lastName },
+    ...row.attributes.map((attribute) => ({
+      id: attribute.key,
+      label: attribute.name ?? attribute.key,
+      value: attribute.value,
+    })),
+  ];
 
   const refresh = async () => {
     await contacts.refetch();
@@ -217,7 +252,7 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
           </div>
           {selectedIds.length > 0 && (
             <div className="bg-primary flex items-center gap-x-2 rounded-md p-1 px-2 text-xs text-white">
-              <div className="lowercase">{`${selectedIds.length} ${t("common.contacts")} ${t("common.selected")}`}</div>
+              <div>{t("workspace.contacts.contacts_selected", { count: selectedIds.length })}</div>
               <Button
                 variant="secondary"
                 size="sm"
@@ -283,29 +318,62 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? "selected" : undefined}
-                className="group cursor-pointer">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    onClick={() => {
-                      if (cell.column.id !== "select")
-                        void navigate({ href: `/workspaces/${workspaceId}/contacts/${row.id}` });
-                    }}
-                    className={cn(
-                      "border-slate-200 bg-white px-4 py-2 group-hover:bg-slate-100",
-                      row.getIsSelected() && "bg-slate-100"
-                    )}>
-                    <div className={cn("flex flex-1 items-center truncate", isExpanded ? "h-10" : "h-full")}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {table.getRowModel().rows.map((row) => {
+              const hiddenMatch = hiddenColumnMatches(searchCells(row.original), search, columnVisibility)[0];
+              return (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  className="group cursor-pointer">
+                  {row.getVisibleCells().map((cell) => {
+                    const isLinkCell = cell.column.id === linkColumnId;
+                    const content = flexRender(cell.column.columnDef.cell, cell.getContext());
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        onClick={(e: MouseEvent<HTMLTableCellElement>) => {
+                          // The row stays clickable for the mouse; the checkbox, the copy button and the link handle their own clicks.
+                          if (
+                            cell.column.id === "select" ||
+                            isFromInteractiveElement(e.target, e.currentTarget)
+                          )
+                            return;
+                          void navigate({ href: contactHref(row.id) });
+                        }}
+                        className={cn(
+                          "border-slate-200 bg-white px-4 py-2 group-hover:bg-slate-100",
+                          row.getIsSelected() && "bg-slate-100"
+                        )}>
+                        <div
+                          className={cn(
+                            "flex flex-1 truncate",
+                            isLinkCell && hiddenMatch ? "flex-col justify-center" : "items-center",
+                            isExpanded ? "min-h-10" : "h-full"
+                          )}>
+                          {isLinkCell ? (
+                            <Link
+                              to="/workspaces/$workspaceId/contacts/$contactId"
+                              params={{ workspaceId, contactId: row.id }}
+                              className="truncate rounded-sm hover:underline"
+                              aria-label={linkText(row.original) ? undefined : rowName(row.original)}>
+                              {content}
+                            </Link>
+                          ) : (
+                            content
+                          )}
+                          {isLinkCell && hiddenMatch && (
+                            <span className="truncate text-xs text-slate-500">
+                              {t("workspace.contacts.search_matched_in", { column: hiddenMatch.label })}{" "}
+                              <HighlightedText value={hiddenMatch.value} searchValue={search} />
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
             {table.getRowModel().rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">

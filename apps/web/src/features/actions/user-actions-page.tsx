@@ -1,7 +1,7 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
-import { Code2Icon, Loader2, MousePointerClickIcon, TrashIcon } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { Loader2, MousePointerClickIcon, TrashIcon } from "lucide-react";
+import { type FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { DataTable } from "../../components/ui/data-table";
@@ -14,6 +14,8 @@ import {
   type ActionFormValues,
   NEW_ACTION_VALUES,
   actionFormErrors,
+  actionTriggerSummary,
+  actionTypeLabel,
   buildActionInput,
   formValuesOf,
 } from "../../lib/action-classes";
@@ -28,12 +30,8 @@ import {
 import { meQuery } from "../../lib/queries/auth";
 import { formatDateTimeForDisplay, timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
+import { ActionClassIcon } from "../action-classes/lib/action-icon";
 import { ActionFields, TabToggle } from "./action-form";
-
-const ACTION_TYPE_ICONS: Record<string, ReactNode> = {
-  code: <Code2Icon className="size-4" />,
-  noCode: <MousePointerClickIcon className="size-4" />,
-};
 
 const column = createColumnHelper<ActionClass>();
 
@@ -54,21 +52,47 @@ export const UserActionsPage = ({
   const columns = [
     column.accessor("name", {
       header: t("workspace.actions.user_actions"),
-      meta: { headerClassName: "w-[65%]" },
+      meta: { headerClassName: "w-[45%]" },
       cell: (info) => (
         <div className="flex items-center gap-4" title={info.getValue()}>
-          <div className="size-5 shrink-0 text-slate-500">{ACTION_TYPE_ICONS[info.row.original.type]}</div>
+          <div className="size-5 shrink-0 text-slate-500">
+            <ActionClassIcon actionClass={info.row.original} />
+          </div>
           <div className="text-left">
-            <div className="font-medium wrap-break-word text-slate-900">{info.getValue()}</div>
-            <div className="text-xs wrap-break-word text-slate-400">{info.row.original.description}</div>
+            {/* The name opens the action, so the keyboard can reach it; the row click stays as a mouse convenience. */}
+            <button
+              type="button"
+              className="rounded-sm text-left font-medium wrap-break-word text-slate-900 hover:underline"
+              onClick={() => setActive(info.row.original)}>
+              {info.getValue()}
+            </button>
+            <div className="text-xs wrap-break-word text-slate-500">{info.row.original.description}</div>
           </div>
         </div>
       ),
     }),
+    column.display({
+      id: "trigger",
+      header: t("workspace.actions.trigger"),
+      meta: { headerClassName: "w-[35%]" },
+      cell: (info) => {
+        const trigger = actionTriggerSummary(info.row.original, t);
+        return (
+          <div className="min-w-0 text-left">
+            <div className="text-sm text-slate-900">{trigger.kind}</div>
+            {trigger.detail && (
+              <div className="truncate font-mono text-xs text-slate-500" title={trigger.detail}>
+                {trigger.detail}
+              </div>
+            )}
+          </div>
+        );
+      },
+    }),
     column.accessor("createdAt", {
       header: t("common.created"),
       meta: {
-        headerClassName: "w-[35%]",
+        headerClassName: "w-[20%]",
         align: "center",
         cellClassName: "whitespace-nowrap text-slate-500",
       },
@@ -240,7 +264,7 @@ const ActionDetailModal = ({
     <ModalWithTabs
       open
       setOpen={setOpen}
-      icon={ACTION_TYPE_ICONS[actionClass.type]}
+      icon={<ActionClassIcon actionClass={actionClass} />}
       label={actionClass.name}
       description={description}
       tabs={[
@@ -314,8 +338,10 @@ const ActionActivityTab = ({ actionClass, locale }: { actionClass: ActionClass; 
         <div>
           <p className="text-xs text-slate-500">{t("common.type")}</p>
           <div className="mt-1 flex items-center">
-            <div className="mr-1.5 size-4 text-slate-600">{ACTION_TYPE_ICONS[actionClass.type]}</div>
-            <p className="text-sm text-slate-700 capitalize">{actionClass.type}</p>
+            <div className="mr-1.5 size-4 text-slate-600">
+              <ActionClassIcon actionClass={actionClass} />
+            </div>
+            <p className="text-sm text-slate-700">{actionTypeLabel(actionClass.type, t)}</p>
           </div>
         </div>
       </div>

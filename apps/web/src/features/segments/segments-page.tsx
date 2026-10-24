@@ -54,8 +54,14 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
             <UsersIcon className="size-5 text-slate-600" />
           </div>
-          <div className="flex flex-col">
-            <div className="font-medium text-slate-900">{info.getValue()}</div>
+          <div className="flex flex-col items-start">
+            {/* The title opens the segment, so the keyboard can reach it; the row click stays as a mouse convenience. */}
+            <button
+              type="button"
+              className="rounded-sm text-left font-medium text-slate-900 hover:underline"
+              onClick={() => setEditing(info.row.original)}>
+              {info.getValue()}
+            </button>
             {info.row.original.description && (
               <div className="text-xs text-slate-500">{info.row.original.description}</div>
             )}

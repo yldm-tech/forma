@@ -92,17 +92,14 @@ export const noCodeConfigForType = (current: NoCodeConfig | null, type: NoCodeTy
   return base;
 };
 
-// The field rules of ZActionClassInput, so each failure keeps its own message and path.
-const ZName = z.string().trim().min(1, { error: "Name must be at least 1 character long" });
+// The field rules of ZActionClassInput, each failure reported on its own path with a translated message.
+const ZName = z.string().trim().min(1);
 const ZKey = z.string().trim().min(1).nullable();
-const ZUrlFilterValue = z.string().trim().min(1, { error: "Value must contain at least 1 character" });
+const ZUrlFilterValue = z.string().trim().min(1);
 const ZTimeInSeconds = z.number().int().min(1).max(3600);
 
-const firstIssue = (result: { error?: { issues: { message: string }[] } }) =>
-  result.error?.issues[0]?.message;
-
 /**
- * The form's errors by field path ("name", "key", "noCodeConfig.urlFilters.0.value", ...): ZActionClassInput's rules with their messages, then forma2's form refinements: a name or key another action of the workspace has, an invalid CSS selector, and a regex URL filter that does not compile.
+ * The form's errors by field path ("name", "key", "noCodeConfig.urlFilters.0.value", ...): ZActionClassInput's rules, then forma2's form refinements: a name or key another action of the workspace has, an invalid CSS selector, and a regex URL filter that does not compile. Every message is translated and names fields by their labels in the form.
  */
 export const actionFormErrors = (
   values: ActionFormValues,
@@ -111,14 +108,12 @@ export const actionFormErrors = (
   t: TFunction
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
-  const nameIssue = firstIssue(ZName.safeParse(values.name));
-  if (nameIssue) errors.name = nameIssue;
+  if (!ZName.safeParse(values.name).success) errors.name = t("workspace.actions.name_required");
   else if (otherNames.includes(values.name))
     errors.name = t("workspace.actions.action_with_name_already_exists", { name: values.name });
 
   if (values.type === "code") {
-    const keyIssue = firstIssue(ZKey.safeParse(values.key));
-    if (keyIssue) errors.key = keyIssue;
+    if (!ZKey.safeParse(values.key).success) errors.key = t("workspace.actions.key_required");
     else if (values.key && otherKeys.includes(values.key))
       errors.key = t("workspace.actions.action_with_key_already_exists", { key: values.key });
     return errors;
@@ -128,10 +123,10 @@ export const actionFormErrors = (
   if (!config) return errors;
   config.urlFilters.forEach((filter, index) => {
     const path = `noCodeConfig.urlFilters.${index}.value`;
-    const valueIssue = firstIssue(ZUrlFilterValue.safeParse(filter.value));
-    if (valueIssue) errors[path] = valueIssue;
+    if (!ZUrlFilterValue.safeParse(filter.value).success)
+      errors[path] = t("workspace.actions.url_value_required");
     else if (!isValidActionClassUrlFilterValue(filter.value.trim(), filter.rule))
-      errors[path] = "Please enter a valid URL (e.g., https://example.com)";
+      errors[path] = t("workspace.actions.invalid_url");
     else if (filter.rule === "matchesRegex") {
       try {
         new RegExp(filter.value);
@@ -144,13 +139,16 @@ export const actionFormErrors = (
     const cssSelector = config.elementSelector?.cssSelector?.trim();
     const innerHtml = config.elementSelector?.innerHtml?.trim();
     if (!cssSelector && !innerHtml)
-      errors["noCodeConfig.elementSelector"] = "Either cssSelector or innerHtml must be provided";
+      errors["noCodeConfig.elementSelector"] = t("workspace.actions.css_selector_or_inner_text_required");
     else if (cssSelector && !isValidCssSelector(cssSelector))
       errors["noCodeConfig.elementSelector.cssSelector"] = t("workspace.actions.invalid_css_selector");
   }
   if (config.type === "pageDwell") {
-    const secondsIssue = firstIssue(ZTimeInSeconds.safeParse(config.timeInSeconds));
-    if (secondsIssue) errors["noCodeConfig.timeInSeconds"] = secondsIssue;
+    if (!ZTimeInSeconds.safeParse(config.timeInSeconds).success)
+      errors["noCodeConfig.timeInSeconds"] = t("workspace.actions.time_in_seconds_range", {
+        min: 1,
+        max: 3600,
+      });
   }
   return errors;
 };
@@ -209,3 +207,44 @@ export const urlPassesFilters = (testUrl: string, config: NoCodeConfig, t: TFunc
     ? config.urlFilters.every(passes)
     : config.urlFilters.some(passes);
 };
+
+/** The trigger column of the actions list: what kind of trigger an action is, and what it watches (the selector or text clicked, the code key, the time on page) and on which pages. */
+export const actionTriggerSummary = (
+  actionClass: Pick<ActionClass, "type" | "key" | "noCodeConfig">,
+  t: TFunction
+): { kind: string; detail: string } => {
+  if (actionClass.type === "code") return { kind: t("common.code"), detail: actionClass.key ?? "" };
+  if (actionClass.type === "automatic") return { kind: t("workspace.actions.trigger_automatic"), detail: "" };
+  const config = actionClass.noCodeConfig;
+  const kinds: Record<NoCodeType, string> = {
+    click: t("workspace.actions.click"),
+    pageView: t("workspace.actions.page_view"),
+    exitIntent: t("workspace.actions.exit_intent"),
+    fiftyPercentScroll: t("workspace.actions.fifty_percent_scroll"),
+    pageDwell: t("workspace.actions.time_on_page"),
+  };
+  const kind = kinds[config?.type ?? "click"] ?? t("common.no_code");
+  if (!config) return { kind, detail: "" };
+  const target =
+    config.type === "click"
+      ? config.elementSelector?.cssSelector?.trim() ||
+        (config.elementSelector?.innerHtml?.trim() ? `“${config.elementSelector.innerHtml.trim()}”` : "")
+      : config.type === "pageDwell" && config.timeInSeconds
+        ? t("workspace.actions.time_in_seconds_with_unit", { seconds: config.timeInSeconds })
+        : "";
+  const pages =
+    config.urlFilters.length === 0
+      ? t("workspace.actions.on_all_pages")
+      : t("workspace.actions.trigger_on_pages", {
+          pages: config.urlFilters.map((filter) => filter.value).join(", "),
+        });
+  return { kind, detail: target ? `${target} · ${pages}` : pages };
+};
+
+/** The translated name of an action's type, rather than the raw enum ("noCode"). */
+export const actionTypeLabel = (type: string, t: TFunction): string =>
+  type === "code"
+    ? t("common.code")
+    : type === "noCode"
+      ? t("common.no_code")
+      : t("workspace.actions.trigger_automatic");

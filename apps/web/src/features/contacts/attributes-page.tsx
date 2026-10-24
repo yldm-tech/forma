@@ -9,10 +9,12 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { CalendarIcon, ExpandIcon, HashIcon, PlusIcon, ShrinkIcon, TagIcon, Trash2Icon } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type MouseEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { isFromInteractiveElement } from "../../components/ui/data-table";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
 import {
   Dialog,
@@ -35,10 +37,12 @@ import { errorMessage } from "../../lib/errors";
 import { meQuery } from "../../lib/queries/auth";
 import {
   attributeKeysQuery,
+  segmentsQuery,
   useCreateAttributeKey,
   useDeleteAttributeKeys,
   useUpdateAttributeKey,
 } from "../../lib/queries/contacts";
+import { attributeKeyUsage } from "../../lib/segment-filters";
 import { formatDateForDisplay, timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
 import { ContactsPageLayout } from "./contacts-layout";
@@ -70,6 +74,9 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
   const [isExpanded, setIsExpanded] = useState(false);
   const [editing, setEditing] = useState<AttributeKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteAnyway, setDeleteAnyway] = useState(false);
+  // Segments, private ones included, to warn before deleting a key their filters use.
+  const segments = useQuery({ ...segmentsQuery(workspaceId), enabled: !isReadOnly });
   const rows = useMemo(() => filterAttributeKeys(keys.data ?? [], search), [keys.data, search]);
 
   const columns = useMemo<ColumnDef<AttributeKey>[]>(() => {
@@ -89,9 +96,22 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
       {
         id: "name",
         header: t("common.label"),
-        cell: ({ row }) => (
-          <HighlightedText value={row.original.name ?? row.original.key} searchValue={search} />
-        ),
+        cell: ({ row }) => {
+          const label = (
+            <HighlightedText value={row.original.name ?? row.original.key} searchValue={search} />
+          );
+          // An editable key's label is the button that opens it, so the keyboard can reach it; the row click stays as a mouse convenience.
+          return !isReadOnly && row.original.type === "custom" ? (
+            <button
+              type="button"
+              className="rounded-sm text-left hover:underline"
+              onClick={() => setEditing(row.original)}>
+              {label}
+            </button>
+          ) : (
+            label
+          );
+        },
       },
       { id: "key", header: t("common.key"), cell: ({ row }) => <IdBadge id={row.original.key} /> },
       {
@@ -132,7 +152,7 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
         header: ({ table }) => (
           <input
             type="checkbox"
-            aria-label="Select all"
+            aria-label={t("workspace.contacts.select_all_rows")}
             className="size-4 cursor-pointer"
             checked={table.getIsAllPageRowsSelected()}
             onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
@@ -143,7 +163,9 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
           row.getCanSelect() ? (
             <input
               type="checkbox"
-              aria-label="Select row"
+              aria-label={t("workspace.contacts.select_row_named", {
+                name: row.original.name ?? row.original.key,
+              })}
               className="size-4 cursor-pointer"
               checked={row.getIsSelected()}
               onChange={(e) => row.toggleSelected(e.target.checked)}
@@ -166,16 +188,26 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
     onRowSelectionChange: setRowSelection,
   });
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+  const usage = attributeKeyUsage(
+    segments.data ?? [],
+    (keys.data ?? []).filter((key) => selectedIds.includes(key.id)).map((key) => key.key)
+  );
+  const isUsed = usage.segments.length > 0 || usage.surveys.length > 0;
+
+  const openDeleteDialog = (open: boolean) => {
+    setDeleteAnyway(false);
+    setConfirmDelete(open);
+  };
 
   const deleteSelected = async () => {
     try {
       await remove.mutateAsync(selectedIds);
+      toast.success(t("workspace.contacts.attributes_deleted_successfully", { count: selectedIds.length }));
       setRowSelection({});
-      toast.success(t("common.table_items_deleted_successfully", { type: "Attribute" }));
     } catch (error) {
       toast.error(errorMessage(t, error));
     } finally {
-      setConfirmDelete(false);
+      openDeleteDialog(false);
     }
   };
 
@@ -194,7 +226,7 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
           </div>
           {selectedIds.length > 0 && (
             <div className="bg-primary flex items-center gap-x-2 rounded-md p-1 px-2 text-xs text-white">
-              <div className="lowercase">{`${selectedIds.length} ${t("common.attributes")} ${t("common.selected")}`}</div>
+              <div>{t("workspace.contacts.attributes_selected", { count: selectedIds.length })}</div>
               <Button
                 variant="secondary"
                 size="sm"
@@ -206,7 +238,7 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
                 variant="secondary"
                 size="sm"
                 className="h-6 gap-1 px-2"
-                onClick={() => setConfirmDelete(true)}>
+                onClick={() => openDeleteDialog(true)}>
                 {t("common.delete")}
                 <Trash2Icon className="size-3" />
               </Button>
@@ -245,8 +277,13 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      onClick={() => {
-                        if (cell.column.id !== "select" && isEditable) setEditing(row.original);
+                      onClick={(e: MouseEvent<HTMLTableCellElement>) => {
+                        if (
+                          cell.column.id === "select" ||
+                          isFromInteractiveElement(e.target, e.currentTarget)
+                        )
+                          return;
+                        if (isEditable) setEditing(row.original);
                       }}
                       className={cn(
                         "border-slate-200 bg-white px-4 py-2",
@@ -275,12 +312,21 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
       </div>
       <DeleteDialog
         open={confirmDelete}
-        setOpen={setConfirmDelete}
+        setOpen={openDeleteDialog}
         deleteWhat={t("common.count_attributes", { count: selectedIds.length })}
         onDelete={() => void deleteSelected()}
         isDeleting={remove.isPending}
-        text={t("workspace.contacts.delete_attribute_confirmation", { value: selectedIds.length })}
-      />
+        disabled={segments.isPending || (isUsed && !deleteAnyway)}
+        text={t("workspace.contacts.delete_attribute_confirmation", { value: selectedIds.length })}>
+        {isUsed && (
+          <AttributeUsageWarning
+            usage={usage}
+            count={selectedIds.length}
+            deleteAnyway={deleteAnyway}
+            setDeleteAnyway={setDeleteAnyway}
+          />
+        )}
+      </DeleteDialog>
       {editing && (
         <EditAttributeModal
           key={editing.id}
@@ -290,6 +336,56 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
         />
       )}
     </div>
+  );
+};
+
+/** What deleting keys breaks: the segments and surveys whose filters use them, and the confirmation it takes to go ahead. */
+const AttributeUsageWarning = ({
+  usage,
+  count,
+  deleteAnyway,
+  setDeleteAnyway,
+}: {
+  usage: { segments: string[]; surveys: string[] };
+  count: number;
+  deleteAnyway: boolean;
+  setDeleteAnyway: (value: boolean) => void;
+}) => {
+  const { t } = useTranslation();
+  const list = (names: string[]) => (
+    <ul className="mt-1 ml-4 list-disc">
+      {names.map((name) => (
+        <li key={name}>{name}</li>
+      ))}
+    </ul>
+  );
+  return (
+    <Alert variant="warning" role="status" className="mt-3">
+      <AlertTitle>{t("workspace.contacts.delete_attribute_in_use", { count })}</AlertTitle>
+      <AlertDescription className="space-y-3 text-slate-800">
+        {usage.segments.length > 0 && (
+          <div>
+            <p>{t("workspace.contacts.delete_attribute_used_by_segments")}</p>
+            {list(usage.segments)}
+          </div>
+        )}
+        {usage.surveys.length > 0 && (
+          <div>
+            <p>{t("workspace.contacts.delete_attribute_used_by_surveys")}</p>
+            {list(usage.surveys)}
+          </div>
+        )}
+        <label className="flex items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4"
+            checked={deleteAnyway}
+            onChange={(e) => setDeleteAnyway(e.target.checked)}
+          />
+          {t("workspace.contacts.delete_attribute_anyway")}
+        </label>
+      </AlertDescription>
+    </Alert>
   );
 };
 

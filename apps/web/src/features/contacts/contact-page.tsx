@@ -11,7 +11,7 @@ import {
   TagIcon,
   TrashIcon,
 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
@@ -29,6 +29,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
 import { type AttributeKey, PROTECTED_ATTRIBUTE_KEYS, attributeKeyLabel } from "../../lib/attribute-keys";
 import { cn } from "../../lib/cn";
 import {
@@ -167,9 +168,11 @@ const AttributesSection = ({
       <div>
         <dt className="flex items-center gap-2 text-sm font-medium text-slate-500">
           <TagIcon className="size-4 text-slate-400" />
-          <span>contactId</span>
+          <span>{t("workspace.contacts.contact_id")}</span>
         </dt>
-        <dd className="mt-1 text-sm text-slate-900">{contactId}</dd>
+        <dd className="mt-1 text-sm text-slate-900">
+          <IdBadge id={contactId} />
+        </dd>
       </div>
       {custom.length > 0 && (
         <>
@@ -233,47 +236,47 @@ const ContactControlBar = ({
     }
   };
 
+  // Each icon button shows its name as a tooltip on hover and focus, so sighted users need not guess what it does.
+  const iconButton = (label: string, icon: ReactNode, onClick: () => void, disabled = false) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={label} disabled={disabled} onClick={onClick}>
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <>
-      <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("common.refresh")}
-          disabled={refreshing}
-          onClick={() => void refresh()}>
-          <RefreshCwIcon className={cn("size-4", refreshing && "animate-spin")} />
-        </Button>
-        {!isReadOnly && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("workspace.contacts.edit_attributes")}
-              onClick={() => setEditOpen(true)}>
-              <PencilIcon className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("workspace.contacts.generate_personal_link")}
-              onClick={() => setLinkOpen(true)}>
-              <LinkIcon className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("common.delete")}
-              onClick={() => setConfirmDelete(true)}>
-              <TrashIcon className="size-4" />
-            </Button>
-          </>
-        )}
-      </div>
+      <TooltipProvider delayDuration={300}>
+        <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1">
+          {iconButton(
+            t("common.refresh"),
+            <RefreshCwIcon className={cn("size-4", refreshing && "animate-spin")} />,
+            () => void refresh(),
+            refreshing
+          )}
+          {!isReadOnly && (
+            <>
+              {iconButton(t("workspace.contacts.edit_attributes"), <PencilIcon className="size-4" />, () =>
+                setEditOpen(true)
+              )}
+              {iconButton(
+                t("workspace.contacts.generate_personal_link"),
+                <LinkIcon className="size-4" />,
+                () => setLinkOpen(true)
+              )}
+              {iconButton(t("common.delete"), <TrashIcon className="size-4" />, () => setConfirmDelete(true))}
+            </>
+          )}
+        </div>
+      </TooltipProvider>
       <DeleteDialog
         open={confirmDelete}
         setOpen={setConfirmDelete}
-        deleteWhat={t("common.person")}
+        deleteWhat={t("common.contact")}
         onDelete={() => void deleteContact()}
         isDeleting={remove.isPending}
         text={t("workspace.contacts.delete_contact_confirmation_with_quotas", { value: 1 })}
@@ -345,7 +348,7 @@ const EditContactAttributesModal = ({
         <DialogTitle>{t("workspace.contacts.edit_attribute_values")}</DialogTitle>
         <DialogDescription>{t("workspace.contacts.edit_attribute_values_description")}</DialogDescription>
       </DialogHeader>
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="flex min-h-0 flex-col gap-4" noValidate>
         <DialogBody>
           <div className="space-y-4">
             {rows.map((row, index) => {
