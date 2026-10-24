@@ -244,6 +244,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
               )
             }
             showCheckIcon
+            comboboxClasses="max-w-none"
             disabled={!canEditTimeZone}
           />
         </div>
