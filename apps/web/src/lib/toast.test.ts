@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { createToastStore, createToasterHosts } from "./toast";
+import { ACTION_TOAST_DURATION_MS, createToastStore, createToasterHosts } from "./toast";
 
 const manualTimers = () => {
   const pending: { fn: () => void; ms: number }[] = [];
@@ -59,4 +59,13 @@ test("only the newest toaster host shows the toasts, and closing it hands them b
   expect(hosts.getSnapshot()).toBe("page");
   page();
   expect(hosts.getSnapshot()).toBeNull();
+});
+
+test("a toast with an action keeps it and stays longer", () => {
+  const timers = manualTimers();
+  const store = createToastStore(timers.schedule);
+  const action = { label: "Undo", onClick: () => {} };
+  store.success("archived", { action });
+  expect(store.getSnapshot()[0]?.action).toBe(action);
+  expect(timers.pending.map((p) => p.ms)).toEqual([ACTION_TOAST_DURATION_MS]);
 });

@@ -2,15 +2,23 @@
 
 export type ToastKind = "success" | "error" | "loading";
 
+/** A button on the toast that follows up on what it reports (Undo, Open); pressing it also dismisses the toast. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: string;
   kind: ToastKind;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastOptions {
   /** Replaces the toast with this id instead of adding another. */
   id?: string;
+  action?: ToastAction;
 }
 
 type Listener = () => void;
@@ -21,6 +29,9 @@ export const TOAST_DURATION_MS: Record<ToastKind, number | null> = {
   error: 6000,
   loading: null,
 };
+
+/** A toast with an action stays longer than its kind's duration, so there is time to reach its button (WCAG 2.2.1). */
+export const ACTION_TOAST_DURATION_MS = 10000;
 
 export const createToastStore = (schedule: (fn: () => void, ms: number) => unknown = setTimeout) => {
   let toasts: Toast[] = [];
@@ -39,12 +50,15 @@ export const createToastStore = (schedule: (fn: () => void, ms: number) => unkno
 
   const show = (kind: ToastKind, message: string, options: ToastOptions = {}): string => {
     const id = options.id ?? `toast-${++nextId}`;
-    const toast: Toast = { id, kind, message };
+    const toast: Toast = options.action
+      ? { id, kind, message, action: options.action }
+      : { id, kind, message };
     const index = toasts.findIndex((existing) => existing.id === id);
     toasts =
       index === -1 ? [...toasts, toast] : toasts.map((existing, i) => (i === index ? toast : existing));
     emit();
-    const duration = TOAST_DURATION_MS[kind];
+    const kindDuration = TOAST_DURATION_MS[kind];
+    const duration = options.action && kindDuration !== null ? ACTION_TOAST_DURATION_MS : kindDuration;
     if (duration !== null) {
       schedule(() => {
         // Only the toast as shown here expires; a replacement under the same id has its own timer.

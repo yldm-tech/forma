@@ -29,6 +29,17 @@ export const Toaster = () => {
           )}>
           {ICONS[item.kind]}
           <span className="flex-1">{item.message}</span>
+          {item.action && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(item.id);
+                item.action?.onClick();
+              }}
+              className="focus-visible:ring-ring -my-0.5 shrink-0 rounded-sm px-1 font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 focus-visible:ring-2 focus-visible:outline-hidden">
+              {item.action.label}
+            </button>
+          )}
           {item.kind !== "loading" && (
             <button
               type="button"
