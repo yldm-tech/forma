@@ -88,11 +88,13 @@ jobs:
 
           total_changes=$((total_additions + total_deletions))
 
-          echo "counted_files=${counted_files}" >> "${GITHUB_OUTPUT}"
-          echo "excluded_files=${excluded_files}" >> "${GITHUB_OUTPUT}"
-          echo "total_additions=${total_additions}" >> "${GITHUB_OUTPUT}"
-          echo "total_deletions=${total_deletions}" >> "${GITHUB_OUTPUT}"
-          echo "total_changes=${total_changes}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "counted_files=${counted_files}"
+            echo "excluded_files=${excluded_files}"
+            echo "total_additions=${total_additions}"
+            echo "total_deletions=${total_deletions}"
+            echo "total_changes=${total_changes}"
+          } >> "${GITHUB_OUTPUT}"
 
           # Set flag if PR is too large (> 800 lines)
           if [ ${total_changes} -gt 800 ]; then
