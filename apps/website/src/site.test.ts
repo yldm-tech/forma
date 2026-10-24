@@ -2,12 +2,16 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vite-plus/test";
 import {
+  APP_LOCALE,
   ASSET_PREFIX,
+  INTEGRATION_LOGO,
   LOCALES,
   PAGES,
   REDIRECTS,
   ROUTES,
   SIGNUP_OPEN,
+  appLoginHref,
+  appSignupHref,
   isReservedPath,
   localeOfPath,
   notFoundPath,
@@ -89,6 +93,26 @@ describe("routes", () => {
   it("sends /signup to self-hosting while sign-up is closed", () => {
     expect(SIGNUP_OPEN).toBe(false);
     expect(REDIRECTS.find((redirect) => redirect.from === "/signup")?.to).toBe("/#get-forma");
+  });
+
+  it("sends sign-in and sign-up to the app in the page's language", () => {
+    expect(appLoginHref("en")).toBe("/app/auth/login?lang=en-US");
+    expect(appLoginHref("zh")).toBe("/app/auth/login?lang=zh-Hans-CN");
+    expect(appSignupHref("ja")).toBe("/app/auth/signup?lang=ja-JP");
+  });
+
+  it("names a locale the app has a catalogue for, for every site locale", () => {
+    const missing = LOCALES.map((locale) => APP_LOCALE[locale]).filter(
+      (tag) => !existsSync(fileURLToPath(new URL(`../../web/locales/${tag}.json`, import.meta.url)))
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("has a committed logo for every native integration", () => {
+    const missing = Object.values(INTEGRATION_LOGO).filter(
+      (path) => !existsSync(fileURLToPath(new URL(`../public${path}`, import.meta.url)))
+    );
+    expect(missing).toEqual([]);
   });
 
   it("has a committed share image for every page (pnpm --filter @forma/website og-images)", () => {

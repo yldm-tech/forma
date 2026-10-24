@@ -126,6 +126,7 @@ export interface Redirect {
 export const REDIRECTS: Redirect[] = [
   // "Open source" is not a claim the site makes while the license is undecided, so the old landing page goes to the neutral one.
   { from: "/open-source-form-builder", to: "/form-builder/", status: 301 },
+  // /signup carries no locale, so the app picks the browser's language.
   { from: "/signup", to: SIGNUP_OPEN ? "/app/auth/signup" : "/#get-forma", status: 302 },
   { from: "/github", to: GITHUB_URL, status: 302 },
   // No Discord exists; the issue tracker is where people reach the project.
@@ -135,8 +136,27 @@ export const REDIRECTS: Redirect[] = [
 /** The services Forma has a native integration for, as the integrations page and its illustration list them. */
 export const NATIVE_INTEGRATIONS = ["Slack", "Notion", "Airtable", "Google Sheets"] as const;
 
+/** Each native integration's logo (public/_site/integrations, copied from apps/web/src/features/integrations/images). */
+export const INTEGRATION_LOGO: Record<(typeof NATIVE_INTEGRATIONS)[number], string> = {
+  Slack: "/_site/integrations/slack.png",
+  Notion: "/_site/integrations/notion.png",
+  Airtable: "/_site/integrations/airtable.svg",
+  "Google Sheets": "/_site/integrations/google-sheets.png",
+};
+
 export const APP_LOGIN_PATH = "/app/auth/login";
 export const APP_SIGNUP_PATH = "/app/auth/signup";
+
+/** The app's catalogue tag for each site locale (apps/web/locales), which the app reads from `?lang=` so that a visitor who chose a language here keeps it at sign-in. */
+export const APP_LOCALE: Record<Locale, string> = { en: "en-US", zh: "zh-Hans-CN", ja: "ja-JP" };
+
+const withAppLocale = (path: string, locale: Locale): string => `${path}?lang=${APP_LOCALE[locale]}`;
+
+/** The app's sign-in page, in the language of the page that links to it. */
+export const appLoginHref = (locale: Locale): string => withAppLocale(APP_LOGIN_PATH, locale);
+
+/** The app's sign-up page, in the language of the page that links to it. */
+export const appSignupHref = (locale: Locale): string => withAppLocale(APP_SIGNUP_PATH, locale);
 
 /** The self-hosting files in the repository, which the self-hosting page points at for each setup. */
 export const SELF_HOSTING_SOURCES = {
@@ -147,7 +167,7 @@ export const SELF_HOSTING_SOURCES = {
 
 /** The primary call to action, which depends on whether public sign-up is open. */
 export const primaryCtaHref = (locale: Locale): string =>
-  SIGNUP_OPEN ? APP_SIGNUP_PATH : pagePath(locale, "selfHosting");
+  SIGNUP_OPEN ? appSignupHref(locale) : pagePath(locale, "selfHosting");
 
 // The HTML snippet that loads the SDK from a Forma instance (/js/forma.umd.cjs) and sets it up once the script has loaded.
 export const JS_SNIPPET = `<!-- START Forma Surveys -->

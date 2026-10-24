@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { DICTIONARIES } from "../content";
-import { LOCALES, ROUTES } from "../site";
+import { APP_LOCALE, LOCALES, ROUTES, localeOfPath } from "../site";
 import { ROBOTS_TXT, buildRedirectsConf, buildSitemap, notFoundProbePath, renderPath } from "./render";
 
 const assets = { stylesheets: ["/_site/assets/main.css"], script: "/_site/assets/main.js" };
@@ -69,6 +69,35 @@ describe("prerendered pages", () => {
     expect(html).toContain(DICTIONARIES.ja.notFound.title);
     expect(html).toContain('<meta name="robots" content="noindex"/>');
     expect(html).not.toContain('rel="canonical"');
+  });
+
+  // A visitor who reads the site in Japanese should land on a Japanese sign-in page, whatever their browser's language.
+  it.each([...ROUTES.map((route) => route.path), ...LOCALES.map(notFoundProbePath)])(
+    "%s links to the app in its own language",
+    async (path) => {
+      const html = await renderPath(path, assets);
+      const appLinks = [...html.matchAll(/href="(\/app\/[^"]*)"/g)].map((match) => match[1] ?? "");
+      expect(appLinks.length).toBeGreaterThan(0);
+      const lang = APP_LOCALE[localeOfPath(path)];
+      expect(appLinks.filter((href) => !href.endsWith(`?lang=${lang}`))).toEqual([]);
+    }
+  );
+
+  it.each(ROUTES.map((route) => route.path))("%s links only to fragments it has", async (path) => {
+    const html = await renderPath(path, assets);
+    const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]));
+    const fragments = [...html.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
+    expect(fragments.filter((fragment) => !ids.has(fragment))).toEqual([]);
+  });
+
+  it("links the developers page's API and MCP cards to its reference", async () => {
+    for (const locale of LOCALES) {
+      const route = ROUTES.find((r) => r.locale === locale && r.page === "developers");
+      const html = await renderPath(route?.path ?? "/developers/", assets);
+      expect(html).toContain('href="#rest-api"');
+      expect(html).toContain('href="#mcp"');
+      expect(html).toContain("X-Api-Key");
+    }
   });
 
   it("keeps the anchor the app links to on the security page", async () => {

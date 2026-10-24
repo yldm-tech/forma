@@ -1,4 +1,4 @@
-import { APP_LOGIN_PATH, GITHUB_URL, HTML_LANG, LOCALES, LOCALE_NAME, localePrefix, pagePath } from "../site";
+import { GITHUB_URL, HTML_LANG, appLoginHref, LOCALES, LOCALE_NAME, localePrefix, pagePath } from "../site";
 import { Icon, type IconName } from "./icons";
 import { LogoMark } from "./Logo";
 import { useSite } from "./site-context";
@@ -151,7 +151,7 @@ export const SiteHeader = () => {
             <div className="hidden md:block">
               <LanguageSwitcher />
             </div>
-            <a href={APP_LOGIN_PATH} className="btn btn-ghost hidden min-h-10 md:inline-flex">
+            <a href={appLoginHref(locale)} className="btn btn-ghost hidden min-h-10 md:inline-flex">
               {content.common.cta.signIn}
             </a>
             <PrimaryCta className="hidden min-h-10 sm:inline-flex" />
@@ -230,7 +230,7 @@ export const SiteHeader = () => {
           </div>
           <div className="mt-8 flex flex-col gap-3">
             <PrimaryCta />
-            <a href={APP_LOGIN_PATH} className="btn btn-secondary">
+            <a href={appLoginHref(locale)} className="btn btn-secondary">
               {content.common.cta.signIn}
             </a>
           </div>

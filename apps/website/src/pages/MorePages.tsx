@@ -13,7 +13,8 @@ import {
   SplitSection,
 } from "../components/ui";
 import {
-  APP_LOGIN_PATH,
+  appLoginHref,
+  INTEGRATION_LOGO,
   NATIVE_INTEGRATIONS,
   GITHUB_URL,
   JS_SNIPPET,
@@ -36,8 +37,14 @@ export const IntegrationsPage = () => {
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {NATIVE_INTEGRATIONS.map((name) => (
               <li key={name} data-reveal className="card flex items-center gap-3 p-5">
-                <span className="bg-mint-100 inline-flex size-10 flex-none items-center justify-center rounded-[22%] font-bold text-teal-900">
-                  {name.charAt(0)}
+                <span className="border-line inline-flex size-10 flex-none items-center justify-center rounded-[22%] border bg-white">
+                  <img
+                    src={INTEGRATION_LOGO[name]}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="size-6 object-contain"
+                  />
                 </span>
                 <span className="font-semibold">{name}</span>
               </li>
@@ -67,9 +74,24 @@ export const IntegrationsPage = () => {
   );
 };
 
+/** The terms of the developer reference. Paths and headers are long unbroken strings, so they may wrap anywhere rather than widen a phone's card. */
+const ReferenceFacts = ({ facts }: { facts: readonly { term: string; body: string }[] }) => (
+  <dl className="mt-6 flex flex-col gap-5">
+    {facts.map((fact) => (
+      <div key={fact.term}>
+        <dt className="font-semibold">{fact.term}</dt>
+        <dd className="text-ink-700 mt-1 [overflow-wrap:anywhere]">
+          <Rich text={fact.body} />
+        </dd>
+      </div>
+    ))}
+  </dl>
+);
+
 export const DevelopersPage = () => {
   const { locale, content } = useSite();
   const page = content.pages.developers;
+  const reference = page.reference;
   return (
     <>
       <PageHero
@@ -90,8 +112,20 @@ export const DevelopersPage = () => {
       />
       <section className="section-pad">
         <div className="container-site grid gap-6 lg:grid-cols-3">
-          <FeatureCard icon="terminal" title={page.api.title} body={page.api.body} />
-          <FeatureCard icon="sparkle" title={page.mcp.title} body={page.mcp.body} />
+          <FeatureCard
+            icon="terminal"
+            title={page.api.title}
+            body={page.api.body}
+            href="#rest-api"
+            linkLabel={page.api.link}
+          />
+          <FeatureCard
+            icon="sparkle"
+            title={page.mcp.title}
+            body={page.mcp.body}
+            href="#mcp"
+            linkLabel={page.mcp.link}
+          />
           <FeatureCard
             icon="webhook"
             title={page.webhooks.title}
@@ -99,6 +133,33 @@ export const DevelopersPage = () => {
             href={pagePath(locale, "integrations")}
             linkLabel={page.webhooks.link}
           />
+        </div>
+      </section>
+      <section aria-labelledby="reference" className="section-pad bg-surface-muted">
+        <div className="container-site">
+          <SectionHeading id="reference" title={reference.title} lead={reference.lead} />
+          <div className="mt-10 grid items-start gap-6 lg:grid-cols-2">
+            <div data-reveal className="card p-6 lg:p-8">
+              <h3 id="rest-api" className="text-h3">
+                {reference.rest.title}
+              </h3>
+              <ReferenceFacts facts={reference.rest.facts} />
+              <h4 className="mt-8 font-semibold">{reference.rest.resourcesTitle}</h4>
+              <ul className="mt-3 flex flex-col gap-3">
+                {reference.rest.resources.map((resource) => (
+                  <li key={resource} className="text-ink-700 [overflow-wrap:anywhere]">
+                    <Rich text={resource} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div data-reveal className="card p-6 lg:p-8">
+              <h3 id="mcp" className="text-h3">
+                {reference.mcp.title}
+              </h3>
+              <ReferenceFacts facts={reference.mcp.facts} />
+            </div>
+          </div>
         </div>
       </section>
       <CtaBand />
@@ -217,7 +278,7 @@ export const NotFoundPage = () => {
           <SmartLink href={localePrefix(locale)} className="btn btn-primary">
             {page.home}
           </SmartLink>
-          <a href={APP_LOGIN_PATH} className="btn btn-secondary">
+          <a href={appLoginHref(locale)} className="btn btn-secondary">
             {content.common.cta.signIn}
           </a>
         </div>

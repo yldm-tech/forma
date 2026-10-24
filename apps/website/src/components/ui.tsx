@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { APP_LOGIN_PATH, SIGNUP_OPEN, primaryCtaHref } from "../site";
+import { SIGNUP_OPEN, appLoginHref, primaryCtaHref } from "../site";
 import { Icon, type IconName } from "./icons";
 import { useSite } from "./site-context";
 
@@ -64,9 +64,9 @@ export const PrimaryCta = ({ className = "" }: { className?: string }) => {
 };
 
 export const SignInCta = ({ className = "" }: { className?: string }) => {
-  const { content } = useSite();
+  const { locale, content } = useSite();
   return (
-    <a href={APP_LOGIN_PATH} className={`btn btn-secondary ${className}`}>
+    <a href={appLoginHref(locale)} className={`btn btn-secondary ${className}`}>
       {content.common.cta.signIn}
     </a>
   );

@@ -270,16 +270,63 @@ export const zh: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "使用 API Key 管理问卷、回答、工作流和标签。",
+        body: "使用 API 密钥管理问卷和工作流。回答和 Webhook 另有管理接口，使用同一个密钥。",
+        link: "REST API 参考 →",
       },
       mcp: {
         title: "MCP 服务器",
         body: "把 MCP 客户端指向 `https://forma.yldm.ai/api/mcp`，用你自己的 Forma 账号通过 OAuth 登录并授权所需权限，Agent 就能查看、创建和编辑问卷与工作流。",
+        link: "连接客户端 →",
       },
       webhooks: {
         title: "Webhook",
         body: "回答创建、更新和完成时，实时推送到你自己的接口。",
         link: "查看集成 →",
+      },
+      reference: {
+        title: "API 参考",
+        lead: "以下路径都相对于你的 Forma 实例：`https://forma.yldm.ai`，私有化部署时则是你自己的域名。请求和响应均为 JSON。",
+        rest: {
+          title: "REST API",
+          facts: [
+            {
+              term: "基础路径",
+              body: "`/api/v3`。错误以 RFC 9457 问题文档（`application/problem+json`）返回。",
+            },
+            {
+              term: "认证",
+              body: "在 `X-Api-Key` 请求头中发送密钥，或使用 `Authorization: Bearer fbk_…`。不要把密钥放进 URL。",
+            },
+            {
+              term: "API 密钥",
+              body: "由组织所有者或管理者在应用中打开“组织设置 → API 密钥 → 添加 API 密钥”，按工作区逐一授予读取、写入或管理权限，然后复制密钥。密钥只显示一次。",
+            },
+          ],
+          resourcesTitle: "主要资源",
+          resources: [
+            "`/api/v3/surveys`：列出、创建、校验、读取、更新、归档、恢复和删除问卷。",
+            "`/api/v3/workflows`：创建和编辑工作流，启用、停用或测试，并查看运行记录。",
+            "`/api/v3/action-classes` 和 `/api/v3/contact-attribute-keys`：应用内问卷所针对的动作和属性，只读。",
+            "`/api/v2/management/responses` 和 `/api/v2/management/webhooks`：回答和 Webhook 订阅，使用同一个密钥。",
+          ],
+        },
+        mcp: {
+          title: "MCP 服务器",
+          facts: [
+            {
+              term: "端点",
+              body: "`/api/mcp`，使用 Streamable HTTP，例如 `https://forma.yldm.ai/api/mcp`。",
+            },
+            {
+              term: "OAuth",
+              body: "支持 OAuth 的客户端会自动找到登录入口：用你的 Forma 账号登录，并批准它请求的权限范围。",
+            },
+            {
+              term: "API 密钥",
+              body: "不支持 OAuth 的客户端可以像调用 REST API 一样，在请求头中发送 API 密钥。只读密钥可以查看；有写入或管理权限的密钥还可以创建和编辑。",
+            },
+          ],
+        },
       },
     },
     selfHosting: {

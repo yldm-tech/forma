@@ -48,7 +48,12 @@
   body {
     font-size: 17px;
     line-height: 28px;
-    /* The illustrations' glows reach past their boxes; clip (unlike hidden) creates no scroll container, so the sticky header keeps working. */
+    /* A last line of defence against a horizontal scrollbar on desktop. It does not stop mobile Chrome from widening the layout viewport to the content's width (the page then pans sideways under a finger); the section rule below does that. */
+    overflow-x: clip;
+  }
+
+  /* The illustrations' glows reach 40px past their boxes (Frame's -inset-10). Clipping each top-level section keeps mobile Chrome's layout viewport at the device width; clip (unlike hidden) creates no scroll container, so nothing inside loses position: sticky and nothing scrolls on its own. */
+  main > section {
     overflow-x: clip;
   }
 
@@ -284,6 +289,14 @@
   .reveal-pending {
     opacity: 0;
     transform: translateY(12px);
+  }
+
+  /* Printing (or saving as PDF) scrolls nothing into view, so every element still pending would print as an empty band. */
+  @media print {
+    .reveal-pending {
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 
   .reveal-in {

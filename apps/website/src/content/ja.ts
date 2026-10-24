@@ -45,7 +45,8 @@ export const ja: SiteContent = {
     illustrations: {
       surveyTitle: "お客様の声",
       ratingQuestion: "ご利用の満足度を教えてください",
-      npsQuestion: "友人や同僚に薦める可能性はどのくらいですか？",
+      // U+2060 (word joiner) keeps どのくらい together: Chrome's phrase segmentation (auto-phrase) otherwise allows a break after どの, which the narrow illustration cards take on phones.
+      npsQuestion: "友人や同僚に薦める可能性はどの\u2060くらいですか？",
       npsLow: "可能性は低い",
       npsHigh: "可能性は高い",
       textPlaceholder: "詳しく教えてください…",
@@ -279,16 +280,63 @@ export const ja: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "API キーで、アンケート・回答・ワークフロー・タグを管理できます。",
+        body: "API キーで、アンケートとワークフローを管理できます。回答と Webhook には、同じキーで使える管理用エンドポイントがあります。",
+        link: "REST API リファレンス →",
       },
       mcp: {
         title: "MCP サーバー",
         body: "MCP クライアントの接続先を `https://forma.yldm.ai/api/mcp` に設定し、自分の Forma アカウントで OAuth ログインして権限を承認すると、エージェントがアンケートやワークフローの一覧表示・作成・編集を行えます。",
+        link: "クライアントを接続する →",
       },
       webhooks: {
         title: "Webhook",
         body: "回答の作成・更新・完了のたびに、自社のエンドポイントで受け取れます。",
         link: "連携機能を見る →",
+      },
+      reference: {
+        title: "API リファレンス",
+        lead: "パスはお使いの Forma インスタンスからの相対パスです。`https://forma.yldm.ai`、セルフホストの場合はご自身のドメインになります。リクエストとレスポンスはどちらも JSON です。",
+        rest: {
+          title: "REST API",
+          facts: [
+            {
+              term: "ベースパス",
+              body: "`/api/v3`。エラーは RFC 9457 の Problem Details（`application/problem+json`）で返ります。",
+            },
+            {
+              term: "認証",
+              body: "キーは `X-Api-Key` ヘッダー、または `Authorization: Bearer fbk_…` で送ります。URL にキーを含めないでください。",
+            },
+            {
+              term: "API キー",
+              body: "組織のオーナーまたはマネージャーが、アプリで「組織設定 → APIキー → APIキーを追加」を開き、ワークスペースごとに読み取り・書き込み・管理の権限を付与してから、キーをコピーします。キーは一度しか表示されません。",
+            },
+          ],
+          resourcesTitle: "主なリソース",
+          resources: [
+            "`/api/v3/surveys`：アンケートの一覧・作成・検証・取得・更新・アーカイブ・復元・削除。",
+            "`/api/v3/workflows`：ワークフローの作成と編集、有効化・無効化・テスト、実行履歴の一覧。",
+            "`/api/v3/action-classes` と `/api/v3/contact-attribute-keys`：アプリ内アンケートの対象となるアクションと属性（読み取り専用）。",
+            "`/api/v2/management/responses` と `/api/v2/management/webhooks`：回答と Webhook の登録。同じキーで使えます。",
+          ],
+        },
+        mcp: {
+          title: "MCP サーバー",
+          facts: [
+            {
+              term: "エンドポイント",
+              body: "`/api/mcp`（Streamable HTTP）。例：`https://forma.yldm.ai/api/mcp`。",
+            },
+            {
+              term: "OAuth",
+              body: "OAuth に対応したクライアントは、ログイン先を自動で見つけます。自分の Forma アカウントでログインし、要求された権限を承認してください。",
+            },
+            {
+              term: "API キー",
+              body: "OAuth に対応していないクライアントは、REST API と同じようにヘッダーで API キーを送ります。読み取りキーは一覧と取得のみ、書き込みまたは管理の権限があるキーは作成と編集もできます。",
+            },
+          ],
+        },
       },
     },
     selfHosting: {

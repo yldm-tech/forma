@@ -279,16 +279,63 @@ export const en: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "Manage surveys, responses, workflows and tags with API keys.",
+        body: "Manage surveys and workflows with an API key. Responses and webhooks have management endpoints that take the same key.",
+        link: "REST API reference →",
       },
       mcp: {
         title: "MCP server",
         body: "Point an MCP client at `https://forma.yldm.ai/api/mcp`. You sign in with your own Forma account over OAuth, approve the scopes, and the agent can list, create and edit surveys and workflows.",
+        link: "Connect a client →",
       },
       webhooks: {
         title: "Webhooks",
         body: "Receive responses at your own endpoint as they are created, updated and finished.",
         link: "See integrations →",
+      },
+      reference: {
+        title: "API reference",
+        lead: "Paths are relative to your Forma instance: `https://forma.yldm.ai`, or your own domain if you self-host. Requests and responses are JSON.",
+        rest: {
+          title: "REST API",
+          facts: [
+            {
+              term: "Base path",
+              body: "`/api/v3`. Errors come back as RFC 9457 problem documents (`application/problem+json`).",
+            },
+            {
+              term: "Authentication",
+              body: "Send the key in the `X-Api-Key` header, or as `Authorization: Bearer fbk_…`. Keep keys out of URLs.",
+            },
+            {
+              term: "API keys",
+              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once.",
+            },
+          ],
+          resourcesTitle: "Main resources",
+          resources: [
+            "`/api/v3/surveys`: list, create, validate, read, update, archive, restore and delete surveys.",
+            "`/api/v3/workflows`: create and edit workflows, enable, disable or test them, and list their runs.",
+            "`/api/v3/action-classes` and `/api/v3/contact-attribute-keys`: the actions and attributes in-app surveys target, read-only.",
+            "`/api/v2/management/responses` and `/api/v2/management/webhooks`: responses and webhook subscriptions, with the same key.",
+          ],
+        },
+        mcp: {
+          title: "MCP server",
+          facts: [
+            {
+              term: "Endpoint",
+              body: "`/api/mcp` over Streamable HTTP, for example `https://forma.yldm.ai/api/mcp`.",
+            },
+            {
+              term: "OAuth",
+              body: "A client that supports OAuth finds the sign-in on its own: you sign in with your Forma account and approve the scopes it asks for.",
+            },
+            {
+              term: "API key",
+              body: "A client without OAuth sends an API key in a header, as with the REST API. A read key can list and read; a write or manage key can also create and edit.",
+            },
+          ],
+        },
       },
     },
     selfHosting: {
