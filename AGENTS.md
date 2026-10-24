@@ -76,6 +76,8 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 
 Every dependency used by two or more workspaces is pinned once in the `catalog:` block of `pnpm-workspace.yaml`, and each `package.json` references it as `"catalog:"`. Bumping a shared dependency means editing the catalog entry, never a `package.json`. `pnpm check` runs `tooling/scripts/check-catalog.mjs`, which fails on a literal version for a catalogued name and on an uncatalogued dependency shared by two workspaces. A peer dependency range is exempt.
 
+The install uses pnpm's isolated linker (`nodeLinker: isolated`): a workspace resolves only what its own `package.json` declares, plus the root `package.json`'s dependencies. Declare a dependency in every workspace that imports it, including what a config or test loads by name (a `@vitest-environment`, a PostCSS or Vite plugin, a Storybook addon, a `types` entry in a tsconfig); there is no hoisting to fall back on.
+
 ### SDK bundles and stale builds
 
 `packages/surveys` and `packages/js-core` are consumed through their builds. Building them copies the UMD bundles into `apps/web/public/js/`, Vite copies that into the SPA build, and the Go binary embeds and serves it at `/js/*` with the cache and CORS headers forma2 sent. `apps/web` declares both packages as dev dependencies, so `vp run -r build` (`pnpm build`, `make build`) builds them first.

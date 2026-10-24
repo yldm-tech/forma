@@ -23,9 +23,11 @@
     "i18n": "pnpm i18n:surveys:generate && pnpm scan-translations"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "js-yaml": "catalog:",
     "rimraf": "catalog:",
     "squawk-cli": "2.65.0",
+    "typescript": "catalog:",
     "vite-plus": "catalog:"
   },
   "engines": {

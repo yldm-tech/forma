@@ -7,6 +7,8 @@ allowBuilds:
   core-js: true
   esbuild: true
   protobufjs: true
+  # Reached through lingo.dev (packages/surveys' i18n:generate) via @openrouter/ai-sdk-provider. Its postinstall (`node scripts/check-types.js || true`, reviewed for 0.3.16) only fetches openrouter.ai's model list to warn that its bundled model types are stale, and exits 0 either way; nothing it does is needed, so it is denied rather than left unreviewed, which pnpm treats as an install failure.
+  "@openrouter/sdk": false
 
 # Single source of truth for the version of every dependency used by two or more workspaces. Packages reference these as `"typescript": "catalog:"` and never as a literal version, so a shared dependency cannot drift between packages: bumping one means editing the entry here, which changes every consumer at once.
 #
@@ -129,20 +131,24 @@ overrides:
   # ENG-2234 / GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895: brace-expansion's recursive expansion has no bound on total output length, so a crafted `{a,b}{c,d}...` pattern grows the result set exponentially (DoS). GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays) bypasses the CVE-2026-14257 mitigation; GHSA-mh99-v99m-4gvg covers only the 1.x and 2.x lines. Every line reaches brace-expansion via minimatch. Pinned to the lowest maintenance release closing both advisories on the line. The 1.x and 2.x lines need no pin any more (see the record above).
   # load-bearing: minimatch 10 depends on it, from @microsoft/api-extractor (via vite-plugin-dts) and glob 13 (rimraf, storybook's react-docgen plugin), all dev.
   brace-expansion@5: 5.0.12
+  # GHSA-mrhx-c7xc-m3w5: zod <4.6.6 can exhaust memory while validating oversized constrained collections; patched in 4.6.6. Points at the catalog entry, so the override and every workspace's zod are the same (patched, see patchedDependencies) 4.6.7.
+  # load-bearing: lingo.dev 0.138.10 (packages/surveys, dev) pins zod 4.4.3 exactly, and its @ai-sdk/* providers and @lingo.dev/_spec resolve that copy.
+  "zod@<4.6.6": "catalog:"
   vite@*: "catalog:"
   vitest@*: "catalog:"
-  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
+  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the storybook tooling get an auto-installed React of their own, at whatever version pnpm picks for the unmet peer. Pinning both keeps one React version in the lockfile, so no package renders with one React while its hooks come from another (under the hoisted linker that nested copy broke react-i18next's hooks in apps/web/).
   react: "catalog:"
   react-dom: "catalog:"
 
 autoInstallPeers: true
 linkWorkspacePackages: true
-shamefullyHoist: true
 sharedWorkspaceLockfile: true
 access: public
 enablePrePostScripts: true
-# Flat, npm-style node_modules. Moving to the strict `isolated` linker is the long-term goal (ENG-1674). Every workspace now declares what its sources, configs and scripts import or run, the relative imports of tooling/vite-plugins and packages/survey-ui included (as `workspace:*` edges); the one exception is tooling/scripts' js-yaml, declared by the root package.json, which the isolated linker still resolves from the root as an ancestor. React is single through the overrides above (ENG-1693). What is left is the switch itself: `shamefullyHoist: true` has to go in the same change, because under the isolated linker it hoists every package to the root and keeps an undeclared import resolving; tools that load plugins by name at runtime (Storybook's addons, the `@import "tailwindcss"` in packages/survey-ui's CSS that apps/storybook loads) are only proven by an install and a build; and the Docker images copy only some workspaces into the build before `pnpm install --frozen-lockfile`. Delete this note with that change.
-nodeLinker: hoisted
+# The strict linker, pnpm's default, written out so a global or user-level `node-linker` cannot switch a checkout back to the flat layout (ENG-1674). A workspace resolves only what its own package.json declares, plus the root package.json's dependencies through the root node_modules as an ancestor (tooling/scripts' js-yaml relies on that; the root's own @types/node and typescript are there for the root tsconfig.json's `types: ["node"]` and .vscode's `typescript.tsdk`), so an import a package does not declare fails instead of resolving through another package's copy. Declare a missing dependency in the package that imports it (as `catalog:` when two workspaces share it); do not bring back `shamefullyHoist` or add a `publicHoistPattern` for it.
+nodeLinker: isolated
+# The isolated linker's command shims (node_modules/.bin) otherwise export NODE_PATH pointing into node_modules/.pnpm, which is a second way for a tool to load a package nobody declared, and which Storybook inlines into the build: the @chromatic-com/storybook manager bundle in storybook-static carried the build machine's absolute store paths.
+extendNodePath: false
 saveExact: true
 # Supply-chain release cooldown: refuse to install package versions published less than
 # 3 days (4320 minutes) ago, so compromised releases are usually detected/yanked before we
