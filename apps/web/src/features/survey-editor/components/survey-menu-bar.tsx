@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { ArrowLeftIcon, SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon, SettingsIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
@@ -14,10 +14,12 @@ import {
 } from "@forma/types/surveys/types";
 import type { TWorkspace as Workspace } from "@forma/types/workspace";
 import { Alert, AlertButton, AlertTitle } from "../../../components/ui/alert";
-import { AlertDialog } from "../../../components/ui/alert-dialog";
 import { Button } from "../../../components/ui/button";
+import { ConfirmationModal } from "../../../components/ui/confirmation-modal";
 import { Input } from "../../../components/ui/input";
+import { TooltipRenderer } from "../../../components/ui/tooltip";
 import { ApiError } from "../../../lib/api";
+import { cn } from "../../../lib/cn";
 import { errorMessage } from "../../../lib/errors";
 import { instanceQuery } from "../../../lib/queries/instance";
 import { isDeepEqual } from "../../../lib/survey/object";
@@ -36,7 +38,10 @@ import {
 import { hasUnsavedSurveyChanges } from "../lib/unsaved-changes";
 import { scrollElementCardIntoView } from "../lib/utils";
 import { isMissingRequiredTrigger, isSurveyValid } from "../lib/validation";
-import { AutoSaveIndicator } from "./auto-save-indicator";
+import { type AutoSaveStatus, AutoSaveIndicator } from "./auto-save-indicator";
+
+/** Autosave failures in a row after which the indicator stops retrying quietly and offers Retry. */
+const AUTOSAVE_FAILURES_BEFORE_WARNING = 2;
 
 interface SurveyMenuBarProps {
   localSurvey: TSurvey;
@@ -82,7 +87,11 @@ export const SurveyMenuBar = ({
   const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isSurveyPublishing, setIsSurveyPublishing] = useState(false);
   const [isSurveySaving, setIsSurveySaving] = useState(false);
-  const [lastAutoSaved, setLastAutoSaved] = useState<Date | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>({ state: "idle" });
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [isNameInvalid, setIsNameInvalid] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveFailuresRef = useRef(0);
   const isSuccessfullySavedRef = useRef(false);
   const isAutoSavingRef = useRef(false);
   const isSurveyPublishingRef = useRef(false);
@@ -208,13 +217,19 @@ export const SurveyMenuBar = ({
     status: "draft",
   });
 
-  const goBack = () => router.history.back();
+  // Where Back, Discard and Save & Close leave for. Navigated to explicitly rather than with history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted or bookmarked URL, hard reload), where back() does nothing or leaves the app. A draft has no responses to summarise and the list never links a draft to its summary, so a draft returns to the list; any other survey to its summary.
+  const exitHref =
+    localSurvey.status === "draft"
+      ? `${workspaceBasePath}/surveys`
+      : `${workspaceBasePath}/surveys/${localSurvey.id}/summary`;
+
+  const goBack = () => router.navigate({ href: exitHref });
 
   const handleBack = () => {
     if (hasUnsavedSurveyChanges(localSurvey, [survey, lastSavedSurveyRef.current])) {
       setConfirmDialogOpen(true);
     } else {
-      goBack();
+      void goBack();
     }
   };
 
@@ -247,11 +262,23 @@ export const SurveyMenuBar = ({
     }
     const [firstIssue] = issues;
     if (!firstIssue) return;
-    const report = describeFirstIssue(
-      firstIssue,
-      (blockNumber) => t("workspace.surveys.edit.block_name_required_for", { blockNumber }),
-      (code) => getLanguageLabel(code, locale) ?? code
-    );
+    // The survey name sits in this bar, outside every card: it is marked and focused here.
+    if (issues.some((issue) => issue.path.length === 1 && issue.path[0] === "name")) {
+      setIsNameInvalid(true);
+      nameInputRef.current?.focus();
+    }
+    const report = describeFirstIssue(localSurvey, firstIssue, {
+      surveyNameRequired: () => t("workspace.surveys.survey_name_required"),
+      blockNameRequired: (blockNumber) =>
+        t("workspace.surveys.edit.block_name_required_for", { blockNumber }),
+      questionTextMissing: (blockNumber, questionNumber) =>
+        t("workspace.surveys.edit.issue_question_text_missing", { blockNumber, questionNumber }),
+      optionLabelMissing: (blockNumber, questionNumber, optionNumber) =>
+        t("workspace.surveys.edit.issue_option_label_missing", { blockNumber, questionNumber, optionNumber }),
+      logicRuleInvalid: (blockNumber, ruleNumber) =>
+        t("workspace.surveys.edit.issue_logic_rule_invalid", { blockNumber, ruleNumber }),
+      languageLabel: (code) => getLanguageLabel(code, locale) ?? code,
+    });
     toast.error(report.message);
     if (report.showLanguageTab) setActiveId("language");
   };
@@ -284,12 +311,65 @@ export const SurveyMenuBar = ({
     toast.error(fallback);
   };
 
+  /** One autosave of the draft as it stands, with no checks: the interval below decides when one is due, and Retry runs one at once. */
+  const autoSave = async () => {
+    isAutoSavingRef.current = true;
+    setAutoSaveStatus({ state: "saving" });
+
+    try {
+      const currentSurvey = localSurveyRef.current;
+      const savedData = await saveSurvey(
+        {
+          ...currentSurvey,
+          segment: currentSurvey.segment?.id === "temp" ? null : currentSurvey.segment,
+          updatedAt: getExpectedSurveyVersion(),
+        },
+        true
+      );
+
+      // If the segment changed on the server (e.g., private segment was deleted when switching from app to link type), update localSurvey to prevent stale segment references when publishing
+      if (!isDeepEqual(localSurveyRef.current.segment, savedData.segment)) {
+        setLocalSurvey({ ...localSurveyRef.current, segment: savedData.segment });
+      }
+
+      // Update surveyRef (not localSurvey state) to prevent re-renders during auto-save. This keeps the UI stable while still tracking that changes have been saved. The comparison uses refs, so this prevents unnecessary re-saves.
+      surveyRef.current = { ...savedData };
+      lastSavedSurveyRef.current = structuredClone(savedData);
+      isSuccessfullySavedRef.current = true;
+      // The cached survey is the baseline the editor reopens on within gcTime; left behind, it would bring back the version before this autosave, and the next save would conflict with, or overwrite, what was autosaved.
+      queryClient.setQueryData(surveyEditorKeys.survey(savedData.id), savedData);
+      autoSaveFailuresRef.current = 0;
+      setAutoSaveStatus({ state: "saved", at: new Date() });
+    } catch (error) {
+      if (recordSaveConflict(error)) {
+        // A concurrent edit is not transient: it stops the loop, so it is reported once, here.
+        toast.error(t("workspace.surveys.edit.error_saving_changes"));
+        setAutoSaveStatus({ state: "idle" });
+      } else {
+        // A single failure is retried quietly in ten seconds; failures in a row are shown, with Retry, so work is never lost without the author knowing.
+        autoSaveFailuresRef.current += 1;
+        setAutoSaveStatus(
+          autoSaveFailuresRef.current >= AUTOSAVE_FAILURES_BEFORE_WARNING
+            ? { state: "failed", failures: autoSaveFailuresRef.current }
+            : { state: "idle" }
+        );
+      }
+    } finally {
+      isAutoSavingRef.current = false;
+    }
+  };
+  // The interval reads the latest autoSave (and through it the latest t) without being re-created.
+  const autoSaveRef = useRef(autoSave);
+  useEffect(() => {
+    autoSaveRef.current = autoSave;
+  });
+
   // Interval-based auto-save for draft surveys (every 10 seconds)
   useEffect(() => {
     // Only set up interval for draft surveys
     if (localSurvey.status !== "draft" || localSurvey.publishOn !== null) return;
 
-    const intervalId = setInterval(async () => {
+    const intervalId = setInterval(() => {
       // Skip if tab is not visible (no computation, no API calls for background tabs)
       if (document.hidden) return;
 
@@ -303,45 +383,11 @@ export const SurveyMenuBar = ({
       if (!hasUnsavedSurveyChanges(localSurveyRef.current, [surveyRef.current, lastSavedSurveyRef.current]))
         return;
 
-      isAutoSavingRef.current = true;
-
-      try {
-        const currentSurvey = localSurveyRef.current;
-        const savedData = await saveSurvey(
-          {
-            ...currentSurvey,
-            segment: currentSurvey.segment?.id === "temp" ? null : currentSurvey.segment,
-            updatedAt: getExpectedSurveyVersion(),
-          },
-          true
-        );
-
-        // If the segment changed on the server (e.g., private segment was deleted when switching from app to link type), update localSurvey to prevent stale segment references when publishing
-        if (!isDeepEqual(localSurveyRef.current.segment, savedData.segment)) {
-          setLocalSurvey({ ...localSurveyRef.current, segment: savedData.segment });
-        }
-
-        // Update surveyRef (not localSurvey state) to prevent re-renders during auto-save. This keeps the UI stable while still tracking that changes have been saved. The comparison uses refs, so this prevents unnecessary re-saves.
-        surveyRef.current = { ...savedData };
-        lastSavedSurveyRef.current = structuredClone(savedData);
-        isSuccessfullySavedRef.current = true;
-        // The cached survey is the baseline the editor reopens on within gcTime; left behind, it would bring back the version before this autosave, and the next save would conflict with, or overwrite, what was autosaved.
-        queryClient.setQueryData(surveyEditorKeys.survey(savedData.id), savedData);
-        setLastAutoSaved(new Date());
-      } catch (error) {
-        // Autosave stays quiet about a transient failure — it retries in ten seconds. A concurrent edit is not transient: it stops the loop, so it is reported once, here.
-        if (recordSaveConflict(error)) {
-          toast.error(t("workspace.surveys.edit.error_saving_changes"));
-        }
-      } finally {
-        isAutoSavingRef.current = false;
-      }
+      void autoSaveRef.current();
     }, 10000);
 
     return () => clearInterval(intervalId);
-    // The interval reads the survey through refs; re-creating it on every edit would restart a ten-second timer before it ever fires.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localSurvey.publishOn, localSurvey.status, setLocalSurvey]);
+  }, [localSurvey.publishOn, localSurvey.status]);
 
   const handleSurveySaveDraft = async (): Promise<boolean> => {
     setIsSurveySaving(true);
@@ -356,6 +402,8 @@ export const SurveyMenuBar = ({
       setIsSurveySaving(false);
       setLocalSurvey(updatedSurvey);
       adoptSavedSurvey(updatedSurvey);
+      autoSaveFailuresRef.current = 0;
+      setAutoSaveStatus({ state: "saved", at: new Date() });
       toast.success(t("workspace.surveys.edit.changes_saved"));
       return true;
     } catch (error) {
@@ -414,17 +462,14 @@ export const SurveyMenuBar = ({
   };
 
   const handleSaveAndGoBack = async () => {
+    setIsLeaving(true);
     const isSurveySaved =
       localSurvey.status === "draft" ? await handleSurveySaveDraft() : await handleSurveySave();
     if (isSurveySaved) {
-      // Navigate explicitly rather than history.back(): the editor is often reached without an in-app history entry behind it (new tab, pasted/bookmarked URL, hard reload), and back() silently no-ops there. "Save & Close" renders only for a published survey, whose editor is reached from its summary, so it returns there; a draft gets here only through the unsaved-changes dialog, and the list never links a draft to a summary, since a draft has no responses to summarise, so a draft returns to the list.
-      await router.navigate({
-        href:
-          localSurvey.status === "draft"
-            ? `${workspaceBasePath}/surveys`
-            : `${workspaceBasePath}/surveys/${localSurvey.id}/summary`,
-      });
+      // "Save & Close" renders only for a published survey, whose editor is reached from its summary; a draft gets here only through the unsaved-changes dialog. Both leave for exitHref.
+      await router.navigate({ href: exitHref });
     }
+    setIsLeaving(false);
   };
 
   /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey's summary, which announces the result: ?success=true celebrates a publish and opens a link survey's share modal, ?scheduled=true confirms a schedule. */
@@ -470,14 +515,16 @@ export const SurveyMenuBar = ({
 
   const handleSurveySchedule = () => publishAs("paused");
 
+  const isDraft = localSurvey.status === "draft";
+
   return (
-    <div className="border-b border-slate-200 bg-white px-5 py-2.5 sm:flex sm:items-center sm:justify-between">
-      <div className="flex h-full items-center gap-x-2 whitespace-nowrap">
+    <div className="border-b border-slate-200 bg-white px-5 py-2.5 sm:flex sm:items-center sm:justify-between sm:gap-x-4">
+      <div className="flex h-full min-w-0 items-center gap-x-2 sm:flex-1">
         {!isCxMode && (
           <Button
             size="sm"
             variant="secondary"
-            className="h-full"
+            className="h-full shrink-0"
             onClick={() => {
               handleBack();
             }}>
@@ -485,33 +532,76 @@ export const SurveyMenuBar = ({
             {t("common.back")}
           </Button>
         )}
-        <p className="hidden pl-4 font-semibold md:block">{workspace.name} / </p>
+        <p className="hidden max-w-48 shrink-0 truncate pl-4 font-semibold whitespace-nowrap md:block">
+          {workspace.name} /{" "}
+        </p>
         <Input
+          ref={nameInputRef}
           defaultValue={localSurvey.name}
+          aria-label={t("workspace.surveys.edit.survey_name")}
+          isInvalid={isNameInvalid}
           onChange={(e) => {
+            if (isNameInvalid && e.target.value.trim() !== "") setIsNameInvalid(false);
             const updatedSurvey = { ...localSurvey, name: e.target.value };
             setLocalSurvey(updatedSurvey);
           }}
-          className="h-8 w-72 border-white py-0 hover:border-slate-200"
+          className={cn(
+            "h-8 w-full max-w-72 min-w-0 py-0",
+            !isNameInvalid && "border-white hover:border-slate-200"
+          )}
         />
       </div>
 
-      <div className="mt-3 flex items-center gap-2 sm:mt-0 sm:ml-4">
-        <AutoSaveIndicator isDraft={localSurvey.status === "draft"} lastSaved={lastAutoSaved} />
+      <div className="mt-3 flex shrink-0 items-center gap-2 sm:mt-0">
+        <AutoSaveIndicator
+          isDraft={isDraft}
+          status={autoSaveStatus}
+          locale={locale}
+          onRetry={() => {
+            if (!isAutoSavingRef.current) void autoSave();
+          }}
+        />
         {instance?.storageConfigured === false && (
-          <div>
-            <Alert variant="warning" size="small" role="status">
-              <AlertTitle>{t("common.storage_not_configured")}</AlertTitle>
-            </Alert>
-          </div>
+          <>
+            <div className="hidden xl:block">
+              <Alert variant="warning" size="small" role="status">
+                <AlertTitle>{t("common.storage_not_configured")}</AlertTitle>
+              </Alert>
+            </div>
+            {/* Below xl the warnings shrink to an icon, so Save and Publish keep their place in the bar. */}
+            <TooltipRenderer tooltipContent={t("common.storage_not_configured")} triggerClass="xl:hidden">
+              <span
+                role="img"
+                aria-label={t("common.storage_not_configured")}
+                className="flex size-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700">
+                <TriangleAlertIcon className="size-4" aria-hidden="true" />
+              </span>
+            </TooltipRenderer>
+          </>
         )}
         {responseCount > 0 && (
-          <div>
-            <Alert variant="warning" size="small" role="status">
-              <AlertTitle>{t("workspace.surveys.edit.caution_text")}</AlertTitle>
-              <AlertButton onClick={() => setIsCautionDialogOpen(true)}>{t("common.learn_more")}</AlertButton>
-            </Alert>
-          </div>
+          <>
+            <div className="hidden xl:block">
+              <Alert variant="warning" size="small" role="status">
+                <AlertTitle>{t("workspace.surveys.edit.caution_text")}</AlertTitle>
+                <AlertButton onClick={() => setIsCautionDialogOpen(true)}>
+                  {t("common.learn_more")}
+                </AlertButton>
+              </Alert>
+            </div>
+            <TooltipRenderer
+              tooltipContent={t("workspace.surveys.edit.caution_text")}
+              triggerClass="xl:hidden">
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 border-amber-200 bg-amber-50 text-amber-700"
+                aria-label={t("workspace.surveys.edit.caution_text")}
+                onClick={() => setIsCautionDialogOpen(true)}>
+                <TriangleAlertIcon aria-hidden="true" />
+              </Button>
+            </TooltipRenderer>
+          </>
         )}
         {!isCxMode && (
           <Button
@@ -520,12 +610,12 @@ export const SurveyMenuBar = ({
             variant="secondary"
             size="sm"
             loading={isSurveySaving}
-            onClick={() => (localSurvey.status === "draft" ? handleSurveySaveDraft() : handleSurveySave())}
+            onClick={() => (isDraft ? handleSurveySaveDraft() : handleSurveySave())}
             type="submit">
-            {localSurvey.status === "draft" ? draftSaveLabel : t("common.save")}
+            {isDraft ? draftSaveLabel : t("common.save")}
           </Button>
         )}
-        {localSurvey.status !== "draft" && (
+        {!isDraft && (
           <Button
             disabled={isSurveySaving}
             className="mr-3"
@@ -535,7 +625,7 @@ export const SurveyMenuBar = ({
             {t("workspace.surveys.edit.save_and_close")}
           </Button>
         )}
-        {localSurvey.status === "draft" && audiencePrompt && !isLinkSurvey && (
+        {isDraft && audiencePrompt && !isLinkSurvey && (
           <Button
             size="sm"
             onClick={() => {
@@ -547,7 +637,7 @@ export const SurveyMenuBar = ({
           </Button>
         )}
         {/* Always display Publish button for link surveys for better CR */}
-        {localSurvey.status === "draft" && (!audiencePrompt || isLinkSurvey) && (
+        {isDraft && (!audiencePrompt || isLinkSurvey) && (
           <Button
             size="sm"
             disabled={isSurveySaving}
@@ -557,19 +647,28 @@ export const SurveyMenuBar = ({
           </Button>
         )}
       </div>
-      <AlertDialog
-        headerText={t("workspace.surveys.edit.confirm_survey_changes")}
+      <ConfirmationModal
+        title={t("workspace.surveys.edit.confirm_survey_changes")}
         open={isConfirmDialogOpen}
         setOpen={setConfirmDialogOpen}
-        mainText={t("workspace.surveys.edit.unsaved_changes_warning")}
-        confirmBtnLabel={localSurvey.status === "draft" ? draftSaveLabel : t("common.save")}
-        declineBtnLabel={t("common.discard")}
-        declineBtnVariant="destructive"
-        onDecline={() => {
-          setConfirmDialogOpen(false);
-          goBack();
+        description={t("workspace.surveys.edit.unsaved_changes_warning")}
+        body={null}
+        Icon={TriangleAlertIcon}
+        cancelButtonText={t("workspace.surveys.edit.keep_editing")}
+        secondaryButton={{
+          text: t("common.discard"),
+          variant: "destructive",
+          disabled: isLeaving,
+          onAction: () => {
+            setConfirmDialogOpen(false);
+            void goBack();
+          },
         }}
-        onConfirm={handleSaveAndGoBack}
+        buttonText={isDraft ? draftSaveLabel : t("common.save")}
+        buttonVariant="default"
+        buttonLoading={isLeaving}
+        isButtonDisabled={isLeaving}
+        onConfirm={() => void handleSaveAndGoBack()}
       />
     </div>
   );
