@@ -2,7 +2,7 @@ import { isSafeIdentifier } from "@forma/types/safe-identifier";
 import { ArrowUpFromLineIcon, ChevronDownIcon, FileUpIcon, PlusIcon } from "lucide-react";
 import { type DragEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert } from "../../components/ui/alert";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -31,6 +31,7 @@ import {
   type TypeMismatch,
   attributeMapErrors,
   csvRecordsError,
+  csvRecordsErrorMessage,
   duplicateMappedColumns,
   isCsvFile,
   isNewAttributeTarget,
@@ -57,7 +58,7 @@ export const UploadContactsButton = ({
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
-        {t("common.upload")} CSV
+        {t("workspace.contacts.upload_csv")}
         <PlusIcon />
       </Button>
       {open && (
@@ -88,12 +89,15 @@ const UploadContactsDialog = ({
   const [duplicateAction, setDuplicateAction] = useState<DuplicateContactsAction>("skip");
   const [fileError, setFileError] = useState("");
   const [uploadError, setUploadError] = useState("");
+  // Set when the server imported nothing because every row was a duplicate it skipped; the dialog stays open so another duplicates choice can be tried.
+  const [skippedAll, setSkippedAll] = useState<number | null>(null);
   const columns = picked?.parsed.columns ?? [];
   const mappingErrors = picked ? attributeMapErrors(columns, attributeMap, attributeKeys, t) : [];
   const error = fileError || uploadError || mappingErrors.join("\n");
 
   const pickFile = async (file: File) => {
     setUploadError("");
+    setSkippedAll(null);
     if (!isCsvFile(file)) {
       setFileError(t("workspace.contacts.upload_contacts_error_invalid_file_type"));
       return;
@@ -111,9 +115,9 @@ const UploadContactsDialog = ({
       );
       return;
     }
-    const recordsError = csvRecordsError(parsed.records);
+    const recordsError = csvRecordsError(parsed.records, parsed.columns);
     if (recordsError) {
-      setFileError(recordsError);
+      setFileError(csvRecordsErrorMessage(recordsError, t));
       return;
     }
     if (parsed.records.length === 0) {
@@ -131,11 +135,13 @@ const UploadContactsDialog = ({
     setDuplicateAction("skip");
     setFileError("");
     setUploadError("");
+    setSkippedAll(null);
   };
 
   const submit = async () => {
     if (!picked) return;
     setUploadError("");
+    setSkippedAll(null);
     const duplicates = duplicateMappedColumns(attributeMap);
     if (duplicates.length > 0) {
       setUploadError(
@@ -146,8 +152,22 @@ const UploadContactsDialog = ({
       return;
     }
     try {
-      await upload.mutateAsync({ file: picked.file, duplicateContactsAction: duplicateAction, attributeMap });
-      toast.success(t("workspace.contacts.upload_contacts_success"));
+      const result = await upload.mutateAsync({
+        file: picked.file,
+        duplicateContactsAction: duplicateAction,
+        attributeMap,
+      });
+      if (result.created + result.updated === 0) {
+        setSkippedAll(result.skipped);
+        return;
+      }
+      toast.success(
+        t("workspace.contacts.upload_contacts_result", {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+        })
+      );
       setOpen(false);
     } catch (err) {
       const mismatches =
@@ -179,14 +199,21 @@ const UploadContactsDialog = ({
     <Dialog open onOpenChange={setOpen} disableCloseOnOutsideClick width="wide">
       <DialogHeader>
         <FileUpIcon />
-        <DialogTitle>{t("common.upload")} CSV</DialogTitle>
+        <DialogTitle>{t("workspace.contacts.upload_csv")}</DialogTitle>
         <DialogDescription>{t("workspace.contacts.upload_contacts_modal_description")}</DialogDescription>
       </DialogHeader>
       <DialogBody>
         <div className="flex flex-col gap-4">
           {error && (
-            <Alert variant="error" className="whitespace-pre-line">
-              {error}
+            <Alert variant="error">
+              <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
+            </Alert>
+          )}
+          {skippedAll !== null && (
+            <Alert variant="warning">
+              <AlertDescription>
+                {t("workspace.contacts.upload_contacts_nothing_imported", { skipped: skippedAll })}
+              </AlertDescription>
             </Alert>
           )}
           <div className="flex flex-col gap-2">
@@ -201,7 +228,7 @@ const UploadContactsDialog = ({
               ) : (
                 <label
                   htmlFor="contacts-file"
-                  className="relative flex cursor-pointer flex-col items-center justify-center rounded-lg hover:bg-slate-100"
+                  className="relative flex cursor-pointer flex-col items-center justify-center rounded-lg focus-within:ring-2 focus-within:ring-slate-700 focus-within:ring-offset-2 hover:bg-slate-100"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={onDrop}>
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -213,7 +240,7 @@ const UploadContactsDialog = ({
                       type="file"
                       id="contacts-file"
                       accept=".csv"
-                      className="hidden"
+                      className="sr-only"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) void pickFile(file);
@@ -273,7 +300,10 @@ const UploadContactsDialog = ({
               <TabToggle<DuplicateContactsAction>
                 label={t("workspace.contacts.upload_contacts_modal_duplicates_title")}
                 value={duplicateAction}
-                onChange={setDuplicateAction}
+                onChange={(action) => {
+                  setDuplicateAction(action);
+                  setSkippedAll(null);
+                }}
                 options={[
                   {
                     value: "skip",

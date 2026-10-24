@@ -23,8 +23,15 @@ declare module "@tanstack/react-table" {
 
 const alignClass = { left: "text-left", center: "text-center", right: "text-right" } as const;
 
+/** Whether a click on a clickable row or cell started on a control inside it (a link, button, checkbox or label), which handles the click itself rather than the row. */
+export const isFromInteractiveElement = (target: EventTarget | null, container: Element): boolean => {
+  if (target === null || !("closest" in target)) return false;
+  const control = (target as Element).closest("a, button, input, select, textarea, label");
+  return control !== null && container.contains(control);
+};
+
 /**
- * forma2's SettingsTable and DataTable on TanStack Table: a header row, one row per item, a loading skeleton and an empty message. A row can open something when clicked, and rows can be selected when the caller owns the selection state.
+ * forma2's SettingsTable and DataTable on TanStack Table: a header row, one row per item, a loading skeleton and an empty message. A row can open something when clicked, and rows can be selected when the caller owns the selection state. A clickable row is only a mouse convenience: give one of its cells a real button or link that does the same, so the keyboard and screen readers can reach it; clicks on such controls do not reach the row.
  */
 export const DataTable = <T,>({
   columns,
@@ -114,7 +121,14 @@ export const DataTable = <T,>({
                 key={row.id}
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 className={cn(onRowClick && "cursor-pointer hover:bg-slate-50")}
-                onClick={onRowClick ? () => onRowClick(row.original) : undefined}>
+                onClick={
+                  onRowClick
+                    ? (e) => {
+                        // The row is a mouse convenience; a column that renders its own button or link (the keyboard's way in) handles the click itself.
+                        if (!isFromInteractiveElement(e.target, e.currentTarget)) onRowClick(row.original);
+                      }
+                    : undefined
+                }>
                 {row.getVisibleCells().map((cell) => {
                   const meta = cell.column.columnDef.meta;
                   return (

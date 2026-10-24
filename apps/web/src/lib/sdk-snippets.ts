@@ -1,4 +1,4 @@
-// forma2's SDK install snippets (modules/workspaces/settings/(setup)/app-connection/page.tsx), verbatim with the workspace id and app URL filled in.
+// forma2's SDK install snippets (modules/workspaces/settings/(setup)/app-connection/page.tsx), with the workspace id and app URL filled in. The HTML snippet calls setup when the script has loaded rather than after forma2's fixed 500 ms, which a slow network outran, as the marketing site's snippet does.
 
 export interface SdkSnippets {
   html: string;
@@ -18,7 +18,7 @@ export const sdkSnippets = (workspaceId: string, appUrl: string): SdkSnippets =>
 !function(){
     var appUrl = "${appUrl}";
     var workspaceId = "${workspaceId}";
-var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e),setTimeout(function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})},500)}();
+var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";t.onload=function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
 </script>
 <!-- END Forma Surveys -->`,
   nextjs: `"use client";

@@ -72,8 +72,16 @@ import {
   updateSegmentIdInFilter,
   updateSurveyInteractionValueInFilter,
 } from "../../lib/segment-filters";
+import { FilterSection, ScrollFadeList } from "./components/scroll-fade-list";
+import { SegmentConnector } from "./components/segment-connector";
 
 const DATA_TYPE_ICONS = { date: CalendarIcon, number: HashIcon, string: TagIcon } as const;
+
+// Fixed column widths, so the fields of every row line up and each select's arrow sits at its own edge. Select's own wrapper fills its container, so a select is sized by the box around it.
+const SUBJECT_WIDTH = "w-40 shrink-0";
+const OPERATOR_WIDTH = "w-36 shrink-0";
+const VALUE_WIDTH = "w-40 shrink-0";
+const UNIT_WIDTH = "w-28 shrink-0";
 
 /** Everything a node of the editor needs: the workspace's keys and segments, the segment's linked surveys, and a way to change the tree. */
 interface EditorContext {
@@ -101,7 +109,7 @@ export const SegmentEditor = ({ group, context }: { group: TBaseFilters; context
         }
         return (
           <div key={nodeId} className="flex items-start gap-2">
-            <ConnectorToggle
+            <SegmentConnector
               connector={connector}
               viewOnly={viewOnly}
               onToggle={(next) => edit((tree) => toggleGroupConnector(tree, nodeId, next))}
@@ -159,33 +167,6 @@ export const AddFilterButton = ({
         />
       )}
     </>
-  );
-};
-
-/** A node's connector: "where" for the first, else and/or, switched by a click. */
-const ConnectorToggle = ({
-  connector,
-  viewOnly,
-  onToggle,
-}: {
-  connector: TSegmentConnector;
-  viewOnly: boolean;
-  onToggle: (next: TSegmentConnector) => void;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div className="w-[40px] text-sm">
-      <button
-        type="button"
-        aria-label={connector ?? t("workspace.segments.where")}
-        className={cn(Boolean(connector) && "cursor-pointer underline", viewOnly && "cursor-not-allowed")}
-        onClick={() => {
-          if (viewOnly || !connector) return;
-          onToggle(connector === "and" ? "or" : "and");
-        }}>
-        {connector ?? t("workspace.segments.where")}
-      </button>
-    </div>
   );
 };
 
@@ -248,28 +229,32 @@ const OperatorSelect = <O extends TAllOperators>({
   onChange,
   disabled,
   label,
+  width = OPERATOR_WIDTH,
 }: {
   value: O;
   operators: readonly O[];
   onChange: (operator: O) => void;
   disabled: boolean;
   label: string;
+  width?: string;
 }) => {
   const { t } = useTranslation();
   return (
-    <Select
-      aria-label={label}
-      className="h-9 w-auto bg-white"
-      disabled={disabled}
-      value={value}
-      title={convertOperatorToTitle(value, t)}
-      onChange={(e) => onChange(e.target.value as O)}>
-      {operators.map((operator) => (
-        <option key={operator} value={operator} title={convertOperatorToTitle(operator, t)}>
-          {convertOperatorToText(operator, t)}
-        </option>
-      ))}
-    </Select>
+    <div className={width}>
+      <Select
+        aria-label={label}
+        className="h-9 bg-white"
+        disabled={disabled}
+        value={value}
+        title={convertOperatorToTitle(value, t)}
+        onChange={(e) => onChange(e.target.value as O)}>
+        {operators.map((operator) => (
+          <option key={operator} value={operator} title={convertOperatorToTitle(operator, t)}>
+            {convertOperatorToText(operator, t)}
+          </option>
+        ))}
+      </Select>
+    </div>
   );
 };
 
@@ -296,10 +281,10 @@ const ValueInput = ({
         ? t("workspace.segments.value_must_be_a_number")
         : "";
   return (
-    <div className="relative flex flex-col gap-1">
+    <div className={cn("relative flex flex-col gap-1", VALUE_WIDTH)}>
       <Input
         aria-label={t("workspace.segments.number")}
-        className={cn("h-9 w-auto bg-white", error && "border border-red-500 focus:border-red-500")}
+        className={cn("h-9 w-full bg-white", error && "border border-red-500 focus:border-red-500")}
         disabled={context.viewOnly}
         list={suggestions ? listId : undefined}
         value={raw}
@@ -365,17 +350,19 @@ const DateValueInput = ({
             onChange({ amount, unit: relative.unit });
           }}
         />
-        <Select
-          aria-label={t("workspace.segments.period")}
-          className="h-9 w-auto bg-white"
-          disabled={viewOnly}
-          value={relative.unit}
-          onChange={(e) => onChange({ amount: relative.amount, unit: e.target.value as TTimeUnit })}>
-          <option value="days">{t("common.days")}</option>
-          <option value="weeks">{t("common.weeks")}</option>
-          <option value="months">{t("common.months")}</option>
-          <option value="years">{t("common.years")}</option>
-        </Select>
+        <div className={UNIT_WIDTH}>
+          <Select
+            aria-label={t("workspace.segments.period")}
+            className="h-9 bg-white"
+            disabled={viewOnly}
+            value={relative.unit}
+            onChange={(e) => onChange({ amount: relative.amount, unit: e.target.value as TTimeUnit })}>
+            <option value="days">{t("common.days")}</option>
+            <option value="weeks">{t("common.weeks")}</option>
+            <option value="months">{t("common.months")}</option>
+            <option value="years">{t("common.years")}</option>
+          </Select>
+        </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
     );
@@ -432,7 +419,7 @@ const SegmentFilterRow = ({
   const { t } = useTranslation();
   const { edit, viewOnly } = context;
   const connectorToggle = (
-    <ConnectorToggle
+    <SegmentConnector
       connector={connector}
       viewOnly={viewOnly}
       onToggle={(next) => edit((tree) => toggleFilterConnector(tree, resource.id, next))}
@@ -459,9 +446,13 @@ const SegmentFilterRow = ({
       return (
         <div className="flex items-center gap-2 text-sm">
           {connectorToggle}
-          <div className="flex h-9 items-center gap-1 rounded-md border border-slate-300 bg-white px-3 lowercase">
-            <FingerprintIcon className="size-4" />
-            <span>{person.root.personIdentifier}</span>
+          <div
+            className={cn(
+              "flex h-9 items-center gap-1 rounded-md border border-slate-300 bg-white px-3 lowercase",
+              SUBJECT_WIDTH
+            )}>
+            <FingerprintIcon className="size-4 shrink-0" />
+            <span className="truncate">{person.root.personIdentifier}</span>
           </div>
           <OperatorSelect
             label={t("common.select")}
@@ -483,32 +474,36 @@ const SegmentFilterRow = ({
       return (
         <div className="flex items-center gap-2 text-sm">
           {connectorToggle}
-          <button
-            type="button"
-            aria-label={operatorText}
-            className={cn("cursor-pointer underline", viewOnly && "cursor-not-allowed")}
-            onClick={() => {
-              if (viewOnly) return;
-              setOperator(segmentFilter.qualifier.operator === "userIsIn" ? "userIsNotIn" : "userIsIn");
-            }}>
-            {operatorText}
-          </button>
+          <div className={SUBJECT_WIDTH}>
+            <button
+              type="button"
+              aria-label={operatorText}
+              className={cn("cursor-pointer underline", viewOnly && "cursor-not-allowed")}
+              onClick={() => {
+                if (viewOnly) return;
+                setOperator(segmentFilter.qualifier.operator === "userIsIn" ? "userIsNotIn" : "userIsIn");
+              }}>
+              {operatorText}
+            </button>
+          </div>
           <div className="flex items-center gap-1">
-            <Users2Icon className="size-4" />
-            <Select
-              aria-label={t("common.segments")}
-              className="h-9 w-auto bg-white"
-              disabled={viewOnly}
-              value={segmentFilter.root.segmentId}
-              onChange={(e) => edit((tree) => updateSegmentIdInFilter(tree, resource.id, e.target.value))}>
-              {context.segments
-                .filter((segment) => !segment.isPrivate)
-                .map((segment) => (
-                  <option key={segment.id} value={segment.id}>
-                    {segment.title}
-                  </option>
-                ))}
-            </Select>
+            <Users2Icon className="size-4 shrink-0" />
+            <div className={SUBJECT_WIDTH}>
+              <Select
+                aria-label={t("common.segments")}
+                className="h-9 bg-white"
+                disabled={viewOnly}
+                value={segmentFilter.root.segmentId}
+                onChange={(e) => edit((tree) => updateSegmentIdInFilter(tree, resource.id, e.target.value))}>
+                {context.segments
+                  .filter((segment) => !segment.isPrivate)
+                  .map((segment) => (
+                    <option key={segment.id} value={segment.id}>
+                      {segment.title}
+                    </option>
+                  ))}
+              </Select>
+            </div>
           </div>
           {actions}
         </div>
@@ -519,9 +514,13 @@ const SegmentFilterRow = ({
       return (
         <div className="flex items-center gap-2 text-sm">
           {connectorToggle}
-          <div className="flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3">
-            <MonitorSmartphoneIcon className="size-4" />
-            <p>Device</p>
+          <div
+            className={cn(
+              "flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3",
+              SUBJECT_WIDTH
+            )}>
+            <MonitorSmartphoneIcon className="size-4 shrink-0" />
+            <p className="truncate">{t("workspace.segments.device")}</p>
           </div>
           <OperatorSelect
             label={t("common.select")}
@@ -530,19 +529,21 @@ const SegmentFilterRow = ({
             disabled={viewOnly}
             onChange={setOperator}
           />
-          <Select
-            aria-label={t("workspace.segments.devices")}
-            className="h-9 w-auto bg-white"
-            disabled={viewOnly}
-            value={device.value as string}
-            onChange={(e) =>
-              edit((tree) =>
-                updateDeviceTypeInFilter(tree, resource.id, e.target.value as "phone" | "desktop")
-              )
-            }>
-            <option value="desktop">{t("workspace.segments.desktop")}</option>
-            <option value="phone">{t("workspace.segments.phone")}</option>
-          </Select>
+          <div className={VALUE_WIDTH}>
+            <Select
+              aria-label={t("workspace.segments.devices")}
+              className="h-9 bg-white"
+              disabled={viewOnly}
+              value={device.value as string}
+              onChange={(e) =>
+                edit((tree) =>
+                  updateDeviceTypeInFilter(tree, resource.id, e.target.value as "phone" | "desktop")
+                )
+              }>
+              <option value="desktop">{t("workspace.segments.desktop")}</option>
+              <option value="phone">{t("workspace.segments.phone")}</option>
+            </Select>
+          </div>
           {actions}
         </div>
       );
@@ -584,24 +585,26 @@ const AttributeFilterRow = ({
   return (
     <div className="flex items-center gap-2 text-sm">
       {connectorToggle}
-      <Select
-        aria-label={t("common.attributes")}
-        className="h-9 w-auto bg-white"
-        disabled={viewOnly}
-        value={resource.root.contactAttributeKey}
-        onChange={(e) => {
-          const next = attributeKeys.find((attributeKey) => attributeKey.key === e.target.value);
-          edit((tree) => changeAttributeKey(tree, resource.id, e.target.value, next?.dataType ?? "string"));
-        }}>
-        {!key && (
-          <option value={resource.root.contactAttributeKey}>{resource.root.contactAttributeKey}</option>
-        )}
-        {attributeKeys.map((attributeKey) => (
-          <option key={attributeKey.id} value={attributeKey.key}>
-            {attributeKeyLabel(attributeKey)}
-          </option>
-        ))}
-      </Select>
+      <div className={SUBJECT_WIDTH}>
+        <Select
+          aria-label={t("common.attributes")}
+          className="h-9 bg-white"
+          disabled={viewOnly}
+          value={resource.root.contactAttributeKey}
+          onChange={(e) => {
+            const next = attributeKeys.find((attributeKey) => attributeKey.key === e.target.value);
+            edit((tree) => changeAttributeKey(tree, resource.id, e.target.value, next?.dataType ?? "string"));
+          }}>
+          {!key && (
+            <option value={resource.root.contactAttributeKey}>{resource.root.contactAttributeKey}</option>
+          )}
+          {attributeKeys.map((attributeKey) => (
+            <option key={attributeKey.id} value={attributeKey.key}>
+              {attributeKeyLabel(attributeKey)}
+            </option>
+          ))}
+        </Select>
+      </div>
       <OperatorSelect
         label={t("common.select")}
         value={operator}
@@ -672,17 +675,20 @@ const SurveyInteractionRow = ({
           value={resource.qualifier.operator}
           operators={SURVEY_INTERACTION_OPERATORS}
           disabled={viewOnly}
+          width={SUBJECT_WIDTH}
           onChange={(operator) => edit((tree) => updateOperatorInFilter(tree, resource.id, operator))}
         />
-        <Select
-          aria-label={t("common.surveys")}
-          className="h-9 w-auto bg-white"
-          disabled={viewOnly}
-          value={value.surveyScope}
-          onChange={(e) => commit({ ...value, surveyScope: e.target.value as "any" | "specific" })}>
-          <option value="any">{t("workspace.segments.any_survey")}</option>
-          <option value="specific">{t("workspace.segments.specific_surveys")}</option>
-        </Select>
+        <div className={OPERATOR_WIDTH}>
+          <Select
+            aria-label={t("common.surveys")}
+            className="h-9 bg-white"
+            disabled={viewOnly}
+            value={value.surveyScope}
+            onChange={(e) => commit({ ...value, surveyScope: e.target.value as "any" | "specific" })}>
+            <option value="any">{t("workspace.segments.any_survey")}</option>
+            <option value="specific">{t("workspace.segments.specific_surveys")}</option>
+          </Select>
+        </div>
         <p className="whitespace-nowrap text-slate-600">{t("workspace.segments.within_last")}</p>
         <Input
           aria-label={t("workspace.segments.number")}
@@ -699,27 +705,29 @@ const SurveyInteractionRow = ({
             commit({ ...value, within: { ...value.within, amount: Math.min(999, Math.max(1, parsed)) } });
           }}
         />
-        <Select
-          aria-label={t("workspace.segments.period")}
-          className="h-9 w-auto bg-white"
-          disabled={viewOnly}
-          value={value.within.unit}
-          onChange={(e) =>
-            commit({
-              ...value,
-              within: { ...value.within, unit: e.target.value as TSurveyInteractionTimeUnit },
-            })
-          }>
-          {SURVEY_INTERACTION_TIME_UNITS.map((unit) => (
-            <option key={unit} value={unit}>
-              {unitLabel(unit, value.within.amount)}
-            </option>
-          ))}
-        </Select>
+        <div className={UNIT_WIDTH}>
+          <Select
+            aria-label={t("workspace.segments.period")}
+            className="h-9 bg-white"
+            disabled={viewOnly}
+            value={value.within.unit}
+            onChange={(e) =>
+              commit({
+                ...value,
+                within: { ...value.within, unit: e.target.value as TSurveyInteractionTimeUnit },
+              })
+            }>
+            {SURVEY_INTERACTION_TIME_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {unitLabel(unit, value.within.amount)}
+              </option>
+            ))}
+          </Select>
+        </div>
         {actions}
       </div>
       {value.surveyScope === "specific" && (
-        <div className="ml-[48px] flex flex-col gap-1 rounded-lg border border-slate-300 bg-white p-3">
+        <div className="ml-[72px] flex flex-col gap-1 rounded-lg border border-slate-300 bg-white p-3">
           <p className="text-xs font-medium text-slate-500">{t("common.surveys")}</p>
           <MultiSelect
             disabled={viewOnly}
@@ -830,23 +838,35 @@ const AddFilterModal = ({
   } else if (tab === "devices") {
     content = deviceButtons;
   } else {
-    const all = [
-      ...keyButtons,
-      ...personButtons,
-      ...(showSurveyInteraction
-        ? [
-            <FilterButton
-              key="surveyInteraction"
-              icon={<MousePointerClickIcon className="size-4" />}
-              label={surveyInteractionLabel}
-              onClick={() => add({ type: "surveyInteraction" })}
-            />,
-          ]
-        : []),
-      ...segmentButtons,
-      ...deviceButtons,
-    ];
-    content = all.length === 0 ? empty(t("workspace.segments.no_filters_yet")) : all;
+    const interactionButtons = showSurveyInteraction
+      ? [
+          <FilterButton
+            key="surveyInteraction"
+            icon={<MousePointerClickIcon className="size-4" />}
+            label={surveyInteractionLabel}
+            onClick={() => add({ type: "surveyInteraction" })}
+          />,
+        ]
+      : [];
+    // The All tab lists every kind under its own heading, so a kind further down is not taken for missing.
+    const sections = [
+      {
+        id: "attributes",
+        label: t("workspace.segments.person_and_attributes"),
+        items: [...keyButtons, ...personButtons],
+      },
+      { id: "behavior", label: t("workspace.segments.filter_group_behavior"), items: interactionButtons },
+      { id: "segments", label: t("common.segments"), items: segmentButtons },
+      { id: "devices", label: t("workspace.segments.devices"), items: deviceButtons },
+    ].filter((section) => section.items.length > 0);
+    content =
+      sections.length === 0
+        ? empty(t("workspace.segments.no_filters_yet"))
+        : sections.map((section) => (
+            <FilterSection key={section.id} label={section.label}>
+              {section.items}
+            </FilterSection>
+          ));
   }
 
   const tabs: { id: FilterTab; label: string }[] = [
@@ -865,7 +885,7 @@ const AddFilterModal = ({
         <div className="flex flex-col">
           <Input
             aria-label={t("common.search")}
-            placeholder="Browse filters..."
+            placeholder={t("workspace.segments.browse_filters")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -887,9 +907,9 @@ const AddFilterModal = ({
               </button>
             ))}
           </div>
-          <div role="tabpanel" className="mt-2 flex max-h-96 flex-col gap-1 overflow-y-auto">
+          <ScrollFadeList role="tabpanel" className="mt-2 flex max-h-96 flex-col gap-1 overflow-y-auto">
             {content}
-          </div>
+          </ScrollFadeList>
         </div>
       </DialogBody>
     </Dialog>
