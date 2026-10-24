@@ -47,6 +47,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.POST("/email/change", h.sessions.Require(), h.requestEmailChange)
 	g.POST("/email/verify", h.confirmEmailChange)
 	g.POST("/account/delete", h.sessions.Require(), h.deleteAccount)
+	g.GET("/deletion-preview", h.sessions.Require(), h.deletionPreview)
 	g.POST("/account/delete/request", h.sessions.Require(), h.requestAccountDeletion)
 	g.POST("/account/delete/confirm", h.sessions.Require(), h.confirmAccountDeletion)
 	g.POST("/two-factor/setup", h.sessions.Require(), h.setupTwoFactor)
@@ -552,6 +553,20 @@ func (h *Handler) deleteAccount(c *gin.Context) {
 	}
 	h.cookies.clear(c, h.cookies.session)
 	c.JSON(http.StatusOK, accountDeletedResponse{RedirectURL: redirect})
+}
+
+type deletionPreviewResponse struct {
+	// Organizations are the ones the caller is the only active owner of, deleted with the account; never null.
+	Organizations []soleOwnedOrganization `json:"organizations"`
+}
+
+func (h *Handler) deletionPreview(c *gin.Context) {
+	orgs, err := h.svc.deletionPreview(c.Request.Context(), actor(c))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, deletionPreviewResponse{Organizations: orgs})
 }
 
 type deletionRequestedResponse struct {
