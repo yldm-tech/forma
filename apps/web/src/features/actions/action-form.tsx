@@ -19,8 +19,6 @@ import {
 import { cn } from "../../lib/cn";
 import { toast } from "../../lib/toast";
 
-export const ACTION_DOCS_HREF = "https://forma.yldm.ai/docs/surveys/website-app-surveys/actions";
-
 /** forma2's TabToggle: a row of mutually exclusive options. */
 export const TabToggle = <V extends string>({
   label,
@@ -204,11 +202,7 @@ const CodeActionFields = ({
           <span className="rounded-sm bg-slate-100 px-2 py-1 text-xs">
             forma.track(&quot;{values.key}&quot;)
           </span>{" "}
-          {t("workspace.actions.in_your_code_read_more_in_our")}{" "}
-          <a href={ACTION_DOCS_HREF} target="_blank" rel="noreferrer" className="underline">
-            {t("common.docs")}
-          </a>
-          {"."}
+          {t("workspace.actions.in_your_code")}
         </AlertDescription>
       </Alert>
     </div>

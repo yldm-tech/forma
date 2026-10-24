@@ -1,6 +1,5 @@
-import { ExternalLinkIcon, Maximize2Icon, SmartphoneIcon } from "lucide-react";
+import { Maximize2Icon, SmartphoneIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "../ui/button";
 
 /** forma2's NoMobileOverlay: below the sm breakpoint the signed-in app is covered by a note that it is made for bigger screens, while the surveys it builds work everywhere. */
 export const NoMobileOverlay = () => {
@@ -19,12 +18,6 @@ export const NoMobileOverlay = () => {
         <h1 className="mt-2 text-2xl font-bold text-zinc-900">{t("common.mobile_overlay_title")}</h1>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_app_works_best_on_desktop")}</p>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_surveys_look_good")}</p>
-        <Button asChild className="mt-8">
-          <a href="https://forma.yldm.ai/docs/surveys/overview">
-            {t("common.learn_more")}
-            <ExternalLinkIcon aria-hidden="true" />
-          </a>
-        </Button>
       </div>
     </div>
   );

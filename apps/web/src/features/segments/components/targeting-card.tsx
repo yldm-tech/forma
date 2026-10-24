@@ -412,19 +412,7 @@ export function TargetingCard({
           <Alert className="flex items-center rounded-none bg-slate-50" role="status">
             <AlertDescription className="ml-2">
               <span className="mr-1 text-slate-600">
-                <Trans
-                  i18nKey="workspace.segments.user_targeting_only_available_when_identifying_users"
-                  components={{
-                    docsLink: (
-                      <TransLink
-                        href="https://forma.yldm.ai/docs/app-surveys/user-identification"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      />
-                    ),
-                  }}
-                />
+                {t("workspace.segments.user_targeting_only_available_when_identifying_users")}
               </span>
             </AlertDescription>
           </Alert>

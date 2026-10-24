@@ -4,7 +4,6 @@ import type { TSurvey } from "@forma/types/surveys/types";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import {
-  ArrowUpRight,
   CodeXmlIcon,
   MousePointerClickIcon,
   PercentIcon,
@@ -17,29 +16,6 @@ import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
 import { H4, Small } from "../../../../components/ui/typography";
 import type { WorkspaceDetail } from "../../../../lib/queries/workspaces";
-
-const documentationLinks = (t: TFunction) => [
-  {
-    href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#html",
-    title: t("workspace.surveys.summary.in_app.html_embed"),
-  },
-  {
-    href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#react-js",
-    title: t("workspace.surveys.summary.in_app.javascript_sdk"),
-  },
-  {
-    href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#swift",
-    title: t("workspace.surveys.summary.in_app.ios_sdk"),
-  },
-  {
-    href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#android",
-    title: t("workspace.surveys.summary.in_app.kotlin_sdk"),
-  },
-  {
-    href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/framework-guides#react-native",
-    title: t("workspace.surveys.summary.in_app.react_native_sdk"),
-  },
-];
 
 const noCodeConfigLabels = (t: TFunction): Record<string, string> => ({
   click: t("workspace.actions.click"),
@@ -198,21 +174,6 @@ export const AppTab = ({ survey, workspace }: { survey: TSurvey; workspace: Work
             />
           </div>
         </div>
-      </div>
-
-      <div className="flex w-full flex-col gap-y-3">
-        <H4>{t("workspace.surveys.summary.in_app.documentation_title")}</H4>
-        {documentationLinks(t).map((link) => (
-          <Alert key={link.title} size="small" role="status">
-            <ArrowUpRight className="size-4" />
-            <AlertTitle>{link.title}</AlertTitle>
-            <AlertButton asChild>
-              <a href={link.href} target="_blank" rel="noopener noreferrer">
-                {t("common.read_docs")}
-              </a>
-            </AlertButton>
-          </Alert>
-        ))}
       </div>
     </div>
   );

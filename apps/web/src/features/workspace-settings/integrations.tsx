@@ -22,7 +22,6 @@ interface CardProps {
   label: string;
   description: string;
   icon: ReactNode;
-  docsHref: string;
   /** A page of this app, or a page elsewhere, which opens in a new tab. */
   connect: { to: string; text: string } | { href: string; text: string };
   connected: boolean;
@@ -35,13 +34,11 @@ const IntegrationCard = ({
   label,
   description,
   icon,
-  docsHref,
   connect,
   connected,
   statusText,
   disabled,
 }: CardProps) => {
-  const { t } = useTranslation();
   return (
     <div className="relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs">
       <div className="absolute top-4 right-4 flex items-center rounded-sm bg-slate-100 px-2 py-1 text-xs text-slate-500">
@@ -60,31 +57,19 @@ const IntegrationCard = ({
       <p className="text-xs text-slate-500">{description}</p>
       <div className="mt-4 flex gap-x-2">
         {disabled ? (
-          <>
-            <Button size="sm" disabled>
-              {connect.text}
-            </Button>
-            <Button size="sm" variant="secondary" disabled>
-              {t("common.docs")}
-            </Button>
-          </>
+          <Button size="sm" disabled>
+            {connect.text}
+          </Button>
         ) : (
-          <>
-            <Button size="sm" asChild>
-              {"to" in connect ? (
-                <Link to={connect.to}>{connect.text}</Link>
-              ) : (
-                <a href={connect.href} target="_blank" rel="noreferrer">
-                  {connect.text}
-                </a>
-              )}
-            </Button>
-            <Button size="sm" variant="secondary" asChild>
-              <a href={docsHref} target="_blank" rel="noreferrer">
-                {t("common.docs")}
+          <Button size="sm" asChild>
+            {"to" in connect ? (
+              <Link to={connect.to}>{connect.text}</Link>
+            ) : (
+              <a href={connect.href} target="_blank" rel="noreferrer">
+                {connect.text}
               </a>
-            </Button>
-          </>
+            )}
+          </Button>
         )}
       </div>
     </div>
@@ -101,7 +86,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
   const counts = webhookCounts(webhooks.data?.webhooks ?? []);
   const isReadOnly = workspace.access.isReadOnly;
   const base = `/workspaces/${workspace.id}/integrations`;
-  const docs = "https://forma.yldm.ai/docs/platform/features/integrations";
 
   const isConnected = (type: IntegrationType) =>
     !!integrations.data?.integrations.some((integration) => integration.type === type);
@@ -115,7 +99,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
     label,
     description,
     icon,
-    docsHref: `${docs}/${slug}`,
     connect: { to: `${base}/${slug}`, text: isConnected(type) ? t("common.manage") : t("common.connect") },
     connected: isConnected(type),
     statusText: isConnected(type) ? t("common.connected") : t("common.not_connected"),
@@ -127,7 +110,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Javascript SDK",
       description: t("workspace.integrations.website_or_app_integration_description"),
       icon: logo(javascriptLogo, "Javascript Logo"),
-      docsHref: "https://forma.yldm.ai/docs/app-surveys/quickstart",
       connect: { to: `${base}/app-connection`, text: t("common.connect") },
       connected: workspace.appSetupCompleted,
       statusText: workspace.appSetupCompleted ? t("common.connected") : t("common.not_connected"),
@@ -137,7 +119,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Zapier",
       description: t("workspace.integrations.zapier_integration_description"),
       icon: logo(zapierLogo, "Zapier Logo"),
-      docsHref: `${docs}/zapier`,
       connect: { href: "https://zapier.com/apps/forma/integrations", text: t("common.connect") },
       connected: counts.zapier > 0,
       statusText: countStatusText(t, counts.zapier, "zap"),
@@ -147,7 +128,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Webhooks",
       description: t("workspace.integrations.webhook_integration_description"),
       icon: logo(webhookLogo, "Webhook Logo"),
-      docsHref: `${docs}/webhooks`,
       connect: { to: `${base}/webhooks`, text: t("workspace.integrations.manage_webhooks") },
       connected: counts.user > 0,
       statusText: countStatusText(t, counts.user, "webhook"),
@@ -178,7 +158,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "n8n",
       description: t("workspace.integrations.n8n_integration_description"),
       icon: logo(n8nLogo, "n8n Logo"),
-      docsHref: `${docs}/n8n`,
       // forma2 labelled this card from an n8n integration row that nothing ever creates, so it always read Connect.
       connect: { href: "https://n8n.io", text: t("common.connect") },
       connected: counts.n8n > 0,
@@ -189,7 +168,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Make.com",
       description: t("workspace.integrations.make_integration_description"),
       icon: logo(makeLogo, "Make Logo"),
-      docsHref: `${docs}/make`,
       connect: { href: "https://www.make.com/en/integrations/forma", text: t("common.connect") },
       connected: counts.make > 0,
       statusText: countStatusText(t, counts.make, t("common.integration")),
@@ -206,7 +184,6 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Activepieces",
       description: t("workspace.integrations.activepieces_integration_description"),
       icon: logo(activepiecesLogo, "ActivePieces Logo"),
-      docsHref: `${docs}/activepieces`,
       connect: { href: "https://www.activepieces.com/pieces/forma", text: t("common.connect") },
       connected: counts.activepieces > 0,
       statusText: countStatusText(t, counts.activepieces, t("common.integration")),

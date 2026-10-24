@@ -20,17 +20,7 @@ export const AuthorizedAppsCard = ({ locale }: { locale: string }) => {
     <SettingsCard
       width="full"
       title={t("auth.oauth.authorized_apps_title")}
-      description={t("auth.oauth.authorized_apps_description")}
-      cta={
-        <Button asChild variant="secondary" size="sm">
-          <a
-            href="https://forma.yldm.ai/docs/platform/mcp/overview"
-            target="_blank"
-            rel="noopener noreferrer">
-            {t("auth.oauth.mcp_docs_link")}
-          </a>
-        </Button>
-      }>
+      description={t("auth.oauth.authorized_apps_description")}>
       {consents.isPending ? (
         <LoadingBlock />
       ) : consents.isError ? (

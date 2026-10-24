@@ -122,7 +122,6 @@ export default defineConfig({
       "packages/survey-ui/src/**/story-helpers.tsx",
       "**/coverage/**",
       "**/storybook-static/**",
-      "apps/docs/forma.js",
       "apps/server/**",
       "apps/web/public/js/**",
       "apps/web/src/routeTree.gen.ts",
@@ -159,15 +158,11 @@ export default defineConfig({
       "apps/server/**",
       "apps/web/public/js/**",
       "apps/web/src/routeTree.gen.ts",
-      "apps/docs/api-v3-reference/openapi.yml",
-      "apps/docs/api-v3-reference/.redocly.lint-ignore.yaml",
       // Helm templates are Go templates that only look like YAML, and the vendored operator chart's CRD and update graph are generated upstream. The chart READMEs carry a generated values table.
       "deploy/helm/**/templates/**",
       "deploy/helm/**/README.md",
       "deploy/helm/spicedb-operator/crds/**",
       "deploy/helm/spicedb-operator/files/**",
-      // Oxfmt treats Markdown inside MDX JSX children as one text block and would collapse Mintlify lists and steps.
-      "*.mdx",
       // The template's intentionally empty list items would be folded into the label above them.
       ".github/pull_request_template.md",
     ],
