@@ -66,7 +66,7 @@ func Forbidden() *apperr.Error {
 	return apperr.Forbidden(ForbiddenDetail)
 }
 
-// problemCodes maps the /api/app error codes onto the v3 problem codes the spec allows.
+// problemCodes maps the /api/app error codes onto the v3 API's RFC 9457 problem codes.
 func problemCode(e *apperr.Error) string {
 	switch e.Status {
 	case http.StatusBadRequest:

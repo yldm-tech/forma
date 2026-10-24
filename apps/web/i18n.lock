@@ -1626,7 +1626,7 @@ checksums:
     workspace/app-connection/install_method_nextjs: 9104a97c2178733d73fd8df641a6a432
     workspace/app-connection/install_method_nextjs_step_1: 78dac2196a5af2126d72a96504729037
     workspace/app-connection/install_method_nextjs_step_2: 845e09f5e8746a9e1bc6ff6350033a01
-    workspace/app-connection/install_method_nextjs_step_3: ebdd52c8dbdabaaf3d309fd1f559e575
+    workspace/app-connection/install_method_nextjs_step_3: 1f9bf19782f4f6c42b9d35264e720f68
     workspace/app-connection/install_method_react: 255be27d27984f618b450d9bbbb162df
     workspace/app-connection/install_method_react_native: 8785330a7cad6a39ed0c1357568e882f
     workspace/app-connection/install_method_react_native_step_1: f6626e4805190585e588961b531893e4

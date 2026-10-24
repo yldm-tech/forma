@@ -13,7 +13,7 @@ import (
 
 // ErrForma2NotImported is the startup guard's refusal.
 var ErrForma2NotImported = errors.New(`this database holds forma2's data (its "User" table has rows) and none of it has been imported: a server started now would serve an empty instance whose first sign-up becomes its owner. Run ` +
-	"`forma import-forma2` (see the migration guide), or `forma import-forma2 --discard-forma2-data --reason=<why>` to start empty on purpose")
+	"`forma import-forma2 --dry-run` to check the import, then `forma import-forma2`, or `forma import-forma2 --discard-forma2-data --reason=<why>` to start empty on purpose")
 
 // ErrForma2Changed is the startup guard's refusal of a database where forma2 ran again after the latest import or discard, as it does after a rollback.
 var ErrForma2Changed = errors.New("forma2's tables changed after its data was last imported or discarded here (forma2 ran again, as after a rollback): a server started now would serve without what forma2 wrote since. Run " +

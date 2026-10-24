@@ -1692,7 +1692,7 @@
       "install_method_nextjs": "Next.js",
       "install_method_nextjs_step_1": "SDKをインストール: npm install @forma/js zod",
       "install_method_nextjs_step_2": "App Router: 以下のスニペットでapp/forma.tsxを作成し、app/layout.tsx内でレンダリングしてください。",
-      "install_method_nextjs_step_3": "Pages Router: 同等の_app.tsxセットアップについては、以下のガイドを参照してください。",
+      "install_method_nextjs_step_3": "Pages Router: 同じスニペットでcomponents/forma.tsxを作成し、pages/_app.tsx内でレンダリングしてください。",
       "install_method_react": "React.js",
       "install_method_react_native": "React Native",
       "install_method_react_native_step_1": "SDKをインストールしてください: npm install @forma/react-native",

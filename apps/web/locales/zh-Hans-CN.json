@@ -1692,7 +1692,7 @@
       "install_method_nextjs": "Next.js",
       "install_method_nextjs_step_1": "安装 SDK：npm install @forma/js zod。",
       "install_method_nextjs_step_2": "App Router：使用下面的代码片段创建 app/forma.tsx，然后在 app/layout.tsx 中渲染它。",
-      "install_method_nextjs_step_3": "Pages Router：请参阅下面的指南了解等效的 _app.tsx 设置。",
+      "install_method_nextjs_step_3": "Pages Router：使用同样的代码片段创建 components/forma.tsx，然后在 pages/_app.tsx 中渲染它。",
       "install_method_react": "React.js",
       "install_method_react_native": "React Native",
       "install_method_react_native_step_1": "安装 SDK：npm install @forma/react-native。",
