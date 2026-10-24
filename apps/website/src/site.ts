@@ -129,6 +129,9 @@ export const REDIRECTS: Redirect[] = [
   { from: "/discord", to: `${GITHUB_URL}/issues`, status: 302 },
 ];
 
+/** The services Forma has a native integration for, as the integrations page and its illustration list them. */
+export const NATIVE_INTEGRATIONS = ["Slack", "Notion", "Airtable", "Google Sheets"] as const;
+
 export const APP_LOGIN_PATH = "/app/auth/login";
 export const APP_SIGNUP_PATH = "/app/auth/signup";
 export const DOCS_PATH = "/docs/";

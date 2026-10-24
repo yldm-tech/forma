@@ -27,6 +27,8 @@ const CLOUD_CHIPS = 177;
 const LOOP_SECONDS = 14;
 /** A moment in the loop where the card rests answered: what the scene freezes on when it stops animating. */
 const RESTING_TIME = 7.9;
+/** Where the clock starts: the card at rest, answered, which is exactly the static SVG it fades in over, held for the length of that fade before it condenses into the mark. Starting at 0 would swap the card the visitor is looking at for a cloud of chips. */
+const START_TIME = 7.7;
 const MAX_TILT = (6 * Math.PI) / 180;
 const MAX_DPR = 1.5;
 const MAX_CSS_WIDTH = 1200;
@@ -362,7 +364,7 @@ export const mountHeroScene = (container: HTMLElement, reducedMotion: MediaQuery
   }
 
   // The clock only advances while frames are drawn, so a pause resumes where it stopped instead of jumping.
-  let elapsed = 0;
+  let elapsed = START_TIME;
   let last = 0;
   let frame = 0;
   let running = false;
@@ -371,6 +373,7 @@ export const mountHeroScene = (container: HTMLElement, reducedMotion: MediaQuery
   let disposed = false;
   let shown = false;
   // Frame-rate watch: after a second of warm-up, a two-second window averaging under 30 fps freezes the scene.
+  let warmUp = 0;
   let watchStart = 0;
   let watchFrames = 0;
 
@@ -396,11 +399,12 @@ export const mountHeroScene = (container: HTMLElement, reducedMotion: MediaQuery
     const dt = last === 0 ? 0 : Math.min((now - last) / 1000, 0.1);
     last = now;
     elapsed += dt;
+    warmUp += dt;
     pointer.x += (pointer.targetX - pointer.x) * 0.08;
     pointer.y += (pointer.targetY - pointer.y) * 0.08;
     draw();
 
-    if (elapsed > 1) {
+    if (warmUp > 1) {
       if (watchStart === 0) watchStart = now;
       watchFrames += 1;
       if (now - watchStart >= 2000) {

@@ -69,6 +69,7 @@ export const ja: SiteContent = {
       segmentValue: "プランがトライアル",
       eventLabel: "アクション",
       eventValue: "レポートをエクスポート",
+      newResponse: "新しい回答",
     },
   },
   pages: {
@@ -169,7 +170,7 @@ export const ja: SiteContent = {
         ],
       },
       control: {
-        title: "回答者をコントロール",
+        title: "回答の受け付けを管理",
         body: "PIN による保護、回答前のメール認証、reCAPTCHA によるスパム対策に加え、回答数の上限や公開期間も設定できます。",
       },
       logic: {
@@ -182,7 +183,7 @@ export const ja: SiteContent = {
       },
       templates: {
         title: "テンプレート",
-        body: "50 以上のテンプレートを、日本語・英語・中国語で用意しています。",
+        body: "50 以上のテンプレートを、日本語・英語・中国語（簡体字・繁体字）で用意しています。",
       },
     },
     websiteSurvey: {
@@ -347,7 +348,7 @@ export const ja: SiteContent = {
       title: "セキュリティ",
       report: {
         title: "脆弱性の報告",
-        body: "公開の issue ではなく、security@yldm.ai までメールでご連絡ください。バグバウンティは実施していませんが、ご希望があれば公開でクレジットを記載します。",
+        body: "公開の issue ではなく、security@yldm.ai までメールでご連絡ください。バグバウンティは実施していませんが、ご希望に応じて報告者としてお名前を公開します。",
       },
       account: {
         title: "アカウントのセキュリティ",

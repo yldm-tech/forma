@@ -87,6 +87,12 @@
     word-break: auto-phrase;
   }
 
+  /* Browsers have no phrase segmentation for Chinese (auto-phrase is Japanese-only), so a balanced heading splits wherever the halves come out even, 反|馈 included. keep-all wraps headings at punctuation and spaces only; break-word still breaks a phrase too long for its line rather than letting it overflow. */
+  html:lang(zh-Hans) :is(h1, h2, h3) {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
   a {
     color: inherit;
   }
@@ -322,4 +328,9 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Two white sections in a row would stack both paddings into one oversized gap; the second one starts at the first one's bottom padding instead. Unlayered, so it wins over the section-pad utility. */
+.section-pad:not(.bg-surface-muted) + .section-pad:not(.bg-surface-muted) {
+  padding-top: 0;
 }

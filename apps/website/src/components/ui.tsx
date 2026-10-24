@@ -257,10 +257,13 @@ export const PageHero = ({
   actions?: ReactNode;
 }) => (
   <section className="relative overflow-hidden">
-    <div
-      className="hero-glow pointer-events-none absolute -top-40 right-0 h-[560px] w-[760px]"
-      aria-hidden="true"
-    />
+    {/* The glow sits behind the visual; without one it would light an empty half of the hero. */}
+    {visual ? (
+      <div
+        className="hero-glow pointer-events-none absolute -top-40 right-0 h-[560px] w-[760px]"
+        aria-hidden="true"
+      />
+    ) : null}
     <div
       className={`container-site relative grid items-center gap-12 pt-12 pb-16 lg:pt-20 lg:pb-24 ${visual ? "lg:grid-cols-2" : ""}`}>
       <div className="min-w-0">

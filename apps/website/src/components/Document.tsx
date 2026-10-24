@@ -138,7 +138,7 @@ export const Document = ({
           />
         ) : null}
       </head>
-      <body className="bg-surface min-h-dvh antialiased">
+      <body className="bg-surface flex min-h-dvh flex-col antialiased">
         <SiteContext.Provider value={{ locale, page, content }}>
           <a
             href="#main"
@@ -147,7 +147,7 @@ export const Document = ({
           </a>
           <SiteHeader />
           <div data-locale-hint-slot />
-          <main id="main" tabIndex={-1} className="outline-none">
+          <main id="main" tabIndex={-1} className="flex-1 outline-none">
             {children}
           </main>
           <SiteFooter />

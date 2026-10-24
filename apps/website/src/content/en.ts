@@ -69,6 +69,7 @@ export const en: SiteContent = {
       segmentValue: "Plan is Trial",
       eventLabel: "Action",
       eventValue: "Exported a report",
+      newResponse: "New response",
     },
   },
   pages: {
@@ -182,7 +183,7 @@ export const en: SiteContent = {
       },
       templates: {
         title: "Templates",
-        body: "More than 50 templates, available in English, Japanese and Chinese.",
+        body: "More than 50 templates, available in English, Japanese, and Simplified and Traditional Chinese.",
       },
     },
     websiteSurvey: {

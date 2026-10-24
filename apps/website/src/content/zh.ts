@@ -69,6 +69,7 @@ export const zh: SiteContent = {
       segmentValue: "套餐为试用版",
       eventLabel: "操作",
       eventValue: "导出了报表",
+      newResponse: "新回答",
     },
   },
   pages: {
@@ -124,7 +125,7 @@ export const zh: SiteContent = {
         link: "查看集成 →",
       },
       ai: {
-        title: "AI，你决定开不开",
+        title: "AI 按需开启",
         body: "用一段话描述需求，就能生成可编辑的问卷草稿；一键把问卷翻译成已启用的语言；还能生成示例回答，提前看看分析效果。AI 默认关闭，只有组织的所有者或管理者才能开启。",
       },
       developers: {
@@ -337,11 +338,11 @@ export const zh: SiteContent = {
       title: "安全",
       report: {
         title: "报告安全漏洞",
-        body: "请发送邮件至 security@yldm.ai，不要公开提交 issue。我们没有漏洞赏金计划，如有需要可以公开致谢。",
+        body: "请发送邮件至 security@yldm.ai，不要公开提交 issue。我们没有漏洞赏金计划；如果你希望，我们会公开致谢。",
       },
       account: {
         title: "账号安全",
-        body: "双因素认证、带团队和工作区级角色的组织结构、审计日志，私有化部署还可使用单点登录。",
+        body: "双因素认证、支持团队和工作区级角色的组织管理、审计日志；私有化部署还可以使用单点登录。",
       },
       policyLink: "在 GitHub 上查看完整政策 →",
     },

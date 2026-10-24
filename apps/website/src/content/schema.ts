@@ -71,6 +71,7 @@ const common = obj({
     segmentValue: text,
     eventLabel: text,
     eventValue: text,
+    newResponse: text,
   }),
 });
 

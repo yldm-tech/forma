@@ -1,4 +1,4 @@
-import { WorkflowChainArt } from "../components/Illustrations";
+import { DestinationsArt, WorkflowChainArt } from "../components/Illustrations";
 import { useSite } from "../components/site-context";
 import {
   BetaBadge,
@@ -14,25 +14,24 @@ import {
 } from "../components/ui";
 import {
   APP_LOGIN_PATH,
+  NATIVE_INTEGRATIONS,
   DOCS,
   DOCS_PATH,
   GITHUB_URL,
   JS_SNIPPET,
-  MCP_URL,
   SECURITY_EMAIL,
   SECURITY_POLICY_URL,
   localePrefix,
   pagePath,
 } from "../site";
 
-const NATIVE_INTEGRATIONS = ["Slack", "Notion", "Airtable", "Google Sheets"] as const;
 
 export const IntegrationsPage = () => {
   const { content } = useSite();
   const page = content.pages.integrations;
   return (
     <>
-      <PageHero title={page.title} sub={page.sub} visual={<WorkflowChainArt />} />
+      <PageHero title={page.title} sub={page.sub} visual={<DestinationsArt />} />
       <section aria-labelledby="native" className="section-pad bg-surface-muted">
         <div className="container-site">
           <SectionHeading id="native" title={page.native.title} lead={page.native.body} />
@@ -125,9 +124,6 @@ export const DevelopersPage = () => {
             href={pagePath(locale, "integrations")}
             linkLabel={page.webhooks.link}
           />
-        </div>
-        <div className="container-site mt-10">
-          <CodeBlock code={MCP_URL} label="MCP" />
         </div>
       </section>
       <CtaBand />

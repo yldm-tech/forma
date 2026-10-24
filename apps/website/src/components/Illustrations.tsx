@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { NATIVE_INTEGRATIONS } from "../site";
 import { Icon, type IconName } from "./icons";
 import { useSite } from "./site-context";
 
@@ -125,6 +126,66 @@ const BrowserChrome = ({ children, address }: { children: ReactNode; address: st
 const Skeleton = ({ width, tall = false }: { width: string; tall?: boolean }) => (
   <div className={`bg-surface-sunken rounded-full ${tall ? "h-4" : "h-2.5"} ${width}`} />
 );
+
+// Row geometry of DestinationsArt: the rows are h-12 with gap-3, and the connector SVG (h-[288px], five rows) draws to their centres.
+const DESTINATION_ROW = 48;
+const DESTINATION_GAP = 12;
+
+/** A response fanning out to every place the integrations page names: the native integrations and a webhook. */
+export const DestinationsArt = () => {
+  const { content } = useSite();
+  const t = content.common.illustrations;
+  const destinations = [...NATIVE_INTEGRATIONS, "Webhook"];
+  const height = destinations.length * DESTINATION_ROW + (destinations.length - 1) * DESTINATION_GAP;
+  return (
+    <Frame className="mx-auto w-full max-w-lg">
+      <div className="grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] items-center sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]">
+        <div className="card shadow-raised p-4">
+          <p className="flex items-center gap-2 text-xs font-semibold text-teal-700">
+            <span className="bg-mint-500 size-2 rounded-full" />
+            {t.newResponse}
+          </p>
+          <p className="text-small mt-2 font-semibold">{t.npsQuestion}</p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="rounded-chip bg-mint-400 text-small flex size-8 flex-none items-center justify-center border border-teal-600 font-semibold text-teal-900">
+              8
+            </span>
+            <Skeleton width="w-full" />
+          </div>
+        </div>
+        <svg
+          className="h-[288px] w-full text-mint-500"
+          viewBox={`0 0 40 ${height}`}
+          preserveAspectRatio="none"
+          fill="none"
+          focusable="false">
+          {destinations.map((name, i) => {
+            const y = i * (DESTINATION_ROW + DESTINATION_GAP) + DESTINATION_ROW / 2;
+            return (
+              <path
+                key={name}
+                d={`M0 ${height / 2} C20 ${height / 2} 20 ${y} 40 ${y}`}
+                stroke="currentColor"
+                strokeWidth={1.5}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </svg>
+        <ul className="flex flex-col gap-3">
+          {destinations.map((name) => (
+            <li key={name} className="card shadow-raised flex h-12 items-center gap-3 px-3">
+              <span className="bg-mint-100 text-small inline-flex size-8 flex-none items-center justify-center rounded-[22%] font-bold text-teal-900">
+                {name === "Webhook" ? <Icon name="webhook" size={16} /> : name.charAt(0)}
+              </span>
+              <span className="text-small leading-5 font-semibold">{name}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Frame>
+  );
+};
 
 export const BrowserPopoverArt = () => {
   const { content } = useSite();
