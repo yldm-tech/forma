@@ -31,6 +31,7 @@ export const BlockMenu = ({
           variant="ghost"
           size="icon"
           disabled={isFirstBlock}
+          aria-label={t("common.move_up")}
           onClick={(e) => {
             if (!isFirstBlock) {
               e.stopPropagation();
@@ -47,6 +48,7 @@ export const BlockMenu = ({
           variant="ghost"
           size="icon"
           disabled={isLastBlock}
+          aria-label={t("common.move_down")}
           onClick={(e) => {
             if (!isLastBlock) {
               e.stopPropagation();
@@ -62,6 +64,7 @@ export const BlockMenu = ({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={t("workspace.surveys.edit.duplicate_block")}
           onClick={(e) => {
             e.stopPropagation();
             onDuplicate();
@@ -76,6 +79,7 @@ export const BlockMenu = ({
           variant="ghost"
           size="icon"
           disabled={isOnlyBlock}
+          aria-label={t("workspace.surveys.edit.delete_block")}
           onClick={(e) => {
             if (!isOnlyBlock) {
               e.stopPropagation();

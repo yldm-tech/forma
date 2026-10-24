@@ -211,10 +211,9 @@ export const EditEndingCard = ({
         open={open}
         onOpenChange={setOpen}
         className="flex-1 rounded-r-lg border border-slate-200 transition-all duration-300 ease-in-out">
-        <Collapsible.CollapsibleTrigger
-          asChild
-          className="flex cursor-pointer justify-between rounded-r-lg p-5 hover:bg-slate-50">
-          <div>
+        {/* The trigger holds the title only; the card menu sits beside it, not inside the button. */}
+        <div className="flex justify-between gap-4 rounded-r-lg p-5 hover:bg-slate-50">
+          <Collapsible.CollapsibleTrigger className="min-w-0 grow cursor-pointer rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-700">
             <div className="inline-flex">
               <div>
                 <p className="text-sm font-semibold">
@@ -234,23 +233,23 @@ export const EditEndingCard = ({
                 )}
               </div>
             </div>
+          </Collapsible.CollapsibleTrigger>
 
-            <div className="flex items-center gap-x-4">
-              <EditorCardMenu
-                survey={localSurvey}
-                cardIdx={endingCardIndex}
-                lastCard={endingCardIndex === localSurvey.endings.length - 1}
-                duplicateCard={duplicateEndingCard}
-                deleteCard={deleteEndingCard}
-                moveCard={moveEndingCard}
-                card={endingCard}
-                updateCard={() => {}}
-                addEndingCard={addEndingCard}
-                cardType="ending"
-              />
-            </div>
+          <div className="flex items-center gap-x-4">
+            <EditorCardMenu
+              survey={localSurvey}
+              cardIdx={endingCardIndex}
+              lastCard={endingCardIndex === localSurvey.endings.length - 1}
+              duplicateCard={duplicateEndingCard}
+              deleteCard={deleteEndingCard}
+              moveCard={moveEndingCard}
+              card={endingCard}
+              updateCard={() => {}}
+              addEndingCard={addEndingCard}
+              cardType="ending"
+            />
           </div>
-        </Collapsible.CollapsibleTrigger>
+        </div>
         <Collapsible.CollapsibleContent className={`flex flex-col px-4 ${open && "mt-3 pb-6"}`}>
           <OptionsSwitch
             options={endingCardTypes}

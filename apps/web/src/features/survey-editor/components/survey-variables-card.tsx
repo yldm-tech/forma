@@ -54,9 +54,7 @@ export const SurveyVariablesCard = ({
         open={open}
         onOpenChange={setOpenState}
         className="flex-1 rounded-r-lg border border-slate-200 transition-all duration-300 ease-in-out">
-        <Collapsible.CollapsibleTrigger
-          asChild
-          className="flex cursor-pointer justify-between rounded-r-lg p-4 hover:bg-slate-50">
+        <Collapsible.CollapsibleTrigger className="flex w-full cursor-pointer justify-between rounded-r-lg p-4 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700">
           <div>
             <div className="inline-flex">
               <div>

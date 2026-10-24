@@ -31,8 +31,6 @@ interface BlocksDroppableProps {
   addElement: (element: TSurveyElement, index?: number) => void;
   isCxMode: boolean;
   locale: TUserLocale;
-  responseCount: number;
-  onAlertTrigger: () => void;
   duplicateBlock: (blockId: string) => void;
   deleteBlock: (blockId: string) => void;
   moveBlock: (blockId: string, direction: "up" | "down") => void;
@@ -58,8 +56,6 @@ export const BlocksDroppable = ({
   addElement,
   isCxMode,
   locale,
-  responseCount,
-  onAlertTrigger,
   duplicateBlock,
   deleteBlock,
   moveBlock,
@@ -100,8 +96,6 @@ export const BlocksDroppable = ({
               addElement={addElement}
               isCxMode={isCxMode}
               locale={locale}
-              responseCount={responseCount}
-              onAlertTrigger={onAlertTrigger}
               duplicateBlock={duplicateBlock}
               deleteBlock={deleteBlock}
               moveBlock={moveBlock}
