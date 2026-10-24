@@ -134,8 +134,10 @@ export const Dialog = ({
       {open && (
         <DialogContext.Provider value={{ titleId, descriptionId }}>
           <PortalContainer.Provider value={element}>
-            {/* The content follows the dialog's own max-height (a caller may lower it), so nothing spills past the panel. A DialogBody scrolls by itself between a fixed header and footer; content not wrapped in one scrolls here, with the header and footer held in place. */}
-            <div className="relative flex max-h-[inherit] flex-col gap-4 overflow-y-auto p-4">{children}</div>
+            {/* The content follows the dialog's own max-height (a caller may lower it), so nothing spills past the panel. A DialogBody scrolls by itself between a fixed header and footer; content not wrapped in one scrolls here, with the header and footer held in place. The scroller takes the dialog's radius so its clip follows the rounded corners: the header's and footer's white backing reaches its edge and would otherwise show as square corners outside the ring. */}
+            <div className="relative flex max-h-[inherit] flex-col gap-4 overflow-y-auto rounded-[inherit] p-4">
+              {children}
+            </div>
             {/* Outside the scroller, so it stays in the corner however far the content scrolls. */}
             {!hideCloseButton && (
               <button

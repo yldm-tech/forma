@@ -100,8 +100,8 @@ export const ConfirmationModal = ({
       onOpenChange={setOpen}
       hideCloseButton={hideCloseButton}
       disableCloseOnOutsideClick={!closeOnOutsideClick}
-      // Escape cancels the confirmation even when a stray click may not, except while its action runs.
-      allowEscapeClose={!buttonLoading && !secondaryButton?.loading}
+      // Escape dismisses the confirmation even for a caller that guards the backdrop, as the Cancel button (which stays enabled while an action runs) does. It only closes the modal and does not call onCancel: a caller's Cancel may discard work (the quota modal's Discard), which the dismiss key must not do.
+      allowEscapeClose
       className="max-w-[540px]">
       <DialogHeader className="flex justify-center gap-2">
         {Icon ? (
