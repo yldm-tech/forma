@@ -42,9 +42,9 @@ import {
   useDeleteAttributeKeys,
   useUpdateAttributeKey,
 } from "../../lib/queries/contacts";
-import { attributeKeyUsage } from "../../lib/segment-filters";
 import { formatDateForDisplay, timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
+import { attributeKeyUsage } from "./attribute-usage";
 import { ContactsPageLayout } from "./contacts-layout";
 
 const DATA_TYPE_ICONS = { date: CalendarIcon, number: HashIcon, string: TagIcon } as const;

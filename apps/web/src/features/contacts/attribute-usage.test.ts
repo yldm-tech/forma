@@ -1,6 +1,6 @@
 import type { TBaseFilter, TBaseFilters } from "@forma/types/segment";
 import { describe, expect, test } from "vite-plus/test";
-import { attributeKeyUsage } from "./segment-filters";
+import { attributeKeyUsage } from "./attribute-usage";
 
 // The warning shown before attribute keys are deleted: which segments and surveys filter on them.
 
