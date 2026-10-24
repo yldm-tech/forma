@@ -358,6 +358,7 @@
     "manage": "管理",
     "marketing": "行銷",
     "members": "成員",
+    "members_and_teams": "成員與團隊",
     "membership": "會員資格",
     "membership_not_found": "找不到成員資格",
     "meta": "Meta",
@@ -1898,11 +1899,13 @@
       "include_metadata": "包含中繼資料（瀏覽器、國家/地區等）",
       "include_variables": "包含變數",
       "integration_added_successfully": "整合已成功新增",
+      "integration_count": "{count, plural, other {# 個整合}}",
       "integration_removed_successfully": "整合已成功移除",
       "integration_updated_successfully": "整合已成功更新",
       "make_integration_description": "透過 Make 將 Forma 與 1000 多個應用程式整合",
       "manage_webhooks": "管理 Webhook",
       "n8n_integration_description": "透過 n8n 將 Forma 與 350 多個應用程式整合",
+      "not_available_on_this_instance": "此執行個體不可用",
       "notion": {
         "col_name_of_type_is_not_supported": "Notion API 不支援類型為 {type} 的 {col_name}。資料將不會反映在您的 Notion 資料庫中。",
         "connect_with_notion": "連線 Notion",
@@ -1955,6 +1958,7 @@
         "slack_reconnect_button_description": "<b>注意：</b>我們最近變更了我們的 Slack 整合以支援私人頻道。請重新連線您的 Slack 工作區。"
       },
       "slack_integration_description": "將您的 Slack 工作區與 Forma 立即連線",
+      "webhook_count": "{count, plural, other {# 個 Webhook}}",
       "webhook_integration_description": "根據您問卷中的操作觸發 Webhook",
       "webhooks": {
         "add_webhook": "新增 Webhook",
@@ -1962,6 +1966,7 @@
         "all_current_and_new_surveys": "所有目前和新的問卷",
         "copy_secret_now": "複製您的簽章密鑰",
         "created_by_third_party": "由第三方建立",
+        "created_by_third_party_no": "否",
         "discord_webhook_not_supported": "目前不支援 Discord webhooks。",
         "empty_webhook_message": "您的 Webhook 將在您新增後立即顯示在此處。⏲️",
         "endpoint_bad_gateway_error": "錯誤的閘道 (502)：代理/閘道錯誤，服務無法連線",
@@ -1993,6 +1998,7 @@
         "webhook_url_placeholder": "貼上您要觸發事件的網址"
       },
       "website_or_app_integration_description": "將 Forma 整合到您的網站或應用程式中",
+      "zap_count": "{count, plural, other {# 個 Zap}}",
       "zapier_integration_description": "透過 Zapier 將 Forma 與 5000 多個應用程式整合"
     },
     "languages": {
@@ -2514,11 +2520,14 @@
         "security_list_tip_link": "請在此註冊。",
         "share_invite_link": "分享邀請連結",
         "share_this_link_to_let_your_organization_member_join_your_organization": "分享此連結以讓您的組織成員加入您的組織：",
-        "test_email_sent_successfully": "測試電子郵件已成功發送"
+        "test_email_requires_smtp": "此執行個體未設定電子郵件，無法寄送測試郵件。",
+        "test_email_sent_successfully": "測試電子郵件已成功發送",
+        "view_only_access": "您只能檢視這些設定，只有擁有者和管理者可以變更。"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "自動訂閱新問卷",
         "email_alerts_surveys": "電子郵件警示（問卷）",
+        "email_not_configured": "此執行個體未設定電子郵件，在管理員完成設定之前不會寄送任何提醒郵件。您在此處的設定仍會儲存。",
         "every_response": "每個回應",
         "every_response_tooltip": "傳送完整的回應，沒有部分回應。",
         "need_slack_or_discord_notifications": "需要 Slack 或 Discord 通知嗎？",
@@ -2531,6 +2540,7 @@
       },
       "profile": {
         "account_deletion_consequences_warning": "帳戶刪除後果",
+        "account_deletion_email_not_configured": "刪除帳戶需要透過電子郵件中的確認連結完成，但此執行個體未設定電子郵件。請聯絡管理員進行設定。",
         "account_deletion_email_sent": "請查收您的電子郵件以確認刪除帳戶。我們已向 {email} 發送了一個連結——點擊後，您的帳戶將被刪除。",
         "backup_code": "備份碼",
         "confirm_delete_account": "刪除您的帳戶以及您的所有個人資訊和資料",
@@ -2553,6 +2563,8 @@
         "save_the_following_backup_codes_in_a_safe_place": "將下列備份碼儲存在安全的地方。",
         "scan_the_qr_code_below_with_your_authenticator_app": "使用您的驗證器應用程式掃描下方的 QR 碼。",
         "security_description": "管理您的密碼和其他安全性設定，例如雙重驗證 (2FA)。",
+        "sole_owned_organization_item": "{name}（{count, plural, other {# 個工作區}}）",
+        "sole_owned_organizations_hint": "如需保留某個組織，請先在「成員與團隊」中將其他成員設為擁有者。",
         "two_factor_authentication": "雙重驗證",
         "two_factor_authentication_description": "在您的密碼被盜時，為您的帳戶新增額外的安全層。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "已啟用雙重驗證。請輸入您驗證器應用程式中的六位數程式碼。",
@@ -2578,6 +2590,8 @@
         "empty_teams_state": "建立您的第一個團隊。",
         "enter_team_name": "輸入團隊名稱",
         "individual": "個人",
+        "invite_created_email_not_configured": "邀請已建立，但此執行個體未設定電子郵件，請改為分享邀請連結。",
+        "invite_email_not_configured_hint": "此執行個體未設定電子郵件，因此不會寄送邀請郵件。邀請後，請自行將邀請連結分享給對方。",
         "invite_member": "邀請成員",
         "invite_member_description": "將您的同事新增至此組織。",
         "manage": "管理",
@@ -2593,6 +2607,10 @@
         "please_fill_all_workspace_fields": "請填寫所有欄位以新增工作區。",
         "read": "讀取",
         "read_write": "讀取和寫入",
+        "role_billing": "帳單",
+        "role_manager": "管理者",
+        "role_member": "成員",
+        "role_owner": "擁有者",
         "team_admin": "團隊管理員",
         "team_created_successfully": "團隊已成功建立。",
         "team_deleted_successfully": "團隊已成功刪除。",

@@ -358,6 +358,7 @@
     "manage": "管理",
     "marketing": "市场营销",
     "members": "成员",
+    "members_and_teams": "成员与团队",
     "membership": "会员资格",
     "membership_not_found": "未找到会员资格",
     "meta": "元数据",
@@ -1898,11 +1899,13 @@
       "include_metadata": "包含 元数据 （浏览器 、国家 等）",
       "include_variables": "包括 变量",
       "integration_added_successfully": "集成 添加成功",
+      "integration_count": "{count, plural, other {# 个集成}}",
       "integration_removed_successfully": "集成 移除 成功",
       "integration_updated_successfully": "集成 更新 成功",
       "make_integration_description": "通过 Make 与 1000 个以上的应用集成 Forma",
       "manage_webhooks": "管理 Webhooks",
       "n8n_integration_description": "通过 n8n 与 350 个以上的应用集成 Forma",
+      "not_available_on_this_instance": "此实例不可用",
       "notion": {
         "col_name_of_type_is_not_supported": "\"类型 {type} 的 {col_name} 不受 notion API 支持。该数据不会反映在您的 notion 数据库中。\"",
         "connect_with_notion": "连接 Notion",
@@ -1955,6 +1958,7 @@
         "slack_reconnect_button_description": "<b>注意：</b> 我们最近更改了我们的 Slack 集成以支持私人频道。 请重新连接您的 Slack 工作区。"
       },
       "slack_integration_description": "立即将 您的 Slack 工作区 与 Forma 连接",
+      "webhook_count": "{count, plural, other {# 个 Webhook}}",
       "webhook_integration_description": "根据您调查中的操作触发 Webhooks",
       "webhooks": {
         "add_webhook": "添加 Webhook",
@@ -1962,6 +1966,7 @@
         "all_current_and_new_surveys": "所有 当前 和 新的 调查",
         "copy_secret_now": "复制您的签名密钥",
         "created_by_third_party": "由 第三方 创建",
+        "created_by_third_party_no": "否",
         "discord_webhook_not_supported": "Discord webhooks 目前不 支持。",
         "empty_webhook_message": "您的 Webhooks 会在您 添加 后 出现在这里。 ⏲️",
         "endpoint_bad_gateway_error": "错误网关 (502)：代理/网关错误，服务不可达",
@@ -1993,6 +1998,7 @@
         "webhook_url_placeholder": "粘贴 你 要 事件 写 入 的 URL"
       },
       "website_or_app_integration_description": "将 Forma 集成到您的网站或应用",
+      "zap_count": "{count, plural, other {# 个 Zap}}",
       "zapier_integration_description": "通过 Zapier 与 5000 个以上的应用集成 Forma"
     },
     "languages": {
@@ -2514,11 +2520,14 @@
         "security_list_tip_link": "点击此处注册。",
         "share_invite_link": "分享邀请链接",
         "share_this_link_to_let_your_organization_member_join_your_organization": "分享 这个 链接 以 让 你的 组织 成员 加入 你的 组织：",
-        "test_email_sent_successfully": "测试 邮件 发送 成功"
+        "test_email_requires_smtp": "此实例未配置邮件，无法发送测试邮件。",
+        "test_email_sent_successfully": "测试 邮件 发送 成功",
+        "view_only_access": "您只能查看这些设置，只有所有者和管理员可以更改。"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "自动 订阅 新 调查",
         "email_alerts_surveys": "邮件 提醒 （调查）",
+        "email_not_configured": "此实例未配置邮件，在管理员完成配置之前不会发送任何提醒邮件。您在此处的设置仍会保存。",
         "every_response": "每 次 响应",
         "every_response_tooltip": "发送 完整 的 反馈，无 部分",
         "need_slack_or_discord_notifications": "需要 Slack 或 Discord 通知",
@@ -2531,6 +2540,7 @@
       },
       "profile": {
         "account_deletion_consequences_warning": "帐户 删除 后果",
+        "account_deletion_email_not_configured": "删除账户需要通过邮件中的确认链接完成，但此实例未配置邮件。请联系管理员进行配置。",
         "account_deletion_email_sent": "请查收您的电子邮件以确认删除账户。我们已向 {email} 发送了一个链接——点击后，您的账户将被删除。",
         "backup_code": "备用代码",
         "confirm_delete_account": "删除您的账户以及所有个人信息和数据",
@@ -2553,6 +2563,8 @@
         "save_the_following_backup_codes_in_a_safe_place": "请 将 以下 备份 代码 保存在 安全地 方。",
         "scan_the_qr_code_below_with_your_authenticator_app": "用 你的 身份验证 应用 扫描 下方 的 二维码。",
         "security_description": "管理你的密码和其他安全设置，如双因素认证 (2FA)。",
+        "sole_owned_organization_item": "{name}（{count, plural, other {# 个工作区}}）",
+        "sole_owned_organizations_hint": "如需保留某个组织，请先在“成员与团队”中将其他成员设为所有者。",
         "two_factor_authentication": "双因素 认证",
         "two_factor_authentication_description": "为你的账户增加额外的安全层，以防密码被盗。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "双因素 认证 已启用 。 请输入 从 你的 身份验证 应用 中 的 六 位 数 字 代码 。",
@@ -2578,6 +2590,8 @@
         "empty_teams_state": "创建 您 的 第一个 团队。",
         "enter_team_name": "输入 团队 名称",
         "individual": "个人",
+        "invite_created_email_not_configured": "邀请已创建，但此实例未配置邮件，请改为分享邀请链接。",
+        "invite_email_not_configured_hint": "此实例未配置邮件，因此不会发送邀请邮件。邀请后，请自行将邀请链接分享给对方。",
         "invite_member": "邀请 成员",
         "invite_member_description": "将 您 的 同事 添加 到 该 组织。",
         "manage": "管理",
@@ -2593,6 +2607,10 @@
         "please_fill_all_workspace_fields": "请填写所有字段以添加新工作区。",
         "read": "阅读",
         "read_write": "读 & 写",
+        "role_billing": "账单",
+        "role_manager": "管理员",
+        "role_member": "成员",
+        "role_owner": "所有者",
         "team_admin": "团队管理员",
         "team_created_successfully": "团队 创建 成功",
         "team_deleted_successfully": "团队 删除 成功",

@@ -358,6 +358,7 @@
     "manage": "管理",
     "marketing": "マーケティング",
     "members": "メンバー",
+    "members_and_teams": "メンバーとチーム",
     "membership": "メンバーシップ",
     "membership_not_found": "メンバーシップが見つかりません",
     "meta": "メタ",
@@ -1898,11 +1899,13 @@
       "include_metadata": "メタデータを含める（ブラウザ、国など）",
       "include_variables": "変数を含める",
       "integration_added_successfully": "連携を追加しました",
+      "integration_count": "{count, plural, other {# 件の連携}}",
       "integration_removed_successfully": "連携を削除しました",
       "integration_updated_successfully": "連携を更新しました",
       "make_integration_description": "Make 経由でFormaを1,000以上のアプリと統合する",
       "manage_webhooks": "Webhook を管理",
       "n8n_integration_description": "n8n経由でFormaを350以上のアプリと統合する",
+      "not_available_on_this_instance": "このインスタンスでは利用不可",
       "notion": {
         "col_name_of_type_is_not_supported": "タイプ {type} の {col_name} は Notion API でサポートされていません。データはNotionデータベースに反映されません。",
         "connect_with_notion": "Notion と接続",
@@ -1955,6 +1958,7 @@
         "slack_reconnect_button_description": "<b>注意:</b> Slack 連携はプライベートチャンネルもサポートするように変更されました。ワークスペースを再接続してください。"
       },
       "slack_integration_description": "FormaをSlackワークスペースと即座に接続する",
+      "webhook_count": "{count, plural, other {# 件の Webhook}}",
       "webhook_integration_description": "アンケート内のアクションに基づいてWebhookをトリガーする",
       "webhooks": {
         "add_webhook": "Webhook を追加",
@@ -1962,6 +1966,7 @@
         "all_current_and_new_surveys": "現在および新規のすべてのフォーム",
         "copy_secret_now": "署名シークレットをコピー",
         "created_by_third_party": "サードパーティによって作成",
+        "created_by_third_party_no": "いいえ",
         "discord_webhook_not_supported": "現在、Discord Webhook はサポートしていません。",
         "empty_webhook_message": "Webhook は追加するとここに表示されます。⏲️",
         "endpoint_bad_gateway_error": "不正なゲートウェイ (502): プロキシまたはゲートウェイのエラーにより、サービスに到達できません",
@@ -1993,6 +1998,7 @@
         "webhook_url_placeholder": "イベントを送信したいURLを貼り付け"
       },
       "website_or_app_integration_description": "Formaをウェブサイトやアプリに統合する",
+      "zap_count": "{count, plural, other {# 件の Zap}}",
       "zapier_integration_description": "Zapier経由で5,000以上のアプリとFormaを統合する"
     },
     "languages": {
@@ -2514,11 +2520,14 @@
         "security_list_tip_link": "こちらからサインアップしてください。",
         "share_invite_link": "招待リンクを共有",
         "share_this_link_to_let_your_organization_member_join_your_organization": "このリンクを共有して、組織メンバーを招待できます:",
-        "test_email_sent_successfully": "テストメールを正常に送信しました"
+        "test_email_requires_smtp": "このインスタンスではメールが設定されていないため、テストメールを送信できません。",
+        "test_email_sent_successfully": "テストメールを正常に送信しました",
+        "view_only_access": "この設定は閲覧のみ可能です。変更できるのはオーナーとマネージャーのみです。"
       },
       "notifications": {
         "auto_subscribe_to_new_surveys": "新しいフォームに自動購読",
         "email_alerts_surveys": "メール通知（フォーム）",
+        "email_not_configured": "このインスタンスではメールが設定されていないため、管理者が設定するまで通知メールは送信されません。ここでの設定は保存されます。",
         "every_response": "すべての回答",
         "every_response_tooltip": "完全な回答を送信します。部分的な回答は送信されません。",
         "need_slack_or_discord_notifications": "SlackまたはDiscord通知が必要ですか",
@@ -2531,6 +2540,7 @@
       },
       "profile": {
         "account_deletion_consequences_warning": "アカウント削除の結果",
+        "account_deletion_email_not_configured": "アカウントの削除はメールで送信される確認リンクから行いますが、このインスタンスではメールが設定されていません。管理者に設定を依頼してください。",
         "account_deletion_email_sent": "アカウントの削除を確認するには、メールをご確認ください。{email} にリンクを送信しました。クリックするとアカウントが削除されます。",
         "backup_code": "バックアップコード",
         "confirm_delete_account": "あなたの個人情報とデータを含むアカウントをすべて削除する",
@@ -2553,6 +2563,8 @@
         "save_the_following_backup_codes_in_a_safe_place": "以下のバックアップコードを安全な場所に保存してください。",
         "scan_the_qr_code_below_with_your_authenticator_app": "以下のQRコードを認証アプリでスキャンしてください。",
         "security_description": "パスワードや二段階認証（2FA）などの他のセキュリティ設定を管理します。",
+        "sole_owned_organization_item": "{name}（{count, plural, other {# 件のワークスペース}}）",
+        "sole_owned_organizations_hint": "組織を残すには、先に「メンバーとチーム」で別のメンバーをオーナーにしてください。",
         "two_factor_authentication": "二段階認証",
         "two_factor_authentication_description": "パスワードが盗まれた場合に備えて、アカウントにセキュリティの追加レイヤーを追加します。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "二段階認証が有効になりました。認証アプリから6桁のコードを入力してください。",
@@ -2578,6 +2590,8 @@
         "empty_teams_state": "最初のチームを作成してください。",
         "enter_team_name": "チーム名を入力",
         "individual": "個人",
+        "invite_created_email_not_configured": "招待を作成しましたが、このインスタンスではメールが設定されていません。代わりに招待リンクを共有してください。",
+        "invite_email_not_configured_hint": "このインスタンスではメールが設定されていないため、招待メールは送信されません。招待後、招待リンクを相手に直接共有してください。",
         "invite_member": "メンバーを招待",
         "invite_member_description": "あなたの同僚をこの組織に招待します。",
         "manage": "管理",
@@ -2593,6 +2607,10 @@
         "please_fill_all_workspace_fields": "新しいワークスペースを追加するには、すべてのフィールドを入力してください。",
         "read": "読み取り",
         "read_write": "読み書き",
+        "role_billing": "請求",
+        "role_manager": "マネージャー",
+        "role_member": "メンバー",
+        "role_owner": "オーナー",
         "team_admin": "チーム管理者",
         "team_created_successfully": "チームを正常に作成しました。",
         "team_deleted_successfully": "チームを正常に削除しました。",
