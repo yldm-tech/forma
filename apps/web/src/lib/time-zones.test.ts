@@ -15,7 +15,11 @@ test("schedulingTimeZones lists the browser's zones with UTC, since the default 
 
 test("organizationSettingsChanges sends only changed fields this role may change", () => {
   const initial = { name: "Acme", displayTimeZone: null, surveySchedulingTimeZone: null };
-  const changed = { name: " Acme Inc ", displayTimeZone: "Asia/Tokyo", surveySchedulingTimeZone: "Asia/Tokyo" };
+  const changed = {
+    name: " Acme Inc ",
+    displayTimeZone: "Asia/Tokyo",
+    surveySchedulingTimeZone: "Asia/Tokyo",
+  };
   expect(organizationSettingsChanges(initial, changed, "owner")).toEqual({
     name: "Acme Inc",
     displayTimeZone: "Asia/Tokyo",

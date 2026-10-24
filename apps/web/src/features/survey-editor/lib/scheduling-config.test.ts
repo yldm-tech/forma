@@ -9,7 +9,12 @@ import { createSurveySchedulingDateUtils } from "./scheduling-date-utils";
 
 describe("resolveSurveySchedulingConfig", () => {
   test("uses the schedule the server sends with the workspace", () => {
-    const fromServer = { timeZone: "Asia/Tokyo", localHour: 9, localMinute: 30, instanceTimeZone: "Europe/Berlin" };
+    const fromServer = {
+      timeZone: "Asia/Tokyo",
+      localHour: 9,
+      localMinute: 30,
+      instanceTimeZone: "Europe/Berlin",
+    };
     const config = resolveSurveySchedulingConfig(fromServer);
     expect(config).toBe(fromServer);
     expect(getSurveySchedulingTimeLabel(config)).toBe("09:30");
@@ -29,9 +34,9 @@ describe("describeScheduledMoment", () => {
 
   test("a day picked in the editor stands for midnight in the organization's zone", () => {
     const tokyo = { timeZone: "Asia/Tokyo", localHour: 0, localMinute: 0 };
-    const snapped = createSurveySchedulingDateUtils(tokyo).normalizeDateOnlySelectionToSurveySchedulingDateTime(
-      new Date("2026-10-30T12:00:00.000Z")
-    );
+    const snapped = createSurveySchedulingDateUtils(
+      tokyo
+    ).normalizeDateOnlySelectionToSurveySchedulingDateTime(new Date("2026-10-30T12:00:00.000Z"));
     expect(snapped?.toISOString()).toBe(instant.toISOString());
   });
 

@@ -89,8 +89,20 @@ export const ResponseOptionsCard = ({
     );
     return (
       <div className="mt-2 space-y-0.5 text-xs text-slate-500" aria-live="polite">
-        <p>{t("workspace.surveys.edit.scheduled_moment", scheduled)}</p>
-        {browser && <p>{t("workspace.surveys.edit.scheduled_moment_in_your_time_zone", browser)}</p>}
+        <p>
+          {t("workspace.surveys.edit.scheduled_moment", {
+            moment: scheduled.moment,
+            timeZone: scheduled.timeZone,
+          })}
+        </p>
+        {browser && (
+          <p>
+            {t("workspace.surveys.edit.scheduled_moment_in_your_time_zone", {
+              moment: browser.moment,
+              timeZone: browser.timeZone,
+            })}
+          </p>
+        )}
       </div>
     );
   };

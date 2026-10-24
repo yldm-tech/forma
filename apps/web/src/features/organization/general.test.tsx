@@ -42,7 +42,12 @@ const organization: OrganizationDetail = {
   isAISmartToolsEnabled: false,
   displayTimeZone: null,
   surveySchedulingTimeZone: null,
-  surveyScheduling: { timeZone: "Europe/Berlin", localHour: 0, localMinute: 0, instanceTimeZone: "Europe/Berlin" },
+  surveyScheduling: {
+    timeZone: "Europe/Berlin",
+    localHour: 0,
+    localMinute: 0,
+    instanceTimeZone: "Europe/Berlin",
+  },
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
   userManagementAllowed: true,

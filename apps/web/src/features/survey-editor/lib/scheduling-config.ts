@@ -32,7 +32,10 @@ export const describeScheduledMoment = (
   browserTimeZone: string,
   locale: string
 ): { scheduled: TScheduledMomentLabel; browser: TScheduledMomentLabel | null } => {
-  const scheduled = { moment: formatMoment(instant, schedulingTimeZone, locale), timeZone: schedulingTimeZone };
+  const scheduled = {
+    moment: formatMoment(instant, schedulingTimeZone, locale),
+    timeZone: schedulingTimeZone,
+  };
   const browserMoment = formatMoment(instant, browserTimeZone, locale);
   return {
     scheduled,
