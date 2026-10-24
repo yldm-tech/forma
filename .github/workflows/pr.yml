@@ -226,6 +226,12 @@ jobs:
       - name: Build
         run: vp run -r build
 
+      # Lint and type-check skip the stories on the grounds that Storybook compiles them (vite.config.ts), and `vp run -r build` does not build Storybook, so this is the step that does. A `--filter` that matches no package exits 0 ("No packages matched the filter"), so the step also checks that the build wrote the site.
+      - name: Build Storybook
+        run: |
+          vp run --filter @forma/storybook build-storybook
+          test -f apps/storybook/storybook-static/index.html
+
       - name: Verify the TanStack Router route tree is committed
         run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
