@@ -226,7 +226,7 @@ function PictureSelect({
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "border-input-border absolute top-[5%] right-[5%] flex size-4 items-center justify-center rounded-full border bg-white shadow-xs transition-colors",
+                      "border-control-border absolute top-[5%] right-[5%] flex size-4 items-center justify-center rounded-full border bg-white shadow-xs transition-colors",
                       isSelected && "border-brand"
                     )}>
                     <span

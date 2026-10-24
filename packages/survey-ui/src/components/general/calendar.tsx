@@ -175,8 +175,9 @@ function Calendar({
         range_start: cn("rounded-l-md bg-accent", defaultClassNames.range_start),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("rounded-r-md bg-accent", defaultClassNames.range_end),
+        // Today is a dot under the date, not a brand box: a box read as the selected date while a required date was still empty.
         today: cn(
-          "border-2 border-brand rounded-md data-[selected=true]:rounded-none",
+          "after:bg-brand data-[selected=true]:after:bg-primary-foreground after:pointer-events-none after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full",
           defaultClassNames.today
         ),
         outside: cn(
