@@ -1,0 +1,11 @@
+{
+  // Node-run config files (Vite configs, the surveys Vitest setup, the survey-ui Tailwind config) sit outside every package's own project. vp check's type-aware lint finds this file by walking up from them, so they are type-checked under the shared strict options instead of an inferred default program. A file a package project already includes (apps/website/vite.config.ts) stays in that project.
+  "extends": "./tooling/typescript/node.json",
+  "include": [
+    "vite.config.ts",
+    "apps/*/vite.config.ts",
+    "packages/*/vite.config.*",
+    "packages/*/tailwind.config.ts",
+    "packages/*/vitestSetup.ts"
+  ]
+}
