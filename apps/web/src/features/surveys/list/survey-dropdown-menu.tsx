@@ -124,6 +124,18 @@ export const SurveyDropdownMenu = ({
     }
   };
 
+  /** The archive toast's Undo: the survey comes back, and one that was running (which archiving paused) runs again. */
+  const undoArchive = async () => {
+    const id = toast.loading(t("workspace.surveys.restoring_survey"));
+    try {
+      await actions.restoreSurvey(survey.id);
+      if (isInProgress) await actions.updateSurveyStatus(survey.id, "inProgress");
+      toast.success(t("workspace.surveys.survey_restored_successfully"), { id });
+    } catch (error) {
+      toast.error(v3ErrorMessage(error, t("workspace.surveys.error_restoring_survey")), { id });
+    }
+  };
+
   const archiveSurvey = async () => {
     setIsArchiving(true);
     const id = toast.loading(t("workspace.surveys.archiving_survey"));
@@ -131,7 +143,7 @@ export const SurveyDropdownMenu = ({
       await actions.archiveSurvey(survey.id);
       toast.success(t("workspace.surveys.survey_archived_successfully"), {
         id,
-        action: { label: t("workspace.surveys.undo_archive"), onClick: () => void restoreSurvey() },
+        action: { label: t("workspace.surveys.undo_archive"), onClick: () => void undoArchive() },
       });
       setArchiveOpen(false);
     } catch (error) {

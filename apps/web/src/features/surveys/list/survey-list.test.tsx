@@ -12,6 +12,7 @@ import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
+import { toast } from "../../../lib/toast";
 import type { SurveyListItem } from "../api";
 import { surveyFiltersKey } from "./filters";
 import { SurveysList } from "./survey-list";
@@ -23,12 +24,20 @@ let i18n: I18n;
 
 beforeAll(async () => {
   i18n = await initI18n("en-US");
+  // jsdom has the <dialog> element but not its modal methods, which the confirmations open with.
+  HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+    this.open = false;
+  };
 });
 
 beforeEach(() => localStorage.clear());
 
 afterEach(() => {
   cleanup();
+  for (const shown of toast.getSnapshot()) toast.dismiss(shown.id);
   vi.unstubAllGlobals();
 });
 
@@ -60,11 +69,18 @@ const stubApi = ({
   workspaceSurveyCount?: number;
 }) => {
   const queries: URLSearchParams[] = [];
+  const mutations: string[] = [];
   const total = pages.flat().length;
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (path: string) => {
+    vi.fn(async (path: string, init?: RequestInit) => {
       const [base, query] = path.split("?");
+      const method = init?.method ?? "GET";
+      if (method !== "GET") {
+        mutations.push(`${method} ${path} ${typeof init?.body === "string" ? init.body : ""}`.trim());
+        const id = base?.split("/")[4] ?? "";
+        return json({ data: { id, status: "paused", archivedAt: null } });
+      }
       if (base === "/api/app/public-domain") return json({ publicDomain: "http://localhost" });
       if (base?.endsWith("/ai")) return json({ available: false, reason: "not_enabled" });
       if (base !== "/api/v3/surveys") throw new Error(`unexpected ${path}`);
@@ -84,7 +100,7 @@ const stubApi = ({
       });
     })
   );
-  return queries;
+  return Object.assign(queries, { mutations });
 };
 
 const renderList = (workspaceId = WORKSPACE_A) => {
@@ -209,5 +225,34 @@ describe("SurveysList rows", () => {
       screen.getByText(i18n.t("workspace.surveys.showing_count", { shown: 13, total: 13 }))
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: i18n.t("common.load_more") })).toBeNull();
+  });
+});
+
+describe("SurveysList archive", () => {
+  test("Undo in the archive toast restores the survey and runs it again if it was running", async () => {
+    const api = stubApi({ pages: [[survey(1, { name: "Live survey", status: "inProgress" })]] });
+    renderList();
+
+    const trigger = await screen.findByRole("button", {
+      name: i18n.t("workspace.surveys.open_options_for", { name: "Live survey" }),
+    });
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: i18n.t("workspace.surveys.archive") }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: i18n.t("workspace.surveys.stop_and_archive") })
+    );
+
+    await waitFor(() => expect(toast.getSnapshot().some((item) => item.action)).toBe(true));
+    const archived = toast.getSnapshot().find((item) => item.action);
+    expect(archived?.action?.label).toBe(i18n.t("workspace.surveys.undo_archive"));
+    archived?.action?.onClick();
+
+    await waitFor(() =>
+      expect(api.mutations).toEqual([
+        "POST /api/v3/surveys/survey-1/archive",
+        "POST /api/v3/surveys/survey-1/restore",
+        'PATCH /api/v3/surveys/survey-1 {"status":"inProgress"}',
+      ])
+    );
   });
 });
