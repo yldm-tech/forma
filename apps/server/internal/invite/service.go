@@ -146,10 +146,8 @@ func (s *Service) checkRole(role string) error {
 }
 
 func (s *Service) inviteURL(token string) string {
-	u := *s.cfg.WebAppURL
-	u.Path = acceptPath
+	u := s.cfg.AppPageURL(acceptPath)
 	u.RawQuery = url.Values{"token": {token}}.Encode()
-	u.Fragment = ""
 	return u.String()
 }
 

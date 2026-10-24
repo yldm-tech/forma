@@ -6732,7 +6732,7 @@
               },
               "required": false,
               "buttonExternal": true,
-              "buttonUrl": "https://forma.yldm.ai/auth/signup"
+              "buttonUrl": "https://forma.yldm.ai/app/auth/signup"
             }
           ],
           "buttonLabel": {
@@ -8287,7 +8287,7 @@
               },
               "required": false,
               "buttonExternal": true,
-              "buttonUrl": "https://forma.yldm.ai/auth/signup"
+              "buttonUrl": "https://forma.yldm.ai/app/auth/signup"
             }
           ],
           "buttonLabel": {

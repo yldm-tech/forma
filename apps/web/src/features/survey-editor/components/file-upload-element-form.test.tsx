@@ -90,7 +90,7 @@ test("on a one-workspace Forma Cloud plan a larger file size is capped at 10 MB,
   expect(updates.at(-1)).toEqual({ maxSizeInMB: 10 });
   expect(toast.getSnapshot().map((shown) => shown.message)).toContain("Max file size limit is 10 MB.");
   expect(screen.getByRole("link", { name: "upgrade your plan" }).getAttribute("href")).toBe(
-    `/organizations/${ORG}/settings/billing`
+    `/app/organizations/${ORG}/settings/billing`
   );
 });
 

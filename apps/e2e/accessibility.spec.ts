@@ -69,7 +69,7 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
     test.use({ viewport: VIEWPORTS[viewport] });
 
     test("the login page meets WCAG AA", async ({ page }) => {
-      await page.goto("/auth/login");
+      await page.goto("/app/auth/login");
       await expect(page.getByRole("heading", { name: "Log in to your account" })).toBeVisible();
       await expectOnlyKnownViolations(page, "login", viewport);
       // The email form only exists once it is opened.
@@ -85,7 +85,7 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
       const { workspaceId, surveyId } = await finishOnboarding(page);
 
       await page.setViewportSize(VIEWPORTS[viewport]);
-      await page.goto(`/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
+      await page.goto(`/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
       await expect(page.getByRole("main").getByRole("heading", { name: DEFAULT_QUESTION })).toBeVisible();
       await expectOnlyKnownViolations(page, "editor", viewport);
     });

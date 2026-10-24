@@ -50,6 +50,8 @@ func TestMain(m *testing.M) {
 
 const (
 	webApp = "http://app.example.com"
+	// appBase is where the SPA's pages live on WEBAPP_URL (config.AppBasePath).
+	appBase = webApp + "/app"
 	// strongPassword satisfies the policy and is not in the stubbed breach corpus.
 	strongPassword = "Correct-Horse-9"
 )

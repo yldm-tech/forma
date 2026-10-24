@@ -38,7 +38,7 @@ func TestForgotPassword(t *testing.T) {
 	if len(msgs) != 1 || msgs[0].To != "ada@example.com" {
 		t.Fatalf("mails %+v", msgs)
 	}
-	if !strings.Contains(msgs[0].HTML, webApp+resetPasswordPath+"?token=") || !strings.Contains(msgs[0].HTML, "30") {
+	if !strings.Contains(msgs[0].HTML, appBase+resetPasswordPath+"?token=") || !strings.Contains(msgs[0].HTML, "30") {
 		t.Fatal("reset mail lacks the link or its lifetime")
 	}
 	events := e.auditEvents(audit.ActionPasswordReset)

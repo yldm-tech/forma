@@ -115,16 +115,16 @@ func TestScopeSets(t *testing.T) {
 	}
 }
 
-// The URLs follow forma2's oauth-urls.ts: a WEBAPP_URL subpath is kept, BETTER_AUTH_URL decides the issuer, and /api/auth is not appended twice.
+// The URLs follow forma2's oauth-urls.ts: a WEBAPP_URL subpath is kept, BETTER_AUTH_URL decides the issuer, and /api/auth is not appended twice. The consent page is an SPA page, under the app's base path.
 func TestURLs(t *testing.T) {
 	cases := []struct {
 		webApp, betterAuth           string
 		resource, issuer, prm, webUI string
 	}{
-		{"https://app.example.com/", "", "https://app.example.com/api/mcp", "https://app.example.com/api/auth", "https://app.example.com/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com"},
-		{"https://example.com/forma/?x=1#y", "", "https://example.com/forma/api/mcp", "https://example.com/forma/api/auth", "https://example.com/forma/.well-known/oauth-protected-resource/api/mcp", "https://example.com/forma"},
-		{"https://app.example.com", "https://auth.example.com/custom/api/auth/", "https://app.example.com/api/mcp", "https://auth.example.com/custom/api/auth", "https://app.example.com/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com"},
-		{"https://APP.example.com:443/api/mcp", "", "https://app.example.com/api/mcp", "https://app.example.com/api/mcp/api/auth", "https://app.example.com/api/mcp/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/api/mcp"},
+		{"https://app.example.com/", "", "https://app.example.com/api/mcp", "https://app.example.com/api/auth", "https://app.example.com/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/app"},
+		{"https://example.com/forma/?x=1#y", "", "https://example.com/forma/api/mcp", "https://example.com/forma/api/auth", "https://example.com/forma/.well-known/oauth-protected-resource/api/mcp", "https://example.com/forma/app"},
+		{"https://app.example.com", "https://auth.example.com/custom/api/auth/", "https://app.example.com/api/mcp", "https://auth.example.com/custom/api/auth", "https://app.example.com/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/app"},
+		{"https://APP.example.com:443/api/mcp", "", "https://app.example.com/api/mcp", "https://app.example.com/api/mcp/api/auth", "https://app.example.com/api/mcp/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/api/mcp/app"},
 	}
 	for _, tc := range cases {
 		cfg := configFor(t, tc.webApp, tc.betterAuth)

@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./index.css";
+import { APP_BASE_PATH } from "./lib/base-path";
 import { initI18n, matchLocale } from "./lib/i18n";
 import { createQueryClient } from "./lib/query-client";
 import { initSentry } from "./lib/telemetry/sentry";
@@ -13,6 +14,8 @@ const queryClient = createQueryClient();
 
 const router = createRouter({
   routeTree,
+  // Routes, links and redirects are written without the base; the router adds it to every URL and strips it from the address bar.
+  basepath: APP_BASE_PATH,
   context: { queryClient },
   defaultPreload: "intent",
   // Route loaders read through TanStack Query, which owns caching; the router must not cache a second copy.

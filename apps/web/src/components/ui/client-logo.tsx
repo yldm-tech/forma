@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TWorkspace as Workspace } from "@forma/types/workspace";
 import { TLogo } from "@forma/types/styling";
 import { cn } from "../../lib/cn";
+import { appHref } from "../../lib/base-path";
 
 interface ClientLogoProps {
   workspaceLogo: Workspace["logo"] | null;
@@ -29,7 +30,7 @@ export const ClientLogo = ({
 }: Readonly<ClientLogoProps>) => {
   const { t } = useTranslation();
   const logoToUse = surveyLogo?.url ? surveyLogo : workspaceLogo;
-  const lookSettingsHref = `/workspaces/${workspaceId}/settings/workspace/look`;
+  const lookSettingsHref = appHref(`/workspaces/${workspaceId}/settings/workspace/look`);
 
   let positionClasses = "";
   if (position === "overlay" && !previewSurvey) {

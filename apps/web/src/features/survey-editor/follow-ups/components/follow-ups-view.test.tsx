@@ -17,6 +17,6 @@ describe("FollowUpsView", () => {
         locale="en-US"
       />
     );
-    expect(html).toContain('href="/workspaces/0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f/workflows"');
+    expect(html).toContain('href="/app/workspaces/0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f/workflows"');
   });
 });

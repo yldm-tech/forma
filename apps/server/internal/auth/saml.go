@@ -278,7 +278,12 @@ func (s *SSO) consumeResponse(ctx context.Context, encoded, relayState string) c
 		s.log.ErrorContext(ctx, "SAML assertion could not be stored", "err", err)
 		return s.failure(callbackCreateFailed)
 	}
-	return callbackResult{redirect: s.pageWithQuery(samlCallbackPath, url.Values{"code": {code}, "state": {relayState}})}
+	// The callback is a server route, not an SPA page, so it stays at the root of WEBAPP_URL.
+	callback := *s.cfg.WebAppURL
+	callback.Path = samlCallbackPath
+	callback.RawQuery = url.Values{"code": {code}, "state": {relayState}}.Encode()
+	callback.Fragment = ""
+	return callbackResult{redirect: callback.String()}
 }
 
 // parseSAMLResponse validates a response with crewjam/saml: the XML is well formed and round-trips; the Response or every Assertion is signed by a certificate in the IdP's metadata, and only signed content is read; the Destination and every bearer confirmation's Recipient are the consumer service; the response and its confirmations answer requestID; the issue instants, confirmation and conditions are within their time windows; the issuer is the IdP; and the audience is this service provider. On top of that it requires a bearer confirmation and conditions, which crewjam/saml dereferences without checking, so a signed assertion that lacks them is refused instead of crashing the request.

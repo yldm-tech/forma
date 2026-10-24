@@ -53,7 +53,7 @@ func TestDeleteAccount(t *testing.T) {
 
 	r = b.post("/auth/account/delete", map[string]string{"password": strongPassword})
 	expectStatus(t, r, http.StatusOK, "")
-	if r.json()["redirectUrl"] != "/auth/login" || b.has(sessionCookieName) {
+	if r.json()["redirectUrl"] != "/app/auth/login" || b.has(sessionCookieName) {
 		t.Fatalf("delete: %s, cookies %v", r.Body.String(), b.cookies)
 	}
 	for _, q := range []string{
@@ -117,7 +117,7 @@ func TestDeleteAccountByEmailLink(t *testing.T) {
 		t.Fatalf("body %s", r.Body.String())
 	}
 	msgs := e.sent("sso@example.com")
-	if len(msgs) != 1 || msgs[0].Subject != subjectDeletion || !strings.Contains(msgs[0].HTML, webApp+deleteAccountPath+"?token=") || !strings.Contains(msgs[0].HTML, "60 minutes") {
+	if len(msgs) != 1 || msgs[0].Subject != subjectDeletion || !strings.Contains(msgs[0].HTML, appBase+deleteAccountPath+"?token=") || !strings.Contains(msgs[0].HTML, "60 minutes") {
 		t.Fatalf("mails %+v", msgs)
 	}
 	token := e.lastToken("sso@example.com", subjectDeletion)
@@ -128,7 +128,7 @@ func TestDeleteAccountByEmailLink(t *testing.T) {
 
 	r = b.post("/auth/account/delete/confirm", map[string]string{"token": token})
 	expectStatus(t, r, http.StatusOK, "")
-	if r.json()["redirectUrl"] != "/auth/login" || e.count(`SELECT count(*) FROM users WHERE id = ?`, sso) != 0 {
+	if r.json()["redirectUrl"] != "/app/auth/login" || e.count(`SELECT count(*) FROM users WHERE id = ?`, sso) != 0 {
 		t.Fatalf("confirm: %s", r.Body.String())
 	}
 	if e.count(`SELECT count(*) FROM users WHERE id = ?`, other) != 1 {

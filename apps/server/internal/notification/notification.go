@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -78,8 +77,7 @@ func (n *Notifier) Content(rf ResponseFinished) (mailer.ResponseFinished, error)
 		return mailer.ResponseFinished{}, err
 	}
 	public := responsemail.PublicBase(n.cfg)
-	app := strings.TrimRight(n.cfg.WebAppURL.String(), "/")
-	base := app + "/workspaces/" + rf.WorkspaceID.String()
+	base := n.cfg.AppPageURL("/workspaces/" + rf.WorkspaceID.String()).String()
 	c := mailer.ResponseFinished{
 		SurveyName:                 rf.Survey.Name,
 		Elements:                   responsemail.WithAbsoluteFiles(elements, public),
@@ -135,8 +133,9 @@ func (n *Notifier) Send(ctx context.Context, recipients []Recipient, rf Response
 // unsubscribeTypes are the switches an unsubscribe link may name.
 var unsubscribeTypes = map[string]bool{"alert": true, "unsubscribedOrganizationIds": true}
 
-// UnsubscribeTarget is where an email's unsubscribe link lands: the account notification settings, which turn the named switch off. forma2's emails linked to /workspaces/{id}/settings/notifications, a page forma2 never had; the link is kept and answered here. elementId keeps its value, except that a forma2 id from an email sent before the migration becomes the id of the survey or organization migrated from it.
+// UnsubscribeTarget is where an email's unsubscribe link lands: the account notification settings under the app's base path, which turn the named switch off. forma2's emails linked to /workspaces/{id}/settings/notifications, a page forma2 never had; the link is kept (under /app, where the root path is redirected) and answered here. elementId keeps its value, except that a forma2 id from an email sent before the migration becomes the id of the survey or organization migrated from it.
 func UnsubscribeTarget(kind, elementID string) string {
+	const settings = config.AppBasePath + "/account/settings/notifications"
 	q := url.Values{}
 	if unsubscribeTypes[kind] {
 		q.Set("type", kind)
@@ -145,7 +144,7 @@ func UnsubscribeTarget(kind, elementID string) string {
 		}
 	}
 	if len(q) == 0 {
-		return "/account/settings/notifications"
+		return settings
 	}
-	return "/account/settings/notifications?" + q.Encode()
+	return settings + "?" + q.Encode()
 }

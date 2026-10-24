@@ -64,7 +64,7 @@ func TestEmailChange(t *testing.T) {
 		t.Fatal("the old address was written to")
 	}
 	msgs := e.sent("new@example.com")
-	if len(msgs) != 1 || msgs[0].Subject != subjectEmailChange || !strings.Contains(msgs[0].HTML, webApp+verifyEmailChangePath+"?token=") {
+	if len(msgs) != 1 || msgs[0].Subject != subjectEmailChange || !strings.Contains(msgs[0].HTML, appBase+verifyEmailChangePath+"?token=") {
 		t.Fatalf("mails %+v", msgs)
 	}
 	token := e.lastToken("new@example.com", subjectEmailChange)

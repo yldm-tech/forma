@@ -198,7 +198,7 @@ func TestGoogleSheetsOAuthFlow(t *testing.T) {
 	}
 
 	rec := e.callback("/api/google-sheet/callback", o, url.Values{"state": {q.Get("state")}, "code": {"auth-code"}})
-	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/workspaces/"+o.ws.String()+"/integrations/google-sheets" {
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/app/workspaces/"+o.ws.String()+"/integrations/google-sheets" {
 		t.Fatalf("callback = %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
 	}
 	exchange := e.fake.to(http.MethodPost, "/google/token")
@@ -225,7 +225,7 @@ func TestGoogleSheetsOAuthFlow(t *testing.T) {
 	for given, want := range map[string]string{"access_denied": "access_denied", "javascript:alert(1)": "oauth_error"} {
 		state := e.authorize("/api/google-sheet", o).Query().Get("state")
 		rec := e.callback("/api/google-sheet/callback", o, url.Values{"state": {state}, "error": {given}, "code": {"c"}})
-		if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/workspaces/"+o.ws.String()+"/integrations/google-sheets?error="+want {
+		if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/app/workspaces/"+o.ws.String()+"/integrations/google-sheets?error="+want {
 			t.Errorf("error %q: %d %s", given, rec.Code, rec.Header().Get("Location"))
 		}
 	}
@@ -263,7 +263,7 @@ func TestAirtableOAuthFlow(t *testing.T) {
 		t.Fatalf("authorize URL = %s", u)
 	}
 	rec := e.callback("/api/v1/integrations/airtable/callback", o, url.Values{"state": {q.Get("state")}, "code": {"air-code"}})
-	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/workspaces/"+o.ws.String()+"/settings/workspace/integrations/airtable" {
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/app/workspaces/"+o.ws.String()+"/settings/workspace/integrations/airtable" {
 		t.Fatalf("callback = %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
 	}
 	form, _ := url.ParseQuery(string(e.fake.to(http.MethodPost, "/airtable/oauth2/v1/token")[0].Body))
@@ -311,7 +311,7 @@ func TestNotionOAuthFlow(t *testing.T) {
 	if u.String() != want {
 		t.Fatalf("authorize URL = %s, want %s", u, want)
 	}
-	page := webApp + "/workspaces/" + o.ws.String() + "/settings/workspace/integrations/notion"
+	page := webApp + "/app/workspaces/" + o.ws.String() + "/settings/workspace/integrations/notion"
 	rec := e.callback("/api/v1/integrations/notion/callback", o, url.Values{"state": {u.Query().Get("state")}, "code": {"n-code"}})
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != page {
 		t.Fatalf("callback = %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
@@ -376,7 +376,7 @@ func TestSlackOAuthFlow(t *testing.T) {
 		t.Fatalf("authorize URL = %s, want %s", u, want)
 	}
 	rec := e.callback("/api/v1/integrations/slack/callback", o, url.Values{"state": {u.Query().Get("state")}, "code": {"s-code"}})
-	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/workspaces/"+o.ws.String()+"/settings/workspace/integrations/slack" {
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != webApp+"/app/workspaces/"+o.ws.String()+"/settings/workspace/integrations/slack" {
 		t.Fatalf("callback = %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
 	}
 	form, _ := url.ParseQuery(string(e.fake.to(http.MethodPost, "/slack/api/oauth.v2.access")[0].Body))

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -15,13 +17,23 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/actionclass"
 	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/billing"
 	"github.com/yldm-tech/forma/apps/server/internal/clientapi"
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
+	"github.com/yldm-tech/forma/apps/server/internal/contact/contactsurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/health"
+	"github.com/yldm-tech/forma/apps/server/internal/instance"
+	"github.com/yldm-tech/forma/apps/server/internal/integration"
 	"github.com/yldm-tech/forma/apps/server/internal/invite"
 	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/mcp"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi"
+	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/org"
 	"github.com/yldm-tech/forma/apps/server/internal/plain"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
@@ -29,10 +41,15 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/storage"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/emailembed"
 	"github.com/yldm-tech/forma/apps/server/internal/tag"
 	"github.com/yldm-tech/forma/apps/server/internal/team"
+	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
@@ -192,4 +209,154 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	if len(want) != 0 {
 		t.Fatalf("routes not mounted: %v", want)
 	}
+}
+
+// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai sends every other path to the marketing website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. The ingress in yldm-platform lists exactly these, plus /app.
+//
+// Each entry is a whole path segment, matched as the path itself and everything under it (/s and /s/...), never as a character prefix: a prefix rule for /s or /p would also take the website's /security or /pricing. A proxy whose prefix match is character-wise, such as Traefik's Ingress pathType Prefix, must route each entry as Exact /x plus Prefix /x/ (the single files favicon.ico and logo-transparent.png need only Exact).
+var RootPathPrefixes = []string{
+	".well-known",          // OAuth and OpenID discovery documents for MCP clients
+	"account",              // legacy admin pages, redirected to /app
+	"animated-bgs",         // survey backgrounds (videos) stored by root URL
+	"api",                  // every API: /api/app, the client API, management v1/v2, v3, MCP, OAuth, SSO and integration callbacks, Stripe
+	"auth",                 // legacy admin pages, redirected to /app
+	"billing-confirmation", // legacy admin page, redirected to /app
+	"c",                    // personal link surveys
+	"email-change-without-verification-success", // legacy admin page, redirected to /app
+	"environments",         // forma2's legacy admin pages, redirected to /app
+	"favicon",              // favicons
+	"favicon.ico",          // favicon
+	"health",               // liveness and readiness probes
+	"i",                    // forma2's /i/{path} shortcut, redirected to /app
+	"image-backgrounds",    // survey backgrounds (images) stored by root URL
+	"ingest",               // first-party PostHog proxy
+	"invite",               // legacy invite links, redirected to /app
+	"js",                   // the SDK and survey runtime bundles customer sites embed
+	"logo-transparent.png", // the logo emails embed
+	"organizations",        // legacy admin pages, redirected to /app
+	"p",                    // pretty-URL surveys
+	"projects",             // forma2's legacy admin pages, redirected to /app
+	"s",                    // public link surveys
+	"sample-csv",           // the invite template download
+	"setup",                // legacy admin pages, redirected to /app
+	"smiley-icons",         // rating icons emails and surveys load
+	"star-icons",           // rating icons emails and surveys load
+	"storage",              // stored files
+	"verify-email-change",  // legacy admin page, redirected to /app
+	"workspaces",           // legacy admin pages and email links, redirected to /app
+}
+
+// The production router answers exactly RootPathPrefixes outside /app, so the list an ingress is configured with cannot fall behind a new route, a new public file or a removed one.
+func TestRootPathPrefixes(t *testing.T) {
+	webURL, _ := url.Parse("https://app.example.com")
+	cfg := config.Config{WebAppURL: webURL, SessionMaxAge: 86400}
+	cfg.Telemetry.PostHogKey = "phc_test"
+	r := newProductionRouter(t, cfg)
+
+	served := map[string]bool{}
+	for _, route := range r.Routes() {
+		first, _, _ := strings.Cut(strings.TrimPrefix(route.Path, "/"), "/")
+		served[first] = true
+	}
+	for _, first := range append(slices.Clone(webui.RootPublicPaths), webui.LegacyAdminPaths...) {
+		served[first] = true
+	}
+	if !served["app"] {
+		t.Fatal("no route under /app; the router no longer mounts the email links there")
+	}
+	delete(served, "app")
+	var got []string
+	for first := range served {
+		got = append(got, first)
+	}
+	sort.Strings(got)
+	want := slices.Sorted(slices.Values(RootPathPrefixes))
+	if !slices.Equal(got, want) {
+		t.Fatalf("root path prefixes = %q, want %q; update RootPathPrefixes and the ingress together", got, want)
+	}
+
+	// Through the whole router, with every middleware in front: the legacy admin prefixes redirect, the root leads to the app, and a path outside the list is not the app.
+	for _, first := range webui.LegacyAdminPaths {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/"+first+"/probe?q=1", nil))
+		if rec.Code != http.StatusPermanentRedirect || rec.Header().Get("Location") != "/app/"+first+"/probe?q=1" {
+			t.Errorf("/%s/probe = %d %s, want 308 to /app/%s/probe?q=1", first, rec.Code, rec.Header().Get("Location"), first)
+		}
+	}
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/pricing", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("/pricing = %d, want 404", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/app/" {
+		t.Errorf("/ = %d %s, want 302 to /app/", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+// newProductionRouter builds the production router (NewRouter, the graph `forma serve` mounts) with handlers that have no dependencies behind them, which is enough to register every route.
+func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
+	t.Helper()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	p := &Platform{Config: cfg, Log: log, ClientIP: httpapi.NewClientIPResolver(cfg, log)}
+	sessions := auth.NewSessions(cfg, nil, log)
+	guard := surveyv3.NewGuard(cfg, sessions, nil, nil, log)
+	v3 := v3api.NewMiddleware(cfg, nil, nil)
+	web, err := webui.NewFromFS(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	surveys := survey.NewHandler(nil, sessions, guard, nil, log)
+	workflows := workflow.NewHandler(cfg, nil, guard, sessions, nil, log)
+	oauth, err := oauthserver.NewHandler(cfg, nil, nil, sessions, nil, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpHandler, err := mcp.NewHandler(cfg, nil, nil, nil, nil, nil, surveys, workflows, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v1 := mgmtv1.New(cfg, nil, nil, nil, nil, nil, log)
+
+	return NewRouter(p, sessions, nil,
+		health.NewHandler(nil, log),
+		auth.NewHandler(cfg, nil, sessions, nil),
+		auth.NewSSOHandler(cfg, auth.NewSSO(cfg, nil, log)),
+		org.NewHandler(nil, sessions),
+		workspace.NewHandler(nil, sessions),
+		team.NewHandler(nil, sessions),
+		invite.NewHandler(nil, sessions),
+		apikey.NewHandler(nil, sessions, nil),
+		surveys,
+		contact.NewHandler(nil, sessions),
+		contact.NewV3Handler(nil),
+		actionclass.NewHandler(nil, sessions, v3),
+		tag.NewHandler(nil, sessions, v3, nil),
+		response.NewHandler(nil, sessions),
+		analysis.NewHandler(nil, sessions),
+		ai.NewHandler(nil, nil, sessions),
+		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
+		linksurvey.NewHandler(cfg, nil, nil, web, log),
+		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log),
+		webhook.NewHandler(nil, sessions),
+		webhook.NewV1Handler(nil, v1, log),
+		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
+		integration.NewHandler(nil, sessions),
+		integration.NewOAuthHandler(nil, sessions, nil, log),
+		notification.NewHandler(web),
+		analysis.NewAttachmentsHandler(nil, nil, v3, nil, nil, log),
+		workflows,
+		oauth,
+		oauthserver.NewAppHandler(oauth, sessions),
+		mcpHandler,
+		billing.NewHandler(nil, sessions),
+		billing.NewWebhookHandler(nil, log),
+		instance.NewHandler(nil, nil, sessions),
+		web,
+		unsplash.NewHandler(nil, sessions),
+		contactsurvey.NewHandler(nil, sessions),
+		emailembed.NewHandler(nil, sessions),
+		plain.NewHandler(cfg, nil, sessions),
+	)
 }

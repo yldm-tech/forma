@@ -7,6 +7,7 @@ import { Button } from "../../../../components/ui/button";
 import type { TFollowUpEmailToUser } from "../../types/survey-follow-up";
 import { formatSurveyFollowUpsSunsetDate } from "../lib/deprecation";
 import { FollowUpItem } from "./follow-up-item";
+import { appHref } from "../../../../lib/base-path";
 
 interface FollowUpsViewProps {
   localSurvey: TSurvey;
@@ -46,7 +47,7 @@ export const FollowUpsView = ({
         <Button size="sm" asChild>
           {/* A new tab on purpose: the editor autosaves drafts only, so leaving a published survey here would drop what the author has not saved. */}
           <a
-            href={`/workspaces/${localSurvey.workspaceId}/workflows`}
+            href={appHref(`/workspaces/${localSurvey.workspaceId}/workflows`)}
             target="_blank"
             rel="noopener noreferrer">
             {t("common.new_workflow")}

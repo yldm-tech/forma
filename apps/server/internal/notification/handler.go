@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
@@ -16,10 +17,10 @@ type Handler struct {
 
 func NewHandler(web *webui.Handler) *Handler { return &Handler{web: web} }
 
-// Register mounts the links' paths ahead of the SPA, which owns every other page.
+// Register mounts the links' paths under the app's base path, ahead of the SPA, which owns every other page there. The root paths emails sent before the SPA moved under /app carry are redirected to these by the SPA handler.
 func (h *Handler) Register(r gin.IRouter) {
-	r.GET("/workspaces/:workspaceId/settings/notifications", h.unsubscribe)
-	r.GET("/workspaces/:workspaceId/surveys/:surveyId/responses", h.responses)
+	r.GET(config.AppBasePath+"/workspaces/:workspaceId/settings/notifications", h.unsubscribe)
+	r.GET(config.AppBasePath+"/workspaces/:workspaceId/surveys/:surveyId/responses", h.responses)
 }
 
 // unsubscribe redirects to the account notification settings with the switch the link names, which the page turns off once the user is signed in.
@@ -36,7 +37,7 @@ func (h *Handler) responses(c *gin.Context) {
 		h.web.ServePage(c)
 		return
 	}
-	target := "/workspaces/" + ws.String() + "/surveys/" + survey.String() + "/responses"
+	target := config.AppBasePath + "/workspaces/" + ws.String() + "/surveys/" + survey.String() + "/responses"
 	if c.Request.URL.RawQuery != "" {
 		target += "?" + c.Request.URL.RawQuery
 	}
