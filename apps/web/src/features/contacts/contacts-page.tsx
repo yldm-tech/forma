@@ -206,6 +206,9 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
   const contactHref = (contactId: string) => `/workspaces/${workspaceId}/contacts/${contactId}`;
   // The first visible text column carries a real link to the contact, for the keyboard, screen readers and opening in a new tab.
   const linkColumnId = LINK_COLUMN_IDS.find((id) => columnVisibility[id] !== false && columnIds.includes(id));
+  // A match in a hidden column is explained under the link, or under the first visible column when every link column is hidden, so the hint never disappears with them.
+  const hintColumnId =
+    linkColumnId ?? columnIds.find((id) => id !== "select" && columnVisibility[id] !== false);
   const linkText = (row: ContactTableRow): string => {
     const texts: Record<string, string> = {
       email: row.email,
@@ -327,6 +330,7 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
                   className="group cursor-pointer">
                   {row.getVisibleCells().map((cell) => {
                     const isLinkCell = cell.column.id === linkColumnId;
+                    const cellHint = cell.column.id === hintColumnId ? hiddenMatch : undefined;
                     const content = flexRender(cell.column.columnDef.cell, cell.getContext());
                     return (
                       <TableCell
@@ -349,7 +353,9 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
                           className={cn(
                             "flex flex-1",
                             !isLinkCell && "truncate",
-                            isLinkCell && hiddenMatch ? "flex-col justify-center" : "items-center",
+                            cellHint
+                              ? cn("flex-col justify-center", !isLinkCell && "items-start")
+                              : "items-center",
                             isExpanded ? "min-h-10" : "h-full"
                           )}>
                           {isLinkCell ? (
@@ -363,10 +369,10 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
                           ) : (
                             content
                           )}
-                          {isLinkCell && hiddenMatch && (
-                            <span className="truncate text-xs text-slate-500">
-                              {t("workspace.contacts.search_matched_in", { column: hiddenMatch.label })}{" "}
-                              <HighlightedText value={hiddenMatch.value} searchValue={search} />
+                          {cellHint && (
+                            <span className="max-w-full truncate text-xs text-slate-500">
+                              {t("workspace.contacts.search_matched_in", { column: cellHint.label })}{" "}
+                              <HighlightedText value={cellHint.value} searchValue={search} />
                             </span>
                           )}
                         </div>

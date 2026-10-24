@@ -4,7 +4,7 @@ import type { TActionClass as ActionClass } from "@forma/types/action-classes";
 import { TSurvey } from "@forma/types/surveys/types";
 import { ActionClassInfo } from "../../../components/ui/action-class-info";
 import { Input } from "../../../components/ui/input";
-import { ACTION_TYPE_ICON_LOOKUP } from "../../action-classes/lib/action-icon";
+import { ActionClassIcon } from "../../action-classes/lib/action-icon";
 
 interface SavedActionsTabProps {
   actionClasses: ActionClass[];
@@ -78,9 +78,10 @@ export const SavedActionsTab = ({
                       className="flex cursor-pointer flex-col items-start rounded-md border border-slate-300 bg-white px-4 py-2 hover:bg-slate-100"
                       onClick={() => handleActionClick(action)}>
                       <div className="mt-1 flex items-center">
-                        <div className="mr-1.5 size-4 text-slate-600">
-                          {ACTION_TYPE_ICON_LOOKUP[action.type]}
-                        </div>
+                        <ActionClassIcon
+                          actionClass={action}
+                          className="mr-1.5 size-4 shrink-0 text-slate-600"
+                        />
                         <h4 className="text-sm font-semibold text-slate-600">{action.name}</h4>
                       </div>
                       <ActionClassInfo actionClass={action} />
