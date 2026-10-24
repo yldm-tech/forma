@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -55,7 +56,8 @@ export interface SurveyActions {
   archiveSurvey: (surveyId: string) => Promise<unknown>;
   restoreSurvey: (surveyId: string) => Promise<unknown>;
   renameSurvey: (surveyId: string, name: string) => Promise<unknown>;
-  copySurvey: (input: { surveyId: string; targetWorkspaceId: string }) => Promise<unknown>;
+  /** Resolves to the created survey, so a duplicate can be opened. */
+  copySurvey: (input: { surveyId: string; targetWorkspaceId: string }) => Promise<{ id: string }>;
 }
 
 const statusLabelKey: Record<SurveyStatus, string> = {
@@ -65,7 +67,7 @@ const statusLabelKey: Record<SurveyStatus, string> = {
   draft: "common.draft",
 };
 
-/** forma2's SurveyDropDownMenu: restore and delete for an archived survey; edit, rename, duplicate, status, copy, preview, copy link, delete and archive for any other. */
+/** forma2's SurveyDropDownMenu: restore and delete for an archived survey; edit, rename, duplicate, status, copy, preview, copy link, archive and delete for any other. Delete, the one action that cannot be undone, comes last, set apart and in red. */
 export const SurveyDropdownMenu = ({
   survey,
   rules,
@@ -92,7 +94,8 @@ export const SurveyDropdownMenu = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const editHref = `/workspaces/${workspaceId}/surveys/${survey.id}/edit`;
+  const editHrefOf = (surveyId: string) => `/workspaces/${workspaceId}/surveys/${surveyId}/edit`;
+  const editHref = editHrefOf(survey.id);
   const isInProgress = survey.status === "inProgress";
 
   if (!rules.hasVisibleActions) return null;
@@ -126,7 +129,10 @@ export const SurveyDropdownMenu = ({
     const id = toast.loading(t("workspace.surveys.archiving_survey"));
     try {
       await actions.archiveSurvey(survey.id);
-      toast.success(t("workspace.surveys.survey_archived_successfully"), { id });
+      toast.success(t("workspace.surveys.survey_archived_successfully"), {
+        id,
+        action: { label: t("workspace.surveys.undo_archive"), onClick: () => void restoreSurvey() },
+      });
       setArchiveOpen(false);
     } catch (error) {
       toast.error(v3ErrorMessage(error, t("workspace.surveys.error_archiving_survey")), { id });
@@ -146,12 +152,23 @@ export const SurveyDropdownMenu = ({
     }
   };
 
-  const duplicateSurvey = async () => {
+  /** Duplicates the survey into this workspace. The copy lands wherever the sort puts it, so the toast offers to open it; openCopy opens its editor at once instead. */
+  const duplicateSurvey = async ({ openCopy = false }: { openCopy?: boolean } = {}) => {
     setMenuOpen(false);
     setIsDuplicating(true);
     try {
-      await actions.copySurvey({ surveyId: survey.id, targetWorkspaceId: workspaceId });
-      toast.success(t("workspace.surveys.survey_duplicated_successfully"));
+      const copy = await actions.copySurvey({ surveyId: survey.id, targetWorkspaceId: workspaceId });
+      if (openCopy) {
+        toast.success(t("workspace.surveys.survey_duplicated_successfully"));
+        void navigate({ href: editHrefOf(copy.id) });
+      } else {
+        toast.success(t("workspace.surveys.survey_duplicated_successfully"), {
+          action: {
+            label: t("workspace.surveys.open_duplicate"),
+            onClick: () => void navigate({ href: editHrefOf(copy.id) }),
+          },
+        });
+      }
     } catch (error) {
       toast.error(errorMessage(t, error));
     } finally {
@@ -171,7 +188,7 @@ export const SurveyDropdownMenu = ({
         <DropdownMenuTrigger asChild disabled={rules.isMenuDisabled}>
           <button
             type="button"
-            aria-label={t("workspace.surveys.open_options")}
+            aria-label={t("workspace.surveys.open_options_for", { name: survey.name })}
             className={cn(
               "rounded-lg border bg-white p-2",
               rules.isMenuDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-slate-50"
@@ -191,6 +208,7 @@ export const SurveyDropdownMenu = ({
                   }}>
                   {t("workspace.surveys.restore")}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600"
                   icon={<TrashIcon className="size-4" />}
@@ -278,15 +296,16 @@ export const SurveyDropdownMenu = ({
             {!rules.isArchived && rules.canManage && (
               <>
                 <DropdownMenuItem
-                  icon={<TrashIcon className="size-4" />}
-                  onSelect={openDialog(setDeleteOpen)}>
-                  {t("common.delete")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-600 focus:text-red-600"
                   icon={<ArchiveIcon className="size-4" />}
                   onSelect={openDialog(setArchiveOpen)}>
                   {t("workspace.surveys.archive")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600"
+                  icon={<TrashIcon className="size-4" />}
+                  onSelect={openDialog(setDeleteOpen)}>
+                  {t("common.delete")}
                 </DropdownMenuItem>
               </>
             )}
@@ -301,12 +320,17 @@ export const SurveyDropdownMenu = ({
           setOpen={setDeleteOpen}
           onDelete={() => void deleteSurvey()}
           text={t("workspace.surveys.delete_survey_and_responses_warning")}
-          isDeleting={isDeleting}
-        />
+          isDeleting={isDeleting}>
+          <p className="mt-2 break-words text-slate-900">
+            {t("workspace.surveys.delete_survey_summary", { name: survey.name, count: survey.responseCount })}
+          </p>
+        </DeleteDialog>
       )}
       {!rules.isArchived && rules.canManage && (
         <>
           <ArchiveSurveyDialog
+            surveyName={survey.name}
+            responseCount={survey.responseCount}
             open={archiveOpen}
             setOpen={setArchiveOpen}
             isInProgress={isInProgress}
@@ -333,6 +357,8 @@ export const SurveyDropdownMenu = ({
               open={cautionOpen}
               setOpen={setCautionOpen}
               onEdit={() => void navigate({ href: editHref })}
+              onDuplicate={() => duplicateSurvey({ openCopy: true })}
+              isDuplicating={isDuplicating}
             />
           )}
         </>
@@ -343,12 +369,16 @@ export const SurveyDropdownMenu = ({
 
 /** forma2's archive confirmation: archiving a running survey stops it, so that confirmation cannot be dismissed by accident and its button says so. */
 const ArchiveSurveyDialog = ({
+  surveyName,
+  responseCount,
   open,
   setOpen,
   isInProgress,
   isArchiving,
   onConfirm,
 }: {
+  surveyName: string;
+  responseCount: number;
   open: boolean;
   setOpen: (open: boolean) => void;
   isInProgress: boolean;
@@ -377,7 +407,10 @@ const ArchiveSurveyDialog = ({
         </div>
       </DialogHeader>
       <DialogBody>
-        <div className="whitespace-pre-line">{t("workspace.surveys.archive_survey_warning")}</div>
+        <p className="break-words text-slate-900">
+          {t("workspace.surveys.archive_survey_summary", { name: surveyName, count: responseCount })}
+        </p>
+        <div className="mt-2 whitespace-pre-line">{t("workspace.surveys.archive_survey_warning")}</div>
       </DialogBody>
       <DialogFooter>
         <Button variant="ghost" onClick={() => setOpen(false)}>
