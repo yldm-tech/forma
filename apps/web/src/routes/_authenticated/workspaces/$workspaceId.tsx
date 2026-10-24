@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../../../components/shell/app-shell";
 import { MainNavigation } from "../../../components/shell/main-navigation";
-import { RoutePending } from "../../../components/shell/route-states";
+import { NotFound, RoutePending } from "../../../components/shell/route-states";
 import { SettingsNavigation } from "../../../components/shell/settings-navigation";
 import { TopControlBar } from "../../../components/shell/top-control-bar";
 import { Button } from "../../../components/ui/button";
@@ -37,7 +37,9 @@ const isWorkspaceUnavailable = (error: unknown): boolean =>
   error instanceof ApiError && (error.status === 403 || error.status === 404);
 
 /**
- * What the workspace layout shows for a not-found. A workspace the caller cannot open gets its own explanation, since it may well exist: a member outside its teams is told to ask for access, not that the page is missing. Any other not-found (an unknown path, a survey that is gone) is the 404 page. An unknown path is drawn inside the shell, in place of the page; a not-found thrown by a loader replaces the whole layout, so it is drawn as a page of its own with the logo.
+ * What the workspace layout shows for a not-found. A workspace the caller cannot open gets its own explanation, since it may well exist: a member outside its teams is told to ask for access, not that the page is missing. Any other not-found (an unknown path, a survey that is gone) is the 404 page.
+ *
+ * A not-found thrown by a loader replaces the whole layout, so it is drawn as a page of its own: the wordmark over the message, centred, as the root not-found page lays it out, with the shared NotFound for the 404. An unknown path is drawn inside the shell, in place of the page; the shell already has the page's <main>, so that 404 has its own markup, linking back to the workspace instead of the root.
  */
 function WorkspaceNotFound() {
   const { t } = useTranslation();
@@ -48,39 +50,32 @@ function WorkspaceNotFound() {
     queryClient.getQueryState(workspaceQuery(workspaceId).queryKey)?.error
   );
 
-  const body = noAccess ? (
-    <>
-      <h1 className="text-2xl font-bold text-slate-900">{t("workspace.no_access_title")}</h1>
-      <p className="mt-2 text-base text-slate-600">{t("workspace.no_access_description")}</p>
-      <Button asChild className="mt-8">
-        <Link to="/">{t("workspace.no_access_cta")}</Link>
-      </Button>
-    </>
-  ) : (
-    <>
-      <p className="text-sm font-semibold text-slate-900" data-testid="error-code">
-        404
-      </p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">{t("common.page_not_found")}</h1>
-      <p className="mt-2 text-base text-slate-600" data-testid="error-message">
-        {t("common.page_not_found_description")}
-      </p>
-      <Button asChild className="mt-8">
-        <Link to={workspaceHomePath(workspaceId)}>{t("common.back_to_home")}</Link>
-      </Button>
-    </>
-  );
-
-  const message = <div className="mx-auto flex max-w-xl flex-col items-center text-center">{body}</div>;
   if (!isStandalone) {
-    return <div className="flex h-full flex-col items-center justify-center p-8">{message}</div>;
+    return (
+      <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center p-8 text-center">
+        <p className="text-sm font-semibold text-slate-900">404</p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-900">{t("common.page_not_found")}</h1>
+        <p className="mt-2 text-base text-slate-600">{t("common.page_not_found_description")}</p>
+        <Button asChild className="mt-8">
+          <Link to={workspaceHomePath(workspaceId)}>{t("common.back_to_home")}</Link>
+        </Button>
+      </div>
+    );
   }
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50">
-      <header className="px-6 py-4">
-        <Wordmark className="text-2xl" />
-      </header>
-      <main className="flex flex-1 flex-col items-center justify-center p-8 pb-24">{message}</main>
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 px-4">
+      <Wordmark className="text-2xl" />
+      {noAccess ? (
+        <main className="mx-auto flex max-w-xl flex-col items-center justify-center py-16 text-center">
+          <h1 className="text-2xl font-bold text-slate-900">{t("workspace.no_access_title")}</h1>
+          <p className="mt-2 text-base text-slate-600">{t("workspace.no_access_description")}</p>
+          <Button asChild className="mt-8">
+            <Link to="/">{t("workspace.no_access_cta")}</Link>
+          </Button>
+        </main>
+      ) : (
+        <NotFound />
+      )}
     </div>
   );
 }
