@@ -133,7 +133,7 @@ const getElementColumns = (
                 {choiceIds.map((choiceId, index) => (
                   // A ranking repeats no id, but an Other answer maps several labels to "other".
                   // oxlint-disable-next-line react/no-array-index-key -- see above
-                  <IdBadge key={`${choiceId}-${index}`} id={choiceId} />
+                  <IdBadge key={`${choiceId}-${index}`} id={choiceId} tabIndex={-1} />
                 ))}
               </div>
             );
@@ -188,7 +188,8 @@ export const generateResponseTableColumns = (
   const responseIdColumn: ColumnDef<TResponseTableData> = {
     accessorKey: "responseId",
     header: () => <div className="gap-x-1.5">{t("common.response_id")}</div>,
-    cell: ({ row }) => <IdBadge id={row.original.responseId} />,
+    // Out of the tab order like every id in the table: the date is the row's keyboard stop, and the response card copies the id.
+    cell: ({ row }) => <IdBadge id={row.original.responseId} tabIndex={-1} />,
   };
 
   // The date is the row's one keyboard stop that opens the response: the click reaches the cell, which opens it for every column.
