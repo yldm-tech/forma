@@ -305,7 +305,10 @@ export const AppliedFilterChips = () => {
       key: `${row.elementType.id ?? ""}-${index}`,
       label: describeFilterRow(row),
       remove: () =>
-        setSelectedFilter((current) => ({ ...current, filter: current.filter.filter((_, i) => i !== index) })),
+        setSelectedFilter((current) => ({
+          ...current,
+          filter: current.filter.filter((_, i) => i !== index),
+        })),
     })),
     ...(statusLabel[selectedFilter.responseStatus]
       ? [
@@ -319,7 +322,9 @@ export const AppliedFilterChips = () => {
   ];
   if (chips.length === 0) return null;
   return (
-    <ul className="flex flex-wrap items-center gap-1.5" aria-label={t("workspace.surveys.summary.applied_filters")}>
+    <ul
+      className="flex flex-wrap items-center gap-1.5"
+      aria-label={t("workspace.surveys.summary.applied_filters")}>
       {chips.map((chip) => (
         <li
           key={chip.key}

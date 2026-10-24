@@ -319,5 +319,6 @@ export const generateResponseTableColumns = (
 export const getDefaultHiddenColumnIds = (survey: TSurvey, columnIds: readonly string[]): string[] =>
   columnIds.filter(
     (id) =>
-      (id === "singleUseId" && !survey.singleUse?.enabled) || (id.startsWith("ELEMENT_") && id.endsWith("optionIds"))
+      (id === "singleUseId" && !survey.singleUse?.enabled) ||
+      (id.startsWith("ELEMENT_") && id.endsWith("optionIds"))
   );

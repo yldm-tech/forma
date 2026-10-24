@@ -307,7 +307,7 @@ export const ResponseTable = ({
           isExpanded={isExpanded}
         />
         {/* The one scroll container of the table, both ways, at most a viewport tall: the header row sticks to its top and the horizontal scrollbar stays in view. */}
-        <div className="max-h-[calc(100dvh-8rem)] w-fit max-w-full overflow-auto rounded-xl border border-slate-200">
+        <div className="max-h-[max(20rem,calc(100dvh-22rem))] w-fit max-w-full overflow-auto rounded-xl border border-slate-200">
           <div className="w-full">
             <table
               className="w-full caption-bottom text-sm"

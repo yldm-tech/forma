@@ -130,7 +130,10 @@ export const NPSSummary = ({
                     {t("common.count_responses", { count: elementSummary[group].count })}
                   </p>
                 </div>
-                <ProgressBar barColor={NPS_GROUP_BAR_COLORS[group]} progress={elementSummary[group].percentage / 100} />
+                <ProgressBar
+                  barColor={NPS_GROUP_BAR_COLORS[group]}
+                  progress={elementSummary[group].percentage / 100}
+                />
               </button>
             ))}
           </div>

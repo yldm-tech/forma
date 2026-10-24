@@ -25,8 +25,8 @@ describe("hasActiveFilters", () => {
   test("is true for a condition, a status or a date range start", () => {
     expect(hasActiveFilters({ filter: [row], responseStatus: "all" }, { from: undefined, to })).toBe(true);
     expect(hasActiveFilters({ filter: [], responseStatus: "partial" }, { from: undefined, to })).toBe(true);
-    expect(hasActiveFilters({ filter: [], responseStatus: "all" }, { from: new Date("2026-10-01"), to })).toBe(
-      true
-    );
+    expect(
+      hasActiveFilters({ filter: [], responseStatus: "all" }, { from: new Date("2026-10-01"), to })
+    ).toBe(true);
   });
 });
