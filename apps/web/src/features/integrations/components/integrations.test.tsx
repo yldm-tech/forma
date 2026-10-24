@@ -783,7 +783,8 @@ describe("webhooks", () => {
       screen.queryByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
     ).toBeNull();
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("zapier")).toBeTruthy();
+    // A platform is shown by its product name.
+    expect(dialog.getByText("Zapier")).toBeTruthy();
     fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
     expect(dialog.getByLabelText(t("common.url"))).toHaveProperty("readOnly", true);
     expect(
