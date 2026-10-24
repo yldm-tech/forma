@@ -63,6 +63,7 @@ export const ZUserEmail = z
 
 export type TUserEmail = z.infer<typeof ZUserEmail>;
 
+// zod 4.5+ counts these length bounds in code points; the Go server and the web form count UTF-16 code units (String.prototype.length), so an astral character counts once here and twice there.
 export const ZUserPassword = z
   .string()
   .min(8, {

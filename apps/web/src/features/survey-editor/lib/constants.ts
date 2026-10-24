@@ -30,7 +30,7 @@ export const SURVEY_BG_COLORS = [
 ];
 
 /**
- * When scheduled surveys open and close: the defaults of SURVEY_SCHEDULING_TIME_ZONE, _LOCAL_HOUR and _LOCAL_MINUTE, which forma2 and the Go server share. The server snaps every publish and close date to this time itself; the editor uses it to show the day and time a date stands for.
+ * When scheduled surveys open and close when the server does not say: the defaults of SURVEY_SCHEDULING_TIME_ZONE, _LOCAL_HOUR and _LOCAL_MINUTE, which forma2 and the Go server share. The server sends the schedule in effect with the workspace (the organization's zone, or the instance's) and snaps every publish and close date to it itself; the editor uses it to show the day and time a date stands for.
  */
 export const SURVEY_SCHEDULING_CONFIG: TSurveySchedulingConfig = {
   timeZone: "Europe/Berlin",

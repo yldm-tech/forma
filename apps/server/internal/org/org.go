@@ -30,6 +30,8 @@ type Organization struct {
 	Whitelabel            json.RawMessage `json:"whitelabel"`
 	// DisplayTimeZone is an IANA zone; nil means UTC.
 	DisplayTimeZone *string `json:"displayTimeZone"`
+	// SurveySchedulingTimeZone is the IANA zone the organization's scheduled surveys open and close in; nil means the instance's SURVEY_SCHEDULING_TIME_ZONE.
+	SurveySchedulingTimeZone *string `json:"surveySchedulingTimeZone"`
 }
 
 // Billing is the organization's billing state, forma2's TOrganizationBilling.

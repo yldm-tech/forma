@@ -61,6 +61,8 @@ type UpdateInput struct {
 
 	PublishOn *time.Time `json:"publishOn"`
 	CloseOn   *time.Time `json:"closeOn"`
+	// SchedulingTimeZone is the zone the editor showed the publish and close dates in, which is not part of forma2's TSurvey. The dates keep their calendar day in it when the organization's zone has changed since the editor loaded it; without it they are read in the organization's zone.
+	SchedulingTimeZone *string `json:"schedulingTimeZone"`
 
 	IsVerifyEmailEnabled        bool    `json:"isVerifyEmailEnabled"`
 	IsBackButtonHidden          bool    `json:"isBackButtonHidden"`
@@ -319,6 +321,11 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 	}
 
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
+		// Before the survey's lock, in the order a zone change locks (lockedScheduleOf). A survey never changes workspace, so the unlocked snapshot names the right organization.
+		schedule, err := s.lockedScheduleOf(ctx, tx, current.WorkspaceID)
+		if err != nil {
+			return err
+		}
 		stored, err := tx.lockForUpdate(ctx, current.ID)
 		if err != nil {
 			return err
@@ -346,7 +353,7 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		rec.IsCaptureIPEnabled, rec.IsAnonymizeResponsesEnabled, rec.ShowLanguageSwitch = in.IsCaptureIPEnabled, in.IsAnonymizeResponsesEnabled, in.ShowLanguageSwitch
 		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
 		storedStatus := stored.Status
-		if rec.PublishOn, rec.CloseOn, err = s.schedule.normalize(&storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
+		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, pickedIn(schedule, in.SchedulingTimeZone), &storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
 			return err
 		}
 

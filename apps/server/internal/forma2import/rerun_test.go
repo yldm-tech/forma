@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/migrations"
 )
 
 func withOverwrite(o forma2import.Options) forma2import.Options {
@@ -68,6 +70,66 @@ func TestRefreshRefusesChangesMadeHere(t *testing.T) {
 	if _, err := forma2import.Run(ctx, withRefresh(options(t, dsn))); err != nil {
 		t.Fatalf("refresh after the overwrite: %v", err)
 	}
+}
+
+// Migration 00010 adds a column to organizations, which changes every row's text but no data. It carries the recorded digest of organizations over in both directions (a refresh runs only on this release's schema, so the record taken before it is the one rolling it back leaves), and a refresh after it is not refused, while a change made here still is.
+func TestRefreshAcrossTheSchedulingTimeZoneMigration(t *testing.T) {
+	ctx := context.Background()
+	dsn := forma2DB(t, 1)
+	importOnce(t, dsn)
+	conn := connect(t, dsn)
+	provider, closeMigrator, err := database.NewMigrator(dsn, migrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeMigrator()
+
+	if _, err := provider.DownTo(ctx, 9); err != nil {
+		t.Fatalf("roll back 00010: %v", err)
+	}
+	if recorded, now := recordedOrganizationsDigest(t, conn), organizationsDigest(t, conn); recorded != now {
+		t.Fatalf("after rolling back 00010 the record holds %s, the organizations are %s", recorded, now)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatalf("apply 00010: %v", err)
+	}
+	if r, err := forma2import.Run(ctx, withRefresh(options(t, dsn))); err != nil {
+		t.Fatalf("refresh after 00010: %v\n%s", err, reportText(r))
+	}
+
+	exec(t, conn, `UPDATE organizations SET survey_scheduling_time_zone = 'Asia/Tokyo'`)
+	if _, err := forma2import.Run(ctx, withRefresh(options(t, dsn))); !errors.Is(err, forma2import.ErrChangedSinceImport) || !strings.Contains(err.Error(), "organizations") {
+		t.Fatalf("refresh over a zone set here: %v", err)
+	}
+}
+
+// organizationsDigest is targetDigests' digest of organizations as the table is now.
+func organizationsDigest(t *testing.T, conn *pgx.Conn) string {
+	t.Helper()
+	ctx := context.Background()
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SET LOCAL TimeZone = 'UTC'; SET LOCAL DateStyle = 'ISO, YMD'; SET LOCAL IntervalStyle = 'postgres'; SET LOCAL extra_float_digits = 1; SET LOCAL bytea_output = 'hex'`); err != nil {
+		t.Fatal(err)
+	}
+	var digest string
+	if err := tx.QueryRow(ctx, `SELECT count(*)::text || ':' || COALESCE(sum(hashtextextended(t::text, 0)), 0)::text FROM organizations t`).Scan(&digest); err != nil {
+		t.Fatal(err)
+	}
+	return digest
+}
+
+// recordedOrganizationsDigest is the digest of organizations the latest import record holds.
+func recordedOrganizationsDigest(t *testing.T, conn *pgx.Conn) string {
+	t.Helper()
+	var digest string
+	if err := conn.QueryRow(context.Background(), `SELECT target_digests->>'organizations' FROM forma2_imports ORDER BY completed_at DESC, id DESC LIMIT 1`).Scan(&digest); err != nil {
+		t.Fatal(err)
+	}
+	return digest
 }
 
 // With nothing changed here, --refresh makes the imported tables what forma2 now holds: what forma2 deleted goes, and a newer invite to an address replaces the imported one instead of colliding with it.

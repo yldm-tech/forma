@@ -41,6 +41,13 @@ const organization: OrganizationDetail = {
   name: "Acme",
   isAISmartToolsEnabled: false,
   displayTimeZone: null,
+  surveySchedulingTimeZone: null,
+  surveyScheduling: {
+    timeZone: "Europe/Berlin",
+    localHour: 0,
+    localMinute: 0,
+    instanceTimeZone: "Europe/Berlin",
+  },
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
   userManagementAllowed: true,
@@ -71,10 +78,12 @@ const renderPage = ({
   storageConfigured,
   isFormaCloud,
   role = "owner",
+  overrides = {},
 }: {
   storageConfigured: boolean;
   isFormaCloud: boolean;
   role?: OrganizationRole;
+  overrides?: Partial<OrganizationDetail>;
 }) => {
   stubServer();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -88,7 +97,7 @@ const renderPage = ({
         path: "/",
         component: () => (
           <OrganizationGeneralPage
-            organization={{ ...organization, membership: { ...organization.membership, role } }}
+            organization={{ ...organization, ...overrides, membership: { ...organization.membership, role } }}
           />
         ),
       }),
@@ -138,6 +147,26 @@ describe("OrganizationGeneralPage", () => {
       ).toBe(true);
     }
   );
+
+  test("the scheduling zone menu shows a stored zone the browser does not list, and is described by its explanation", async () => {
+    const listed = Intl.supportedValuesOf("timeZone");
+    const unlisted = ["Asia/Kolkata", "Europe/Kyiv", "Asia/Calcutta"].find((zone) => !listed.includes(zone));
+    if (!unlisted) throw new Error("the browser lists every zone this test tries");
+    renderPage({
+      storageConfigured: true,
+      isFormaCloud: true,
+      overrides: {
+        surveySchedulingTimeZone: unlisted,
+        surveyScheduling: { ...organization.surveyScheduling, timeZone: unlisted },
+      },
+    });
+    const menu = await screen.findByRole("combobox", {
+      name: t("workspace.settings.general.survey_scheduling_time_zone"),
+    });
+    expect(menu.textContent).toContain(unlisted);
+    const description = document.getElementById(menu.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toContain("00:00");
+  });
 
   test("a manager edits the page and is told only owners delete the organization", async () => {
     renderPage({ storageConfigured: true, isFormaCloud: true, role: "manager" });

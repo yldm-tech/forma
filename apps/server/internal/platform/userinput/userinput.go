@@ -1,4 +1,4 @@
-// Package userinput holds the rules of forma2's shared user fields (packages/types/user.ts: ZUserName and ZUserEmail) for the modules that accept a person's name or address: sign-up, account changes and invites. Lengths are counted in UTF-16 code units, as zod counts them.
+// Package userinput holds the rules of forma2's shared user fields (packages/types/user.ts: ZUserName and ZUserEmail) for the modules that accept a person's name or address: sign-up, account changes and invites. Lengths are counted in UTF-16 code units, as JavaScript's String.prototype.length counts them; zod 4.5 and later count code points instead.
 package userinput
 
 import (

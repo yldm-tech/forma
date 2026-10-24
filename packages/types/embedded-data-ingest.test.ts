@@ -157,6 +157,10 @@ describe("normalizeIngestedValue", () => {
       expect(normalizeIngestedValue("2026-08-06T10:30:00Z", "date")).toEqual({
         value: "2026-08-06T10:30:00Z",
       });
+      // Minute precision is kept as sent, matching the Go server's NormalizeValue.
+      expect(normalizeIngestedValue("2026-08-06T10:30Z", "date")).toEqual({
+        value: "2026-08-06T10:30Z",
+      });
       expect(normalizeIngestedValue("2026-08-06T10:30:00+02:00", "date")).toEqual({
         value: "2026-08-06T08:30:00.000Z",
       });

@@ -327,7 +327,7 @@ func jsLength(s string) int {
 	return n
 }
 
-// lengthChecks applies z.string().min().max(); a negative bound is no bound.
+// lengthChecks applies z.string().min().max(), counting UTF-16 code units as zod did before 4.5. zod 4.5 and later count code points, so the web's ZWorkflowDefinition accepts everything this does. A negative bound is no bound.
 func (p *parser) lengthChecks(s string, at []any, minimum, maximum int) {
 	n := jsLength(s)
 	if minimum >= 0 && n < minimum {

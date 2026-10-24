@@ -157,6 +157,7 @@ export const SurveyEditor = ({
         isCxMode={isCxMode}
         locale={locale}
         setIsCautionDialogOpen={setIsCautionDialogOpen}
+        schedulingTimeZone={surveySchedulingConfig.timeZone}
       />
       <div className="relative z-0 flex flex-1 overflow-hidden">
         <main

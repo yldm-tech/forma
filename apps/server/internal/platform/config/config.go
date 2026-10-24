@@ -91,7 +91,7 @@ type Config struct {
 	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did. Unset, it is taken from forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT when either is set (resolveWorkerConcurrency).
 	WorkerConcurrency int `env:"WORKER_CONCURRENCY" envDefault:"0"`
 
-	// SurveySchedulingTimeZone, SurveySchedulingLocalHour and SurveySchedulingLocalMinute are when, each day, scheduled surveys are published and closed: a publish or close date is snapped to that local time of its calendar day in the zone, forma2's SURVEY_SCHEDULING_* settings.
+	// SurveySchedulingTimeZone, SurveySchedulingLocalHour and SurveySchedulingLocalMinute are when, each day, scheduled surveys are published and closed: a publish or close date is snapped to that local time of its calendar day in the zone, forma2's SURVEY_SCHEDULING_* settings. An organization can choose its own zone (organizations.survey_scheduling_time_zone); this one is the default of those that do not.
 	SurveySchedulingTimeZone    string `env:"SURVEY_SCHEDULING_TIME_ZONE" envDefault:"Europe/Berlin"`
 	SurveySchedulingLocalHour   int    `env:"SURVEY_SCHEDULING_LOCAL_HOUR" envDefault:"0"`
 	SurveySchedulingLocalMinute int    `env:"SURVEY_SCHEDULING_LOCAL_MINUTE" envDefault:"0"`

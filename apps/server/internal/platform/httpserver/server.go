@@ -42,15 +42,16 @@ func NewEngine(cfg config.Config, log *slog.Logger, outer ...gin.HandlerFunc) *g
 	// outer middleware (the telemetry) wraps the panic recovery, so it sees a request that panicked with the 500 the recovery answered.
 	r.Use(outer...)
 	r.Use(securityHeaders(cfg), accessLog(log), recovery(log), reportServerErrors())
-	r.Use(noTransformHTML())
+	r.Use(noTransformHTML(), compressionPolicy())
 	return r
 }
 
+// New serves engine with its responses compressed (see Compress).
 func New(cfg config.Config, engine *gin.Engine, log *slog.Logger) *Server {
 	return &Server{
 		srv: &http.Server{
 			Addr:              cfg.HTTPAddr,
-			Handler:           engine,
+			Handler:           Compress(engine),
 			ReadHeaderTimeout: 10 * time.Second,
 			IdleTimeout:       120 * time.Second,
 		},
