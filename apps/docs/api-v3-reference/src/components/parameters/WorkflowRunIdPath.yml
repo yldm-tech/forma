@@ -1,7 +1,0 @@
-in: path
-name: runId
-required: true
-schema:
-  type: string
-  format: cuid2
-description: Workflow run identifier.

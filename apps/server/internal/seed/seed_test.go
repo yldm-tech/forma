@@ -24,8 +24,7 @@ var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 // seededTables are the tables a seed writes to, counted to prove a second seed adds nothing.
 var seededTables = []string{
 	"organizations", "organization_billing", "users", "user_identities", "memberships", "workspaces", "languages", "contact_attribute_keys",
-	"surveys", "survey_languages", "displays", "responses", "workflows", "workflow_versions", "workflow_runs", "workflow_run_logs",
-	"action_classes", "api_keys", "api_key_workspaces",
+	"surveys", "displays", "responses", "workflows", "workflow_versions", "workflow_runs", "workflow_run_logs", "api_keys", "api_key_workspaces",
 }
 
 func counts(t *testing.T, db *gorm.DB) map[string]int64 {
@@ -50,14 +49,13 @@ func count(t *testing.T, db *gorm.DB, sql string, args ...any) int64 {
 	return n
 }
 
-func TestContractSeedIsIdempotentAndUsable(t *testing.T) {
+func TestSeedIsIdempotentAndUsable(t *testing.T) {
 	ctx := context.Background()
 	db := pgtest.GORM(t)
 	const keySecret = "0123456789abcdef0123456789abcdef"
-	opts := Options{APIKeySecret: keySecret, Contract: true}
+	opts := Options{APIKeySecret: keySecret}
 
-	fixtures, err := Run(ctx, db, opts, discard)
-	if err != nil {
+	if err := Run(ctx, db, opts, discard); err != nil {
 		t.Fatal(err)
 	}
 	first := counts(t, db)
@@ -70,7 +68,7 @@ func TestContractSeedIsIdempotentAndUsable(t *testing.T) {
 		t.Errorf("responses %d, displays %d; want forma2's 3 x 50 responses and 30%% more displays", first["responses"], first["displays"])
 	}
 
-	if _, err := Run(ctx, db, opts, discard); err != nil {
+	if err := Run(ctx, db, opts, discard); err != nil {
 		t.Fatalf("second seed: %v", err)
 	}
 	if second := counts(t, db); !maps.Equal(first, second) {
@@ -107,30 +105,6 @@ func TestContractSeedIsIdempotentAndUsable(t *testing.T) {
 		p.WorkspacePermissions[0].WorkspaceID != WorkspaceID || p.WorkspacePermissions[0].Permission != "manage" || p.OrganizationAccess != (apikey.OrganizationAccess{}) {
 		t.Errorf("seeded key principal = %+v", p)
 	}
-
-	// Every fixture names a row of the seeded workspace.
-	ids := []uuid.UUID{fixtures.Read["surveyId"], fixtures.Read["workflowId"], fixtures.Read["runId"]}
-	for _, op := range fixtures.Operations {
-		for _, id := range op.Path {
-			ids = append(ids, id)
-		}
-	}
-	for _, id := range ids {
-		n := count(t, db, `SELECT (SELECT count(*) FROM surveys WHERE id = ? AND workspace_id = ?) + (SELECT count(*) FROM workflows WHERE id = ? AND workspace_id = ?) + (SELECT count(*) FROM workflow_runs WHERE id = ? AND workspace_id = ?)`,
-			id, WorkspaceID, id, WorkspaceID, id, WorkspaceID)
-		if n != 1 {
-			t.Errorf("fixture %s names %d rows of the seeded workspace, want 1", id, n)
-		}
-	}
-	if fixtures.WorkspaceID != WorkspaceID || len(fixtures.Operations) != 12 {
-		t.Errorf("fixtures = %+v", fixtures)
-	}
-	if n := count(t, db, `SELECT count(*) FROM survey_languages WHERE survey_id = ?`, fixtures.Read["surveyId"]); n != int64(len(readSurveyLanguages)) {
-		t.Errorf("the read fixture configures %d languages, want %d", n, len(readSurveyLanguages))
-	}
-	if n := count(t, db, `SELECT count(*) FROM surveys WHERE id = ? AND archived_at IS NOT NULL`, fixtures.Operations["restoreSurveyV3"].Path["surveyId"]); n != 1 {
-		t.Error("the restore fixture is not archived")
-	}
 }
 
 func TestClearRemovesOnlySeededRows(t *testing.T) {
@@ -148,7 +122,7 @@ func TestClearRemovesOnlySeededRows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Run(ctx, db, Options{}, discard); err != nil {
+	if err := Run(ctx, db, Options{}, discard); err != nil {
 		t.Fatal(err)
 	}
 	seeded := counts(t, db)
@@ -157,7 +131,7 @@ func TestClearRemovesOnlySeededRows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Run(ctx, db, Options{Clear: true}, discard); err != nil {
+	if err := Run(ctx, db, Options{Clear: true}, discard); err != nil {
 		t.Fatal(err)
 	}
 	if reseeded := counts(t, db); !maps.Equal(seeded, reseeded) {
@@ -183,12 +157,11 @@ func TestClearRemovesOnlySeededRows(t *testing.T) {
 
 func TestRunRefusesUnusableOptions(t *testing.T) {
 	for name, opts := range map[string]Options{
-		"contract without a key": {Contract: true},
-		"key outside base64url":  {APIKeySecret: "not a key"},
+		"key outside base64url": {APIKeySecret: "not a key"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			// Refused before the database is touched.
-			if _, err := Run(context.Background(), nil, opts, discard); err == nil {
+			if err := Run(context.Background(), nil, opts, discard); err == nil {
 				t.Fatal("Run accepted the options")
 			}
 		})

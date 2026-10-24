@@ -85,39 +85,6 @@ func endingsOf(surveyKey string) json.RawMessage {
 	return raw
 }
 
-// translated gives every i18n string of a survey document a text for each of the codes, the default text marked with the code, as a survey whose languages are all enabled must carry.
-func translated(doc json.RawMessage, codes []string) json.RawMessage {
-	var v any
-	if err := json.Unmarshal(doc, &v); err != nil {
-		panic(err)
-	}
-	var walk func(v any)
-	walk = func(v any) {
-		switch v := v.(type) {
-		case map[string]any:
-			if def, ok := v["default"].(string); ok {
-				for _, code := range codes {
-					v[code] = "[" + code + "] " + def
-				}
-				return
-			}
-			for _, child := range v {
-				walk(child)
-			}
-		case []any:
-			for _, child := range v {
-				walk(child)
-			}
-		}
-	}
-	walk(v)
-	out, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
 // answer is forma2's generateQuestionResponse made deterministic: the i-th response's value for an element, cycling through the options instead of drawing them at random, so two seeds write the same data. nil leaves the element unanswered.
 func answer(e map[string]any, i int) any {
 	pick := func(key string) map[string]any {

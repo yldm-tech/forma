@@ -3,14 +3,14 @@ package main
 import "testing"
 
 func TestSeedFlags(t *testing.T) {
-	f, err := parseSeedFlags([]string{"--clear", "--contract", "--out", "/tmp/fixtures.json"})
-	if err != nil || !f.clear || !f.contract || f.out != "/tmp/fixtures.json" {
+	f, err := parseSeedFlags([]string{"--clear"})
+	if err != nil || !f.clear {
 		t.Fatalf("parseSeedFlags = %+v, %v", f, err)
 	}
-	if f, err := parseSeedFlags(nil); err != nil || f.clear || f.contract || f.out != defaultFixturesPath {
+	if f, err := parseSeedFlags(nil); err != nil || f.clear {
 		t.Fatalf("defaults = %+v, %v", f, err)
 	}
-	for _, args := range [][]string{{"--nope"}, {"extra"}, {"--out", ""}} {
+	for _, args := range [][]string{{"--nope"}, {"extra"}, {"--contract"}} {
 		if _, err := parseSeedFlags(args); err == nil {
 			t.Errorf("parseSeedFlags(%q) accepted", args)
 		}

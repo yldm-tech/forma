@@ -28,9 +28,8 @@ jobs:
       # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. forma2 published 0.1.<run> from its own repository into the same image repository; this repository's run numbers start again at 1, so its versions are 0.2.<run>, which can never collide with an image forma2 published.
       VERSION: 0.2.${{ github.run_number }}
       IMAGE: ghcr.io/yldm-tech/forma
-      DOCS_IMAGE: ghcr.io/yldm-tech/forma-docs
       RELEASE_SHA: ${{ github.sha }}
-      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, and only once the upgrade guide (apps/docs/self-hosting/advanced/migration.mdx, "forma2 to the Go server") is published, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: deploy/docker/forma.sh and the self-hosting guides download deploy/docker/ from it, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so it always describes the image `latest` names.
+      # `latest` is what forma2's docker compose file and one-click installer pull. Until the cutover to this server (with the data migration) it must keep pointing at forma2, so moving it is opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover, since the first `docker compose pull` after that moves every forma2 install that follows `latest` onto this server. The `stable` branch moves with it: deploy/docker/forma.sh downloads deploy/docker/ from it, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so it always describes the image `latest` names.
       MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -47,7 +46,7 @@ jobs:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
-      # `packages: write` is not enough on its own: both image repositories were created by forma2's release workflow, and an organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access". yldm-tech/forma needs the Write role there on both ghcr.io/yldm-tech/forma and ghcr.io/yldm-tech/forma-docs (github.com/orgs/yldm-tech/packages/container/<name>/settings); without it the push fails with `denied: permission_denied: write_package`.
+      # `packages: write` is not enough on its own: the image repository was created by forma2's release workflow, and an organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access". yldm-tech/forma needs the Write role there on ghcr.io/yldm-tech/forma (github.com/orgs/yldm-tech/packages/container/<name>/settings); without it the push fails with `denied: permission_denied: write_package`.
       - name: Log in to ghcr.io
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
         with:
@@ -69,7 +68,7 @@ jobs:
               exit 1
             fi
           elif published=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{.Manifest.Digest}}' 2>/dev/null); then
-            # An earlier attempt pushed the image and failed before the tag (the documentation push, say). The sha- tag it pushed alongside names the commit, so this commit may finish its own release; any other commit is refused.
+            # An earlier attempt pushed the image and failed before the tag. The sha- tag it pushed alongside names the commit, so this commit may finish its own release; any other commit is refused.
             if [ "$(docker buildx imagetools inspect "$IMAGE:sha-$RELEASE_SHA" --format '{{.Manifest.Digest}}' 2>/dev/null)" != "$published" ]; then
               echo "::error::$IMAGE:$VERSION is already published, but neither a $tag tag nor $IMAGE:sha-$RELEASE_SHA says it came from this commit"
               exit 1
@@ -97,22 +96,6 @@ jobs:
             org.opencontainers.image.version=${{ env.VERSION }}
           provenance: false
 
-      # The documentation is a second image from the same commit, so the two can never describe different versions of the product. Same tag, different repository.
-      - name: Build and push the documentation
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: ./apps/docs/deploy/Dockerfile
-          push: true
-          tags: |
-            ${{ env.DOCS_IMAGE }}:${{ env.VERSION }}
-            ${{ env.DOCS_IMAGE }}:sha-${{ github.sha }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ env.VERSION }}
-          provenance: false
-
       # After the build, not before: forma2's first release run failed on a missing build secret and left a v0.1.1 tag pointing at a commit that never produced an image. The concurrency group serialises runs, so nothing is racing for the name.
       - name: Tag the published commit
         shell: bash
@@ -129,7 +112,7 @@ jobs:
           # GitHub refuses to let a token without the `workflows` permission move a branch across commits that change .github/workflows/, and the job's own token can never hold that permission, so most `stable` updates need another token. RELEASE_STABLE_TOKEN is a fine-grained token (or a GitHub App token) for this repository with Contents and Workflows write; configure it before setting RELEASE_MOVE_LATEST. Without it the update falls back to the job's token, and a refusal fails the step before `latest` moves.
           STABLE_TOKEN: ${{ secrets.RELEASE_STABLE_TOKEN || github.token }}
         run: |
-          # First, so a refused `stable` update below still leaves the published version recorded: its images and tag already exist.
+          # First, so a refused `stable` update below still leaves the published version recorded: its image and tag already exist.
           if ! gh release view "v$VERSION" >/dev/null 2>&1; then
             gh release create "v$VERSION" --verify-tag --title "v$VERSION" --generate-notes --latest=false
           fi
@@ -138,7 +121,6 @@ jobs:
             echo "## Published $VERSION"
             echo "Source: $RELEASE_SHA"
             echo "- \`$IMAGE:$VERSION\` (linux/amd64, linux/arm64)"
-            echo "- \`$DOCS_IMAGE:$VERSION\`"
             echo "- \`$IMAGE:sha-$RELEASE_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
