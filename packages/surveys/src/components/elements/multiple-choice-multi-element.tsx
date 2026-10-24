@@ -239,10 +239,7 @@ export function MultipleChoiceMultiElement({
   };
 
   return (
-    <form
-      key={element.id}
-      onSubmit={handleSubmit}
-      className="w-full">
+    <form key={element.id} onSubmit={handleSubmit} className="w-full">
       <MultiSelect
         elementId={element.id}
         inputId={element.id}

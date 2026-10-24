@@ -130,10 +130,7 @@ export function MatrixElement({
   };
 
   return (
-    <form
-      key={element.id}
-      onSubmit={handleSubmit}
-      className="w-full">
+    <form key={element.id} onSubmit={handleSubmit} className="w-full">
       <Matrix
         dir={dir}
         elementId={element.id}

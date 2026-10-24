@@ -355,7 +355,14 @@ const addImplicitContactInfoRules = (
   return rules;
 };
 
-const ADDRESS_FIELD_ORDER: TAddressField[] = ["addressLine1", "addressLine2", "city", "state", "zip", "country"];
+const ADDRESS_FIELD_ORDER: TAddressField[] = [
+  "addressLine1",
+  "addressLine2",
+  "city",
+  "state",
+  "zip",
+  "country",
+];
 const CONTACT_INFO_FIELD_ORDER: TContactInfoField[] = ["firstName", "lastName", "email", "phone", "company"];
 
 interface TFormFieldConfig {
@@ -364,7 +371,9 @@ interface TFormFieldConfig {
 }
 
 /** The sub-fields of an address or contact-info element in their response order, with their show/required configuration; empty for any other element. */
-const getFormFields = (element: TSurveyElement): { id: TAddressField | TContactInfoField; config: TFormFieldConfig }[] => {
+const getFormFields = (
+  element: TSurveyElement
+): { id: TAddressField | TContactInfoField; config: TFormFieldConfig }[] => {
   if (element.type === TSurveyElementTypeEnum.Address) {
     return ADDRESS_FIELD_ORDER.map((id) => ({ id, config: element[id] as TFormFieldConfig }));
   }

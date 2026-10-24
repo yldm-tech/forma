@@ -60,7 +60,9 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
       </div>
       {(!workspace || workspace.linkSurveyBranding) && (
         <div>
-          <a href={POWERED_BY_URL} className="inline-flex rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
+          <a
+            href={POWERED_BY_URL}
+            className="inline-flex rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
             <Wordmark className="text-2xl" />
           </a>
         </div>

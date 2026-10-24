@@ -163,90 +163,95 @@ function Matrix({
               <table
                 className="w-full table-fixed border-collapse"
                 style={{ minWidth: `${(columns.length * 2.75 + 6).toString()}rem` }}>
-              {/* Column headers */}
-              <thead>
-                <tr>
-                  {/* Empty top-left corner: a plain data cell (not a header), so it is neither an
+                {/* Column headers */}
+                <thead>
+                  <tr>
+                    {/* Empty top-left corner: a plain data cell (not a header), so it is neither an
                       empty <th> nor announced. Each cell radio is named by its row + column header. */}
-                  <td className="w-[35%] p-2" />
-                  {columns.map((column) => {
-                    const columnHeaderId = `${inputId}-col-${column.id}`;
+                    <td className="w-[35%] p-2" />
+                    {columns.map((column) => {
+                      const columnHeaderId = `${inputId}-col-${column.id}`;
+                      return (
+                        <th
+                          key={column.id}
+                          id={columnHeaderId}
+                          className="p-1 text-center align-bottom font-normal wrap-anywhere hyphens-auto">
+                          <Label className="justify-center leading-5">{column.label}</Label>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                {/* Rows */}
+                <tbody>
+                  {rows.map((row, index) => {
+                    const rowGroupId = `${inputId}-row-${row.id}`;
+                    const rowHeaderId = `${rowGroupId}-header`;
+                    const selectedColumnId = selectedValues[row.id];
+                    const baseBgColor = index % 2 === 0 ? "bg-input-bg" : "bg-transparent";
+
                     return (
-                      <th
-                        key={column.id}
-                        id={columnHeaderId}
-                        className="p-1 text-center align-bottom font-normal break-words hyphens-auto">
-                        <Label className="justify-center leading-5">{column.label}</Label>
-                      </th>
+                      <tr key={row.id} className={cn("relative", baseBgColor)} dir={dir}>
+                        {/* Row label */}
+                        <th
+                          scope="row"
+                          id={rowHeaderId}
+                          className={cn(
+                            "rounded-s-input p-2 text-start align-middle wrap-anywhere hyphens-auto"
+                          )}>
+                          <div className="flex flex-col gap-0 leading-none">
+                            <Label className="leading-5">{row.label}</Label>
+                          </div>
+                        </th>
+                        {/* Column options for this row */}
+                        {columns.map((column, colIndex) => {
+                          const cellId = `${rowGroupId}-${column.id}`;
+                          const columnHeaderId = `${inputId}-col-${column.id}`;
+                          const isLastColumn = colIndex === columns.length - 1;
+                          const isSelected = selectedColumnId === column.id;
+
+                          return (
+                            <td
+                              key={column.id}
+                              className={cn(
+                                "p-2 text-center align-middle",
+                                isLastColumn && "rounded-e-input"
+                              )}>
+                              <label
+                                htmlFor={cellId}
+                                className={cn(
+                                  "flex justify-center",
+                                  disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                                )}>
+                                <input
+                                  type="radio"
+                                  id={cellId}
+                                  name={rowGroupId}
+                                  value={column.id}
+                                  checked={isSelected}
+                                  disabled={disabled}
+                                  aria-labelledby={`${rowHeaderId} ${columnHeaderId}`}
+                                  className="peer sr-only"
+                                  onChange={() => {
+                                    handleSelect(row.id, column.id);
+                                  }}
+                                  onClick={() => {
+                                    // Native radios cannot be unchecked by re-clicking; allow deselect
+                                    // when the field is not required.
+                                    if (!required && isSelected) {
+                                      handleDeselect(row.id, column.id);
+                                    }
+                                  }}
+                                />
+                                <MatrixRadioIndicator />
+                              </label>
+                            </td>
+                          );
+                        })}
+                      </tr>
                     );
                   })}
-                </tr>
-              </thead>
-              {/* Rows */}
-              <tbody>
-                {rows.map((row, index) => {
-                  const rowGroupId = `${inputId}-row-${row.id}`;
-                  const rowHeaderId = `${rowGroupId}-header`;
-                  const selectedColumnId = selectedValues[row.id];
-                  const baseBgColor = index % 2 === 0 ? "bg-input-bg" : "bg-transparent";
-
-                  return (
-                    <tr key={row.id} className={cn("relative", baseBgColor)} dir={dir}>
-                      {/* Row label */}
-                      <th
-                        scope="row"
-                        id={rowHeaderId}
-                        className={cn("rounded-s-input p-2 text-start align-middle break-words hyphens-auto")}>
-                        <div className="flex flex-col gap-0 leading-none">
-                          <Label className="leading-5">{row.label}</Label>
-                        </div>
-                      </th>
-                      {/* Column options for this row */}
-                      {columns.map((column, colIndex) => {
-                        const cellId = `${rowGroupId}-${column.id}`;
-                        const columnHeaderId = `${inputId}-col-${column.id}`;
-                        const isLastColumn = colIndex === columns.length - 1;
-                        const isSelected = selectedColumnId === column.id;
-
-                        return (
-                          <td
-                            key={column.id}
-                            className={cn("p-2 text-center align-middle", isLastColumn && "rounded-e-input")}>
-                            <label
-                              htmlFor={cellId}
-                              className={cn(
-                                "flex justify-center",
-                                disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
-                              )}>
-                              <input
-                                type="radio"
-                                id={cellId}
-                                name={rowGroupId}
-                                value={column.id}
-                                checked={isSelected}
-                                disabled={disabled}
-                                aria-labelledby={`${rowHeaderId} ${columnHeaderId}`}
-                                className="peer sr-only"
-                                onChange={() => {
-                                  handleSelect(row.id, column.id);
-                                }}
-                                onClick={() => {
-                                  // Native radios cannot be unchecked by re-clicking; allow deselect
-                                  // when the field is not required.
-                                  if (!required && isSelected) {
-                                    handleDeselect(row.id, column.id);
-                                  }
-                                }}
-                              />
-                              <MatrixRadioIndicator />
-                            </label>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
+                </tbody>
               </table>
             </div>
             {hasMoreAtEnd ? (

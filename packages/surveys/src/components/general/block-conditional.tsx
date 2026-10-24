@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { useTranslation } from "react-i18next";
 import { type TJsFileUploadParams } from "@forma/types/js";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import { type TUploadFileConfig } from "@forma/types/storage";
@@ -18,16 +17,16 @@ import {
   shouldTriggerAutoProgress,
 } from "@/lib/auto-progress";
 import { canMoveFocusInto } from "@/lib/focus-guard";
-import { getLocalizedValue } from "@/lib/i18n";
+import { getLocalizedValue, getTranslations } from "@/lib/i18n";
 import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import {
-  getFirstErrorMessage,
-  getFormFieldErrors,
-  validateBlockResponses,
-} from "@/lib/validation/evaluator";
+import { getFirstErrorMessage, getFormFieldErrors, validateBlockResponses } from "@/lib/validation/evaluator";
 
 const AUTO_PROGRESS_SUBMIT_DELAY_MS = 350;
+
+const STICKY_ROW_SIDE_FILL = {
+  boxShadow: "-1rem 0 0 0 var(--fb-survey-background-color), 1rem 0 0 0 var(--fb-survey-background-color)",
+};
 
 /**
  * Anchors are deliberately absent: they are focusable, but a link is never what a card asks of the
@@ -127,7 +126,6 @@ export function BlockConditional({
   isCardless = false,
   surveyLanguages,
 }: Readonly<BlockConditionalProps>) {
-  const { t } = useTranslation();
   // Track the current element being filled (for TTC tracking)
   const [currentElementId, setCurrentElementId] = useState(block.elements[0]?.id);
 
@@ -149,6 +147,8 @@ export function BlockConditional({
     // Cleared first, so a second failed submit with the same count is a change a screen reader announces again.
     setErrorSummary("");
     requestAnimationFrame(() => {
+      // In the survey's language, like the element messages the evaluator produces.
+      const t = getTranslations(languageCode);
       setErrorSummary(t("errors.x_questions_need_an_answer", { count }));
     });
   };
@@ -528,7 +528,9 @@ export function BlockConditional({
               fullSizeCards && !isCardless ? "bg-survey-bg sticky bottom-0" : "",
               // Above the answers that raise themselves (a selected or focused scale cell), and with room so the row does not sit flush on the content scrolling under it.
               hasStickyButtonRow && !fullSizeCards ? "bg-survey-bg sticky bottom-0 z-30 py-2" : ""
-            )}>
+            )}
+            // The scroller's side padding is painted too, so an answer's error bar there does not run on beside the row.
+            style={hasStickyButtonRow && !fullSizeCards ? STICKY_ROW_SIDE_FILL : undefined}>
             <div>
               {shouldHideSubmitButton ? (
                 // Keep layout symmetry for Back button positioning (LTR/RTL).

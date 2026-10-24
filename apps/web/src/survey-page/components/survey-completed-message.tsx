@@ -22,7 +22,9 @@ export const SurveyCompletedMessage = ({ singleUse, workspace }: TCompletedState
       </div>
       {(!workspace || workspace.linkSurveyBranding) && (
         <div>
-          <a href={SURVEY_COMPLETED_URL} className="inline-flex rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
+          <a
+            href={SURVEY_COMPLETED_URL}
+            className="inline-flex rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
             <Wordmark className="text-2xl" />
           </a>
         </div>
