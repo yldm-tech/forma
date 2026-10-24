@@ -10,6 +10,9 @@ const VIEWPORTS = {
   mobile: { width: 390, height: 844 },
 } as const;
 
+/** The narrowest screen the editor is used on: Tailwind's sm breakpoint, below which the phone overlay covers the signed-in app. */
+const EDITOR_NARROWEST = { width: 640, height: 844 } as const;
+
 type Viewport = keyof typeof VIEWPORTS;
 type Surface = "login" | "editor" | "survey";
 
@@ -29,8 +32,15 @@ const KNOWN_VIOLATIONS: Record<Surface, Record<Viewport, string[]>> = {
       "label",
       "nested-interactive",
     ],
-    // Below the sm breakpoint the editor sits inert under the phone overlay, which axe leaves out, so the scan covers the overlay alone.
-    mobile: [],
+    // The low-contrast workspace name in the menu bar is not shown below the md breakpoint.
+    mobile: [
+      "aria-allowed-attr",
+      "aria-command-name",
+      "aria-input-field-name",
+      "button-name",
+      "label",
+      "nested-interactive",
+    ],
   },
   survey: { desktop: [], mobile: [] },
 };
@@ -79,8 +89,19 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
       await signUpAndSignIn(page, baseURL!, `a11y-editor-${viewport}`);
       const { workspaceId, surveyId } = await finishOnboarding(page);
 
-      await page.setViewportSize(VIEWPORTS[viewport]);
-      await page.goto(`/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
+      const editor = `/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`;
+      if (viewport === "mobile") {
+        // On a phone the editor is inert under the overlay, and axe leaves inert content out, so a scan there covers the overlay alone. The overlay has to pass with no exceptions; the editor's mobile entry is then measured at the narrowest width it is shown at.
+        await page.setViewportSize(VIEWPORTS.mobile);
+        await page.goto(editor);
+        await expect(page.getByRole("dialog", { name: "Oops, tiny screen detected!" })).toBeVisible();
+        expect((await scan(page)).map((v) => v.line)).toEqual([]);
+        await page.setViewportSize(EDITOR_NARROWEST);
+        await expect(page.getByRole("dialog", { name: "Oops, tiny screen detected!" })).toBeHidden();
+      } else {
+        await page.setViewportSize(VIEWPORTS[viewport]);
+        await page.goto(editor);
+      }
       await expect(page.getByRole("main").getByRole("heading", { name: DEFAULT_QUESTION })).toBeVisible();
       await expectOnlyKnownViolations(page, "editor", viewport);
     });
