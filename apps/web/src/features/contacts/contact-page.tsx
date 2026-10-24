@@ -170,8 +170,8 @@ const AttributesSection = ({
           <TagIcon className="size-4 text-slate-400" />
           <span>{t("workspace.contacts.contact_id")}</span>
         </dt>
-        {/* A UUID does not fit the column on one line; it wraps anywhere and stays left-aligned. */}
-        <dd className="mt-1 text-sm text-slate-900 [&_button]:text-left [&_button>span]:break-all">
+        {/* A UUID does not fit the column on one line. Both properties are inherited, so the badge's own markup needs no targeting: it may break anywhere, and the two lines come out about equally long instead of leaving the last characters alone on a line. */}
+        <dd className="mt-1 text-sm text-balance break-all text-slate-900">
           <IdBadge id={contactId} />
         </dd>
       </div>

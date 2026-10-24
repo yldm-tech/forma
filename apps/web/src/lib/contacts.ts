@@ -80,7 +80,7 @@ export const highlightParts = (value: string, search: string): { text: string; m
     .map((text) => ({ text, match: text.toLowerCase() === search.toLowerCase() }));
 };
 
-/** The cells of a row that the table hides but whose value contains the search (as the server matches it: trimmed, case-insensitive), so a hit the visible columns do not explain can be. */
+/** The cells of a row that the table hides but whose value contains the search (as the server matches it: trimmed, case-insensitive), so a hit the visible columns do not explain can be. When a visible column already contains the search, the row needs no explanation and nothing is returned. */
 export const hiddenColumnMatches = <C extends { id: string; value: string }>(
   cells: C[],
   search: string,
@@ -88,7 +88,7 @@ export const hiddenColumnMatches = <C extends { id: string; value: string }>(
 ): C[] => {
   const query = search.trim().toLowerCase();
   if (!query) return [];
-  return cells.filter(
-    (cell) => columnVisibility[cell.id] === false && cell.value.toLowerCase().includes(query)
-  );
+  const matching = cells.filter((cell) => cell.value.toLowerCase().includes(query));
+  if (matching.some((cell) => columnVisibility[cell.id] !== false)) return [];
+  return matching;
 };

@@ -90,7 +90,9 @@ test("a search hit in a hidden column is found, as the server matches it", () =>
   // Case-insensitive and trimmed; a hit in a visible column needs no explanation.
   expect(hiddenColumnMatches(cells, " pro ", visibility)).toEqual([cells[1]]);
   expect(hiddenColumnMatches(cells, "akira", visibility)).toEqual([]);
-  expect(hiddenColumnMatches(cells, "a", visibility)).toEqual([cells[2]]);
+  // The visible email already contains "a", so the hidden country needs no mention.
+  expect(hiddenColumnMatches(cells, "a", visibility)).toEqual([]);
+  expect(hiddenColumnMatches(cells, "jap", visibility)).toEqual([cells[2]]);
   expect(hiddenColumnMatches(cells, "  ", visibility)).toEqual([]);
   // A column without a stored choice counts as shown.
   expect(hiddenColumnMatches(cells, "japan", { plan: false })).toEqual([]);
