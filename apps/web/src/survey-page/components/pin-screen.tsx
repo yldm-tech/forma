@@ -2,9 +2,9 @@ import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";
-import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { validateSurveyPin } from "../lib/api";
+import { type TPinError, pinErrorKind } from "../lib/pin-error";
 import type { TPublicSurvey, TSurveyProps } from "../lib/state";
 import { useAppLocale } from "../lib/use-app-locale";
 import { SurveyClientWrapper } from "./survey-client-wrapper";
@@ -12,14 +12,6 @@ import { SurveyClientWrapper } from "./survey-client-wrapper";
 const PIN_PATTERN = /^\d{4}$/;
 /** How long a rejected PIN stays on screen, in red, before the boxes clear. */
 const ERROR_RESET_MS = 2000;
-
-/** Why the last PIN was refused, so the respondent knows whether to retype it or to wait. */
-type TPinError = "incorrect" | "rateLimited" | "failed";
-
-const pinErrorKind = (error: unknown): TPinError => {
-  if (!(error instanceof ApiError)) return "failed";
-  return error.isRateLimited ? "rateLimited" : "incorrect";
-};
 
 /**
  * forma2's PinScreen: four digit boxes. Once all four are entered the server checks them, and a correct PIN returns the survey with the token its responses must carry; until then the survey never reaches the browser.
