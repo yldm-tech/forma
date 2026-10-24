@@ -11,21 +11,13 @@ import type {
   TSurveyElementSummaryOpenText,
 } from "@forma/types/surveys/types";
 import { Link } from "@tanstack/react-router";
-import { DownloadIcon, FileIcon, InboxIcon, MessageSquareTextIcon } from "lucide-react";
+import { DownloadIcon, FileIcon, InboxIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PersonAvatar } from "../../../../components/ui/avatar";
 import { Button } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
-import { IdBadge } from "../../../../components/ui/id-badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../../components/ui/table";
+import { cn } from "../../../../lib/cn";
 import { formatStoredDateForDisplay } from "../../../../lib/survey/date-display";
 import { timeSince } from "../../../../lib/time";
 import { renderHyperlinkedContent } from "../../lib/response-display";
@@ -79,7 +71,9 @@ interface Sample {
   contactAttributes: TContactAttributes | null;
 }
 
-/** The user / response / time grid the sample cards share, ten rows at a time, with the truncation notice under the last page. */
+/**
+ * The user / response / time grid every sample card shares, ten rows at a time, with the truncation notice under the last page. It grows with the page rather than scrolling inside it: "Load more" is what bounds its height. With onOpen, a row's trailing button opens the response it came from, and a click elsewhere on the row does too; the row itself is not a control, so the contact link inside it is not nested in another one.
+ */
 const SampleGrid = <T extends Sample>({
   samples,
   responseCount,
@@ -88,6 +82,7 @@ const SampleGrid = <T extends Sample>({
   paged,
   sampleKey,
   renderValue,
+  onOpen,
 }: {
   samples: T[];
   responseCount: number;
@@ -96,6 +91,7 @@ const SampleGrid = <T extends Sample>({
   paged: boolean;
   sampleKey: (sample: T, index: number) => string;
   renderValue: (sample: T) => ReactNode;
+  onOpen?: (sample: T) => void;
 }) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(PAGE);
@@ -107,16 +103,30 @@ const SampleGrid = <T extends Sample>({
         <div className="col-span-2 pl-4 md:pl-6">{t("common.response")}</div>
         <div className="px-4 md:px-6">{t("common.time")}</div>
       </div>
-      <div className="max-h-[62vh] w-full overflow-y-auto">
+      <div className="w-full">
         {samples.length === 0 ? (
           <div className="p-8">
             <EmptyState text={t("workspace.surveys.summary.no_responses_found")} variant="simple" />
           </div>
         ) : (
           shown.map((sample, index) => (
+            // The row click is a mouse shortcut for the row's own Open button, which keyboard users reach.
+            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- see above
             <div
               key={sampleKey(sample, index)}
-              className="grid grid-cols-4 items-center border-b border-slate-100 py-2 text-sm text-slate-800 last:border-transparent md:text-base">
+              onClick={
+                onOpen
+                  ? (event) => {
+                      // A link in the answer or the contact's link does its own thing.
+                      if (event.target instanceof Element && event.target.closest("a, button")) return;
+                      onOpen(sample);
+                    }
+                  : undefined
+              }
+              className={cn(
+                "grid grid-cols-4 items-center border-b border-slate-100 py-2 text-sm text-slate-800 last:border-transparent md:text-base",
+                onOpen && "cursor-pointer hover:bg-slate-50"
+              )}>
               <div className="pl-4 md:pl-6">
                 <SampleUser
                   workspaceId={workspaceId}
@@ -125,8 +135,20 @@ const SampleGrid = <T extends Sample>({
                 />
               </div>
               {renderValue(sample)}
-              <div className="px-4 text-slate-500 md:px-6">
-                {timeSince(sample.updatedAt.toISOString(), locale)}
+              <div className="flex items-center justify-between gap-2 px-4 text-slate-500 md:px-6">
+                <span>{timeSince(sample.updatedAt.toISOString(), locale)}</span>
+                {onOpen && (
+                  <button
+                    type="button"
+                    className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:border-slate-300 hover:text-slate-900 focus-visible:ring-2 focus-visible:outline-hidden"
+                    aria-label={t("workspace.surveys.summary.open_response_details")}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpen(sample);
+                    }}>
+                    <Maximize2Icon className="size-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -322,83 +344,25 @@ export const OpenTextSummary = ({
   locale: string;
   isReadOnly: boolean;
 }) => {
-  const { t } = useTranslation();
-  const [visibleResponses, setVisibleResponses] = useState(PAGE);
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
       <ElementSummaryHeader elementSummary={elementSummary} survey={survey} />
-      <div className="border-t border-slate-200" />
-      {elementSummary.samples.length === 0 ? (
-        <div className="p-8">
-          <EmptyState text={t("workspace.surveys.summary.no_responses_found")} variant="simple" />
-        </div>
-      ) : (
-        <div className="max-h-[40vh] overflow-y-auto">
-          <Table>
-            <TableHeader className="bg-slate-100">
-              <TableRow>
-                <TableHead className="w-1/5">{t("common.user")}</TableHead>
-                <TableHead className="w-2/5">{t("common.response")}</TableHead>
-                <TableHead className="w-1/5">{t("common.time")}</TableHead>
-                <TableHead className="w-1/5">{t("common.response_id")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {elementSummary.samples.slice(0, visibleResponses).map((response) => (
-                <TableRow
-                  key={response.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={t("workspace.surveys.summary.open_response_details")}
-                  className="cursor-pointer hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                  onClick={() => setSelectedResponseId(response.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedResponseId(response.id);
-                    }
-                  }}>
-                  <TableCell className="w-1/5">
-                    <SampleUser
-                      workspaceId={survey.workspaceId}
-                      contact={response.contact}
-                      contactAttributes={response.contactAttributes}
-                    />
-                  </TableCell>
-                  <TableCell className="w-2/5 font-medium">
-                    {renderHyperlinkedContent(response.value)}
-                  </TableCell>
-                  <TableCell className="w-1/5">
-                    {timeSince(response.updatedAt.toISOString(), locale)}
-                  </TableCell>
-                  <TableCell className="w-1/5" onClick={(e) => e.stopPropagation()}>
-                    <IdBadge id={response.id} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {visibleResponses < elementSummary.samples.length ? (
-            <div className="flex justify-center py-4">
-              <Button
-                onClick={() =>
-                  setVisibleResponses((current) => Math.min(current + PAGE, elementSummary.samples.length))
-                }
-                variant="secondary"
-                size="sm">
-                {t("common.load_more")}
-              </Button>
-            </div>
-          ) : (
-            <SampleTruncationNotice
-              sampleCount={elementSummary.samples.length}
-              responseCount={elementSummary.responseCount}
-            />
-          )}
-        </div>
-      )}
+      <SampleGrid
+        samples={elementSummary.samples}
+        responseCount={elementSummary.responseCount}
+        workspaceId={survey.workspaceId}
+        locale={locale}
+        paged
+        sampleKey={(sample) => sample.id}
+        renderValue={(sample) => (
+          <div className="ph-no-capture col-span-2 pl-4 font-medium break-words whitespace-pre-wrap md:pl-6">
+            {renderHyperlinkedContent(sample.value)}
+          </div>
+        )}
+        onOpen={(sample) => setSelectedResponseId(sample.id)}
+      />
       <ResponseSampleModal
         responseId={selectedResponseId}
         onClose={() => setSelectedResponseId(null)}

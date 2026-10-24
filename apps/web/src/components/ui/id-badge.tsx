@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "../../lib/clipboard";
 
-/** forma2's IdBadge: an identifier with a copy button, under its label in the column variant, alone in a table cell. */
-export const IdBadge = ({ id, label }: { id: string; label?: string }) => {
+/** forma2's IdBadge: an identifier with a copy button, under its label in the column variant, alone in a table cell. A table whose rows have their own keyboard stop passes tabIndex -1, so tabbing down the rows does not stop at (and scroll sideways to) every row's id. */
+export const IdBadge = ({ id, label, tabIndex }: { id: string; label?: string; tabIndex?: number }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -19,6 +19,7 @@ export const IdBadge = ({ id, label }: { id: string; label?: string }) => {
       {label && <span className="text-xs text-slate-700">{label}</span>}
       <button
         type="button"
+        tabIndex={tabIndex}
         aria-label={label ? `${t("common.copy")} ${label} ${id}` : `${t("common.copy")} ${id}`}
         title={copied ? t("common.copied") : t("common.copy")}
         onClick={async () => setCopied(await copyText(id, t))}

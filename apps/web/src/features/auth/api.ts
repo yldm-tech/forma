@@ -39,9 +39,12 @@ export type SignInStatus = "signed_in" | "two_factor_required";
 
 export type InviteStatus = "valid" | "not_found" | "expired" | "email_mismatch";
 
+/** What an invite link is. email, organizationName and inviterName come with a working link (valid, or another account's on email_mismatch), never with an unknown or expired one. */
 export interface InviteInspection {
   status: InviteStatus;
   email?: string;
+  organizationName?: string;
+  inviterName?: string;
 }
 
 export interface SignupInput {

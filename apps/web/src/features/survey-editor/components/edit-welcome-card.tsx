@@ -69,10 +69,9 @@ export const EditWelcomeCard = ({
         open={open}
         onOpenChange={setOpen}
         className="flex-1 rounded-r-lg border border-slate-200 transition-all duration-200 ease-in-out">
-        <Collapsible.CollapsibleTrigger
-          asChild
-          className="flex cursor-pointer justify-between rounded-r-lg p-4 hover:bg-slate-50">
-          <div>
+        {/* The trigger holds the title only; the on/off switch sits beside it, not inside the button. */}
+        <div className="flex justify-between gap-4 rounded-r-lg p-4 hover:bg-slate-50">
+          <Collapsible.CollapsibleTrigger className="min-w-0 grow cursor-pointer rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-700">
             <div className="inline-flex">
               <div>
                 <p className="text-sm font-semibold">{t("common.welcome_card")}</p>
@@ -83,27 +82,28 @@ export const EditWelcomeCard = ({
                 )}
               </div>
             </div>
+          </Collapsible.CollapsibleTrigger>
 
-            <div className="flex items-center gap-x-2">
-              <Label htmlFor="welcome-toggle">
-                {localSurvey?.welcomeCard?.enabled ? t("common.on") : t("common.off")}
-              </Label>
+          <div className="flex items-center gap-x-2">
+            <Label htmlFor="welcome-toggle">
+              {localSurvey?.welcomeCard?.enabled ? t("common.on") : t("common.off")}
+            </Label>
 
-              <Switch
-                id="welcome-toggle"
-                checked={localSurvey?.welcomeCard?.enabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newEnabledState = !localSurvey.welcomeCard?.enabled;
-                  updateSurvey({ enabled: newEnabledState });
-                  if (newEnabledState && !open) {
-                    setActiveElementId("start");
-                  }
-                }}
-              />
-            </div>
+            <Switch
+              id="welcome-toggle"
+              aria-label={t("common.welcome_card")}
+              checked={localSurvey?.welcomeCard?.enabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                const newEnabledState = !localSurvey.welcomeCard?.enabled;
+                updateSurvey({ enabled: newEnabledState });
+                if (newEnabledState && !open) {
+                  setActiveElementId("start");
+                }
+              }}
+            />
           </div>
-        </Collapsible.CollapsibleTrigger>
+        </div>
         <Collapsible.CollapsibleContent className={`flex flex-col px-4 ${open && "pb-6"}`}>
           <form>
             <div className="mt-2">
@@ -128,7 +128,7 @@ export const EditWelcomeCard = ({
               <ElementFormInput
                 id="headline"
                 value={localSurvey.welcomeCard.headline}
-                label={t("common.note") + "*"}
+                label={t("common.headline") + "*"}
                 localSurvey={localSurvey}
                 elementIdx={-1}
                 isInvalid={isInvalid}

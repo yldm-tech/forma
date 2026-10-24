@@ -27,7 +27,7 @@ export const SurveyAnalysisLayout = ({
   const { t } = useTranslation();
   const base = `/workspaces/${workspace.id}/surveys/${survey.id}`;
   const publicDomain = useQuery(publicDomainQuery);
-  // The tools read the survey's unfiltered response count: the edit caution and nothing else depends on it.
+  // The survey's unfiltered response count: the Responses tab shows it, and the tools read it for the edit caution and the reset confirmation.
   const responseCount = useQuery(surveyResponseCountQuery(survey.id, {}));
 
   return (
@@ -50,7 +50,15 @@ export const SurveyAnalysisLayout = ({
           activeId={activeId}
           navigation={[
             { id: "summary", label: t("common.summary"), href: `${base}/summary` },
-            { id: "responses", label: t("common.responses"), href: `${base}/responses` },
+            {
+              id: "responses",
+              // The unfiltered total, from the count the tools read already.
+              label:
+                responseCount.data === undefined
+                  ? t("common.responses")
+                  : t("workspace.surveys.responses.responses_tab_label", { count: responseCount.data }),
+              href: `${base}/responses`,
+            },
           ]}
         />
       </PageHeader>

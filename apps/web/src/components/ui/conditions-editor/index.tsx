@@ -192,6 +192,8 @@ export function ConditionsEditor({
                     placeholder: t("workspace.surveys.edit.select_or_type_value"),
                   }}
                   key="conditionMatchValue"
+                  // Without its free-text input the box is a plain picker, which shows this until a value is chosen.
+                  placeholder={showInput ? undefined : t("workspace.surveys.edit.select_value")}
                   showSearch={false}
                   groupedOptions={options}
                   allowMultiSelect={allowMultiSelect}

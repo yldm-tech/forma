@@ -25,11 +25,13 @@ export const Route = createFileRoute(
 });
 
 function TemplatesStep() {
+  const { organizationId } = Route.useParams();
   const onboarding = Route.useLoaderData();
   const { data: me } = useSuspenseQuery(meQuery);
   const { data: workspace } = useSuspenseQuery(workspaceQuery(onboarding.workspaceId));
   return (
     <XMTemplateList
+      organizationId={organizationId}
       workspaceId={workspace.id}
       defaultLanguage={resolveDefaultSurveyLanguage({
         workspaceDefaultLanguage: workspaceSurveyConfig(workspace).defaultSurveyLanguage,

@@ -1,6 +1,6 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { TFunction } from "i18next";
-import { CheckIcon } from "lucide-react";
+import { GaugeIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "../../../../lib/toast";
 import { useTranslation } from "react-i18next";
@@ -108,14 +108,13 @@ export const QuotasCard = ({ localSurvey, quotas, hasResponses }: QuotasCardProp
         onOpenChange={setOpen}
         className="w-full rounded-lg border border-slate-300 bg-white">
         <Collapsible.Trigger
-          asChild
-          className="h-full w-full cursor-pointer rounded-lg hover:bg-slate-50"
+          className="h-full w-full cursor-pointer rounded-lg text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700"
           id="quotasCardTrigger">
           <div className="inline-flex px-4 py-4">
             <div className="flex items-center pr-5 pl-2">
-              <CheckIcon
-                strokeWidth={3}
-                className="size-7 rounded-full border border-green-300 bg-green-100 p-1.5 text-green-600"
+              <GaugeIcon
+                aria-hidden="true"
+                className="size-7 rounded-full border border-slate-200 bg-slate-100 p-1.5 text-slate-600"
               />
             </div>
 

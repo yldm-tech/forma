@@ -40,6 +40,27 @@ func (e *env) editorSurvey(user uuid.UUID, id string) map[string]any {
 	return sv
 }
 
+// assertEmbeddedFields checks a survey payload's embeddedFields as "name:source" pairs in order; a hidden field is keyed by its name.
+func assertEmbeddedFields(t *testing.T, raw any, want ...string) {
+	t.Helper()
+	list, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("embeddedFields %#v is not a list", raw)
+	}
+	got := make([]string, 0, len(list))
+	for _, item := range list {
+		f := item.(map[string]any)
+		def, link := f["field"].(map[string]any), f["link"].(map[string]any)
+		got = append(got, fmt.Sprintf("%v:%v", def["name"], def["source"]))
+		if def["source"] == "ingested" && def["name"] != link["storageKey"] {
+			t.Fatalf("hidden field %v", f)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("embeddedFields %v, want %v", got, want)
+	}
+}
+
 func TestEditorSave(t *testing.T) {
 	e := newEnv(t)
 	owner, reader := e.user(), e.user()
@@ -52,6 +73,8 @@ func TestEditorSave(t *testing.T) {
 	if sv["workspaceId"] != ws.String() || len(sv["languages"].([]any)) != 2 || sv["segment"] != nil || len(sv["followUps"].([]any)) != 0 {
 		t.Fatalf("editor survey %v", sv)
 	}
+	// The response table, card and filter read hidden fields and variables only from embeddedFields.
+	assertEmbeddedFields(t, sv["embeddedFields"], "score:computed", "plan:ingested")
 	e.ok(e.do(reader, http.MethodGet, appPath(id, ""), nil), http.StatusOK, nil)
 	e.fails(e.do(e.user(), http.MethodGet, appPath(id, ""), nil), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
 	e.fails(e.do(owner, http.MethodGet, appPath(uuid.New(), ""), nil), http.StatusNotFound, apperr.CodeNotFound, "Survey not found")
@@ -66,6 +89,7 @@ func TestEditorSave(t *testing.T) {
 	if saved["name"] != "Edited" || saved["pin"] != "1234" || len(saved["followUps"].([]any)) != 1 {
 		t.Fatalf("saved %v", saved)
 	}
+	assertEmbeddedFields(t, saved["embeddedFields"], "score:computed", "plan:ingested")
 	e.fails(e.do(reader, http.MethodPut, appPath(id, ""), sv), http.StatusForbidden, apperr.CodeForbidden, "")
 
 	sv["pin"] = "12"
@@ -111,6 +135,35 @@ func TestEditorSave(t *testing.T) {
 	e.exec(`UPDATE surveys SET archived_at = now() WHERE id = ?`, id)
 	sv["recaptcha"] = nil
 	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusBadRequest, apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
+}
+
+// Every editor save needs a name, a full save (Publish, Save on a live survey) as much as a draft one, and a name of only spaces is no name. The stored survey keeps its name.
+func TestEditorSaveRequiresAName(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	sv := e.editorSurvey(owner, id)
+	stored := sv["name"]
+
+	for _, name := range []string{"", "   ", "\t\n"} {
+		sv["name"] = name
+		for _, rest := range []string{"", "/draft"} {
+			body := e.fails(e.do(owner, http.MethodPut, appPath(id, rest), sv), http.StatusBadRequest, apperr.CodeValidation, "Survey name is required")
+			issues, _ := body.Details["issues"].([]any)
+			if len(issues) == 0 || fmt.Sprint(issues[0].(map[string]any)["path"]) != "[name]" {
+				t.Fatalf("save %q to %q: issues %v", rest, name, body.Details["issues"])
+			}
+			// Refused like any other invalid save, so audited as a failed update.
+			e.expectAudit(audit.ActionUpdated, audit.StatusFailure, audit.ActorUser, owner.String(), audit.TargetSurvey, id)
+		}
+	}
+	if got := e.editorSurvey(owner, id)["name"]; got != stored {
+		t.Fatalf("stored name %v, want %v", got, stored)
+	}
+
+	sv["name"] = "  Renamed  "
+	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
 }
 
 // The editor holds updatedAt as a JavaScript Date, which keeps milliseconds, while updated_at has microseconds: a draft save compares the two, and names the stored version, at millisecond precision, as forma2's DateTime(3) did.
@@ -281,6 +334,9 @@ func TestCopyAndDuplicate(t *testing.T) {
 	}
 	if e.count(`SELECT count(*) FROM survey_quotas WHERE survey_id = ?`, dup.ID) != 1 || e.count(`SELECT count(*) FROM survey_embedded_data WHERE survey_id = ?`, dup.ID) != 2 {
 		t.Fatal("quotas or embedded data not copied")
+	}
+	if len(dup.EmbeddedFields) != 2 || dup.EmbeddedFields[1].Field.Name != "plan" || dup.EmbeddedFields[1].Link.StorageKey != "plan" {
+		t.Fatalf("duplicate embedded fields %+v", dup.EmbeddedFields)
 	}
 
 	var copied Survey

@@ -9,8 +9,10 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { SkeletonLoader } from "../../../../components/ui/skeleton-loader";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { toast } from "../../../../lib/toast";
+import { hasActiveFilters } from "../../lib/filter-state";
 import { OptionsType, type SelectedFilterValue } from "../../lib/filter-types";
 import { constructToastMessage } from "../../lib/summary";
+import { AnalysisEmptyState } from "../analysis-empty-state";
 import { useResponseFilter } from "../filter/response-filter-context";
 import {
   MatrixElementSummary,
@@ -77,7 +79,7 @@ export const SummaryList = ({
   locale: string;
   isReadOnly: boolean;
 }) => {
-  const { setSelectedFilter, selectedFilter } = useResponseFilter();
+  const { setSelectedFilter, selectedFilter, dateRange, resetState } = useResponseFilter();
   const { t } = useTranslation();
 
   const setFilter: SetSummaryFilter = (elementId, label, elementType, filterValue, filterComboBoxValue) => {
@@ -173,7 +175,24 @@ export const SummaryList = ({
       return <EmptyAppSurveys workspaceId={survey.workspaceId} />;
     }
     if (summary.length === 0) return <SkeletonLoader type="summary" />;
-    if (responseCount === 0) return <EmptyState text={t("workspace.surveys.summary.no_responses_found")} />;
+    if (responseCount === 0) {
+      // A filter that matches nothing is not an empty survey: say so, and offer the way back.
+      if (hasActiveFilters(selectedFilter, dateRange)) {
+        return (
+          <div className="rounded-xl border border-slate-200 shadow-xs">
+            <AnalysisEmptyState
+              title={t("workspace.surveys.responses.no_responses_match_filters")}
+              action={
+                <Button variant="secondary" size="sm" onClick={resetState}>
+                  {t("common.clear_filters")}
+                </Button>
+              }
+            />
+          </div>
+        );
+      }
+      return <EmptyState text={t("workspace.surveys.summary.no_responses_found")} />;
+    }
     return summary.map(renderEntry);
   };
 

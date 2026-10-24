@@ -81,8 +81,9 @@ export const SurveyEditorTabs = ({
     : tabsComputed;
 
   return (
-    <div className="fixed z-30 flex h-12 w-full items-center justify-center border-b bg-white md:w-2/3">
-      <nav className="flex h-full items-center gap-x-4" aria-label="Tabs">
+    // Scrolls sideways rather than clipping when the labels (longer in some languages) do not fit; mx-auto centres the tabs while they fit and lets them start at the left edge once they scroll.
+    <div className="fixed z-30 flex h-12 w-full items-center overflow-x-auto border-b bg-white md:w-2/3">
+      <nav className="mx-auto flex h-full shrink-0 items-center gap-x-1 px-2 lg:gap-x-4" aria-label="Tabs">
         {tabsToDisplay.map((tab, index) => (
           <Fragment key={tab.id}>
             <button
@@ -92,7 +93,7 @@ export const SurveyEditorTabs = ({
                 tab.id === activeId
                   ? "border-brand-dark font-semibold text-slate-900"
                   : "border-transparent text-slate-500 hover:text-slate-700",
-                "flex h-full items-center border-b-2 px-3 text-sm font-medium"
+                "flex h-full shrink-0 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap"
               )}
               aria-current={tab.id === activeId ? "page" : undefined}>
               {tab.icon && <div className="mr-2 size-5">{tab.icon}</div>}
@@ -100,7 +101,10 @@ export const SurveyEditorTabs = ({
               {tab.alert && <AlertTriangleIcon className="ml-1.5 size-4 text-amber-500" />}
             </button>
             {index < tabsToDisplay.length - 1 && (
-              <ChevronRightIcon className="size-4 text-slate-300" aria-hidden="true" />
+              <ChevronRightIcon
+                className="hidden size-4 shrink-0 text-slate-300 lg:block"
+                aria-hidden="true"
+              />
             )}
           </Fragment>
         ))}

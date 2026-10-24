@@ -1,6 +1,6 @@
 import { cn } from "../../lib/cn";
 
-/** forma2's product mark: a card with a filled field, a shorter one and a chosen option. */
+/** The product mark, drawn as the website's LogoMark (apps/website/src/components/Logo.tsx): a card with a filled field, a shorter one and a chosen option. The square viewBox is kept so every caller's sizing stays the same. */
 export const FormaLogo = ({ className }: { className?: string }) => (
   <svg
     viewBox="0 0 48 48"
@@ -9,9 +9,9 @@ export const FormaLogo = ({ className }: { className?: string }) => (
     className={className}
     aria-hidden="true">
     <rect x="6" y="4" width="36" height="40" rx="10" fill="#038178" />
-    <rect x="14" y="17" width="20" height="5" rx="2.5" fill="#00E6CA" />
-    <rect x="14" y="27" width="12" height="5" rx="2.5" fill="#FFFFFF" />
-    <rect x="29" y="27" width="5" height="5" rx="2.5" fill="#00E6CA" />
+    <rect x="14" y="17" width="23" height="5" rx="2.5" fill="#00E6CA" />
+    <rect x="14" y="27" width="15" height="5" rx="2.5" fill="#FFFFFF" />
+    <circle cx="34" cy="29.5" r="2.5" fill="#00E6CA" />
   </svg>
 );
 

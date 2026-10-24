@@ -5,7 +5,8 @@ import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./index.css";
 import { APP_BASE_PATH } from "./lib/base-path";
-import { initI18n, matchLocale } from "./lib/i18n";
+import { initI18n } from "./lib/i18n";
+import { initialLocale } from "./lib/initial-locale";
 import { createQueryClient } from "./lib/query-client";
 import { initSentry } from "./lib/telemetry/sentry";
 import { routeTree } from "./routeTree.gen";
@@ -32,9 +33,12 @@ declare module "@tanstack/react-router" {
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("#root element missing from index.html");
 
-// The catalogue loads before the first render so no screen ever shows raw keys. The browser's languages pick it until the signed-in user's saved locale is known (see changeLocale). Sentry, where the server configured it, starts alongside, so errors thrown while rendering are reported.
+// The catalogue loads before the first render so no screen ever shows raw keys. A ?lang= hint in the address, then the browser's languages, pick it until the signed-in user's saved locale is known (see changeLocale). Sentry, where the server configured it, starts alongside, so errors thrown while rendering are reported.
 const bootstrap = async () => {
-  const [i18n] = await Promise.all([initI18n(matchLocale(navigator.languages)), initSentry()]);
+  const [i18n] = await Promise.all([
+    initI18n(initialLocale(window.location.search, navigator.languages)),
+    initSentry(),
+  ]);
   createRoot(rootElement).render(
     <StrictMode>
       <I18nextProvider i18n={i18n}>

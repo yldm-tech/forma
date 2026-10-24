@@ -1,10 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../../lib/api";
+import { changeLocale, isLocale } from "../../lib/i18n";
+import { meQuery } from "../../lib/queries/auth";
 import { reportError } from "../../lib/telemetry/sentry";
 import { Button } from "../ui/button";
 import { ErrorComponent } from "../ui/error-component";
+import { Wordmark } from "../ui/logo";
 import { LoadingBlock } from "../ui/page";
 import { appHref } from "../../lib/base-path";
 
@@ -55,11 +59,11 @@ export const RoutePending = () => {
   );
 };
 
-/** forma2's not-found page (app/not-found.tsx): the code, what happened and the way home. */
+/** forma2's not-found page (app/not-found.tsx): the code, what happened and the way home, filling whatever area it is rendered in. */
 export const NotFound = () => {
   const { t } = useTranslation();
   return (
-    <main className="mx-auto flex h-full max-w-xl flex-col items-center justify-center py-16 text-center">
+    <main className="mx-auto flex h-full max-w-xl flex-col items-center justify-center px-4 py-16 text-center">
       <p className="text-sm font-semibold text-zinc-900" data-testid="error-code">
         404
       </p>
@@ -71,5 +75,23 @@ export const NotFound = () => {
         <Link to="/">{t("common.back_to_home")}</Link>
       </Button>
     </main>
+  );
+};
+
+/**
+ * The not-found page of an address no route knows: the Forma wordmark over NotFound, centred on the screen. It renders outside the signed-in layout that applies the user's saved language, so it applies it itself when the browser has a session; without one, the browser's language stays.
+ */
+export const RootNotFound = () => {
+  const { i18n } = useTranslation();
+  const me = useQuery({ ...meQuery, retry: false });
+  const locale = me.data?.locale;
+  useEffect(() => {
+    if (locale && isLocale(locale) && i18n.language !== locale) void changeLocale(i18n, locale);
+  }, [locale, i18n]);
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 px-4">
+      <Wordmark className="text-2xl" />
+      <NotFound />
+    </div>
   );
 };

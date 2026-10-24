@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
+
+	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 )
 
 // Repository reads and writes surveys and the rows that belong to them. Every statement names the survey or workspace it is scoped to.
@@ -124,6 +126,7 @@ func (row surveyRow) survey() *Survey {
 		IsAnonymizeResponsesEnabled: row.IsAnonymizeResponsesEnabled, Pin: row.Pin, DisplayPercentage: row.DisplayPercentage,
 		Metadata: rawOrNull(row.Metadata), Slug: row.Slug, CustomHeadScripts: row.CustomHeadScripts, CustomHeadScriptsMode: row.CustomHeadScriptsMode,
 		InlineTriggers: rawOrNull(row.InlineTriggers), Triggers: []Trigger{}, FollowUps: []FollowUp{}, Languages: []SurveyLanguage{},
+		EmbeddedFields: []embeddeddata.LinkedField{},
 	}
 }
 
@@ -158,6 +161,9 @@ func (r *Repository) loadRelations(ctx context.Context, s *Survey, segmentID *uu
 		return err
 	}
 	if s.FollowUps, err = r.followUps(ctx, s.ID); err != nil {
+		return err
+	}
+	if s.EmbeddedFields, err = embeddeddata.SurveyFields(ctx, r.db, s.ID); err != nil {
 		return err
 	}
 	if segmentID != nil {
