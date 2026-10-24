@@ -488,6 +488,7 @@
     "show_response_count": "显示 响应 计数",
     "shown": "显示",
     "size": "尺寸",
+    "skip_to_content": "跳到主要内容",
     "skipped": "跳过",
     "skips": "跳过",
     "some_files_failed_to_upload": "某些文件上传失败",
@@ -2126,6 +2127,9 @@
       "theme": "主题",
       "theme_settings_description": "为所有问卷创建一个样式主题。你可以为每个问卷启用自定义样式。"
     },
+    "no_access_cta": "前往我的工作区",
+    "no_access_description": "此工作区不存在，或你没有访问权限。请联系组织的所有者或管理员，将你加入有访问权限的团队。",
+    "no_access_title": "无法打开此工作区",
     "segments": {
       "add_filter_below": "在下方添加 过滤器",
       "add_your_first_filter_to_get_started": "添加 您 的 第一个 过滤器 以 开始",
@@ -2664,10 +2668,12 @@
       "archive_survey": "归档此调查问卷？",
       "archive_survey_description": "你可以在接下来的30天内随时恢复它。",
       "archive_survey_description_in_progress": "它将立即停止收集回复。",
+      "archive_survey_summary": "{count, plural, =0 {“{name}”还没有回复。} other {“{name}”的 # 条回复会保留。}}",
       "archive_survey_warning": "此调查问卷及其所有回复将在 30 天后永久删除。",
       "archiving_survey": "正在归档问卷...",
       "change_status": "更改状态",
       "completed_responses": "已完成",
+      "completed_responses_hint": "仅统计已完成的回复，不含部分回复。",
       "copy_survey": "复制问卷",
       "copy_survey_description": "选择要将此问卷复制到的工作区。",
       "copy_survey_error": "复制问卷失败",
@@ -2678,6 +2684,8 @@
       "copy_survey_target_workspaces_label": "目标工作区",
       "copy_to": "复制到...",
       "delete_survey_and_responses_warning": "您 确定 要 删除 此 调查 及 所有 回复 吗？",
+      "delete_survey_summary": "{count, plural, =0 {“{name}”没有回复。} other {“{name}”及其 # 条回复将被删除。}}",
+      "duplicate_instead": "改为复制",
       "edit": {
         "activate_translations": "激活翻译",
         "add": "添加 +",
@@ -3302,9 +3310,12 @@
         "complete_responses": "完整反馈",
         "partial_responses": "部分 反馈"
       },
+      "filter_selected_count": "已选 {count} 项",
       "new_survey": "新 调查",
       "no_other_workspaces_available": "没有其他可用的工作区来复制此问卷。",
-      "open_options": "打开 选项",
+      "no_surveys_match_filters": "没有符合这些筛选条件的问卷。",
+      "open_duplicate": "打开",
+      "open_options_for": "{name} 的选项",
       "preview_survey_in_a_new_tab": "在 新 标签 中 预览 survey",
       "read_only_user_not_allowed_to_create_survey_warning": "作为 只读 用户，你 无法 创建 调查。请 询问 一位 具有 写 访问 权限 的 用户 创建 调查 或 请 一位 经理 升级 你的 角色。",
       "relevance": "相关性",
@@ -3488,6 +3499,7 @@
           "title": "社交媒体"
         }
       },
+      "showing_count": "显示 {shown} / {total} 份",
       "status_updated_successfully": "调查状态更新成功",
       "status_updating": "正在更新调查状态...",
       "stop_and_archive": "停止并归档",
@@ -3618,11 +3630,14 @@
         "all_channels": "所有 渠道",
         "all_industries": "所有 行业",
         "all_roles": "所有 角色",
+        "clear_search": "清除搜索",
         "create_a_new_survey": "创建 新 调查",
         "multiple_industries": "多个 行业",
+        "no_templates_match": "没有与“{query}”匹配的模板。",
         "use_this_template": "使用 此 模板",
         "uses_branching_logic": "此调查 使用 分支逻辑。"
-      }
+      },
+      "undo_archive": "撤销"
     },
     "tags": {
       "add": "添加",
