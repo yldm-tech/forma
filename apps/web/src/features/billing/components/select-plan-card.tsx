@@ -114,7 +114,7 @@ export const SelectPlanCard = ({ organizationId, nextUrl }: { organizationId: st
           <ul className="mt-4 space-y-1.5">
             {reducedLimits.map((item) => (
               <li key={item.to} className="flex items-center gap-2 text-sm text-slate-700">
-                <XCircleIcon className="text-primary size-3.5 shrink-0" />
+                <XCircleIcon className="text-ink size-3.5 shrink-0" />
                 <span>
                   <span className="text-slate-400 line-through">{item.from}</span>{" "}
                   <span aria-hidden="true">→</span> {item.to}
@@ -123,7 +123,7 @@ export const SelectPlanCard = ({ organizationId, nextUrl }: { organizationId: st
             ))}
             {lostFeatures.map((item) => (
               <li key={item} className="flex items-center gap-2 text-sm text-slate-700">
-                <XCircleIcon className="text-primary size-3.5 shrink-0" />
+                <XCircleIcon className="text-ink size-3.5 shrink-0" />
                 <span className="text-slate-400 line-through">{item}</span>
               </li>
             ))}

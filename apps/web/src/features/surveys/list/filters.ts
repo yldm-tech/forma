@@ -1,7 +1,7 @@
 // The survey list's filters, forma2's modules/survey/list/lib/{constants,utils}.ts: what the toolbar can ask for, how a stored or typed value is normalized before it reaches the query, and where the browser remembers them.
 
-/** forma2's FORMA_SURVEYS_FILTERS_KEY_LS. */
-export const SURVEY_FILTERS_KEY = "forma-surveys-filters";
+/** Where this browser keeps a workspace's survey filters. Each workspace has its own, so a filter set in one does not empty another's list. forma2 kept one key ("forma-surveys-filters") for every workspace; that value is no longer read. */
+export const surveyFiltersKey = (workspaceId: string): string => `forma-surveys-filters:${workspaceId}`;
 
 /** forma2's SURVEYS_PER_PAGE. */
 export const SURVEYS_PER_PAGE = 12;
@@ -54,6 +54,19 @@ export const parseStoredSurveyFilters = (
   } catch {
     return null;
   }
+};
+
+/** What the browser keeps of the filters: status, type and sort order. The name search is left out, so coming back later does not show a list narrowed by a search typed in an earlier visit. */
+export const storableSurveyFilters = (filters: SurveyFilters): Omit<SurveyFilters, "name"> => ({
+  status: filters.status,
+  type: filters.type,
+  sortBy: filters.sortBy,
+});
+
+/** The filters a list opens with: what the browser kept for the workspace, with an empty name search. */
+export const restoredSurveyFilters = (stored: string | null, channel?: WorkspaceChannel): SurveyFilters => {
+  const parsed = parseStoredSurveyFilters(stored, channel);
+  return parsed ? { ...parsed, name: initialFilters.name } : initialFilters;
 };
 
 /** Whether the toolbar offers "Clear filters": a status, a type or a name is set; the sort order alone does not count. */

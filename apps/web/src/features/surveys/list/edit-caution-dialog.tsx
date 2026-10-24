@@ -9,15 +9,20 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 
-/** forma2's EditPublicSurveyAlertDialog, shown before opening the editor of a survey that already has responses. */
+/** forma2's EditPublicSurveyAlertDialog, shown before opening the editor of a survey that already has responses. It recommends duplicating the survey, so with onDuplicate it also offers to do that (and open the copy) instead. */
 export const EditCautionDialog = ({
   open,
   setOpen,
   onEdit,
+  onDuplicate,
+  isDuplicating = false,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   onEdit: () => void;
+  /** Duplicates the survey and opens the copy's editor; the dialog stays open until it has. */
+  onDuplicate?: () => Promise<void>;
+  isDuplicating?: boolean;
 }) => {
   const { t } = useTranslation();
   return (
@@ -35,10 +40,19 @@ export const EditCautionDialog = ({
         </ul>
       </DialogBody>
       <DialogFooter>
-        <Button variant="secondary" onClick={() => setOpen(false)}>
+        <Button variant="ghost" onClick={() => setOpen(false)}>
           {t("common.cancel")}
         </Button>
+        {onDuplicate && (
+          <Button
+            variant="secondary"
+            loading={isDuplicating}
+            onClick={() => void onDuplicate().finally(() => setOpen(false))}>
+            {t("workspace.surveys.duplicate_instead")}
+          </Button>
+        )}
         <Button
+          disabled={isDuplicating}
           onClick={() => {
             setOpen(false);
             onEdit();

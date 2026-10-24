@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { pickAttributionParams } from "../../../lib/attribution";
 import { type Validators, useForm } from "../../../lib/form";
@@ -10,7 +10,7 @@ import { signupFailure } from "../errors";
 import { withSignupEmail } from "../history-state";
 import { readLastUsed } from "../last-used";
 import type { CallbackSearch } from "../search";
-import { emailError, nameError, passwordError } from "../validation";
+import { emailError, nameError, passwordError, translatedRules } from "../validation";
 import { PasswordChecks } from "./password-checks";
 import { SSOButtons } from "./sso-buttons";
 import { Turnstile } from "./turnstile";
@@ -54,18 +54,23 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
     ...pickAttributionParams(new URLSearchParams(window.location.search)),
   };
 
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [lastUsed] = useState(readLastUsed);
+  // As on the sign-in page: the fields show at once when email is the only way in, the address is already known (an invite's), or the visitor used email last time.
+  const [showEmailForm, setShowEmailForm] = useState(
+    () => options.ssoProviders.length === 0 || search.email !== undefined || lastUsed === "Email"
+  );
   const [turnstileToken, setTurnstileToken] = useState<string>();
   const [turnstileReset, setTurnstileReset] = useState(0);
   const [subscribeToSecurityUpdates, setSubscribeToSecurityUpdates] = useState(false);
   const [subscribeToProductUpdates, setSubscribeToProductUpdates] = useState(false);
-  const [lastUsed] = useState(readLastUsed);
   const [ssoError, setSsoError] = useState<string>();
   const turnstileSiteKey = options.turnstileSiteKey;
 
+  const rules = useMemo(() => translatedRules(t, SIGNUP_RULES), [t]);
+
   const form = useForm<SignupValues>({
     defaultValues: { name: "", email: search.email ?? "", password: "" },
-    validators: SIGNUP_RULES,
+    validators: rules,
     onSubmit: async ({ name, email, password }) => {
       if (turnstileSiteKey && !turnstileToken) {
         form.setFormError(t("auth.signup.please_verify_captcha"));
@@ -129,7 +134,7 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
                     id="signup-name"
                     name="name"
                     autoComplete="name"
-                    // oxlint-disable-next-line jsx-a11y/no-autofocus -- revealed by the user's own click on "Continue with Email", as forma2 focused it
+                    // oxlint-disable-next-line jsx-a11y/no-autofocus -- the first field of the form this page exists for, shown at once or revealed by the user's own click on "Continue with Email", as forma2 focused it
                     autoFocus
                     placeholder="Full name"
                     value={form.values.name}
@@ -151,6 +156,8 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
                     value={form.values.email}
                     error={form.errors.email}
                     onChange={(event) => form.setValue("email", event.target.value)}
+                    // A pasted address often carries a trailing space, which the email rule rejects.
+                    onBlur={(event) => form.setValue("email", event.target.value.trim())}
                   />
                 </Field>
                 <Field id="signup-password" label={t("common.password")} error={form.errors.password}>
@@ -198,8 +205,15 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
             ))}
           <Button
             type={showForm ? "submit" : "button"}
-            onClick={showForm ? undefined : () => setShowEmailForm(true)}
-            disabled={showForm && !form.isValid}
+            onClick={
+              showForm
+                ? undefined
+                : (event) => {
+                    // See the sign-in page: without this the click that reveals the fields also submits them, empty. The submit stays enabled so a refused one says what is wrong under each field.
+                    event.preventDefault();
+                    setShowEmailForm(true);
+                  }
+            }
             loading={showForm && form.isSubmitting}
             className="w-full">
             {t("auth.continue_with_email")}

@@ -11,6 +11,8 @@ const ZServerId = z.string().min(1);
 /** forma2's ZSurvey, refinements included, accepting the Go server's record ids. */
 export const ZEditorSurvey = ZSurveyBase.extend({
   id: ZServerId,
+  // forma2 accepted any string, so a survey could be published without a name; the editor (and the Go server's editor saves) require one. Kept out of packages/types, whose schema the v1/v3 APIs share.
+  name: z.string().trim().min(1, { message: "Survey name is required" }),
   workspaceId: ZServerId,
   triggers: z.array(
     z.object({ actionClass: ZActionClass.extend({ id: ZServerId, workspaceId: ZServerId }) })

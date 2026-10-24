@@ -20,6 +20,7 @@
     },
     "forgot-password": {
       "back_to_login": "Back to login",
+      "description": "Enter your email and we'll send you a link to reset your password.",
       "email-sent": {
         "heading": "Password reset successfully requested",
         "text": "If an account with this email exists, you will receive password reset instructions shortly."
@@ -35,12 +36,15 @@
         }
       },
       "reset_password": "Reset password",
-      "reset_password_description": "You will be logged out to reset your password."
+      "reset_password_description": "You will be logged out to reset your password.",
+      "title": "Forgot your password?"
     },
     "invite": {
+      "already_used_signed_in": "If you created your account from this invite, you are already a member.",
       "create_account": "Create an account",
       "email_does_not_match": "Ooops! Wrong email 🤦",
       "email_does_not_match_description": "The email in the invitation does not match yours.",
+      "email_does_not_match_for": "This invite was sent to {email}, but you are signed in as {currentEmail}. Log in with the invited address to accept it.",
       "go_to_app": "Go to app",
       "happy_to_have_you": "Happy to have you 🤗",
       "happy_to_have_you_description": "Please create an account or login.",
@@ -48,9 +52,13 @@
       "invite_expired_description": "Invites are valid for 7 days. Please request a new invite.",
       "invite_not_found": "Invite not found 😥",
       "invite_not_found_description": "The invitation code cannot be found or has already been used.",
+      "invited_you_to_join": "{inviterName} invited you to join {organizationName}.",
       "login": "Log in",
+      "switch_account": "Log out and switch account",
       "welcome_to_organization": "You are in 🎉",
-      "welcome_to_organization_description": "Welcome to the organization."
+      "welcome_to_organization_description": "Welcome to the organization.",
+      "you_are_invited_to_join": "You are invited to join {organizationName}.",
+      "you_joined": "You joined {organizationName}"
     },
     "last_used": "Last Used",
     "login": {
@@ -134,6 +142,19 @@
     "signup_without_verification_success": {
       "user_successfully_created": "User created successfully",
       "user_successfully_created_info": "We have checked for an account associated with {email}. If none existed, we have created one for you. If an account already existed, no changes were made. Please log in below to continue."
+    },
+    "two_factor": {
+      "i_saved_my_codes": "I've saved my codes",
+      "provide_code_or_backup_code": "Enter either the code from your authenticator app or a backup code."
+    },
+    "validation": {
+      "captcha_required": "Complete the CAPTCHA check.",
+      "invalid_email": "Enter a valid email address.",
+      "name_invalid": "Your name contains characters that are not allowed.",
+      "name_required": "Enter your name.",
+      "password_needs_upper_and_digit": "Use at least one uppercase letter and one number.",
+      "password_too_long": "Use {max} characters or fewer.",
+      "password_too_short": "Use at least {min} characters."
     },
     "verification-requested": {
       "email_not_configured_description": "This Forma instance has no email server set up, so no verification link could be sent. Please contact your administrator.",
@@ -363,6 +384,8 @@
     "meta": "Meta",
     "metadata": "Metadata",
     "mobile_overlay_app_works_best_on_desktop": "Forma works best on a bigger screen. To manage or build surveys, switch to another device.",
+    "mobile_overlay_copy_link": "Copy link to open on desktop",
+    "mobile_overlay_signed_in_as": "Signed in as {email}",
     "mobile_overlay_surveys_look_good": "Do not worry – your surveys look great on every device and screen size!",
     "mobile_overlay_title": "Oops, tiny screen detected!",
     "months": "months",
@@ -488,6 +511,7 @@
     "show_response_count": "Show response count",
     "shown": "Shown",
     "size": "Size",
+    "skip_to_content": "Skip to content",
     "skipped": "Skipped",
     "skips": "Skips",
     "some_files_failed_to_upload": "Some files failed to upload",
@@ -675,6 +699,7 @@
     },
     "workspaces": {
       "new": {
+        "skip_for_now": "Skip for now",
         "survey": {
           "create_with_ai_description": "Describe what you need and start from a generated survey.",
           "start_from_scratch": "Start from scratch",
@@ -705,8 +730,8 @@
     "survey_already_answered_subheading": "You can only use this link once.",
     "survey_preview": "Survey Preview 👀",
     "survey_sent_to": "Survey sent to {email}",
-    "this_looks_fishy": "This looks fishy.",
-    "verify_email": "Verify email.",
+    "this_looks_fishy": "This link isn't valid",
+    "verify_email": "Verify email",
     "verify_email_before_submission": "Verify your email to respond",
     "verify_email_before_submission_button": "Verify",
     "verify_email_before_submission_description": "To respond to this survey, please verify your email",
@@ -2126,6 +2151,9 @@
       "theme": "Theme",
       "theme_settings_description": "Create a style theme for all surveys. You can enable custom styling for each survey."
     },
+    "no_access_cta": "Go to your workspaces",
+    "no_access_description": "This workspace doesn't exist or you don't have access to it. Ask an owner or manager of your organization to add you to a team that has access.",
+    "no_access_title": "You can't open this workspace",
     "segments": {
       "add_filter_below": "Add filter below",
       "add_your_first_filter_to_get_started": "Add your first filter to get started",
@@ -2664,10 +2692,12 @@
       "archive_survey": "Archive this survey?",
       "archive_survey_description": "You can restore it anytime within the next 30 days.",
       "archive_survey_description_in_progress": "It will stop collecting responses immediately.",
+      "archive_survey_summary": "{count, plural, =0 {“{name}” has no responses yet.} one {“{name}” keeps its # response.} other {“{name}” keeps its # responses.}}",
       "archive_survey_warning": "This survey and all its responses will be permanently deleted after 30 days.",
       "archiving_survey": "Archiving survey...",
       "change_status": "Change status",
-      "completed_responses": "Completed",
+      "completed_responses": "Completed responses",
+      "completed_responses_hint": "Completed responses only. Partial responses are not counted.",
       "copy_survey": "Copy survey",
       "copy_survey_description": "Choose a workspace to copy this survey to.",
       "copy_survey_error": "Failed to copy survey",
@@ -2678,6 +2708,8 @@
       "copy_survey_target_workspaces_label": "Target workspaces",
       "copy_to": "Copy to...",
       "delete_survey_and_responses_warning": "Are you sure you want to delete this survey and all of its responses?",
+      "delete_survey_summary": "{count, plural, =0 {“{name}” has no responses.} one {“{name}” and its # response will be deleted.} other {“{name}” and its # responses will be deleted.}}",
+      "duplicate_instead": "Duplicate instead",
       "edit": {
         "activate_translations": "Activate translations",
         "add": "Add +",
@@ -2745,6 +2777,10 @@
         "automatically_close_the_survey_after_a_certain_number_of_responses": "Automatically close the survey after a certain number of responses.",
         "automatically_close_the_survey_if_the_user_does_not_respond_after_certain_number_of_seconds": "Automatically close the survey if the user does not respond after certain number of seconds.",
         "automatically_mark_complete_after_n_responses": "Automatically mark the survey as complete after <autoCompleteInput /> completed responses.",
+        "autosave_failed": "Autosave failed",
+        "autosave_not_saved": "Not saved: {reason}",
+        "autosave_saved_at": "Saved · {time}",
+        "autosave_saving": "Saving…",
         "back_button_label": "“Back” Button Label",
         "background_styling": "Background styling",
         "block_duplicated": "Block duplicated.",
@@ -2834,8 +2870,13 @@
         "default": "Default",
         "default_language": "Default language",
         "delete_anyways": "Delete anyways",
+        "delete_applies_on_save": "Nothing is deleted until you save the survey.",
         "delete_block": "Delete block",
+        "delete_block_confirm_text": "“{name}” and the {count, plural, one {# question} other {# questions}} in it will be removed from the survey.",
+        "delete_block_confirm_title": "Delete this block?",
         "delete_choice": "Delete choice",
+        "delete_question_confirm_text": "“{name}” will be removed from the survey.",
+        "delete_question_confirm_title": "Delete this question?",
         "disable_the_visibility_of_survey_progress": "Disable the visibility of survey progress.",
         "display_an_estimate_of_completion_time_for_survey": "Display an estimate of completion time for survey",
         "display_number_of_responses_for_survey": "Display number of responses for survey",
@@ -2878,7 +2919,7 @@
         "fallback_missing": "Fallback missing",
         "fieldId_is_used_in_logic_of_question_please_remove_it_from_logic_first": "{fieldId} is used in logic of question {questionIndex}. Please remove it from logic first.",
         "fieldId_is_used_in_quota_please_remove_it_from_quota_first": "Hidden field “{fieldId}” is being used in “{quotaName}” quota",
-        "field_name_eg_score_price": "Field name e.g, score, price",
+        "field_name_eg_score_price": "Field name, e.g. score, price",
         "first_name": "First Name",
         "five_points_recommended": "5 points (recommended)",
         "follow_ups": "Follow-ups",
@@ -2981,9 +3022,13 @@
         "is_set": "Is set",
         "is_skipped": "Is skipped",
         "is_submitted": "Is submitted",
+        "issue_logic_rule_incomplete": "Logic rule {ruleNumber} in block {blockNumber} is incomplete",
+        "issue_option_label_missing": "Option {optionNumber} of question {questionNumber} in block {blockNumber} is empty",
+        "issue_question_text_missing": "Question {questionNumber} in block {blockNumber} has no question text",
         "italic": "Italic",
         "jump_to_block": "Jump to block",
         "keep_current_order": "Keep current order",
+        "keep_editing": "Keep editing",
         "keep_showing_while_conditions_match": "Keep showing while conditions match",
         "key": "Key",
         "last_name": "Last Name",
@@ -3007,6 +3052,7 @@
         "max_file_size_limit_is_mb": "Max file size limit is {maxSize} MB.",
         "max_file_size_limit_is_mb_upgrade": "Max file size limit is {maxSize} MB. If you need more, please <upgradeLink>upgrade your plan</upgradeLink>.",
         "missing_first": "Missing first",
+        "more_actions": "More actions",
         "move_question_to_block": "Move question to block",
         "multiply": "Multiply *",
         "narrow": "Narrow",
@@ -3043,6 +3089,8 @@
         "please_set_a_survey_trigger": "Please set a survey trigger",
         "please_specify": "Please specify",
         "present_your_survey_in_multiple_languages": "Present your survey in multiple languages",
+        "preview_desktop": "Desktop preview",
+        "preview_mobile": "Mobile preview",
         "progress_saved": "Progress saved",
         "protect_survey_with_pin": "Protect survey with a PIN",
         "protect_survey_with_pin_description": "Only users who have the PIN can access the survey.",
@@ -3099,6 +3147,8 @@
         "redirect_to_url": "Redirect to URL",
         "remove_description": "Remove description",
         "remove_translations": "Remove translations",
+        "reorder_block": "Reorder block {number}",
+        "reorder_ending_card": "Reorder ending card {number}",
         "require_answer": "Require Answer",
         "required": "Required",
         "reset_to_theme_styles": "Reset to theme styles",
@@ -3123,7 +3173,10 @@
         "select_or_type_value": "Select or type value",
         "select_ordering": "Select ordering",
         "select_saved_action": "Select saved action",
+        "select_target": "Select a block or ending",
         "select_type": "Select type",
+        "select_value": "Select a value",
+        "select_variable": "Select a variable",
         "send_survey_to_audience_who_match": "Send survey to audience who match…",
         "send_your_respondents_to_a_page_of_your_choice": "Send your respondents to a page of your choice.",
         "set_global_placement_in_look_feel_settings_hint": "To keep the placement over all surveys consistent, you can <lookFeelLink>set the global placement in the Look & Feel settings.</lookFeelLink>",
@@ -3161,6 +3214,7 @@
         "survey_completed_heading": "Survey Completed",
         "survey_completed_subheading": "This free & open-source survey has been closed",
         "survey_display_settings": "Survey Display Settings",
+        "survey_name": "Survey name",
         "survey_placement": "Survey Placement",
         "survey_styling": "Survey styling",
         "survey_trigger": "Survey Trigger",
@@ -3256,6 +3310,7 @@
         "validation_logic_or": "any is true",
         "validation_rules": "Validation rules",
         "validation_rules_description": "Only accept responses that meet the following criteria",
+        "value": "Value",
         "variable_is_used_in_logic_of_question_please_remove_it_from_logic_first": "{variable} is used in logic of question {questionIndex}. Please remove it from logic first.",
         "variable_is_used_in_quota_please_remove_it_from_quota_first": "Variable “{variableName}” is being used in “{quotaName}” quota",
         "variable_name_conflicts_with_hidden_field": "Variable name conflicts with an existing hidden field ID.",
@@ -3302,9 +3357,12 @@
         "complete_responses": "Complete responses",
         "partial_responses": "Partial responses"
       },
+      "filter_selected_count": "{count} selected",
       "new_survey": "New Survey",
       "no_other_workspaces_available": "No other workspaces available to copy this survey to.",
-      "open_options": "Open options",
+      "no_surveys_match_filters": "No surveys match these filters.",
+      "open_duplicate": "Open",
+      "open_options_for": "Options for {name}",
       "preview_survey_in_a_new_tab": "Preview survey in a new tab",
       "read_only_user_not_allowed_to_create_survey_warning": "As a Read-Only user you are not allowed to create surveys. Please ask a user with write access to create a survey or a manager to upgrade your role.",
       "relevance": "Relevance",
@@ -3498,6 +3556,7 @@
           "title": "Social media"
         }
       },
+      "showing_count": "Showing {shown} of {total}",
       "status_updated_successfully": "Survey status updated successfully",
       "status_updating": "Updating survey status...",
       "stop_and_archive": "Stop and archive",
@@ -3643,11 +3702,14 @@
         "all_channels": "All channels",
         "all_industries": "All industries",
         "all_roles": "All roles",
+        "clear_search": "Clear search",
         "create_a_new_survey": "Create a new survey",
         "multiple_industries": "Multiple industries",
+        "no_templates_match": "No templates match “{query}”.",
         "use_this_template": "Use this template",
         "uses_branching_logic": "This survey uses branching logic."
-      }
+      },
+      "undo_archive": "Undo"
     },
     "tags": {
       "add": "Add",

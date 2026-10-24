@@ -43,6 +43,8 @@ export const ThemePreview = ({
       survey,
       styling,
       isPreviewMode: true,
+      // The preview renders inline in the settings page, not in an iframe, so the runtime would otherwise focus its first control on every card and pull focus away from the form beside it.
+      autoFocus: false,
       isRedirectDisabled: true,
       isBrandingEnabled: isApp ? workspace.inAppSurveyBranding : workspace.linkSurveyBranding,
       onFileUpload: async (file: { name: string }) => file.name,

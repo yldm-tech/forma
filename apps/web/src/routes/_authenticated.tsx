@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { NoMobileOverlay } from "../components/shell/no-mobile-overlay";
+import { NoMobileOverlay, useIsPhone } from "../components/shell/no-mobile-overlay";
 import { ApiError } from "../lib/api";
 import { appHref } from "../lib/base-path";
 import { changeLocale, isLocale } from "../lib/i18n";
@@ -34,12 +34,15 @@ function AuthenticatedLayout() {
     if (isLocale(me.locale) && i18n.language !== me.locale) void changeLocale(i18n, me.locale);
   }, [me.locale, i18n]);
 
+  // forma2's app layout covered every signed-in page on a phone-sized screen. The app stays mounted under the overlay, inert, so nothing behind it takes focus or reaches a screen reader, and clipped to the screen, so a page wider than the phone cannot widen the layout viewport and push the overlay's text off its edge.
+  const isPhone = useIsPhone();
   return (
     <>
-      {/* forma2's app layout covered every signed-in page on a phone-sized screen. */}
-      <NoMobileOverlay />
+      {isPhone && <NoMobileOverlay email={me.email} />}
       <PostHogIdentify userId={me.id} email={me.email} />
-      <Outlet />
+      <div inert={isPhone || undefined} className={isPhone ? "h-dvh overflow-hidden" : "contents"}>
+        <Outlet />
+      </div>
     </>
   );
 }
