@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
-import { describeFirstIssue, getInvalidCards, issuesFromDetails } from "./survey-issues";
+import {
+  type IssueMessages,
+  describeFirstIssue,
+  getInvalidCards,
+  issuesFromDetails,
+  logicRuleDomId,
+} from "./survey-issues";
 
 const element = (id: string) => ({
   id,
@@ -45,12 +51,12 @@ describe("getInvalidCards", () => {
     });
   });
 
-  test("flags the logic rule of a rule issue, scrolling to its block", () => {
+  test("flags the logic rule of a rule issue, scrolling to the rule itself", () => {
     expect(
       getInvalidCards(survey, [{ path: ["blocks", 0, "logic", 1, "conditions"], message: "x" }])
     ).toEqual({
       invalidIds: ["logic-b"],
-      firstInvalidScrollId: "blockone0000000000000000",
+      firstInvalidScrollId: logicRuleDomId("logic-b"),
     });
   });
 
@@ -92,30 +98,106 @@ describe("getInvalidCards", () => {
 });
 
 describe("describeFirstIssue", () => {
-  const blockNameRequired = (n: number) => `Block name is required for Block ${n}`;
-  const languageLabel = (code: string) => ({ de: "German", fr: "French" })[code] ?? code;
+  const messages: IssueMessages = {
+    surveyNameRequired: () => "Please enter a survey name.",
+    blockNameRequired: (n) => `Block name is required for Block ${n}`,
+    questionTextMissing: (block, question) => `Question ${question} in block ${block} needs a question text`,
+    optionLabelMissing: (block, question, option) =>
+      `Option ${option} of question ${question} in block ${block} is empty`,
+    logicRuleInvalid: (block, rule) => `Rule ${rule} in block ${block} is incomplete`,
+    languageLabel: (code) => ({ de: "German", fr: "French" })[code] ?? code,
+  };
+  const choiceSurvey = {
+    blocks: [
+      {
+        id: "blockone0000000000000000",
+        name: "Block 1",
+        elements: [
+          { ...element("q1"), headline: { default: "<p></p>" } },
+          {
+            id: "q2",
+            type: TSurveyElementTypeEnum.MultipleChoiceSingle,
+            headline: { default: "Pick one" },
+            required: false,
+            choices: [
+              { id: "a", label: { default: "Yes" } },
+              { id: "b", label: { default: " " } },
+            ],
+          },
+        ],
+      },
+    ],
+    endings: [],
+  } as unknown as TSurvey;
 
   test("names the block a missing block name belongs to", () => {
     expect(
-      describeFirstIssue(
-        { path: ["blocks", 2, "name"], message: "Block name is required" },
-        blockNameRequired,
-        languageLabel
-      )
+      describeFirstIssue(survey, { path: ["blocks", 2, "name"], message: "Block name is required" }, messages)
     ).toEqual({ message: "Block name is required for Block 3", showLanguageTab: false });
+  });
+
+  test("words a missing survey name in the editor's language", () => {
+    expect(
+      describeFirstIssue(survey, { path: ["name"], message: "Survey name is required" }, messages)
+    ).toEqual({ message: "Please enter a survey name.", showLanguageTab: false });
+  });
+
+  test("words an empty question text and an empty option by their position", () => {
+    expect(
+      describeFirstIssue(
+        choiceSurvey,
+        {
+          path: ["blocks", 0, "elements", 0, "headline"],
+          message: "The question in question 1 of block 1 is missing",
+        },
+        messages
+      ).message
+    ).toBe("Question 1 in block 1 needs a question text");
+    expect(
+      describeFirstIssue(
+        choiceSurvey,
+        {
+          path: ["blocks", 0, "elements", 1, "choices", 1],
+          message: "Choice 2 in question 2 of block 1 is missing",
+        },
+        messages
+      ).message
+    ).toBe("Option 2 of question 2 in block 1 is empty");
+  });
+
+  test("keeps the raw message when the text the path names is not empty", () => {
+    const message = "The headline in question 1 of block 1 is not present for the following languages: de";
+    expect(
+      describeFirstIssue(survey, { path: ["blocks", 0, "elements", 0, "headline"], message }, messages)
+        .message
+    ).toBe(message);
+  });
+
+  test("words a logic rule issue by rule and block, whatever the rule broke", () => {
+    expect(
+      describeFirstIssue(
+        survey,
+        {
+          path: ["blocks", 0, "logic", 1, "conditions"],
+          message:
+            'Conditional Logic: right operand is required for operator "equals" in logic no: 2 of block 1',
+        },
+        messages
+      ).message
+    ).toBe("Rule 2 in block 1 is incomplete");
   });
 
   test("lists the languages of a translation issue by name and sends the author to the Language tab", () => {
     expect(
       describeFirstIssue(
+        survey,
         {
           path: ["blocks", 0, "elements", 0, "headline"],
           message:
             "The question in question 1 of block 1 is missing for the following languages:  -fLang- de,fr",
           params: { invalidLanguageCodes: ["de", "fr"] },
         },
-        blockNameRequired,
-        languageLabel
+        messages
       )
     ).toEqual({
       message:
@@ -127,9 +209,9 @@ describe("describeFirstIssue", () => {
   test("passes any other issue through", () => {
     expect(
       describeFirstIssue(
+        survey,
         { path: ["autoComplete"], message: "Response limit must be greater than 0" },
-        blockNameRequired,
-        languageLabel
+        messages
       )
     ).toEqual({ message: "Response limit must be greater than 0", showLanguageTab: false });
   });

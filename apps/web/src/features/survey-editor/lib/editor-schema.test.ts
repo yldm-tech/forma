@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
-import { type TSurvey, ZSurvey } from "@forma/types/surveys/types";
+import { type TSurvey, ZSurvey, ZSurveyBase } from "@forma/types/surveys/types";
 import { ZEditorSurvey } from "./editor-schema";
 
 const now = new Date("2026-10-01T00:00:00.000Z");
@@ -114,6 +114,16 @@ describe("ZEditorSurvey", () => {
     );
     expect(issue?.code === "custom" ? issue.params : undefined).toEqual({ invalidLanguageCodes: ["de"] });
   });
+
+  test.each(["", "   ", "\t"])(
+    "refuses the survey name %j, which forma2's schema let a publish store",
+    (name) => {
+      const unnamed = { ...survey(), name };
+      expect(ZSurveyBase.shape.name.safeParse(name).success).toBe(true);
+      const issues = ZEditorSurvey.safeParse(unnamed).error?.issues ?? [];
+      expect(issues.map((issue) => issue.path)).toContainEqual(["name"]);
+    }
+  );
 
   test("still requires the ids the editor creates to be cuid2", () => {
     const badBlockId = survey();
