@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { CheckIcon, CopyIcon, ExternalLinkIcon, TrashIcon, WebhookIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, TrashIcon, WebhookIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../../../components/ui/badge";
@@ -45,8 +45,6 @@ import {
 import { BackToIntegrations } from "./shared";
 
 type SurveyOption = { id: string; name: string };
-
-const DOCS = "https://forma.yldm.ai/docs/platform/features/integrations/webhooks";
 
 /** forma2's webhooks page: the workspace's webhooks, newest first, and adding one when the caller may write to the workspace. */
 export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string; isReadOnly: boolean }) => {
@@ -508,14 +506,6 @@ export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; on
           <p className="mt-2 text-xs text-slate-500">
             {t("workspace.integrations.webhooks.secret_copy_warning")}
           </p>
-          <a
-            href={`${DOCS}#webhook-security-with-standard-webhooks`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-xs text-slate-600 underline hover:text-slate-800">
-            {t("workspace.integrations.webhooks.learn_to_verify")}
-            <ExternalLinkIcon className="size-3" />
-          </a>
         </div>
       </DialogBody>
       <DialogFooter>
@@ -792,11 +782,6 @@ const WebhookSettings = ({
                 {t("common.delete")}
               </Button>
             )}
-            <Button variant="secondary" asChild>
-              <a href={DOCS} target="_blank" rel="noreferrer">
-                {t("common.read_docs")}
-              </a>
-            </Button>
           </div>
           {!isReadOnly && (
             <Button type="submit" loading={update.isPending}>

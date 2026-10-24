@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Starts the running instance the browser suite (apps/e2e/, .github/workflows/e2e.yml) and the v3 contract tests (.github/workflows/api-v3-contract-tests.yml) drive: docker-compose.dev.yml's PostgreSQL, Valkey, SpiceDB and RustFS, then bin/forma (built beforehand, `make build` or `make server`) migrated, with the SpiceDB schema written, optionally seeded, and serving with its job worker as `forma start` does in the container.
+# Starts the running instance the browser suite (apps/e2e/, .github/workflows/e2e.yml) drives: docker-compose.dev.yml's PostgreSQL, Valkey, SpiceDB and RustFS, then bin/forma (built beforehand, `make build` or `make server`) migrated, with the SpiceDB schema written, optionally seeded, and serving with its job worker as `forma start` does in the container.
 #
-#   tooling/scripts/ci-stack.sh up      start everything; SEED_ARGS="" seeds the base data, SEED_ARGS="--contract" also the contract fixtures
+#   tooling/scripts/ci-stack.sh up      start everything; SEED_ARGS="" seeds the base data, and any flags in it are passed to `forma seed`
 #   tooling/scripts/ci-stack.sh down    stop the server and the containers
 #
 # Configuration is .env.example's, under the overrides below; any variable already set wins over both, so a local run can move the ports (POSTGRES_PORT, VALKEY_PORT, SPICEDB_GRPC_PORT, RUSTFS_PORT, with DATABASE_URL, REDIS_URL, AUTHZED_ENDPOINT and S3_ENDPOINT_URL to match) or the compose project (COMPOSE_PROJECT_NAME). The server's output goes to FORMA_LOG (default forma.log in a temporary directory, printed at start).

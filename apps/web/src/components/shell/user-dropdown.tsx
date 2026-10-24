@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRightIcon, BellIcon, LogOutIcon, UserCircleIcon } from "lucide-react";
+import { BellIcon, LogOutIcon, UserCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { errorMessage } from "../../lib/errors";
 import { type Me, signOut } from "../../lib/queries/auth";
@@ -13,10 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-export const DOCUMENTATION_URL = "https://forma.yldm.ai/docs";
-
 /**
- * forma2's user menu: profile, notifications (left out for the billing role, which sees no survey activity), documentation and log out. Logging out records why, forgets the remembered workspace and goes to the sign-in page.
+ * forma2's user menu: profile, notifications (left out for the billing role, which sees no survey activity) and log out. Logging out records why, forgets the remembered workspace and goes to the sign-in page.
  */
 export const UserDropdown = ({
   user,
@@ -70,12 +68,6 @@ export const UserDropdown = ({
             </Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem asChild>
-          <a href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
-            <ArrowUpRightIcon className="mr-2 size-4" strokeWidth={1.5} />
-            {t("common.documentation")}
-          </a>
-        </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => void logOut()}
           icon={<LogOutIcon className="mr-2 size-4" strokeWidth={1.5} />}>

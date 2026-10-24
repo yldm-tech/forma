@@ -1,6 +1,6 @@
-// Package seed writes the contributor and CI seed data, forma2's packages/database/src/seed.ts and seed-contract-fixtures.ts: a demo organization with an owner, a manager and a member who can sign in, a workspace with forma2's four demo surveys (one of them carrying every element type) and their responses, demo workflows with run history, and on request an API key and the disposable resources the v3 contract tests mutate.
+// Package seed writes the contributor and CI seed data, forma2's packages/database/src/seed.ts: a demo organization with an owner, a manager and a member who can sign in, a workspace with forma2's four demo surveys (one of them carrying every element type) and their responses, demo workflows with run history, and on request an API key.
 //
-// Every seeded row has a fixed id, the uuidv5 legacyid derives from forma2's seed id (SEED_IDS and CONTRACT_IDS), so a second seed rewrites the same rows instead of adding more, forma2's ids still resolve in URLs, and Clear can remove exactly what a seed wrote. Rows are written with SQL in one transaction, so the authorization triggers enqueue the SpiceDB projection of every organization, membership, workspace and API key exactly as the services' writes do; the worker (or `forma authz outbox drain`) delivers it. The services themselves are not used: they authorize an actor through SpiceDB, which knows nothing about data that does not exist yet.
+// Every seeded row has a fixed id, the uuidv5 legacyid derives from forma2's seed id (SEED_IDS), so a second seed rewrites the same rows instead of adding more, forma2's ids still resolve in URLs, and Clear can remove exactly what a seed wrote. Rows are written with SQL in one transaction, so the authorization triggers enqueue the SpiceDB projection of every organization, membership, workspace and API key exactly as the services' writes do; the worker (or `forma authz outbox drain`) delivers it. The services themselves are not used: they authorize an actor through SpiceDB, which knows nothing about data that does not exist yet.
 package seed
 
 import (
@@ -60,36 +60,30 @@ type Options struct {
 	Clear bool
 	// APIKeySecret, when set, creates the seeded API key, sent as "fbk_" + APIKeySecret, with manage access to the seeded workspace (forma2's SEED_API_KEY). The secret must be base64url characters, as every key the API accepts is.
 	APIKeySecret string
-	// Contract also seeds the disposable resources the v3 contract tests mutate and returns their id map. It needs APIKeySecret: the suite authenticates with that key.
-	Contract bool
 }
 
-// Run seeds db. In contract mode the returned fixtures are the id map apps/docs/api-v3-reference/contract-tests/hooks.py reads; otherwise they are nil.
-func Run(ctx context.Context, db *gorm.DB, opts Options, log *slog.Logger) (*Fixtures, error) {
-	if opts.Contract && opts.APIKeySecret == "" {
-		return nil, errors.New("contract fixtures need SEED_API_KEY: the contract tests authenticate with the seeded API key")
-	}
+// Run seeds db.
+func Run(ctx context.Context, db *gorm.DB, opts Options, log *slog.Logger) error {
 	if opts.APIKeySecret != "" && !validKeySecret(opts.APIKeySecret) {
-		return nil, errors.New("SEED_API_KEY must be base64url characters (A-Z, a-z, 0-9, - and _), as `openssl rand -hex 32` prints")
+		return errors.New("SEED_API_KEY must be base64url characters (A-Z, a-z, 0-9, - and _), as `openssl rand -hex 32` prints")
 	}
 	schemas, err := jsonschema.New()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	validator := surveydoc.NewValidator(schemas)
 	// Hashed before the transaction opens: bcrypt at forma2's cost takes a moment each.
 	passwordHash, err := secret.HashPassword(Password)
 	if err != nil {
-		return nil, fmt.Errorf("hash seed password: %w", err)
+		return fmt.Errorf("hash seed password: %w", err)
 	}
 	var keyHash string
 	if opts.APIKeySecret != "" {
 		if keyHash, err = secret.HashPassword(opts.APIKeySecret); err != nil {
-			return nil, fmt.Errorf("hash seed api key: %w", err)
+			return fmt.Errorf("hash seed api key: %w", err)
 		}
 	}
 
-	var fixtures *Fixtures
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		s := &seeder{tx: tx, validator: validator, now: time.Now().UTC()}
 		if opts.Clear {
@@ -106,20 +100,13 @@ func Run(ctx context.Context, db *gorm.DB, opts Options, log *slog.Logger) (*Fix
 				return err
 			}
 		}
-		if opts.Contract {
-			f, err := s.contract()
-			if err != nil {
-				return err
-			}
-			fixtures = f
-		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	log.InfoContext(ctx, "seeded the demo organization", "organization", OrganizationID, "workspace", WorkspaceID, "api_key", opts.APIKeySecret != "", "contract_fixtures", opts.Contract)
-	return fixtures, nil
+	log.InfoContext(ctx, "seeded the demo organization", "organization", OrganizationID, "workspace", WorkspaceID, "api_key", opts.APIKeySecret != "")
+	return nil
 }
 
 // Clear removes everything a seed wrote: the seeded organization, which takes its workspaces, surveys, responses, workflows and API keys with it, and the seeded users. Nothing else is touched.
@@ -193,7 +180,7 @@ func (s *seeder) base(passwordHash string) error {
 	if err := s.exec("workspace", `INSERT INTO workspaces (id, organization_id, name, config) VALUES (?, ?, 'Seed Workspace', '{"channel": null, "industry": null}') ON CONFLICT (id) DO NOTHING`, WorkspaceID, OrganizationID); err != nil {
 		return err
 	}
-	if err := s.language("en-US"); err != nil {
+	if err := s.exec("language", `INSERT INTO languages (workspace_id, code) VALUES (?, 'en-US') ON CONFLICT (workspace_id, code) DO NOTHING`, WorkspaceID); err != nil {
 		return err
 	}
 	for _, k := range contactAttributeKeys {
@@ -204,7 +191,7 @@ func (s *seeder) base(passwordHash string) error {
 	}
 	for _, sv := range seedSurveys {
 		id := legacyid.ID(sv.id)
-		if err := s.survey(id, sv.id, sv.name, sv.status, sv.elements, nil); err != nil {
+		if err := s.survey(id, sv.id, sv.name, sv.status, sv.elements); err != nil {
 			return err
 		}
 		if err := s.responses(id, sv.id, sv.elements, sv.responses); err != nil {
@@ -226,47 +213,22 @@ var contactAttributeKeys = []struct {
 	{"language", "Language", "The language preference of a contact", false},
 }
 
-// language makes sure the seeded workspace has the language and returns its id.
-func (s *seeder) language(code string) error {
-	return s.exec("language", `INSERT INTO languages (workspace_id, code) VALUES (?, ?) ON CONFLICT (workspace_id, code) DO NOTHING`, WorkspaceID, code)
-}
-
-// survey writes a link survey, rewriting its document on a re-seed. The document is checked as the editor's save checks it first, so a seed never writes a survey the product would refuse. languages, first the default, are configured on the survey when given.
-func (s *seeder) survey(id uuid.UUID, key, name, status string, elements []map[string]any, languages []string) error {
+// survey writes a link survey, rewriting its document on a re-seed. The document is checked as the editor's save checks it first, so a seed never writes a survey the product would refuse.
+func (s *seeder) survey(id uuid.UUID, key, name, status string, elements []map[string]any) error {
 	blocks, endings := blocksOf(key, elements), endingsOf(key)
-	if len(languages) > 1 {
-		blocks, endings = translated(blocks, languages[1:]), translated(endings, languages[1:])
-	}
 	welcome, hidden := json.RawMessage(`{"enabled": false}`), json.RawMessage(`{"enabled": true, "fieldIds": []}`)
-	var langs []surveydoc.Language
-	for i, code := range languages {
-		langs = append(langs, surveydoc.Language{Code: code, Default: i == 0, Enabled: true})
-	}
-	issues, _, err := s.validator.Check(surveydoc.Document{WelcomeCard: welcome, Blocks: blocks, Endings: endings, HiddenFields: hidden, Variables: json.RawMessage(`[]`), Metadata: json.RawMessage(`{}`)}, langs, nil)
+	issues, _, err := s.validator.Check(surveydoc.Document{WelcomeCard: welcome, Blocks: blocks, Endings: endings, HiddenFields: hidden, Variables: json.RawMessage(`[]`), Metadata: json.RawMessage(`{}`)}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("validate seed survey %s: %w", name, err)
 	}
 	if len(issues) > 0 {
 		return fmt.Errorf("seed survey %s is not a valid survey: %v", name, issues)
 	}
-	if err := s.exec("survey", `INSERT INTO surveys (id, workspace_id, created_by, name, type, status, welcome_card, blocks, endings, hidden_fields)
+	return s.exec("survey", `INSERT INTO surveys (id, workspace_id, created_by, name, type, status, welcome_card, blocks, endings, hidden_fields)
 		VALUES (?, ?, ?, ?, 'link', ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb)
 		ON CONFLICT (id) DO UPDATE SET name = excluded.name, type = 'link', status = excluded.status, welcome_card = excluded.welcome_card, blocks = excluded.blocks,
 			endings = excluded.endings, hidden_fields = excluded.hidden_fields, archived_at = NULL, updated_at = now()`,
-		id, WorkspaceID, Users[0].ID, name, status, string(welcome), string(blocks), string(endings), string(hidden)); err != nil {
-		return err
-	}
-	for i, code := range languages {
-		if err := s.language(code); err != nil {
-			return err
-		}
-		if err := s.exec("survey language", `INSERT INTO survey_languages (survey_id, language_id, is_default, enabled)
-			SELECT ?, id, ?, true FROM languages WHERE workspace_id = ? AND code = ?
-			ON CONFLICT (survey_id, language_id) DO UPDATE SET is_default = excluded.is_default, enabled = true`, id, i == 0, WorkspaceID, code); err != nil {
-			return err
-		}
-	}
-	return nil
+		id, WorkspaceID, Users[0].ID, name, status, string(welcome), string(blocks), string(endings), string(hidden))
 }
 
 // responses writes forma2's generated responses, each with the display it answered, plus 30% more displays nobody answered. A re-seed leaves rows that exist alone.

@@ -5,10 +5,9 @@ import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
-import { CircleHelpIcon, EyeOffIcon, FileDigitIcon, FileType2Icon, MailIcon, TagIcon } from "lucide-react";
+import { EyeOffIcon, FileDigitIcon, FileType2Icon, MailIcon, TagIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { IdBadge } from "../../../../components/ui/id-badge";
-import { TooltipRenderer } from "../../../../components/ui/tooltip";
 import { cn } from "../../../../lib/cn";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { recallToHeadline } from "../../../../lib/survey/recall";
@@ -160,26 +159,7 @@ export const generateResponseTableColumns = (
 
   const personColumn: ColumnDef<TResponseTableData> = {
     accessorKey: "personId",
-    header: () => (
-      <div className="flex items-center gap-x-1.5">
-        {t("common.person")}
-        <TooltipRenderer
-          tooltipContent={
-            <span className="space-x-1 font-normal">
-              <span>{t("workspace.surveys.responses.how_to_identify_users")}</span>
-              <a
-                className="underline underline-offset-2 hover:text-slate-900"
-                href="https://forma.yldm.ai/docs/app-surveys/user-identification"
-                target="_blank"
-                rel="noopener noreferrer">
-                {t("common.app_survey")}
-              </a>
-            </span>
-          }>
-          <CircleHelpIcon className="size-3 text-slate-500" strokeWidth={1.5} />
-        </TooltipRenderer>
-      </div>
-    ),
+    header: () => <div className="flex items-center gap-x-1.5">{t("common.person")}</div>,
     size: 275,
     cell: ({ row }) => (
       <p className="truncate text-slate-900">

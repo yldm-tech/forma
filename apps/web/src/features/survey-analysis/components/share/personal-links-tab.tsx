@@ -9,7 +9,6 @@ import { Select } from "../../../../components/ui/select";
 import { generatePersonalLinks, segmentsQuery } from "../../../../lib/queries/contacts";
 import { toast } from "../../../../lib/toast";
 import { personalLinkErrorMessage } from "../../../contacts/personal-link-errors";
-import { DocumentationLinks } from "./documentation-links";
 
 const TOAST_ID = "generating-links";
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -118,14 +117,6 @@ export const PersonalLinksTab = ({ surveyId, workspaceId }: { surveyId: string; 
             : t("workspace.surveys.share.personal_links.generate_and_download_links")}
         </Button>
       </div>
-      <DocumentationLinks
-        links={[
-          {
-            title: t("workspace.surveys.share.personal_links.work_with_segments"),
-            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/advanced-targeting#segment-configuration",
-          },
-        ]}
-      />
     </div>
   );
 };

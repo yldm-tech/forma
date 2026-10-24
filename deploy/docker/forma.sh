@@ -16,7 +16,6 @@ FORMA_DIR="${FORMA_DIR:-forma}"
 FORMA_REF="${FORMA_REF:-stable}"
 FORMA_SOURCE_DIR="${FORMA_SOURCE_DIR:-}"
 FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/deploy/docker"
-FORMA_UPGRADE_GUIDE="https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server"
 
 # The files the stack is made of; docker-compose.yml mounts the two scripts.
 FORMA_STACK_FILES="docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh"
@@ -381,7 +380,6 @@ Nothing else was started, and the configuration has been migrated (the previous 
   docker compose run --rm forma-migrate
   docker compose run --rm forma-migrate import-forma2 --dry-run
   docker compose run --rm forma-migrate import-forma2
-The upgrade guide explains each step: $FORMA_UPGRADE_GUIDE
 EOF
     exit 1
   fi
@@ -397,7 +395,7 @@ Nothing else was started. Stop forma2, then either import its data again or keep
   docker compose run --rm forma-migrate import-forma2 --refresh --dry-run
   docker compose run --rm forma-migrate import-forma2 --refresh
   docker compose run --rm forma-migrate import-forma2 --discard-forma2-data --reason="<why>"
-A refresh refuses when the Go server changed its tables too; the upgrade guide explains the choice: $FORMA_UPGRADE_GUIDE
+A refresh refuses when the Go server changed its tables too.
 EOF
     exit 1
   fi
@@ -601,7 +599,7 @@ install_forma() {
     if [ "$(ask "Does $domain point at this server, with ports 80 and 443 open? [Y/n]" y)" = y ]; then
       read -r -p "Email address for the certificate: " email
     else
-      echo "Without that a certificate cannot be issued; set up HTTPS yourself (https://forma.yldm.ai/docs/self-hosting/configuration/custom-ssl)."
+      echo "Without that a certificate cannot be issued; set up HTTPS yourself."
       https_setup=n
     fi
   fi
@@ -699,7 +697,7 @@ update_forma() {
   cp -p .env ".env.$stamp"
   if is_forma2_compose docker-compose.yml; then
     forma2=1
-    echo "This is a forma2 installation; migrating it to the Go server ($FORMA_UPGRADE_GUIDE)."
+    echo "This is a forma2 installation; migrating it to the Go server."
     cp -p docker-compose.yml "docker-compose.yml.forma2-$stamp"
     echo "Backups: docker-compose.yml.forma2-$stamp, .env.$stamp"
     migrate_forma2_install docker-compose.yml .env docker-compose.override.yml

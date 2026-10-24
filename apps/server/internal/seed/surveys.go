@@ -21,7 +21,7 @@ var kitchenSink = []map[string]any{
 	{"id": "frequency", "type": "multipleChoiceSingle", "headline": text("How often do you use Forma?"), "required": true, "choices": []any{choice("daily", "Daily"), choice("weekly", "Weekly"), choice("monthly", "Monthly"), choice("rarely", "Rarely")}},
 	{"id": "features", "type": "multipleChoiceMulti", "headline": text("Which features do you use?"), "required": false, "choices": []any{choice("surveys", "Surveys"), choice("analytics", "Analytics"), choice("integrations", "Integrations"), choice("actions", "Action Tracking")}},
 	{"id": "recommend", "type": "nps", "headline": text("How likely are you to recommend Forma?"), "required": true, "lowerLabel": text("Not likely"), "upperLabel": text("Very likely")},
-	{"id": "docs", "type": "cta", "headline": text("Check out our documentation!"), "required": false, "buttonExternal": true, "buttonUrl": "https://forma.yldm.ai/docs", "ctaButtonLabel": text("Go to Docs")},
+	{"id": "website", "type": "cta", "headline": text("Check out our website!"), "required": false, "buttonExternal": true, "buttonUrl": "https://forma.yldm.ai", "ctaButtonLabel": text("Go to website")},
 	{"id": "experience", "type": "rating", "headline": text("Rate your overall experience"), "required": true, "scale": "star", "range": 5, "lowerLabel": text("Poor"), "upperLabel": text("Excellent")},
 	{"id": "satisfaction", "type": "csat", "headline": text("How satisfied are you with Forma?"), "required": false, "scale": "smiley", "range": 5},
 	{"id": "effort", "type": "ces", "headline": text("Forma made it easy to collect feedback."), "required": false, "scale": "number", "range": 5},
@@ -83,39 +83,6 @@ func endingsOf(surveyKey string) json.RawMessage {
 		panic(err)
 	}
 	return raw
-}
-
-// translated gives every i18n string of a survey document a text for each of the codes, the default text marked with the code, as a survey whose languages are all enabled must carry.
-func translated(doc json.RawMessage, codes []string) json.RawMessage {
-	var v any
-	if err := json.Unmarshal(doc, &v); err != nil {
-		panic(err)
-	}
-	var walk func(v any)
-	walk = func(v any) {
-		switch v := v.(type) {
-		case map[string]any:
-			if def, ok := v["default"].(string); ok {
-				for _, code := range codes {
-					v[code] = "[" + code + "] " + def
-				}
-				return
-			}
-			for _, child := range v {
-				walk(child)
-			}
-		case []any:
-			for _, child := range v {
-				walk(child)
-			}
-		}
-	}
-	walk(v)
-	out, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return out
 }
 
 // answer is forma2's generateQuestionResponse made deterministic: the i-th response's value for an element, cycling through the options instead of drawing them at random, so two seeds write the same data. nil leaves the element unanswered.

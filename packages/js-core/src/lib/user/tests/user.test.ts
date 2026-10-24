@@ -255,7 +255,7 @@ describe("user.ts", () => {
       expect(result.ok).toBe(true);
     });
 
-    test("keeps event subscriptions registered — the docs promise handlers survive logout (ENG-1814)", () => {
+    test("keeps event subscriptions registered — handlers survive logout (ENG-1814)", () => {
       const mockLogger = { debug: vi.fn(), error: vi.fn() };
       getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
 

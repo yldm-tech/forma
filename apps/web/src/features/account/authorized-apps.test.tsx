@@ -67,14 +67,11 @@ const renderCard = () => {
 };
 
 describe("AuthorizedAppsCard", () => {
-  test("says no client is connected yet, and links the MCP docs", async () => {
+  test("says no client is connected yet", async () => {
     stubServer([]);
     renderCard();
 
     expect(await screen.findByText(i18n.t("auth.oauth.no_authorized_apps"))).toBeTruthy();
-    expect(screen.getByRole("link", { name: i18n.t("auth.oauth.mcp_docs_link") }).getAttribute("href")).toBe(
-      "https://forma.yldm.ai/docs/platform/mcp/overview"
-    );
   });
 
   test("lists each connected client with its host and the permissions it holds", async () => {

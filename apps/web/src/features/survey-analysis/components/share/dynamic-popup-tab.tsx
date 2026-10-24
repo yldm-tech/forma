@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
-import { DocumentationLinks } from "./documentation-links";
 
 /** forma2's DynamicPopupTab: a link survey can also pop up on a website, set up in the editor. */
 export const DynamicPopupTab = ({ surveyId, workspaceId }: { surveyId: string; workspaceId: string }) => {
@@ -17,22 +16,6 @@ export const DynamicPopupTab = ({ surveyId, workspaceId }: { surveyId: string; w
           </Link>
         </AlertButton>
       </Alert>
-      <DocumentationLinks
-        links={[
-          {
-            title: t("workspace.surveys.share.dynamic_popup.attribute_based_targeting"),
-            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/advanced-targeting",
-          },
-          {
-            title: t("workspace.surveys.share.dynamic_popup.code_no_code_triggers"),
-            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/actions",
-          },
-          {
-            title: t("workspace.surveys.share.dynamic_popup.recontact_options"),
-            href: "https://forma.yldm.ai/docs/surveys/website-app-surveys/recontact",
-          },
-        ]}
-      />
     </div>
   );
 };

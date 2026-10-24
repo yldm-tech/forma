@@ -23,7 +23,6 @@ Phases, in order: P0 foundation (this skeleton, the new schema, recorded contrac
 | `apps/e2e`                                                    | The Playwright browser suite (`@forma/e2e`, `playwright.config.ts`), run against a running server by `make e2e`.                                                                                                                                                                                                                                                                                    |
 | `deploy/docker/`, `deploy/helm/forma`                         | The production image (`deploy/docker/Dockerfile`: distroless, uid 1001, default command `forma start`, built with the repository root as context, `docker build -f deploy/docker/Dockerfile .`), the production compose stack (`deploy/docker/docker-compose.yml`) and the Helm chart; `docker-build-validation.yml` and `helm-chart-validation.yml` check them, `release.yml` publishes the image. |
 | `apps/server/authzed/`                                        | SpiceDB schema (`schema.zed`) and its assertion suite; it is the schema's only copy, embedded by the `authzed` Go package and read from there by `internal/authz`.                                                                                                                                                                                                                                  |
-| `apps/docs/`                                                  | Product and API documentation (Mintlify). `apps/docs/api-v3-reference` is the source of the v3 OpenAPI contract.                                                                                                                                                                                                                                                                                    |
 | `tooling/`                                                    | Build tooling, not runtime code: `tooling/typescript` holds the shared `tsconfig` bases (`@forma/config-typescript`), `tooling/vite-plugins` the Vite and PostCSS plugins (`@forma/vite-plugins`), and `tooling/scripts` the repository checks and CI helpers (`check-catalog.mjs`, `ci-stack.sh`, ...).                                                                                            |
 
 ## Commands
@@ -37,7 +36,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - `make dev-web` — run the Vite dev server on `:5173`; it proxies `/api` and `/health` to the Go server.
 - `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.
 - `make generate` — regenerate `apps/server/internal/app/wire_gen.go` after changing a provider.
-- `make check` — what CI runs: golangci-lint, `go test -race`, `vp check` (Oxfmt, Oxlint, type-check), the Vitest suites, the catalog and OpenAPI checks, and the SpiceDB schema assertions.
+- `make check` — what CI runs: golangci-lint, `go test -race`, `vp check` (Oxfmt, Oxlint, type-check), the Vitest suites, the catalog checks, and the SpiceDB schema assertions.
 - `pnpm exec vp check --fix` — format and apply lint autofixes. A pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs this on staged files.
 - `pnpm exec vp run --filter @forma/surveys test -- src/lib/logic.test.ts` — one TypeScript test file; `cd apps/server && go test ./internal/health -run TestReady` — one Go test.
 
@@ -68,7 +67,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 ## API contracts
 
 - Paths and payloads that something outside this repository calls are frozen: the client API used by `packages/js-core` and `packages/surveys` (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, the v3 management API, MCP, OAuth and webhook callback URLs, and `/health`, `/health/ready`. Reproduce forma2's behaviour byte for byte and prove it with a contract test.
-- `/api/v3` is the forward API and is specified first in `apps/docs/api-v3-reference`; the Go server and the SPA's client are generated from that spec. Endpoints only the admin UI needs live under `/api/app/*`: session-authenticated, errors as `{code, message, details}`, and every mutation must come from `WEBAPP_URL` or `PUBLIC_URL` (`Origin`) with an `X-Requested-With` header, which `apps/web/src/lib/api.ts` always sends.
+- `/api/v3` is the forward API. Endpoints only the admin UI needs live under `/api/app/*`: session-authenticated, errors as `{code, message, details}`, and every mutation must come from `WEBAPP_URL` or `PUBLIC_URL` (`Origin`) with an `X-Requested-With` header, which `apps/web/src/lib/api.ts` always sends.
 
 ## TypeScript workspace
 

@@ -1,5 +1,5 @@
 {{- if not .Values.authzed.enabled -}}
-{{- fail "Forma v6 requires AuthZed. Follow the v6 migration guide instead of upgrading with authzed.enabled=false" -}}
+{{- fail "Forma v6 requires AuthZed. Follow the AuthZed / SpiceDB section of the chart README instead of upgrading with authzed.enabled=false" -}}
 {{- end -}}
 {{- if and .Release.IsUpgrade (not .Values.authzed.migrationAcknowledged) -}}
 {{- fail "AuthZed v6 upgrade preparation is not acknowledged. Complete the preparation (forma authz schema apply, outbox drain and backfill --apply until it exits 0), then set authzed.migrationAcknowledged=true" -}}

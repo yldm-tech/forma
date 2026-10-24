@@ -28,5 +28,5 @@ body:
       value: |
         ### Additional resources 🤓
 
-        - Check out our [Contributor Docs](https://forma.yldm.ai/docs/developer-docs/contributing/get-started)
+        - Check out our [contributing guide](https://github.com/yldm-tech/forma/blob/main/CONTRIBUTING.md)
         - Anything unclear? [Ask in Github Discussions](https://github.com/yldm-tech/forma/discussions)

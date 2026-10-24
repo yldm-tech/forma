@@ -5,8 +5,7 @@ name: PR Label Sync
 # below — no other changes needed.
 #
 # Currently configured:
-#   - the checkbox in the "Breaking changes" section -> `breaking-change`
-#     Release notes and the self-hoster migration guide are compiled from the PRs carrying it.
+#   - the checkbox in the "Breaking changes" section -> `breaking-change`. Release notes are compiled from the PRs carrying it.
 #
 # Uses pull_request_target because adding a label needs a write-scoped token (incl. fork PRs). This is
 # safe here: the job only reads the PR *body* (data) and never checks out or runs PR code.
@@ -51,9 +50,7 @@ jobs:
             // Deciding is now the author's (or agent's) job, stated in one unambiguous bit; the text can
             // say whatever it needs to.
             //
-            // The trade-off: a forgotten tick silently omits a migration-guide entry that self-hosters
-            // need, where the old heuristic erred towards a spurious label instead. So the template asks
-            // for a deliberate answer, and PR review is the backstop.
+            // The trade-off: a forgotten tick silently omits a release-notes entry that self-hosters need, where the old heuristic erred towards a spurious label instead. So the template asks for a deliberate answer, and PR review is the backstop.
             //
             // No checkbox in the section at all -> leave the label alone rather than assume "not
             // breaking", so a restructured section or a hand-applied label survives.

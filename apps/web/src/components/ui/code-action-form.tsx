@@ -50,15 +50,7 @@ export const CodeActionForm = ({ form, isReadOnly }: CodeActionFormProps) => {
           <span className="rounded-sm bg-slate-100 px-2 py-1 text-xs">
             forma.track(&quot;{key}&quot;)
           </span>{" "}
-          {t("workspace.actions.in_your_code_read_more_in_our")}{" "}
-          <a
-            href="https://forma.yldm.ai/docs/surveys/website-app-surveys/actions"
-            target="_blank"
-            rel="noreferrer"
-            className="underline">
-            {t("common.docs")}
-          </a>
-          {"."}
+          {t("workspace.actions.in_your_code")}
         </AlertDescription>
       </Alert>
     </div>
