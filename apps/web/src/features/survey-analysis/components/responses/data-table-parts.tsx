@@ -160,10 +160,9 @@ export const DataTableHeader = <T,>({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group h-10 border-b border-slate-200 bg-white px-4 text-center align-middle font-medium shadow-[inset_0_-1px_0_var(--color-slate-200)]",
+        "group h-10 border-b border-slate-200 bg-white px-4 text-center align-middle font-medium",
         {
           "border-r": !header.column.getIsLastColumn(),
-          "border-l": !header.column.getIsFirstColumn(),
         }
       )}>
       <div className="flex items-center gap-1">

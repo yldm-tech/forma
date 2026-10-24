@@ -83,10 +83,9 @@ const ResponseTableCell = memo(
     return (
       <TableCell
         className={cn(
-          "border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
+          "border-b border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
           isSelected && "bg-slate-100",
           !cell.column.getIsLastColumn() && "border-r",
-          !cell.column.getIsFirstColumn() && "border-l",
           isSelect && "px-2"
         )}
         style={{
@@ -318,7 +317,8 @@ export const ResponseTable = ({
         <div className="max-h-[max(20rem,calc(100dvh-22rem))] w-fit max-w-full overflow-auto rounded-xl border border-slate-200">
           <div className="w-full">
             <table
-              className="w-full caption-bottom text-sm"
+              // Separate borders belong to their cells, so the pinned columns carry theirs when the table scrolls sideways; collapsed borders stay behind and let the scrolled cells show through.
+              className="w-full caption-bottom border-separate border-spacing-0 text-sm"
               style={{ tableLayout: "fixed" }}
               id="response-table">
               <thead className="text-slate-800 [&_tr]:border-b">
@@ -337,7 +337,9 @@ export const ResponseTable = ({
                 ))}
               </thead>
               {/* Auto animation is off past 200 responses: animating that many rows costs more than it shows. */}
-              <tbody ref={responses.length > 200 ? undefined : parent} className="[&_tr:last-child]:border-0">
+              <tbody
+                ref={responses.length > 200 ? undefined : parent}
+                className="[&_tr:last-child_td]:border-b-0">
                 {rows.map((row) => (
                   <TableRow
                     key={row.id}
