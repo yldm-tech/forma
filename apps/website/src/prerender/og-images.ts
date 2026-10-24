@@ -34,7 +34,7 @@ const template = (locale: string, heading: string, eyebrow: string): string => `
   .glow { position: absolute; right: -180px; top: -260px; width: 720px; height: 720px; border-radius: 50%; background: #e6fcf8; }
   .brand { position: absolute; left: 80px; top: 72px; display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
   .eyebrow { position: absolute; left: 80px; top: 196px; font-size: 26px; font-weight: 600; color: #026a62; }
-  h1 { position: absolute; left: 80px; top: 244px; width: 700px; font-size: ${locale === "en" ? 58 : 52}px; line-height: 1.18; font-weight: 700; letter-spacing: ${locale === "en" ? "-0.02em" : "0"}; text-wrap: balance; word-break: ${locale === "ja" ? "auto-phrase" : "normal"}; }
+  h1 { position: absolute; left: 80px; top: 244px; width: 700px; font-size: ${locale === "en" ? 58 : 52}px; line-height: 1.18; font-weight: 700; letter-spacing: ${locale === "en" ? "-0.02em" : "0"}; text-wrap: balance; word-break: ${locale === "ja" ? "auto-phrase" : locale === "zh" ? "keep-all" : "normal"}; overflow-wrap: break-word; }
   .bars { position: absolute; right: 96px; bottom: 0; display: flex; align-items: flex-end; gap: 22px; }
   .bars span { display: block; width: 56px; border-radius: 14px 14px 0 0; }
   .rule { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: #038178; }

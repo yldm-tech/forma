@@ -19,7 +19,7 @@ const HeroActions = () => (
   <>
     <PrimaryCta />
     <SignInCta />
-    <DocsLink className="ml-2" />
+    <DocsLink className="sm:ml-2" />
   </>
 );
 

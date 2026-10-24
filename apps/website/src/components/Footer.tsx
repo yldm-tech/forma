@@ -28,8 +28,8 @@ export const SiteFooter = () => {
   const footer = content.common.footer;
   return (
     <footer aria-label={footer.label} className="border-line bg-surface-muted border-t">
-      <div className="container-site grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-5 lg:py-16">
-        <div className="lg:col-span-2">
+      <div className="container-site grid grid-cols-2 gap-x-6 gap-y-10 py-12 lg:grid-cols-5 lg:py-16">
+        <div className="col-span-2">
           <SmartLink
             href={localePrefix(locale)}
             aria-label={content.common.homeLabel}

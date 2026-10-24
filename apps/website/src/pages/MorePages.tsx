@@ -25,7 +25,6 @@ import {
   pagePath,
 } from "../site";
 
-
 export const IntegrationsPage = () => {
   const { content } = useSite();
   const page = content.pages.integrations;

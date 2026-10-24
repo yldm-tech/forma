@@ -154,7 +154,7 @@ export const DestinationsArt = () => {
           </div>
         </div>
         <svg
-          className="h-[288px] w-full text-mint-500"
+          className="text-mint-500 h-[288px] w-full"
           viewBox={`0 0 40 ${height}`}
           preserveAspectRatio="none"
           fill="none"

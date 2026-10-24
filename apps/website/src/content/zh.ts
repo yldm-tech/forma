@@ -216,7 +216,7 @@ export const zh: SiteContent = {
         title: "应用内问卷 · Forma",
         description: "识别用户、补充属性、创建分群，并在产品内的特定操作发生时触发问卷。",
       },
-      title: "面向已登录用户的应用内问卷",
+      title: "应用内问卷，面向已登录用户",
       sub: "识别用户、补充用户属性，只向那些对当下决策真正有参考价值的人提问。",
       identify: {
         title: "识别并补充用户信息",
@@ -294,7 +294,8 @@ export const zh: SiteContent = {
         title: "私有化部署 Forma · Docker / Helm",
         description: "使用 Docker Compose、Ubuntu 一键脚本或 Helm Chart 部署 Forma，附硬件要求与部署指南。",
       },
-      title: "在自己的基础设施上运行 Forma",
+      // U+200B marks where the heading may wrap: headings in Chinese only wrap at punctuation and spaces (styles.css).
+      title: "在自己的基础设施上\u200b运行 Forma",
       sub: "一个容器里的 Go 程序，加上 PostgreSQL、Valkey 和 SpiceDB。选择适合你团队的部署方式。",
       optionsTitle: "选择部署方式",
       docker: {

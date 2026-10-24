@@ -78,6 +78,12 @@
     letter-spacing: -0.02em;
   }
 
+  /* No single word (or, in CJK, a lone character or closing punctuation) stranded on a paragraph's last line. */
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
   html:lang(zh-Hans) :is(h1, h2, h3),
   html:lang(ja) :is(h1, h2, h3) {
     letter-spacing: 0;
