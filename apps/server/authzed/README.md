@@ -14,7 +14,6 @@ assertion-based validation suite.
   immutable-artifact, rollback, and environment-gate contract. It supersedes
   the earlier shadow/cohort release proposal and remains in Linear rather than
   being duplicated in this repository.
-- [`AuthZed Operations`](../../docs/self-hosting/advanced/authzed-operations.mdx) — the public self-hosting contract for Docker and Kubernetes operators.
 
 ## Running the validation
 

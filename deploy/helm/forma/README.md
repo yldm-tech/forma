@@ -4,13 +4,13 @@
 
 A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valkey and SpiceDB
 
-**Homepage:** <https://forma.yldm.ai/docs/self-hosting/setup/kubernetes>
+**Homepage:** <https://forma.yldm.ai>
 
 The chart is installed from this repository (`helm install forma ./deploy/helm/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma:<version>` as the release workflow publishes it.
 
 ## Forma on the Go server: what changed in this chart
 
-The chart keeps forma2's values, Secrets and resource names; these are the differences. The whole move from forma2, including the job queue and the database, is in the [upgrade guide](https://forma.yldm.ai/docs/self-hosting/advanced/migration#forma2-to-the-go-server).
+The chart keeps forma2's values, Secrets and resource names; these are the differences.
 
 - One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
 - The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
@@ -268,8 +268,6 @@ kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill
 The initial apply to an empty instance needs no digest. A non-empty instance whose schema differs must first be checked and then applied with `--expected-current-digest=sha256:<digest-from-check>`; the initialization Job cannot do that on its own, so a release that changes the schema of an existing instance needs that one manual apply before the upgrade. Once the audit exits `0`, set `authzed.migrationAcknowledged=true` in the v6 upgrade values. The chart refuses an unacknowledged upgrade,
 `authzed.enabled=false`, or consistency other than `fully_consistent`. Back up the current schema and affected
 relationships before replacement; see the repository `apps/server/authzed/README.md` for exit codes and rollback rules.
-The public [AuthZed operations guide](../../../apps/docs/self-hosting/advanced/authzed-operations.mdx) covers backups,
-restoration, schema lifecycle, relationship repair, and monitoring.
 
 Cloud operators that run the same guarded schema, outbox drain, reconciliation, and audit sequence outside Helm
 may set `authzed.initialization.enabled=false` together with `authzed.migrationAcknowledged=true`. This suppresses
