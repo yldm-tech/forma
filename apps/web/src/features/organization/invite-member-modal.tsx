@@ -31,7 +31,7 @@ import { BulkInviteTab } from "./bulk-invite-tab";
 const EMPTY: InviteForm = { name: "", email: "", role: "member", teamIds: [] };
 
 /**
- * forma2's invite member modal: one member at a time, or a CSV of them (the bulk tab). A team admin who is not an owner or manager gets the individual form only and invites members, into the teams they administer. Where the instance sends no email the modal says so, and a new invite is handed to onCreatedWithoutEmail so its link can be shared by hand.
+ * forma2's invite member modal: one member at a time, or a CSV of them (the bulk tab). A team admin who is not an owner or manager gets the individual form only and invites members, into the teams they administer. Where the instance sends no email the modal says so. An owner or manager then gets the new invite handed to onCreatedWithoutEmail so its link can be shared by hand; a team admin may not create invite links, so they are told to ask an owner or manager instead.
  */
 export const InviteMemberModal = ({
   open,
@@ -61,6 +61,8 @@ export const InviteMemberModal = ({
   const create = useCreateInvite(organizationId);
   const { isOwnerOrManager } = accessFlags(membershipRole);
   const teamAdminOnly = !isOwnerOrManager && adminTeamIds.length > 0;
+  // The server creates invite links for owners and managers only (the same user-management gate as their invites); a team admin's invite has to be shared by one of them.
+  const canShareLink = isOwnerOrManager;
 
   const allTeams = [...(teams.data?.userTeams ?? []), ...(teams.data?.otherTeams ?? [])];
   const teamOptions = allTeams
@@ -90,11 +92,13 @@ export const InviteMemberModal = ({
       toast.success(
         emailConfigured
           ? t("workspace.settings.general.member_invited_successfully")
-          : t("workspace.settings.teams.invite_created_email_not_configured"),
+          : canShareLink
+            ? t("workspace.settings.teams.invite_created_email_not_configured")
+            : t("workspace.settings.teams.invite_created_email_not_configured_ask_admin"),
         { id: toastId }
       );
       close();
-      if (!emailConfigured) onCreatedWithoutEmail(created.id);
+      if (!emailConfigured && canShareLink) onCreatedWithoutEmail(created.id);
     } catch (error) {
       const reason = error instanceof ApiError ? inviteFailureReason(error.code) : "unknown";
       toast.error(
@@ -120,7 +124,9 @@ export const InviteMemberModal = ({
       {!emailConfigured && (
         <Alert variant="warning" role="status" className="mb-4">
           <AlertDescription>
-            {t("workspace.settings.teams.invite_email_not_configured_hint")}
+            {canShareLink
+              ? t("workspace.settings.teams.invite_email_not_configured_hint")
+              : t("workspace.settings.teams.invite_email_not_configured_team_admin_hint")}
           </AlertDescription>
         </Alert>
       )}

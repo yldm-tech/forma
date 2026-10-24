@@ -212,6 +212,7 @@ const MemberTableRow = ({
             organizationId={organizationId}
             name={name}
             emailConfigured={emailConfigured}
+            canManageInvites={accessFlags(currentUserRole).isOwnerOrManager}
             canDelete={canDeleteRow(
               row.kind === "invite"
                 ? { kind: "invite" }
@@ -305,18 +306,20 @@ const RoleCell = ({
   );
 };
 
-/** forma2's MemberActions: remove, and for an invite share its link or, where the instance sends email, send it again. A membership row has nothing to share or resend, so it shows neither button. */
+/** forma2's MemberActions: remove, and for an invite share its link or, where the instance sends email, send it again. A membership row has nothing to share or resend, so it shows neither button; nor does an invite row for a team admin, since the server shares and resends invites for owners and managers only. */
 const MemberActions = ({
   row,
   organizationId,
   name,
   canDelete,
+  canManageInvites,
   emailConfigured,
 }: {
   row: MemberRow;
   organizationId: string;
   name: string;
   canDelete: boolean;
+  canManageInvites: boolean;
   emailConfigured: boolean;
 }) => {
   const { t } = useTranslation();
@@ -326,7 +329,7 @@ const MemberActions = ({
   const deleteInvite = useDeleteInvite(organizationId);
   const resend = useResendInvite(organizationId);
   const link = useInviteLink(organizationId);
-  const invite = row.kind === "invite" ? row.invite : null;
+  const invite = row.kind === "invite" && canManageInvites ? row.invite : null;
 
   const remove = async () => {
     try {

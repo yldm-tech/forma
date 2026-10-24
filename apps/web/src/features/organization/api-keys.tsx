@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { FilesIcon, Trash2Icon, TrashIcon } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
@@ -37,6 +38,18 @@ import { toast } from "../../lib/toast";
 
 const PERMISSIONS: ApiKeyPermission[] = ["read", "write", "manage"];
 const NO_ACCESS: OrganizationAccess = { accessControl: { read: false, write: false } };
+
+/** A workspace permission as the pages name it, in the user's language; the enum value itself is never shown. Write includes read on the server, so it reads as the teams page's "Read & Write". */
+export const permissionLabel = (t: TFunction, permission: ApiKeyPermission): string => {
+  switch (permission) {
+    case "read":
+      return t("workspace.settings.teams.read");
+    case "write":
+      return t("workspace.settings.teams.read_write");
+    case "manage":
+      return t("workspace.settings.teams.manage");
+  }
+};
 
 /** forma2's API keys page: owners and managers (organization.manage_api_keys) list, create, relabel and revoke the organization's keys. */
 export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail }) => {
@@ -314,7 +327,6 @@ const AddApiKeyModal = ({
                 <div className="w-1/2">
                   <Select
                     aria-label={t("workspace.api_keys.permissions")}
-                    className="capitalize"
                     value={row.permission}
                     onChange={(e) =>
                       setRows(
@@ -325,7 +337,7 @@ const AddApiKeyModal = ({
                     }>
                     {PERMISSIONS.map((permission) => (
                       <option key={permission} value={permission}>
-                        {permission}
+                        {permissionLabel(t, permission)}
                       </option>
                     ))}
                   </Select>
@@ -473,8 +485,8 @@ const ViewPermissionModal = ({
                     <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2">
                       {permission.workspaceName}
                     </span>
-                    <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2 capitalize">
-                      {permission.permission}
+                    <span className="w-1/2 truncate rounded-md border border-slate-300 px-3 py-2">
+                      {permissionLabel(t, permission.permission)}
                     </span>
                   </li>
                 ))}
