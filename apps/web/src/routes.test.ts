@@ -5,6 +5,7 @@ import { routeTree } from "./routeTree.gen";
 import { Route as OrganizationSettingsRoute } from "./routes/_authenticated/organizations/$organizationId/settings";
 import { Route as PlanStepRoute } from "./routes/_authenticated/organizations/$organizationId/workspaces/new/plan";
 import { Route as LegacyIntegrationRoute } from "./routes/_authenticated/workspaces/$workspaceId/settings/workspace/integrations/$";
+import { Route as SurveyEditorRoute } from "./routes/_authenticated/workspaces/$workspaceId_/surveys/$surveyId/edit";
 
 // Pages the Go server sends the browser to: redirects (the root page's GET /api/app/home, SSO callbacks, workspace and organization navigation) and links in the mails it sends. Each must be a page of the SPA, not its not-found screen.
 const SERVER_PAGES = [
@@ -186,5 +187,60 @@ describe("organization settings for the billing role", () => {
     expect(await visit(`/organizations/${ORG}/settings/general`)).toBe(
       `/organizations/${ORG}/settings/billing`
     );
+  });
+});
+
+describe("the survey editor", () => {
+  const loader = SurveyEditorRoute.options.loader as unknown as (ctx: {
+    context: { queryClient: QueryClient };
+    params: { workspaceId: string; surveyId: string };
+  }) => Promise<void>;
+  const WORKSPACE = "0190a000-0000-7000-8000-000000000002";
+  const SURVEY = "0190a000-0000-7000-8000-000000000003";
+
+  // Counting a segment's contacts evaluates it over every contact of the workspace, which takes seconds on a large one; the editor's loader waits on the segment list, so the list must not carry the counts and the loader must not ask for them.
+  test("loads the segment list without counting its contacts", async () => {
+    const requested: string[] = [];
+    const bodies: [string, unknown][] = [
+      [
+        `/api/app/surveys/${SURVEY}`,
+        {
+          id: SURVEY,
+          workspaceId: WORKSPACE,
+          name: "Survey",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          triggers: [],
+          languages: [],
+          followUps: [],
+          segment: null,
+        },
+      ],
+      [`/api/app/surveys/${SURVEY}/quotas`, { quotas: [] }],
+      [`/api/app/workspaces/${WORKSPACE}/action-classes`, { actionClasses: [] }],
+      [`/api/app/workspaces/${WORKSPACE}/contact-attribute-keys`, []],
+      [`/api/app/workspaces/${WORKSPACE}/segments`, []],
+      [`/api/app/workspaces/${WORKSPACE}`, { id: WORKSPACE }],
+      ["/api/v3/surveys?", { data: [], meta: { nextCursor: null } }],
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string) => {
+        requested.push(path);
+        const body = bodies.find(([known]) =>
+          known.endsWith("?") ? path.startsWith(known) : path === known
+        );
+        if (!body) throw new Error(`unexpected ${path}`);
+        return new Response(JSON.stringify(body[1]), { headers: { "content-type": "application/json" } });
+      })
+    );
+
+    await loader({
+      context: { queryClient: new QueryClient() },
+      params: { workspaceId: WORKSPACE, surveyId: SURVEY },
+    });
+
+    expect(requested).toContain(`/api/app/workspaces/${WORKSPACE}/segments`);
+    expect(requested.filter((path) => path.includes("contact-counts"))).toEqual([]);
   });
 });

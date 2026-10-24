@@ -10,7 +10,7 @@ import { segmentPreviewCountQuery } from "../api";
 export const PREVIEW_COUNT_DEBOUNCE_MS = 400;
 
 /**
- * How many of the workspace's contacts the filter tree matches, shown under the tree while it is edited. The tree is counted once it has stayed unchanged for a moment and the schema accepts it; while a filter is incomplete the last count stays. Device and survey-interaction filters are left out of the count, which then says it is approximate; a count of zero is a warning, since the segment would reach nobody.
+ * How many of the workspace's contacts the filter tree matches, shown under the tree while it is edited. The tree is counted once it has stayed unchanged for a moment and the schema accepts it; while a filter is incomplete the last count stays. Survey-interaction filters are counted exactly; device filters depend on the device a survey is shown on, so they are left out of the count, which then says it is approximate; a count of zero is a warning, since the segment would reach nobody.
  */
 export const SegmentPreviewCount = ({
   workspaceId,

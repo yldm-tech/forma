@@ -43,6 +43,7 @@ func (h *Handler) Register(r gin.IRouter) {
 
 	g.GET("/workspaces/:workspaceId/segments", h.segments)
 	g.POST("/workspaces/:workspaceId/segments", h.createSegment)
+	g.GET("/workspaces/:workspaceId/segments/contact-counts", h.segmentContactCounts)
 	g.POST("/workspaces/:workspaceId/segments/preview-count", h.previewSegmentCount)
 	g.GET("/workspaces/:workspaceId/segment-surveys", h.surveyRefs)
 	g.GET("/segments/:segmentId", h.segment)
@@ -342,6 +343,15 @@ func (h *Handler) segments(c *gin.Context) {
 	}
 	segs, err := h.svc.Segments(c.Request.Context(), userID(c), ws)
 	respond(c, http.StatusOK, segs, err)
+}
+
+func (h *Handler) segmentContactCounts(c *gin.Context) {
+	ws, ok := pathID(c, "workspaceId")
+	if !ok {
+		return
+	}
+	counts, err := h.svc.SegmentContactCounts(c.Request.Context(), userID(c), ws)
+	respond(c, http.StatusOK, counts, err)
 }
 
 // previewSegmentCountRequest is a filter tree being edited, not yet saved.

@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../../lib/cn";
 import { InputCombobox, TComboboxOption } from "../../../components/ui/input-combo-box";
 import { attributeValuesQuery } from "../api";
+
+/** How many values the server suggests at most (GET /contact-attribute-keys/:id/values); a full list may leave out the value searched for. */
+const MAX_SUGGESTED_VALUES = 100;
 
 interface AttributeValueInputProps {
   attributeKeyId: string;
@@ -21,6 +25,7 @@ export const AttributeValueInput = ({
   className,
   valueError,
 }: AttributeValueInputProps) => {
+  const { t } = useTranslation();
   // The values contacts already have for the key, offered as suggestions; a failed load leaves only free text.
   const { data: values, isFetching: loading } = useQuery({
     ...attributeValuesQuery(attributeKeyId),
@@ -32,10 +37,11 @@ export const AttributeValueInput = ({
   );
 
   const emptyDropdownText = useMemo(() => {
-    if (loading) return "Loading values...";
-    if (options.length === 50) return "Showing first 50 values";
-    return "No values found";
-  }, [loading, options.length]);
+    if (loading) return t("workspace.segments.loading_values");
+    if (options.length === MAX_SUGGESTED_VALUES)
+      return t("workspace.segments.showing_first_values", { count: MAX_SUGGESTED_VALUES });
+    return t("workspace.segments.no_values_found");
+  }, [loading, options.length, t]);
 
   return (
     <div className="relative">
@@ -44,10 +50,12 @@ export const AttributeValueInput = ({
         options={options}
         value={value}
         onChangeValue={(newValue) => onChange(newValue as string)}
+        aria-label={t("workspace.segments.filter_value")}
         withInput={true}
         showSearch={true}
         clearable={true}
         inputProps={{
+          "aria-label": t("workspace.segments.filter_value"),
           className: cn(
             "h-9 w-auto bg-white",
             valueError && "border border-red-500 focus:border-red-500",

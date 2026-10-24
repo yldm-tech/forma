@@ -1,5 +1,11 @@
 import type { TContactAttributeKey } from "@forma/types/contact-attribute-key";
-import type { TBaseFilter, TBaseFilters, TSegmentFilter } from "@forma/types/segment";
+import type {
+  TAttributeOperator,
+  TBaseFilter,
+  TBaseFilters,
+  TSegmentFilter,
+  TSegmentFilterValue,
+} from "@forma/types/segment";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
@@ -73,7 +79,11 @@ const keys: TContactAttributeKey[] = [
 ];
 
 /** A form holding a tree, edited through the adapter the segments page uses; latest() is the tree after the last edit. */
-const renderForm = (initial: TBaseFilters, { viewOnly = false }: { viewOnly?: boolean } = {}) => {
+const renderFormWithKeys = (
+  initial: TBaseFilters,
+  contactAttributeKeys: TContactAttributeKey[],
+  { viewOnly = false }: { viewOnly?: boolean } = {}
+) => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => new Response("[]", { status: 200, headers: { "content-type": "application/json" } }))
@@ -87,7 +97,7 @@ const renderForm = (initial: TBaseFilters, { viewOnly = false }: { viewOnly?: bo
         group={filters}
         segment={segment}
         segments={[]}
-        contactAttributeKeys={keys}
+        contactAttributeKeys={contactAttributeKeys}
         setSegment={formSetSegment(segment, (next) => {
           changed(next);
           setFilters(next);
@@ -105,6 +115,9 @@ const renderForm = (initial: TBaseFilters, { viewOnly = false }: { viewOnly?: bo
   );
   return { latest: () => changed.mock.lastCall?.[0] ?? initial };
 };
+
+const renderForm = (initial: TBaseFilters, { viewOnly = false }: { viewOnly?: boolean } = {}) =>
+  renderFormWithKeys(initial, keys, { viewOnly });
 
 const nodesOf = (tree: TBaseFilters, index: number) => tree[index]?.resource as TBaseFilters;
 const filterOf = (tree: TBaseFilters, index: number) => tree[index]?.resource as TSegmentFilter;
@@ -200,6 +213,85 @@ describe("SegmentEditor", () => {
     ]);
     const trigger = screen.getByRole("combobox", { name: i18n.t("common.attributes") });
     expect(within(trigger).getByText("legacyPlan")).toBeTruthy();
+  });
+
+  // The controls of a filter row have no visible labels; each is named for what it sets, as the segments page's own editor named them.
+  test("every control of a filter row has an accessible name", () => {
+    const t = (key: string) => i18n.t(key);
+    const attribute = (
+      id: string,
+      key: string,
+      operator: TAttributeOperator,
+      value: TSegmentFilterValue
+    ): TBaseFilter => ({
+      id: `node${id}`,
+      connector: id === "1" ? null : "and",
+      resource: { id, root: { type: "attribute", contactAttributeKey: key }, qualifier: { operator }, value },
+    });
+    renderFormWithKeys(
+      [
+        attribute("1", "plan", "contains", "pro"),
+        attribute("2", "seats", "greaterThan", 3),
+        attribute("3", "signup", "isOlderThan", { amount: 2, unit: "weeks" }),
+        attribute("4", "signup", "isBetween", ["2026-01-02T00:00:00.000Z", "2026-03-04T00:00:00.000Z"]),
+        attribute("5", "signup", "isSameDay", "2026-05-06T00:00:00.000Z"),
+        {
+          id: "node6",
+          connector: "and",
+          resource: {
+            id: "6",
+            root: { type: "person", personIdentifier: "userId" },
+            qualifier: { operator: "equals" },
+            value: "u1",
+          },
+        },
+        device("7", "phone", "and"),
+      ],
+      [
+        ...keys,
+        { ...keys[0]!, id: "k2", key: "seats", name: "Seats", dataType: "number" },
+        { ...keys[0]!, id: "k3", key: "signup", name: "Signup", dataType: "date" },
+      ]
+    );
+
+    // Operators are named by the operator they show, not by a generic "Select".
+    expect(screen.queryAllByRole("combobox", { name: t("common.select") })).toHaveLength(0);
+    for (const operator of [
+      t("workspace.segments.operator_contains"),
+      ">",
+      t("workspace.segments.operator_is_older_than"),
+      t("workspace.segments.operator_is_between"),
+      t("workspace.segments.operator_is_same_day"),
+    ]) {
+      expect(screen.getByRole("combobox", { name: operator })).toBeTruthy();
+    }
+    // The person filter's and the device filter's equals.
+    expect(screen.getAllByRole("combobox", { name: "=" })).toHaveLength(2);
+    expect(screen.getByRole("combobox", { name: t("common.person") })).toBeTruthy();
+
+    // The text attribute's suggesting field, the number attribute's field and the person's value.
+    const values = screen.getAllByRole("textbox", { name: t("workspace.segments.filter_value") });
+    expect(values.map((input) => (input as HTMLInputElement).value)).toEqual(["pro", "3", "u1"]);
+    expect(screen.getByRole("combobox", { name: t("workspace.segments.filter_value") })).toBeTruthy();
+
+    expect(
+      (screen.getByRole("spinbutton", { name: t("workspace.segments.number") }) as HTMLInputElement).value
+    ).toBe("2");
+    expect(screen.getByRole("combobox", { name: t("workspace.segments.period") })).toBeTruthy();
+
+    // A date picker's name says which date it is and keeps the date it shows.
+    const after = screen.getByRole("button", {
+      name: new RegExp(`^${t("workspace.segments.operator_is_after")} .*2026`),
+    });
+    const before = screen.getByRole("button", {
+      name: new RegExp(`^${t("workspace.segments.operator_is_before")} .*2026`),
+    });
+    expect(after).not.toBe(before);
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${t("workspace.segments.operator_is_same_day")} .*2026`),
+      })
+    ).toBeTruthy();
   });
 });
 

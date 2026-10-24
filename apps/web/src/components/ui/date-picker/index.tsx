@@ -1,5 +1,5 @@
 import { CalendarIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { type Matcher } from "react-day-picker";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../../lib/cn";
@@ -38,6 +38,8 @@ interface DatePickerProps {
   onClear?: () => void;
   clearButtonId?: string;
   clearButtonLabel?: string;
+  /** What the date is, for a trigger without a visible label. The trigger's accessible name is this followed by the date it shows, so the picked date is still announced. */
+  "aria-label"?: string;
 }
 
 export const DatePicker = ({
@@ -54,23 +56,32 @@ export const DatePicker = ({
   onClear,
   clearButtonId,
   clearButtonLabel,
+  "aria-label": ariaLabel,
 }: Readonly<DatePickerProps>) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const labelId = useId();
+  const textId = useId();
 
   const label = value ? formatDateForDisplay(value, locale, DISPLAY_OPTIONS) : undefined;
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
+      {ariaLabel && (
+        <span id={labelId} className="sr-only">
+          {ariaLabel}
+        </span>
+      )}
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
             disabled={disabled}
+            aria-labelledby={ariaLabel ? `${labelId} ${textId}` : undefined}
             className={cn("w-[280px] justify-start bg-white text-left font-normal", triggerClassName)}>
             <CalendarIcon className="mr-2 size-4 shrink-0" />
-            <span className={cn("truncate", !label && "text-slate-500")}>
+            <span id={textId} className={cn("truncate", !label && "text-slate-500")}>
               {label ?? placeholder ?? t("common.pick_a_date")}
             </span>
           </Button>
