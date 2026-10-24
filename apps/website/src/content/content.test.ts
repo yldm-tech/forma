@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 import { LOCALES, PAGES } from "../site";
 import { DICTIONARIES, validateDictionaries } from "./index";
@@ -25,6 +26,17 @@ describe("website content", () => {
     expect(siteContentSchema.safeParse(empty).success).toBe(false);
     const extra = { ...DICTIONARIES.en, notFound: { ...DICTIONARIES.en.notFound, subtitle: "x" } };
     expect(siteContentSchema.safeParse(extra).success).toBe(false);
+  });
+
+  // The reference sits under "authenticate with an API key", so it must not name a v3 route the server mounts session-only. tag/handler.go RegisterV3 mounts every tag route with v3api.AuthSession.
+  it("lists no session-only v3 route in the developers API reference", () => {
+    const tagHandler = readFileSync(new URL("../../../server/internal/tag/handler.go", import.meta.url), "utf8");
+    expect(tagHandler).toContain("h.v3.Auth(v3api.AuthSession)");
+    for (const locale of LOCALES) {
+      const { api, reference } = DICTIONARIES[locale].pages.developers;
+      expect(JSON.stringify(reference.rest)).not.toContain("/api/v3/tags");
+      expect(api.body).not.toMatch(/tags|标签|タグ/);
+    }
   });
 
   // The design spec rules these out until the license is decided and the claims can be verified.

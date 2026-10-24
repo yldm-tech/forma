@@ -279,7 +279,7 @@ export const en: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "Manage surveys, workflows and tags with an API key. Responses and webhooks have management endpoints that take the same key.",
+        body: "Manage surveys and workflows with an API key. Responses and webhooks have management endpoints that take the same key.",
         link: "REST API reference →",
       },
       mcp: {
@@ -308,14 +308,13 @@ export const en: SiteContent = {
             },
             {
               term: "API keys",
-              body: "In the app, open Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once.",
+              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once.",
             },
           ],
           resourcesTitle: "Main resources",
           resources: [
             "`/api/v3/surveys`: list, create, validate, read, update, archive, restore and delete surveys.",
             "`/api/v3/workflows`: create and edit workflows, enable, disable or test them, and list their runs.",
-            "`/api/v3/tags`: list, rename, merge and delete response tags.",
             "`/api/v3/action-classes` and `/api/v3/contact-attribute-keys`: the actions and attributes in-app surveys target, read-only.",
             "`/api/v2/management/responses` and `/api/v2/management/webhooks`: responses and webhook subscriptions, with the same key.",
           ],

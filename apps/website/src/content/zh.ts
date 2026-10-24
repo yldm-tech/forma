@@ -270,7 +270,7 @@ export const zh: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "使用 API 密钥管理问卷、工作流和标签。回答和 Webhook 另有管理接口，使用同一个密钥。",
+        body: "使用 API 密钥管理问卷和工作流。回答和 Webhook 另有管理接口，使用同一个密钥。",
         link: "REST API 参考 →",
       },
       mcp: {
@@ -299,14 +299,13 @@ export const zh: SiteContent = {
             },
             {
               term: "API 密钥",
-              body: "在应用中打开“组织设置 → API 密钥 → 添加 API 密钥”，按工作区逐一授予读取、写入或管理权限，然后复制密钥。密钥只显示一次。",
+              body: "由组织所有者或管理者在应用中打开“组织设置 → API 密钥 → 添加 API 密钥”，按工作区逐一授予读取、写入或管理权限，然后复制密钥。密钥只显示一次。",
             },
           ],
           resourcesTitle: "主要资源",
           resources: [
             "`/api/v3/surveys`：列出、创建、校验、读取、更新、归档、恢复和删除问卷。",
             "`/api/v3/workflows`：创建和编辑工作流，启用、停用或测试，并查看运行记录。",
-            "`/api/v3/tags`：列出、重命名、合并和删除回答标签。",
             "`/api/v3/action-classes` 和 `/api/v3/contact-attribute-keys`：应用内问卷所针对的动作和属性，只读。",
             "`/api/v2/management/responses` 和 `/api/v2/management/webhooks`：回答和 Webhook 订阅，使用同一个密钥。",
           ],

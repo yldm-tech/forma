@@ -280,7 +280,7 @@ export const ja: SiteContent = {
       },
       api: {
         title: "REST API v3",
-        body: "API キーで、アンケート・ワークフロー・タグを管理できます。回答と Webhook には、同じキーで使える管理用エンドポイントがあります。",
+        body: "API キーで、アンケートとワークフローを管理できます。回答と Webhook には、同じキーで使える管理用エンドポイントがあります。",
         link: "REST API リファレンス →",
       },
       mcp: {
@@ -309,14 +309,13 @@ export const ja: SiteContent = {
             },
             {
               term: "API キー",
-              body: "アプリで「組織設定 → APIキー → APIキーを追加」を開き、ワークスペースごとに読み取り・書き込み・管理の権限を付与してから、キーをコピーします。キーは一度しか表示されません。",
+              body: "組織のオーナーまたはマネージャーが、アプリで「組織設定 → APIキー → APIキーを追加」を開き、ワークスペースごとに読み取り・書き込み・管理の権限を付与してから、キーをコピーします。キーは一度しか表示されません。",
             },
           ],
           resourcesTitle: "主なリソース",
           resources: [
             "`/api/v3/surveys`：アンケートの一覧・作成・検証・取得・更新・アーカイブ・復元・削除。",
             "`/api/v3/workflows`：ワークフローの作成と編集、有効化・無効化・テスト、実行履歴の一覧。",
-            "`/api/v3/tags`：回答タグの一覧・名前の変更・統合・削除。",
             "`/api/v3/action-classes` と `/api/v3/contact-attribute-keys`：アプリ内アンケートの対象となるアクションと属性（読み取り専用）。",
             "`/api/v2/management/responses` と `/api/v2/management/webhooks`：回答と Webhook の登録。同じキーで使えます。",
           ],
