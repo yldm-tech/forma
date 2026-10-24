@@ -16,6 +16,10 @@ interface ElementErrorProps {
    * Announce the message as it appears. Off by default: a failed submit moves focus to the first invalid control, which reads this message through aria-describedby, and the block announces one summary; ten live regions changing at once queued ten identical phrases. Only an error that appears without a submit (a file that failed to upload) needs announcing on its own.
    */
   live?: boolean;
+  /**
+   * Show the message beside the bar. Off when the element shows its errors at the failing fields themselves (an address or contact-info element with per-field messages): the bar still marks the element, and a message above the first field would point at a field that may be fine.
+   */
+  showMessage?: boolean;
 }
 
 interface ElementErrorAria {
@@ -38,7 +42,9 @@ function ElementError({
   dir = "auto",
   id,
   live = false,
+  showMessage = true,
 }: Readonly<ElementErrorProps>): React.JSX.Element {
+  const message = showMessage ? errorMessage : undefined;
   return (
     <>
       {/* Error indicator bar: decorative, so it stays outside the live region (a live region must
@@ -59,12 +65,12 @@ function ElementError({
         id={id}
         aria-live={live ? "polite" : undefined}
         aria-atomic={live ? "true" : undefined}
-        className={errorMessage ? "text-destructive mb-2 flex items-center gap-1 text-sm" : undefined}
+        className={message ? "text-destructive mb-2 flex items-center gap-1 text-sm" : undefined}
         dir={dir}>
-        {errorMessage ? (
+        {message ? (
           <>
             <AlertCircle className="size-4" />
-            <span>{errorMessage}</span>
+            <span>{message}</span>
           </>
         ) : null}
       </div>

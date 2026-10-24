@@ -128,7 +128,13 @@ function FormField({
 
       {/* Form Fields */}
       <div className="relative" data-element-input>
-        <ElementError errorMessage={errorMessage} dir={dir} id={errorAria.errorId} />
+        {/* With per-field messages the element keeps only its error bar: the failing fields say what is wrong right under themselves. */}
+        <ElementError
+          errorMessage={errorMessage}
+          dir={dir}
+          id={errorAria.errorId}
+          showMessage={!hasFieldErrors}
+        />
         <div className="space-y-3">
           {visibleFields.map((field) => {
             const fieldRequired = isFieldRequired(field);
