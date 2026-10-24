@@ -29,15 +29,8 @@ const KNOWN_VIOLATIONS: Record<Surface, Record<Viewport, string[]>> = {
       "label",
       "nested-interactive",
     ],
-    // The low-contrast workspace name in the menu bar is not shown below the md breakpoint.
-    mobile: [
-      "aria-allowed-attr",
-      "aria-command-name",
-      "aria-input-field-name",
-      "button-name",
-      "label",
-      "nested-interactive",
-    ],
+    // Below the sm breakpoint the editor sits inert under the phone overlay, which axe leaves out, so the scan covers the overlay alone.
+    mobile: [],
   },
   survey: { desktop: [], mobile: [] },
 };
@@ -71,10 +64,12 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
     test("the login page meets WCAG AA", async ({ page }) => {
       await page.goto("/app/auth/login");
       await expect(page.getByRole("heading", { name: "Log in to your account" })).toBeVisible();
-      await expectOnlyKnownViolations(page, "login", viewport);
-      // The email form only exists once it is opened.
-      await page.getByRole("button", { name: "Log in with Email" }).click();
+      // Email is the only way in on this instance, so the form is open at once.
       await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
+      await expectOnlyKnownViolations(page, "login", viewport);
+      // The errors of an empty submit are part of the page too.
+      await page.getByRole("button", { name: "Log in with Email" }).click();
+      await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
       await expectOnlyKnownViolations(page, "login", viewport);
     });
 
