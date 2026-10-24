@@ -73,6 +73,47 @@ jobs:
           print(f"reviews.path_filters: {len(filters)} entries, all exclusions.")
           PY
 
+      # An exclusion whose path was moved or deleted matches nothing, and CodeRabbit does not say so: the files it was written for come back into reviews under their new path, or the entry just lingers. Git's glob pathspec has no extglob, so `!(...)` is widened to `*` first; the widened pattern matches a superset, which is enough to tell whether the files the entry names still exist. It has no brace expansion either, so write `{a,b}` as one entry per alternative.
+      - name: Check every path_filters exclusion matches a tracked file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          import subprocess
+          import sys
+
+          import yaml
+
+          CONFIG = ".coderabbit.yaml"
+
+          with open(CONFIG, encoding="utf-8") as handle:
+              config = yaml.safe_load(handle) or {}
+
+          filters = (config.get("reviews") or {}).get("path_filters") or []
+          stale = []
+          for entry in filters:
+              pattern = str(entry).strip().removeprefix("!")
+              pathspec = re.sub(r"!\([^)]*\)", "*", pattern)
+              tracked = subprocess.run(
+                  ["git", "ls-files", "--", f":(glob){pathspec}"],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout
+              if not tracked:
+                  stale.append(pattern)
+
+          if stale:
+              print(f"::error file={CONFIG}::reviews.path_filters has exclusions that match no tracked file")
+              for pattern in stale:
+                  print(f"  - {pattern!r}", file=sys.stderr)
+              print("\nPoint each entry at where the files live now, or remove it.", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"reviews.path_filters: every one of the {len(filters)} exclusions matches a tracked file.")
+          PY
+
       # Deliberately not `curl https://cli.coderabbit.ai/install.sh | sh`: that script is
       # mutable and fetches the release archive without verifying it, so piping it to a shell
       # would undo the pin below. Fetch the immutable versioned artifact instead and check it

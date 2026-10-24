@@ -1,0 +1,34 @@
+# Actions are pinned to a commit SHA and Go modules to exact versions in go.mod, so without this a security fix only lands when someone bumps a pin by hand. Weekly and grouped: one pull request per ecosystem each week.
+#
+# The titles use a conventional-commit prefix because `PR title` (semantic-pull-requests.yml) is a required check: Dependabot's default "Bump x from a to b" would fail it.
+#
+# Not covered, on purpose:
+# - npm: the workspace runs pnpm 11 (package.json's packageManager), and Dependabot's documented pnpm support stops at v10. Revisit when it lists pnpm 11, and check then that it rewrites the `catalog:` entries in pnpm-workspace.yaml, where every shared version lives.
+# - docker (the Dockerfiles): deploy/docker/Dockerfile and apps/website/Dockerfile take every base image from an ARG default (`FROM ${NODE_IMAGE}`), which Dependabot does not resolve (dependabot/dependabot-core#2057), so the ecosystem would find nothing to update.
+# - docker-compose (the service images): each version lives in several places Dependabot cannot edit together. The images in docker-compose.dev.yml and deploy/docker/docker-compose.yml are also pinned in the Go testcontainer helpers (apps/server/internal/authz/spicedbtest, platform/valkey/valkeytest, platform/pgtest, storage/s3test), the Helm values (deploy/helm/forma/values.yaml) and the service containers of docker-build-validation.yml. A compose-only bump would pass CI while dev and self-hosting run a version no test covers, and deploy/docker/docker-compose.yml is what self-hosters get: a major PostgreSQL bump there cannot open existing data volumes, and its Valkey is pinned by digest alone, with no tag that would tell a major bump apart. Bump these by hand, in all of those places at once.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: gomod
+    directory: /apps/server
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      go-modules:
+        patterns:
+          - "*"
+
