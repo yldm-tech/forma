@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { NotFound, RouteError } from "../components/shell/route-states";
+import { RootNotFound, RouteError } from "../components/shell/route-states";
 import { Toaster } from "../components/ui/toaster";
 import { documentTitle } from "../lib/page-titles";
 
@@ -12,7 +12,7 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
-  notFoundComponent: NotFound,
+  notFoundComponent: RootNotFound,
   errorComponent: RouteError,
 });
 

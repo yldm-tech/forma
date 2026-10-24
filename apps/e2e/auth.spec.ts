@@ -7,13 +7,17 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
 
   await test.step("sign up", async () => {
     await page.goto("/app/auth/signup");
-    await page.getByRole("button", { name: "Continue with Email" }).click();
+    // Email is the only way in on this instance, so the fields show at once, with no error before anything is typed.
     const submit = page.getByRole("button", { name: "Continue with Email" });
+    await expect(page.getByRole("alert")).toHaveCount(0);
     await page.getByRole("textbox", { name: "Full name" }).fill("Playwright User");
     // Mixed case on purpose: the account is stored and shown under the lower-cased address.
     await page.getByRole("textbox", { name: "Email" }).fill(email.replace("signup", "SignUp"));
     await page.getByRole("textbox", { name: "Password" }).fill("short");
-    await expect(submit).toBeDisabled();
+    // A refused submit says why under the field and moves focus there.
+    await submit.click();
+    await expect(page.getByText("Use at least 8 characters.")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Password" })).toBeFocused();
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await submit.click();
     await page.waitForURL(/\/app\/auth\/signup-without-verification-success/);
@@ -22,8 +26,9 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
 
   await test.step("log in", async () => {
     await page.getByRole("link", { name: "Log in" }).click();
-    await page.getByRole("button", { name: "Log in with Email" }).click();
-    await page.getByRole("textbox", { name: "Email" }).fill(email);
+    // The address just signed up with is carried over, so the password is what is left to type.
+    await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(email);
+    await expect(page.getByRole("textbox", { name: "Password" })).toBeFocused();
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("button", { name: "Log in with Email" }).click();
     await page.waitForURL(/\/app\/organizations\/[^/]+\/workspaces\/new\/survey/);
@@ -53,7 +58,6 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
 
 test("refuses a wrong password", async ({ page }) => {
   await page.goto("/app/auth/login");
-  await page.getByRole("button", { name: "Log in with Email" }).click();
   await page.getByRole("textbox", { name: "Email" }).fill(uniqueEmail("nobody"));
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
   await page.getByRole("button", { name: "Log in with Email" }).click();
