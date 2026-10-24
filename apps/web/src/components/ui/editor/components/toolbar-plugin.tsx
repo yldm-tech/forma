@@ -43,6 +43,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../tooltip";
 import { cn } from "../../../../lib/cn";
 import type { TextEditorProps } from "./editor";
+import { EDITOR_SEED_TAG, isSeedUpdate } from "../lib/seed-tag";
 
 const LowPriority = 1;
 
@@ -243,20 +244,16 @@ export const ToolbarPlugin = (
 
   useEffect(() => {
     if (!props.firstRender) {
-      editor.update(() => {
-        const root = $getRoot();
-        if (root) {
-          editor.update(() => {
-            const parser = new DOMParser();
-            // Create a new TextNode
-            const dom = parser.parseFromString(props.getText(), "text/html");
-
-            const nodes = $generateNodesFromDOM(editor, dom);
-            root.clear();
-            root.append(...nodes);
-          });
-        }
-      });
+      editor.update(
+        () => {
+          const dom = new DOMParser().parseFromString(props.getText(), "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+          const root = $getRoot();
+          root.clear();
+          root.append(...nodes);
+        },
+        { tag: EDITOR_SEED_TAG }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally reloads editor content only when updateTemplate/firstRender toggle; depending on editor/props would re-run on every unrelated prop change
   }, [props.updateTemplate, props.firstRender]);
@@ -264,22 +261,25 @@ export const ToolbarPlugin = (
   useEffect(() => {
     if (props.setFirstRender && props.firstRender) {
       props.setFirstRender(false);
-      editor.update(() => {
-        const parser = new DOMParser();
-        const dom = parser.parseFromString(props.getText(), "text/html");
-
-        const nodes = $generateNodesFromDOM(editor, dom);
-        const root = $getRoot();
-        root.clear();
-        root.append(...nodes);
-      });
+      editor.update(
+        () => {
+          const dom = new DOMParser().parseFromString(props.getText(), "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+          const root = $getRoot();
+          root.clear();
+          root.append(...nodes);
+        },
+        { tag: EDITOR_SEED_TAG }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time firstRender initialization; adding editor/props would re-seed the editor on unrelated changes
   }, []);
 
   // Register text-saving update listener - always active for each editor instance
   useEffect(() => {
-    const unregister = editor.registerUpdateListener(({ editorState }) => {
+    const unregister = editor.registerUpdateListener(({ editorState, tags, dirtyElements, dirtyLeaves }) => {
+      // Loading the stored text into the editor is not an edit: reporting it would hand the caller a re-serialised copy (plain text becomes <p class="fb-editor-paragraph">...), which marks an untouched survey as changed and lets autosave rewrite it. Updates that change no node (selection, focus) are not edits either.
+      if (isSeedUpdate(tags) || (dirtyElements.size === 0 && dirtyLeaves.size === 0)) return;
       editorState.read(() => {
         const textInHtml = $generateHtmlFromNodes(editor)
           .replace(/&lt;/g, "<")
