@@ -289,7 +289,7 @@ Forma application image reference. A configured digest takes precedence over the
 {{- if .Values.deployment.image.digest -}}
 {{- printf "%s@%s" .Values.deployment.image.repository .Values.deployment.image.digest -}}
 {{- else -}}
-{{- printf "%s:%s" .Values.deployment.image.repository (required "deployment.image.tag (or deployment.image.digest) is required: set it to the release you deploy, ghcr.io/yldm-tech/forma:<version> as the release workflow publishes it" .Values.deployment.image.tag) -}}
+{{- printf "%s:%s" .Values.deployment.image.repository (required "deployment.image.tag (or deployment.image.digest) is required: set it to the release you deploy, ghcr.io/yldm-tech/forma-server:<version> as the release workflow publishes it" .Values.deployment.image.tag) -}}
 {{- end -}}
 {{- end }}
 {{- define "forma.postgresAdminPassword" -}}
