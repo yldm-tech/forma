@@ -37,6 +37,7 @@ interface EditEndingCardProps {
   addEndingCard: (index: number) => void;
   locale: TUserLocale;
   quotas: TSurveyQuota[];
+  responseCount: number;
 }
 
 export const EditEndingCard = ({
@@ -50,6 +51,7 @@ export const EditEndingCard = ({
   addEndingCard,
   locale,
   quotas,
+  responseCount,
 }: EditEndingCardProps) => {
   const selectedLanguageCode = "default";
   const { t } = useTranslation();
@@ -103,6 +105,33 @@ export const EditEndingCard = ({
     });
   };
 
+  const endScreenHeadline =
+    endingCard.type === "endScreen" && endingCard.headline
+      ? recallToHeadline(endingCard.headline, localSurvey, true, selectedLanguageCode)[selectedLanguageCode]
+      : undefined;
+
+  const isEndingCardUsedInFollowUps = localSurvey.followUps.some(
+    (followUp) =>
+      followUp.trigger.type === "endings" &&
+      (followUp.trigger.properties?.endingIds?.includes(endingCard.id) ?? false)
+  );
+
+  /** What the delete confirmation says: the follow-ups that lose the ending, or the ending's name, then the caution for a survey with responses. */
+  const deleteConfirmationBody = () => {
+    const endingName =
+      endingCard.type === "endScreen"
+        ? getTextContent(endScreenHeadline ?? "").trim() || t("workspace.surveys.edit.ending_card")
+        : endingCard.label?.trim() || t("workspace.surveys.edit.redirect_to_url");
+    const removed = isEndingCardUsedInFollowUps
+      ? t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_text")
+      : t("workspace.surveys.edit.delete_question_confirm_text", { name: endingName });
+    return responseCount > 0
+      ? `${removed}\n\n${t("workspace.surveys.edit.caution_explanation_new_responses_separated")}`
+      : removed;
+  };
+  // Only a draft that autosaves loses the ending for good on its own; anywhere else the deletion waits for Save, and Back with Discard brings the ending back.
+  const isAutoSaved = localSurvey.status === "draft" && localSurvey.publishOn === null;
+
   const deleteEndingCard = () => {
     const quota = quotas.find((quota) => isUsedInQuota(quota, { endingCardId: endingCard.id }));
     if (quota) {
@@ -113,16 +142,6 @@ export const EditEndingCard = ({
       );
       return;
     }
-    const isEndingCardUsedInFollowUps = localSurvey.followUps.some((followUp) => {
-      if (followUp.trigger.type === "endings") {
-        if (followUp.trigger.properties?.endingIds?.includes(endingCard.id)) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-
     // checking if this ending card is used in logic
     const quesIdx = findEndingCardUsedInLogic(localSurvey, endingCard.id);
 
@@ -131,7 +150,8 @@ export const EditEndingCard = ({
       return;
     }
 
-    if (isEndingCardUsedInFollowUps) {
+    // Responses record the ending they reached, so in a survey with responses an ending goes only once the author confirms, as blocks and questions do.
+    if (isEndingCardUsedInFollowUps || responseCount > 0) {
       setOpenDeleteConfirmationModal(true);
       return;
     }
@@ -141,11 +161,6 @@ export const EditEndingCard = ({
       return { ...prevSurvey, endings: updatedEndings };
     });
   };
-
-  const endScreenHeadline =
-    endingCard.type === "endScreen" && endingCard.headline
-      ? recallToHeadline(endingCard.headline, localSurvey, true, selectedLanguageCode)[selectedLanguageCode]
-      : undefined;
 
   const style = {
     transition: transition ?? "transform 100ms ease",
@@ -186,12 +201,15 @@ export const EditEndingCard = ({
       ref={setNodeRef}
       style={style}
       id={endingCard.id}>
+      {/* The rail is the drag handle, as on the blocks; the grip only shows it. */}
       <div
         {...listeners}
         {...attributes}
+        aria-label={t("workspace.surveys.edit.reorder_ending_card", { number: endingCardIndex + 1 })}
         className={cn(
           open ? "bg-slate-50" : "",
           "flex w-10 flex-col items-center justify-between rounded-l-lg border-t border-b border-l py-2 group-aria-expanded:rounded-bl-none",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700",
           isInvalid ? "bg-red-400" : "bg-white group-hover:bg-slate-50"
         )}>
         <div className="mt-3 flex w-full justify-center">
@@ -201,20 +219,18 @@ export const EditEndingCard = ({
             <Undo2 className="size-4 rotate-180" />
           )}
         </div>
-        <button
-          type="button"
-          className="opacity-0 transition-all duration-300 group-hover:opacity-100 hover:cursor-move">
-          <GripIcon className="size-4" />
-        </button>
+        <GripIcon
+          aria-hidden="true"
+          className="size-4 opacity-0 transition-all duration-300 group-focus-within:opacity-100 group-hover:opacity-100"
+        />
       </div>
       <Collapsible.Root
         open={open}
         onOpenChange={setOpen}
         className="flex-1 rounded-r-lg border border-slate-200 transition-all duration-300 ease-in-out">
-        <Collapsible.CollapsibleTrigger
-          asChild
-          className="flex cursor-pointer justify-between rounded-r-lg p-5 hover:bg-slate-50">
-          <div>
+        {/* The trigger holds the title only; the card menu sits beside it, not inside the button. */}
+        <div className="flex justify-between gap-4 rounded-r-lg p-5 hover:bg-slate-50">
+          <Collapsible.CollapsibleTrigger className="min-w-0 grow cursor-pointer rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-700">
             <div className="inline-flex">
               <div>
                 <p className="text-sm font-semibold">
@@ -234,23 +250,23 @@ export const EditEndingCard = ({
                 )}
               </div>
             </div>
+          </Collapsible.CollapsibleTrigger>
 
-            <div className="flex items-center gap-x-4">
-              <EditorCardMenu
-                survey={localSurvey}
-                cardIdx={endingCardIndex}
-                lastCard={endingCardIndex === localSurvey.endings.length - 1}
-                duplicateCard={duplicateEndingCard}
-                deleteCard={deleteEndingCard}
-                moveCard={moveEndingCard}
-                card={endingCard}
-                updateCard={() => {}}
-                addEndingCard={addEndingCard}
-                cardType="ending"
-              />
-            </div>
+          <div className="flex items-center gap-x-4">
+            <EditorCardMenu
+              survey={localSurvey}
+              cardIdx={endingCardIndex}
+              lastCard={endingCardIndex === localSurvey.endings.length - 1}
+              duplicateCard={duplicateEndingCard}
+              deleteCard={deleteEndingCard}
+              moveCard={moveEndingCard}
+              card={endingCard}
+              updateCard={() => {}}
+              addEndingCard={addEndingCard}
+              cardType="ending"
+            />
           </div>
-        </Collapsible.CollapsibleTrigger>
+        </div>
         <Collapsible.CollapsibleContent className={`flex flex-col px-4 ${open && "mt-3 pb-6"}`}>
           <OptionsSwitch
             options={endingCardTypes}
@@ -309,7 +325,8 @@ export const EditEndingCard = ({
         }}
         open={openDeleteConfirmationModal}
         setOpen={setOpenDeleteConfirmationModal}
-        body={t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_text")}
+        description={isAutoSaved ? undefined : t("workspace.surveys.edit.delete_applies_on_save")}
+        body={deleteConfirmationBody()}
         title={t("workspace.surveys.edit.follow_ups_ending_card_delete_modal_title")}
       />
     </div>

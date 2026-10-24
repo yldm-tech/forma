@@ -1,5 +1,5 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { CheckIcon } from "lucide-react";
+import { RepeatIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
@@ -149,14 +149,13 @@ export const RecontactOptionsCard = ({ localSurvey, setLocalSurvey }: RecontactO
       }}
       className="w-full rounded-lg border border-slate-300 bg-white">
       <Collapsible.CollapsibleTrigger
-        asChild
-        className="h-full w-full cursor-pointer rounded-lg hover:bg-slate-50"
+        className="h-full w-full cursor-pointer rounded-lg text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-700"
         id="recontactOptionsCardTrigger">
         <div className="inline-flex px-4 py-4">
           <div className="flex items-center pr-5 pl-2">
-            <CheckIcon
-              strokeWidth={3}
-              className="size-7 rounded-full border border-green-300 bg-green-100 p-1.5 text-green-600"
+            <RepeatIcon
+              aria-hidden="true"
+              className="size-7 rounded-full border border-slate-200 bg-slate-100 p-1.5 text-slate-600"
             />
           </div>
           <div>

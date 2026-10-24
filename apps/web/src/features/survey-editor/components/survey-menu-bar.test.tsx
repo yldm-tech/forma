@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -33,6 +33,13 @@ let i18n: I18n;
 
 beforeAll(async () => {
   i18n = await initI18n("en-US");
+  // jsdom has no modal dialogs; the unsaved-changes dialog only needs to open and close.
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  };
 });
 
 afterEach(() => {
@@ -240,6 +247,11 @@ const renderMenuBar = (persisted: TSurvey) => {
       path: "/workspaces/$workspaceId/surveys/$surveyId/summary",
       component: () => <h1>Survey summary</h1>,
     }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/workspaces/$workspaceId/surveys",
+      component: () => <h1>Survey list</h1>,
+    }),
   ]);
   const router = createRouter({
     routeTree,
@@ -388,7 +400,7 @@ describe("SurveyMenuBar", () => {
       vi.advanceTimersByTime(10_000);
     });
 
-    expect(await screen.findByText("Progress saved")).toBeTruthy();
+    expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
     expect(saves).toHaveLength(1);
     expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}/draft`);
     expect(saves[0]?.body).toMatchObject({ name: "Feedback 2026", updatedAt: LOADED_AT.toISOString() });
@@ -413,6 +425,193 @@ describe("SurveyMenuBar", () => {
     expect(queryClient.getQueryData<TSurvey>(surveyEditorKeys.survey(SURVEY_ID))?.updatedAt).toEqual(
       LOADED_AT
     );
+  });
+
+  test("Back on an untouched survey leaves at once, for the list or the summary, even with no history behind the editor", async () => {
+    stubSaveEndpoint();
+    const { router } = renderMenuBar(survey({ status: "inProgress" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(SUMMARY_PATH);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  test("Back with unsaved changes asks first: Keep editing stays, Discard leaves for the list without saving", async () => {
+    const saves = stubSaveEndpoint();
+    const { router } = renderMenuBar(survey());
+
+    fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Discard" })).toBeNull());
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+
+    expect(await screen.findByRole("heading", { name: "Survey list" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(`/workspaces/${WORKSPACE_ID}/surveys`);
+    expect(saves).toHaveLength(0);
+  });
+
+  test.each(["", "   "])("Publish with the name %j saves nothing and marks the name field", async (name) => {
+    const saves = stubSaveEndpoint();
+    const { router } = renderMenuBar(survey());
+
+    const nameField = await screen.findByRole("textbox", { name: "Survey name" });
+    fireEvent.change(nameField, { target: { value: name } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+
+    await waitFor(() => expect(nameField.getAttribute("aria-invalid")).toBe("true"));
+    expect(document.activeElement).toBe(nameField);
+    expect(saves).toHaveLength(0);
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+
+    fireEvent.change(nameField, { target: { value: "Feedback" } });
+    expect(nameField.getAttribute("aria-invalid")).toBeNull();
+  });
+
+  test("autosave stays quiet after one failure and offers Try again after two in a row, which saves at once", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const saves = stubSaveEndpoint(503);
+    renderMenuBar(survey());
+
+    fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    await waitFor(() => expect(saves).toHaveLength(1));
+    expect(screen.queryByText("Autosave failed")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText("Autosave failed")).toBeTruthy();
+    expect(saves).toHaveLength(2);
+
+    stubSaveEndpoint();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
+    expect(screen.queryByText("Autosave failed")).toBeNull();
+  });
+
+  test("an autosave refused as invalid marks the field and says why, offers no Try again, and is not sent again until the draft changes", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const saves: SaveRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string) as Record<string, unknown>;
+        saves.push({ path, body });
+        if (String(body.name).trim() === "") {
+          return Response.json(
+            {
+              code: "validation_error",
+              message: "Survey name is required",
+              details: { issues: [{ path: ["name"], message: "Survey name is required" }] },
+            },
+            { status: 400 }
+          );
+        }
+        return Response.json({ ...body, updatedAt: SAVED_AT });
+      })
+    );
+    renderMenuBar(survey());
+
+    const nameField = await screen.findByRole("textbox", { name: "Survey name" });
+    fireEvent.change(nameField, { target: { value: "" } });
+    nameField.blur();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(await screen.findByText("Not saved: Please enter a survey name.")).toBeTruthy();
+    expect(nameField.getAttribute("aria-invalid")).toBe("true");
+    // Autosave does not take the focus.
+    expect(document.activeElement).not.toBe(nameField);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByText("Autosave failed")).toBeNull();
+
+    // Unchanged, the refused draft is not sent again.
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(saves).toHaveLength(1);
+
+    fireEvent.change(nameField, { target: { value: "Feedback 2026" } });
+    expect(nameField.getAttribute("aria-invalid")).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText(/^Saved · \d{1,2}:\d\d/)).toBeTruthy();
+    expect(saves).toHaveLength(2);
+  });
+
+  test("an autosave refusal clears once the change it carried is undone, with nothing to save", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const saves: SaveRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit) => {
+        saves.push({ path, body: JSON.parse(init.body as string) as Record<string, unknown> });
+        return Response.json(
+          {
+            code: "validation_error",
+            message: "Survey name is required",
+            details: { issues: [{ path: ["name"], message: "Survey name is required" }] },
+          },
+          { status: 400 }
+        );
+      })
+    );
+    renderMenuBar(survey());
+
+    const nameField = await screen.findByRole("textbox", { name: "Survey name" });
+    fireEvent.change(nameField, { target: { value: "" } });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText("Not saved: Please enter a survey name.")).toBeTruthy();
+
+    fireEvent.change(nameField, { target: { value: "Feedback" } });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(await screen.findByText("Auto-save on")).toBeTruthy();
+    expect(screen.queryByText(/^Not saved/)).toBeNull();
+    expect(saves).toHaveLength(1);
+  });
+
+  test("while Save in the unsaved-changes dialog runs, Keep editing does not close it, and the save still leaves when it lands", async () => {
+    let answerSave: (() => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_path: string, init: RequestInit) =>
+          new Promise<Response>((resolve) => {
+            const body = JSON.parse(init.body as string) as Record<string, unknown>;
+            answerSave = () => resolve(Response.json({ ...body, updatedAt: SAVED_AT }));
+          })
+      )
+    );
+    const { router } = renderMenuBar(survey());
+
+    fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(answerSave).toBeDefined());
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Discard" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+
+    await act(async () => {
+      answerSave?.();
+    });
+    expect(await screen.findByRole("heading", { name: "Survey list" })).toBeTruthy();
   });
 
   test.each([

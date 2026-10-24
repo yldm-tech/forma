@@ -28,15 +28,13 @@ export const RichTextTranslationInput = ({
   // Separates external value changes (e.g. AI fill) from the editor's own write-back so we
   // only remount for the former.
   const lastWrittenRef = useRef(value);
-  // Suppresses Lexical's mount-time empty listener fire which would otherwise clobber an
-  // externally-applied value back to empty. Lexical can serialize an empty editor as either
-  // "" or markup like "<p><br></p>", so we check by text content rather than literal equality.
-  const initialContentSetRef = useRef(false);
+  // Suppresses an empty write before the field has held any text, which would otherwise clobber an externally-applied value back to empty. Loading the value no longer writes (the editor tags it as a seed), so a field that starts with text counts as set: clearing it is then the user's edit and is kept. Lexical can serialize an empty editor as either "" or markup like "<p><br></p>", so we check by text content rather than literal equality.
+  const initialContentSetRef = useRef(getTextContent(value).trim() !== "");
 
   useEffect(() => {
     if (value !== lastWrittenRef.current) {
       lastWrittenRef.current = value;
-      initialContentSetRef.current = false;
+      initialContentSetRef.current = getTextContent(value).trim() !== "";
       setEditorKey((k) => k + 1);
       setFirstRender(true);
     }

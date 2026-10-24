@@ -113,6 +113,35 @@ func TestEditorSave(t *testing.T) {
 	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusBadRequest, apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
 }
 
+// Every editor save needs a name, a full save (Publish, Save on a live survey) as much as a draft one, and a name of only spaces is no name. The stored survey keeps its name.
+func TestEditorSaveRequiresAName(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	sv := e.editorSurvey(owner, id)
+	stored := sv["name"]
+
+	for _, name := range []string{"", "   ", "\t\n"} {
+		sv["name"] = name
+		for _, rest := range []string{"", "/draft"} {
+			body := e.fails(e.do(owner, http.MethodPut, appPath(id, rest), sv), http.StatusBadRequest, apperr.CodeValidation, "Survey name is required")
+			issues, _ := body.Details["issues"].([]any)
+			if len(issues) == 0 || fmt.Sprint(issues[0].(map[string]any)["path"]) != "[name]" {
+				t.Fatalf("save %q to %q: issues %v", rest, name, body.Details["issues"])
+			}
+			// Refused like any other invalid save, so audited as a failed update.
+			e.expectAudit(audit.ActionUpdated, audit.StatusFailure, audit.ActorUser, owner.String(), audit.TargetSurvey, id)
+		}
+	}
+	if got := e.editorSurvey(owner, id)["name"]; got != stored {
+		t.Fatalf("stored name %v, want %v", got, stored)
+	}
+
+	sv["name"] = "  Renamed  "
+	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
+}
+
 // The editor holds updatedAt as a JavaScript Date, which keeps milliseconds, while updated_at has microseconds: a draft save compares the two, and names the stored version, at millisecond precision, as forma2's DateTime(3) did.
 func TestEditorDraftSaveComparesVersionsToTheMillisecond(t *testing.T) {
 	e := newEnv(t)

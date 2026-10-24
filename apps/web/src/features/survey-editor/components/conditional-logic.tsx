@@ -18,6 +18,7 @@ import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import { TSurvey } from "@forma/types/surveys/types";
 import { cn } from "../../../lib/cn";
 import { duplicateLogicItem } from "../lib/survey-logic";
+import { logicRuleDomId } from "../lib/survey-issues";
 import { replaceHeadlineRecall } from "../../../lib/survey/recall";
 import { LogicEditor } from "./logic-editor";
 import { getDefaultOperatorForElement, replaceEndingCardHeadlineRecall } from "../lib/utils";
@@ -182,8 +183,10 @@ export function ConditionalLogic({
               {blockLogic.map((logicItem, logicItemIdx) => (
                 <div
                   key={logicItem.id}
+                  id={logicRuleDomId(logicItem.id)}
                   className={cn(
-                    "relative flex w-full grow items-start gap-2 rounded-lg border bg-slate-50 p-3",
+                    // scroll-mt clears the fixed tabs bar when a rule issue scrolls here
+                    "relative flex w-full grow scroll-mt-16 items-start gap-2 rounded-lg border bg-slate-50 p-3",
                     invalidElements?.includes(logicItem.id) ? "border-red-400" : "border-slate-200"
                   )}>
                   <LogicEditor

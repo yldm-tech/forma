@@ -37,6 +37,36 @@ interface PreviewSurveyProps {
 let surveyNameTemp: string;
 let setBlockId = (_: string) => {};
 
+/** The nearest ancestor of `node`, inside `boundary`, that scrolls vertically. */
+const findScrollContainer = (node: HTMLElement, boundary: HTMLElement): HTMLElement | null => {
+  for (let current = node.parentElement; current && current !== boundary; current = current.parentElement) {
+    const { overflowY } = getComputedStyle(current);
+    if ((overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight) {
+      return current;
+    }
+  }
+  return null;
+};
+
+/**
+ * Scrolls the preview so the element being edited is visible. Only the preview's own scroll container moves: `scrollIntoView` would also scroll the editor column the author is typing in. Runs after two frames, so the block `setBlockId` switched to has mounted.
+ */
+const scrollPreviewToElement = (elementId: string) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const preview = document.getElementById("survey-preview");
+      const target = preview?.querySelector<HTMLElement>(`#${CSS.escape(elementId)}`);
+      if (!preview || !target) return;
+      const container = findScrollContainer(target, preview);
+      if (!container) return;
+      const top =
+        container.scrollTop + target.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      container.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    });
+  });
+};
+
 export const PreviewSurvey = ({
   elementId,
   survey,
@@ -169,6 +199,8 @@ export const PreviewSurvey = ({
       const block = survey.blocks.find((b) => b.elements.some((e) => e.id === newElementId));
       if (block) {
         setBlockId(block.id);
+        // A block can hold many questions; the one being edited may sit below the fold of the preview card, so bring it into view once the block has rendered.
+        if (block.elements[0]?.id !== newElementId) scrollPreviewToElement(newElementId);
         return;
       }
 
@@ -319,6 +351,7 @@ export const PreviewSurvey = ({
                     <SurveyInline
                       appUrl={window.location.origin}
                       isPreviewMode={true}
+                      autoFocus={false}
                       survey={toJsWorkspaceStateSurvey(previewSurvey)}
                       isBrandingEnabled={workspace.inAppSurveyBranding}
                       isRedirectDisabled={true}
@@ -367,6 +400,7 @@ export const PreviewSurvey = ({
                         <SurveyInline
                           appUrl={window.location.origin}
                           isPreviewMode={true}
+                          autoFocus={false}
                           isBrandingEnabled={workspace.linkSurveyBranding}
                           survey={toJsWorkspaceStateSurvey({ ...previewSurvey, type: "link" })}
                           isRedirectDisabled={true}
@@ -454,6 +488,7 @@ export const PreviewSurvey = ({
                   <SurveyInline
                     appUrl={window.location.origin}
                     isPreviewMode={true}
+                    autoFocus={false}
                     survey={toJsWorkspaceStateSurvey(previewSurvey)}
                     isBrandingEnabled={workspace.inAppSurveyBranding}
                     isRedirectDisabled={true}
@@ -510,6 +545,7 @@ export const PreviewSurvey = ({
                         <SurveyInline
                           appUrl={window.location.origin}
                           isPreviewMode={true}
+                          autoFocus={false}
                           survey={toJsWorkspaceStateSurvey({ ...previewSurvey, type: "link" })}
                           isBrandingEnabled={workspace.linkSurveyBranding}
                           isRedirectDisabled={true}
@@ -544,12 +580,14 @@ export const PreviewSurvey = ({
         <div className="mt-2 flex rounded-full border-2 border-slate-300 p-1">
           <TabOption
             active={previewMode === "mobile"}
-            icon={<SmartphoneIcon className="mx-4 my-2 size-4 text-slate-700" />}
+            label={t("workspace.surveys.edit.preview_mobile")}
+            icon={<SmartphoneIcon className="mx-4 my-2 size-4 text-slate-700" aria-hidden="true" />}
             onClick={() => handlePreviewModeChange("mobile")}
           />
           <TabOption
             active={previewMode === "desktop"}
-            icon={<MonitorIcon className="mx-4 my-2 size-4 text-slate-700" />}
+            label={t("workspace.surveys.edit.preview_desktop")}
+            icon={<MonitorIcon className="mx-4 my-2 size-4 text-slate-700" aria-hidden="true" />}
             onClick={() => handlePreviewModeChange("desktop")}
           />
         </div>
