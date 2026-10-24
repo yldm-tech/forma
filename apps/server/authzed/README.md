@@ -20,10 +20,7 @@ assertion-based validation suite.
 pnpm authzed:validate
 ```
 
-CI runs the same script on every pull request as part of `.github/workflows/pr.yml`.
-The validation job is a dependency of the required `PR Check Summary`, so a
-failing assertion blocks the change: it means the schema no longer matches the
-documented semantics.
+CI runs the same script in `.github/workflows/pr.yml` for every pull request that changes `apps/server/authzed/` or anything shared by the whole repository (`.github/`, `tooling/`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and on every manual run (`workflow_dispatch`). The validation job is a dependency of the required `PR Check Summary`, so a failing assertion blocks the change: it means the schema no longer matches the documented semantics. When a pull request touches none of those paths, the job is skipped and the summary accepts the skip.
 
 ## Checking and applying the schema
 
