@@ -23,7 +23,9 @@ import { TUserLocale } from "@forma/types/user";
 import { addMultiLanguageLabels, createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 import { getDefaultEndingCard } from "../lib/survey-builder";
 import { isConditionGroup } from "../lib/survey-logic";
-import { checkForEmptyFallBackValue } from "../../../lib/survey/recall";
+import { checkForEmptyFallBackValue, recallToHeadline } from "../../../lib/survey/recall";
+import { getTextContent } from "@forma/types/surveys/validation";
+import { getTSurveyElementTypeEnumName } from "../lib/elements";
 import { AddElementButton } from "./add-element-button";
 import { AddEndingCardButton } from "./add-ending-card-button";
 import { BlocksDroppable } from "./blocks-droppable";
@@ -74,8 +76,8 @@ interface ElementsViewProps {
   selectedLanguageCode: string;
   isCxMode: boolean;
   locale: TUserLocale;
+  /** Responses the survey has collected: deleting content from a survey with responses is always confirmed. */
   responseCount: number;
-  setIsCautionDialogOpen: (open: boolean) => void;
   quotas: TSurveyQuota[];
 }
 
@@ -91,7 +93,6 @@ export const ElementsView = ({
   isCxMode,
   locale,
   responseCount,
-  setIsCautionDialogOpen,
   quotas,
 }: ElementsViewProps) => {
   const { t } = useTranslation();
@@ -105,6 +106,11 @@ export const ElementsView = ({
     elementIdx: 0,
     type: "element",
   });
+
+  // A deletion waiting for the author's confirmation: a block holding several questions, or anything in a survey that already has responses. A single question of a survey without responses goes at once, as before.
+  const [pendingDeletion, setPendingDeletion] = React.useState<
+    { type: "element"; elementIdx: number } | { type: "block"; blockId: string } | null
+  >(null);
 
   const elements = useMemo(() => getElementsFromBlocks(localSurvey.blocks), [localSurvey.blocks]);
 
@@ -424,6 +430,11 @@ export const ElementsView = ({
       return;
     }
 
+    if (responseCount > 0) {
+      setPendingDeletion({ type: "element", elementIdx });
+      return;
+    }
+
     executeDeletion(elementIdx);
   };
 
@@ -684,8 +695,48 @@ export const ElementsView = ({
       }
     }
 
+    if (block && (block.elements.length > 1 || responseCount > 0)) {
+      setPendingDeletion({ type: "block", blockId });
+      return;
+    }
+
     executeBlockDeletion(blockId);
   };
+
+  /** What the confirmation names: the block or question, and how many questions go with it. */
+  const describePendingDeletion = (): { title: string; body: string } | null => {
+    if (!pendingDeletion) return null;
+    const withResponses =
+      responseCount > 0
+        ? `\n\n${t("workspace.surveys.edit.caution_explanation_new_responses_separated")}`
+        : "";
+    if (pendingDeletion.type === "block") {
+      const blockIdx = localSurvey.blocks.findIndex((b) => b.id === pendingDeletion.blockId);
+      const block = localSurvey.blocks[blockIdx];
+      if (!block) return null;
+      return {
+        title: t("workspace.surveys.edit.delete_block_confirm_title"),
+        body:
+          t("workspace.surveys.edit.delete_block_confirm_text", {
+            name: block.name.trim() || t("workspace.surveys.edit.block_n", { blockNumber: blockIdx + 1 }),
+            count: block.elements.length,
+          }) + withResponses,
+      };
+    }
+    const element = elements[pendingDeletion.elementIdx];
+    if (!element) return null;
+    const headline = getTextContent(
+      recallToHeadline(element.headline, localSurvey, false, "default").default ?? ""
+    ).trim();
+    return {
+      title: t("workspace.surveys.edit.delete_question_confirm_title"),
+      body:
+        t("workspace.surveys.edit.delete_question_confirm_text", {
+          name: headline || getTSurveyElementTypeEnumName(element.type, t),
+        }) + withResponses,
+    };
+  };
+  const pendingDeletionText = describePendingDeletion();
 
   const moveBlockById = (blockId: string, direction: "up" | "down") => {
     const result = moveBlockHelper(localSurvey, blockId, direction);
@@ -865,8 +916,6 @@ export const ElementsView = ({
           addElement={addElement}
           isCxMode={isCxMode}
           locale={locale}
-          responseCount={responseCount}
-          onAlertTrigger={() => setIsCautionDialogOpen(true)}
           duplicateBlock={duplicateBlock}
           deleteBlock={deleteBlockById}
           moveBlock={moveBlockById}
@@ -898,6 +947,7 @@ export const ElementsView = ({
                   addEndingCard={addEndingCard}
                   locale={locale}
                   quotas={quotas}
+                  responseCount={responseCount}
                 />
               );
             })}
@@ -926,6 +976,26 @@ export const ElementsView = ({
         )}
       </div>
 
+      <ConfirmationModal
+        open={pendingDeletionText !== null}
+        setOpen={(open) => {
+          if (!open) setPendingDeletion(null);
+        }}
+        title={pendingDeletionText?.title ?? ""}
+        // Only a draft that autosaves loses the deletion for good on its own; anywhere else it waits for Save, and Back with Discard undoes it.
+        description={
+          localSurvey.status === "draft" && localSurvey.publishOn === null
+            ? undefined
+            : t("workspace.surveys.edit.delete_applies_on_save")
+        }
+        body={pendingDeletionText?.body ?? ""}
+        buttonText={t("common.delete")}
+        onConfirm={() => {
+          if (pendingDeletion?.type === "element") executeDeletion(pendingDeletion.elementIdx);
+          if (pendingDeletion?.type === "block") executeBlockDeletion(pendingDeletion.blockId);
+          setPendingDeletion(null);
+        }}
+      />
       <ConfirmationModal
         open={logicDeletionWarning.open}
         setOpen={(open) => setLogicDeletionWarning((prev) => ({ ...prev, open: open as boolean }))}

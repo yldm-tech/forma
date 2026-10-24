@@ -124,9 +124,13 @@ export const LanguageView = ({
     setHasIncompleteTranslations(hasIncomplete);
   }, [localSurvey.languages, translatableStrings, isMultiLanguageActivated, setHasIncompleteTranslations]);
 
-  const updateSurveyTranslations = (survey: TSurvey, updatedLanguages: TSurveyLanguage[]) => {
+  const updateSurveyTranslations = (
+    survey: TSurvey,
+    updatedLanguages: TSurveyLanguage[],
+    overrides: Partial<TSurvey> = {}
+  ) => {
     const translatedSurveyResult = addMultiLanguageLabels(survey, extractLanguageCodes(updatedLanguages));
-    const updatedSurvey = { ...translatedSurveyResult, languages: updatedLanguages };
+    const updatedSurvey = { ...translatedSurveyResult, languages: updatedLanguages, ...overrides };
     setLocalSurvey(updatedSurvey as TSurvey);
   };
 
@@ -222,7 +226,13 @@ export const LanguageView = ({
           ...localSurvey.languages,
           { enabled: true, default: false, language },
         ];
-        updateSurveyTranslations(localSurvey, updatedLanguages);
+        // A respondent following a plain link gets the default language; without the switch they cannot reach the translation being added. Turned on when the survey gains its second language, unless the author has already decided (the stored value of an existing survey is left as it is).
+        const isSecondLanguage = updatedLanguages.filter((l) => l.enabled).length === 2;
+        updateSurveyTranslations(
+          localSurvey,
+          updatedLanguages,
+          isSecondLanguage && localSurvey.showLanguageSwitch == null ? { showLanguageSwitch: true } : {}
+        );
       }
     }
   };

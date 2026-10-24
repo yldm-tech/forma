@@ -58,18 +58,59 @@ export const parseContactsCsv = (text: string): CsvContacts => {
   return { columns, records };
 };
 
-/** forma2's ZContactCSVUploadResponse on the file as read: the first problem, or null. */
-export const csvRecordsError = (records: Record<string, string>[]): string | null => {
-  if (records.length > MAX_CSV_RECORDS) return "Maximum 10000 records allowed at a time.";
-  for (const record of records) {
-    if (!Object.hasOwn(record, "email")) return "Missing email field for one or more records";
-    if (!record.email) return "Email field is empty for one or more records";
+/** A problem with the file's rows, as a code and the values its message names. */
+export type CsvRecordsError =
+  | { code: "too_many_records"; max: number }
+  | { code: "missing_email_column"; columns: string[] }
+  | { code: "empty_email"; row: number }
+  | { code: "duplicate_email"; email: string }
+  | { code: "duplicate_user_id"; userId: string };
+
+/** The first value that appears twice, or undefined. */
+const firstDuplicate = (values: string[]): string | undefined => {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) return value;
+    seen.add(value);
   }
-  const emails = records.map((record) => record.email);
-  if (new Set(emails).size !== emails.length) return "Duplicate emails found in the records";
-  const userIds = records.map((record) => record.userId).filter(Boolean);
-  if (new Set(userIds).size !== userIds.length) return "Duplicate userIds found in the records";
+  return undefined;
+};
+
+/**
+ * forma2's ZContactCSVUploadResponse on the file as read: the first problem, or null. An empty email names its row as a spreadsheet numbers it (the header is row 1), and a missing email column lists the columns that were found, which shows a file split on the wrong delimiter.
+ */
+export const csvRecordsError = (
+  records: Record<string, string>[],
+  columns: string[] = Object.keys(records[0] ?? {})
+): CsvRecordsError | null => {
+  if (records.length > MAX_CSV_RECORDS) return { code: "too_many_records", max: MAX_CSV_RECORDS };
+  for (const [index, record] of records.entries()) {
+    if (!Object.hasOwn(record, "email")) return { code: "missing_email_column", columns };
+    if (!record.email) return { code: "empty_email", row: index + 2 };
+  }
+  const email = firstDuplicate(records.map((record) => record.email ?? ""));
+  if (email !== undefined) return { code: "duplicate_email", email };
+  const userId = firstDuplicate(records.map((record) => record.userId).filter((id): id is string => !!id));
+  if (userId !== undefined) return { code: "duplicate_user_id", userId };
   return null;
+};
+
+/** The translated message for a problem csvRecordsError found. */
+export const csvRecordsErrorMessage = (error: CsvRecordsError, t: TFunction): string => {
+  switch (error.code) {
+    case "too_many_records":
+      return t("workspace.contacts.upload_contacts_error_too_many_records", { max: error.max });
+    case "missing_email_column":
+      return t("workspace.contacts.upload_contacts_error_missing_email_column", {
+        columns: error.columns.join(", "),
+      });
+    case "empty_email":
+      return t("workspace.contacts.upload_contacts_error_empty_email", { row: error.row });
+    case "duplicate_email":
+      return t("workspace.contacts.upload_contacts_error_duplicate_email", { email: error.email });
+    case "duplicate_user_id":
+      return t("workspace.contacts.upload_contacts_error_duplicate_user_id", { userId: error.userId });
+  }
 };
 
 /** The first key a column matches by name (or key), as forma2 suggested and the server falls back to. */

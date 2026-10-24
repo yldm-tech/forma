@@ -129,6 +129,7 @@ export interface ScanResults {
   staleKnownUnusedKeys: string[]; // recorded as unused, but used again or gone
   keysWithSpaces: Set<string>; // keys that contain spaces
   lockfileValidation?: LockfileValidationResults | null;
+  cjkSpacing?: Map<string, string[]>; // zh/ja locale -> keys whose value has spaces between CJK characters
 }
 
 /**
@@ -421,6 +422,59 @@ export function compareWithKnownUnused(
   };
 }
 
+/** Locales written without spaces between words. */
+const UNSPACED_LOCALE = /^(?:zh|ja)(?:-|$)/;
+
+/** Whether a character is a CJK ideograph, kana, or CJK / full-width punctuation. */
+export function isCjkCharacter(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return (
+    (code >= 0x3000 && code <= 0x30ff) ||
+    (code >= 0x31f0 && code <= 0x31ff) ||
+    (code >= 0x3400 && code <= 0x4dbf) ||
+    (code >= 0x4e00 && code <= 0x9fff) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xff00 && code <= 0xffef) ||
+    (code >= 0x20000 && code <= 0x2ffff)
+  );
+}
+
+/**
+ * Whether a value has a run of spaces with a CJK character on each side ("这 将 删除"), the mark word-by-word machine translation left on forma2's zh-Hans-CN catalogue. Spaces next to Latin words, digits and {placeholders} are fine. Scans character by character.
+ */
+export function hasCjkSpacing(value: string): boolean {
+  const chars = Array.from(value);
+  for (let i = 1; i < chars.length; i++) {
+    if (chars[i] !== " " || !isCjkCharacter(chars[i - 1] ?? "")) continue;
+    let end = i;
+    while (chars[end] === " ") end++;
+    if (end < chars.length && isCjkCharacter(chars[end] ?? "")) return true;
+    i = end;
+  }
+  return false;
+}
+
+/** Keys of a catalogue whose value has spaces between CJK characters. */
+export function findCjkSpacing(catalogue: TranslationKeys, prefix = ""): string[] {
+  return Object.entries(catalogue).flatMap(([key, value]) => {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === "string") return hasCjkSpacing(value) ? [fullKey] : [];
+    return findCjkSpacing(value, fullKey);
+  });
+}
+
+/** For each zh and ja catalogue in the directory, the keys whose value has spaces between CJK characters. */
+async function checkCjkSpacing(localesDir: string): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  for (const locale of await getLocaleFiles(localesDir)) {
+    if (!UNSPACED_LOCALE.test(locale)) continue;
+    const content = await fs.promises.readFile(path.join(localesDir, `${locale}.json`), "utf-8");
+    const keys = findCjkSpacing(JSON.parse(content) as TranslationKeys);
+    if (keys.length > 0) result.set(locale, keys);
+  }
+  return result;
+}
+
 /**
  * Detect keys that contain spaces (which should not be used in translation keys)
  */
@@ -505,6 +559,7 @@ export function hasIssues(results: ScanResults): boolean {
     results.extraTranslations.size > 0 ||
     results.staleKnownUnusedKeys.length > 0 ||
     results.keysWithSpaces.size > 0 ||
+    (results.cjkSpacing?.size ?? 0) > 0 ||
     hasLockfileIssues(results)
   );
 }
@@ -611,6 +666,21 @@ function displayResults(results: ScanResults, packageName: string, defaultLocale
       console.log(`   • "${visualKey}"`);
     });
     console.log("\n   Please remove spaces from these keys or use valid key names.\n");
+  }
+
+  if (results.cjkSpacing && results.cjkSpacing.size > 0) {
+    console.log(`\n❌ SPACES BETWEEN CJK CHARACTERS:\n`);
+    console.log("   Chinese and Japanese are written without spaces between words. Remove them from:\n");
+    for (const [locale, keys] of results.cjkSpacing.entries()) {
+      console.log(`   📝 ${locale} (${keys.length.toString()} values):`);
+      keys.slice(0, 10).forEach((key) => {
+        console.log(`      • ${key}`);
+      });
+      if (keys.length > 10) {
+        console.log(`      ... and ${(keys.length - 10).toString()} more`);
+      }
+    }
+    console.log();
   }
 
   if (results.lockfileValidation) {
@@ -770,6 +840,7 @@ export async function validateTarget(target: ScanTarget): Promise<ScanResults> {
   const resultsWithLockfile: ScanResults = {
     ...results,
     lockfileValidation: await validateLockfile(target.localesDir, target.defaultLocale),
+    cjkSpacing: await checkCjkSpacing(target.localesDir),
   };
 
   displayResults(resultsWithLockfile, target.name, target.defaultLocale);
@@ -814,6 +885,9 @@ async function main(): Promise<void> {
       }
       if (results.some((r) => r.extraTranslations.size > 0)) {
         console.error("   • Remove keys the source language no longer has from target language files");
+      }
+      if (results.some((r) => (r.cjkSpacing?.size ?? 0) > 0)) {
+        console.error("   • Remove the spaces between Chinese or Japanese characters in the listed values");
       }
       if (results.some(hasLockfileIssues)) {
         console.error("   • Rebuild and update your lockfiles (run 'pnpm i18n')");

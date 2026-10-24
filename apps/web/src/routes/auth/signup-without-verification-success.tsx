@@ -37,7 +37,7 @@ function SignupWithoutVerificationSuccessPage() {
         {t("auth.signup_without_verification_success.user_successfully_created_info", { email })}
       </p>
       <hr className="my-4" />
-      <BackToLoginButton callbackUrl={callbackUrl} />
+      <BackToLoginButton callbackUrl={callbackUrl} email={email} />
     </>
   );
 }

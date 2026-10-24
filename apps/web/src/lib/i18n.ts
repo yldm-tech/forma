@@ -85,6 +85,17 @@ export const isLocale = (value: string): value is Locale =>
   (AVAILABLE_LOCALES as readonly string[]).includes(value);
 
 /**
+ * Keeps <html lang> on the language the UI is showing, which index.html can only guess as "en": screen readers pick their voice by it, and browsers pick Han glyph forms, fonts and line breaking (index.css's CJK rules). The catalogue ids are BCP 47 tags already. Outside a browser (the Node tests) there is no document to follow.
+ */
+const syncDocumentLanguage = (instance: I18n) => {
+  if (typeof document === "undefined") return;
+  document.documentElement.lang = instance.language;
+  instance.on("languageChanged", (language: string) => {
+    document.documentElement.lang = language;
+  });
+};
+
+/**
  * Creates the i18next instance with en-US (the fallback for any missing key) and `locale` loaded. Keys are written `<namespace>.<key>` (`t("common.loading")`), the shape every forma2 call site uses, so screens port with their keys unchanged.
  */
 export const initI18n = async (locale: Locale): Promise<I18n> => {
@@ -105,7 +116,10 @@ export const initI18n = async (locale: Locale): Promise<I18n> => {
       ns: Object.keys(loaded[0] ?? {}),
       resources,
       interpolation: { escapeValue: false },
+      // i18next otherwise logs an advertisement for its hosted service to the console.
+      showSupportNotice: false,
     });
+  syncDocumentLanguage(instance);
   return instance;
 };
 

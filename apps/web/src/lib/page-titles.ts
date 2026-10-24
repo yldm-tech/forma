@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { analysisSurveyQuery } from "../features/survey-analysis/api";
 
-// The browser tab titles forma2's pages set through Next's metadata, by route id: its root layout's "%s | Forma" template around the page's own title, "Forma" for a page without one. A layout's title covers the pages under it unless they have their own, as Next resolved metadata, so the deepest matched route with an entry wins. Settings and integration pages name themselves with the key of the heading they render (forma2's getSettingsPageMetadata); the few untranslated titles are forma2's literal strings.
+// The browser tab titles, by route id: forma2's root layout's "%s | Forma" template around the page's own title, "Forma" for a page without one. A layout's title covers the pages under it unless they have their own, as Next resolved metadata, so the deepest matched route with an entry wins. Every page names itself with the key of a heading it renders or of its name in the navigation, so the title is in the user's language (forma2 left a few as English literals, and most auth, onboarding and account pages untitled).
 
 export const BASE_TITLE = "Forma";
 
@@ -28,13 +28,35 @@ const surveyResultsTitle = ({ t, params, queryClient }: TitleContext): string =>
 
 const WS = "/_authenticated/workspaces/$workspaceId";
 
+const ORG = "/_authenticated/organizations/$organizationId";
+
 export const PAGE_TITLES: Record<string, TitleSource> = {
-  "/auth/login": { text: "Login" },
-  "/setup/intro": { text: "Intro" },
-  "/setup/signup": { text: "Sign up" },
-  "/_authenticated/setup/organization/create": { text: "Create Organization" },
-  "/_authenticated/setup/organization/$organizationId/invite": { text: "Invite" },
-  [`${WS}/surveys/`]: { text: "Your Surveys" },
+  "/auth/login": { key: "auth.login.login_to_your_account" },
+  "/auth/signup": { key: "auth.signup.title" },
+  "/auth/forgot-password/": { key: "auth.forgot-password.title" },
+  "/auth/forgot-password/reset/": { key: "auth.forgot-password.reset_password" },
+  "/invite": { key: "common.invite" },
+  "/setup/intro": { key: "setup.intro.welcome_to_forma" },
+  "/setup/signup": { key: "setup.signup.create_administrator" },
+  "/_authenticated/setup/organization/create": { key: "setup.organization.create.title" },
+  "/_authenticated/setup/organization/$organizationId/invite": {
+    key: "setup.invite.invite_your_organization_members",
+  },
+  [`${ORG}/workspaces/new/plan`]: { key: "workspace.settings.billing.plan_selection_title" },
+  [`${ORG}/workspaces/new/survey`]: { key: "organizations.workspaces.new.survey.title" },
+  [`${ORG}/workspaces/new/templates`]: { key: "workspace.xm-templates.headline" },
+  [`${ORG}/workspaces/new/ai`]: { key: "workspace.surveys.ai_create.dialog_title" },
+  [`${ORG}/settings/general`]: { key: "workspace.settings.general.organization_settings" },
+  [`${ORG}/settings/teams`]: { key: "common.teams" },
+  [`${ORG}/settings/api-keys`]: { key: "common.api_keys" },
+  [`${ORG}/settings/domain`]: { key: "common.domain" },
+  [`${ORG}/settings/billing`]: { key: "common.billing" },
+  "/_authenticated/account/settings/profile": { key: "common.profile" },
+  "/_authenticated/account/settings/notifications": { key: "common.notifications" },
+  [`${WS}/surveys/`]: { key: "common.surveys" },
+  "/_authenticated/workspaces/$workspaceId_/surveys/templates": {
+    key: "workspace.surveys.templates.create_a_new_survey",
+  },
   [`${WS}/surveys/$surveyId`]: surveyResultsTitle,
   [`${WS}/integrations/`]: { key: "common.integrations" },
   [`${WS}/integrations/app-connection`]: { key: "common.web_and_mobile_sdk" },

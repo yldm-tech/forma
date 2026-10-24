@@ -32,19 +32,22 @@ export const AppConnectionPage = ({ workspace }: { workspace: WorkspaceDetail })
     <PageContentWrapper>
       <PageHeader pageTitle={t("common.web_and_mobile_sdk")} />
       <div className="space-y-4">
-        <Alert variant="info" role="status" className="max-w-4xl rounded-xl">
-          <AlertTitle>{t("workspace.app-connection.invite_banner_title")}</AlertTitle>
-          <AlertDescription>{t("workspace.app-connection.invite_banner_description")}</AlertDescription>
-          <Button
-            variant="secondary"
-            size="sm"
-            asChild
-            className="col-start-2 row-span-2 row-start-1 self-center">
-            <Link to={organizationSettingsPath(workspace.organizationId, "teams")}>
-              {t("workspace.app-connection.invite_banner_button")}
-            </Link>
-          </Button>
-        </Alert>
+        {/* Asking for a developer only makes sense until the SDK has connected; while loading or on an error it is not known yet. */}
+        {connection.data && !connection.data.appSetupCompleted && (
+          <Alert variant="info" role="status" className="rounded-xl">
+            <AlertTitle>{t("workspace.app-connection.invite_banner_title")}</AlertTitle>
+            <AlertDescription>{t("workspace.app-connection.invite_banner_description")}</AlertDescription>
+            <Button
+              variant="secondary"
+              size="sm"
+              asChild
+              className="col-start-2 row-span-2 row-start-1 self-center">
+              <Link to={organizationSettingsPath(workspace.organizationId, "teams")}>
+                {t("workspace.app-connection.invite_banner_button")}
+              </Link>
+            </Button>
+          </Alert>
+        )}
         {connection.isPending ? (
           <LoadingBlock />
         ) : connection.isError ? (

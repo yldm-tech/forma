@@ -10,6 +10,9 @@ const VIEWPORTS = {
   mobile: { width: 390, height: 844 },
 } as const;
 
+/** The narrowest screen the editor is used on: Tailwind's sm breakpoint, below which the phone overlay covers the signed-in app. */
+const EDITOR_NARROWEST = { width: 640, height: 844 } as const;
+
 type Viewport = keyof typeof VIEWPORTS;
 type Surface = "login" | "editor" | "survey";
 
@@ -18,26 +21,11 @@ type Surface = "login" | "editor" | "survey";
  */
 const KNOWN_VIOLATIONS: Record<Surface, Record<Viewport, string[]>> = {
   login: { desktop: [], mobile: [] },
-  // The editor carried over from forma2 has unlabelled icon buttons and inputs, ARIA attributes on elements that do not take them, and interactive controls nested in the block and ending cards. forma2 never ran axe on its editor.
+  // The editor carried over from forma2 still has ARIA attributes on elements that do not take them. forma2 never ran axe on its editor.
   editor: {
-    desktop: [
-      "aria-allowed-attr",
-      "aria-command-name",
-      "aria-input-field-name",
-      "button-name",
-      "color-contrast",
-      "label",
-      "nested-interactive",
-    ],
+    desktop: ["aria-allowed-attr", "color-contrast"],
     // The low-contrast workspace name in the menu bar is not shown below the md breakpoint.
-    mobile: [
-      "aria-allowed-attr",
-      "aria-command-name",
-      "aria-input-field-name",
-      "button-name",
-      "label",
-      "nested-interactive",
-    ],
+    mobile: ["aria-allowed-attr"],
   },
   survey: { desktop: [], mobile: [] },
 };
@@ -71,10 +59,12 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
     test("the login page meets WCAG AA", async ({ page }) => {
       await page.goto("/app/auth/login");
       await expect(page.getByRole("heading", { name: "Log in to your account" })).toBeVisible();
-      await expectOnlyKnownViolations(page, "login", viewport);
-      // The email form only exists once it is opened.
-      await page.getByRole("button", { name: "Log in with Email" }).click();
+      // Email is the only way in on this instance, so the form is open at once.
       await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
+      await expectOnlyKnownViolations(page, "login", viewport);
+      // The errors of an empty submit are part of the page too.
+      await page.getByRole("button", { name: "Log in with Email" }).click();
+      await expect(page.getByRole("textbox", { name: "Email" })).toBeFocused();
       await expectOnlyKnownViolations(page, "login", viewport);
     });
 
@@ -84,8 +74,19 @@ for (const viewport of Object.keys(VIEWPORTS) as Viewport[]) {
       await signUpAndSignIn(page, baseURL!, `a11y-editor-${viewport}`);
       const { workspaceId, surveyId } = await finishOnboarding(page);
 
-      await page.setViewportSize(VIEWPORTS[viewport]);
-      await page.goto(`/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`);
+      const editor = `/app/workspaces/${workspaceId}/surveys/${surveyId}/edit`;
+      if (viewport === "mobile") {
+        // On a phone the editor is inert under the overlay, and axe leaves inert content out, so a scan there covers the overlay alone. The overlay has to pass with no exceptions; the editor's mobile entry is then measured at the narrowest width it is shown at.
+        await page.setViewportSize(VIEWPORTS.mobile);
+        await page.goto(editor);
+        await expect(page.getByRole("dialog", { name: "Oops, tiny screen detected!" })).toBeVisible();
+        expect((await scan(page)).map((v) => v.line)).toEqual([]);
+        await page.setViewportSize(EDITOR_NARROWEST);
+        await expect(page.getByRole("dialog", { name: "Oops, tiny screen detected!" })).toBeHidden();
+      } else {
+        await page.setViewportSize(VIEWPORTS[viewport]);
+        await page.goto(editor);
+      }
       await expect(page.getByRole("main").getByRole("heading", { name: DEFAULT_QUESTION })).toBeVisible();
       await expectOnlyKnownViolations(page, "editor", viewport);
     });

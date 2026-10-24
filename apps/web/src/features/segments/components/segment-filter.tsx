@@ -63,6 +63,7 @@ import {
   SelectValue,
 } from "../../../components/ui/select-menu";
 import { AddFilterModal } from "./add-filter-modal";
+import { SegmentConnector } from "./segment-connector";
 import { AttributeValueInput } from "./attribute-value-input";
 import { DateFilterValue } from "./date-filter-value";
 import { SurveyInteractionFilter } from "./survey-interaction-filter";
@@ -100,7 +101,6 @@ export function SegmentFilterItemConnector({
   filterId: string;
   viewOnly?: boolean;
 }>) {
-  const { t } = useTranslation();
   const updateLocalSurvey = (newConnector: TSegmentConnector) => {
     const updatedSegment = structuredClone(segment);
     if (updatedSegment.filters) {
@@ -110,30 +110,7 @@ export function SegmentFilterItemConnector({
     setSegment(updatedSegment);
   };
 
-  const onConnectorChange = () => {
-    if (!connector) return;
-
-    if (connector === "and") {
-      updateLocalSurvey("or");
-    } else {
-      updateLocalSurvey("and");
-    }
-  };
-
-  return (
-    <div className="w-[40px]">
-      <button
-        type="button"
-        aria-label={connector ?? t("workspace.segments.where")}
-        className={cn(Boolean(connector) && "cursor-pointer underline", viewOnly && "cursor-not-allowed")}
-        onClick={() => {
-          if (viewOnly) return;
-          onConnectorChange();
-        }}>
-        {connector ?? t("workspace.segments.where")}
-      </button>
-    </div>
-  );
+  return <SegmentConnector connector={connector} viewOnly={viewOnly} onToggle={updateLocalSurvey} />;
 }
 
 export function SegmentFilterItemContextMenu({
@@ -798,7 +775,7 @@ function DeviceFilter({
 
       <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2">
         <MonitorSmartphoneIcon className="size-4" />
-        <p>Device</p>
+        <p>{t("workspace.segments.device")}</p>
       </div>
 
       <SelectMenu

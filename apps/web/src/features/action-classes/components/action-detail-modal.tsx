@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { TActionClass } from "@forma/types/action-classes";
 import { ModalWithTabs } from "../../../components/ui/modal-with-tabs";
-import { ACTION_TYPE_ICON_LOOKUP } from "../lib/action-icon";
+import { ActionClassIcon } from "../lib/action-icon";
 import { ActionActivityTab } from "./action-activity-tab";
 import { ActionSettingsTab } from "./action-settings-tab";
 
@@ -69,7 +69,7 @@ export const ActionDetailModal = ({
       open={open}
       setOpen={setOpen}
       tabs={tabs}
-      icon={ACTION_TYPE_ICON_LOOKUP[actionClass.type]}
+      icon={<ActionClassIcon actionClass={actionClass} />}
       label={actionClass.name}
       description={typeDescription()}
     />

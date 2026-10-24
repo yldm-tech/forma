@@ -5,6 +5,7 @@ import {
   contactTableRows,
   defaultColumnVisibility,
   formatAttributeValue,
+  hiddenColumnMatches,
   highlightParts,
 } from "./contacts";
 
@@ -77,4 +78,22 @@ test("search matches are highlighted case-insensitively and literally", () => {
     { text: "b", match: false },
   ]);
   expect(highlightParts("abc", " ")).toEqual([{ text: "abc", match: false }]);
+});
+
+test("a search hit in a hidden column is found, as the server matches it", () => {
+  const cells = [
+    { id: "email", label: "Email", value: "akira@example.com" },
+    { id: "plan", label: "Plan", value: "Pro" },
+    { id: "country", label: "Country", value: "Japan" },
+  ];
+  const visibility = { email: true, plan: false, country: false };
+  // Case-insensitive and trimmed; a hit in a visible column needs no explanation.
+  expect(hiddenColumnMatches(cells, " pro ", visibility)).toEqual([cells[1]]);
+  expect(hiddenColumnMatches(cells, "akira", visibility)).toEqual([]);
+  // The visible email already contains "a", so the hidden country needs no mention.
+  expect(hiddenColumnMatches(cells, "a", visibility)).toEqual([]);
+  expect(hiddenColumnMatches(cells, "jap", visibility)).toEqual([cells[2]]);
+  expect(hiddenColumnMatches(cells, "  ", visibility)).toEqual([]);
+  // A column without a stored choice counts as shown.
+  expect(hiddenColumnMatches(cells, "japan", { plan: false })).toEqual([]);
 });

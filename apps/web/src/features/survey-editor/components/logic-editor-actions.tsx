@@ -166,6 +166,7 @@ export function LogicEditorActions({
                       key={`target-${action.id}`}
                       showSearch={true}
                       options={getActionTargetOptions(action, localSurvey, blockIdx, t)}
+                      placeholder={t("workspace.surveys.edit.select_target")}
                       value={action.target}
                       onChangeValue={(val: string | number | string[]) => {
                         handleValuesChange(idx, {
@@ -185,6 +186,7 @@ export function LogicEditorActions({
                         key={`variableId-${action.id}`}
                         showSearch={false}
                         options={getActionVariableOptions(localSurvey)}
+                        placeholder={t("workspace.surveys.edit.select_variable")}
                         value={action.variableId}
                         onChangeValue={(val: string | number | string[]) => {
                           handleValuesChange(idx, {
@@ -226,7 +228,7 @@ export function LogicEditorActions({
                         clearable={true}
                         value={action.value?.value ?? ""}
                         inputProps={{
-                          placeholder: "Value",
+                          placeholder: t("workspace.surveys.edit.value"),
                           type: getCalculateFieldType(action.variableId) ?? "text",
                         }}
                         groupedOptions={getActionValueOptions(action.variableId, localSurvey, blockIdx, t)}

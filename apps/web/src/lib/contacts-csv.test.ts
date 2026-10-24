@@ -4,6 +4,7 @@ import {
   EXAMPLE_CSV,
   attributeMapErrors,
   csvRecordsError,
+  csvRecordsErrorMessage,
   duplicateMappedColumns,
   isCsvFile,
   isNewAttributeTarget,
@@ -89,18 +90,35 @@ test("only CSV files are taken", () => {
 
 describe("csvRecordsError", () => {
   test("every record needs a non-empty email", () => {
-    expect(csvRecordsError([{ Email: "a@x.com" }])).toBe("Missing email field for one or more records");
-    expect(csvRecordsError([{ email: "" }])).toBe("Email field is empty for one or more records");
+    expect(csvRecordsError([{ Email: "a@x.com" }])).toEqual({
+      code: "missing_email_column",
+      columns: ["Email"],
+    });
+    // The empty email is reported on its spreadsheet row, the header being row 1.
+    expect(csvRecordsError([{ email: "a@x.com" }, { email: "" }])).toEqual({ code: "empty_email", row: 3 });
+  });
+
+  test('a missing email column lists the columns that were found, so "mail" shows it is not "email"', () => {
+    const { columns, records } = parseContactsCsv("name;mail\nAda;ada@example.com\n");
+    expect(columns).toEqual(["name", "mail"]);
+    expect(csvRecordsError(records, columns)).toEqual({
+      code: "missing_email_column",
+      columns: ["name", "mail"],
+    });
+    expect(csvRecordsErrorMessage({ code: "missing_email_column", columns }, t)).toContain("name, mail");
   });
 
   test("emails and non-empty userIds are unique", () => {
-    expect(csvRecordsError([{ email: "a" }, { email: "a" }])).toBe("Duplicate emails found in the records");
+    expect(csvRecordsError([{ email: "a" }, { email: "a" }])).toEqual({
+      code: "duplicate_email",
+      email: "a",
+    });
     expect(
       csvRecordsError([
         { email: "a", userId: "1" },
         { email: "b", userId: "1" },
       ])
-    ).toBe("Duplicate userIds found in the records");
+    ).toEqual({ code: "duplicate_user_id", userId: "1" });
     expect(
       csvRecordsError([
         { email: "a", userId: "" },
@@ -111,7 +129,14 @@ describe("csvRecordsError", () => {
 
   test("at most 10000 records", () => {
     const records = Array.from({ length: 10001 }, (_, i) => ({ email: `${i}@x.com` }));
-    expect(csvRecordsError(records)).toBe("Maximum 10000 records allowed at a time.");
+    expect(csvRecordsError(records)).toEqual({ code: "too_many_records", max: 10000 });
+  });
+
+  test("every problem has a translated message that names its values", () => {
+    expect(csvRecordsErrorMessage({ code: "empty_email", row: 7 }, t)).toContain("7");
+    expect(csvRecordsErrorMessage({ code: "duplicate_email", email: "a@x.com" }, t)).toContain("a@x.com");
+    expect(csvRecordsErrorMessage({ code: "duplicate_user_id", userId: "u-1" }, t)).toContain("u-1");
+    expect(csvRecordsErrorMessage({ code: "too_many_records", max: 10000 }, t)).toMatch(/10,?000/);
   });
 });
 

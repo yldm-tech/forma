@@ -251,3 +251,17 @@ test("a reader is offered no personal link", async () => {
     screen.queryByRole("button", { name: i18n.t("workspace.contacts.generate_personal_link") })
   ).toBeNull();
 });
+
+test("the contact id is labelled and copyable, and deleting names a contact", async () => {
+  stubServer();
+  renderPage();
+  await screen.findAllByText("ada@example.com");
+  expect(screen.getByText(i18n.t("workspace.contacts.contact_id"))).toBeTruthy();
+  expect(screen.queryByText("contactId")).toBeNull();
+  expect(screen.getByRole("button", { name: `${i18n.t("common.copy")} ${CONTACT}` })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: i18n.t("common.delete") }));
+  expect(
+    await screen.findByText(i18n.t("common.delete_what", { deleteWhat: i18n.t("common.contact") }))
+  ).toBeTruthy();
+});
