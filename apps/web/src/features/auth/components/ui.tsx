@@ -57,7 +57,7 @@ export function ContentLayout({
 type Variant = "primary" | "secondary" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-700",
+  primary: "bg-primary text-primary-foreground hover:bg-primary-hover",
   secondary: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
   ghost: "text-slate-700 hover:bg-slate-100",
 };
