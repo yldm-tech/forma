@@ -249,6 +249,18 @@ func (r *Repository) membershipRole(ctx context.Context, userID, organizationID 
 	return roles[0], nil
 }
 
+// surveySchedulingTimeZone is the organization's own survey scheduling zone, nil when it has none.
+func (r *Repository) surveySchedulingTimeZone(ctx context.Context, organizationID uuid.UUID) (*string, error) {
+	var rows []struct{ SurveySchedulingTimeZone *string }
+	if err := r.db.WithContext(ctx).Raw(`SELECT survey_scheduling_time_zone FROM organizations WHERE id = ?`, organizationID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("load organization scheduling time zone: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return rows[0].SurveySchedulingTimeZone, nil
+}
+
 // surveyCount is the number of surveys in the workspace, the onboarding gate's measure.
 func (r *Repository) surveyCount(ctx context.Context, workspaceID uuid.UUID) (int64, error) {
 	var n int64

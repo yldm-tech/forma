@@ -11,9 +11,9 @@
   "devDependencies": {
     "@chromatic-com/storybook": "5.3.1",
     "@forma/config-typescript": "workspace:*",
-    "@storybook/addon-a11y": "10.6.0",
-    "@storybook/addon-docs": "10.6.0",
-    "@storybook/addon-links": "10.6.0",
+    "@storybook/addon-a11y": "10.6.3",
+    "@storybook/addon-docs": "10.6.3",
+    "@storybook/addon-links": "10.6.3",
     "@storybook/react-vite": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",

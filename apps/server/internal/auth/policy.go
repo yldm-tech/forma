@@ -10,7 +10,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
 
-// Input rules from forma2's packages/types/user.ts (ZUserName, ZUserEmail, ZUserPassword, ZUserLocale). Lengths are counted in UTF-16 code units, as zod counts them.
+// Input rules from forma2's packages/types/user.ts (ZUserName, ZUserEmail, ZUserPassword, ZUserLocale). Lengths are counted in UTF-16 code units, as JavaScript's String.prototype.length and the web forms count them; zod 4.5 and later count code points instead, so the zod schemas no longer define the length rule here.
 const (
 	passwordMinLength = 8
 	passwordMaxLength = 128

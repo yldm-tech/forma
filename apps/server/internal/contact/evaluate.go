@@ -81,6 +81,25 @@ type builder struct {
 	workspaceID uuid.UUID
 	device      string
 	now         time.Time
+	// preview leaves out what the admin UI's contact counts do not evaluate: a survey-interaction filter constrains nothing, as a device filter without a device already does. approximate records that the tree had a filter of either kind, nested segments included.
+	preview     bool
+	approximate bool
+	// stored resolves nested segments from trees already read, so counting a whole list of segments reads none of them again. A segment it does not hold is read from the database.
+	stored map[string]storedSegment
+}
+
+// storedSegment is a segment's tree as stored, with its workspace.
+type storedSegment struct {
+	filters     Filters
+	workspaceID uuid.UUID
+}
+
+// load reads a nested segment's tree, from stored when it holds it.
+func (b *builder) load(ctx context.Context, id string) (Filters, uuid.UUID, error) {
+	if s, ok := b.stored[id]; ok {
+		return s.filters, s.workspaceID, nil
+	}
+	return loadSegmentFilters(ctx, b.db, id)
 }
 
 // tree is forma2's processFilters: AND binds tighter than OR, so consecutive "and" nodes form a group, "or" starts the next, and the tree matches when any group does. A node that constrains nothing is dropped from its group, a group left empty is dropped, and a tree with no groups left constrains nothing.
@@ -135,10 +154,17 @@ func (b *builder) leaf(ctx context.Context, f *Filter, path []string) (condition
 		}
 		return b.attribute(personIdentifierUserID, f.Qualifier.Operator, decodeValue(f.Value))
 	case filterRootDevice:
+		if b.preview {
+			b.approximate = true
+		}
 		return b.deviceFilter(f), nil
 	case filterRootSegment:
 		return b.segment(ctx, f, path)
 	case filterRootSurveyInteraction:
+		if b.preview {
+			b.approximate = true
+			return condition{}, nil
+		}
 		return b.interaction(f)
 	}
 	return condition{}, nil
@@ -322,7 +348,7 @@ func (b *builder) segment(ctx context.Context, f *Filter, path []string) (condit
 		b.log.ErrorContext(ctx, "Circular reference detected in segment filter", "segmentId", id)
 		return condition{}, nil
 	}
-	nested, workspaceID, err := loadSegmentFilters(ctx, b.db, id)
+	nested, workspaceID, err := b.load(ctx, id)
 	if err != nil {
 		return condition{}, err
 	}
@@ -330,7 +356,11 @@ func (b *builder) segment(ctx context.Context, f *Filter, path []string) (condit
 		b.log.ErrorContext(ctx, "Refusing to resolve a segment filter referencing another workspace's segment", "segmentId", id, "segmentWorkspaceId", workspaceID.String(), "workspaceId", b.workspaceID.String())
 		return condition{}, nil
 	}
+	outerApproximate := b.approximate
+	b.approximate = false
 	inner, err := b.tree(ctx, nested, append(slices.Clone(path), id))
+	innerApproximate := b.approximate
+	b.approximate = outerApproximate || innerApproximate
 	if err != nil {
 		return condition{}, err
 	}
@@ -338,6 +368,10 @@ func (b *builder) segment(ctx context.Context, f *Filter, path []string) (condit
 	case operatorUserIsIn:
 		return inner, nil
 	case operatorUserIsNotIn:
+		// A segment that constrains nothing holds every contact, so nobody is outside it; but when it constrains nothing only because a preview left its filters out, who is outside it is unknown, and the preview leaves this filter out too.
+		if inner.empty() && innerApproximate {
+			return condition{}, nil
+		}
 		if inner.empty() {
 			return matchNone, nil
 		}

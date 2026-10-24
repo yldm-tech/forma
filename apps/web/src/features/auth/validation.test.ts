@@ -45,7 +45,7 @@ describe("signInPasswordError", () => {
     expect(signInPasswordError(password)).toBe(expected);
   });
 
-  test("counts UTF-16 code units, as zod does", () => {
+  test("counts UTF-16 code units, as the Go server does", () => {
     expect(signInPasswordError("😀😀😀😀")).toBeUndefined();
   });
 });

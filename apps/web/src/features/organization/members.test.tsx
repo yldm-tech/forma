@@ -52,6 +52,13 @@ const organization = (role: OrganizationRole): OrganizationDetail => ({
   name: "Acme",
   isAISmartToolsEnabled: false,
   displayTimeZone: null,
+  surveySchedulingTimeZone: null,
+  surveyScheduling: {
+    timeZone: "Europe/Berlin",
+    localHour: 0,
+    localMinute: 0,
+    instanceTimeZone: "Europe/Berlin",
+  },
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role },
   userManagementAllowed: role === "owner" || role === "manager",

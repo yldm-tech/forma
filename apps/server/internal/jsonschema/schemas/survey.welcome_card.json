@@ -69,6 +69,7 @@
       "type": "boolean"
     },
     "__schema10": {
+      "default": false,
       "type": "boolean"
     },
     "__schema11": {

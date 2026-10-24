@@ -5,8 +5,13 @@ import { Trans, useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { cn } from "../../../lib/cn";
-import { type TSurveySchedulingConfig, getSurveySchedulingTimeLabel } from "../lib/scheduling-config";
-import { createSurveySchedulingDateUtils, toDateOnlySelection } from "../lib/scheduling-date-utils";
+import {
+  type TSurveySchedulingConfig,
+  browserTimeZone,
+  describeScheduledMoment,
+  getSurveySchedulingTimeLabel,
+} from "../lib/scheduling-config";
+import { createSurveySchedulingDateUtils } from "../lib/scheduling-date-utils";
 import { SURVEY_PIN_PATTERN, generateSurveyPin } from "../lib/survey-pin";
 import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-toggle";
 import { Alert, AlertTitle } from "../../../components/ui/alert";
@@ -33,10 +38,12 @@ export const ResponseOptionsCard = ({
   locale,
 }: Readonly<ResponseOptionsCardProps>) => {
   const { t } = useTranslation();
-  const { toCalendarDate, getMinimumSurveySchedulingCalendarDate } = useMemo(
-    () => createSurveySchedulingDateUtils(surveySchedulingConfig),
-    [surveySchedulingConfig]
-  );
+  const {
+    toCalendarDate,
+    getMinimumSurveySchedulingCalendarDate,
+    normalizeDateOnlySelectionToSurveySchedulingDateTime,
+    toSurveySchedulingDateTime,
+  } = useMemo(() => createSurveySchedulingDateUtils(surveySchedulingConfig), [surveySchedulingConfig]);
   const surveySchedulingTimeLabel = getSurveySchedulingTimeLabel(surveySchedulingConfig);
   const surveySchedulingTimeZoneLabel = surveySchedulingConfig.timeZone;
   const [open, setOpen] = useState(localSurvey.type === "link");
@@ -71,6 +78,35 @@ export const ResponseOptionsCard = ({
       ? nextCalendarDay
       : minimumSchedulingDate;
   })();
+  /** The moment a picked date stands for, in the scheduling zone and, when it differs, in the browser's. */
+  const scheduledMoment = (date: Date | null) => {
+    const instant = normalizeDateOnlySelectionToSurveySchedulingDateTime(date);
+    if (!instant) return null;
+    const { scheduled, browser } = describeScheduledMoment(
+      instant,
+      surveySchedulingConfig.timeZone,
+      browserTimeZone(),
+      locale
+    );
+    return (
+      <div className="mt-2 space-y-0.5 text-xs text-slate-500" aria-live="polite">
+        <p>
+          {t("workspace.surveys.edit.scheduled_moment", {
+            moment: scheduled.moment,
+            timeZone: scheduled.timeZone,
+          })}
+        </p>
+        {browser && (
+          <p>
+            {t("workspace.surveys.edit.scheduled_moment_in_your_time_zone", {
+              moment: browser.moment,
+              timeZone: browser.timeZone,
+            })}
+          </p>
+        )}
+      </div>
+    );
+  };
   const isPublishOnDateEnabled = localSurvey.publishOn !== null;
   const isCloseOnDateEnabled = localSurvey.closeOn !== null;
 
@@ -214,7 +250,7 @@ export const ResponseOptionsCard = ({
       return;
     }
 
-    const nextPublishOn = toDateOnlySelection(minPublishDate);
+    const nextPublishOn = toSurveySchedulingDateTime(minPublishDate);
     const nextPublishCalendarDate = toCalendarDate(nextPublishOn);
 
     setLocalSurvey((currentSurvey) => ({
@@ -239,7 +275,7 @@ export const ResponseOptionsCard = ({
 
     setLocalSurvey((currentSurvey) => ({
       ...currentSurvey,
-      closeOn: toDateOnlySelection(minCloseDate),
+      closeOn: toSurveySchedulingDateTime(minCloseDate),
     }));
   };
 
@@ -356,7 +392,7 @@ export const ResponseOptionsCard = ({
                   }));
                 }}
                 onChange={(date) => {
-                  const nextPublishOn = toDateOnlySelection(date);
+                  const nextPublishOn = toSurveySchedulingDateTime(date);
                   const nextPublishCalendarDate = toCalendarDate(nextPublishOn);
 
                   setLocalSurvey((currentSurvey) => ({
@@ -370,6 +406,7 @@ export const ResponseOptionsCard = ({
                   }));
                 }}
               />
+              {scheduledMoment(localSurvey.publishOn)}
             </div>
           </AdvancedOptionToggle>
           <AdvancedOptionToggle
@@ -398,10 +435,11 @@ export const ResponseOptionsCard = ({
                 onChange={(date) => {
                   setLocalSurvey((currentSurvey) => ({
                     ...currentSurvey,
-                    closeOn: toDateOnlySelection(date),
+                    closeOn: toSurveySchedulingDateTime(date),
                   }));
                 }}
               />
+              {scheduledMoment(localSurvey.closeOn)}
             </div>
           </AdvancedOptionToggle>
           {/* Close Survey on Limit */}

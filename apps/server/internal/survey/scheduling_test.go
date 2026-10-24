@@ -2,14 +2,18 @@ package survey
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 func mustTime(t *testing.T, s string) *time.Time {
@@ -21,45 +25,9 @@ func mustTime(t *testing.T, s string) *time.Time {
 	return &v
 }
 
-func TestScheduleSnapsToTheLocalRunTime(t *testing.T) {
-	berlin := Schedule{loc: mustLoad(t, "Europe/Berlin"), hour: 9, minute: 30}
-	cases := []struct{ in, want string }{
-		// Noon UTC, the editor's date-only selection, is that calendar day at 09:30 Berlin.
-		{"2026-03-10T12:00:00Z", "2026-03-10T08:30:00Z"},
-		// Late evening UTC is already the next day in Berlin.
-		{"2026-03-10T23:30:00Z", "2026-03-11T08:30:00Z"},
-		// Across the spring-forward change Berlin is UTC+2.
-		{"2026-03-29T12:00:00Z", "2026-03-29T07:30:00Z"},
-	}
-	for _, tc := range cases {
-		if got := berlin.snap(mustTime(t, tc.in)); !got.Equal(*mustTime(t, tc.want)) {
-			t.Errorf("snap(%s) = %s, want %s", tc.in, got.UTC().Format(time.RFC3339), tc.want)
-		}
-	}
-	if berlin.snap(nil) != nil {
-		t.Error("snap(nil) is not nil")
-	}
-	midnight := Schedule{loc: mustLoad(t, "Europe/Berlin")}
-	if got := midnight.next(*mustTime(t, "2026-03-10T22:59:00Z"), 0, 0); !got.Equal(*mustTime(t, "2026-03-10T23:00:00Z")) {
-		t.Errorf("next run %s", got)
-	}
-	if got := midnight.next(*mustTime(t, "2026-03-10T23:00:00Z"), 0, 0); !got.Equal(*mustTime(t, "2026-03-11T23:00:00Z")) {
-		t.Errorf("next run after the run %s", got)
-	}
-}
-
-func mustLoad(t *testing.T, name string) *time.Location {
-	t.Helper()
-	loc, err := time.LoadLocation(name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return loc
-}
-
 // The cases of forma2's normalizeSurveyScheduling tests (lib/survey/service.scheduling.test.ts).
 func TestNormalizeScheduling(t *testing.T) {
-	s := Schedule{loc: time.UTC}
+	s := scheduling.New(time.UTC, 0, 0)
 	pub, cls := mustTime(t, "2026-05-01T00:00:00Z"), mustTime(t, "2026-05-03T00:00:00Z")
 	str := func(v string) *string { return &v }
 	cases := []struct {
@@ -76,15 +44,15 @@ func TestNormalizeScheduling(t *testing.T) {
 		{"a draft keeps both", str(StatusDraft), StatusDraft, true, true},
 	}
 	for _, tc := range cases {
-		p, c, err := s.normalize(tc.current, tc.status, pub, cls)
+		p, c, err := normalizeDates(s, s, tc.current, tc.status, pub, cls)
 		if err != nil || (p != nil) != tc.wantPub || (c != nil) != tc.wantCls {
 			t.Errorf("%s: %v %v %v", tc.name, p, c, err)
 		}
 	}
-	if p, c, _ := s.normalize(str(StatusInProgress), StatusPaused, nil, cls); p != nil || c != nil {
+	if p, c, _ := normalizeDates(s, s, str(StatusInProgress), StatusPaused, nil, cls); p != nil || c != nil {
 		t.Error("pausing by hand without a publish date kept the close date")
 	}
-	if _, _, err := s.normalize(nil, StatusPaused, cls, pub); err == nil {
+	if _, _, err := normalizeDates(s, s, nil, StatusPaused, cls, pub); err == nil {
 		t.Error("a close date before the publish date was accepted")
 	} else if e, ok := apperr.As(err); !ok || e.Message != "Close date must be after publish date" {
 		t.Errorf("error %v", err)
@@ -145,6 +113,150 @@ func TestSaveAppliesADueSchedule(t *testing.T) {
 	if saved.Status != StatusCompleted || saved.CloseOn != nil {
 		t.Fatalf("a save with a passed close date left %s %v", saved.Status, saved.CloseOn)
 	}
+}
+
+// A survey of an organization with its own time zone is snapped to that zone's local run time, not the instance's (Europe/Berlin here), and the scheduler applies it at that instant: St. John's is UTC-3:30 until its spring-forward change on 2026-03-08 and UTC-2:30 after it, offsets no whole hour fits.
+func TestScheduledTransitionInTheOrganizationZoneAcrossDST(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	e.exec(`UPDATE organizations SET survey_scheduling_time_zone = 'America/St_Johns' WHERE id = ?`, org)
+	ctx := context.Background()
+	schedule, err := e.svc.scheduleOf(ctx, e.repo, ws)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := schedule.Settings(); got.TimeZone != "America/St_Johns" || got.InstanceTimeZone != "Europe/Berlin" {
+		t.Fatalf("schedule %+v", got)
+	}
+	before, publishDay, closeDay := mustTime(t, "2026-03-08T12:00:00Z"), mustTime(t, "2026-03-09T12:00:00Z"), mustTime(t, "2026-03-10T12:00:00Z")
+	if got := schedule.Snap(before); !got.Equal(*mustTime(t, "2026-03-08T03:30:00Z")) {
+		t.Fatalf("midnight of March 8 in St. John's is %s, want 03:30Z (NST)", got)
+	}
+	publishOn, closeOn := schedule.Snap(publishDay), schedule.Snap(closeDay)
+	if !publishOn.Equal(*mustTime(t, "2026-03-09T02:30:00Z")) || !closeOn.Equal(*mustTime(t, "2026-03-10T02:30:00Z")) {
+		t.Fatalf("midnights after the change %s %s, want 02:30Z (NDT)", publishOn, closeOn)
+	}
+	id := e.insert(`INSERT INTO surveys (workspace_id, name, status, publish_on, close_on) VALUES (?, 'S', ?, ?, ?) RETURNING id`, ws, StatusPaused, publishOn, closeOn)
+	runs := scheduling.RunsFor(e.svc.schedule)
+	for _, due := range []time.Time{*publishOn, *closeOn} {
+		if next := runs.Next(due.Add(-10 * time.Minute)); !next.Equal(due) {
+			t.Fatalf("the scheduler runs at %s, not at %s", next, due)
+		}
+	}
+	status := func() string { return e.text(`SELECT status FROM surveys WHERE id = ?`, id) }
+	if published, _, err := e.svc.scheduler.Reconcile(ctx, publishOn.Add(-time.Second), &id); err != nil || published != 0 || status() != StatusPaused {
+		t.Fatalf("a second before its publish date: %d published, %v, status %s", published, err, status())
+	}
+	if published, _, err := e.svc.scheduler.Reconcile(ctx, *publishOn, &id); err != nil || published != 1 || status() != StatusInProgress {
+		t.Fatalf("at its publish date: %d published, %v, status %s", published, err, status())
+	}
+	if _, closed, err := e.svc.scheduler.Reconcile(ctx, closeOn.Add(-time.Second), &id); err != nil || closed != 0 || status() != StatusInProgress {
+		t.Fatalf("a second before its close date: %d closed, %v, status %s", closed, err, status())
+	}
+	if _, closed, err := e.svc.scheduler.Reconcile(ctx, *closeOn, &id); err != nil || closed != 1 || status() != StatusCompleted {
+		t.Fatalf("at its close date: %d closed, %v, status %s", closed, err, status())
+	}
+}
+
+// A save snaps the dates to the organization's zone; without one, to the instance's.
+func TestSaveSnapsToTheOrganizationZone(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	picked := time.Now().AddDate(0, 0, 30).UTC()
+	picked = time.Date(picked.Year(), picked.Month(), picked.Day(), 12, 0, 0, 0, time.UTC)
+	for _, zone := range []string{"", "Asia/Tokyo"} {
+		want := "Europe/Berlin"
+		if zone != "" {
+			e.exec(`UPDATE organizations SET survey_scheduling_time_zone = ? WHERE id = ?`, zone, org)
+			want = zone
+		}
+		loc := mustLoad(t, want)
+		id := e.createLink(owner, ws)
+		sv := e.editorSurvey(owner, id)
+		sv["status"] = StatusInProgress
+		sv["closeOn"] = picked.Format(time.RFC3339)
+		var saved Survey
+		e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
+		if expect := time.Date(picked.Year(), picked.Month(), picked.Day(), 0, 0, 0, 0, loc); saved.CloseOn == nil || !saved.CloseOn.Equal(expect) {
+			t.Errorf("zone %q: close date %v, want midnight in %s (%s)", zone, saved.CloseOn, want, expect.UTC())
+		}
+	}
+}
+
+// An editor that loaded the survey before its organization's zone changed shows, and sends, the dates of the old zone. The zone it names keeps each date on its day in the new one; a save that names none reads the instant in the organization's zone.
+func TestSaveKeepsTheDayPickedInTheEditorsZone(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	e.exec(`UPDATE organizations SET survey_scheduling_time_zone = 'America/New_York' WHERE id = ?`, org)
+	newYork, berlin := mustLoad(t, "America/New_York"), mustLoad(t, "Europe/Berlin")
+	day := time.Now().AddDate(0, 0, 30)
+	// Midnight of the day in Berlin, the zone the editor showed: the evening before in New York.
+	sent := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, berlin).UTC()
+	onTheDay := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, newYork)
+	dayBefore := time.Date(day.Year(), day.Month(), day.Day()-1, 0, 0, 0, 0, newYork)
+	for _, tc := range []struct {
+		zone any
+		want time.Time
+	}{
+		{"Europe/Berlin", onTheDay},
+		{"America/New_York", dayBefore},
+		{nil, dayBefore},
+		{"Mars/Olympus", dayBefore},
+	} {
+		id := e.createLink(owner, ws)
+		sv := e.editorSurvey(owner, id)
+		sv["status"] = StatusInProgress
+		sv["closeOn"] = sent.Format(time.RFC3339)
+		sv["schedulingTimeZone"] = tc.zone
+		var saved Survey
+		e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
+		if saved.CloseOn == nil || !saved.CloseOn.Equal(tc.want) {
+			t.Errorf("picked in %v: close date %v, want %s", tc.zone, saved.CloseOn, tc.want.UTC())
+		}
+	}
+}
+
+// A save that writes dates holds its organization's row in share mode before it locks the survey, so a zone change, which locks the organization first, waits for it instead of missing a survey that is given its first dates.
+func TestDatedSaveHoldsTheOrganizationAgainstAZoneChange(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	zoneChange := func() error {
+		return e.db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec(`SET LOCAL lock_timeout = '200ms'`).Error; err != nil {
+				return err
+			}
+			return tx.Exec(`SELECT id FROM organizations WHERE id = ? FOR NO KEY UPDATE`, org).Error
+		})
+	}
+	for _, lock := range []bool{true, false} {
+		err := e.repo.transaction(context.Background(), func(tx *Repository) error {
+			if _, err := tx.schedulingTimeZone(context.Background(), ws, lock); err != nil {
+				return err
+			}
+			changeErr := zoneChange()
+			var pgErr *pgconn.PgError
+			if blocked := errors.As(changeErr, &pgErr) && pgErr.Code == "55P03"; blocked != lock {
+				t.Errorf("lock %v: zone change error %v", lock, changeErr)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func mustLoad(t *testing.T, name string) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return loc
 }
 
 func TestArchivePurge(t *testing.T) {

@@ -177,6 +177,7 @@ describe("ZEmbeddedData", () => {
       ["string", "web"],
       ["date", "2026-08-06"],
       ["date", "2026-08-06T10:30:00Z"],
+      ["date", "2026-08-06T10:30Z"],
     ] as const)("accepts dataType %s with default %p", (dataType, defaultValue) => {
       expect(ZEmbeddedData.safeParse({ ...ingested, dataType, defaultValue }).success).toBe(true);
     });

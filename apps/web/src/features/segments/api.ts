@@ -1,5 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@forma/types/segment";
+import type { TBaseFilters, TSegment, TSegmentCreateInput, TSegmentUpdateInput } from "@forma/types/segment";
 import { api } from "../../lib/api";
 import { type Stamped } from "../../lib/wire";
 import { type SurveyWire, parseSurvey } from "../survey-editor/api";
@@ -31,6 +31,8 @@ export const segmentKeys = {
   list: (workspaceId: string) => ["workspaces", workspaceId, "segments"] as const,
   surveys: (workspaceId: string) => ["workspaces", workspaceId, "segment-surveys"] as const,
   attributeValues: (keyId: string) => ["contact-attribute-keys", keyId, "values"] as const,
+  previewCount: (workspaceId: string, filters: TBaseFilters) =>
+    ["workspaces", workspaceId, "segment-preview-count", filters] as const,
 };
 
 export const segmentsQuery = (workspaceId: string) =>
@@ -55,6 +57,25 @@ export const attributeValuesQuery = (keyId: string) =>
   queryOptions({
     queryKey: segmentKeys.attributeValues(keyId),
     queryFn: ({ signal }) => api.get<string[]>(`/api/app/contact-attribute-keys/${keyId}/values`, { signal }),
+  });
+
+/** How many of the workspace's contacts a filter tree matches, of how many in all. Approximate when the tree has device or survey-interaction filters, which the count leaves out. */
+export interface SegmentPreviewCount {
+  count: number;
+  total: number;
+  approximate: boolean;
+}
+
+/** Counts the contacts an unsaved filter tree matches; a read, sent as a POST because the tree is too large for a query string. */
+export const segmentPreviewCountQuery = (workspaceId: string, filters: TBaseFilters) =>
+  queryOptions({
+    queryKey: segmentKeys.previewCount(workspaceId, filters),
+    queryFn: ({ signal }) =>
+      api.post<SegmentPreviewCount>(
+        `/api/app/workspaces/${workspaceId}/segments/preview-count`,
+        { filters },
+        { signal }
+      ),
   });
 
 /** forma2's TSegmentCreateInput; the workspace comes from the path. */

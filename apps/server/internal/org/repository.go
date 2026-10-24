@@ -3,6 +3,7 @@ package org
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 // Repository reads and writes organizations, their billing rows and memberships. Every query names the organization it is scoped to, or the user whose own memberships it reads.
@@ -35,23 +37,24 @@ func (r *Repository) serializable(ctx context.Context, fn func(tx *Repository) e
 	})
 }
 
-const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone,
+const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone, o.survey_scheduling_time_zone,
 	b.organization_id IS NOT NULL AS has_billing, b.stripe_customer_id, b.limits, b.usage_cycle_anchor, b.stripe`
 
 type organizationRow struct {
-	ID                    uuid.UUID
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-	Name                  string
-	IsAiSmartToolsEnabled bool
-	Whitelabel            []byte
-	DisplayTimeZone       sql.NullString
-	HasBilling            bool
-	StripeCustomerID      sql.NullString
-	Limits                []byte
-	UsageCycleAnchor      sql.NullTime
-	Stripe                []byte
-	Role                  sql.NullString
+	ID                       uuid.UUID
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	Name                     string
+	IsAiSmartToolsEnabled    bool
+	Whitelabel               []byte
+	DisplayTimeZone          sql.NullString
+	SurveySchedulingTimeZone sql.NullString
+	HasBilling               bool
+	StripeCustomerID         sql.NullString
+	Limits                   []byte
+	UsageCycleAnchor         sql.NullTime
+	Stripe                   []byte
+	Role                     sql.NullString
 }
 
 // organization maps a row; a missing billing row reads as the defaults, as forma2's mapOrganizationBilling did.
@@ -62,6 +65,9 @@ func (o organizationRow) organization(isFormaCloud bool) *Organization {
 	}
 	if o.DisplayTimeZone.Valid {
 		out.DisplayTimeZone = &o.DisplayTimeZone.String
+	}
+	if o.SurveySchedulingTimeZone.Valid {
+		out.SurveySchedulingTimeZone = &o.SurveySchedulingTimeZone.String
 	}
 	if o.HasBilling {
 		out.Billing = Billing{Limits: o.Limits, Stripe: o.Stripe}
@@ -305,4 +311,49 @@ func (r *Repository) deleteMembership(ctx context.Context, userID, organizationI
 		return fmt.Errorf("delete membership: %w", err)
 	}
 	return nil
+}
+
+// resnapSchedules moves the publish and close dates of the organization's surveys, archived ones included, from one schedule to another, keeping each date's calendar day, and reports how many surveys changed. Surveys whose dates are the same instants in both zones (Europe/Berlin and Europe/Paris, or Asia/Calcutta and Asia/Kolkata) are left alone, so an open editor is not told the survey changed. The rows are locked first; a concurrent save that gives a survey its first dates holds the organization's row in share mode (survey.Repository.schedulingTimeZone), so it either committed before this lock and is moved here, or waits for this change and snaps in the new zone.
+func (r *Repository) resnapSchedules(ctx context.Context, organizationID uuid.UUID, from, to scheduling.Schedule) (int, error) {
+	var rows []struct {
+		ID        uuid.UUID
+		PublishOn *time.Time
+		CloseOn   *time.Time
+	}
+	if err := r.db.WithContext(ctx).Raw(`SELECT s.id, s.publish_on, s.close_on FROM surveys s JOIN workspaces w ON w.id = s.workspace_id
+		WHERE w.organization_id = ? AND (s.publish_on IS NOT NULL OR s.close_on IS NOT NULL) ORDER BY s.id FOR NO KEY UPDATE OF s`, organizationID).Scan(&rows).Error; err != nil {
+		return 0, fmt.Errorf("load scheduled surveys: %w", err)
+	}
+	type move struct {
+		ID        uuid.UUID  `json:"id"`
+		PublishOn *time.Time `json:"publish_on"`
+		CloseOn   *time.Time `json:"close_on"`
+	}
+	var moves []move
+	for _, row := range rows {
+		publishOn, closeOn := to.Resnap(from, row.PublishOn), to.Resnap(from, row.CloseOn)
+		if sameInstant(publishOn, row.PublishOn) && sameInstant(closeOn, row.CloseOn) {
+			continue
+		}
+		moves = append(moves, move{ID: row.ID, PublishOn: publishOn, CloseOn: closeOn})
+	}
+	if len(moves) == 0 {
+		return 0, nil
+	}
+	payload, err := json.Marshal(moves)
+	if err != nil {
+		return 0, fmt.Errorf("encode survey schedules: %w", err)
+	}
+	if err := r.db.WithContext(ctx).Exec(`UPDATE surveys s SET publish_on = m.publish_on, close_on = m.close_on, updated_at = now()
+		FROM jsonb_to_recordset(?::jsonb) AS m(id uuid, publish_on timestamptz, close_on timestamptz) WHERE s.id = m.id`, string(payload)).Error; err != nil {
+		return 0, fmt.Errorf("move survey schedules: %w", err)
+	}
+	return len(moves), nil
+}
+
+func sameInstant(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Equal(*b)
 }

@@ -173,7 +173,10 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
         },
         {
           "$ref": "#/$defs/__schema5"

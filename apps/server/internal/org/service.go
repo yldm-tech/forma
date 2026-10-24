@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	// Display time zones are validated against the IANA database; embedding it keeps validation independent of the host's zoneinfo.
 	_ "time/tzdata"
@@ -20,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
@@ -127,6 +127,8 @@ type Detail struct {
 	Membership Membership `json:"membership"`
 	// UserManagementAllowed is whether the caller may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE.
 	UserManagementAllowed bool `json:"userManagementAllowed"`
+	// SurveyScheduling is when the organization's scheduled surveys open and close: its own zone or the instance's, at the instance's local time.
+	SurveyScheduling scheduling.Settings `json:"surveyScheduling"`
 }
 
 // Get is forma2's getOrganizationAuth: organization.read and a membership are both required, and a caller without them gets a not-found, so an organization's existence never leaks to a non-member.
@@ -142,7 +144,8 @@ func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*D
 	if o == nil {
 		return nil, errOrganizationNotFound()
 	}
-	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: UserManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole)}, nil
+	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: UserManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole),
+		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(o.SurveySchedulingTimeZone).Settings()}, nil
 }
 
 func errOrganizationNotFound() *apperr.Error { return apperr.NotFound("Organization", "") }
@@ -170,11 +173,13 @@ func (s *Service) memberWith(ctx context.Context, userID, organizationID uuid.UU
 type UpdateInput struct {
 	Name *string
 	// DisplayTimeZone is set when the request names the field; a nil Value means UTC.
-	DisplayTimeZone       *TimeZone
-	IsAISmartToolsEnabled *bool
+	DisplayTimeZone *TimeZone
+	// SurveySchedulingTimeZone is set when the request names the field; a nil Value means the instance's zone.
+	SurveySchedulingTimeZone *TimeZone
+	IsAISmartToolsEnabled    *bool
 }
 
-// TimeZone is a display time zone change.
+// TimeZone is a time zone change.
 type TimeZone struct {
 	Value *string
 }
@@ -182,7 +187,7 @@ type TimeZone struct {
 // CodeAIInstanceNotConfigured is forma2's ai_instance_not_configured refusal.
 const CodeAIInstanceNotConfigured = "ai_instance_not_configured"
 
-// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
+// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
 func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (*Organization, error) {
 	old, o, err := s.update(ctx, userID, organizationID, in)
 	s.record(ctx, audit.ActionUpdated, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, o)
@@ -196,12 +201,12 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 			return nil, nil, err
 		}
 	}
-	if in.DisplayTimeZone != nil || in.IsAISmartToolsEnabled != nil {
+	if in.DisplayTimeZone != nil || in.SurveySchedulingTimeZone != nil || in.IsAISmartToolsEnabled != nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationManage, resource); err != nil {
 			return nil, nil, err
 		}
 	}
-	if in.Name == nil && in.DisplayTimeZone == nil && in.IsAISmartToolsEnabled == nil {
+	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationRead, resource); err != nil {
 			return nil, nil, err
 		}
@@ -223,6 +228,9 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	if in.DisplayTimeZone != nil {
 		columns = append(columns, column{"display_time_zone", in.DisplayTimeZone.Value})
 	}
+	if in.SurveySchedulingTimeZone != nil {
+		columns = append(columns, column{"survey_scheduling_time_zone", in.SurveySchedulingTimeZone.Value})
+	}
 	if in.IsAISmartToolsEnabled != nil {
 		columns = append(columns, column{"is_ai_smart_tools_enabled", *in.IsAISmartToolsEnabled})
 	}
@@ -234,6 +242,11 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 		if !exists {
 			return apperr.NotFound("Organization", organizationID.String())
 		}
+		if in.SurveySchedulingTimeZone != nil {
+			if err := s.resnapSchedules(ctx, tx, organizationID, in.SurveySchedulingTimeZone.Value); err != nil {
+				return err
+			}
+		}
 		return tx.update(ctx, organizationID, columns)
 	})
 	if err != nil {
@@ -243,13 +256,31 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	return old, updated, err
 }
 
-// ValidTimeZone is forma2's isValidIanaTimeZone.
-func ValidTimeZone(name string) bool {
-	if name == "" || name == "Local" {
-		return false
+// resnapSchedules moves the organization's scheduled dates to the schedule of its new zone, keeping each date's calendar day. It runs under the organization's row lock, and reads the current zone there, so two concurrent changes re-snap one after the other.
+func (s *Service) resnapSchedules(ctx context.Context, tx *Repository, organizationID uuid.UUID, zone *string) error {
+	current, err := tx.byID(ctx, organizationID, s.cfg.IsFormaCloud)
+	if err != nil {
+		return err
 	}
-	_, err := time.LoadLocation(name)
-	return err == nil
+	if current == nil {
+		return apperr.NotFound("Organization", organizationID.String())
+	}
+	instance := scheduling.Instance(s.cfg)
+	from, to := instance.ForOrganization(current.SurveySchedulingTimeZone), instance.ForOrganization(zone)
+	if from.Location().String() == to.Location().String() {
+		return nil
+	}
+	n, err := tx.resnapSchedules(ctx, organizationID, from, to)
+	if err != nil {
+		return err
+	}
+	s.log.InfoContext(ctx, "Survey schedules moved to the organization's new time zone", "organizationId", organizationID.String(), "from", from.Location().String(), "to", to.Location().String(), "surveys", n)
+	return nil
+}
+
+// ValidTimeZone is forma2's isValidIanaTimeZone, for both the display and the survey scheduling time zone.
+func ValidTimeZone(name string) bool {
+	return scheduling.ValidZone(name)
 }
 
 // Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check; a user left without one is sent to create one by the root page. Everything the organization holds cascades, the SpiceDB cleanup follows from the triggers, and on Forma Cloud its Stripe subscriptions are cancelled.
