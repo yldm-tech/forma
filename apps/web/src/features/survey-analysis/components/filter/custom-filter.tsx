@@ -24,7 +24,7 @@ import {
 import { saveExport } from "../../lib/download";
 import type { DateRange } from "../../lib/filter-types";
 import { getTodayDate } from "../../lib/filters";
-import { PopoverTriggerButton, ResponseFilter } from "./response-filter";
+import { AppliedFilterChips, PopoverTriggerButton, ResponseFilter } from "./response-filter";
 import { useResponseFilter } from "./response-filter-context";
 
 // The relative ranges this filter offers, in dropdown order. Picking one tags the range with its preset, so the trigger label survives a remount without reverse-matching the bounds: several presets span identical days on period-boundary dates and cannot be told apart from their bounds alone. Order still breaks that tie for a hand-picked range that matches a preset. Labels are literal t() calls so the translation-key scan sees them.
@@ -183,7 +183,7 @@ export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
 
   return (
     <div className="relative flex justify-between">
-      <div className="flex justify-stretch gap-x-1.5">
+      <div className="flex flex-wrap items-center justify-stretch gap-1.5">
         <ResponseFilter survey={survey} />
         <DropdownMenu
           onOpenChange={(open) => {
@@ -264,6 +264,7 @@ export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <AppliedFilterChips />
       </div>
       {isDatePickerOpen && (
         <div ref={datePickerRef} className="absolute top-full z-50 my-2 rounded-md border bg-white">

@@ -11,7 +11,7 @@ import { IdBadge } from "../../../../components/ui/id-badge";
 import { cn } from "../../../../lib/cn";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { recallToHeadline } from "../../../../lib/survey/recall";
-import { formatDateTimeForDisplay } from "../../../../lib/time";
+import { formatDateForDisplay } from "../../../../lib/time";
 import { getElementsFromBlocks } from "../../../survey-editor/lib/client-utils";
 import { getElementIconMap } from "../../../survey-editor/lib/elements";
 import {
@@ -38,6 +38,15 @@ const HeaderWithIcon = ({ icon, title }: { icon: ReactNode; title: string }) => 
     </div>
   </div>
 );
+
+/** The table's date: short enough that the time fits the pinned column. */
+const RESPONSE_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+};
 
 const TextCell = ({ value }: { value: unknown }) =>
   typeof value === "string" ? <p className="text-slate-900">{value}</p> : null;
@@ -124,7 +133,7 @@ const getElementColumns = (
                 {choiceIds.map((choiceId, index) => (
                   // A ranking repeats no id, but an Other answer maps several labels to "other".
                   // oxlint-disable-next-line react/no-array-index-key -- see above
-                  <IdBadge key={`${choiceId}-${index}`} id={choiceId} />
+                  <IdBadge key={`${choiceId}-${index}`} id={choiceId} tabIndex={-1} />
                 ))}
               </div>
             );
@@ -143,7 +152,7 @@ const getElementColumns = (
 };
 
 /**
- * forma2's generateResponseTableColumns, in its order: selection (unless read-only), person, single-use id, response id, date, quotas (when the survey has any), status, verified email (when the survey verifies), the elements' columns, the variables, the hidden fields, the reserved fields and the tags.
+ * The response table's columns in their default order: selection (unless read-only), date, person, status, tags, quotas (when the survey has any), verified email (when the survey verifies), the elements' columns, the variables, the hidden fields, then the ids and the reserved fields. The answers come before the ids, so the first screen shows what people said. The order only applies to a survey whose table has no saved order; reconcileColumnOrder keeps a saved one.
  */
 export const generateResponseTableColumns = (
   survey: TSurvey,
@@ -179,16 +188,26 @@ export const generateResponseTableColumns = (
   const responseIdColumn: ColumnDef<TResponseTableData> = {
     accessorKey: "responseId",
     header: () => <div className="gap-x-1.5">{t("common.response_id")}</div>,
-    cell: ({ row }) => <IdBadge id={row.original.responseId} />,
+    // Out of the tab order like every id in the table: the date is the row's keyboard stop, and the response card copies the id.
+    cell: ({ row }) => <IdBadge id={row.original.responseId} tabIndex={-1} />,
   };
 
+  // The date is the row's one keyboard stop that opens the response: the click reaches the cell, which opens it for every column.
   const dateColumn: ColumnDef<TResponseTableData> = {
     accessorKey: "createdAt",
     header: () => t("common.date"),
-    size: 200,
-    cell: ({ row }) => (
-      <p className="text-slate-900">{formatDateTimeForDisplay(row.original.createdAt, locale)}</p>
-    ),
+    size: 240,
+    cell: ({ row }) => {
+      const date = formatDateForDisplay(row.original.createdAt, locale, RESPONSE_DATE_OPTIONS);
+      return (
+        <button
+          type="button"
+          className="focus-visible:ring-ring cursor-pointer truncate rounded-sm text-left text-slate-900 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+          aria-label={t("workspace.surveys.responses.open_response_from", { date })}>
+          {date}
+        </button>
+      );
+    },
   };
 
   const quotasColumn: ColumnDef<TResponseTableData> = {
@@ -278,21 +297,29 @@ export const generateResponseTableColumns = (
   };
 
   const baseColumns = [
-    personColumn,
-    singleUseIdColumn,
-    responseIdColumn,
     dateColumn,
-    ...(showQuotasColumn ? [quotasColumn] : []),
+    personColumn,
     statusColumn,
+    tagsColumn,
+    ...(showQuotasColumn ? [quotasColumn] : []),
     ...(survey.isVerifyEmailEnabled ? [verifiedEmailColumn] : []),
     ...elementColumns,
     ...variableColumns,
     ...hiddenFieldColumns,
+    singleUseIdColumn,
+    responseIdColumn,
     ...metadataColumns,
-    tagsColumn,
   ];
 
   return isReadOnly
     ? baseColumns
     : [getSelectionColumn<TResponseTableData>(t("common.select_all"), t("common.select")), ...baseColumns];
 };
+
+/** The columns the table starts hidden, among columnIds: the single-use id unless the survey uses single-use links (it is empty for every other response), and the option-id twin of each choice question, which repeats its answer as ids. seedColumnVisibility applies them only to columns an author has never shown or hidden. */
+export const getDefaultHiddenColumnIds = (survey: TSurvey, columnIds: readonly string[]): string[] =>
+  columnIds.filter(
+    (id) =>
+      (id === "singleUseId" && !survey.singleUse?.enabled) ||
+      (id.startsWith("ELEMENT_") && id.endsWith("optionIds"))
+  );

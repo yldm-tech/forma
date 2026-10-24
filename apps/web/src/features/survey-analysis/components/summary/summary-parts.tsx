@@ -56,8 +56,9 @@ export const ElementSummaryHeader = ({
       <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600 md:text-sm">
         <div className="flex items-center rounded-lg bg-slate-100 p-2">
           {elementType && <elementType.icon className="mr-2 size-4" />}
-          {elementType ? elementType.label : t("workspace.surveys.summary.unknown_question_type")}{" "}
-          {t("common.question")}
+          {t("workspace.surveys.summary.question_type", {
+            type: elementType ? elementType.label : t("workspace.surveys.summary.unknown_question_type"),
+          })}
         </div>
         {showResponses && (
           <div className="flex items-center rounded-lg bg-slate-100 p-2">
@@ -68,13 +69,16 @@ export const ElementSummaryHeader = ({
         {denominator && (
           <div className="flex items-center rounded-lg bg-slate-100 p-2">
             <EyeIcon className="mr-2 size-4" />
-            {`${denominator.impressionCount} ${t("common.impressions")}`}
+            {t("workspace.surveys.summary.count_impressions", { count: denominator.impressionCount })}
           </div>
         )}
         {denominator && denominator.skipCount > 0 && (
           <div className="flex items-center rounded-lg bg-slate-100 p-2">
             <SkipForwardIcon className="mr-2 size-4" />
-            {`${denominator.skipCount} ${t("common.skips")} (${denominator.skipPercentage}%)`}
+            {t("workspace.surveys.summary.count_skips_with_percentage", {
+              count: denominator.skipCount,
+              percentage: denominator.skipPercentage,
+            })}
           </div>
         )}
         {additionalInfo}

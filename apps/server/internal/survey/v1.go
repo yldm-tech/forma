@@ -60,6 +60,8 @@ func V1Object(sv *Survey) (map[string]any, error) {
 		return nil, err
 	}
 	delete(obj, "inlineTriggers")
+	// v1 never described the inlined embedded-data fields the admin app reads.
+	delete(obj, "embeddedFields")
 	questions, err := blocksToQuestions(sv.Blocks, sv.Endings)
 	if err != nil {
 		return nil, err
@@ -77,6 +79,7 @@ func V1DeletedObject(sv *Survey) (map[string]any, error) {
 	}
 	delete(obj, "languages")
 	delete(obj, "followUps")
+	delete(obj, "embeddedFields")
 	obj["questions"] = []any{}
 	var segmentID any
 	if sv.Segment != nil {
