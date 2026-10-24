@@ -13,6 +13,15 @@ test("schedulingTimeZones lists the browser's zones with UTC, since the default 
   expect(zones.filter((zone) => zone === "UTC")).toHaveLength(1);
 });
 
+test("schedulingTimeZones offers a stored zone the browser does not list", () => {
+  const listed = schedulingTimeZones();
+  const unlisted = ["Asia/Kolkata", "Europe/Kyiv", "Asia/Calcutta"].find((zone) => !listed.includes(zone));
+  if (!unlisted) throw new Error("the browser lists every zone this test tries");
+  expect(schedulingTimeZones(unlisted)).toEqual([...listed, unlisted]);
+  expect(schedulingTimeZones("Asia/Tokyo")).toEqual(listed);
+  expect(schedulingTimeZones(null)).toEqual(listed);
+});
+
 test("organizationSettingsChanges sends only changed fields this role may change", () => {
   const initial = { name: "Acme", displayTimeZone: null, surveySchedulingTimeZone: null };
   const changed = {

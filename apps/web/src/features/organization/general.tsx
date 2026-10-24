@@ -135,6 +135,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
   const queryClient = useQueryClient();
   const zones = useMemo(() => ianaTimeZones(), []);
   const { instanceTimeZone } = organization.surveyScheduling;
+  const storedSchedulingTimeZone = organization.surveySchedulingTimeZone;
   const schedulingZoneOptions = useMemo(
     () => [
       {
@@ -143,9 +144,9 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
           timeZone: instanceTimeZone,
         }),
       },
-      ...schedulingTimeZones().map((zone) => ({ value: zone, label: zone })),
+      ...schedulingTimeZones(storedSchedulingTimeZone).map((zone) => ({ value: zone, label: zone })),
     ],
-    [t, instanceTimeZone]
+    [t, instanceTimeZone, storedSchedulingTimeZone]
   );
   const changes = organizationSettingsChanges(
     initial,
@@ -225,7 +226,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
           </Select>
         </div>
         <div className="space-y-2">
-          <Label id="survey-scheduling-time-zone-label" htmlFor="survey-scheduling-time-zone">
+          <Label id="survey-scheduling-time-zone-label">
             {t("workspace.settings.general.survey_scheduling_time_zone")}
           </Label>
           <p id="survey-scheduling-time-zone-description" className="text-sm text-slate-500">
@@ -236,6 +237,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
           <InputCombobox
             id="survey-scheduling-time-zone"
             aria-labelledby="survey-scheduling-time-zone-label"
+            aria-describedby="survey-scheduling-time-zone-description"
             options={schedulingZoneOptions}
             value={surveySchedulingTimeZone ?? INSTANCE_DEFAULT}
             onChangeValue={(value) =>

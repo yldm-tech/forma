@@ -8,10 +8,11 @@ export const INSTANCE_DEFAULT = "instance-default";
 export const ianaTimeZones = (): string[] =>
   Intl.supportedValuesOf("timeZone").filter((zone) => zone !== UTC_DEFAULT);
 
-/** The IANA zones the browser knows, UTC included, for the organization's survey scheduling time zone, whose default entry is the instance's zone. */
-export const schedulingTimeZones = (): string[] => {
-  const zones = Intl.supportedValuesOf("timeZone");
-  return zones.includes(UTC_DEFAULT) ? zones : [UTC_DEFAULT, ...zones];
+/** The IANA zones the browser knows, UTC included, for the organization's survey scheduling time zone, whose default entry is the instance's zone. The stored zone is offered too when the browser lists it under another name or not at all (V8 knows Asia/Calcutta and Europe/Kiev, not Asia/Kolkata and Europe/Kyiv), so the menu still shows the zone in effect. */
+export const schedulingTimeZones = (stored?: string | null): string[] => {
+  const supported = Intl.supportedValuesOf("timeZone");
+  const zones = supported.includes(UTC_DEFAULT) ? supported : [UTC_DEFAULT, ...supported];
+  return stored && !zones.includes(stored) ? [...zones, stored] : zones;
 };
 
 interface OrganizationSettings {
