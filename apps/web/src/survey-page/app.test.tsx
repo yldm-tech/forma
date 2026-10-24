@@ -193,7 +193,7 @@ describe("SurveyPageApp", () => {
     },
     {
       inactive: { status: "link invalid", isScheduled: false, surveyClosedMessage: null, workspace: null },
-      heading: "This looks fishy.",
+      heading: "This link isn't valid",
       description: "This survey can only be taken by invitation.",
       cta: false,
       logo: true,
@@ -482,7 +482,7 @@ describe("the email verification gate", () => {
 
   test("a verification link that does not verify looks fishy", async () => {
     renderPage(verifyState(true));
-    expect(await screen.findByText("This looks fishy.")).toBeTruthy();
+    expect(await screen.findByText("This link isn't valid")).toBeTruthy();
   });
 
   test("mails the survey link to the lowercased address", async () => {

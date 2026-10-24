@@ -10,7 +10,7 @@ import {
   ssoStartFailure,
   twoFactorFailure,
 } from "./errors";
-import { MESSAGES } from "./validation";
+import { MESSAGES, validationMessage } from "./validation";
 
 let t: TFunction;
 
@@ -69,7 +69,7 @@ describe("signInFailure", () => {
 
   test("puts a field the server refused under that field", () => {
     expect(signInFailure(t, validation({ field: "email", rule: "email" }))).toEqual({
-      fields: { email: MESSAGES.invalidEmail },
+      fields: { email: validationMessage(t, MESSAGES.invalidEmail) },
     });
   });
 });
@@ -135,8 +135,18 @@ describe("signupFailure", () => {
         )
       )
     ).toEqual({
-      fields: { name: MESSAGES.nameFormat, password: MESSAGES.passwordPattern },
-      message: MESSAGES.captchaRequired,
+      fields: {
+        name: validationMessage(t, MESSAGES.nameFormat),
+        password: "Use at least one uppercase letter and one number.",
+      },
+      message: validationMessage(t, MESSAGES.captchaRequired),
+    });
+  });
+
+  test("names a constraint no client rule words as the server reported it", () => {
+    expect(signupFailure(t, validation({ field: "userLocale", rule: "oneof" }))).toEqual({
+      fields: {},
+      message: "userLocale: oneof",
     });
   });
 });

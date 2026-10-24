@@ -27,8 +27,9 @@ export const PageHeader = ({
   children?: ReactNode;
 }) => (
   <div className="border-b border-slate-200">
-    <div className="flex items-center justify-between gap-x-4 pb-4">
-      <h1 className="text-3xl font-bold text-slate-800">{pageTitle}</h1>
+    {/* The actions wrap under a long title rather than being pushed past the viewport's edge. */}
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4">
+      <h1 className="min-w-0 text-3xl font-bold break-words text-slate-800">{pageTitle}</h1>
       {cta}
     </div>
     {children}

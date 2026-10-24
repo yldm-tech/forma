@@ -12,6 +12,8 @@ interface OTPInputProps {
   /** Classes for every digit box, such as the error border of a rejected PIN. */
   inputBoxClassName?: string;
   disabled?: boolean;
+  /** Focuses the first box when it mounts, and when a Dialog holding it opens. */
+  autoFocus?: boolean;
 }
 
 /** forma2's OTPInput: one box per digit, digits only, pasting a whole code fills every box. */
@@ -22,6 +24,7 @@ export const OTPInput = ({
   className,
   inputBoxClassName,
   disabled,
+  autoFocus = false,
 }: OTPInputProps) => {
   const { t } = useTranslation();
   const digits = otpDigits(value, valueLength);
@@ -83,6 +86,10 @@ export const OTPInput = ({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           disabled={disabled}
+          // autoFocus covers a box mounted into a page or an already open dialog; data-autofocus covers one that is in the dialog when showModal() runs, which moves the focus after React's autoFocus.
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in, for a step whose only task is typing the code the user was just sent or shown
+          autoFocus={autoFocus && index === 0}
+          data-autofocus={autoFocus && index === 0 ? "" : undefined}
         />
       ))}
     </div>

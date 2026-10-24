@@ -125,6 +125,23 @@ describe("web scan target", () => {
     expect(hasIssues(results)).toBe(true);
   });
 
+  test("fails on a zh or ja value with spaces between CJK characters", async () => {
+    const values = { "auth/login": "Log in" };
+    root = fixture({
+      "apps/web/src/a.ts": `export const a = t("auth.login");`,
+      "apps/web/locales/en-US.json": JSON.stringify({ auth: { login: "Log in" } }),
+      "apps/web/locales/de-DE.json": JSON.stringify({ auth: { login: "Ein loggen" } }),
+      "apps/web/locales/ja-JP.json": JSON.stringify({ auth: { login: "ログイン" } }),
+      "apps/web/locales/zh-Hans-CN.json": JSON.stringify({ auth: { login: "登 录" } }),
+      "apps/web/i18n.lock": lockfile(values),
+    });
+
+    const results = await validateTarget(target({ referenceSources: [], knownUnusedKeys: [] }));
+
+    expect([...(results.cjkSpacing?.entries() ?? [])]).toEqual([["zh-Hans-CN", ["auth.login"]]]);
+    expect(hasIssues(results)).toBe(true);
+  });
+
   test("fails without a lockfile", async () => {
     root = fixture({
       "apps/web/src/a.ts": `export const a = t("auth.login");`,

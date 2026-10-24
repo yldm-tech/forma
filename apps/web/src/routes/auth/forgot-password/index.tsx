@@ -1,13 +1,19 @@
+import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { authApi } from "../../../features/auth/api";
 import { Alert, Button, ButtonLink, Field, TextInput } from "../../../features/auth/components/ui";
 import { emailFormFailure } from "../../../features/auth/errors";
 import { redirectIfSignedIn } from "../../../features/auth/guards";
-import { emailError } from "../../../features/auth/validation";
+import { stringParam } from "../../../features/auth/search";
+import { emailError, translatedRules } from "../../../features/auth/validation";
 import { type Validators, useForm } from "../../../lib/form";
 
 export const Route = createFileRoute("/auth/forgot-password/")({
+  // The sign-in page passes on what was typed in its email field.
+  validateSearch: (search: Record<string, unknown>): { email?: string } => ({
+    email: stringParam(search.email),
+  }),
   beforeLoad: redirectIfSignedIn,
   component: ForgotPasswordPage,
 });
@@ -17,10 +23,12 @@ const RULES: Validators<{ email: string }> = { email: emailError };
 /** The server answers the same for every address, so the next page says only that instructions follow if an account exists. */
 function ForgotPasswordPage() {
   const { t } = useTranslation();
+  const { email: typedEmail } = Route.useSearch();
   const navigate = useNavigate();
+  const rules = useMemo(() => translatedRules(t, RULES), [t]);
   const form = useForm({
-    defaultValues: { email: "" },
-    validators: RULES,
+    defaultValues: { email: typedEmail ?? "" },
+    validators: rules,
     onSubmit: async ({ email }) => {
       try {
         await authApi.forgotPassword(email);
@@ -36,6 +44,12 @@ function ForgotPasswordPage() {
 
   return (
     <form onSubmit={(event) => void form.handleSubmit(event)} className="space-y-6" noValidate>
+      <div className="text-center">
+        <h1 className="mb-2 text-xl font-semibold text-balance text-slate-800">
+          {t("auth.forgot-password.title")}
+        </h1>
+        <p className="text-sm text-pretty text-slate-600">{t("auth.forgot-password.description")}</p>
+      </div>
       {form.formError && <Alert variant="error">{form.formError}</Alert>}
       <Field id="forgot-email" label={t("common.email")} error={form.errors.email}>
         <TextInput

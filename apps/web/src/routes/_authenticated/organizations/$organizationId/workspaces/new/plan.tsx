@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/organizations/$organizatio
 function PlanStep() {
   const { organizationId } = Route.useParams();
   return (
-    <main className="flex min-h-screen min-w-full flex-col items-center justify-center bg-slate-50 p-6">
+    <main className="flex w-full flex-1 flex-col items-center justify-center p-6">
       <SelectPlanCard organizationId={organizationId} nextUrl={onboardingPath(organizationId, "survey")} />
     </main>
   );

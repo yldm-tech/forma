@@ -6,11 +6,18 @@
   --color-brand-light: #00e6ca;
   --color-brand-dark: #00c4b8;
 
-  --color-primary: #0f172a;
-  --color-primary-foreground: #fefefe;
+  /* The website's palette (apps/website/src/styles.css): teal-600 for the primary action and the focus ring, ink-900 for neutral text, mint-50 for a selected or highlighted surface. Each pair below clears WCAG AA against its foreground, and the hover shades are darker so hovering never lowers the contrast. */
+  --color-primary: #038178;
+  --color-primary-hover: #026a62;
+  --color-primary-foreground: #ffffff;
 
-  --color-destructive: #ff6b6b;
-  --color-destructive-foreground: #fff5f5;
+  --color-ring: #038178;
+  --color-brand-subtle: #e6fcf8;
+  --color-ink: #0f172a;
+
+  --color-destructive: #dc2626;
+  --color-destructive-hover: #b91c1c;
+  --color-destructive-foreground: #ffffff;
 
   --color-secondary: #f1f5f9;
   --color-secondary-foreground: #0f172a;

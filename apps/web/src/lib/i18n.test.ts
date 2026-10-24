@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { changeLocale, initI18n, isLocale, matchLocale } from "./i18n";
 
 describe("matchLocale", () => {
@@ -62,5 +62,32 @@ describe("initI18n", () => {
     await changeLocale(i18n, "zh-Hant-TW");
     expect(i18n.language).toBe("zh-Hant-TW");
     expect(i18n.t("common.loading")).not.toBe("Loading");
+  });
+});
+
+describe("<html lang>", () => {
+  // These tests run in Node; the root element is all of the document i18n touches.
+  const stubDocument = () => {
+    const documentElement = { lang: "en" };
+    vi.stubGlobal("document", { documentElement });
+    return documentElement;
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("follows the locale the catalogue starts in", async () => {
+    const root = stubDocument();
+    await initI18n("zh-Hans-CN");
+    expect(root.lang).toBe("zh-Hans-CN");
+  });
+
+  test("follows changeLocale, as when the signed-in user's saved locale arrives", async () => {
+    const root = stubDocument();
+    const i18n = await initI18n("en-US");
+    expect(root.lang).toBe("en-US");
+    await changeLocale(i18n, "ja-JP");
+    expect(root.lang).toBe("ja-JP");
   });
 });

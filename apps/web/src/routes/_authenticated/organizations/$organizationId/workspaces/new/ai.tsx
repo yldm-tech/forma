@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { RoutePending } from "../../../../../../components/shell/route-states";
 import { workspaceAIQuery } from "../../../../../../features/ai/availability";
 import { leaveIfOnboardingComplete, onboardingPath } from "../../../../../../features/onboarding/onboarding";
+import { OnboardingBackLink } from "../../../../../../features/onboarding/onboarding-options";
 import { CreateWithAIForm } from "../../../../../../features/surveys/ai-create/create-with-ai-form";
 import { surveyEditorPath } from "../../../../../../features/surveys/templates/use-create-survey";
 import { guardPageError } from "../../../../../../lib/route-guards";
@@ -26,8 +27,9 @@ function AIStep() {
   const { organizationId } = Route.useParams();
   const onboarding = Route.useLoaderData();
   return (
-    <main className="flex min-h-screen min-w-full flex-col items-center justify-center bg-slate-50 p-6">
+    <main className="flex w-full flex-1 flex-col items-center justify-center p-6">
       <div className="flex w-full max-w-xl flex-col items-center gap-y-8 px-4">
+        <OnboardingBackLink organizationId={organizationId} />
         <div className="text-center">
           <h1 className="text-3xl font-medium text-slate-800">
             {t("workspace.surveys.ai_create.dialog_title")}
