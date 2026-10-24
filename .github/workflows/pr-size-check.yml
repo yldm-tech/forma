@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check PR size
         id: check-size
@@ -36,11 +37,12 @@ jobs:
           diff_output=$(git diff --numstat "origin/${{ github.base_ref }}"...HEAD)
 
           # Count lines, excluding:
-          # - Test files (*.test.ts, *.spec.tsx, etc.)
+          # - Test files (*.test.ts, *.spec.tsx, Go's *_test.go) and Go test fixtures (testdata/)
           # - Locale files (locales/*.json, i18n/*.json)
-          # - Lock files (pnpm-lock.yaml, package-lock.json, yarn.lock)
-          # - Generated files (dist/, coverage/, build/, .next/)
+          # - Lock files (pnpm-lock.yaml, go.sum, go.work.sum)
+          # - Committed generated files (TanStack Router's *.gen.ts, Wire's *_gen.go, the JSON schemas exported from @forma/types (apps/server/internal/jsonschema/schemas/), *.tsbuildinfo)
           # - Storybook stories (*.stories.tsx)
+          # Build output (dist/, coverage/ and the like) is gitignored, so it never shows up in the diff.
 
           total_additions=0
           total_deletions=0
@@ -55,7 +57,7 @@ jobs:
             
             # Check if file should be excluded
             case "$file" in
-              *.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*.test.js|*.test.jsx|*.spec.js|*.spec.jsx)
+              *.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*.test.js|*.test.jsx|*.spec.js|*.spec.jsx|*_test.go|*/testdata/*)
                 excluded_files=$((excluded_files + 1))
                 continue
                 ;;
@@ -63,11 +65,11 @@ jobs:
                 excluded_files=$((excluded_files + 1))
                 continue
                 ;;
-              pnpm-lock.yaml|package-lock.json|yarn.lock)
+              pnpm-lock.yaml|*/go.sum|go.work.sum)
                 excluded_files=$((excluded_files + 1))
                 continue
                 ;;
-              dist/*|coverage/*|build/*|node_modules/*|test-results/*|playwright-report/*|.next/*|*.tsbuildinfo)
+              *.gen.ts|*_gen.go|apps/server/internal/jsonschema/schemas/*|*.tsbuildinfo)
                 excluded_files=$((excluded_files + 1))
                 continue
                 ;;
@@ -86,11 +88,13 @@ jobs:
 
           total_changes=$((total_additions + total_deletions))
 
-          echo "counted_files=${counted_files}" >> "${GITHUB_OUTPUT}"
-          echo "excluded_files=${excluded_files}" >> "${GITHUB_OUTPUT}"
-          echo "total_additions=${total_additions}" >> "${GITHUB_OUTPUT}"
-          echo "total_deletions=${total_deletions}" >> "${GITHUB_OUTPUT}"
-          echo "total_changes=${total_changes}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "counted_files=${counted_files}"
+            echo "excluded_files=${excluded_files}"
+            echo "total_additions=${total_additions}"
+            echo "total_deletions=${total_deletions}"
+            echo "total_changes=${total_changes}"
+          } >> "${GITHUB_OUTPUT}"
 
           # Set flag if PR is too large (> 800 lines)
           if [ ${total_changes} -gt 800 ]; then
