@@ -16,9 +16,9 @@ import (
 // schedulingBatchSize is forma2's SURVEY_SCHEDULING_RECONCILIATION_BATCH_SIZE.
 const schedulingBatchSize = 250
 
-// normalizeDates is forma2's normalizeSurveyScheduling: both dates are snapped to the schedule of the survey's organization; a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
-func normalizeDates(s scheduling.Schedule, current *string, status string, publishOn, closeOn *time.Time) (*time.Time, *time.Time, error) {
-	closeOn, publishOn = s.Snap(closeOn), s.Snap(publishOn)
+// normalizeDates is forma2's normalizeSurveyScheduling: both dates are snapped to the schedule of the survey's organization, s, keeping the calendar day they have in pickedIn, the schedule the client picked them in (s itself unless the editor says it showed them in another zone); a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
+func normalizeDates(s, pickedIn scheduling.Schedule, current *string, status string, publishOn, closeOn *time.Time) (*time.Time, *time.Time, error) {
+	closeOn, publishOn = s.Resnap(pickedIn, closeOn), s.Resnap(pickedIn, publishOn)
 	manual := current == nil || *current != status
 	if manual && status == StatusInProgress {
 		publishOn = nil
@@ -35,19 +35,41 @@ func normalizeDates(s scheduling.Schedule, current *string, status string, publi
 	return publishOn, closeOn, nil
 }
 
+// pickedIn is the schedule an editor save's dates were picked in: the zone the editor showed them in, which is the organization's unless the zone changed after the editor loaded it, or the organization's schedule when the save names no zone (or one that is not a zone).
+func pickedIn(schedule scheduling.Schedule, zone *string) scheduling.Schedule {
+	if zone == nil {
+		return schedule
+	}
+	in, _ := schedule.InZone(*zone)
+	return in
+}
+
 // scheduleOf is the schedule of a workspace's organization: its own time zone, or the instance's.
 func (s *Service) scheduleOf(ctx context.Context, repo *Repository, workspaceID uuid.UUID) (scheduling.Schedule, error) {
-	zone, err := repo.schedulingTimeZone(ctx, workspaceID)
+	zone, err := repo.schedulingTimeZone(ctx, workspaceID, false)
 	if err != nil {
 		return scheduling.Schedule{}, err
 	}
 	return s.schedule.ForOrganization(zone), nil
 }
 
-// schedulingTimeZone is the scheduling time zone of a workspace's organization, nil when it has none (or the workspace does not exist).
-func (r *Repository) schedulingTimeZone(ctx context.Context, workspaceID uuid.UUID) (*string, error) {
+// lockedScheduleOf is scheduleOf with the organization's row held in share mode until tx ends. A save or create that writes dates takes it before it locks the survey, the order a zone change takes its locks in (the organization, then its scheduled surveys): a zone change either committed before and the dates are snapped in its zone, or waits until they are written and then moves them. Without it, a survey given its first dates is not among the rows a concurrent zone change moves.
+func (s *Service) lockedScheduleOf(ctx context.Context, tx *Repository, workspaceID uuid.UUID) (scheduling.Schedule, error) {
+	zone, err := tx.schedulingTimeZone(ctx, workspaceID, true)
+	if err != nil {
+		return scheduling.Schedule{}, err
+	}
+	return s.schedule.ForOrganization(zone), nil
+}
+
+// schedulingTimeZone is the scheduling time zone of a workspace's organization, nil when it has none (or the workspace does not exist); with lock, the organization's row is held in share mode until the transaction ends.
+func (r *Repository) schedulingTimeZone(ctx context.Context, workspaceID uuid.UUID, lock bool) (*string, error) {
+	query := `SELECT o.survey_scheduling_time_zone FROM workspaces w JOIN organizations o ON o.id = w.organization_id WHERE w.id = ?`
+	if lock {
+		query += ` FOR SHARE OF o`
+	}
 	var rows []struct{ SurveySchedulingTimeZone *string }
-	if err := r.db.WithContext(ctx).Raw(`SELECT o.survey_scheduling_time_zone FROM workspaces w JOIN organizations o ON o.id = w.organization_id WHERE w.id = ?`, workspaceID).Scan(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(query, workspaceID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load organization scheduling time zone: %w", err)
 	}
 	if len(rows) == 0 {

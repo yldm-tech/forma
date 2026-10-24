@@ -1,4 +1,5 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { surveyKeys } from "../../features/surveys/list/query";
 import { api } from "../api";
 import type { OrganizationRole } from "../roles";
 
@@ -128,11 +129,24 @@ export interface OrganizationUpdate {
   isAISmartToolsEnabled?: boolean;
 }
 
+/** After the organization's survey scheduling zone changed, the server has moved every scheduled publish and close date to the new zone. Cached surveys still hold the old instants, and the editor's never refetches on its own (its baseline would be sent back with the old zone's dates), so they are dropped; workspaces, which tell the editor the zone, are read again. */
+export const forgetSurveySchedules = (queryClient: QueryClient): Promise<void> => {
+  queryClient.removeQueries({ queryKey: surveyKeys.all, type: "inactive" });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: surveyKeys.all }),
+    queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+  ]).then(() => undefined);
+};
+
 export const useUpdateOrganization = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: OrganizationUpdate) => api.patch<Organization>(`/api/app/organizations/${id}`, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
+    onSuccess: (_, input) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
+        input.surveySchedulingTimeZone !== undefined ? forgetSurveySchedules(queryClient) : undefined,
+      ]),
   });
 };
 

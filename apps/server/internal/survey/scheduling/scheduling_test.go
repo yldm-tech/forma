@@ -112,6 +112,45 @@ func TestResnapKeepsTheDay(t *testing.T) {
 	}
 }
 
+// At UTC+12 and beyond noon UTC is already the next day, so the editor sends a picked day as that day's run time in the zone; the snap keeps it there.
+func TestSnapKeepsTheEditorsDayEastOfUTCPlus12(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ zone, sent string }{
+		{"Pacific/Auckland", "2026-04-30T12:00:00Z"},
+		{"Pacific/Chatham", "2026-04-30T11:15:00Z"},
+		{"Pacific/Kiritimati", "2026-04-30T10:00:00Z"},
+	} {
+		s := New(load(t, tc.zone), 0, 0)
+		sent := at(t, tc.sent)
+		if got := s.Snap(&sent); !got.Equal(sent) {
+			t.Errorf("%s: Snap(%s) = %s, want it unchanged", tc.zone, tc.sent, got.Format(time.RFC3339))
+		}
+		if local := sent.In(s.Location()); local.Day() != 1 || local.Month() != time.May {
+			t.Errorf("%s: %s is %s there, not May 1", tc.zone, tc.sent, local)
+		}
+		// Noon UTC, what the editor used to send, is May 2 there.
+		noon := at(t, "2026-05-01T12:00:00Z")
+		if local := s.Snap(&noon).In(s.Location()); local.Day() != 2 {
+			t.Errorf("%s: noon UTC snapped to %s, expected May 2", tc.zone, local)
+		}
+	}
+}
+
+// A zone a client names is a schedule at the same local time; anything that is not a zone an organization may choose is not.
+func TestInZone(t *testing.T) {
+	t.Parallel()
+	base := New(load(t, "Europe/Berlin"), 6, 30)
+	in, ok := base.InZone("Pacific/Auckland")
+	if !ok || in.Location().String() != "Pacific/Auckland" || in.Settings().LocalHour != 6 || in.Settings().LocalMinute != 30 || in.Settings().InstanceTimeZone != "Europe/Berlin" {
+		t.Fatalf("InZone(Pacific/Auckland) = %+v, %v", in.Settings(), ok)
+	}
+	for _, name := range []string{"", "Local", "Mars/Olympus"} {
+		if got, ok := base.InZone(name); ok || got.Location() != base.Location() {
+			t.Errorf("InZone(%q) = %s, %v", name, got.Location(), ok)
+		}
+	}
+}
+
 // The quarter-hour runs reach every zone's local run time at its instant, including zones a whole hour does not fit (India, Nepal, Chatham) and on both sides of a daylight saving change.
 func TestRunsHitEveryZonesLocalTime(t *testing.T) {
 	t.Parallel()

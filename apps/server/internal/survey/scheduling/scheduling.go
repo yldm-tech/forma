@@ -54,6 +54,20 @@ func (s Schedule) ForOrganization(zone *string) Schedule {
 	return out
 }
 
+// InZone is the schedule at s's local time in the named zone: the schedule a client picked its dates in when it names the zone it showed them in. False when name is not a zone an organization may choose.
+func (s Schedule) InZone(name string) (Schedule, bool) {
+	if !ValidZone(name) {
+		return s, false
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return s, false
+	}
+	out := s
+	out.loc = loc
+	return out, true
+}
+
 // Location is the schedule's time zone.
 func (s Schedule) Location() *time.Location { return s.loc }
 

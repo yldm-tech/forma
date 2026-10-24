@@ -623,7 +623,7 @@ func (s *Service) createV3(ctx context.Context, caller Caller, workspaceID uuid.
 		applyDistribution(&rec, d.Distribution)
 	}
 	// A v3 create carries no dates, so the organization's zone does not matter here.
-	if rec.PublishOn, rec.CloseOn, err = normalizeDates(s.schedule, nil, rec.Status, nil, nil); err != nil {
+	if rec.PublishOn, rec.CloseOn, err = normalizeDates(s.schedule, s.schedule, nil, rec.Status, nil, nil); err != nil {
 		return nil, err
 	}
 	filters := json.RawMessage(`[]`)

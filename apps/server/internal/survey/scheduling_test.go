@@ -2,12 +2,15 @@ package survey
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
@@ -41,15 +44,15 @@ func TestNormalizeScheduling(t *testing.T) {
 		{"a draft keeps both", str(StatusDraft), StatusDraft, true, true},
 	}
 	for _, tc := range cases {
-		p, c, err := normalizeDates(s, tc.current, tc.status, pub, cls)
+		p, c, err := normalizeDates(s, s, tc.current, tc.status, pub, cls)
 		if err != nil || (p != nil) != tc.wantPub || (c != nil) != tc.wantCls {
 			t.Errorf("%s: %v %v %v", tc.name, p, c, err)
 		}
 	}
-	if p, c, _ := normalizeDates(s, str(StatusInProgress), StatusPaused, nil, cls); p != nil || c != nil {
+	if p, c, _ := normalizeDates(s, s, str(StatusInProgress), StatusPaused, nil, cls); p != nil || c != nil {
 		t.Error("pausing by hand without a publish date kept the close date")
 	}
-	if _, _, err := normalizeDates(s, nil, StatusPaused, cls, pub); err == nil {
+	if _, _, err := normalizeDates(s, s, nil, StatusPaused, cls, pub); err == nil {
 		t.Error("a close date before the publish date was accepted")
 	} else if e, ok := apperr.As(err); !ok || e.Message != "Close date must be after publish date" {
 		t.Errorf("error %v", err)
@@ -178,6 +181,71 @@ func TestSaveSnapsToTheOrganizationZone(t *testing.T) {
 		e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
 		if expect := time.Date(picked.Year(), picked.Month(), picked.Day(), 0, 0, 0, 0, loc); saved.CloseOn == nil || !saved.CloseOn.Equal(expect) {
 			t.Errorf("zone %q: close date %v, want midnight in %s (%s)", zone, saved.CloseOn, want, expect.UTC())
+		}
+	}
+}
+
+// An editor that loaded the survey before its organization's zone changed shows, and sends, the dates of the old zone. The zone it names keeps each date on its day in the new one; a save that names none reads the instant in the organization's zone.
+func TestSaveKeepsTheDayPickedInTheEditorsZone(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	e.exec(`UPDATE organizations SET survey_scheduling_time_zone = 'America/New_York' WHERE id = ?`, org)
+	newYork, berlin := mustLoad(t, "America/New_York"), mustLoad(t, "Europe/Berlin")
+	day := time.Now().AddDate(0, 0, 30)
+	// Midnight of the day in Berlin, the zone the editor showed: the evening before in New York.
+	sent := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, berlin).UTC()
+	onTheDay := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, newYork)
+	dayBefore := time.Date(day.Year(), day.Month(), day.Day()-1, 0, 0, 0, 0, newYork)
+	for _, tc := range []struct {
+		zone any
+		want time.Time
+	}{
+		{"Europe/Berlin", onTheDay},
+		{"America/New_York", dayBefore},
+		{nil, dayBefore},
+		{"Mars/Olympus", dayBefore},
+	} {
+		id := e.createLink(owner, ws)
+		sv := e.editorSurvey(owner, id)
+		sv["status"] = StatusInProgress
+		sv["closeOn"] = sent.Format(time.RFC3339)
+		sv["schedulingTimeZone"] = tc.zone
+		var saved Survey
+		e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
+		if saved.CloseOn == nil || !saved.CloseOn.Equal(tc.want) {
+			t.Errorf("picked in %v: close date %v, want %s", tc.zone, saved.CloseOn, tc.want.UTC())
+		}
+	}
+}
+
+// A save that writes dates holds its organization's row in share mode before it locks the survey, so a zone change, which locks the organization first, waits for it instead of missing a survey that is given its first dates.
+func TestDatedSaveHoldsTheOrganizationAgainstAZoneChange(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	zoneChange := func() error {
+		return e.db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec(`SET LOCAL lock_timeout = '200ms'`).Error; err != nil {
+				return err
+			}
+			return tx.Exec(`SELECT id FROM organizations WHERE id = ? FOR NO KEY UPDATE`, org).Error
+		})
+	}
+	for _, lock := range []bool{true, false} {
+		err := e.repo.transaction(context.Background(), func(tx *Repository) error {
+			if _, err := tx.schedulingTimeZone(context.Background(), ws, lock); err != nil {
+				return err
+			}
+			changeErr := zoneChange()
+			var pgErr *pgconn.PgError
+			if blocked := errors.As(changeErr, &pgErr) && pgErr.Code == "55P03"; blocked != lock {
+				t.Errorf("lock %v: zone change error %v", lock, changeErr)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }

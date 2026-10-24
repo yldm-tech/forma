@@ -237,6 +237,8 @@ type newSurvey struct {
 	// SegmentID connects an existing segment; an app survey without one gets a private segment with PrivateSegmentFilters.
 	SegmentID             *uuid.UUID
 	PrivateSegmentFilters json.RawMessage
+	// SnappedIn is the schedule Record's publish and close dates were snapped in before the transaction; nil when the create carries no dates.
+	SnappedIn *scheduling.Schedule
 }
 
 // insertSurvey is the write half of forma2's createSurvey: one transaction creates the survey, its private segment for an app survey, its triggers, languages, follow-ups and embedded data; afterwards a schedule already due is applied and the creator subscribed to response alerts.
@@ -249,6 +251,14 @@ func (s *Service) insertSurvey(ctx context.Context, n newSurvey, organizationID 
 		return nil, err
 	}
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
+		if n.SnappedIn != nil && (n.Record.PublishOn != nil || n.Record.CloseOn != nil) {
+			// The organization's zone may have changed since the dates were snapped; read it again under the share lock a zone change waits for, and keep the dates on their days in it.
+			schedule, err := s.lockedScheduleOf(ctx, tx, n.WorkspaceID)
+			if err != nil {
+				return err
+			}
+			n.Record.PublishOn, n.Record.CloseOn = schedule.Resnap(*n.SnappedIn, n.Record.PublishOn), schedule.Resnap(*n.SnappedIn, n.Record.CloseOn)
+		}
 		if err := tx.insert(ctx, n.ID, n.WorkspaceID, n.Record); err != nil {
 			return err
 		}

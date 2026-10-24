@@ -58,6 +58,8 @@ interface SurveyMenuBarProps {
   isCxMode: boolean;
   locale: string;
   setIsCautionDialogOpen: (open: boolean) => void;
+  /** The zone the editor shows publish and close dates in, sent with every save. */
+  schedulingTimeZone: string;
 }
 
 export const SurveyMenuBar = ({
@@ -75,6 +77,7 @@ export const SurveyMenuBar = ({
   isCxMode,
   locale,
   setIsCautionDialogOpen,
+  schedulingTimeZone,
 }: Readonly<SurveyMenuBarProps>) => {
   const workspaceBasePath = `/workspaces/${workspace.id}`;
   const { t } = useTranslation();
@@ -344,6 +347,7 @@ export const SurveyMenuBar = ({
           ...currentSurvey,
           segment: currentSurvey.segment?.id === "temp" ? null : currentSurvey.segment,
           updatedAt: getExpectedSurveyVersion(),
+          schedulingTimeZone,
         },
         true
       );
@@ -435,7 +439,11 @@ export const SurveyMenuBar = ({
       const segment = await handleSegmentUpdate();
       clearSurveyLocalStorage();
       const updatedSurvey = await saveSurvey(
-        { ...getDraftSurveyToPersist(localSurvey, segment), updatedAt: getExpectedSurveyVersion() },
+        {
+          ...getDraftSurveyToPersist(localSurvey, segment),
+          updatedAt: getExpectedSurveyVersion(),
+          schedulingTimeZone,
+        },
         true
       );
       setIsSurveySaving(false);
@@ -464,6 +472,7 @@ export const SurveyMenuBar = ({
         ? ZSurveyRedirectUrlCard.parse(ending)
         : ZSurveyEndScreenCard.parse(ending)
     ),
+    schedulingTimeZone,
     ...overrides,
   });
 

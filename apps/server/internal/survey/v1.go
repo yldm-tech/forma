@@ -578,10 +578,10 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if err != nil {
 		return nil, err
 	}
-	if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, nil, rec.Status, optTime(body["publishOn"]), optTime(body["closeOn"])); err != nil {
+	if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, schedule, nil, rec.Status, optTime(body["publishOn"]), optTime(body["closeOn"])); err != nil {
 		return nil, err
 	}
-	return s.insertSurvey(ctx, newSurvey{WorkspaceID: workspaceID, Record: rec, Languages: links, TriggerIDs: triggerIDs, FollowUps: writes, SegmentID: segmentID, PrivateSegmentFilters: json.RawMessage(`[]`)}, *org)
+	return s.insertSurvey(ctx, newSurvey{WorkspaceID: workspaceID, Record: rec, Languages: links, TriggerIDs: triggerIDs, FollowUps: writes, SegmentID: segmentID, PrivateSegmentFilters: json.RawMessage(`[]`), SnappedIn: &schedule}, *org)
 }
 
 // v1FollowUps reads the follow-ups of a v1 input; anything that is not a list of objects is no follow-ups, which the type check already reported.
@@ -627,6 +627,8 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 		return nil, &V1Invalid{Issues: []surveydoc.Issue{{Path: []any{}, Message: "Invalid input"}}}
 	}
 	in.ID = current.ID
+	// The editor's own field; a v1 update's dates are read in the organization's zone, as forma2 read them in the instance's.
+	in.SchedulingTimeZone = nil
 	if recaptchaEnabled(merged["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
