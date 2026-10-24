@@ -18,6 +18,7 @@ import {
 } from "@/lib/auto-progress";
 import { canMoveFocusInto } from "@/lib/focus-guard";
 import { getLocalizedValue } from "@/lib/i18n";
+import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { getFirstErrorMessage, validateBlockResponses } from "@/lib/validation/evaluator";
 
@@ -406,7 +407,7 @@ export function BlockConditional({
       const form = elementFormRefs.current.get(firstErrorElementId);
       if (form) {
         const scrollTarget = form.querySelector("[data-element-input]") ?? form;
-        scrollTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+        scrollTarget.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
         // Defer so aria-invalid from the new error state is in the DOM.
         requestAnimationFrame(() => {
           focusFirstControl(form, true);
@@ -419,7 +420,7 @@ export function BlockConditional({
     const firstInvalidForm = findFirstInvalidForm();
     if (firstInvalidForm) {
       const scrollTarget = firstInvalidForm.querySelector("[data-element-input]") ?? firstInvalidForm;
-      scrollTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      scrollTarget.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
       requestAnimationFrame(() => {
         focusFirstControl(firstInvalidForm, true);
       });
