@@ -215,7 +215,7 @@ overrides:
   brace-expansion@5: 5.0.9
   vite@*: "catalog:"
   vitest@*: "catalog:"
-  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the docs/storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in web/ then run against a React that is not the one rendering.
+  # One React in the install. Without these, react-i18next (a dependency of packages/surveys, which renders with Preact and declares no React) and the docs/storybook tooling get an auto-installed React of their own; the hoisted linker nests that copy under them, and react-i18next's hooks in apps/web/ then run against a React that is not the one rendering.
   react: "catalog:"
   react-dom: "catalog:"
   # === Closed by ENG-2343 (kept as a record, like the section above) ===
