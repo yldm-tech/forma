@@ -16,6 +16,7 @@ import {
   shouldHideSubmitButtonForAutoProgress,
   shouldTriggerAutoProgress,
 } from "@/lib/auto-progress";
+import { scrollToFailedElement } from "@/lib/error-scroll";
 import { canMoveFocusInto } from "@/lib/focus-guard";
 import { getLocalizedValue, getTranslations } from "@/lib/i18n";
 import { scrollBehavior } from "@/lib/motion";
@@ -436,13 +437,11 @@ export function BlockConditional({
       );
       announceErrorCount(Object.keys(errorMap).length);
 
-      // Find the first element with an error, scroll to its input area (not the headline)
-      // and move focus to its first invalid control so keyboard users can fix it directly.
+      // Find the first element with an error, scroll it into view (by its headline when the error fits under it) and move focus to its first invalid control so keyboard users can fix it directly.
       const firstErrorElementId = Object.keys(errorMap)[0];
       const form = elementFormRefs.current.get(firstErrorElementId);
       if (form) {
-        const scrollTarget = form.querySelector("[data-element-input]") ?? form;
-        scrollTarget.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+        scrollToFailedElement(form, scrollBehavior());
         // Defer so aria-invalid from the new error state is in the DOM.
         requestAnimationFrame(() => {
           focusFirstControl(form, true);
@@ -456,8 +455,7 @@ export function BlockConditional({
     const firstInvalidForm = invalidForms[0];
     if (firstInvalidForm) {
       announceErrorCount(invalidForms.length);
-      const scrollTarget = firstInvalidForm.querySelector("[data-element-input]") ?? firstInvalidForm;
-      scrollTarget.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+      scrollToFailedElement(firstInvalidForm, scrollBehavior());
       requestAnimationFrame(() => {
         focusFirstControl(firstInvalidForm, true);
       });

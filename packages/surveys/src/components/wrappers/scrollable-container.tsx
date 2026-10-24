@@ -4,6 +4,11 @@ import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { ScrollToBottomButton } from "@/components/buttons/scroll-to-bottom-button";
 import { cn } from "@/lib/utils";
 
+/** The height of the top fade (h-4). */
+const SCROLL_PADDING_TOP = "1rem";
+/** The sticky Back/Next row: a 2.5rem button with py-2 around it, plus a little room. */
+const STICKY_FOOTER_SCROLL_PADDING = "4.5rem";
+
 interface ScrollableContainerProps {
   children: JSX.Element;
   fullSizeCards: boolean;
@@ -99,8 +104,14 @@ export const ScrollableContainer = forwardRef<ScrollableContainerHandle, Scrolla
         )}
         <div
           ref={containerRef}
+          // Marks the card's own scrolling area, so a failed submit can measure how much of a question fits in it.
+          data-survey-scroller={disableInternalScroll ? undefined : ""}
           style={{
             maxHeight,
+            // Whatever the browser scrolls into view (a control that takes keyboard focus, a question a failed submit points at) lands clear of the top fade and, with a sticky Back/Next row, above that row instead of under it (WCAG 2.4.11).
+            scrollPaddingTop: disableInternalScroll ? undefined : SCROLL_PADDING_TOP,
+            scrollPaddingBottom:
+              !disableInternalScroll && hasStickyFooter ? STICKY_FOOTER_SCROLL_PADDING : undefined,
           }}
           className={cn(disableInternalScroll ? "overflow-visible" : "bg-survey-bg overflow-auto px-4 pt-4")}>
           {children}
