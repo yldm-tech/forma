@@ -100,6 +100,8 @@ export const ConfirmationModal = ({
       onOpenChange={setOpen}
       hideCloseButton={hideCloseButton}
       disableCloseOnOutsideClick={!closeOnOutsideClick}
+      // Escape cancels the confirmation even when a stray click may not, except while its action runs.
+      allowEscapeClose={!buttonLoading && !secondaryButton?.loading}
       className="max-w-[540px]">
       <DialogHeader className="flex justify-center gap-2">
         {Icon ? (
