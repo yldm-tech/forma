@@ -18,26 +18,11 @@ type Surface = "login" | "editor" | "survey";
  */
 const KNOWN_VIOLATIONS: Record<Surface, Record<Viewport, string[]>> = {
   login: { desktop: [], mobile: [] },
-  // The editor carried over from forma2 has unlabelled icon buttons and inputs, ARIA attributes on elements that do not take them, and interactive controls nested in the block and ending cards. forma2 never ran axe on its editor.
+  // The editor carried over from forma2 still has ARIA attributes on elements that do not take them. forma2 never ran axe on its editor.
   editor: {
-    desktop: [
-      "aria-allowed-attr",
-      "aria-command-name",
-      "aria-input-field-name",
-      "button-name",
-      "color-contrast",
-      "label",
-      "nested-interactive",
-    ],
+    desktop: ["aria-allowed-attr", "color-contrast"],
     // The low-contrast workspace name in the menu bar is not shown below the md breakpoint.
-    mobile: [
-      "aria-allowed-attr",
-      "aria-command-name",
-      "aria-input-field-name",
-      "button-name",
-      "label",
-      "nested-interactive",
-    ],
+    mobile: ["aria-allowed-attr"],
   },
   survey: { desktop: [], mobile: [] },
 };
