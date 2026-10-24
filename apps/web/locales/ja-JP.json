@@ -20,6 +20,7 @@
     },
     "forgot-password": {
       "back_to_login": "ログインに戻る",
+      "description": "メールアドレスを入力すると、パスワードを再設定するためのリンクをお送りします。",
       "email-sent": {
         "heading": "パスワードのリセット要求を送信しました",
         "text": "このメールアドレスにアカウントが存在する場合、パスワードリセットの手順がまもなく送信されます。"
@@ -35,12 +36,15 @@
         }
       },
       "reset_password": "パスワードをリセット",
-      "reset_password_description": "パスワードをリセットするためにログアウトされます。"
+      "reset_password_description": "パスワードをリセットするためにログアウトされます。",
+      "title": "パスワードをお忘れですか？"
     },
     "invite": {
+      "already_used_signed_in": "この招待からアカウントを作成した場合は、すでにメンバーになっています。",
       "create_account": "アカウントを作成",
       "email_does_not_match": "おっと！間違ったメールアドレスです 🤦",
       "email_does_not_match_description": "招待状のメールアドレスが、あなたのメールアドレスと一致しません。",
+      "email_does_not_match_for": "この招待は{email}宛てに送信されましたが、現在{currentEmail}でログインしています。招待されたメールアドレスでログインすると参加できます。",
       "go_to_app": "アプリへ移動",
       "happy_to_have_you": "ようこそ 🤗",
       "happy_to_have_you_description": "アカウントを作成するか、ログインしてください。",
@@ -48,9 +52,13 @@
       "invite_expired_description": "招待は7日間有効です。新しい招待状をリクエストしてください。",
       "invite_not_found": "招待が見つかりません 😥",
       "invite_not_found_description": "招待コードが見つからないか、すでに使用されています。",
+      "invited_you_to_join": "{inviterName}さんから{organizationName}への招待が届いています。",
       "login": "ログイン",
+      "switch_account": "ログアウトしてアカウントを切り替える",
       "welcome_to_organization": "参加しました 🎉",
-      "welcome_to_organization_description": "ようこそ、組織へ。"
+      "welcome_to_organization_description": "ようこそ、組織へ。",
+      "you_are_invited_to_join": "{organizationName}への招待が届いています。",
+      "you_joined": "{organizationName}に参加しました"
     },
     "last_used": "最終使用",
     "login": {
@@ -134,6 +142,19 @@
     "signup_without_verification_success": {
       "user_successfully_created": "ユーザーの作成に成功しました",
       "user_successfully_created_info": "入力されたメールアドレス ({email}) に関連するアカウントをチェックしました。アカウントが存在しない場合、作成されました。すでに存在する場合、変更はありません。続行するには、以下のログインフォームからログインしてください。"
+    },
+    "two_factor": {
+      "i_saved_my_codes": "コードを保存しました",
+      "provide_code_or_backup_code": "認証アプリのコードかバックアップコードのどちらかを入力してください。"
+    },
+    "validation": {
+      "captcha_required": "CAPTCHA認証を完了してください。",
+      "invalid_email": "有効なメールアドレスを入力してください。",
+      "name_invalid": "名前に使用できない文字が含まれています。",
+      "name_required": "名前を入力してください。",
+      "password_needs_upper_and_digit": "大文字と数字をそれぞれ1文字以上含めてください。",
+      "password_too_long": "{max}文字以内で入力してください。",
+      "password_too_short": "{min}文字以上で入力してください。"
     },
     "verification-requested": {
       "email_not_configured_description": "この Forma インスタンスにはメールサーバーが設定されていないため、確認リンクを送信できませんでした。管理者にお問い合わせください。",
@@ -363,6 +384,8 @@
     "meta": "メタ",
     "metadata": "メタデータ",
     "mobile_overlay_app_works_best_on_desktop": "Forma は より 大きな 画面 で最適に 作動します。 フォーム を 管理または 構築する には、 別の デバイス に 切り替える 必要が あります。",
+    "mobile_overlay_copy_link": "リンクをコピーしてパソコンで開く",
+    "mobile_overlay_signed_in_as": "{email}でログイン中",
     "mobile_overlay_surveys_look_good": "ご安心ください - お使い の デバイス や 画面 サイズ に 関係なく、 フォーム は 素晴らしく 見えます！",
     "mobile_overlay_title": "おっと、 小さな 画面 が 検出されました！",
     "months": "ヶ月",
@@ -675,6 +698,7 @@
     },
     "workspaces": {
       "new": {
+        "skip_for_now": "今はスキップ",
         "survey": {
           "create_with_ai_description": "必要な内容を説明すると、AIが自動生成したアンケートから始められます。",
           "start_from_scratch": "ゼロから作成",

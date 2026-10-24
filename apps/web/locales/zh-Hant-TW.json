@@ -20,6 +20,7 @@
     },
     "forgot-password": {
       "back_to_login": "返回登入",
+      "description": "輸入您的電子郵件，我們會寄送重設密碼的連結給您。",
       "email-sent": {
         "heading": "已成功請求重設密碼",
         "text": "如果此電子郵件存在帳戶，您將很快收到重設密碼的說明。"
@@ -35,12 +36,15 @@
         }
       },
       "reset_password": "重設密碼",
-      "reset_password_description": "您將被登出以重設您的密碼。"
+      "reset_password_description": "您將被登出以重設您的密碼。",
+      "title": "忘記密碼了嗎？"
     },
     "invite": {
+      "already_used_signed_in": "如果您是透過此邀請建立帳戶，您已經是成員了。",
       "create_account": "建立帳戶",
       "email_does_not_match": "哎呀！電子郵件不符 🤦",
       "email_does_not_match_description": "邀請中的電子郵件與您的不符。",
+      "email_does_not_match_for": "此邀請是寄給{email}，但您目前登入的是{currentEmail}。請使用受邀的電子郵件地址登入以接受邀請。",
       "go_to_app": "前往應用程式",
       "happy_to_have_you": "很高興能有你 🤗",
       "happy_to_have_you_description": "請建立帳戶或登入。",
@@ -48,9 +52,13 @@
       "invite_expired_description": "邀請有效期為 7 天。請請求新的邀請。",
       "invite_not_found": "找不到邀請 😥",
       "invite_not_found_description": "找不到邀請碼或已使用過。",
+      "invited_you_to_join": "{inviterName}邀請您加入{organizationName}。",
       "login": "登入",
+      "switch_account": "登出並切換帳戶",
       "welcome_to_organization": "您已加入 🎉",
-      "welcome_to_organization_description": "歡迎加入組織。"
+      "welcome_to_organization_description": "歡迎加入組織。",
+      "you_are_invited_to_join": "您受邀加入{organizationName}。",
+      "you_joined": "您已加入{organizationName}"
     },
     "last_used": "上次使用",
     "login": {
@@ -134,6 +142,19 @@
     "signup_without_verification_success": {
       "user_successfully_created": "使用者建立成功",
       "user_successfully_created_info": "我們已檢查與 {email} 相關聯的帳戶。如果不存在，我們已為您建立一個。如果帳戶已存在，則未進行任何更改。請在下方登入以繼續。"
+    },
+    "two_factor": {
+      "i_saved_my_codes": "我已儲存備份碼",
+      "provide_code_or_backup_code": "請輸入驗證器應用程式中的驗證碼或備份碼。"
+    },
+    "validation": {
+      "captcha_required": "請完成人機驗證。",
+      "invalid_email": "請輸入有效的電子郵件地址。",
+      "name_invalid": "姓名中包含不允許使用的字元。",
+      "name_required": "請輸入您的姓名。",
+      "password_needs_upper_and_digit": "請至少包含一個大寫字母和一個數字。",
+      "password_too_long": "請使用不超過{max}個字元。",
+      "password_too_short": "請至少使用{min}個字元。"
     },
     "verification-requested": {
       "email_not_configured_description": "此 Forma 實例未設定電子郵件伺服器，因此無法發送驗證連結。請聯絡您的管理員。",
@@ -363,6 +384,8 @@
     "meta": "Meta",
     "metadata": "中繼資料",
     "mobile_overlay_app_works_best_on_desktop": "Forma 適合在大螢幕上使用。若要管理或建立問卷，請切換到其他裝置。",
+    "mobile_overlay_copy_link": "複製連結，在電腦上開啟",
+    "mobile_overlay_signed_in_as": "目前登入：{email}",
     "mobile_overlay_surveys_look_good": "別擔心——你的問卷在各種裝置與螢幕尺寸上都會呈現得很棒！",
     "mobile_overlay_title": "糟糕 ，偵測到小螢幕！",
     "months": "月",
@@ -675,6 +698,7 @@
     },
     "workspaces": {
       "new": {
+        "skip_for_now": "暫時略過",
         "survey": {
           "create_with_ai_description": "描述您的需求，從生成的問卷開始。",
           "start_from_scratch": "從頭開始",
