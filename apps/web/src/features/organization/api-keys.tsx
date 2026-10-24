@@ -401,12 +401,13 @@ const OrganizationAccessSwitches = ({
   readDisabled?: boolean;
   disabled?: boolean;
 }) => {
+  const { t } = useTranslation();
   const id = useId();
   return (
     <div className="mt-2 flex items-center gap-6">
       <div className="flex items-center gap-2">
         <span id={`${id}-read`} className="text-sm font-medium text-slate-800">
-          Read
+          {t("workspace.api_keys.organization_read")}
         </span>
         <Switch
           aria-labelledby={`${id}-read`}
@@ -417,7 +418,7 @@ const OrganizationAccessSwitches = ({
       </div>
       <div className="flex items-center gap-2">
         <span id={`${id}-write`} className="text-sm font-medium text-slate-800">
-          Write
+          {t("workspace.api_keys.organization_write")}
         </span>
         <Switch
           aria-labelledby={`${id}-write`}
