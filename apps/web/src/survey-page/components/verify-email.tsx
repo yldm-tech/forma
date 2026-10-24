@@ -21,6 +21,9 @@ import { StackedCardsContainer } from "./stacked-cards-container";
 
 const ZEmail = z.email();
 
+/** A ghost button whose label is a sentence: it wraps on a narrow screen and grows to fit. The Button base keeps one line at a fixed height, and in Japanese "just curious? preview the questions" alone was wider than a phone, pushing the whole gate off both sides of the screen. It is a block rather than the base's flex row, so the label's two parts wrap as one sentence instead of two narrow columns side by side. */
+const WRAPPING_TEXT_BUTTON = "mx-auto mt-6 block h-auto whitespace-normal text-center";
+
 /**
  * forma2's VerifyEmail gate: asks for the respondent's address and mails them the survey link with a token proving it, or, for a verification link that does not verify, says so. "Just curious?" lists the questions.
  */
@@ -93,7 +96,7 @@ export const VerifyEmail = ({
           🤔
         </span>
         <h1 className="mt-8 text-4xl font-bold">{t("s.this_looks_fishy")}</h1>
-        <Button variant="ghost" className="mt-4" onClick={handleGoBackClick}>
+        <Button variant="ghost" className="mt-4 h-auto whitespace-normal" onClick={handleGoBackClick}>
           {t("s.please_try_again_with_the_original_link")}
         </Button>
       </main>
@@ -151,7 +154,7 @@ export const VerifyEmail = ({
               <Button
                 type="button"
                 variant="ghost"
-                className="mt-6"
+                className={WRAPPING_TEXT_BUTTON}
                 onClick={() => setShowPreviewQuestions(true)}>
                 {t("s.just_curious")} <span>{t("s.preview_survey_questions")}</span>
               </Button>
@@ -168,7 +171,10 @@ export const VerifyEmail = ({
                 )}`}</p>
               ))}
             </div>
-            <Button variant="ghost" className="mt-6" onClick={() => setShowPreviewQuestions(false)}>
+            <Button
+              variant="ghost"
+              className={WRAPPING_TEXT_BUTTON}
+              onClick={() => setShowPreviewQuestions(false)}>
               {t("s.want_to_respond")} <span>{t("s.verify_email")}</span>
             </Button>
           </div>
