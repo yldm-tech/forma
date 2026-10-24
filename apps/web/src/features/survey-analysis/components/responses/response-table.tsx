@@ -23,7 +23,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Maximize2Icon } from "lucide-react";
-import { memo, useEffect, useMemo, useState } from "react";
+import { type ReactNode, memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
 import { TableCell, TableRow } from "../../../../components/ui/table";
@@ -31,17 +31,19 @@ import { cn } from "../../../../lib/cn";
 import { readStorage, writeStorage } from "../../../../lib/storage";
 import { toast } from "../../../../lib/toast";
 import { type ExportFormat, analysisApi } from "../../api";
-import { reconcileColumnOrder, seedReservedColumnVisibility } from "../../lib/column-state";
+import { reconcileColumnOrder, seedColumnVisibility } from "../../lib/column-state";
 import { saveExport } from "../../lib/download";
 import { mapResponsesToTableData } from "../../lib/response-table";
 import {
   DataTableHeader,
   DataTableSettingsModal,
   DataTableToolbar,
+  PINNED_COLUMN_IDS,
   getCommonPinningStyles,
+  isPinnedColumn,
 } from "./data-table-parts";
 import { ResponseCardModal } from "./response-card-modal";
-import { generateResponseTableColumns } from "./response-table-columns";
+import { generateResponseTableColumns, getDefaultHiddenColumnIds } from "./response-table-columns";
 import { SelectedRowSettings } from "./selected-row-settings";
 
 /** Keeps a dragged column on its row, as dnd-kit's restrictToHorizontalAxis did in forma2. */
@@ -71,8 +73,9 @@ const ResponseTableCell = memo(
     onOpen: (responseId: string) => void;
     expandLabel: string;
   }) => {
+    const isSelect = cell.column.id === "select";
     const open = () => {
-      if (cell.column.id !== "select") onOpen(row.id);
+      if (!isSelect) onOpen(row.id);
     };
     return (
       <TableCell
@@ -80,22 +83,32 @@ const ResponseTableCell = memo(
           "border-slate-200 bg-white shadow-none group-hover:bg-slate-100",
           row.getIsSelected() && "bg-slate-100",
           !cell.column.getIsLastColumn() && "border-r",
-          !cell.column.getIsFirstColumn() && "border-l"
+          !cell.column.getIsFirstColumn() && "border-l",
+          isSelect && "px-2"
         )}
         style={{
           width: `${cell.column.getSize()}px`,
-          ...(cell.column.id === "select" ? getCommonPinningStyles(cell.column) : {}),
+          ...(isPinnedColumn(cell.column.id) ? getCommonPinningStyles(cell.column) : {}),
         }}
         onClick={open}>
         <div className="flex w-full items-center">
-          <div className={cn("flex flex-1 items-center truncate", isExpanded ? "h-full" : "h-10")}>
+          {/* The selection cell is not truncated: overflow hidden would clip the checkbox's border. */}
+          <div
+            className={cn(
+              "flex flex-1 items-center",
+              !isSelect && "min-w-0 truncate",
+              isExpanded ? "h-full" : "h-10"
+            )}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </div>
+          {/* A mouse affordance only: the date itself is the row's keyboard stop that opens the response. */}
           {cell.column.id === "createdAt" && (
             <button
               type="button"
-              aria-label={expandLabel}
-              className="hidden shrink-0 cursor-pointer items-center rounded-md border border-slate-200 bg-white p-2 group-hover:flex hover:border-slate-300 focus:outline-hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+              title={expandLabel}
+              className="hidden shrink-0 cursor-pointer items-center rounded-md border border-slate-200 bg-white p-2 group-focus-within:flex group-hover:flex hover:border-slate-300 focus:outline-hidden"
               onClick={(event) => {
                 event.stopPropagation();
                 open();
@@ -121,6 +134,8 @@ export const ResponseTable = ({
   fetchNextPage,
   hasMore,
   isFetchingFirstPage,
+  totalCount,
+  emptyState,
   showQuotasColumn,
   locale,
   onResponseChanged,
@@ -130,9 +145,13 @@ export const ResponseTable = ({
   responses: TResponseWithQuotas[];
   environmentTags: TTag[];
   isReadOnly: boolean;
-  fetchNextPage: () => void;
+  fetchNextPage: () => Promise<unknown>;
   hasMore: boolean;
   isFetchingFirstPage: boolean;
+  /** How many responses match the current filter, when known: the response card's position reads "n of total". */
+  totalCount: number | undefined;
+  /** What shows under the header row when no response matches: it sits outside the table, which is as wide as all its columns, so it stays in view. */
+  emptyState: ReactNode;
   showQuotasColumn: boolean;
   locale: string;
   onResponseChanged: (responseId: string) => void;
@@ -142,8 +161,8 @@ export const ResponseTable = ({
   const orderKey = `${survey.id}-columnOrder`;
   const visibilityKey = `${survey.id}-columnVisibility`;
   const expandKey = `${survey.id}-rowExpand`;
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
-    seedReservedColumnVisibility(readJson<VisibilityState>(visibilityKey) ?? {})
+  const [savedVisibility, setSavedVisibility] = useState<VisibilityState>(
+    () => readJson<VisibilityState>(visibilityKey) ?? {}
   );
   const [rowSelection, setRowSelection] = useState({});
   const [isTableSettingsModalOpen, setIsTableSettingsModalOpen] = useState(false);
@@ -162,6 +181,11 @@ export const ResponseTable = ({
           column.id ?? ("accessorKey" in column ? String(column.accessorKey).replaceAll(".", "_") : "")
       ),
     [columns]
+  );
+  // A column the saved state has never seen gets its default visibility; one the author has shown or hidden keeps that choice.
+  const columnVisibility = useMemo(
+    () => seedColumnVisibility(savedVisibility, getDefaultHiddenColumnIds(survey, defaultColumnOrder)),
+    [savedVisibility, survey, defaultColumnOrder]
   );
   const [savedOrder, setSavedOrder] = useState<string[]>(() => readJson<string[]>(orderKey) ?? []);
   // A saved order is reconciled with the table's real columns: stale ids drop, new ones take their default place.
@@ -211,7 +235,8 @@ export const ResponseTable = ({
     columns: tableColumns,
     getRowId: (row) => row.responseId,
     getCoreRowModel: getCoreRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: (updater) =>
+      setSavedVisibility(typeof updater === "function" ? updater(columnVisibility) : updater),
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: (updater) =>
       setSavedOrder((current) =>
@@ -223,7 +248,7 @@ export const ResponseTable = ({
     columnResizeDirection: "ltr",
     manualPagination: true,
     defaultColumn: { size: 300 },
-    state: { columnOrder, columnVisibility, rowSelection, columnPinning: { left: ["select", "createdAt"] } },
+    state: { columnOrder, columnVisibility, rowSelection, columnPinning: { left: PINNED_COLUMN_IDS } },
   });
 
   const sensors = useSensors(
@@ -254,6 +279,7 @@ export const ResponseTable = ({
   };
 
   const rows = table.getRowModel().rows;
+  const isEmpty = !isFetchingFirstPage && rows.length === 0;
 
   return (
     <div>
@@ -280,8 +306,9 @@ export const ResponseTable = ({
           setIsTableSettingsModalOpen={setIsTableSettingsModalOpen}
           isExpanded={isExpanded}
         />
-        <div className="w-fit max-w-full overflow-hidden overflow-x-auto rounded-xl border border-slate-200">
-          <div className="w-full overflow-x-auto">
+        {/* The one scroll container of the table, both ways, at most a viewport tall: the header row sticks to its top and the horizontal scrollbar stays in view. */}
+        <div className="max-h-[calc(100dvh-8rem)] w-fit max-w-full overflow-auto rounded-xl border border-slate-200">
+          <div className="w-full">
             <table
               className="w-full caption-bottom text-sm"
               style={{ tableLayout: "fixed" }}
@@ -320,21 +347,15 @@ export const ResponseTable = ({
                     ))}
                   </TableRow>
                 ))}
-                {rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      {t("common.no_results")}
-                    </TableCell>
-                  </TableRow>
-                )}
               </tbody>
             </table>
           </div>
+          {isEmpty && <div className="sticky left-0">{emptyState}</div>}
         </div>
 
         {hasMore && data.length > 0 && (
           <div className="mt-4 flex justify-center">
-            <Button onClick={fetchNextPage}>{t("common.load_more")}</Button>
+            <Button onClick={() => void fetchNextPage()}>{t("common.load_more")}</Button>
           </div>
         )}
 
@@ -349,6 +370,9 @@ export const ResponseTable = ({
         <ResponseCardModal
           survey={survey}
           responses={responses}
+          hasMore={hasMore}
+          fetchNextPage={fetchNextPage}
+          totalCount={totalCount}
           environmentTags={environmentTags}
           isReadOnly={isReadOnly}
           onResponseChanged={onResponseChanged}

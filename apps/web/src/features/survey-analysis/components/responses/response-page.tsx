@@ -1,19 +1,29 @@
 import type { TResponseWithQuotas } from "@forma/types/responses";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { type InfiniteData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../../../components/ui/button";
 import { errorMessage } from "../../../../lib/errors";
 import { tagsQuery } from "../../../../lib/queries/tags";
 import { replaceHeadlineRecall } from "../../../../lib/survey/recall";
 import { quotasQuery } from "../../../survey-editor/api";
-import { analysisApi, analysisKeys, surveyResponsesQuery, toResponseTag } from "../../api";
+import {
+  analysisApi,
+  analysisKeys,
+  surveyResponseCountQuery,
+  surveyResponsesQuery,
+  toResponseTag,
+} from "../../api";
+import { hasActiveFilters } from "../../lib/filter-state";
+import { AnalysisEmptyState } from "../analysis-empty-state";
 import { CustomFilter } from "../filter/custom-filter";
 import { useResponseFilter } from "../filter/response-filter-context";
 import { ResponseTable } from "./response-table";
 
 /**
- * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first. A deleted response leaves the loaded pages at once; a tag change reads the response again.
+ * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once; a tag change reads the response again. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
  */
 export const ResponsePage = ({
   survey,
@@ -26,9 +36,14 @@ export const ResponsePage = ({
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { filterCriteria } = useResponseFilter();
+  const router = useRouter();
+  const location = useLocation();
+  const { filterCriteria, selectedFilter, dateRange, resetState } = useResponseFilter();
+  const isFiltered = hasActiveFilters(selectedFilter, dateRange);
   const responsesQuery = surveyResponsesQuery(survey.id, filterCriteria);
   const responses = useInfiniteQuery(responsesQuery);
+  // The count under the current filter; the delete and tag handlers below invalidate it with the other analysis reads.
+  const matchingCount = useQuery(surveyResponseCountQuery(survey.id, filterCriteria));
   const tags = useQuery(tagsQuery(survey.workspaceId));
   const quotas = useQuery(quotasQuery(survey.id));
   const surveyWithRecall = useMemo(() => replaceHeadlineRecall(survey, "default"), [survey]);
@@ -59,11 +74,55 @@ export const ResponsePage = ({
     void invalidateOtherAnalysis();
   };
 
+  // The share modal of the header opens from the ?share param, as it does after publishing.
+  const openShare = () =>
+    void router.navigate({
+      href: `${location.pathname}${router.options.stringifySearch({ ...location.search, share: true })}`,
+    });
+
+  const clearFiltersButton = (
+    <Button variant="secondary" size="sm" onClick={resetState}>
+      {t("common.clear_filters")}
+    </Button>
+  );
+
+  const emptyState = isFiltered ? (
+    <AnalysisEmptyState
+      title={t("workspace.surveys.responses.no_responses_match_filters")}
+      action={clearFiltersButton}
+    />
+  ) : (
+    <AnalysisEmptyState
+      title={t("workspace.surveys.responses.no_responses_yet")}
+      action={
+        !survey.archivedAt && (
+          <Button size="sm" onClick={openShare}>
+            {t("workspace.surveys.summary.share_survey")}
+          </Button>
+        )
+      }
+    />
+  );
+
+  const total = matchingCount.data;
+  const showCount = !responses.isPending && total !== undefined && total > 0;
+
   return (
     <>
-      <div className="flex h-9 gap-1.5">
+      <div className="flex min-h-9 gap-1.5">
         <CustomFilter survey={surveyWithRecall} />
       </div>
+      {showCount && (
+        <div className="flex items-center gap-3 text-sm text-slate-600">
+          <p aria-live="polite">
+            {t("workspace.surveys.responses.showing_count", {
+              loaded: Math.min(loaded.length, total),
+              total,
+            })}
+          </p>
+          {isFiltered && clearFiltersButton}
+        </div>
+      )}
       {responses.isError && (
         <p role="alert" className="text-sm text-red-600">
           {errorMessage(t, responses.error)}
@@ -75,9 +134,11 @@ export const ResponsePage = ({
           responses={loaded}
           environmentTags={environmentTags}
           isReadOnly={isReadOnly}
-          fetchNextPage={() => void responses.fetchNextPage()}
+          fetchNextPage={() => responses.fetchNextPage()}
           hasMore={responses.hasNextPage}
           isFetchingFirstPage={responses.isPending}
+          totalCount={total}
+          emptyState={emptyState}
           showQuotasColumn={(quotas.data?.length ?? 0) > 0}
           locale={locale}
           onResponseChanged={(responseId) => void onResponseChanged(responseId)}

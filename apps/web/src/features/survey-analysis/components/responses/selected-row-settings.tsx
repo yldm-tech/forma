@@ -31,6 +31,9 @@ export const deleteInChunks = async (
 
 const Separator = () => <div aria-hidden="true">|</div>;
 
+// The toolbar sits on the primary colour, so its buttons are ghost buttons in white; the enabled:hover: prefix lets them replace the variant's hover colours.
+const TOOLBAR_BUTTON = "h-6 px-2 text-white enabled:hover:bg-white/15 enabled:hover:text-white";
+
 /** forma2's SelectedRowSettings for responses: the selection's count, select all or none, download and delete. */
 export const SelectedRowSettings = ({
   table,
@@ -60,7 +63,7 @@ export const SelectedRowSettings = ({
     try {
       await deleteInChunks(ids, (id) => deleteResponse(id, decrementQuotas));
       onDeleted(ids);
-      toast.success(t("common.table_items_deleted_successfully", { type: "Response" }));
+      toast.success(t("workspace.surveys.responses.responses_deleted", { count: ids.length }));
     } catch (error) {
       toast.error(errorMessage(t, error));
     } finally {
@@ -84,26 +87,28 @@ export const SelectedRowSettings = ({
   return (
     <>
       <div className="bg-primary flex items-center gap-x-2 rounded-md p-1 px-2 text-xs text-white">
-        <div className="lowercase">{`${selectedRowCount} ${t("common.responses")} ${t("common.selected")}`}</div>
+        <div aria-live="polite">
+          {t("workspace.surveys.responses.selected_count", { count: selectedRowCount })}
+        </div>
         <Separator />
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="h-6 border-none px-2"
+          className={TOOLBAR_BUTTON}
           onClick={() => table.toggleAllPageRowsSelected(true)}>
           {t("common.select_all")}
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="h-6 border-none px-2"
+          className={TOOLBAR_BUTTON}
           onClick={() => table.toggleAllPageRowsSelected(false)}>
           {t("common.clear_selection")}
         </Button>
         <Separator />
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={isDownloading}>
-            <Button variant="outline" size="sm" className="h-6 gap-1 border-none px-2">
+            <Button variant="ghost" size="sm" className={`${TOOLBAR_BUTTON} gap-1`}>
               {isDownloading ? <Loader2Icon className="size-4 animate-spin" /> : <ArrowDownToLineIcon />}
               {t("common.download")}
             </Button>
@@ -132,7 +137,7 @@ export const SelectedRowSettings = ({
         deleteWhat={t("common.count_responses", { count: selectedRowCount })}
         onDelete={() => void handleDelete()}
         isDeleting={isDeleting}
-        text={t("workspace.surveys.responses.delete_response_confirmation")}>
+        text={t("workspace.surveys.responses.delete_responses_confirmation", { count: selectedRowCount })}>
         {hasQuotas && (
           <DecrementQuotasCheckbox
             title={t("workspace.surveys.responses.bulk_delete_response_quotas")}

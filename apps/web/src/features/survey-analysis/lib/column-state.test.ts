@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { RESERVED_FIELD_CATALOG } from "@forma/types/embedded-data-resolver";
-import { reconcileColumnOrder, seedReservedColumnVisibility } from "./column-state";
+import { reconcileColumnOrder, seedColumnVisibility, seedReservedColumnVisibility } from "./column-state";
 import { reservedColumnId } from "./response-table";
 
 /**
@@ -138,5 +138,24 @@ describe("seedReservedColumnVisibility", () => {
 
     expect(seeded.ELEMENT_q1).toBe(false);
     expect(seeded.tags).toBe(true);
+  });
+});
+
+describe("seedColumnVisibility", () => {
+  test("hides the default-hidden columns an author has never decided about", () => {
+    const seeded = seedColumnVisibility({}, ["singleUseId", "ELEMENT_q1optionIds"]);
+    expect(seeded.singleUseId).toBe(false);
+    expect(seeded.ELEMENT_q1optionIds).toBe(false);
+  });
+
+  test("keeps an explicit choice, so a column the author revealed stays visible", () => {
+    const seeded = seedColumnVisibility({ ELEMENT_q1optionIds: true }, ["ELEMENT_q1optionIds"]);
+    expect(seeded.ELEMENT_q1optionIds).toBe(true);
+  });
+
+  test("still seeds the reserved columns", () => {
+    const secondary = RESERVED_FIELD_CATALOG.find((entry) => entry.display === "secondary");
+    expect(secondary).toBeDefined();
+    expect(seedColumnVisibility({}, [])[reservedColumnId(secondary?.name ?? "")]).toBe(false);
   });
 });

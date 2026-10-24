@@ -64,3 +64,17 @@ export const seedReservedColumnVisibility = (saved: VisibilityState): Visibility
 
   return seeded;
 };
+
+/**
+ * Seeds the table's default visibility for every column the persisted state has never seen: the reserved columns as {@link seedReservedColumnVisibility} does, and the columns the table starts hidden (the single-use id of a survey that does not use single-use links, the option-id twin of every choice question). Like the reserved seeding it only fills gaps, so a column an author has shown or hidden keeps that choice.
+ */
+export const seedColumnVisibility = (
+  saved: VisibilityState,
+  hiddenByDefault: readonly string[]
+): VisibilityState => {
+  const seeded = seedReservedColumnVisibility(saved);
+  for (const columnId of hiddenByDefault) {
+    if (!(columnId in seeded)) seeded[columnId] = false;
+  }
+  return seeded;
+};

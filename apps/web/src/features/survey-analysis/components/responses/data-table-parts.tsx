@@ -24,7 +24,7 @@ import {
   MoveVerticalIcon,
   SettingsIcon,
 } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import {
@@ -46,6 +46,11 @@ import { cn } from "../../../../lib/cn";
 
 // forma2's data-table components, as the response table uses them: the sortable header, the column menu, the table settings and the toolbar.
 
+/** The columns pinned to the left of the response table: the selection and the date, so a row keeps its anchor when the table scrolls sideways. */
+export const PINNED_COLUMN_IDS = ["select", "createdAt"];
+
+export const isPinnedColumn = (columnId: string) => PINNED_COLUMN_IDS.includes(columnId);
+
 /** The sticky position of a column pinned to the left. */
 export const getCommonPinningStyles = <T,>(column: Column<T>): CSSProperties => ({
   left: `${column.getStart("left") - 1}px`,
@@ -64,7 +69,7 @@ export const getSelectionColumn = <T extends object>(
   size: 60,
   enableResizing: false,
   header: ({ table }) => (
-    <div className="flex w-full items-center justify-center pr-4">
+    <div className="flex w-full items-center justify-center">
       <Checkbox
         checked={table.getIsAllPageRowsSelected()}
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
@@ -73,7 +78,7 @@ export const getSelectionColumn = <T extends object>(
     </div>
   ),
   cell: ({ row }) => (
-    <div className="flex w-full items-center justify-center pr-4">
+    <div className="flex w-full items-center justify-center">
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(value === true)}
@@ -83,18 +88,28 @@ export const getSelectionColumn = <T extends object>(
   ),
 });
 
+/** A column's menu. It is named "Column options" followed by the column's title (aria-labelledby on itself and the title), and it is out of the tab order: both of its actions are in the toolbar's table settings, and one stop per column would put dozens of stops between the toolbar and the first row. */
 const ColumnSettingsDropdown = <T,>({
   column,
   setIsTableSettingsModalOpen,
+  titleId,
 }: {
   column: Column<T>;
   setIsTableSettingsModalOpen: (open: boolean) => void;
+  titleId: string;
 }) => {
   const { t } = useTranslation();
+  const triggerId = useId();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="py-2 focus:outline-hidden" aria-label={t("common.table_settings")}>
+        <button
+          id={triggerId}
+          type="button"
+          tabIndex={-1}
+          className="py-2 focus:outline-hidden"
+          aria-label={t("workspace.surveys.responses.column_options")}
+          aria-labelledby={`${triggerId} ${titleId}`}>
           <EllipsisVerticalIcon className="size-4" />
         </button>
       </DropdownMenuTrigger>
@@ -123,16 +138,20 @@ export const DataTableHeader = <T,>({
   setIsTableSettingsModalOpen: (open: boolean) => void;
 }) => {
   const { t } = useTranslation();
+  const titleId = useId();
   const { attributes, isDragging, listeners, setNodeRef, transform } = useSortable({ id: header.column.id });
+  const pinned = isPinnedColumn(header.column.id);
+  // Every header cell sticks to the top of the table's scroll container; the pinned ones also to its left, above the other headers and the pinned body cells.
   const style: CSSProperties = {
     opacity: isDragging ? 0.8 : 1,
-    position: "relative",
     transform: CSS.Translate.toString(transform),
     transition: "width transform 0.2s ease-in-out",
     whiteSpace: "nowrap",
     width: header.column.getSize(),
-    zIndex: isDragging ? 1 : 0,
-    ...(header.column.id === "select" ? getCommonPinningStyles(header.column) : {}),
+    ...(pinned ? getCommonPinningStyles(header.column) : {}),
+    position: "sticky",
+    top: 0,
+    zIndex: isDragging ? 4 : pinned ? 3 : 2,
   };
 
   return (
@@ -141,7 +160,7 @@ export const DataTableHeader = <T,>({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative h-10 border-b border-slate-200 bg-white px-4 text-center align-middle font-medium",
+        "group h-10 border-b border-slate-200 bg-white px-4 text-center align-middle font-medium shadow-[inset_0_-1px_0_var(--color-slate-200)]",
         {
           "border-r": !header.column.getIsLastColumn(),
           "border-l": !header.column.getIsFirstColumn(),
@@ -153,18 +172,21 @@ export const DataTableHeader = <T,>({
             <ColumnSettingsDropdown
               column={header.column}
               setIsTableSettingsModalOpen={setIsTableSettingsModalOpen}
+              titleId={titleId}
             />
+            {/* dnd-kit's attributes make the handle a tab stop; tabIndex comes after them to take it out. Keyboard reordering is in the table settings. */}
             <button
               type="button"
               {...attributes}
               {...listeners}
+              tabIndex={-1}
               className="cursor-move"
               aria-label={t("common.reorder_and_hide_columns")}>
               <GripVerticalIcon className="size-4" />
             </button>
           </div>
         )}
-        <div className="w-full truncate text-left font-semibold">
+        <div id={titleId} className="w-full truncate text-left font-semibold">
           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
         </div>
         {header.column.getCanResize() && (

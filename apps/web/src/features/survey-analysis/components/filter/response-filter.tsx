@@ -1,7 +1,7 @@
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Plus, TrashIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, TrashIcon, XIcon } from "lucide-react";
 import { type ButtonHTMLAttributes, Fragment, type ReactNode, forwardRef, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
@@ -16,6 +16,7 @@ import {
   type SelectedFilterValue,
   type TResponseStatus,
 } from "../../lib/filter-types";
+import { countAppliedFilters } from "../../lib/filter-state";
 import { NO_VALUE_FILTER_OPERATORS, generateElementAndFilterOptions } from "../../lib/filters";
 import { ElementFilterComboBox } from "./element-filter-combo-box";
 import { ElementsComboBox } from "./elements-combo-box";
@@ -159,7 +160,8 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
     ),
   }));
 
-  const activeFilterCount = filterValue.filter.length + (filterValue.responseStatus === "all" ? 0 : 1);
+  // The applied filter, not the rows being edited: a row added but not applied changes nothing yet.
+  const activeFilterCount = countAppliedFilters(selectedFilter);
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
@@ -273,12 +275,67 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
               {t("common.apply_filters")}
             </Button>
           </div>
-          <Button size="sm" variant="destructive" onClick={handleClearAllFilters}>
+          <Button size="sm" variant="ghost" onClick={handleClearAllFilters}>
             {t("common.clear_all")}
-            <TrashIcon />
           </Button>
         </div>
       </PopoverContent>
     </Popover>
+  );
+};
+
+/** What one applied condition reads as on its chip: the target, the operator and the value. */
+const describeFilterRow = (row: SelectedFilterValue["filter"][number]): string => {
+  const value = row.filterType.filterComboBoxValue;
+  const values = Array.isArray(value) ? value.join(", ") : (value ?? "");
+  return [row.elementType.label, row.filterType.filterValue, values].filter(Boolean).join(" ");
+};
+
+/** The applied conditions as chips beside the filter bar, each removable on its own, so a filtered view says what it is filtered by. */
+export const AppliedFilterChips = () => {
+  const { t } = useTranslation();
+  const { selectedFilter, setSelectedFilter } = useResponseFilter();
+  const statusLabel: Record<TResponseStatus, string | null> = {
+    all: null,
+    complete: t("workspace.surveys.filter.complete_responses"),
+    partial: t("workspace.surveys.filter.partial_responses"),
+  };
+  const chips = [
+    ...selectedFilter.filter.map((row, index) => ({
+      key: `${row.elementType.id ?? ""}-${index}`,
+      label: describeFilterRow(row),
+      remove: () =>
+        setSelectedFilter((current) => ({ ...current, filter: current.filter.filter((_, i) => i !== index) })),
+    })),
+    ...(statusLabel[selectedFilter.responseStatus]
+      ? [
+          {
+            key: "responseStatus",
+            label: statusLabel[selectedFilter.responseStatus] ?? "",
+            remove: () => setSelectedFilter((current) => ({ ...current, responseStatus: "all" })),
+          },
+        ]
+      : []),
+  ];
+  if (chips.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap items-center gap-1.5" aria-label={t("workspace.surveys.summary.applied_filters")}>
+      {chips.map((chip) => (
+        <li
+          key={chip.key}
+          className="flex h-9 max-w-72 items-center gap-1 rounded-md border border-slate-200 bg-slate-50 pr-1 pl-2.5 text-sm text-slate-700">
+          <span className="truncate" title={chip.label}>
+            {chip.label}
+          </span>
+          <button
+            type="button"
+            className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-sm p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-800 focus-visible:ring-2 focus-visible:outline-hidden"
+            aria-label={t("workspace.surveys.summary.remove_filter", { filter: chip.label })}
+            onClick={chip.remove}>
+            <XIcon className="size-3.5" />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 };
