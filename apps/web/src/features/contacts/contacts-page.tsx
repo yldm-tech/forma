@@ -344,9 +344,11 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
                           "border-slate-200 bg-white px-4 py-2 group-hover:bg-slate-100",
                           row.getIsSelected() && "bg-slate-100"
                         )}>
+                        {/* The link cell's wrapper does not clip: the link truncates itself, and its focus ring has to show outside its box. */}
                         <div
                           className={cn(
-                            "flex flex-1 truncate",
+                            "flex flex-1",
+                            !isLinkCell && "truncate",
                             isLinkCell && hiddenMatch ? "flex-col justify-center" : "items-center",
                             isExpanded ? "min-h-10" : "h-full"
                           )}>
@@ -354,7 +356,7 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
                             <Link
                               to="/workspaces/$workspaceId/contacts/$contactId"
                               params={{ workspaceId, contactId: row.id }}
-                              className="truncate rounded-sm hover:underline"
+                              className="truncate rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                               aria-label={linkText(row.original) ? undefined : rowName(row.original)}>
                               {content}
                             </Link>

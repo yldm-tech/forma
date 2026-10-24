@@ -58,7 +58,7 @@ export const SegmentsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
             {/* The title opens the segment, so the keyboard can reach it; the row click stays as a mouse convenience. */}
             <button
               type="button"
-              className="rounded-sm text-left font-medium text-slate-900 hover:underline"
+              className="rounded-sm text-left font-medium text-slate-900 hover:underline focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 focus-visible:outline-hidden"
               onClick={() => setEditing(info.row.original)}>
               {info.getValue()}
             </button>

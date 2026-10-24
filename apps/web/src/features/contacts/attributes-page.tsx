@@ -104,7 +104,7 @@ const AttributesTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isR
           return !isReadOnly && row.original.type === "custom" ? (
             <button
               type="button"
-              className="rounded-sm text-left hover:underline"
+              className="rounded-sm text-left hover:underline focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 focus-visible:outline-hidden"
               onClick={() => setEditing(row.original)}>
               {label}
             </button>
