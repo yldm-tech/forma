@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 var update = flag.Bool("update", false, "rewrite locales/*.json from apps/web/locales")
@@ -15,7 +17,7 @@ var update = flag.Bool("update", false, "rewrite locales/*.json from apps/web/lo
 // locales/*.json must stay the keys of apps/web/locales the preview uses; run with -update after changing apps/web/locales.
 func TestLocalesMatchWebLocales(t *testing.T) {
 	for _, locale := range Locales {
-		b, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "web", "locales", locale+".json"))
+		b, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/locales", locale+".json"))
 		if err != nil {
 			t.Fatal(err)
 		}

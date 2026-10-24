@@ -7,8 +7,7 @@ assertion-based validation suite.
   (`use typechecking`).
 - `schema-validation.yaml` — relationships, assertions, and expected-relations
   blocks that pin down the schema's semantics.
-- `validate.sh` — offline validation runner (local `zed` binary or the pinned
-  `authzed/zed` container image; no SpiceDB server needed).
+- `validate.sh` — offline validation runner, no SpiceDB server needed. Its `ZED_IMAGE` is the only pin of the zed version: with Docker it always validates in that `authzed/zed` image, as CI does, and only without Docker falls back to a local `zed` binary.
 - `schema.go` — the `authzed` Go package, which embeds `schema.zed` for the server (`internal/authz` reads it from there), so this directory holds the schema's only copy.
 - [Direct AuthZed cutover and rollback contract](https://linear.app/forma/document/direct-authzed-cutover-and-rollback-contract-b4c352aecdad) — the approved direct-authority, fail-closed,
   immutable-artifact, rollback, and environment-gate contract. It supersedes
@@ -76,7 +75,7 @@ Forma processes after changing AuthZed environment values.
 
 Before replacing any non-empty schema:
 
-1. Export the current schema with the pinned `zed` CLI.
+1. Export the current schema with the pinned `zed` CLI (the `ZED_IMAGE` version in `validate.sh`).
 2. Export relationships that depend on definitions or relations being removed.
 3. Store both files with mode `0600`.
 4. Run `check` and retain its remote digest.
