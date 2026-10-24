@@ -2,8 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { getDateFnsLocale } from "./date-fns-locale";
 
 describe("getDateFnsLocale", () => {
-  // The calendar reads month, weekday and first-day-of-week off the returned locale, so the assertions
-  // are on the resolved locale's `code` rather than on object identity.
+  // The calendar reads month, weekday and first-day-of-week off the returned locale, so the assertions are on the resolved locale's `code` rather than on object identity.
   test.each([
     ["de-DE", "de"],
     ["es-ES", "es"],
