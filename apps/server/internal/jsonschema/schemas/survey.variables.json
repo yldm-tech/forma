@@ -28,6 +28,7 @@
           "const": "number"
         },
         "value": {
+          "default": 0,
           "type": "number"
         }
       },
@@ -53,6 +54,7 @@
           "const": "text"
         },
         "value": {
+          "default": "",
           "type": "string"
         }
       },

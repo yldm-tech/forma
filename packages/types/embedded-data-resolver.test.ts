@@ -441,6 +441,10 @@ describe("coerceToEmbeddedDataType", () => {
       expect(coerceToEmbeddedDataType("2026-08-06T10:30:00Z", "date")).toBe("2026-08-06T10:30:00Z");
     });
 
+    test("keeps a minute-precision UTC datetime as-is, as the Go server's Coerce does", () => {
+      expect(coerceToEmbeddedDataType("2026-08-06T10:30Z", "date")).toBe("2026-08-06T10:30Z");
+    });
+
     test("coerces a Date instance to its ISO string", () => {
       expect(coerceToEmbeddedDataType(new Date("2026-08-06T10:30:00.000Z"), "date")).toBe(
         "2026-08-06T10:30:00.000Z"
@@ -485,6 +489,7 @@ describe("coerceToEmbeddedDataType", () => {
         "2026-08-06",
         "2026-08-06T10:30:00Z",
         "2026-08-06T10:30:00.123Z",
+        "2026-08-06T10:30Z",
         "2026-08-06T10:30:00+02:00",
         "2026-08-06T10:30:00",
         " 2026-08-06",

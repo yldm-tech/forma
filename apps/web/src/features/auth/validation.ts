@@ -67,7 +67,7 @@ const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d).*$/;
 export const emailError = (email: string): ValidationKey | undefined =>
   EMAIL_PATTERN.test(email) ? undefined : MESSAGES.invalidEmail;
 
-/** The sign-in form's password rule: length only, so an older password that predates the composition rule can still sign in. Lengths are UTF-16 code units, as zod counts them. */
+/** The sign-in form's password rule: length only, so an older password that predates the composition rule can still sign in. Lengths are String.prototype.length (UTF-16 code units), as the Go server counts them; zod 4.5+ counts code points, so ZUserPassword in packages/types is not this rule for astral characters. */
 export const signInPasswordError = (password: string): ValidationKey | undefined => {
   if (password.length < PASSWORD_MIN_LENGTH) return MESSAGES.passwordTooShort;
   if (password.length > PASSWORD_MAX_LENGTH) return MESSAGES.passwordTooLong;
