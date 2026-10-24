@@ -156,6 +156,7 @@ const SAME_IN_EVERY_LOCALE = new Set([
   "workspace.surveys.responses.os",
   "workspace.surveys.share.anonymous_links.custom_single_use_id_placeholder",
   "workspace.surveys.share.pretty_url.slug_placeholder",
+  "workspace.surveys.summary.nps_score_badge",
   "workspace.workflows.email_to_placeholder",
   "workspace.xm-templates.ces",
   "workspace.xm-templates.csat",
