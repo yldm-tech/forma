@@ -70,7 +70,7 @@
     "prepack": "node scripts/assert-pnpm-publish.mjs",
     "prepublishOnly": "node scripts/assert-pnpm-publish.mjs",
     "clean": "rimraf node_modules dist coverage",
-    "ui:add": "npx shadcn@latest add",
+    "ui:add": "npx shadcn@4.22.1 add",
     "test": "vp test run",
     "test:coverage": "vp test run --coverage"
   },
