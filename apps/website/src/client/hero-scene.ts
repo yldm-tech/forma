@@ -343,8 +343,6 @@ export const mountHeroScene = (container: HTMLElement, reducedMotion: MediaQuery
     renderer.setSize(width, height, false);
   };
   resize();
-  const resizeObserver = new ResizeObserver(resize);
-  resizeObserver.observe(container);
 
   // The pointer, in -1..1 of the hero box, followed with a lag; fine pointers only.
   const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
@@ -440,6 +438,13 @@ export const mountHeroScene = (container: HTMLElement, reducedMotion: MediaQuery
     pointer.x = pointer.y = pointer.targetX = pointer.targetY = 0;
     draw();
   }
+
+  // setSize resets the canvas's drawing buffer, which clears it. A running scene draws again on its next frame, but a frozen or paused one is drawn here, or the hero stays blank over the SVG it has already hidden.
+  const resizeObserver = new ResizeObserver(() => {
+    resize();
+    if (shown && !running && !disposed) draw();
+  });
+  resizeObserver.observe(container);
 
   const intersection = new IntersectionObserver(([entry]) => {
     visible = entry?.isIntersecting ?? false;

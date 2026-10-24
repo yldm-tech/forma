@@ -99,7 +99,7 @@ const main = async (): Promise<void> => {
   }
   report.push(`${pages.length} HTML pages`);
 
-  write("/sitemap.xml", buildSitemap(new Date().toISOString().slice(0, 10)));
+  write("/sitemap.xml", buildSitemap());
   write("/robots.txt", ROBOTS_TXT);
   mkdirSync(PRERENDER, { recursive: true });
   writeFileSync(join(PRERENDER, "redirects.conf"), buildRedirectsConf());

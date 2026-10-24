@@ -30,6 +30,19 @@ describe("prerendered pages", () => {
     }
   );
 
+  // WCAG 1.3.1: each heading is at most one level below the one before it, and a section is a landmark only when a heading of its own names it.
+  it.each([...ROUTES.map((route) => route.path), ...LOCALES.map(notFoundProbePath)])(
+    "%s keeps its heading order and names no section after the page",
+    async (path) => {
+      const html = await renderPath(path, assets);
+      const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((match) => Number(match[1]));
+      expect(levels[0]).toBe(1);
+      const skips = levels.flatMap((level, i) => (i > 0 && level > levels[i - 1] + 1 ? [`h${levels[i - 1]} → h${level}`] : []));
+      expect(skips).toEqual([]);
+      expect(html).not.toMatch(/<section[^>]* aria-label=/);
+    }
+  );
+
   it("renders the home hero in each locale", async () => {
     for (const locale of LOCALES) {
       const route = ROUTES.find((r) => r.locale === locale && r.page === "home");
@@ -54,10 +67,11 @@ describe("prerendered pages", () => {
 
 describe("sitemap, robots and redirects", () => {
   it("lists 24 URLs with alternates", () => {
-    const sitemap = buildSitemap("2026-10-24");
+    const sitemap = buildSitemap();
     expect(sitemap.match(/<url>/g)).toHaveLength(24);
     expect(sitemap.match(/hreflang="x-default"/g)).toHaveLength(24);
     expect(sitemap).toContain("<loc>https://forma.yldm.ai/ja/security/</loc>");
+    expect(sitemap).not.toContain("<lastmod>");
   });
 
   it("keeps crawlers out of the app", () => {

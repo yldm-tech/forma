@@ -77,7 +77,7 @@ export const zh: SiteContent = {
       meta: {
         title: "Forma：链接问卷、网站问卷与应用内问卷",
         description:
-          "用无代码编辑器搭建问卷，精准定向答题人群，查看结果并同步到 Slack、Notion、Google Sheets 或 Webhook。可用托管版，也可私有化部署。",
+          "用无代码编辑器搭建问卷，精准定向答题人群，查看结果并通过 Webhook 推送；私有化部署还可以同步到 Slack、Notion、Google Sheets。",
       },
       hero: {
         eyebrow: "问卷与用户反馈",
@@ -121,7 +121,7 @@ export const zh: SiteContent = {
       },
       act: {
         title: "让每条回答都有下文",
-        body: "把回答同步到 Slack、Notion、Airtable 或 Google Sheets，也可以用 Webhook 推送到任意地址。Workflows（Beta）会在回答提交完成后自动发邮件，还可以只针对你选定的结束页触发。",
+        body: "用 Webhook 把回答推送到任意地址；私有化部署还可以同步到 Slack、Notion、Airtable 或 Google Sheets。Workflows（Beta）会在回答提交完成后自动发邮件，还可以只针对你选定的结束页触发。",
         link: "查看集成 →",
       },
       ai: {
@@ -170,7 +170,7 @@ export const zh: SiteContent = {
       },
       control: {
         title: "控制谁来回答",
-        body: "可以为问卷设置 PIN 码、要求先验证邮箱再作答、开启 reCAPTCHA 防刷，还能限制回答数量或定时开放。",
+        body: "可以为问卷设置 PIN 码、要求先验证邮箱再作答，还能限制回答数量或定时开放；私有化部署还可以开启 reCAPTCHA 防刷。",
       },
       logic: {
         title: "逻辑与数据",
@@ -232,20 +232,20 @@ export const zh: SiteContent = {
       },
       language: {
         title: "语言",
-        body: "通过 SDK 设置用户语言。如果问卷没有该语言的翻译，Forma 就不会向该用户展示这份问卷。",
+        body: "通过 SDK 设置用户语言。如果多语言问卷没有该语言的翻译，Forma 就不会向该用户展示这份问卷。",
       },
     },
     integrations: {
       meta: {
         title: "集成与工作流 · Forma",
         description:
-          "把回答同步到 Slack、Notion、Airtable、Google Sheets 或 Webhook，并用 Workflows（Beta）在回答完成后自动发邮件。",
+          "用 Webhook 推送回答，私有化部署还可以同步到 Slack、Notion、Airtable、Google Sheets，并用 Workflows（Beta）在回答完成后自动发邮件。",
       },
       title: "集成与工作流",
       sub: "回答只有被看到才有价值。把它们送到团队工作的地方。",
       native: {
         title: "原生集成",
-        body: "连接账号，选择新回答要发送到哪里。",
+        body: "私有化部署配置好对应服务的 OAuth 应用后，即可连接账号，选择新回答要发送到哪里。",
       },
       webhooks: {
         title: "Webhook",

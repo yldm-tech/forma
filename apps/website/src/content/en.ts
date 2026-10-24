@@ -77,7 +77,7 @@ export const en: SiteContent = {
       meta: {
         title: "Forma: link, website and in-app surveys",
         description:
-          "Build surveys in a no-code editor, target who answers, read the results and send them to Slack, Notion, Google Sheets or a webhook. Hosted or self-hosted.",
+          "Build surveys in a no-code editor, target who answers, read the results and send them to a webhook, or to Slack, Notion and Google Sheets on self-hosted instances.",
       },
       hero: {
         eyebrow: "Surveys and feedback",
@@ -121,7 +121,7 @@ export const en: SiteContent = {
       },
       act: {
         title: "Turn responses into next steps",
-        body: "Send responses to Slack, Notion, Airtable or Google Sheets, or to any endpoint with webhooks. Workflows (Beta) send an email when a response is completed, optionally only for the endings you choose.",
+        body: "Send responses to any endpoint with webhooks, and on self-hosted instances to Slack, Notion, Airtable or Google Sheets. Workflows (Beta) send an email when a response is completed, optionally only for the endings you choose.",
         link: "See integrations →",
       },
       ai: {
@@ -171,7 +171,7 @@ export const en: SiteContent = {
       },
       control: {
         title: "Control who answers",
-        body: "Protect a survey with a PIN, require email verification before it starts, add reCAPTCHA spam protection, and cap or schedule submissions.",
+        body: "Protect a survey with a PIN, require email verification before it starts, and cap or schedule submissions. Self-hosted instances can add reCAPTCHA spam protection.",
       },
       logic: {
         title: "Logic and data",
@@ -240,20 +240,20 @@ export const en: SiteContent = {
       },
       language: {
         title: "Language",
-        body: "Set the user's language through the SDK. If a survey has no translation for it, Forma does not show that survey to the user.",
+        body: "Set the user's language through the SDK. If a multi-language survey has no translation for it, Forma does not show that survey to the user.",
       },
     },
     integrations: {
       meta: {
         title: "Integrations and Workflows · Forma",
         description:
-          "Send responses to Slack, Notion, Airtable, Google Sheets or webhooks, and email on completed responses with Workflows (Beta).",
+          "Send responses to webhooks, or to Slack, Notion, Airtable and Google Sheets on self-hosted instances, and email on completed responses with Workflows (Beta).",
       },
       title: "Integrations and Workflows",
       sub: "Responses are only useful once someone sees them. Send them where your team works.",
       native: {
         title: "Native integrations",
-        body: "Connect an account and choose where new responses go.",
+        body: "On a self-hosted instance with the service's OAuth app configured, connect an account and choose where new responses go.",
       },
       webhooks: {
         title: "Webhooks",

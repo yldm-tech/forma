@@ -392,8 +392,17 @@ jobs:
 
           status() { curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$1"; }
           location() { curl -s -o /dev/null -w '%{redirect_url}' "http://localhost:8080$1"; }
-          for path in / /zh/ /ja/ /form-builder/ /ja/security/ /sitemap.xml /robots.txt /favicon.ico; do
+          for path in / /zh/ /ja/ /form-builder/ /ja/security/ /sitemap.xml /robots.txt /_site/icons/favicon-32x32.png; do
             test "$(status "$path")" = "200" || { echo "$path: $(status "$path")"; exit 1; }
+          done
+          # Nothing from the base image, and nothing on a path the ingress gives the server (/favicon.ico is apps/web's).
+          for path in /50x.html /favicon.ico; do
+            test "$(status "$path")" = "404" || { echo "$path: $(status "$path")"; exit 1; }
+          done
+          # A directory under /_site/ is a 404 that is not cached, never a 403 or redirect with the assets' year-long Cache-Control.
+          for path in /_site/ /_site/assets/ /_site/assets; do
+            test "$(status "$path")" = "404" || { echo "$path: $(status "$path")"; exit 1; }
+            curl -sI "http://localhost:8080$path" | grep -iF 'cache-control: no-cache'
           done
           test "$(status /ja/no-such-page/)" = "404"
           curl -s http://localhost:8080/ja/no-such-page/ | grep -F '<html lang="ja">'

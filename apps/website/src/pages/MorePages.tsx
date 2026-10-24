@@ -46,7 +46,7 @@ export const IntegrationsPage = () => {
           </ul>
         </div>
       </section>
-      <section aria-label={page.title} className="section-pad">
+      <section className="section-pad">
         <div className="container-site grid gap-6 md:grid-cols-2">
           <FeatureCard icon="webhook" title={page.webhooks.title} body={page.webhooks.body} />
           <FeatureCard
@@ -100,7 +100,7 @@ export const DevelopersPage = () => {
         visual={<CodeBlock code={JS_SNIPPET} label="HTML" />}
         muted
       />
-      <section aria-label={page.title} className="section-pad">
+      <section className="section-pad">
         <div className="container-site grid gap-6 lg:grid-cols-3">
           <FeatureCard
             icon="terminal"
@@ -177,7 +177,7 @@ export const SelfHostingPage = () => {
           </div>
         </div>
       </section>
-      <section aria-label={page.title} className="section-pad">
+      <section className="section-pad">
         <div className="container-site grid gap-6 md:grid-cols-2">
           <FeatureCard icon="cpu" title={page.requirements.title} body={page.requirements.body} />
           <FeatureCard icon="key" title={page.signIn.title} body={page.signIn.body} />

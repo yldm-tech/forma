@@ -116,6 +116,7 @@ export const FeatureCard = ({
   href,
   linkLabel,
   badge,
+  heading: Heading = "h3",
 }: {
   icon: IconName;
   title: string;
@@ -123,10 +124,12 @@ export const FeatureCard = ({
   href?: string;
   linkLabel?: string;
   badge?: ReactNode;
+  /** h2 where the cards are the first level below the page's h1, as on a page with no section heading above them. */
+  heading?: "h2" | "h3";
 }) => (
   <div data-reveal className="card relative flex flex-col gap-4 p-6">
     <IconTile icon={icon} />
-    <h3 className="text-h3 flex flex-wrap items-center gap-2">
+    <Heading className="text-h3 flex flex-wrap items-center gap-2">
       {href && !linkLabel ? (
         <SmartLink href={href} className="after:absolute after:inset-0 hover:text-teal-700">
           {title}
@@ -135,7 +138,7 @@ export const FeatureCard = ({
         title
       )}
       {badge}
-    </h3>
+    </Heading>
     <p className="text-ink-700">
       <Rich text={body} />
     </p>
@@ -199,7 +202,7 @@ export const CodeBlock = ({ code, label }: { code: string; label: string }) => {
   const { content } = useSite();
   return (
     <figure data-code-block className="rounded-card border-line bg-surface-sunken overflow-hidden border">
-      <figcaption className="border-line text-small text-ink-500 flex items-center justify-between border-b px-4 py-2">
+      <figcaption className="border-line text-small text-ink-700 flex items-center justify-between border-b px-4 py-2">
         <span>{label}</span>
         <button
           type="button"

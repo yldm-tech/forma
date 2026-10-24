@@ -32,6 +32,9 @@ RUN SIGNUP_OPEN=${SIGNUP_OPEN} pnpm --filter @forma/website build
 # ---- runtime ----
 FROM ${NGINX_IMAGE}
 
+# The base image's own pages (index.html, 50x.html) go first: only the site's build is served from this root, so /50x.html is a 404 like any other path the site does not have.
+RUN rm -rf /usr/share/nginx/html/*
+
 COPY apps/website/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY apps/website/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/apps/website/.prerender/redirects.conf /etc/nginx/website/redirects.conf

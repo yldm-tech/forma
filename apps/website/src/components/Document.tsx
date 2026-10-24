@@ -33,7 +33,7 @@ const LocaleHintTemplate = ({ locale, page }: { locale: Locale; page: PageId | u
           <a
             href={page ? pagePath(locale, page) : localePrefix(locale)}
             hrefLang={HTML_LANG[locale]}
-            className="link">
+            className="link text-teal-700 hover:text-teal-900">
             {hint.text}
           </a>
           <button
@@ -110,6 +110,7 @@ export const Document = ({
             ))
           : null}
         {page ? <link rel="alternate" hrefLang="x-default" href={absoluteUrl(pagePath("en", page))} /> : null}
+        {/* /favicon.ico is the server's (apps/web/public/favicon.ico, the same icon): the ingress sends it there. */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/_site/icons/favicon-32x32.png" />
         <link rel="apple-touch-icon" href="/_site/icons/apple-touch-icon.png" />

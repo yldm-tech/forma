@@ -110,8 +110,10 @@
     font-size: 0.9em;
   }
 
+  /* The ring is a box-shadow, which forced-colors mode removes; the transparent outline is what that mode then draws in the system color. */
   :focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     box-shadow:
       0 0 0 2px #fff,
       0 0 0 4px var(--color-teal-600);

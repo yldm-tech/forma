@@ -69,7 +69,7 @@ export const localeOfPath = (path: string): Locale =>
   LOCALES.find((locale) => locale !== "en" && (path === `/${locale}` || path.startsWith(`/${locale}/`))) ??
   "en";
 
-// Paths the website must never serve on forma.yldm.ai: the app (/app), the Go server's public pages, APIs, SDK bundles and well-known endpoints, the documentation, and the files the server serves from apps/web/public that stored surveys, emails and customer sites load cross-origin. The ingress sends these to the server or the docs image, so a page here would be unreachable at best and would shadow a live URL at worst.
+// Paths the website must never serve on forma.yldm.ai: the app (/app) and the root admin paths the server redirects into it (webui.LegacyAdminPaths), the Go server's public pages, APIs, SDK bundles and well-known endpoints, the documentation, and the files the server serves from apps/web/public at their root URL (webui.RootPublicPaths) that stored surveys, emails, browsers and customer sites load. The ingress sends these to the server or the docs image, so a page here would be unreachable at best and would shadow a live URL at worst.
 export const RESERVED_PREFIXES = [
   "/app",
   "/api",
@@ -82,7 +82,9 @@ export const RESERVED_PREFIXES = [
   "/ingest",
   "/storage",
   "/health",
+  "/account",
   "/auth",
+  "/billing-confirmation",
   "/environments",
   "/organizations",
   "/projects",
@@ -96,6 +98,7 @@ export const RESERVED_PREFIXES = [
   "/oauth",
   "/mcp",
   "/favicon",
+  "/favicon.ico",
   "/image-backgrounds",
   "/animated-bgs",
   "/smiley-icons",

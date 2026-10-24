@@ -27,8 +27,8 @@ export const notFoundProbePath = (locale: Locale): string => `${localePrefix(loc
 const escapeXml = (value: string): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-/** Every page in every locale, each with its hreflang alternates (the same set the pages' <head> lists). */
-export const buildSitemap = (lastmod: string): string => {
+/** Every page in every locale, each with its hreflang alternates (the same set the pages' <head> lists). No <lastmod>: every release rebuilds the site, so the build date would claim a change on every page each time, and search engines ignore a lastmod that is not accurate. */
+export const buildSitemap = (): string => {
   const urls = ROUTES.map((route) => {
     const alternates = [
       ...LOCALES.map((alt) => ({ lang: HTML_LANG[alt], href: absoluteUrl(pagePath(alt, route.page)) })),
@@ -36,7 +36,7 @@ export const buildSitemap = (lastmod: string): string => {
     ]
       .map((alt) => `    <xhtml:link rel="alternate" hreflang="${alt.lang}" href="${escapeXml(alt.href)}"/>`)
       .join("\n");
-    return `  <url>\n    <loc>${escapeXml(absoluteUrl(route.path))}</loc>\n    <lastmod>${lastmod}</lastmod>\n${alternates}\n  </url>`;
+    return `  <url>\n    <loc>${escapeXml(absoluteUrl(route.path))}</loc>\n${alternates}\n  </url>`;
   });
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
 };

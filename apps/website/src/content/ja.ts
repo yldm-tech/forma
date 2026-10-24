@@ -77,7 +77,7 @@ export const ja: SiteContent = {
       meta: {
         title: "Forma｜リンク・Web サイト・アプリ内アンケート",
         description:
-          "ノーコードでアンケートを作成し、回答者を絞り込み、結果を Slack・Notion・Google スプレッドシート・Webhook へ連携。ホスティング版とセルフホストに対応。",
+          "ノーコードでアンケートを作成し、回答者を絞り込み、結果を Webhook へ連携。セルフホスト環境では Slack・Notion・Google スプレッドシートにも送れます。",
       },
       hero: {
         eyebrow: "アンケートとフィードバック",
@@ -121,7 +121,7 @@ export const ja: SiteContent = {
       },
       act: {
         title: "回答を、次のアクションへ",
-        body: "回答を Slack、Notion、Airtable、Google スプレッドシートへ送ったり、Webhook で任意のエンドポイントへ送信したりできます。Workflows（ベータ版）では、回答が完了したときにメールを送信でき、特定の終了画面に到達した回答だけを対象にすることもできます。",
+        body: "Webhook で任意のエンドポイントへ回答を送信できます。セルフホスト環境では Slack、Notion、Airtable、Google スプレッドシートにも送れます。Workflows（ベータ版）では、回答が完了したときにメールを送信でき、特定の終了画面に到達した回答だけを対象にすることもできます。",
         link: "連携機能を見る →",
       },
       ai: {
@@ -171,7 +171,7 @@ export const ja: SiteContent = {
       },
       control: {
         title: "回答の受け付けを管理",
-        body: "PIN による保護、回答前のメール認証、reCAPTCHA によるスパム対策に加え、回答数の上限や公開期間も設定できます。",
+        body: "PIN による保護、回答前のメール認証に加え、回答数の上限や公開期間も設定できます。セルフホスト環境では reCAPTCHA によるスパム対策も利用できます。",
       },
       logic: {
         title: "ロジックとデータ",
@@ -240,20 +240,20 @@ export const ja: SiteContent = {
       },
       language: {
         title: "言語",
-        body: "SDK でユーザーの言語を設定します。その言語の翻訳がないアンケートは、そのユーザーには表示されません。",
+        body: "SDK でユーザーの言語を設定します。多言語アンケートにその言語の翻訳がない場合、そのアンケートはそのユーザーには表示されません。",
       },
     },
     integrations: {
       meta: {
         title: "連携とワークフロー｜Forma",
         description:
-          "Slack・Notion・Airtable・Google スプレッドシート・Webhook へ回答を送信。Workflows（ベータ版）で回答完了時にメールを送れます。",
+          "Webhook へ回答を送信。セルフホスト環境では Slack・Notion・Airtable・Google スプレッドシートにも送れます。Workflows（ベータ版）で回答完了時にメールを送れます。",
       },
       title: "連携とワークフロー",
       sub: "回答は、誰かの目に届いてはじめて意味を持ちます。チームが働く場所へ届けましょう。",
       native: {
         title: "ネイティブ連携",
-        body: "アカウントを接続し、新しい回答の送信先を選ぶだけです。",
+        body: "セルフホスト環境で各サービスの OAuth アプリを設定すると、アカウントを接続して新しい回答の送信先を選べます。",
       },
       webhooks: {
         title: "Webhook",

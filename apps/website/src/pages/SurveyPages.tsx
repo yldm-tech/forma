@@ -44,7 +44,7 @@ export const FormBuilderPage = () => {
           </ul>
         </div>
       </section>
-      <section aria-label={page.title} className="section-pad">
+      <section className="section-pad">
         <div className="container-site grid gap-6 md:grid-cols-2">
           <FeatureCard icon="lock" title={page.control.title} body={page.control.body} />
           <FeatureCard icon="gitBranch" title={page.logic.title} body={page.logic.body} />
@@ -80,7 +80,7 @@ export const WebsiteSurveyPage = () => {
           </div>
         </div>
       </section>
-      <section aria-label={page.title} className="section-pad bg-surface-muted">
+      <section className="section-pad bg-surface-muted">
         <div className="container-site grid gap-6 md:grid-cols-2">
           <FeatureCard icon="clock" title={page.considerate.title} body={page.considerate.body} />
           <FeatureCard icon="palette" title={page.style.title} body={page.style.body} />
@@ -97,12 +97,12 @@ export const InAppSurveyPage = () => {
   return (
     <>
       <PageHero title={page.title} sub={page.sub} visual={<InAppArt />} actions={<HeroActions />} />
-      <section aria-label={page.title} className="section-pad bg-surface-muted">
+      <section className="section-pad bg-surface-muted">
         <div className="container-site grid gap-6 md:grid-cols-2">
-          <FeatureCard icon="userCheck" title={page.identify.title} body={page.identify.body} />
-          <FeatureCard icon="users" title={page.segments.title} body={page.segments.body} />
-          <FeatureCard icon="code" title={page.codeActions.title} body={page.codeActions.body} />
-          <FeatureCard icon="languages" title={page.language.title} body={page.language.body} />
+          <FeatureCard heading="h2" icon="userCheck" title={page.identify.title} body={page.identify.body} />
+          <FeatureCard heading="h2" icon="users" title={page.segments.title} body={page.segments.body} />
+          <FeatureCard heading="h2" icon="code" title={page.codeActions.title} body={page.codeActions.body} />
+          <FeatureCard heading="h2" icon="languages" title={page.language.title} body={page.language.body} />
         </div>
       </section>
       <CtaBand />

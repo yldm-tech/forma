@@ -35,7 +35,6 @@ describe("routes", () => {
       ...ROUTES.map((route) => ogImagePath(route.locale, route.page)),
       ...REDIRECTS.map((redirect) => redirect.from),
       ASSET_PREFIX,
-      "/favicon.ico",
       "/robots.txt",
       "/sitemap.xml",
     ];
@@ -49,7 +48,35 @@ describe("routes", () => {
     expect(isReservedPath("/favicon/favicon-32x32.png")).toBe(true);
     expect(isReservedPath("/security/")).toBe(false);
     expect(isReservedPath("/setup-guide")).toBe(false);
-    expect(isReservedPath("/favicon.ico")).toBe(false);
+    expect(isReservedPath("/favicon.ico")).toBe(true);
+  });
+
+  // The root paths apps/server/internal/webui serves or redirects (RootPublicPaths, LegacyAdminPaths): the ingress sends them to the server, so a file the site builds there would never be served.
+  it("reserves every root path the server owns", () => {
+    const server = [
+      "/animated-bgs",
+      "/favicon",
+      "/favicon.ico",
+      "/image-backgrounds",
+      "/js",
+      "/logo-transparent.png",
+      "/sample-csv",
+      "/smiley-icons",
+      "/star-icons",
+      "/account",
+      "/auth",
+      "/billing-confirmation",
+      "/email-change-without-verification-success",
+      "/environments",
+      "/i",
+      "/invite",
+      "/organizations",
+      "/projects",
+      "/setup",
+      "/verify-email-change",
+      "/workspaces",
+    ];
+    expect(server.filter((path) => !isReservedPath(path))).toEqual([]);
   });
 
   it("finds the locale of any path by its prefix", () => {
