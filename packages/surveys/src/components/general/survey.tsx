@@ -534,6 +534,8 @@ export function Survey({
   useEffect(() => {
     if (getSetBlockId) {
       getSetBlockId((value: string) => {
+        // A card chosen from outside (the editor selecting a question, the preview's reset) is not the respondent navigating, so the card it opens must not take focus.
+        hasUserNavigatedRef.current = false;
         setBlockId(value);
       });
     }

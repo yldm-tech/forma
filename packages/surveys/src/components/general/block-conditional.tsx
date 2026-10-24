@@ -16,6 +16,7 @@ import {
   shouldHideSubmitButtonForAutoProgress,
   shouldTriggerAutoProgress,
 } from "@/lib/auto-progress";
+import { canMoveFocusInto } from "@/lib/focus-guard";
 import { getLocalizedValue } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { getFirstErrorMessage, validateBlockResponses } from "@/lib/validation/evaluator";
@@ -141,7 +142,10 @@ export function BlockConditional({
     // Defer so the card's content (and any card transition) has rendered.
     const timeoutId = setTimeout(() => {
       requestAnimationFrame(() => {
-        if (containerRef.current) focusFirstControl(containerRef.current);
+        // Never pull focus out of the page around the survey, such as the editor field the author is typing in beside the live preview.
+        if (containerRef.current && canMoveFocusInto(containerRef.current)) {
+          focusFirstControl(containerRef.current);
+        }
       });
     }, 0);
 
