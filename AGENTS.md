@@ -28,7 +28,7 @@ Phases, in order: P0 foundation (this skeleton, the new schema, recorded contrac
 
 ## Commands
 
-Everything runs from the repository root. The TypeScript side uses [Vite+](https://viteplus.dev/) (`vp`): Vite (Rolldown) for dev and build, Vitest for tests, Oxlint and Oxfmt for lint and format, tsgolint for type checks, and `vp run` as the workspace task runner. There is no ESLint, Prettier or Turborepo. `pnpm` is the version pinned in `package.json` (`packageManager`) and Node.js the one in `.node-version`; Go comes from `apps/server/go.mod`, which the root `go.work` uses.
+Everything runs from the repository root. The TypeScript side uses [Vite+](https://viteplus.dev/) (`vp`): Vite (Rolldown) for dev and build, Vitest for tests, Oxlint and Oxfmt for lint and format, tsgolint for type checks, and `vp run` as the workspace task runner. There is no ESLint, Prettier or Turborepo. `pnpm` is the version pinned in `package.json` (`packageManager`) and Node.js the one in `.node-version`; Go comes from `apps/server/go.mod`. There is no `go.work`, so `go` commands run inside `apps/server` (the Makefile targets `cd` there).
 
 - `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`); `deps-up` also runs `make authz-schema`, which writes `apps/server/authzed/schema.zed` into the local SpiceDB.
 - `forma authz schema check|apply`, `forma authz backfill [--apply] ...`, `forma authz outbox status|drain|replay` — operate the SpiceDB projection (`forma authz help`). Each prints one JSON line; exit 0 clean, 2 drift, 1 failed.
@@ -37,7 +37,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - `make dev-web` — run the Vite dev server on `:5173`, the app at `http://localhost:5173/app/`; it proxies `/api` and `/health` to the Go server.
 - `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.
 - `make generate` — regenerate `apps/server/internal/app/wire_gen.go` after changing a provider.
-- `make check` — what CI runs: golangci-lint, `go test -race`, `vp check` (Oxfmt, Oxlint, type-check), the Vitest suites, the catalog checks, and the SpiceDB schema assertions.
+- `make check` — the lint, test and generated-file checks CI runs: golangci-lint (the `GOLANGCI_LINT_VERSION` in the Makefile, which `make lint` requires), `go test -race`, `vp check` (Oxfmt, Oxlint, type-check), the Vitest suites, `make check-generated` (`wire_gen.go`, `routeTree.gen.ts` and the exported JSON Schemas are current), the migration lint, the catalog, orphaned-test, bundle budget and translation checks, and the SpiceDB schema assertions. The Docker and Helm validation, the Go coverage floor and the e2e suite run only in CI.
 - `pnpm exec vp check --fix` — format and apply lint autofixes. A pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs this on staged files.
 - `pnpm exec vp run --filter @forma/surveys test -- src/lib/logic.test.ts` — one TypeScript test file; `cd apps/server && go test ./internal/health -run TestReady` — one Go test.
 
