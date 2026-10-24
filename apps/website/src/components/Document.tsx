@@ -144,7 +144,7 @@ export const Document = ({
           {/* The base :focus-visible ring is a box-shadow, so the raised shadow would replace it; the ring utilities compose with --tw-shadow and keep the teal ring. */}
           <a
             href="#main"
-            className="rounded-button focus:shadow-raised focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2">
+            className="rounded-button focus:shadow-raised sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:ring-2 focus:ring-teal-600 focus:ring-offset-2">
             {content.common.skipToContent}
           </a>
           <SiteHeader />

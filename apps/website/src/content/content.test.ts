@@ -30,7 +30,10 @@ describe("website content", () => {
 
   // The reference sits under "authenticate with an API key", so it must not name a v3 route the server mounts session-only. tag/handler.go RegisterV3 mounts every tag route with v3api.AuthSession.
   it("lists no session-only v3 route in the developers API reference", () => {
-    const tagHandler = readFileSync(new URL("../../../server/internal/tag/handler.go", import.meta.url), "utf8");
+    const tagHandler = readFileSync(
+      new URL("../../../server/internal/tag/handler.go", import.meta.url),
+      "utf8"
+    );
     expect(tagHandler).toContain("h.v3.Auth(v3api.AuthSession)");
     for (const locale of LOCALES) {
       const { api, reference } = DICTIONARIES[locale].pages.developers;
