@@ -112,6 +112,7 @@
     "value_must_contain": "قدر میں {value} ہونا ضروری ہے",
     "value_must_equal": "قدر {value} کے برابر ہونی چاہیے",
     "value_must_not_contain": "قدر میں {value} نہیں ہونی چاہیے",
-    "value_must_not_equal": "قدر {value} کے برابر نہیں ہونی چاہیے"
+    "value_must_not_equal": "قدر {value} کے برابر نہیں ہونی چاہیے",
+    "x_questions_need_an_answer": "{count, plural, one {{count} سوال کا جواب درکار ہے} other {{count} سوالات کے جواب درکار ہیں}}"
   }
 }

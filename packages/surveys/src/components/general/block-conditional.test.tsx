@@ -4,6 +4,16 @@ import type { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { BlockConditional } from "./block-conditional";
 
+// The catalogue's ICU plurals are formatted by the bundle's i18next-icu; here a key and its count are enough to see what was announced.
+vi.mock("@/lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/i18n")>();
+  return {
+    ...actual,
+    getTranslations: () => (key: string, options?: { count?: number }) =>
+      options?.count === undefined ? key : `${key}:${String(options.count)}`,
+  };
+});
+
 afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
@@ -56,7 +66,7 @@ describe("BlockConditional", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole("status").textContent).not.toBe("");
+      expect(screen.getByRole("status").textContent).toBe("errors.x_questions_need_an_answer:2");
     });
     const liveRegions = container.querySelectorAll("[aria-live]");
     expect(liveRegions).toHaveLength(1);

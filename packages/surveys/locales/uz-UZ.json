@@ -112,6 +112,7 @@
     "value_must_contain": "Qiymatda {value} bo‘lishi kerak",
     "value_must_equal": "Qiymat {value} ga teng bo‘lishi kerak",
     "value_must_not_contain": "Qiymatda {value} bo‘lmasligi kerak",
-    "value_must_not_equal": "Qiymat {value} ga teng bo‘lmasligi kerak"
+    "value_must_not_equal": "Qiymat {value} ga teng bo‘lmasligi kerak",
+    "x_questions_need_an_answer": "{count, plural, one {{count} ta savolga javob berish kerak} other {{count} ta savolga javob berish kerak}}"
   }
 }

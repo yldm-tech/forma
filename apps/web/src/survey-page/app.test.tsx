@@ -140,10 +140,21 @@ describe("readSurveyPageState", () => {
 });
 
 describe("SurveyPageApp", () => {
-  test("not found", () => {
+  test("not found, in the visitor's language", async () => {
     renderPage({ view: "notFound", locale: "en-US" });
-    expect(screen.getByRole("heading", { name: "Survey not found." })).toBeTruthy();
-    expect(screen.getByText("There is no survey with this ID.")).toBeTruthy();
+    expect(screen.getByRole("main")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "This survey isn't available" })).toBeTruthy();
+    expect(
+      screen.getByText("The link may be wrong, or the survey isn't accepting responses yet.")
+    ).toBeTruthy();
+    cleanup();
+    await i18n.changeLanguage("ja-JP");
+    try {
+      renderPage({ view: "notFound", locale: "ja-JP" });
+      expect(screen.getByRole("heading", { level: 1, name: "このアンケートは利用できません" })).toBeTruthy();
+    } finally {
+      await i18n.changeLanguage("en-US");
+    }
   });
 
   // forma2's SurveyInactive: headings, descriptions, the create-your-own CTA and the footer logo.
@@ -193,7 +204,7 @@ describe("SurveyPageApp", () => {
     },
     {
       inactive: { status: "link invalid", isScheduled: false, surveyClosedMessage: null, workspace: null },
-      heading: "This looks fishy.",
+      heading: "s.this_looks_fishy",
       description: "This survey can only be taken by invitation.",
       cta: false,
       logo: true,
@@ -221,10 +232,13 @@ describe("SurveyPageApp", () => {
     "inactive: $inactive.status, scheduled $inactive.isScheduled",
     ({ inactive, heading, description, cta, logo }) => {
       renderPage({ view: "inactive", locale: "en-US", inactive });
-      expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
+      // A heading given as a key is read from the catalogue, so a reworded value does not break this test.
+      const name = heading.startsWith("s.") ? i18n.t(heading) : heading;
+      expect(screen.getByRole("heading", { name })).toBeTruthy();
       expect(screen.getByText(description)).toBeTruthy();
       expect(Boolean(screen.queryByRole("link", { name: "Create your own open-source survey" }))).toBe(cta);
-      expect(Boolean(screen.queryByAltText("Brand logo"))).toBe(logo);
+      // Forma's wordmark, not the upstream logo, linked with the accessible name Forma.
+      expect(Boolean(screen.queryByRole("link", { name: "Forma" }))).toBe(logo);
     }
   );
 
@@ -239,11 +253,12 @@ describe("SurveyPageApp", () => {
     });
     expect(screen.getByRole("heading", { name: "Done" })).toBeTruthy();
     expect(screen.getByText("Once only")).toBeTruthy();
-    expect(screen.queryByAltText("Brand logo")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Forma" })).toBeNull();
     cleanup();
     renderPage({ view: "completed", locale: "en-US", completed: { singleUse: null, workspace: null } });
     expect(screen.getByRole("heading", { name: "The survey has already been answered." })).toBeTruthy();
     expect(screen.getByText("You can only use this link once.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Forma" })).toBeTruthy();
   });
 
   test("the error screen", () => {
@@ -441,7 +456,12 @@ describe("the PIN gate", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
-    expect(await screen.findByText("This survey is protected. Enter the PIN below.")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "This survey is protected. Enter the PIN below." })
+    ).toBeTruthy();
+    expect(screen.getByRole("main")).toBeTruthy();
+    // The gate exists only to take the PIN, so typing works at once.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getAllByRole("textbox")[0]));
     expect(renderSurvey).not.toHaveBeenCalled();
 
     typePin("1234");
@@ -465,6 +485,7 @@ describe("the PIN gate", () => {
     typePin("0000");
     await waitFor(() => expect(screen.getAllByRole("textbox")[0]?.className).toContain("border-red-400"));
     expect((screen.getAllByRole("textbox")[0] as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByRole("status").textContent).toBe("Incorrect PIN. Try again.");
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
@@ -473,12 +494,37 @@ describe("the PIN gate", () => {
       timeout: 4000,
     });
     expect(screen.getAllByRole("textbox")[0]?.className).not.toContain("border-red-400");
+    // The boxes are cleared and enabled again, focus is back in the first one, and the reason stays until the next keystroke.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getAllByRole("textbox")[0]));
+    expect(screen.getByRole("status").textContent).toBe("Incorrect PIN. Try again.");
+    typePin("1");
+    expect(screen.getByRole("status").textContent).toBe("");
     expect(renderSurvey).not.toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  test("a rate-limited PIN says to wait instead of calling it wrong", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ code: "too_many_requests", message: "Too many requests" }, { status: 429 })
+      )
+    );
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
+    await screen.findByText("This survey is protected. Enter the PIN below.");
+    typePin("0000");
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("Too many attempts. Wait a minute and try again.")
+    );
   });
 });
 
 describe("the email verification gate", () => {
+  // The gate is a lazy chunk; loading it once up front keeps the first test's wait about the gate, not the module transform.
+  beforeAll(async () => {
+    await import("./components/verify-email");
+  });
+
   const verifyState = (fishy: boolean): TSurveyPageState => ({
     view: "verifyEmail",
     locale: "en-US",
@@ -493,19 +539,27 @@ describe("the email verification gate", () => {
     },
   });
 
-  test("a verification link that does not verify looks fishy", async () => {
+  test("a verification link that does not verify says so in its heading", async () => {
     renderPage(verifyState(true));
-    expect(await screen.findByText("This looks fishy.")).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: i18n.t("s.this_looks_fishy") })).toBeTruthy();
   });
 
   test("mails the survey link to the lowercased address", async () => {
     const fetchMock = vi.fn(async () => Response.json({ success: true }, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     renderPage(verifyState(false));
-    const input = await screen.findByPlaceholderText("engineering@acme.com");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Verify your email to respond" })
+    ).toBeTruthy();
+    // A visible label names the field; the placeholder is a localized example, not a company address.
+    const input = screen.getByLabelText("Email address");
+    expect(input.getAttribute("placeholder")).toBe("you@example.com");
     fireEvent.change(input, { target: { value: "Not an email" } });
     fireEvent.click(screen.getByRole("button", { name: "Verify" }));
-    expect(await screen.findByRole("alert")).toBeTruthy();
+    // Zod's English message is replaced by the catalogue's, and the field points at it.
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Please enter a valid email address");
+    expect(input.getAttribute("aria-describedby")).toBe(alert.id);
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.change(input, { target: { value: "User1@Example.com" } });

@@ -112,6 +112,7 @@
     "value_must_contain": "Değer {value} içermelidir",
     "value_must_equal": "Değer {value} olmalıdır",
     "value_must_not_contain": "Değer {value} içermemelidir",
-    "value_must_not_equal": "Değer {value} olmamalıdır"
+    "value_must_not_equal": "Değer {value} olmamalıdır",
+    "x_questions_need_an_answer": "{count, plural, one {{count} sorunun yanıtlanması gerekiyor} other {{count} sorunun yanıtlanması gerekiyor}}"
   }
 }

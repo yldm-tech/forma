@@ -112,6 +112,7 @@
     "value_must_contain": "Værdien skal indeholde {value}",
     "value_must_equal": "Værdien skal være lig med {value}",
     "value_must_not_contain": "Værdien må ikke indeholde {value}",
-    "value_must_not_equal": "Værdien må ikke være lig med {value}"
+    "value_must_not_equal": "Værdien må ikke være lig med {value}",
+    "x_questions_need_an_answer": "{count, plural, one {{count} spørgsmål mangler et svar} other {{count} spørgsmål mangler et svar}}"
   }
 }
