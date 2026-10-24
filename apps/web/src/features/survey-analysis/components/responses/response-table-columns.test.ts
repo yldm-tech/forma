@@ -1,11 +1,13 @@
 import type { TFunction } from "i18next";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { describe, expect, test } from "vite-plus/test";
+import { OptionsType } from "../../lib/filter-types";
+import { generateElementAndFilterOptions } from "../../lib/filters";
 import { generateResponseTableColumns, getDefaultHiddenColumnIds } from "./response-table-columns";
 
 const t = ((key: string) => key) as unknown as TFunction;
 
-// A survey with one choice question and the hidden field `plan`, inlined as the server sends it (embeddedFields).
+// A survey with one choice question and the hidden field `plan`, inlined as the server sends it (embeddedFields). The web side always read embeddedFields; RA-01 was the server not sending them, which TestEditorSave and TestCopyAndDuplicate in apps/server/internal/survey guard. These cases pin the other half of that contract: the payload shape the server now sends yields the hidden-field column and filter group.
 const survey = {
   id: "survey",
   workspaceId: "workspace",
@@ -41,11 +43,33 @@ const columnIds = (forSurvey: TSurvey, isReadOnly = false) =>
     "accessorKey" in column ? String(column.accessorKey) : (column.id ?? "")
   );
 
-describe("generateResponseTableColumns", () => {
+describe("the embeddedFields contract with the server", () => {
   test("renders a column for each hidden field the survey's embeddedFields declare", () => {
     expect(columnIds(survey)).toContain("HIDDEN_FIELD_plan");
   });
 
+  test("offers each hidden field in the filter's Hidden Fields group", () => {
+    const { elementOptions, elementFilterOptions } = generateElementAndFilterOptions({
+      survey,
+      environmentTags: undefined,
+      attributes: {},
+      reservedValues: {},
+      hiddenFields: { plan: ["pro"] },
+      variableValues: {},
+      quotas: [],
+      t,
+    });
+    expect(elementOptions.find((group) => group.header === OptionsType.HIDDEN_FIELDS)?.option).toStrictEqual([
+      { label: "plan", type: OptionsType.HIDDEN_FIELDS, id: "plan" },
+    ]);
+    expect(
+      elementFilterOptions.find((option) => option.type === "Hidden Fields" && option.id === "plan")
+        ?.filterComboBoxOptions
+    ).toStrictEqual(["pro"]);
+  });
+});
+
+describe("generateResponseTableColumns", () => {
   test("puts the date and the answers before the ids", () => {
     const ids = columnIds(survey);
     expect(ids.slice(0, 5)).toStrictEqual(["select", "createdAt", "personId", "status", "tags"]);
