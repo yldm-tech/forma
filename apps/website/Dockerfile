@@ -10,15 +10,16 @@ ARG NGINX_IMAGE=nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf75
 # ---- build: the static site (apps/website `build`) ----
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 
-# pnpm is the version package.json pins (packageManager), through the same corepack release as deploy/docker/Dockerfile.
+# The same corepack release as deploy/docker/Dockerfile. It provides pnpm at the version package.json pins (packageManager), installed once package.json is in.
 RUN npm install --ignore-scripts -g corepack@0.35.0 \
-    && corepack enable \
-    && corepack prepare pnpm@11.7.0 --activate
+    && corepack enable
 
 WORKDIR /src
 
 # Only the website and what it builds against; the lockfile covers the whole workspace and the filtered install takes its part of it.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .node-version ./
+# pnpm as package.json's packageManager names it, the one place its version is written.
+RUN corepack install
 COPY patches ./patches
 COPY tooling/typescript ./tooling/typescript
 COPY apps/website ./apps/website

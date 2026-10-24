@@ -13,15 +13,16 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/static-debian13@sha256:034df5c1737e8241f6ed6
 # ---- web: the SPA, the survey page and the SDK bundles (`make web`) ----
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS web
 
-# pnpm is the version package.json pins (packageManager), through the corepack release forma2's image used.
+# The corepack release forma2's image used. It provides pnpm at the version package.json pins (packageManager), installed once package.json is in.
 RUN npm install --ignore-scripts -g corepack@0.35.0 \
-    && corepack enable \
-    && corepack prepare pnpm@11.7.0 --activate
+    && corepack enable
 
 WORKDIR /src
 
 # Only the TypeScript workspace: a server change leaves these layers cached. The package store is a cache mount, so a reinstall after a source change downloads nothing. (`pnpm fetch` would let the install layer survive source changes, but it fails on the workspace's patched dependencies.)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml vite.config.ts .node-version ./
+# pnpm as package.json's packageManager names it, the one place its version is written.
+RUN corepack install
 COPY patches ./patches
 COPY apps/storybook ./apps/storybook
 COPY apps/web ./apps/web
