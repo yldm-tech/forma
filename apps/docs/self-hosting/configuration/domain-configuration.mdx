@@ -124,7 +124,7 @@ All other routes are restricted to the private domain (`WEBAPP_URL`) for securit
 
 The admin app lives under `/app` on `WEBAPP_URL` (`https://forma.example.com/app/`), and every link Forma generates to an admin page (emails, sign-in and integration redirects, Stripe's return pages) points there. Everything outside the admin app keeps its root path, because survey links, SDK snippets and emails already in circulation carry it. `/` redirects to `/app/`, and the admin pages' old root addresses (`/workspaces/...`, `/auth/login`, ...) answer with a permanent redirect (308) to the same path and query under `/app`.
 
-When Forma shares its hostname with another site, for example a website at `/` and documentation at `/docs`, route `/app` and the following first path segments to Forma and everything else to the other site:
+When Forma shares its hostname with another site, for example a website at `/` and documentation at `/docs`, route `/app` and the following first path segments to Forma and everything else to the other site. Each entry is a whole path segment: `/s` means `/s` itself and everything under `/s/`, not every path that starts with the letter s.
 
 | Path | What it serves |
 | --- | --- |
@@ -138,6 +138,12 @@ When Forma shares its hostname with another site, for example a website at `/` a
 | `/ingest` | The first-party analytics proxy (only with `POSTHOG_KEY`) |
 | `/image-backgrounds`, `/animated-bgs`, `/smiley-icons`, `/star-icons`, `/logo-transparent.png`, `/favicon`, `/favicon.ico`, `/sample-csv` | Static files surveys, emails and customer sites load by their root URL |
 | `/account`, `/auth`, `/billing-confirmation`, `/email-change-without-verification-success`, `/environments`, `/i`, `/invite`, `/organizations`, `/projects`, `/setup`, `/verify-email-change`, `/workspaces` | Old admin addresses, redirected to `/app` |
+
+Match these as segments, not as character prefixes. A plain prefix match on `/s`, `/c`, `/p` or `/i` also captures the other site's pages such as `/security`, `/pricing` or `/integrations`, and Forma answers those with 404. Traefik's `PathPrefix` matches character by character, and Traefik's Kubernetes Ingress provider (checked on Traefik 3.3) turns a `pathType: Prefix` path into a `PathPrefix`; nginx's prefix `location` matches character by character as well. With such a proxy:
+
+- For a Kubernetes Ingress, give each directory entry a `pathType: Prefix` path with a trailing slash (`/app/`, `/api/`, `/s/`, `/c/`, `/p/`, `/i/`, `/js/`, `/health/`, ...), add `pathType: Exact` paths for the bare addresses that must still reach Forma (`/app`, `/health`), and route the two files `/favicon.ico` and `/logo-transparent.png` with `pathType: Exact`.
+- For a Traefik router, one rule covers the whole list: ``PathRegexp(`^/(app|api|\.well-known|s|c|p|js|storage|health|ingest|image-backgrounds|animated-bgs|smiley-icons|star-icons|favicon|sample-csv|account|auth|billing-confirmation|email-change-without-verification-success|environments|i|invite|organizations|projects|setup|verify-email-change|workspaces)(/|$)`) || Path(`/favicon.ico`) || Path(`/logo-transparent.png`)``.
+- For nginx, use one regex location: `location ~ ^/(app|api|\.well-known|s|c|p|js|storage|health|ingest|image-backgrounds|animated-bgs|smiley-icons|star-icons|favicon|sample-csv|account|auth|billing-confirmation|email-change-without-verification-success|environments|i|invite|organizations|projects|setup|verify-email-change|workspaces)(/|$)`, plus `location = /favicon.ico` and `location = /logo-transparent.png`.
 
 The server's test suite pins this list (`TestRootPathPrefixes` in `apps/server/internal/app`), so a release that adds or removes a path says so in its changes.
 

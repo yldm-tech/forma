@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -196,7 +199,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	}
 }
 
-// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai routes /docs to the documentation and every other path to the website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. The ingress in yldm-platform lists exactly these; apps/docs/self-hosting/configuration/domain-configuration.mdx documents them.
+// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai routes /docs to the documentation and every other path to the website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. Each is a whole path segment, matched as the path itself and everything under it (/s and /s/...), never as a character prefix: a prefix rule for /s or /p would also take the website's /security or /pricing. The ingress in yldm-platform lists exactly these; apps/docs/self-hosting/configuration/domain-configuration.mdx documents them.
 var RootPathPrefixes = []string{
 	".well-known",          // OAuth and OpenID discovery documents for MCP clients
 	"account",              // legacy admin pages, redirected to /app
@@ -227,6 +230,41 @@ var RootPathPrefixes = []string{
 	"storage",              // stored files
 	"verify-email-change",  // legacy admin page, redirected to /app
 	"workspaces",           // legacy admin pages and email links, redirected to /app
+}
+
+// rootPathFiles are the RootPathPrefixes that name a single file rather than a directory, so a proxy routes them by exact path.
+var rootPathFiles = []string{"favicon.ico", "logo-transparent.png"}
+
+// The segment-matching proxy rules the self-hosting docs publish (the Traefik and nginx regexes, plus an exact rule per file) name exactly /app and RootPathPrefixes, so a copied rule cannot drop a path or catch one the server does not answer.
+func TestRootPathPrefixesDocumentedAsSegments(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "self-hosting", "configuration", "domain-configuration.mdx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(raw)
+	want := []string{"app"}
+	for _, p := range RootPathPrefixes {
+		if !slices.Contains(rootPathFiles, p) {
+			want = append(want, p)
+		}
+	}
+	sort.Strings(want)
+	rules := regexp.MustCompile(`\^/\(([^)]*)\)\(/\|\$\)`).FindAllStringSubmatch(doc, -1)
+	if len(rules) != 2 {
+		t.Fatalf("found %d segment regexes in the docs, want the Traefik and the nginx one", len(rules))
+	}
+	for _, rule := range rules {
+		got := strings.Split(strings.ReplaceAll(rule[1], `\.`, "."), "|")
+		sort.Strings(got)
+		if !slices.Equal(got, want) {
+			t.Errorf("documented segments = %q, want %q", got, want)
+		}
+	}
+	for _, f := range rootPathFiles {
+		if !strings.Contains(doc, "Path(`/"+f+"`)") || !strings.Contains(doc, "location = /"+f) {
+			t.Errorf("the docs do not route /%s by exact path", f)
+		}
+	}
 }
 
 // The production router answers exactly RootPathPrefixes outside /app, so the list an ingress is configured with cannot fall behind a new route, a new public file or a removed one.

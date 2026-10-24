@@ -6,9 +6,14 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
 var update = flag.Bool("update", false, "rewrite catalog/locales from apps/web/locales")
@@ -149,6 +154,21 @@ func TestCatalogRendersEveryTemplate(t *testing.T) {
 	}
 	if TemplateLocale("de-DE") != "de-DE" || TemplateLocale("it-IT") != "en-US" || !IsSurveyDefaultLanguage("it-IT") || IsSurveyDefaultLanguage("xx-XX") {
 		t.Fatal("template locale")
+	}
+}
+
+// A survey created from a template stores the template's URLs in its own definition, where a deploy cannot change them, so a link to a Forma admin page must use its canonical address under /app rather than the legacy root path that only redirects there.
+func TestCatalogLinksAdminPagesUnderApp(t *testing.T) {
+	raw, err := catalogFS.ReadFile("catalog/templates.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	formaURL := regexp.MustCompile(`https?://forma\.yldm\.ai(/[^"?#\s]*)?`)
+	for _, m := range formaURL.FindAllSubmatch(raw, -1) {
+		first, _, _ := strings.Cut(strings.TrimPrefix(string(m[1]), "/"), "/")
+		if slices.Contains(webui.LegacyAdminPaths, first) {
+			t.Errorf("%s links a legacy root admin path; use %s%s", m[0], config.AppBasePath, m[1])
+		}
 	}
 }
 
