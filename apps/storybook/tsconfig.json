@@ -4,7 +4,6 @@
     "allowImportingTsExtensions": true,
     "declaration": false,
     "declarationMap": false,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
