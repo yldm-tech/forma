@@ -49,7 +49,11 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
 
   await test.step("find it live in the survey list", async () => {
     await page.getByRole("link", { name: "Surveys" }).click();
-    const row = page.getByRole("main").getByRole("link", { name: /^Start from scratch/ });
+    // The survey's name is the row's link; the row holds the status and type cells beside it.
+    const row = page
+      .getByRole("main")
+      .getByRole("row")
+      .filter({ has: page.getByRole("link", { name: "Start from scratch", exact: true }) });
     await expect(row).toBeVisible();
     await expect(row).toContainText("In Progress");
     await expect(row).toContainText("Link");

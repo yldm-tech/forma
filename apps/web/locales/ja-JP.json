@@ -511,6 +511,7 @@
     "show_response_count": "回答数を表示",
     "shown": "表示済み",
     "size": "サイズ",
+    "skip_to_content": "メインコンテンツへスキップ",
     "skipped": "スキップ済み",
     "skips": "スキップ数",
     "some_files_failed_to_upload": "一部のファイルのアップロードに失敗しました",
@@ -2150,6 +2151,9 @@
       "theme": "テーマ",
       "theme_settings_description": "すべてのアンケート用のスタイルテーマを作成します。各アンケートでカスタムスタイルを有効にできます。"
     },
+    "no_access_cta": "自分のワークスペースへ移動",
+    "no_access_description": "このワークスペースは存在しないか、アクセス権がありません。組織のオーナーまたはマネージャーに、アクセス権のあるチームへ追加するよう依頼してください。",
+    "no_access_title": "このワークスペースを開けません",
     "segments": {
       "add_filter_below": "下にフィルターを追加",
       "add_your_first_filter_to_get_started": "まず最初のフィルターを追加してください",
@@ -2688,10 +2692,12 @@
       "archive_survey": "このアンケートをアーカイブしますか?",
       "archive_survey_description": "30日以内であればいつでも復元できます。",
       "archive_survey_description_in_progress": "すぐに回答の収集が停止されます。",
+      "archive_survey_summary": "{count, plural, =0 {「{name}」にはまだ回答がありません。} other {「{name}」の回答 # 件はそのまま保持されます。}}",
       "archive_survey_warning": "このアンケートとすべての回答は30日後に完全に削除されます。",
       "archiving_survey": "アンケートをアーカイブ中...",
       "change_status": "ステータスを変更",
       "completed_responses": "回答完了数",
+      "completed_responses_hint": "完了した回答のみの件数です。途中までの回答は含まれません。",
       "copy_survey": "アンケートをコピー",
       "copy_survey_description": "このアンケートをコピーするワークスペースを選択してください。",
       "copy_survey_error": "アンケートのコピーに失敗しました",
@@ -2702,6 +2708,8 @@
       "copy_survey_target_workspaces_label": "コピー先のワークスペース",
       "copy_to": "コピー先...",
       "delete_survey_and_responses_warning": "本当にこのフォームとすべての回答を削除しますか？",
+      "delete_survey_summary": "{count, plural, =0 {「{name}」に回答はありません。} other {「{name}」と、その回答 # 件が削除されます。}}",
+      "duplicate_instead": "代わりに複製",
       "edit": {
         "activate_translations": "翻訳を有効化",
         "add": "追加 +",
@@ -3326,9 +3334,12 @@
         "complete_responses": "完了した回答",
         "partial_responses": "部分的な回答"
       },
+      "filter_selected_count": "{count} 件選択中",
       "new_survey": "新規フォーム",
       "no_other_workspaces_available": "このアンケートをコピーできる他のワークスペースがありません。",
-      "open_options": "オプションを開く",
+      "no_surveys_match_filters": "条件に一致するフォームはありません。",
+      "open_duplicate": "開く",
+      "open_options_for": "{name} のオプション",
       "preview_survey_in_a_new_tab": "新しいタブでフォームをプレビュー",
       "read_only_user_not_allowed_to_create_survey_warning": "読み取り専用ユーザーはフォームを作成できません。書き込みアクセスを持つユーザーにフォームの作成を依頼するか、管理者にあなたの役割をアップグレードするように依頼してください。",
       "relevance": "関連性",
@@ -3512,6 +3523,7 @@
           "title": "ソーシャルメディア"
         }
       },
+      "showing_count": "{total} 件中 {shown} 件を表示",
       "status_updated_successfully": "アンケートのステータスが正常に更新されました",
       "status_updating": "アンケートのステータスを更新中...",
       "stop_and_archive": "停止してアーカイブ",
@@ -3642,11 +3654,14 @@
         "all_channels": "すべてのチャネル",
         "all_industries": "すべての業界",
         "all_roles": "すべての役割",
+        "clear_search": "検索をクリア",
         "create_a_new_survey": "新しいフォームを作成",
         "multiple_industries": "複数の業界",
+        "no_templates_match": "「{query}」に一致するテンプレートはありません。",
         "use_this_template": "このテンプレートを使用",
         "uses_branching_logic": "このフォームは分岐ロジックを使用しています。"
-      }
+      },
+      "undo_archive": "元に戻す"
     },
     "tags": {
       "add": "追加",

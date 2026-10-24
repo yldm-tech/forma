@@ -4,6 +4,9 @@ import {
   initialFilters,
   normalizeSurveyFilters,
   parseStoredSurveyFilters,
+  restoredSurveyFilters,
+  storableSurveyFilters,
+  surveyFiltersKey,
 } from "./filters";
 
 // forma2's modules/survey/list/lib/utils.test.ts.
@@ -94,5 +97,29 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...initialFilters, name: "x" })).toBe(true);
     expect(hasActiveFilters({ ...initialFilters, status: ["archived"] })).toBe(true);
     expect(hasActiveFilters({ ...initialFilters, type: ["app"] })).toBe(true);
+  });
+});
+
+describe("surveyFiltersKey", () => {
+  test("gives every workspace its own key", () => {
+    expect(surveyFiltersKey("ws-a")).toBe("forma-surveys-filters:ws-a");
+    expect(surveyFiltersKey("ws-a")).not.toBe(surveyFiltersKey("ws-b"));
+  });
+});
+
+describe("storableSurveyFilters and restoredSurveyFilters", () => {
+  test("the name search is neither stored nor restored", () => {
+    const filters = { name: "zzzz", status: ["draft" as const], type: [], sortBy: "name" as const };
+    expect(storableSurveyFilters(filters)).toEqual({ status: ["draft"], type: [], sortBy: "name" });
+    expect(restoredSurveyFilters(JSON.stringify(filters))).toEqual({ ...filters, name: "" });
+  });
+
+  test("nothing stored, or a value that is not JSON, restores the defaults", () => {
+    expect(restoredSurveyFilters(null)).toEqual(initialFilters);
+    expect(restoredSurveyFilters("{")).toEqual(initialFilters);
+  });
+
+  test("applies the workspace channel", () => {
+    expect(restoredSurveyFilters(JSON.stringify({ type: ["app"] }), "link").type).toEqual([]);
   });
 });

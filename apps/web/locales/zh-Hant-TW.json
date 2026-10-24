@@ -511,6 +511,7 @@
     "show_response_count": "顯示回應數",
     "shown": "已顯示",
     "size": "大小",
+    "skip_to_content": "跳至主要內容",
     "skipped": "已跳過",
     "skips": "跳過次數",
     "some_files_failed_to_upload": "部分檔案上傳失敗",
@@ -2150,6 +2151,9 @@
       "theme": "主題",
       "theme_settings_description": "為所有調查建立樣式主題。您可以為每個調查啟用自訂樣式。"
     },
+    "no_access_cta": "前往我的工作區",
+    "no_access_description": "此工作區不存在，或您沒有存取權限。請聯絡組織的擁有者或管理者，將您加入具有存取權限的團隊。",
+    "no_access_title": "無法開啟此工作區",
     "segments": {
       "add_filter_below": "在下方新增篩選器",
       "add_your_first_filter_to_get_started": "新增您的第一個篩選器以開始使用",
@@ -2688,10 +2692,12 @@
       "archive_survey": "要封存這份問卷嗎?",
       "archive_survey_description": "你可以在接下來的 30 天內隨時還原。",
       "archive_survey_description_in_progress": "它將立即停止收集回覆。",
+      "archive_survey_summary": "{count, plural, =0 {「{name}」還沒有回應。} other {「{name}」的 # 筆回應會保留。}}",
       "archive_survey_warning": "這份問卷及其所有回覆將在 30 天後永久刪除。",
       "archiving_survey": "正在封存問卷...",
       "change_status": "變更狀態",
       "completed_responses": "完成回覆數",
+      "completed_responses_hint": "僅計算已完成的回應，不含部分回應。",
       "copy_survey": "複製問卷",
       "copy_survey_description": "選擇要將此問卷複製到的工作區。",
       "copy_survey_error": "複製問卷失敗",
@@ -2702,6 +2708,8 @@
       "copy_survey_target_workspaces_label": "目標工作區",
       "copy_to": "複製到...",
       "delete_survey_and_responses_warning": "您確定要刪除此問卷及其所有回應嗎？",
+      "delete_survey_summary": "{count, plural, =0 {「{name}」沒有回應。} other {「{name}」及其 # 筆回應將被刪除。}}",
+      "duplicate_instead": "改為複製",
       "edit": {
         "activate_translations": "啟用翻譯",
         "add": "新增 +",
@@ -3326,9 +3334,12 @@
         "complete_responses": "完整回應",
         "partial_responses": "部分回應"
       },
+      "filter_selected_count": "已選 {count} 項",
       "new_survey": "新增問卷",
       "no_other_workspaces_available": "沒有其他可用的工作區可複製此問卷。",
-      "open_options": "開啟選項",
+      "no_surveys_match_filters": "沒有符合這些篩選條件的問卷。",
+      "open_duplicate": "開啟",
+      "open_options_for": "{name} 的選項",
       "preview_survey_in_a_new_tab": "在新分頁中預覽問卷",
       "read_only_user_not_allowed_to_create_survey_warning": "身為唯讀使用者，您不得建立問卷。請要求具有寫入權限的使用者建立問卷或管理員升級您的角色。",
       "relevance": "相關性",
@@ -3512,6 +3523,7 @@
           "title": "社群媒體"
         }
       },
+      "showing_count": "顯示 {shown} / {total} 份",
       "status_updated_successfully": "問卷狀態已成功更新",
       "status_updating": "正在更新問卷狀態...",
       "stop_and_archive": "停止並封存",
@@ -3642,11 +3654,14 @@
         "all_channels": "所有管道",
         "all_industries": "所有產業",
         "all_roles": "所有角色",
+        "clear_search": "清除搜尋",
         "create_a_new_survey": "建立新的問卷",
         "multiple_industries": "多個產業",
+        "no_templates_match": "沒有符合「{query}」的範本。",
         "use_this_template": "使用此範本",
         "uses_branching_logic": "此問卷使用分支邏輯。"
-      }
+      },
+      "undo_archive": "復原"
     },
     "tags": {
       "add": "新增",

@@ -33,7 +33,7 @@ export const OrganizationBreadcrumb = ({
   return (
     <BreadcrumbItem isActive={open}>
       <DropdownMenu onOpenChange={setOpen}>
-        <DropdownMenuTrigger className="flex cursor-pointer items-center gap-1 outline-hidden">
+        <DropdownMenuTrigger className="focus-visible:ring-ring flex cursor-pointer items-center gap-1 rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
           <Building2Icon className="size-3" strokeWidth={1.5} />
           <span>{organizationName}</span>
           {open || isLastCrumb ? (
