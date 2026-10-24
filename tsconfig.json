@@ -7,5 +7,6 @@
     "packages/*/vite.config.*",
     "packages/*/tailwind.config.ts",
     "packages/*/vitestSetup.ts"
-  ]
+  ],
+  "exclude": ["apps/website/vite.config.ts"]
 }
