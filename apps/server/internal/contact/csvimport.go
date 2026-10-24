@@ -60,10 +60,22 @@ type TypeMismatch struct {
 	InvalidValues []string `json:"invalidValues"`
 }
 
-// ImportResult lists the contacts an import created or changed; skipped duplicates are not in it.
+// ImportResult lists the contacts an import created or changed; skipped duplicates are not in it. Created, Updated and Skipped count the file's rows by what happened to them (an overwritten duplicate counts as updated), so a caller can tell an import that changed nothing from one that worked.
 type ImportResult struct {
 	Contacts []Contact `json:"contacts"`
+	Created  int       `json:"created"`
+	Updated  int       `json:"updated"`
+	Skipped  int       `json:"skipped"`
 }
+
+// importOutcome is what importRecord did with one row.
+type importOutcome int
+
+const (
+	importCreated importOutcome = iota
+	importUpdated
+	importSkipped
+)
 
 // csvTable is a parsed file: its trimmed headers and its rows.
 type csvTable struct {
@@ -267,11 +279,11 @@ func (s *Service) Import(ctx context.Context, userID, workspaceID uuid.UUID, in 
 			return nil, fmt.Errorf("count contacts: %w", err)
 		}
 	}
-	contacts, err := s.importRecords(ctx, workspaceID, mapped, keys, in.DuplicateAction)
+	res, err = s.importRecords(ctx, workspaceID, mapped, keys, in.DuplicateAction)
 	if err != nil {
 		return nil, err
 	}
-	res = &ImportResult{Contacts: contacts}
+	contacts := res.Contacts
 	ev.NewObject = map[string]any{"contacts": contacts}
 	analytics.Capture(userID.String(), "contact_created", analytics.Properties{
 		"organization_id":        org.String(),
@@ -315,7 +327,7 @@ type existingContact struct {
 	userID string
 }
 
-func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *mappedTable, keys []Key, action string) ([]Contact, error) {
+func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *mappedTable, keys []Key, action string) (*ImportResult, error) {
 	var emails, userIDs []string
 	values := map[string][]string{}
 	for _, r := range m.records {
@@ -382,6 +394,7 @@ func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *m
 		created = append(created, newKey{key: col, dataType: types[lower]})
 	}
 	var ids []uuid.UUID
+	var counts [3]int
 	for start := 0; start < len(m.records); start += importChunkSize {
 		chunk := m.records[start:min(start+importChunkSize, len(m.records))]
 		err := s.repo.transaction(ctx, func(tx *Repository) error {
@@ -398,14 +411,22 @@ func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *m
 					actual[strings.ToLower(k.Key)] = k
 				}
 			}
+			// A chunk's counts are kept only once its transaction commits.
+			var chunkIDs []uuid.UUID
+			var chunkCounts [3]int
 			for _, record := range chunk {
-				id, err := importRecord(ctx, tx, workspaceID, m.keys, record, actual, byEmail, userIDOwners, action)
+				id, outcome, err := importRecord(ctx, tx, workspaceID, m.keys, record, actual, byEmail, userIDOwners, action)
 				if err != nil {
 					return err
 				}
+				chunkCounts[outcome]++
 				if id != uuid.Nil {
-					ids = append(ids, id)
+					chunkIDs = append(chunkIDs, id)
 				}
+			}
+			ids = append(ids, chunkIDs...)
+			for i, n := range chunkCounts {
+				counts[i] += n
 			}
 			return nil
 		})
@@ -413,7 +434,11 @@ func (s *Service) importRecords(ctx context.Context, workspaceID uuid.UUID, m *m
 			return nil, err
 		}
 	}
-	return s.repo.contactsByID(ctx, ids)
+	contacts, err := s.repo.contactsByID(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	return &ImportResult{Contacts: contacts, Created: counts[importCreated], Updated: counts[importUpdated], Skipped: counts[importSkipped]}, nil
 }
 
 // unparsed lists the values a typed key cannot read.
@@ -430,14 +455,14 @@ func unparsed(values []string, dataType string) []string {
 	return bad
 }
 
-// importRecord writes one row and returns the contact it created or changed, or uuid.Nil for a skipped duplicate.
-func importRecord(ctx context.Context, tx *Repository, workspaceID uuid.UUID, columns []string, record map[string]string, actual map[string]Key, byEmail map[string]existingContact, userIDOwners map[string][]uuid.UUID, action string) (uuid.UUID, error) {
+// importRecord writes one row and returns the contact it created or changed (uuid.Nil for a skipped duplicate) and which of the three it did.
+func importRecord(ctx context.Context, tx *Repository, workspaceID uuid.UUID, columns []string, record map[string]string, actual map[string]Key, byEmail map[string]existingContact, userIDOwners map[string][]uuid.UUID, action string) (uuid.UUID, importOutcome, error) {
 	row := map[string]string{}
 	var order []string
 	for _, col := range columns {
 		k, ok := actual[strings.ToLower(col)]
 		if !ok {
-			return uuid.Nil, apperr.InvalidInput(apperr.CodeValidation, fmt.Sprintf("Attribute key %q not found in attribute key map", col))
+			return uuid.Nil, 0, apperr.InvalidInput(apperr.CodeValidation, fmt.Sprintf("Attribute key %q not found in attribute key map", col))
 		}
 		if _, seen := row[k.Key]; !seen {
 			order = append(order, k.Key)
@@ -445,11 +470,11 @@ func importRecord(ctx context.Context, tx *Repository, workspaceID uuid.UUID, co
 		row[k.Key] = record[col]
 	}
 	if row[keyEmail] == "" {
-		return uuid.Nil, apperr.InvalidInput(apperr.CodeValidation, "Email is required for all contacts")
+		return uuid.Nil, 0, apperr.InvalidInput(apperr.CodeValidation, "Email is required for all contacts")
 	}
 	existing, found := byEmail[row[keyEmail]]
 	if found && action == DuplicateSkip {
-		return uuid.Nil, nil
+		return uuid.Nil, importSkipped, nil
 	}
 	if found {
 		// resolveUserIdConflict: a userId another contact holds gives way to this contact's own, or to none.
@@ -470,17 +495,17 @@ func importRecord(ctx context.Context, tx *Repository, workspaceID uuid.UUID, co
 	if !found {
 		id, err := tx.insertContact(ctx, workspaceID)
 		if err != nil {
-			return uuid.Nil, err
+			return uuid.Nil, 0, err
 		}
-		return id, tx.upsertAttributes(ctx, id, values)
+		return id, importCreated, tx.upsertAttributes(ctx, id, values)
 	}
 	if action == DuplicateOverwrite {
 		if err := tx.deleteAllAttributes(ctx, existing.id); err != nil {
-			return uuid.Nil, err
+			return uuid.Nil, 0, err
 		}
 	}
 	if err := tx.upsertAttributes(ctx, existing.id, values); err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, 0, err
 	}
-	return existing.id, tx.touchContact(ctx, existing.id)
+	return existing.id, importUpdated, tx.touchContact(ctx, existing.id)
 }
