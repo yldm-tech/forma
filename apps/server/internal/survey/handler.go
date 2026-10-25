@@ -46,6 +46,13 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/quotas/:quotaId", h.deleteQuota)
 	g.GET("/quotas/:quotaId/response-count", h.quotaResponseCount)
 	g.GET("/workspaces/:workspaceId/survey-templates", h.templates)
+	// The organization's own templates, saved from its surveys.
+	g.GET("/organizations/:organizationId/survey-templates", h.organizationTemplates)
+	g.POST("/surveys/:surveyId/save-as-template", h.saveAsTemplate)
+	g.GET("/survey-templates/:templateId", h.organizationTemplate)
+	g.PATCH("/survey-templates/:templateId", h.updateOrganizationTemplate)
+	g.DELETE("/survey-templates/:templateId", h.deleteOrganizationTemplate)
+	g.POST("/survey-templates/:templateId/surveys", h.createFromOrganizationTemplate)
 	g.GET("/workspaces/:workspaceId/sdk-state", h.sdkState)
 	g.GET("/public-domain", h.publicDomain)
 	// The create-with-AI dialog's streamed generation spends from the same per-user bucket as POST /api/v3/surveys/generate.
@@ -365,6 +372,110 @@ func (h *Handler) templates(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"templates": templates, "xmTemplateIds": XMTemplateIDs})
+}
+
+func (h *Handler) organizationTemplates(c *gin.Context) {
+	id, ok := h.param(c, "organizationId")
+	if !ok {
+		return
+	}
+	out, err := h.svc.OrganizationTemplates(c.Request.Context(), sessionCaller(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// templateDetailsRequest is a template's name and description; the service trims and bounds them.
+type templateDetailsRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+func (h *Handler) saveAsTemplate(c *gin.Context) {
+	id, ok := h.param(c, "surveyId")
+	if !ok {
+		return
+	}
+	var req templateDetailsRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	t, err := h.svc.SaveAsTemplate(c.Request.Context(), sessionCaller(c), id, TemplateDetails(req))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, t)
+}
+
+func (h *Handler) organizationTemplate(c *gin.Context) {
+	id, ok := h.param(c, "templateId")
+	if !ok {
+		return
+	}
+	t, err := h.svc.OrganizationTemplate(c.Request.Context(), sessionCaller(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, t)
+}
+
+func (h *Handler) updateOrganizationTemplate(c *gin.Context) {
+	id, ok := h.param(c, "templateId")
+	if !ok {
+		return
+	}
+	var req templateDetailsRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	t, err := h.svc.UpdateOrganizationTemplate(c.Request.Context(), sessionCaller(c), id, TemplateDetails(req))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, t)
+}
+
+func (h *Handler) deleteOrganizationTemplate(c *gin.Context) {
+	id, ok := h.param(c, "templateId")
+	if !ok {
+		return
+	}
+	if err := h.svc.DeleteOrganizationTemplate(c.Request.Context(), sessionCaller(c), id); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+type createFromTemplateRequest struct {
+	WorkspaceID uuid.UUID `json:"workspaceId" binding:"required"`
+	SurveyType  string    `json:"surveyType" binding:"required,oneof=link app"`
+}
+
+// createFromOrganizationTemplate answers the created survey as the editor loads it, as a copy does.
+func (h *Handler) createFromOrganizationTemplate(c *gin.Context) {
+	id, ok := h.param(c, "templateId")
+	if !ok {
+		return
+	}
+	var req createFromTemplateRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	sv, err := h.svc.CreateFromOrganizationTemplate(c.Request.Context(), sessionCaller(c), id, req.WorkspaceID, req.SurveyType)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, sv)
 }
 
 // publicDomain tells the list and the editor where a survey's public link lives, which forma2's pages read on the server.

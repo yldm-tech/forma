@@ -98,13 +98,15 @@ const (
 	TargetFile                Target = "file"
 	TargetQuota               Target = "quota"
 	TargetCubeQuery           Target = "cubeQuery"
+	// TargetSurveyTemplate is one of an organization's own survey templates; forma2 had none.
+	TargetSurveyTemplate Target = "surveyTemplate"
 )
 
 var targets = []Target{
 	TargetSegment, TargetSurvey, TargetWorkflow, TargetWebhook, TargetUser, TargetContactAttributeKey,
 	TargetWorkspaceTeam, TargetTeam, TargetActionClass, TargetResponse, TargetContact, TargetOrganization,
 	TargetTag, TargetWorkspace, TargetLanguage, TargetInvite, TargetMembership, TargetTwoFactorAuth,
-	TargetAPIKey, TargetIntegration, TargetFile, TargetQuota, TargetCubeQuery,
+	TargetAPIKey, TargetIntegration, TargetFile, TargetQuota, TargetCubeQuery, TargetSurveyTemplate,
 }
 
 type ActorType string
