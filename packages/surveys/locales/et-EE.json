@@ -58,6 +58,10 @@
     "welcome_video": "Tervituskaardi video",
     "your_feedback_is_stuck": "Sinu tagasiside on kinni jäänud :("
   },
+  "date_time": {
+    "select_a_time": "Palun vali kellaaeg",
+    "time": "Kellaaeg"
+  },
   "errors": {
     "accept_to_continue": "Jätkamiseks palun nõustu",
     "all_options_must_be_ranked": "Palun järjesta kõik variandid",
@@ -130,5 +134,9 @@
     "invalid_type": "See failitüüp pole lubatud. Lubatud vormingud: {formats}",
     "max_size_hint": "Kuni {maxSizeInMB} MB",
     "tap_to_upload": "Puuduta failide üleslaadimiseks"
+  },
+  "slider": {
+    "choose_a_value": "Palun liiguta liugurit, et valida väärtus",
+    "not_answered": "Vastamiseks liiguta liugurit"
   }
 }

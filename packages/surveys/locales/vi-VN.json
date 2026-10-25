@@ -58,6 +58,10 @@
     "welcome_video": "Video thẻ chào mừng",
     "your_feedback_is_stuck": "Phản hồi của bạn bị kẹt :("
   },
+  "date_time": {
+    "select_a_time": "Vui lòng chọn thời gian",
+    "time": "Thời gian"
+  },
   "errors": {
     "accept_to_continue": "Vui lòng đồng ý để tiếp tục",
     "all_options_must_be_ranked": "Vui lòng xếp hạng tất cả các tùy chọn",
@@ -130,5 +134,9 @@
     "invalid_type": "Loại tệp này không được phép. Định dạng được phép: {formats}",
     "max_size_hint": "Tối đa {maxSizeInMB} MB",
     "tap_to_upload": "Chạm để tải lên tệp"
+  },
+  "slider": {
+    "choose_a_value": "Vui lòng kéo thanh trượt để chọn một giá trị",
+    "not_answered": "Kéo thanh trượt để trả lời"
   }
 }

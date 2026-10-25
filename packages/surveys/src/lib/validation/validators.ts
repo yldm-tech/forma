@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { TResponseDataValue } from "@forma/types/responses";
+import { getAnswerDay } from "@forma/types/surveys/date-answer";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
 import type {
   TRelativeDateBound,
@@ -408,15 +409,17 @@ export const validators: Record<TValidationRuleType, TValidator> = {
       if (!value || typeof value !== "string" || value === "") {
         return { valid: true };
       }
+      // A date answer with a time of day is held to the rule's calendar days by its day alone.
+      const day = getAnswerDay(value);
       // Compare dates as strings (YYYY-MM-DD format). Relative bounds are inclusive: an offset of
       // "3 days before" means that day itself is still an allowed answer. Fixed bounds keep their
       // original exclusive behaviour.
       if (hasRelativeBound(params)) {
         const bound = resolveRelativeDate(params.relative, applyTimezoneGrace(new Date(), "lower"));
-        return { valid: value >= bound };
+        return { valid: day >= bound };
       }
       const typedParams = params as TValidationRuleParamsIsLaterThanFixed;
-      return { valid: value > typedParams.date };
+      return { valid: day > typedParams.date };
     },
     getDefaultMessage: (params: TValidationRuleParams, _element: TSurveyElement, t: TFunction): string => {
       // Relative bounds are resolved to a concrete date so the respondent reads a real day rather
@@ -435,12 +438,14 @@ export const validators: Record<TValidationRuleType, TValidator> = {
       if (!value || typeof value !== "string" || value === "") {
         return { valid: true };
       }
+      // A date answer with a time of day is held to the rule's calendar days by its day alone.
+      const day = getAnswerDay(value);
       if (hasRelativeBound(params)) {
         const bound = resolveRelativeDate(params.relative, applyTimezoneGrace(new Date(), "upper"));
-        return { valid: value <= bound };
+        return { valid: day <= bound };
       }
       const typedParams = params as TValidationRuleParamsIsEarlierThanFixed;
-      return { valid: value < typedParams.date };
+      return { valid: day < typedParams.date };
     },
     getDefaultMessage: (params: TValidationRuleParams, _element: TSurveyElement, t: TFunction): string => {
       const date = hasRelativeBound(params)
@@ -455,12 +460,14 @@ export const validators: Record<TValidationRuleType, TValidator> = {
       if (!value || typeof value !== "string" || value === "") {
         return { valid: true };
       }
+      // A date answer with a time of day is held to the rule's calendar days by its day alone.
+      const day = getAnswerDay(value);
       if (hasRelativeRange(params)) {
         const { startDate, endDate } = resolveRelativeRange(params, "accepts-inside");
-        return { valid: value >= startDate && value <= endDate };
+        return { valid: day >= startDate && day <= endDate };
       }
       const typedParams = params as TValidationRuleParamsIsBetweenFixed;
-      return { valid: value > typedParams.startDate && value < typedParams.endDate };
+      return { valid: day > typedParams.startDate && day < typedParams.endDate };
     },
     getDefaultMessage: (params: TValidationRuleParams, _element: TSurveyElement, t: TFunction): string => {
       const { startDate, endDate } = hasRelativeRange(params)
@@ -475,14 +482,16 @@ export const validators: Record<TValidationRuleType, TValidator> = {
       if (!value || typeof value !== "string" || value === "") {
         return { valid: true };
       }
+      // A date answer with a time of day is held to the rule's calendar days by its day alone.
+      const day = getAnswerDay(value);
       // The excluded window is inclusive for relative bounds, so a valid answer sits strictly
       // outside it.
       if (hasRelativeRange(params)) {
         const { startDate, endDate } = resolveRelativeRange(params, "accepts-outside");
-        return { valid: value < startDate || value > endDate };
+        return { valid: day < startDate || day > endDate };
       }
       const typedParams = params as TValidationRuleParamsIsNotBetweenFixed;
-      return { valid: value < typedParams.startDate || value > typedParams.endDate };
+      return { valid: day < typedParams.startDate || day > typedParams.endDate };
     },
     getDefaultMessage: (params: TValidationRuleParams, _element: TSurveyElement, t: TFunction): string => {
       const { startDate, endDate } = hasRelativeRange(params)

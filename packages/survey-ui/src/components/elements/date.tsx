@@ -2,6 +2,8 @@ import * as React from "react";
 import { Calendar } from "@/components/general/calendar";
 import { ElementError, getElementErrorAria } from "@/components/general/element-error";
 import { ElementHeader } from "@/components/general/element-header";
+import { Input } from "@/components/general/input";
+import { Label } from "@/components/general/label";
 import { getDateFnsLocale } from "@/lib/locale";
 
 interface DateElementProps {
@@ -13,7 +15,7 @@ interface DateElementProps {
   description?: string;
   /** Unique identifier for the date input */
   inputId: string;
-  /** Current date value in ISO format (YYYY-MM-DD) */
+  /** Current value: the date in ISO format (YYYY-MM-DD), followed by the time (THH:mm) when includeTime is on */
   value?: string;
   /** Callback function called when the date value changes */
   onChange: (value: string) => void;
@@ -37,7 +39,17 @@ interface DateElementProps {
   imageUrl?: string;
   /** Video URL to display above the headline */
   videoUrl?: string;
+  /** Whether the respondent also picks a time of day; the value is then YYYY-MM-DDTHH:mm once both are picked */
+  includeTime?: boolean;
+  /** Label of the time input. The survey runtime supplies a translated one; the English default only covers consumers that render this component outside a survey. */
+  timeLabel?: string;
 }
+
+/** The time of day (HH:mm) a value carries, "" for none. */
+const getTimeOfDay = (value: string | undefined): string => {
+  const time = value?.split("T")[1] ?? "";
+  return /^\d{2}:\d{2}$/.test(time) ? time : "";
+};
 
 function DateElement({
   elementId,
@@ -56,14 +68,32 @@ function DateElement({
   errorMessage,
   imageUrl,
   videoUrl,
+  includeTime = false,
+  timeLabel = "Time",
 }: Readonly<DateElementProps>): React.JSX.Element {
   const errorAria = getElementErrorAria(inputId, errorMessage);
+
+  // The time picked so far. It is kept apart from the value: a time picked before the day has nowhere to go in a YYYY-MM-DD value, and must not be lost when the day follows.
+  const [time, setTime] = React.useState<string>(() => getTimeOfDay(value));
+  // A value given from outside (going back to the question, a prefill) brings its own time; adjusted while rendering rather than in an effect, so the input never shows the old time for a frame.
+  const [timeSource, setTimeSource] = React.useState(value);
+  if (value !== timeSource) {
+    setTimeSource(value);
+    const fromValue = getTimeOfDay(value);
+    if (fromValue) setTime(fromValue);
+  }
+
+  /** The value for a day and the time picked: the day alone until a time is picked, nothing without a day. */
+  const compose = (day: string, timeOfDay: string): string => {
+    if (!day) return "";
+    return includeTime && timeOfDay ? `${day}T${timeOfDay}` : day;
+  };
 
   // Initialize date from value string, parsing as local time to avoid timezone issues
   const [date, setDate] = React.useState<Date | undefined>(() => {
     if (!value) return undefined;
     // Parse YYYY-MM-DD format as local date (not UTC)
-    const [year, month, day] = value.split("-").map(Number);
+    const [year, month, day] = value.slice(0, 10).split("-").map(Number);
     return new Date(year, month - 1, day);
   });
 
@@ -71,7 +101,7 @@ function DateElement({
   React.useEffect(() => {
     if (value) {
       // Parse YYYY-MM-DD format as local date (not UTC)
-      const [year, month, day] = value.split("-").map(Number);
+      const [year, month, day] = value.slice(0, 10).split("-").map(Number);
       const newDate = new Date(year, month - 1, day);
       setDate((prevDate) => {
         // Only update if the date actually changed to avoid unnecessary re-renders
@@ -94,9 +124,18 @@ function DateElement({
       const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
       const day = String(selectedDate.getDate()).padStart(2, "0");
       const isoString = `${year}-${month}-${day}`;
-      onChange(isoString);
+      onChange(compose(isoString, time));
     } else {
       onChange("");
+    }
+  };
+
+  const selectedDay = value ? value.slice(0, 10) : "";
+
+  const handleTimeChange = (timeOfDay: string): void => {
+    setTime(timeOfDay);
+    if (selectedDay) {
+      onChange(compose(selectedDay, timeOfDay));
     }
   };
 
@@ -195,6 +234,26 @@ function DateElement({
             required={required}
             className="rounded-input border-input-border bg-input-bg text-input-text shadow-input mx-auto h-[stretch] w-full max-w-[25rem] border"
           />
+          {includeTime ? (
+            <div className="mx-auto mt-3 flex w-full max-w-[25rem] items-center gap-3">
+              <Label htmlFor={`${inputId}-time`} variant="default">
+                {timeLabel}
+              </Label>
+              <Input
+                id={`${inputId}-time`}
+                type="time"
+                value={time}
+                dir={dir}
+                disabled={disabled}
+                aria-invalid={errorAria.ariaInvalid}
+                aria-describedby={errorAria.ariaDescribedBy}
+                onChange={(e) => {
+                  handleTimeChange(e.currentTarget.value);
+                }}
+                className="w-auto"
+              />
+            </div>
+          ) : null}
         </fieldset>
       </div>
     </div>

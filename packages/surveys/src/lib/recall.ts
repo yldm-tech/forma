@@ -1,6 +1,11 @@
 import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
 import { type TSurveyElement } from "@forma/types/surveys/elements";
-import { formatDateWithOrdinal, parseDateOnly } from "@/lib/date-time";
+import {
+  formatDateTimeWithOrdinal,
+  formatDateWithOrdinal,
+  parseDateOnly,
+  parseDateTime,
+} from "@/lib/date-time";
 import { getLocalizedValue } from "@/lib/i18n";
 
 // Extracts the ID of recall question from a string containing the "recall" pattern.
@@ -71,8 +76,11 @@ export const replaceRecallInfo = (
 
     // Additional value formatting if it exists
     if (value) {
+      const recalledDateTime = parseDateTime(value);
       const recalledDate = parseDateOnly(value);
-      if (recalledDate) {
+      if (recalledDateTime) {
+        value = formatDateTimeWithOrdinal(recalledDateTime, languageCode);
+      } else if (recalledDate) {
         value = formatDateWithOrdinal(recalledDate, languageCode);
       } else if (Array.isArray(value)) {
         value = value.filter((item) => item).join(", "); // Filters out empty values and joins with a comma

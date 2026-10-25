@@ -58,6 +58,10 @@
     "welcome_video": "Welcome Card video",
     "your_feedback_is_stuck": "Your feedback is stuck :("
   },
+  "date_time": {
+    "select_a_time": "Please select a time",
+    "time": "Time"
+  },
   "errors": {
     "accept_to_continue": "Please accept to continue",
     "all_options_must_be_ranked": "Please rank all options",
@@ -130,5 +134,9 @@
     "invalid_type": "This file type isn't allowed. Allowed formats: {formats}",
     "max_size_hint": "Up to {maxSizeInMB} MB",
     "tap_to_upload": "Tap to upload files"
+  },
+  "slider": {
+    "choose_a_value": "Please move the slider to choose a value",
+    "not_answered": "Move the slider to answer"
   }
 }

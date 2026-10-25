@@ -1,7 +1,9 @@
 import type { TFunction } from "i18next";
 import type { TResponseData, TResponseDataValue } from "@forma/types/responses";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
+import { DATE_TIME_ANSWER_PATTERN } from "@forma/types/surveys/date-answer";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { isSliderValueOnScale } from "@forma/types/surveys/slider";
 import type {
   TAddressField,
   TContactInfoField,
@@ -50,6 +52,8 @@ const getRequiredMessage = (t: TFunction, elementType?: TSurveyElementTypeEnum):
       return t("errors.upload_a_file");
     case TSurveyElementTypeEnum.Date:
       return t("errors.select_a_date");
+    case TSurveyElementTypeEnum.Slider:
+      return t("slider.choose_a_value");
     default:
       return t("errors.please_fill_out_this_field");
   }
@@ -280,6 +284,41 @@ const validateChoiceMembership = (
   }
 
   return null;
+};
+
+/**
+ * A slider answer must be a position of its scale: a number from min to max, a whole number of steps from min. The slider itself only produces such numbers, so anything else came straight to the API. Empty values are deferred to the required check. The server repeats this check (apps/server/internal/response/answers).
+ */
+const validateSliderValue = (
+  element: TSurveyElement,
+  value: TResponseDataValue,
+  t: TFunction
+): TValidationError | null => {
+  if (element.type !== TSurveyElementTypeEnum.Slider || isEmpty(value)) {
+    return null;
+  }
+  return isSliderValueOnScale(element, value) ? null : createInvalidOptionError(t);
+};
+
+/**
+ * A date element that asks for the time of day takes a date and a time. The picker stores the day alone while the time is still missing, which is what this names; the server answers such a value with the invalid-format message.
+ */
+const validateDateTimeValue = (
+  element: TSurveyElement,
+  value: TResponseDataValue,
+  t: TFunction
+): TValidationError | null => {
+  if (element.type !== TSurveyElementTypeEnum.Date || !element.includeTime || isEmpty(value)) {
+    return null;
+  }
+  if (typeof value === "string" && DATE_TIME_ANSWER_PATTERN.test(value)) {
+    return null;
+  }
+  return {
+    ruleId: "invalidOption",
+    ruleType: "minLength", // Structural field only - the time of day is not a configurable rule
+    message: t("date_time.select_a_time"),
+  } as TValidationError;
 };
 
 /**
@@ -597,6 +636,16 @@ export const validateElementResponse = (
   const invalidOptionError = validateChoiceMembership(element, value, languageCode, t);
   if (invalidOptionError) {
     errors.push(invalidOptionError);
+  }
+
+  const sliderError = validateSliderValue(element, value, t);
+  if (sliderError) {
+    errors.push(sliderError);
+  }
+
+  const dateTimeError = validateDateTimeValue(element, value, t);
+  if (dateTimeError) {
+    errors.push(dateTimeError);
   }
 
   // Validation rules apply to matrix elements regardless of required status
