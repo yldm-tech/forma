@@ -1,99 +1,81 @@
-// forma2's SDK install snippets (modules/workspaces/settings/(setup)/app-connection/page.tsx), with the workspace id and app URL filled in. The HTML snippet calls setup when the script has loaded rather than after forma2's fixed 500 ms, which a slow network outran, as the marketing site's snippet does.
+// The SDK install snippets, with the workspace id and app URL filled in. Every snippet loads the SDK the same way, from the instance's /js/forma.umd.js through a script tag: no Forma package is published on npm (or for mobile and WordPress), so the page offers nothing that installs one.
 
 export interface SdkSnippets {
+  /** The script-tag loader for a plain page's <head>, also pasted into a Google Tag Manager Custom HTML tag and into index.html for React and Vue. */
   html: string;
+  /** The same loader as a Next.js component, rendered through next/script. */
   nextjs: string;
-  react: string;
-  vue: string;
-  reactNative: string;
-  android: string;
-  swift: string;
-  flutter: string;
+  /** How app code calls the SDK the loader defines (window.forma), with the TypeScript declaration for it. */
+  usage: string;
 }
 
-/** The install snippets for a workspace, pointing the SDK at appUrl. */
-export const sdkSnippets = (workspaceId: string, appUrl: string): SdkSnippets => ({
-  html: `<!-- START Forma Surveys -->
-<script type="text/javascript">
-!function(){
+/** The methods the loader's stub accepts before the SDK has arrived. Each call is queued and replayed, in order, once it has: the SDK's own globalThis.forma replaces the stub when its script runs. setup is not among them: the loader calls it. */
+export const SDK_STUB_METHODS = [
+  "setUserId",
+  "setEmail",
+  "setAttribute",
+  "setAttributes",
+  "setLanguage",
+  "track",
+  "logout",
+  "registerRouteChange",
+  "setNonce",
+  "setEmbeddedData",
+  "clearEmbeddedData",
+  "on",
+  "off",
+] as const;
+
+/** Queued calls that do not go through the SDK's command queue, replayed before setup: an on() handler then sees forma_setup_successful, and the nonce and embedded data are in place before the first survey renders. Every other call is replayed after setup, since the command queue drops anything that arrives before it. */
+const SDK_IMMEDIATE_METHODS = ["on", "off", "setNonce", "setEmbeddedData", "clearEmbeddedData"] as const;
+
+/** The loader's JavaScript: ES5, because a GTM Custom HTML tag rejects newer syntax. A second copy on the page, or one running after the SDK is already there, does nothing. */
+const loaderScript = (workspaceId: string, appUrl: string): string => `!function(){
     var appUrl = "${appUrl}";
     var workspaceId = "${workspaceId}";
-var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";t.onload=function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
+    var f=window.forma=window.forma||{};if(f.setup||f.q)return;f.q=[];
+    "${SDK_STUB_METHODS.join(" ")}".split(" ").forEach(function(m){f[m]=function(){f.q.push([m,arguments])}});
+    var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.js";
+    t.onload=function(){var s=window.forma,i=/^(${SDK_IMMEDIATE_METHODS.join("|")})$/,r=function(p){f.q.forEach(function(c){if(i.test(c[0])===p)s[c[0]].apply(s,c[1])})};r(!0);s.setup({workspaceId: workspaceId, appUrl: appUrl});r(!1)};
+    var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();`;
+
+/** The install snippets for a workspace, pointing the SDK at appUrl. */
+export const sdkSnippets = (workspaceId: string, appUrl: string): SdkSnippets => {
+  const loader = loaderScript(workspaceId, appUrl);
+  return {
+    html: `<!-- START Forma Surveys -->
+<script type="text/javascript">
+${loader}
 </script>
 <!-- END Forma Surveys -->`,
-  nextjs: `"use client";
+    nextjs: `import Script from "next/script";
 
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import forma from "@forma/js";
-
-export default function FormaProvider() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    forma.setup({ workspaceId: "${workspaceId}", appUrl: "${appUrl}" });
-  }, []);
-
-  useEffect(() => {
-    forma?.registerRouteChange();
-  }, [pathname, searchParams]);
-
-  return null;
-}`,
-  react: `import forma from "@forma/js";
-
-if (typeof window !== "undefined") {
-  forma.setup({
-    workspaceId: "${workspaceId}",
-    appUrl: "${appUrl}",
-  });
-}`,
-  vue: `import forma from "@forma/js";
-
-if (typeof window !== "undefined") {
-  forma.setup({
-    workspaceId: "${workspaceId}",
-    appUrl: "${appUrl}",
-  });
-}
-
-export default forma;`,
-  reactNative: `import Forma from "@forma/react-native";
-
-const config = {
-  workspaceId: "${workspaceId}",
-  appUrl: "${appUrl}",
-};
-
-export default function App() {
+export default function FormaScript() {
   return (
-    <>
-      {/* Your app content */}
-      <Forma initConfig={config} />
-    </>
+    <Script id="forma-sdk" strategy="afterInteractive">
+      {\`${loader}\`}
+    </Script>
   );
 }`,
-  android: `val config = FormaConfig.Builder(
-    "${appUrl}",
-    "${workspaceId}"
-)
-  .setFragmentManager(supportFragmentManager)
-  .build()
+    usage: `// forma.d.ts: lets TypeScript see the global the snippet defines.
+interface Window {
+  forma: { [method: string]: (...args: unknown[]) => unknown };
+}
 
-Forma.setup(this, config)`,
-  swift: `import FormaSDK
+// In your app code, after the user signs in:
+window.forma.setUserId(user.id);
+window.forma.setAttributes({ plan: "pro" });
 
-let config = FormaConfig.Builder(
-    appUrl: "${appUrl}",
-    workspaceId: "${workspaceId}"
-).build()
+// When something worth a survey happens:
+window.forma.track("upgrade_clicked");
 
-Forma.setup(with: config)`,
-  flutter: `import 'package:forma/forma.dart';
+// When the user signs out:
+window.forma.logout();`,
+  };
+};
 
-Forma(
-  appUrl: "${appUrl}",
-  workspaceId: "${workspaceId}",
-);`,
-});
+/** The SDK reference on the website, in the website's language closest to the app's: it has en, zh (Simplified) and ja. */
+export const sdkReferenceUrl = (language: string): string => {
+  const prefix = language.startsWith("ja") ? "/ja" : language.startsWith("zh") ? "/zh" : "";
+  return `https://forma.yldm.ai${prefix}/developers/sdk/`;
+};
