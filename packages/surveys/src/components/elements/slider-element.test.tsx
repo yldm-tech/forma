@@ -56,6 +56,13 @@ describe("SliderElement", () => {
     expect(onChange).toHaveBeenLastCalledWith({ s: 5 });
   });
 
+  // A touch tap on a range input fires pointerup and touchend but no click.
+  test("tapping it where it rests on a touch screen answers with that value", () => {
+    const { input, onChange } = renderSlider();
+    fireEvent.pointerUp(input, { pointerType: "touch" });
+    expect(onChange).toHaveBeenLastCalledWith({ s: 5 });
+  });
+
   test("an answered slider announces its value", () => {
     const { input } = renderSlider(2.5);
     expect(input.value).toBe("2.5");

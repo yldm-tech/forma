@@ -142,7 +142,10 @@ function Slider({
             onChange={(e) => {
               report(Number(e.currentTarget.value));
             }}
-            // A press on the thumb where it rests changes nothing and fires no change event, yet the respondent chose that value.
+            // A press on the thumb where it rests changes nothing and fires no change event, yet the respondent chose that value. A touch tap on a range input fires no click in Chromium, only pointerup and touchend, so pointerup carries the tap and click covers the mouse where pointer events are missing. After a drag the value is already answered, and a swipe that scrolls the page ends in pointercancel, not pointerup.
+            onPointerUp={(e) => {
+              if (!isAnswered) report(Number(e.currentTarget.value));
+            }}
             onClick={(e) => {
               if (!isAnswered) report(Number(e.currentTarget.value));
             }}

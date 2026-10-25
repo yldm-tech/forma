@@ -62,13 +62,25 @@ export const SliderElementForm = ({
     tooManySteps: t("workspace.surveys.edit.slider_too_many_steps", { max: SLIDER_MAX_STEPS }),
   };
 
-  const issue = getSliderScaleIssue(element);
+  const isNumberText = (text: string): boolean => text.trim() !== "" && Number.isFinite(Number(text));
+
+  // A box that is blank or holds no number is not saved, so the element still has the number from before; the issue shown is about that box, not about the hidden number.
+  const blankField = SCALE_FIELDS.find((field) => !isNumberText(drafts[field]));
+  const issue: { code: TSliderScaleIssueCode; field: TScaleField } | null = blankField
+    ? { code: "notNumbers", field: blankField }
+    : getSliderScaleIssue(element);
 
   const updateScaleField = (field: TScaleField, text: string) => {
     setDrafts((current) => ({ ...current, [field]: text }));
-    const value = Number(text);
-    if (text.trim() !== "" && Number.isFinite(value)) {
-      updateElement(elementIdx, { [field]: value });
+    if (isNumberText(text)) {
+      updateElement(elementIdx, { [field]: Number(text) });
+    }
+  };
+
+  // Leaving a box that holds no number puts back the number that is saved, so the box never shows something other than what the survey will use.
+  const restoreScaleField = (field: TScaleField) => {
+    if (!isNumberText(drafts[field])) {
+      setDrafts((current) => ({ ...current, [field]: String(element[field]) }));
     }
   };
 
@@ -137,6 +149,9 @@ export const SliderElementForm = ({
                 value={drafts[field]}
                 onChange={(e) => {
                   updateScaleField(field, e.target.value);
+                }}
+                onBlur={() => {
+                  restoreScaleField(field);
                 }}
                 aria-invalid={isFieldInvalid}
                 aria-describedby={isFieldInvalid ? `slider-${element.id}-scale-issue` : undefined}
