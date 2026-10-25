@@ -156,6 +156,31 @@ func TestPromotionMakesTheUserAdminOfTheirTeams(t *testing.T) {
 	}
 }
 
+// Demotion from manager to member takes back the team admin seats promotion gave, in the organization only; a plain member's team admin seat survives their role being set to member again.
+func TestDemotionMakesTheUserContributorOfTheirTeams(t *testing.T) {
+	e := newEnv(t)
+	owner, manager, member := e.user(), e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	other := e.organization(e.user(), "Other")
+	e.member(c.ID, manager, RoleManager)
+	e.member(other.ID, manager, RoleManager)
+	e.member(c.ID, member, RoleMember)
+	team, foreignTeam := e.team(c.ID), e.team(other.ID)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'admin'), (?, ?, 'admin'), (?, ?, 'admin')`, team, manager, foreignTeam, manager, team, member)
+
+	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, manager), map[string]string{"role": RoleMember}), http.StatusOK, nil)
+	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, member), map[string]string{"role": RoleMember}), http.StatusOK, nil)
+	if e.count(`SELECT count(*) FROM team_members WHERE team_id = ? AND user_id = ? AND role = 'contributor'`, team, manager) != 1 {
+		t.Fatal("the demoted manager is still a team admin")
+	}
+	if e.count(`SELECT count(*) FROM team_members WHERE team_id = ? AND user_id = ? AND role = 'admin'`, foreignTeam, manager) != 1 {
+		t.Fatal("a team of another organization was touched")
+	}
+	if e.count(`SELECT count(*) FROM team_members WHERE team_id = ? AND user_id = ? AND role = 'admin'`, team, member) != 1 {
+		t.Fatal("a plain member lost the team admin seat they were given")
+	}
+}
+
 func TestOwnersDemotingEachOtherConcurrentlyKeepAnOwner(t *testing.T) {
 	e := newEnv(t)
 	a, b := e.user(), e.user()

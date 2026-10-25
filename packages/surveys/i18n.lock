@@ -37,6 +37,8 @@ checksums:
     common/response_saved_offline: 7c06127ffc49fe30c5c1d8ca792c7a0d
     common/retry: 6e44d18639560596569a1278f9c83676
     common/retrying: 40989361ea5f6b95897b95ac928b5bd9
+    common/saving_offline: 45ffcb37c6286a00451b565d087f89b7
+    common/saving_reconnecting: 4695cd035268e789cc69aed04abfe7b6
     common/scheduling_calendar: 043c92144cbaa0fbe000d5c2ea234b9a
     common/scroll_to_bottom: 9481586f42c7c8b1b91c220346e1e630
     common/search: fe877a75eac472fc5b188c135c78a558

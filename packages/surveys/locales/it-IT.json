@@ -36,6 +36,8 @@
     "response_saved_offline": "La tua risposta non è stata ancora inviata. Verrà inviata automaticamente quando tornerai online.",
     "retry": "Riprova",
     "retrying": "Riprovando...",
+    "saving_offline": "Sei offline. Puoi continuare a rispondere; le tue risposte verranno salvate quando tornerai online.",
+    "saving_reconnecting": "Alcune risposte non sono ancora state salvate. Continueremo a riprovare mentre prosegui.",
     "scheduling_calendar": "Calendario di pianificazione",
     "scroll_to_bottom": "Scorri verso il basso",
     "search": "Cerca...",
