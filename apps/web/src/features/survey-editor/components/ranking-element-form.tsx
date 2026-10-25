@@ -5,14 +5,15 @@ import { createId } from "@paralleldrive/cuid2";
 import { PlusIcon } from "lucide-react";
 import { type JSX, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  TSurveyElement,
-  TSurveyElementChoice,
-  TSurveyRankingElement,
+import {
+  type TSurveyElementChoice,
+  TSurveyElementTypeEnum,
+  type TSurveyRankingElement,
 } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
+import type { TElementUpdate, TUpdateElement } from "../types/editor";
 import { ElementFormInput } from "./element-form-input/index";
 import { ElementOptionChoice } from "./element-option-choice";
 import { ValidationRulesEditor } from "./validation-rules-editor";
@@ -24,7 +25,7 @@ interface RankingElementFormProps {
   localSurvey: TSurvey;
   element: TSurveyRankingElement;
   elementIdx: number;
-  updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
+  updateElement: TUpdateElement;
   selectedLanguageCode: string;
   isInvalid: boolean;
   locale: TUserLocale;
@@ -46,34 +47,45 @@ export const RankingElementForm = ({
   const surveyLanguageCodes = extractLanguageCodes(localSurvey.languages);
   const surveyLanguages = localSurvey.languages ?? [];
 
-  const updateChoice = (choiceIdx: number, updatedAttributes: Partial<TSurveyElementChoice>) => {
-    if (element.choices) {
-      const newChoices = element.choices.map((choice, idx) => {
-        if (idx !== choiceIdx) return choice;
-        return { ...choice, ...updatedAttributes };
-      });
+  // Choice edits are computed from the element's latest choices, not this render's: an option's label is committed 100 ms after its last keystroke, after Enter may already have added the next row.
+  const updateCurrentElement = (compute: (current: TSurveyRankingElement) => TElementUpdate) =>
+    updateElement(elementIdx, (current) =>
+      current.type === TSurveyElementTypeEnum.Ranking ? compute(current) : {}
+    );
 
-      updateElement(elementIdx, { choices: newChoices });
-    }
+  const updateChoice = (choiceIdx: number, updatedAttributes: Partial<TSurveyElementChoice>) => {
+    // The index is this render's; the choice it names is found by id in the latest choices.
+    const choiceId = element.choices[choiceIdx]?.id;
+    if (!choiceId) return;
+
+    updateCurrentElement((current) => ({
+      choices: current.choices.map((choice) =>
+        choice.id === choiceId ? { ...choice, ...updatedAttributes } : choice
+      ),
+    }));
   };
 
   const addChoice = (choiceIdx: number) => {
-    let newChoices = !element.choices ? [] : element.choices;
-
+    // Created outside the updater, which React may call more than once.
     const newChoice = {
       id: createId(),
       label: createI18nString("", surveyLanguageCodes),
     };
+    const afterChoiceId = element.choices[choiceIdx]?.id;
 
-    updateElement(elementIdx, {
-      choices: [...newChoices.slice(0, choiceIdx + 1), newChoice, ...newChoices.slice(choiceIdx + 1)],
+    updateCurrentElement((current) => {
+      const afterIdx = current.choices.findIndex((c) => c.id === afterChoiceId);
+      return {
+        choices:
+          afterIdx === -1
+            ? [...current.choices, newChoice]
+            : [...current.choices.slice(0, afterIdx + 1), newChoice, ...current.choices.slice(afterIdx + 1)],
+      };
     });
   };
 
   const addOption = () => {
-    const choices = !element.choices ? [] : element.choices;
-
-    if (choices.length >= 25) {
+    if (element.choices.length >= 25) {
       return;
     }
 
@@ -82,18 +94,23 @@ export const RankingElementForm = ({
       label: createI18nString("", surveyLanguageCodes),
     };
 
-    updateElement(elementIdx, { choices: [...choices, newChoice] });
+    updateCurrentElement((current) =>
+      current.choices.length >= 25 ? {} : { choices: [...current.choices, newChoice] }
+    );
   };
 
   const deleteChoice = (choiceIdx: number) => {
-    const newChoices = element.choices.filter((_, idx) => idx !== choiceIdx);
+    const choiceToDelete = element.choices[choiceIdx]?.id;
+    if (!choiceToDelete) return;
     const choiceValue = element.choices[choiceIdx]?.label[selectedLanguageCode];
 
     if (isInvalidValue === choiceValue) {
       setIsInvalidValue(null);
     }
 
-    updateElement(elementIdx, { choices: newChoices });
+    updateCurrentElement((current) => ({
+      choices: current.choices.filter((c) => c.id !== choiceToDelete),
+    }));
   };
 
   const shuffleOptionsTypes = {

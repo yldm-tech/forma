@@ -2210,6 +2210,7 @@
       "delete_segment": "セグメントを削除",
       "desktop": "デスクトップ",
       "device": "デバイス",
+      "device_filter_hint": "訪問のたびに判定されます。連絡先の件数にはデバイスの条件は含まれません。",
       "devices": "デバイス",
       "edit_segment": "セグメントを編集",
       "error_resetting_filters": "フィルターのリセット中にエラーが発生しました",

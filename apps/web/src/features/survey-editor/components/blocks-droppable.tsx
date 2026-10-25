@@ -1,5 +1,5 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { TElementUpdate } from "../types/editor";
+import type { TUpdateElement } from "../types/editor";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import type { TWorkspace as Workspace } from "@forma/types/workspace";
 import { TI18nString } from "@forma/types/i18n";
@@ -14,7 +14,7 @@ interface BlocksDroppableProps {
   setLocalSurvey: (survey: TSurvey) => void;
   workspace: Workspace;
   moveElement: (elementIdx: number, up: boolean) => void;
-  updateElement: (elementIdx: number, updatedAttributes: TElementUpdate) => void;
+  updateElement: TUpdateElement;
   updateBlockLogic: (elementIdx: number, logic: TSurveyBlockLogic[]) => void;
   updateBlockLogicFallback: (elementIdx: number, logicFallback: string | undefined) => void;
   updateBlockName: (blockIdx: number, name: string) => void;

@@ -162,13 +162,13 @@ func TestUpdateAttributes(t *testing.T) {
 		}
 	})
 
-	t.Run("strict types for existing keys skip only the bad value", func(t *testing.T) {
+	t.Run("strict types for existing keys skip only the bad value, reported as errors", func(t *testing.T) {
 		res := e.updateAttrs(owner, c, `{"email":"a@example.com","age":"43","renewal":"15-01-2025","firstName":"Grace"}`)
-		if codes(res.Messages) != "attribute_type_validation_error,attribute_type_validation_error" {
-			t.Fatalf("messages %+v", res.Messages)
+		if codes(res.Errors) != "attribute_type_validation_error,attribute_type_validation_error" || len(res.Messages) != 0 {
+			t.Fatalf("errors %+v, messages %+v", res.Errors, res.Messages)
 		}
-		if res.Messages[0].Params["key"] != "age" || res.Messages[0].Params["dataType"] != TypeNumber || !strings.HasPrefix(res.Messages[0].Params["error"], "Attribute 'age' expects a number") {
-			t.Fatalf("type message %+v", res.Messages[0])
+		if res.Errors[0].Params["key"] != "age" || res.Errors[0].Params["dataType"] != TypeNumber || !strings.HasPrefix(res.Errors[0].Params["error"], "Attribute 'age' expects a number") {
+			t.Fatalf("type error %+v", res.Errors[0])
 		}
 		got := e.values(c)
 		if got["age"] != "42" || got["firstName"] != "Grace" {
