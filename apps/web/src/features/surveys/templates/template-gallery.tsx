@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";
-import { Suspense, lazy, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, Suspense, lazy, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import {
@@ -15,12 +15,20 @@ import {
 import { LoadingBlock } from "../../../components/ui/page";
 import { CreateWithAICard } from "../ai-create/create-with-ai-card";
 import { CUSTOM_TEMPLATE_ID, type SurveyTemplate, surveyTemplatesQuery } from "../api";
+import {
+  type OrganizationTemplate,
+  organizationTemplateIdOf,
+  organizationTemplatesQuery,
+} from "./organization-templates";
 import { TemplateList } from "./template-list";
-import { useCreateSurveyFromTemplate } from "./use-create-survey";
+import { useCreateSurveyFromOrganizationTemplate, useCreateSurveyFromTemplate } from "./use-create-survey";
 
 // The preview pulls in the editor's preview frame and the respondent runtime, so it loads only once a template is previewed.
 const TemplatePreview = lazy(() =>
   import("./template-preview").then((m) => ({ default: m.TemplatePreview }))
+);
+const OrganizationTemplatePreview = lazy(() =>
+  import("./template-preview").then((m) => ({ default: m.OrganizationTemplatePreview }))
 );
 
 /** Tailwind's lg breakpoint: from here the preview sits beside the gallery; below it, a template is previewed in a dialog. */
@@ -48,7 +56,7 @@ const createLabelKey = (template: SurveyTemplate) =>
     : "workspace.surveys.templates.use_this_template";
 
 /**
- * forma2's TemplateContainerWithPreview: the template gallery with its search, as the templates page (under a menu bar with a back button) or as the survey list of a workspace without any survey yet, which also offers a draft written by AI. The chosen template is previewed as respondents will see it: beside the gallery on a wide screen, in a dialog from the card's Preview button on a narrower one. Both offer to create the survey from it.
+ * forma2's TemplateContainerWithPreview: the template gallery with its search, the organization's own templates above the catalog, as the templates page (under a menu bar with a back button) or as the survey list of a workspace without any survey yet, which also offers a draft written by AI. The chosen template is previewed as respondents will see it: beside the gallery on a wide screen, in a dialog from the card's Preview button on a narrower one. Both offer to create the survey from it.
  */
 export const TemplateGallery = ({
   workspaceId,
@@ -58,7 +66,7 @@ export const TemplateGallery = ({
   isTemplatePage,
 }: {
   workspaceId: string;
-  organizationId?: string;
+  organizationId: string;
   surveyType: "link" | "app";
   defaultLanguage: string;
   isTemplatePage: boolean;
@@ -93,6 +101,52 @@ export const TemplateGallery = ({
       surveyType,
       defaultLanguage,
     });
+  // The organization's own templates, from the query the list reads.
+  const ownTemplates = useQuery(organizationTemplatesQuery(organizationId));
+  const activeOwnId = organizationTemplateIdOf(activeId);
+  const activeOwnTemplate =
+    (activeOwnId && ownTemplates.data?.templates.find((template) => template.id === activeOwnId)) || null;
+  const own = useCreateSurveyFromOrganizationTemplate();
+  const isCreating = isPending || own.isPending;
+  const createFromOwn = (template: OrganizationTemplate) =>
+    void own.create({ templateId: template.id, workspaceId, surveyType });
+  /** The chosen card, from the catalog or the organization's templates: what the pane and the dialog show, the label of their button and what it does. */
+  const chosen: {
+    name: string;
+    description: string;
+    createLabel: string;
+    create: () => void;
+    preview: ReactNode;
+  } | null = activeTemplate
+    ? {
+        name: activeTemplate.name,
+        description: activeTemplate.description,
+        createLabel: t(createLabelKey(activeTemplate)),
+        create: () => createFrom(activeTemplate),
+        preview: (
+          <TemplatePreview
+            workspaceId={workspaceId}
+            templateId={activeTemplate.id}
+            defaultLanguage={defaultLanguage}
+            surveyType={surveyType}
+          />
+        ),
+      }
+    : activeOwnTemplate
+      ? {
+          name: activeOwnTemplate.name,
+          description: activeOwnTemplate.description,
+          createLabel: t("workspace.surveys.templates.use_this_template"),
+          create: () => createFromOwn(activeOwnTemplate),
+          preview: (
+            <OrganizationTemplatePreview
+              workspaceId={workspaceId}
+              templateId={activeOwnTemplate.id}
+              surveyType={surveyType}
+            />
+          ),
+        }
+      : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -127,12 +181,14 @@ export const TemplateGallery = ({
           </div>
           <TemplateList
             workspaceId={workspaceId}
+            organizationId={organizationId}
             search={search}
             onClearSearch={clearSearch}
             activeId={activeId}
             onSelect={setActiveId}
             onCreate={createFrom}
-            isCreating={isPending}
+            onCreateFromOrganizationTemplate={createFromOwn}
+            isCreating={isCreating}
             hasPreviewPane={isWideScreen}
             onPreview={isWideScreen ? undefined : () => setIsPreviewDialogOpen(true)}
             aiCard={
@@ -150,30 +206,19 @@ export const TemplateGallery = ({
           <aside
             aria-label={t("workspace.surveys.templates.template_preview")}
             className="flex w-2/5 shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-slate-100">
-            {activeTemplate ? (
+            {chosen ? (
               <>
                 <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-3">
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold text-slate-800">{activeTemplate.name}</h2>
-                    <p className="line-clamp-2 text-xs text-slate-500">{activeTemplate.description}</p>
+                    <h2 className="truncate text-sm font-semibold text-slate-800">{chosen.name}</h2>
+                    <p className="line-clamp-2 text-xs text-slate-500">{chosen.description}</p>
                   </div>
-                  <Button
-                    size="sm"
-                    className="shrink-0"
-                    loading={isPending}
-                    onClick={() => createFrom(activeTemplate)}>
-                    {t(createLabelKey(activeTemplate))}
+                  <Button size="sm" className="shrink-0" loading={isCreating} onClick={chosen.create}>
+                    {chosen.createLabel}
                   </Button>
                 </div>
                 <div className="relative min-h-0 flex-1">
-                  <Suspense fallback={<PreviewFallback />}>
-                    <TemplatePreview
-                      workspaceId={workspaceId}
-                      templateId={activeTemplate.id}
-                      defaultLanguage={defaultLanguage}
-                      surveyType={surveyType}
-                    />
-                  </Suspense>
+                  <Suspense fallback={<PreviewFallback />}>{chosen.preview}</Suspense>
                 </div>
               </>
             ) : (
@@ -184,27 +229,20 @@ export const TemplateGallery = ({
           </aside>
         )}
       </div>
-      {!isWideScreen && activeTemplate && (
+      {!isWideScreen && chosen && (
         <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen} width="wide">
           <DialogHeader>
-            <DialogTitle>{activeTemplate.name}</DialogTitle>
-            <DialogDescription>{activeTemplate.description}</DialogDescription>
+            <DialogTitle>{chosen.name}</DialogTitle>
+            <DialogDescription>{chosen.description}</DialogDescription>
           </DialogHeader>
           <DialogBody
             aria-label={t("workspace.surveys.templates.template_preview")}
             className="relative h-[65dvh] flex-none overflow-hidden">
-            <Suspense fallback={<PreviewFallback />}>
-              <TemplatePreview
-                workspaceId={workspaceId}
-                templateId={activeTemplate.id}
-                defaultLanguage={defaultLanguage}
-                surveyType={surveyType}
-              />
-            </Suspense>
+            <Suspense fallback={<PreviewFallback />}>{chosen.preview}</Suspense>
           </DialogBody>
           <DialogFooter>
-            <Button loading={isPending} onClick={() => createFrom(activeTemplate)}>
-              {t(createLabelKey(activeTemplate))}
+            <Button loading={isCreating} onClick={chosen.create}>
+              {chosen.createLabel}
             </Button>
           </DialogFooter>
         </Dialog>

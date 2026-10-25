@@ -235,6 +235,7 @@ export const SurveysList = ({
   workspaceId,
   organizationId,
   isReadOnly,
+  canSaveAsTemplate,
   channel,
   surveyType,
   defaultLanguage,
@@ -242,6 +243,8 @@ export const SurveysList = ({
   workspaceId: string;
   organizationId: string;
   isReadOnly: boolean;
+  /** The caller is an owner or a manager of the organization, whose rows offer "Save as template". */
+  canSaveAsTemplate: boolean;
   channel: WorkspaceChannel;
   surveyType: "link" | "app";
   defaultLanguage: string;
@@ -395,6 +398,7 @@ export const SurveysList = ({
                 isReadOnly={isReadOnly}
                 publicDomain={publicDomain}
                 actions={actions}
+                canSaveAsTemplate={canSaveAsTemplate}
               />
             ))}
           </div>

@@ -7,6 +7,7 @@ import {
 } from "../../../../../features/surveys/defaults";
 import { SurveysList } from "../../../../../features/surveys/list/survey-list";
 import { meQuery } from "../../../../../lib/queries/auth";
+import { accessFlags } from "../../../../../lib/roles";
 import { workspaceQuery } from "../../../../../lib/queries/workspaces";
 
 // forma2's survey list, /workspaces/{id}/surveys.
@@ -25,6 +26,7 @@ function SurveysPage() {
       workspaceId={workspace.id}
       organizationId={workspace.organizationId}
       isReadOnly={workspace.access.isReadOnly}
+      canSaveAsTemplate={accessFlags(workspace.access.role).isOwnerOrManager}
       channel={config.channel}
       surveyType={surveyTypeForChannel(config.channel)}
       defaultLanguage={resolveDefaultSurveyLanguage({

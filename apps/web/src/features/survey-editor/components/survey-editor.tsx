@@ -67,6 +67,8 @@ interface SurveyEditorProps {
   userEmail: string;
   teamMemberDetails: TFollowUpEmailToUser[];
   quotas: TSurveyQuota[];
+  /** The user is an owner or a manager of the organization, who may save the survey as a template of it. */
+  canSaveAsTemplate: boolean;
 }
 
 export const SurveyEditor = ({
@@ -86,6 +88,7 @@ export const SurveyEditor = ({
   userEmail,
   teamMemberDetails,
   quotas,
+  canSaveAsTemplate,
 }: Readonly<SurveyEditorProps>) => {
   const queryClient = useQueryClient();
   const isFollowUpsTabVisible = shouldShowFollowUpsTab(survey.followUps.length);
@@ -157,6 +160,7 @@ export const SurveyEditor = ({
         locale={locale}
         setIsCautionDialogOpen={setIsCautionDialogOpen}
         schedulingTimeZone={surveySchedulingConfig.timeZone}
+        canSaveAsTemplate={canSaveAsTemplate}
       />
       <div className="relative z-0 flex flex-1 overflow-hidden">
         <main

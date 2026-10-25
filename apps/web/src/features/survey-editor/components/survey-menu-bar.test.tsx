@@ -24,6 +24,7 @@ import { withSurveyNameFocus } from "../lib/name-focus";
 import { SurveyMenuBar } from "./survey-menu-bar";
 
 const WORKSPACE_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
+const ORGANIZATION_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d12";
 const SURVEY_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0e";
 const EDITOR_PATH = `/workspaces/${WORKSPACE_ID}/surveys/${SURVEY_ID}/edit`;
 const SUMMARY_PATH = `/workspaces/${WORKSPACE_ID}/surveys/${SURVEY_ID}/summary`;
@@ -213,7 +214,11 @@ const stubAppSurveyEndpoints = (): SaveRequest[] => {
 /** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. The editor shows the open tab, and on the Questions tab the cards of the survey's questions, as the editor mounts them. */
 const renderMenuBar = (
   persisted: TSurvey,
-  { initialTab = "elements", focusName = false }: { initialTab?: TSurveyEditorTabs; focusName?: boolean } = {}
+  {
+    initialTab = "elements",
+    focusName = false,
+    canSaveAsTemplate = false,
+  }: { initialTab?: TSurveyEditorTabs; focusName?: boolean; canSaveAsTemplate?: boolean } = {}
 ) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(surveyEditorKeys.survey(persisted.id), persisted);
@@ -233,13 +238,14 @@ const renderMenuBar = (
           setActiveId={setActiveId}
           setInvalidElements={setInvalidElements}
           setHasTriggerError={setHasTriggerError}
-          workspace={{ id: WORKSPACE_ID, name: "Acme" } as TWorkspace}
+          workspace={{ id: WORKSPACE_ID, name: "Acme", organizationId: ORGANIZATION_ID } as TWorkspace}
           responseCount={0}
           finishedResponseCount={0}
           selectedLanguageCode="default"
           locale="en-US"
           setIsCautionDialogOpen={() => {}}
           schedulingTimeZone="Pacific/Auckland"
+          canSaveAsTemplate={canSaveAsTemplate}
         />
         <p data-testid="active-tab">{activeId}</p>
         {activeId === "elements" &&
@@ -844,5 +850,74 @@ describe("SurveyMenuBar", () => {
     expect(saves[0]?.body.status).toBe("draft");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(router.state.location.pathname).toBe(EDITOR_PATH);
+  });
+});
+
+describe("SurveyMenuBar save as template", () => {
+  test("an owner or a manager saves the survey as a template, told that unsaved changes are not part of it", async () => {
+    const posts: { path: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit = {}) => {
+        if (init.method !== "POST") throw new Error(`unexpected ${init.method ?? "GET"} ${path}`);
+        posts.push({ path, body: JSON.parse(init.body as string) });
+        return Response.json({ id: "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d13" }, { status: 201 });
+      })
+    );
+    renderMenuBar(survey({ status: "inProgress" }), { canSaveAsTemplate: true });
+
+    fireEvent.change(await screen.findByDisplayValue("Feedback"), { target: { value: "Feedback 2026" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.save_as_template"),
+      })
+    );
+    expect(
+      await screen.findByText(i18n.t("workspace.surveys.organization_templates.unsaved_changes_not_included"))
+    ).toBeTruthy();
+    // The template is offered under the stored name, since the edit is not part of it.
+    const name = screen.getByRole<HTMLInputElement>("textbox", { name: i18n.t("common.name") });
+    expect(name.value).toBe("Feedback");
+    fireEvent.click(
+      screen.getByRole("button", { name: i18n.t("workspace.surveys.organization_templates.save_template") })
+    );
+
+    await waitFor(() =>
+      expect(posts).toEqual([
+        {
+          path: `/api/app/surveys/${SURVEY_ID}/save-as-template`,
+          body: { name: "Feedback", description: "" },
+        },
+      ])
+    );
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: i18n.t("common.name") })).toBeNull());
+  });
+
+  test("an editor without unsaved changes says nothing about them, and nobody else is offered the button", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit = {}) => {
+        throw new Error(`unexpected ${init.method ?? "GET"} ${path}`);
+      })
+    );
+    renderMenuBar(survey({ status: "inProgress" }), { canSaveAsTemplate: true });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.save_as_template"),
+      })
+    );
+    expect(await screen.findByRole("textbox", { name: i18n.t("common.name") })).toBeTruthy();
+    expect(
+      screen.queryByText(i18n.t("workspace.surveys.organization_templates.unsaved_changes_not_included"))
+    ).toBeNull();
+    cleanup();
+
+    renderMenuBar(survey({ status: "inProgress" }));
+    expect(await screen.findByDisplayValue("Feedback")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.save_as_template"),
+      })
+    ).toBeNull();
   });
 });
