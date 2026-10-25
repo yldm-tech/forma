@@ -305,6 +305,13 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	webhookRepository := webhook.NewRepository(db)
 	guard := ssrf.New(cfg)
 	deliverer := webhook.NewDeliverer(webhookRepository, guard)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	mailerMailer, err := mailer.New(cfg, log)
 	if err != nil {
 		cleanup3()
@@ -332,26 +339,18 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	integrationRepository := integration.NewRepository(db, cipher, log)
 	integrationDeliverer := integration.NewDeliverer(cfg, integrationRepository, redisClient, log)
-	enqueuer, err := jobs.NewEnqueuer(log)
-	if err != nil {
-		cleanup4()
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
 	stripe := billing.NewStripe(cfg, log)
 	meter := billing.NewMeter(cfg, stripe, log)
 	workflowEnqueuer := workflow.NewEnqueuer(db, enqueuer, meter, log)
 	reporter := usagereport.NewReporter(cfg, db, redisClient, log)
 	handoffs := newPipelineHandoffs(integrationDeliverer, workflowEnqueuer, meter, reporter)
-	worker := pipeline.NewWorker(cfg, db, deliverer, sender, notifier, emitter, handoffs, log)
+	worker := pipeline.NewWorker(cfg, db, deliverer, enqueuer, sender, notifier, emitter, handoffs, log)
 	runner := workflow.NewRunner(cfg, db, mailerMailer, log)
 	reconciler := workflow.NewReconciler(db, enqueuer, log)
 	billingRepository := billing.NewRepository(db)
 	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
 	brevoClient := brevo.NewClient(cfg)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, runner, reconciler, engine, reporter, brevoClient)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, deliverer, runner, reconciler, engine, reporter, brevoClient)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()

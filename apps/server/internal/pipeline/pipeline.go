@@ -1,8 +1,8 @@
 // Package pipeline is forma2's response pipeline (apps/web/modules/response-pipeline): the River worker of the response-pipeline.process jobs the response module enqueues with every write, and what it does after a response, in forma2's order. Every event is delivered to the webhooks subscribed to it; a responseCreated event is then metered for Stripe billing, and a responseFinished event starts the workspace's workflow runs, delivers to its integrations, sends the survey's follow-ups and the members' notification emails, and completes a survey that reached its response limit.
 //
-// A webhook that fails is retried by retrying the whole job, which delivers again to every subscribed webhook with the same webhook-id, so a receiver can drop the duplicate; no other side effect runs on an attempt that will be retried. The last attempt logs the failure and carries on with the side effects. The integrations, the workflow runs, the Stripe meter and the usage report are reached through Handoffs, which app/jobs.go newPipelineHandoffs wires.
+// The delivery to each subscribed webhook is a webhook.deliver job of its own, queued before the other side effects, which then run without waiting for it: a webhook that fails is retried by its job, on the webhook package's schedule of hours and with the same webhook-id, and neither delivers again to the other webhooks nor holds back the rest. The deliveries are unique by webhook and JobKey, so an attempt that runs again queues none twice. The integrations, the workflow runs, the Stripe meter and the usage report are reached through Handoffs, which app/jobs.go newPipelineHandoffs wires.
 //
-// An attempt whose context ends (River cancels it SHUTDOWN_TIMEOUT after the worker is asked to stop, and at jobTimeout) fails as soon as the pipeline sees it, so the side effects it cut short run on the retry instead of being lost. The side effects that had completed run again on that retry, as they did when forma2's BullMQ worker stopped mid-job.
+// An attempt whose context ends (River cancels it SHUTDOWN_TIMEOUT after the worker is asked to stop, and at jobTimeout) fails as soon as the pipeline sees it, so the side effects it cut short run on the retry instead of being lost. The side effects that had completed run again on that retry, as they did when forma2's BullMQ worker stopped mid-job, except the webhook deliveries, which are already queued.
 package pipeline
 
 import (
@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,6 +56,7 @@ type Worker struct {
 	cfg       config.Config
 	db        *gorm.DB
 	webhooks  *webhook.Deliverer
+	jobs      *jobs.Enqueuer
 	followUps *followup.Sender
 	notifier  *notification.Notifier
 	audit     *audit.Emitter
@@ -64,8 +64,8 @@ type Worker struct {
 	log       *slog.Logger
 }
 
-func NewWorker(cfg config.Config, db *gorm.DB, webhooks *webhook.Deliverer, followUps *followup.Sender, notifier *notification.Notifier, emitter *audit.Emitter, handoffs Handoffs, log *slog.Logger) *Worker {
-	return &Worker{cfg: cfg, db: db, webhooks: webhooks, followUps: followUps, notifier: notifier, audit: emitter, handoffs: handoffs, log: log}
+func NewWorker(cfg config.Config, db *gorm.DB, webhooks *webhook.Deliverer, enqueuer *jobs.Enqueuer, followUps *followup.Sender, notifier *notification.Notifier, emitter *audit.Emitter, handoffs Handoffs, log *slog.Logger) *Worker {
+	return &Worker{cfg: cfg, db: db, webhooks: webhooks, jobs: enqueuer, followUps: followUps, notifier: notifier, audit: emitter, handoffs: handoffs, log: log}
 }
 
 // RegisterJobs adds the pipeline's worker to `forma worker`.
@@ -145,7 +145,7 @@ func (w *Worker) work(ctx context.Context, job *river.Job[response.PipelineArgs]
 		Name: args.Event, JobKey: JobKey(args), WorkspaceID: args.WorkspaceID, Response: args.Response, Locale: args.Locale,
 		OrganizationID: org.ID, DisplayTimeZone: tz, StripeCustomerID: org.StripeCustomerID, Survey: sv,
 	}
-	if err := w.deliverWebhooks(ctx, job, ev, hooks, log); err != nil {
+	if err := w.queueWebhooks(ctx, ev, hooks); err != nil {
 		return err
 	}
 	// forma2's runResponseCreatedSideEffects: the response is billable from its creation, counts toward the survey's analytics milestones, and may make the usage update due.
@@ -164,8 +164,8 @@ func (w *Worker) work(ctx context.Context, job *river.Job[response.PipelineArgs]
 	return nil
 }
 
-// deliverWebhooks is forma2's deliverWebhooks: every subscribed webhook concurrently. A failure fails the attempt while attempts remain, so the job is retried; on the last attempt it is logged and the job goes on.
-func (w *Worker) deliverWebhooks(ctx context.Context, job *river.Job[response.PipelineArgs], ev *Event, hooks []*webhook.Webhook, log *slog.Logger) error {
+// queueWebhooks is forma2's deliverWebhooks, decoupled: one webhook.deliver job per subscribed webhook, all queued in one transaction, so they run concurrently on the worker and each is retried on its own. Only a failure to queue them fails the attempt, before any other side effect.
+func (w *Worker) queueWebhooks(ctx context.Context, ev *Event, hooks []*webhook.Webhook) error {
 	if len(hooks) == 0 {
 		return nil
 	}
@@ -173,34 +173,9 @@ func (w *Worker) deliverWebhooks(ctx context.Context, job *river.Job[response.Pi
 	if err != nil {
 		return err
 	}
-	errs := make([]error, len(hooks))
-	var wg sync.WaitGroup
-	for i, h := range hooks {
-		wg.Go(func() {
-			if errs[i] = w.webhooks.Deliver(ctx, h, ev.Name, ev.JobKey, data); errs[i] != nil {
-				log.ErrorContext(ctx, "Response pipeline webhook delivery failed", "err", errs[i], "webhook_id", h.ID)
-			}
-		})
-	}
-	wg.Wait()
-	failed := 0
-	var first error
-	for _, e := range errs {
-		if e != nil {
-			failed++
-			if first == nil {
-				first = e
-			}
-		}
-	}
-	if failed == 0 {
-		return nil
-	}
-	if job.Attempt < job.MaxAttempts {
-		return first
-	}
-	log.ErrorContext(ctx, "Response pipeline webhook delivery exhausted retries; continuing with remaining side effects", "failed_webhook_count", failed)
-	return nil
+	return w.jobs.Transaction(ctx, w.db, func(tx *jobs.Tx) error {
+		return webhook.Enqueue(ctx, tx, hooks, ev.Name, ev.JobKey, ev.WorkspaceID, ev.Survey.ID, ev.Response.ID, data)
+	})
 }
 
 // autoCompleteTimeout bounds the survey auto-complete, which runs even when the attempt's context has ended: it is one idempotent update, and retrying the job for it would send every notification email again.
