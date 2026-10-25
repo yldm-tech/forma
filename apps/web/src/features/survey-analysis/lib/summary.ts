@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "../../survey-editor/lib/client-utils";
+import { getFilterOperatorLabel, getFilterValueLabel } from "./filters";
 
 // The summary page's formatting: forma2's summary/lib utils, element-denominator and sample-truncation, and the number formats of its cards.
 
@@ -13,6 +14,7 @@ export const convertFloatTo2Decimal = (num: number) => {
   return Math.round(num * 100) / 100;
 };
 
+/** The toast a summary click shows. filterValue and filterComboBoxValue are the filter's wire values; the message names them by their labels. */
 export const constructToastMessage = (
   elementType: TSurveyElementTypeEnum,
   filterValue: string,
@@ -34,12 +36,11 @@ export const constructToastMessage = (
       questionIdx: elementIdx + 1,
     });
   } else {
+    const values = Array.isArray(filterComboBoxValue) ? filterComboBoxValue : [filterComboBoxValue];
     return t("workspace.surveys.summary.added_filter_for_responses_where_answer_to_question", {
       questionIdx: elementIdx + 1,
-      filterComboBoxValue: Array.isArray(filterComboBoxValue)
-        ? filterComboBoxValue.join(",")
-        : filterComboBoxValue,
-      filterValue,
+      filterComboBoxValue: values.map((value) => getFilterValueLabel(elementType, value, t)).join(","),
+      filterValue: getFilterOperatorLabel(elementType, filterValue, t),
     });
   }
 };

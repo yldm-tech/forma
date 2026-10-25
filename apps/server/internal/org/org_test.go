@@ -81,6 +81,37 @@ func TestCreateOrganization(t *testing.T) {
 	e.fails(e.do(uuid.Nil, http.MethodPost, "/api/app/organizations", map[string]string{"name": "X"}), http.StatusUnauthorized, apperr.CodeNotAuthenticated, "")
 }
 
+// A creator's browser zone becomes the new organization's display and scheduling zone, so a Tokyo creator's surveys open and close at midnight in Tokyo rather than in the instance's zone. Without one, or with a name this build cannot load, the organization keeps the defaults and is still created.
+func TestCreateOrganizationTakesTheCreatorsTimeZone(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+
+	var tokyo Created
+	e.ok(e.do(owner, http.MethodPost, "/api/app/organizations", map[string]any{"name": "Tokyo", "timeZone": "Asia/Tokyo"}), http.StatusCreated, &tokyo)
+	if tokyo.DisplayTimeZone == nil || *tokyo.DisplayTimeZone != "Asia/Tokyo" || tokyo.SurveySchedulingTimeZone == nil || *tokyo.SurveySchedulingTimeZone != "Asia/Tokyo" {
+		t.Fatalf("created zones %v %v", tokyo.DisplayTimeZone, tokyo.SurveySchedulingTimeZone)
+	}
+	var d Detail
+	e.ok(e.do(owner, http.MethodGet, orgPath(tokyo.ID, ""), nil), http.StatusOK, &d)
+	if d.SurveyScheduling.TimeZone != "Asia/Tokyo" || d.SurveyScheduling.InstanceTimeZone != "UTC" {
+		t.Fatalf("effective schedule %+v", d.SurveyScheduling)
+	}
+
+	for _, body := range []map[string]any{
+		{"name": "No zone"},
+		{"name": "Null zone", "timeZone": nil},
+		{"name": "Unknown zone", "timeZone": "Mars/Olympus"},
+		{"name": "Empty zone", "timeZone": ""},
+		{"name": "Local zone", "timeZone": "Local"},
+	} {
+		var c Created
+		e.ok(e.do(owner, http.MethodPost, "/api/app/organizations", body), http.StatusCreated, &c)
+		if c.DisplayTimeZone != nil || c.SurveySchedulingTimeZone != nil {
+			t.Fatalf("%v: zones %v %v, want the defaults", body["name"], c.DisplayTimeZone, c.SurveySchedulingTimeZone)
+		}
+	}
+}
+
 func TestCreateOrganizationOnCloudUsesCloudBilling(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	c := e.organization(e.user(), "Acme")

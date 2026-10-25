@@ -15,6 +15,7 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { HalfCircle, ProgressBar } from "../../../../components/ui/progress-bar";
 import { TooltipRenderer } from "../../../../components/ui/tooltip";
 import { cn } from "../../../../lib/cn";
+import { SUMMARY_FILTER_OPERATOR, SUMMARY_FILTER_VALUE } from "../../lib/filters";
 import { convertFloatToNDecimal, formatAverage, formatNpsScore, npsScoreColor } from "../../lib/summary";
 import { RatingResponse } from "../response-values/rating-response";
 import {
@@ -65,11 +66,12 @@ export const NPSSummary = ({
     dismissed: t("workspace.surveys.summary.nps_dismissed"),
   };
 
+  // Wire operators, not labels: the filter matches these (lib/filters).
   const groupFilters: Record<NpsGroup, { comparison: string; values: string | string[] | undefined }> = {
-    promoters: { comparison: t("workspace.surveys.summary.includes_either"), values: ["9", "10"] },
-    passives: { comparison: t("workspace.surveys.summary.includes_either"), values: ["7", "8"] },
-    detractors: { comparison: t("workspace.surveys.summary.is_less_than"), values: "7" },
-    dismissed: { comparison: t("common.skipped"), values: undefined },
+    promoters: { comparison: SUMMARY_FILTER_OPERATOR.includesEither, values: ["9", "10"] },
+    passives: { comparison: SUMMARY_FILTER_OPERATOR.includesEither, values: ["7", "8"] },
+    detractors: { comparison: SUMMARY_FILTER_OPERATOR.isLessThan, values: "7" },
+    dismissed: { comparison: SUMMARY_FILTER_OPERATOR.skipped, values: undefined },
   };
 
   return (
@@ -79,9 +81,16 @@ export const NPSSummary = ({
         survey={survey}
         additionalInfo={
           <TooltipRenderer
-            tooltipContent={t("workspace.surveys.summary.nps_promoters_tooltip", {
-              percentage: promotersPercentage,
-            })}
+            tooltipContent={
+              <div className="max-w-xs space-y-1">
+                <p>{t("workspace.analysis.nps_formula_tooltip", { count: elementSummary.answered })}</p>
+                <p>
+                  {t("workspace.surveys.summary.nps_promoters_tooltip", {
+                    percentage: promotersPercentage,
+                  })}
+                </p>
+              </div>
+            }
             delayDuration={150}>
             <div className="flex items-center gap-x-2 rounded-lg bg-slate-100 p-2">
               <div
@@ -149,7 +158,7 @@ export const NPSSummary = ({
                   elementSummary.element.id,
                   elementSummary.element.headline,
                   elementSummary.element.type,
-                  t("workspace.surveys.summary.is_equal_to"),
+                  SUMMARY_FILTER_OPERATOR.isEqualTo,
                   choice.rating.toString()
                 )
               }>
@@ -200,13 +209,7 @@ const RatingLikeSummary = ({
   const [activeTab, setActiveTab] = useState<"aggregated" | "individual">("aggregated");
   const { element } = elementSummary;
   const filterByRating = (rating: number | null) =>
-    setFilter(
-      element.id,
-      element.headline,
-      element.type,
-      t("workspace.surveys.summary.is_equal_to"),
-      String(rating)
-    );
+    setFilter(element.id, element.headline, element.type, SUMMARY_FILTER_OPERATOR.isEqualTo, String(rating));
   const visibleChoices = elementSummary.choices.filter((choice) => choice.percentage !== 0);
 
   return (
@@ -540,8 +543,12 @@ export const ConsentSummary = ({
 }) => {
   const { t } = useTranslation();
   const items = [
-    { title: t("common.accepted"), ...elementSummary.accepted },
-    { title: t("common.dismissed"), ...elementSummary.dismissed },
+    { title: t("common.accepted"), filterValue: SUMMARY_FILTER_VALUE.accepted, ...elementSummary.accepted },
+    {
+      title: t("common.dismissed"),
+      filterValue: SUMMARY_FILTER_VALUE.dismissed,
+      ...elementSummary.dismissed,
+    },
   ];
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs">
@@ -551,14 +558,14 @@ export const ConsentSummary = ({
           <button
             type="button"
             className="group w-full cursor-pointer"
-            key={item.title}
+            key={item.filterValue}
             onClick={() =>
               setFilter(
                 elementSummary.element.id,
                 elementSummary.element.headline,
                 elementSummary.element.type,
-                "is",
-                item.title
+                SUMMARY_FILTER_OPERATOR.is,
+                item.filterValue
               )
             }>
             <ShareRow

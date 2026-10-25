@@ -4,9 +4,11 @@ export const UTC_DEFAULT = "UTC";
 /** The value the survey scheduling time zone menu uses for "no zone chosen", which the server stores as null and resolves to the instance's zone. No IANA name looks like it. */
 export const INSTANCE_DEFAULT = "instance-default";
 
-/** The IANA zones the browser knows, for the organization's display time zone. UTC is offered once, as the default entry. */
-export const ianaTimeZones = (): string[] =>
-  Intl.supportedValuesOf("timeZone").filter((zone) => zone !== UTC_DEFAULT);
+/** The IANA zones the browser knows, for the organization's display time zone. UTC is offered once, as the default entry. The stored zone is offered too when the browser lists it under another name or not at all, as for the scheduling menu: an organization takes its creator's browser zone, which another engine may name differently (Firefox's Asia/Kolkata is V8's Asia/Calcutta), and the menu must still show the zone dates are shown in rather than the default. */
+export const ianaTimeZones = (stored?: string | null): string[] => {
+  const zones = Intl.supportedValuesOf("timeZone").filter((zone) => zone !== UTC_DEFAULT);
+  return stored && stored !== UTC_DEFAULT && !zones.includes(stored) ? [...zones, stored] : zones;
+};
 
 /** The IANA zones the browser knows, UTC included, for the organization's survey scheduling time zone, whose default entry is the instance's zone. The stored zone is offered too when the browser lists it under another name or not at all (V8 knows Asia/Calcutta and Europe/Kiev, not Asia/Kolkata and Europe/Kyiv), so the menu still shows the zone in effect. */
 export const schedulingTimeZones = (stored?: string | null): string[] => {

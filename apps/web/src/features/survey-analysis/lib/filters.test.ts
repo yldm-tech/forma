@@ -7,7 +7,17 @@ import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
 import { TLanguage } from "@forma/types/workspace";
 import { type DateRange, OptionsType, type SelectedFilterValue } from "./filter-types";
-import { generateElementAndFilterOptions, getFormattedFilters, getTodayDate } from "./filters";
+import {
+  SUMMARY_FILTER_OPERATOR,
+  describeFilterCondition,
+  generateElementAndFilterOptions,
+  getFilterOperatorLabel,
+  getFilterTargetLabel,
+  getFilterValueLabel,
+  getFormattedFilters,
+  getTodayDate,
+  pictureFilterValue,
+} from "./filters";
 
 const t = ((key: string) => key) as TFunction;
 
@@ -1376,6 +1386,158 @@ describe("surveys", () => {
       expect(result.getMinutes()).toBe(59);
       expect(result.getSeconds()).toBe(59);
       expect(result.getMilliseconds()).toBe(999);
+    });
+  });
+
+  describe("score filter values", () => {
+    const surveyWith = (elements: TSurveyElement[]) =>
+      ({
+        id: "survey1",
+        name: "Scales",
+        blocks: [{ id: "block1", name: "Block 1", elements }],
+        questions: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: "inProgress",
+      }) as unknown as TSurvey;
+
+    const scaleElement = (id: string, type: TSurveyElementTypeEnum, range: number) =>
+      ({
+        id,
+        type,
+        headline: { default: id },
+        required: false,
+        scale: "number",
+        range,
+      }) as unknown as TSurveyElement;
+
+    const valuesOf = (survey: TSurvey, id: string) =>
+      genOptions(survey).elementFilterOptions.find((option) => option.id === id)?.filterComboBoxOptions;
+
+    test.each([3, 4, 6, 7, 10])("a rating of range %i offers 1 to its range", (range) => {
+      const survey = surveyWith([scaleElement("rating", TSurveyElementTypeEnum.Rating, range)]);
+      expect(valuesOf(survey, "rating")).toEqual(Array.from({ length: range }, (_, i) => String(i + 1)));
+    });
+
+    test("a 5-point CES offers 1 to 5, a 7-point one 1 to 7", () => {
+      const survey = surveyWith([
+        scaleElement("ces5", TSurveyElementTypeEnum.CES, 5),
+        scaleElement("ces7", TSurveyElementTypeEnum.CES, 7),
+      ]);
+      expect(valuesOf(survey, "ces5")).toEqual(["1", "2", "3", "4", "5"]);
+      expect(valuesOf(survey, "ces7")).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+    });
+
+    test("CSAT keeps 1 to 5", () => {
+      const survey = surveyWith([scaleElement("csat", TSurveyElementTypeEnum.CSAT, 5)]);
+      expect(valuesOf(survey, "csat")).toEqual(["1", "2", "3", "4", "5"]);
+    });
+
+    test("a value above 5 on a 10-point rating filters", () => {
+      const survey = surveyWith([scaleElement("rating", TSurveyElementTypeEnum.Rating, 10)]);
+      const result = getFormattedFilters(
+        survey,
+        {
+          filter: [
+            {
+              elementType: {
+                id: "rating",
+                label: "rating",
+                type: OptionsType.ELEMENTS,
+                elementType: TSurveyElementTypeEnum.Rating,
+              },
+              filterType: { filterValue: "Is more than", filterComboBoxValue: "8" },
+            },
+          ],
+          responseStatus: "all",
+        },
+        {} as DateRange
+      );
+      expect(result.data?.rating).toEqual({ op: "greaterThan", value: 8 });
+    });
+  });
+
+  describe("filter labels", () => {
+    // Renders the key and its values, so a test sees which label was chosen.
+    const labelT = ((key: string, values?: Record<string, unknown>) =>
+      values ? `${key} ${JSON.stringify(values)}` : key) as unknown as TFunction;
+
+    test("operators are labelled by their key", () => {
+      expect(getFilterOperatorLabel(TSurveyElementTypeEnum.NPS, "Includes either", labelT)).toBe(
+        "workspace.surveys.summary.includes_either"
+      );
+      expect(getFilterOperatorLabel(TSurveyElementTypeEnum.Rating, "Is more than", labelT)).toBe(
+        "workspace.analysis.filter_op.is_more_than"
+      );
+      expect(getFilterOperatorLabel(OptionsType.META, "Does not end with", labelT)).toBe(
+        "workspace.analysis.filter_op.does_not_end_with"
+      );
+      expect(getFilterOperatorLabel(OptionsType.QUOTAS, "Status", labelT)).toBe("common.status");
+    });
+
+    test("a matrix row label in the operator slot is shown as it is", () => {
+      expect(getFilterOperatorLabel(TSurveyElementTypeEnum.Matrix, "Skipped", labelT)).toBe("Skipped");
+    });
+
+    test("fixed values are labelled, the creator's and respondents' own values are not", () => {
+      expect(getFilterValueLabel(TSurveyElementTypeEnum.OpenText, "Filled out", labelT)).toBe(
+        "workspace.analysis.filter_op.filled_out"
+      );
+      expect(getFilterValueLabel(OptionsType.TAGS, "Not applied", labelT)).toBe(
+        "workspace.analysis.filter_op.not_applied"
+      );
+      expect(getFilterValueLabel(TSurveyElementTypeEnum.Consent, "Dismissed", labelT)).toBe(
+        "common.dismissed"
+      );
+      // A choice that happens to be called "Skipped" stays the choice.
+      expect(getFilterValueLabel(TSurveyElementTypeEnum.MultipleChoiceSingle, "Skipped", labelT)).toBe(
+        "Skipped"
+      );
+      expect(getFilterValueLabel(OptionsType.META, "Applied", labelT)).toBe("Applied");
+    });
+
+    test("a picture value is labelled by its position", () => {
+      expect(
+        getFilterValueLabel(TSurveyElementTypeEnum.PictureSelection, pictureFilterValue(3), labelT)
+      ).toBe('workspace.surveys.edit.picture_idx {"idx":3}');
+    });
+
+    test("only the language target is a wire value", () => {
+      expect(
+        getFilterTargetLabel({ type: OptionsType.OTHERS, id: "language", label: "Language" }, labelT)
+      ).toBe("common.language");
+      expect(getFilterTargetLabel({ type: OptionsType.ATTRIBUTES, id: "plan", label: "plan" }, labelT)).toBe(
+        "plan"
+      );
+    });
+
+    test("a chip describes the operator and every value by their labels", () => {
+      expect(
+        describeFilterCondition(
+          {
+            elementType: {
+              id: "q1",
+              label: "Q1",
+              type: OptionsType.ELEMENTS,
+              elementType: TSurveyElementTypeEnum.NPS,
+            },
+            filterType: {
+              filterValue: SUMMARY_FILTER_OPERATOR.includesEither,
+              filterComboBoxValue: ["9", "10"],
+            },
+          },
+          labelT
+        )
+      ).toBe("workspace.surveys.summary.includes_either 9, 10");
+      expect(
+        describeFilterCondition(
+          {
+            elementType: { id: "t1", label: "vip", type: OptionsType.TAGS },
+            filterType: { filterValue: "is", filterComboBoxValue: "Applied" },
+          },
+          labelT
+        )
+      ).toBe("workspace.analysis.filter_op.is workspace.analysis.filter_op.applied");
     });
   });
 });

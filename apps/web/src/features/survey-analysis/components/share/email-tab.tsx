@@ -9,6 +9,7 @@ import { TabBar } from "../../../../components/ui/tab-bar";
 import { api } from "../../../../lib/api";
 import { copyText } from "../../../../lib/clipboard";
 import { errorMessage } from "../../../../lib/errors";
+import { authOptionsQuery } from "../../../../lib/queries/auth";
 import { toast } from "../../../../lib/toast";
 import { CodeBlock } from "./code-block";
 
@@ -56,6 +57,9 @@ export const EmailTab = ({ surveyId, email }: { surveyId: string; email: string 
   const [activeTab, setActiveTab] = useState("preview");
   const [frameHeight, setFrameHeight] = useState(MIN_FRAME_HEIGHT);
   const html = useQuery(emailHtmlQuery(surveyId));
+  const { data: options } = useQuery(authOptionsQuery);
+  // An instance without SMTP answers every preview with sent: false, so the button says why up front instead of failing with a generic error.
+  const emailUnavailable = options?.smtpConfigured === false;
   const send = useMutation({
     mutationFn: () => api.post<{ sent: boolean }>(`/api/app/surveys/${surveyId}/email-preview`),
     onSuccess: ({ sent }) => {
@@ -129,12 +133,19 @@ export const EmailTab = ({ surveyId, email }: { surveyId: string; email: string 
             <Button
               title={t("workspace.surveys.share.send_email.send_preview_email")}
               aria-label={t("workspace.surveys.share.send_email.send_preview_email")}
+              aria-describedby={emailUnavailable ? "email-preview-unavailable" : undefined}
+              disabled={emailUnavailable}
               onClick={() => send.mutate()}
               loading={send.isPending}
               className="shrink-0">
               {t("workspace.surveys.share.send_email.send_preview")}
               <SendIcon />
             </Button>
+            {emailUnavailable && (
+              <p id="email-preview-unavailable" className="max-w-sm text-sm text-slate-600">
+                {t("workspace.settings.general.test_email_requires_smtp")}
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4 pb-4">

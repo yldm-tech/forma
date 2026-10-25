@@ -25,14 +25,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** The Go server: the survey's email embed, and the preview mail answering sent. */
-const stubServer = (sent: boolean) => {
+/** The Go server: the instance's auth options, the survey's email embed, and the preview mail answering sent. */
+const stubServer = (sent: boolean, smtpConfigured = true) => {
   const previews: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
       const json = (value: unknown) =>
         new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
+      if (path === "/api/app/auth/options") return json({ smtpConfigured });
       if (path === `/api/app/surveys/${SURVEY}/email-html`) return json({ html: EMBED });
       if (path === `/api/app/surveys/${SURVEY}/email-preview` && init.method === "POST") {
         previews.push(path);
@@ -107,4 +108,18 @@ test("a preview the server could not send is reported", async () => {
     screen.getByRole("button", { name: i18n.t("workspace.surveys.share.send_email.send_preview_email") })
   );
   await waitFor(() => expect(toasts()).toContain(i18n.t("common.something_went_wrong_please_try_again")));
+});
+
+test("without email on the instance the preview cannot be sent, and the tab says why", async () => {
+  const previews = stubServer(false, false);
+  renderTab();
+  const button = screen.getByRole("button", {
+    name: i18n.t("workspace.surveys.share.send_email.send_preview_email"),
+  });
+  await waitFor(() => expect(button).toHaveProperty("disabled", true));
+  const reason = screen.getByText(i18n.t("workspace.settings.general.test_email_requires_smtp"));
+  expect(button.getAttribute("aria-describedby")).toBe(reason.id);
+  fireEvent.click(button);
+  expect(previews).toHaveLength(0);
+  expect(toasts()).not.toContain(i18n.t("common.something_went_wrong_please_try_again"));
 });
