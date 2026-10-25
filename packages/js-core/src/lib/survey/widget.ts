@@ -67,9 +67,9 @@ export const triggerSurvey = async (
 ): Promise<void> => {
   const logger = Logger.getInstance();
 
-  // Check if the survey should be displayed based on displayPercentage. The sample is per user, not per trigger: an identified user is bucketed by contact id, an anonymous visitor by the id persisted in this browser.
+  // Check if the survey should be displayed based on displayPercentage. The sample is per user, not per trigger: an identified user is bucketed by userId, an anonymous visitor by the id persisted in this browser. Not by the state's contactId: that token is sealed under the server's encryption key and records whether the identify was verified, so it changes with either and would move the user in or out of running samples.
   if (survey.displayPercentage) {
-    const samplingId = Config.getInstance().get().user.data.contactId ?? getAnonymousSamplingId();
+    const samplingId = Config.getInstance().get().user.data.userId ?? getAnonymousSamplingId();
     const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(
       survey.displayPercentage,
       samplingId,

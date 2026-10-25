@@ -146,7 +146,7 @@ window.forma.setUserId(user.id, { userHash });
 
 The SDK keeps the hash with the user and sends it with every identify, so pass it wherever you call `setUserId`. A hash that does not match is logged as a console error and the user is identified without verification.
 
-Once every page sends a `userHash`, turn on **Require verified identities**. Forma then refuses an identify without a valid hash, so nobody can identify as one of your users or read their state, and displays and responses that name a user ID without a valid hash are recorded without a contact. Regenerating the secret invalidates every hash computed with the old one at once: while verification is required, users are refused until your server uses the new secret.
+Once every page sends a `userHash`, turn on **Require verified identities**. Forma then refuses an identify without a valid hash, so nobody can identify as one of your users or read their state. Displays and responses are attached to a contact only when they come from a verified identify, or from the contact's personal link; the rest, including link surveys opened with `?userId=`, are recorded without a contact. Regenerating the secret invalidates every hash computed with the old one at once: while verification is required, a browser that still holds a user with an old hash is logged out on its next sync, and its user is identified again by the next `setUserId` call that brings a hash made with the new secret.
 
 ## Track actions
 

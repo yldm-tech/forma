@@ -143,15 +143,15 @@ describe("widget-file", () => {
     }).not.toThrow();
   });
 
-  const mockUserConfig = (contactId: string | null): void => {
+  const mockUserConfig = (userId: string | null): void => {
     getInstanceConfigMock.mockReturnValue({
-      get: vi.fn().mockReturnValue({ user: { data: { contactId } } }),
+      get: vi.fn().mockReturnValue({ user: { data: { userId, contactId: userId ? "ct1.token" : null } } }),
     } as unknown as Config);
   };
 
   test("triggerSurvey skips if shouldDisplayBasedOnPercentage returns false", async () => {
     getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
-    mockUserConfig("contact_1");
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
 
     await widget.triggerSurvey(mockSurvey);
@@ -161,13 +161,14 @@ describe("widget-file", () => {
     );
   });
 
-  test("triggerSurvey samples an identified user by contact id", async () => {
-    mockUserConfig("contact_1");
+  // Not by the contact token, which is sealed under the server's encryption key and changes when it rotates or when the user is first verified: that would move the user in or out of running samples.
+  test("triggerSurvey samples an identified user by userId", async () => {
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
 
     await widget.triggerSurvey({ ...mockSurvey, displayPercentage: 10 });
 
-    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "contact_1", mockSurvey.id);
+    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "user_1", mockSurvey.id);
     expect(getAnonymousSamplingId).not.toHaveBeenCalled();
   });
 
@@ -183,7 +184,7 @@ describe("widget-file", () => {
 
   test("triggerSurvey short-circuits via renderWidget when a survey is already running", async () => {
     widget.setIsSurveyRunning(true);
-    mockUserConfig("contact_1");
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(true);
 
     await widget.triggerSurvey(mockSurvey);

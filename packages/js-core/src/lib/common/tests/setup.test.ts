@@ -13,7 +13,7 @@ import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
 import { addCleanupEventListeners, addEventListeners } from "@/lib/common/event-listeners";
 import { Logger } from "@/lib/common/logger";
 import { handleErrorOnFirstSetup, setup, tearDown } from "@/lib/common/setup";
-import { setIsSetup } from "@/lib/common/status";
+import { getIsSetup, setIsSetup } from "@/lib/common/status";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
 import { filterSurveys, getIsDebug, getSurveyKey, isNowExpired } from "@/lib/common/utils";
 import type * as Utils from "@/lib/common/utils";
@@ -570,6 +570,72 @@ describe("setup.ts", () => {
           filteredSurveys: [{ name: "S1" }, { name: "S2" }],
         })
       );
+    });
+
+    // A workspace that requires verified identities refuses a stored user whose userHash is missing or was made with a regenerated secret. Setup must still complete, logged out, so the page's setUserId with the new hash runs instead of being dropped on every load.
+    test("finishes setup with an anonymous user when the server refuses the stored identity (403)", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspaceId: "ws_123",
+          appUrl: "https://my.url",
+          workspace: { expiresAt: new Date(Date.now() + 60_000), data: { actionClasses: [], surveys: [] } },
+          user: {
+            data: { userId: "user_abc", userHash: "old_hash", contactId: "ct1.x", segments: ["seg_1"] },
+            expiresAt: new Date(Date.now() - 5000), // expired, so setup re-identifies
+          },
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockImplementation(
+        (date: Date) => new Date(date).getTime() < Date.now()
+      );
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "forbidden", status: 403, responseMessage: "Identity verification failed" },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+
+      expect(result.ok).toBe(true);
+      expect(getIsSetup()).toBe(true);
+      expect(sendUpdatesToBackend).toHaveBeenCalledWith(
+        expect.objectContaining({ updates: { userId: "user_abc", userHash: "old_hash" } })
+      );
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        expect.objectContaining({ user: DEFAULT_USER_STATE_NO_USER_ID })
+      );
+    });
+
+    test("still fails setup when re-identifying the stored user fails for another reason", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspaceId: "ws_123",
+          appUrl: "https://my.url",
+          workspace: { expiresAt: new Date(Date.now() + 60_000), data: { actionClasses: [], surveys: [] } },
+          user: { data: { userId: "user_abc" }, expiresAt: new Date(Date.now() - 5000) },
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockImplementation(
+        (date: Date) => new Date(date).getTime() < Date.now()
+      );
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "network_error", status: 500, responseMessage: "boom" },
+      });
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+
+      expect(result.ok).toBe(false);
+      expect(getIsSetup()).toBe(false);
+      expect(mockConfig.update).not.toHaveBeenCalled();
     });
 
     test("resets config if no valid config found, fetches workspace state, sets default user", async () => {

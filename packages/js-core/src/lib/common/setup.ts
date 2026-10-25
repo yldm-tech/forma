@@ -295,6 +295,12 @@ export const setup = async (
 
           if (updatesResponse.ok) {
             userState = withUserHash(updatesResponse.data.state, userHash);
+          } else if (isIdentifyRefused(updatesResponse.error)) {
+            // The workspace refuses this stored identity: it requires verified identities and the stored userHash is missing or was made with a secret since regenerated. Failing setup here would drop the page's own setUserId, the one call that can bring a valid hash, on every load until storage is cleared. Setup goes on with the user logged out, and that setUserId identifies again.
+            logger.error(
+              `The stored user ${userState.data.userId} was refused (${updatesResponse.error.responseMessage ?? updatesResponse.error.code}); continuing as an anonymous user until setUserId() identifies again.`
+            );
+            userState = DEFAULT_USER_STATE_NO_USER_ID;
           } else {
             const message = `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`;
             logger.error(message);
@@ -476,6 +482,10 @@ const ERROR_STATE_DURATION_MS = 10 * 60000;
  */
 const isConfigurationError = (e: { code: string; status?: number }): boolean =>
   e.code === "forbidden" || (e.status !== undefined && e.status >= 400 && e.status < 500 && e.status !== 429);
+
+/** An identify the server refused with 403: the workspace requires verified identities and the userHash sent with it does not verify the userId. */
+const isIdentifyRefused = (e: { code: string; status?: number }): boolean =>
+  e.code === "forbidden" || e.status === 403;
 
 const failureCodeFor = (e: { code: string; status?: number }): TSetupFailureCode =>
   isConfigurationError(e) ? "invalid_config" : "network_error";
