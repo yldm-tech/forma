@@ -389,7 +389,7 @@ func (h *Handler) v2CreateUser(c *gin.Context) {
 	}
 	created, err := h.repo.createOrgUser(ctx, organizationID, newOrgUser{Name: *in.name, Email: in.email, Role: *in.role, IsActive: in.isActive, TeamIDs: teamIDs})
 	if errors.Is(err, errEmailTaken) {
-		// The same answer whether the email's user is a member here or only has an account elsewhere on the instance: an organization's key must not learn which emails have accounts it has no authority over.
+		// The same text whether the email's user is a member here or only has an account elsewhere on the instance, so the detail does not say which. The 409 itself still tells the key that the email has an account on the instance, against a 201 for an unused one; closing that needs the invite flow (decision D-AO01).
 		v2Error(c, http.StatusConflict, detail("email", issueEmailUnavailable))
 		return
 	}

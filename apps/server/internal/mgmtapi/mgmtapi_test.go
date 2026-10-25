@@ -284,8 +284,8 @@ func TestV2UsersKeepAnActiveOwner(t *testing.T) {
 	expectStatus(t, "inactive owner demoted", e.do("PATCH", users, map[string]any{"email": "owner2@example.com", "role": "member"}, "x-api-key", key), 200)
 }
 
-// An email that already has an account is answered the same way whether its user is a member of the organization or only has an account elsewhere on the instance.
-func TestV2CreateUserDoesNotDiscloseOtherAccounts(t *testing.T) {
+// An email that already has an account gets the same 409 body whether its user is a member of the organization or only has an account elsewhere on the instance. This makes the text uniform only: 409 against 201 still shows that the email has an account (D-AO01).
+func TestV2CreateUserDuplicateEmailIsNeutral(t *testing.T) {
 	e := newEnv(t)
 	s := e.seedRecording()
 	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
