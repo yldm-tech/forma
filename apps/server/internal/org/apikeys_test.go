@@ -113,3 +113,23 @@ func TestRefusedMembershipChangeKeepsTheKeys(t *testing.T) {
 		t.Fatalf("a refused demotion disabled the key (%s)", got)
 	}
 }
+
+// Only a change from a role that manages keys to one that does not disables them. A key whose creator was already below manager (one created before keys were disabled on demotion, say) stays enabled when that role is sent again, and no demotion is recorded for it.
+func TestUnchangedRoleBelowManagerKeepsTheCreatorsKeys(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, member, RoleMember)
+	key := e.apiKey(c.ID, member)
+
+	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, member), map[string]string{"role": RoleMember}), http.StatusOK, nil)
+
+	if got := e.disabledReason(key); got != "" {
+		t.Fatalf("an unchanged role disabled the key (%s)", got)
+	}
+	for _, rec := range e.auditEvents() {
+		if rec["action"] == "disabled" {
+			t.Fatalf("a role write that demoted nobody recorded %v", rec)
+		}
+	}
+}

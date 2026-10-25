@@ -52,7 +52,7 @@ func (s *Service) manageUsers(ctx context.Context, userID, organizationID uuid.U
 	return s.limiter.Apply(ctx, ratelimit.ActionStateMutation, organizationID.String())
 }
 
-// ChangeRole is forma2's updateMembershipAction. Billing is a Forma Cloud role; a manager may only assign the member role and may not touch an owner; and demoting an owner is refused when no other active owner would remain, checked in the same serializable transaction as the write. Promotion to owner or manager makes the user admin of their teams in the organization. A role below manager disables the API keys the user created in the organization, in the same transaction.
+// ChangeRole is forma2's updateMembershipAction. Billing is a Forma Cloud role; a manager may only assign the member role and may not touch an owner; and demoting an owner is refused when no other active owner would remain, checked in the same serializable transaction as the write. Promotion to owner or manager makes the user admin of their teams in the organization. Demotion from owner or manager to a role below manager disables the API keys the user created in the organization, in the same transaction; a role that was already below manager, sent again, disables nothing.
 func (s *Service) ChangeRole(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, role string) (*Membership, error) {
 	old, m, disabled, err := s.changeRole(ctx, userID, organizationID, targetUserID, role)
 	s.record(ctx, audit.ActionUpdated, audit.TargetMembership, Membership{UserID: targetUserID, OrganizationID: organizationID}.auditID(), organizationID.String(), err, old, m)
@@ -118,7 +118,7 @@ func (s *Service) changeRole(ctx context.Context, userID, organizationID, target
 		}
 		// Assigned, not appended: a retried transaction runs this again.
 		disabled = nil
-		if !disable.ManagesKeys(role) {
+		if disable.ManagesKeys(target.Role) && !disable.ManagesKeys(role) {
 			if disabled, err = disable.CreatedBy(ctx, tx.db, targetUserID, &organizationID, disable.ReasonCreatorDemoted); err != nil {
 				return err
 			}

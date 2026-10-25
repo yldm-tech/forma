@@ -318,7 +318,7 @@ type userPatch struct {
 // managesTeams is whether the organization role administers every team of the organization (owner, manager).
 func managesTeams(role string) bool { return role == "owner" || role == "manager" }
 
-// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged. A role below manager disables the API keys the user created in the organization, which it returns, as the app's role change does.
+// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged. Demotion from owner or manager to a role below manager disables the API keys the user created in the organization, which it returns, as the app's role change does; a role that was already below manager, sent again, disables nothing. The role it compares is read again in the transaction.
 func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID, current *orgUser, p userPatch) ([]disable.Key, error) {
 	activeOwner := current.Role == "owner" && current.IsActive
 	demoting := activeOwner && p.Role != nil && *p.Role != "owner"
@@ -367,6 +367,11 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 			return fmt.Errorf("update user: %w", err)
 		}
 		if p.Role != nil {
+			// Read under the transaction: only a role that may manage keys, replaced by one that may not, disables them.
+			var was string
+			if err := tx.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, current.ID, organizationID).Scan(&was).Error; err != nil {
+				return fmt.Errorf("read membership role: %w", err)
+			}
 			if err := tx.Exec(`UPDATE memberships SET role = ?, updated_at = now() WHERE user_id = ? AND organization_id = ?`, *p.Role, current.ID, organizationID).Error; err != nil {
 				return fmt.Errorf("update membership: %w", err)
 			}
@@ -375,7 +380,7 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 					return fmt.Errorf("demote team memberships: %w", err)
 				}
 			}
-			if !disable.ManagesKeys(*p.Role) {
+			if disable.ManagesKeys(was) && !disable.ManagesKeys(*p.Role) {
 				var err error
 				if disabled, err = disable.CreatedBy(ctx, tx, current.ID, &organizationID, disable.ReasonCreatorDemoted); err != nil {
 					return err

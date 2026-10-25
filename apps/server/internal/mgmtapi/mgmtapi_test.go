@@ -545,3 +545,28 @@ func TestV2UsersDemotionDisablesTheCreatorsKeys(t *testing.T) {
 	}
 	expectStatus(t, "the disabled key", e.do("GET", "/api/v2/organizations/"+org+"/teams", nil, "x-api-key", managerKey), 401)
 }
+
+// A full user record PATCHed again, as a directory sync does on every run, demotes nobody: the key of a creator who was already a member stays enabled and no disabled event is recorded.
+func TestV2UsersUnchangedRoleKeepsTheCreatorsKeys(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, ownerKey := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	member := e.user("Member", "member@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, member, org)
+	_, keyID := e.apiKey(uuid.MustParse(org), member, "legacy", true, false)
+	e.deliver()
+
+	expectStatus(t, "patch the unchanged role", e.do("PATCH", "/api/v2/organizations/"+org+"/users", map[string]any{"email": "member@example.com", "role": "member", "name": "Member"}, "x-api-key", ownerKey), 200)
+	var reason *string
+	if err := e.db.Raw(`SELECT disabled_reason FROM api_keys WHERE id = ?`, keyID).Row().Scan(&reason); err != nil {
+		t.Fatal(err)
+	}
+	if reason != nil {
+		t.Fatalf("an unchanged role disabled the key (%s)", *reason)
+	}
+	for _, ev := range e.audits() {
+		if ev.Action == "disabled" {
+			t.Fatalf("an unchanged role recorded %+v", ev)
+		}
+	}
+}
