@@ -1,6 +1,7 @@
 package clientapi
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -164,13 +165,11 @@ func TestIdentifyRefusals(t *testing.T) {
 	}
 }
 
-// The state lists the contact's segments as evaluated for a phone, forma2's quirk, its displays newest first and the surveys it responded to.
+// The state lists the contact's segments, its displays newest first and the surveys it responded to.
 func TestIdentifyState(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
 	all := e.segment(ws, "Everyone", `[]`)
-	phone := e.segment(ws, "Phones", `[{"id":"f1","connector":null,"resource":{"id":"r1","root":{"type":"device","deviceType":"phone"},"value":"phone","qualifier":{"operator":"equals"}}}]`)
-	desktop := e.segment(ws, "Desktops", `[{"id":"f2","connector":null,"resource":{"id":"r2","root":{"type":"device","deviceType":"desktop"},"value":"desktop","qualifier":{"operator":"equals"}}}]`)
 	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u1"}))
 	contactID := d["contactId"]
 	older, newer := e.survey(ws, "type", "app"), e.survey(ws, "type", "app")
@@ -178,12 +177,8 @@ func TestIdentifyState(t *testing.T) {
 	e.exec(`INSERT INTO responses (survey_id, contact_id) VALUES (?, ?)`, older, contactID)
 
 	d = stateData(t, e.identify(t, ws, map[string]any{"userId": "u1"}))
-	segments := map[any]bool{}
-	for _, s := range d["segments"].([]any) {
-		segments[s] = true
-	}
-	if !segments[all.String()] || !segments[phone.String()] || segments[desktop.String()] {
-		t.Fatalf("segments %v", d["segments"])
+	if segments := d["segments"].([]any); len(segments) != 1 || segments[0] != all.String() {
+		t.Fatalf("segments %v", segments)
 	}
 	displays := d["displays"].([]any)
 	if len(displays) != 2 || displays[0].(map[string]any)["surveyId"] != newer.String() || d["lastDisplayAt"] != displays[0].(map[string]any)["createdAt"] {
@@ -191,5 +186,60 @@ func TestIdentifyState(t *testing.T) {
 	}
 	if responses := d["responses"].([]any); len(responses) != 1 || responses[0] != older.String() {
 		t.Fatalf("responses %v", responses)
+	}
+}
+
+// Device filters are evaluated for the device the identify comes from, read from its User-Agent: a phone for a mobile one, a desktop for anything else, tablets included. forma2 evaluated every identify as a phone.
+func TestIdentifySegmentsByDevice(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	all := e.segment(ws, "Everyone", `[]`)
+	phone := e.segment(ws, "Phones", `[{"id":"f1","connector":null,"resource":{"id":"r1","root":{"type":"device","deviceType":"phone"},"value":"phone","qualifier":{"operator":"equals"}}}]`)
+	desktop := e.segment(ws, "Desktops", `[{"id":"f2","connector":null,"resource":{"id":"r2","root":{"type":"device","deviceType":"desktop"},"value":"desktop","qualifier":{"operator":"equals"}}}]`)
+	for _, tc := range []struct {
+		name, userAgent string
+		want            uuid.UUID
+	}{
+		{"desktop Chrome", browserUA, desktop},
+		{"iPhone", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", phone},
+		{"Android phone", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36", phone},
+		{"iPad counts as a desktop", "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", desktop},
+		{"no User-Agent", "", desktop},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e.clock.nextWindow()
+			d := stateData(t, e.do("POST", "/api/v2/client/"+ws.String()+"/user", map[string]any{"userId": "u1"}, "User-Agent", tc.userAgent))
+			got := map[any]bool{}
+			for _, s := range d["segments"].([]any) {
+				got[s] = true
+			}
+			other := phone
+			if tc.want == phone {
+				other = desktop
+			}
+			if len(got) != 2 || !got[all.String()] || !got[tc.want.String()] || got[other.String()] {
+				t.Fatalf("segments %v, want everyone and %s", d["segments"], tc.want)
+			}
+		})
+	}
+}
+
+// A value of the wrong type for a typed key is not written and is reported under errors, which the SDK always logs, not under messages, which it logs only in debug mode.
+func TestIdentifyTypeMismatchIsAnError(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"seats": 25}}))
+	r := e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"seats": "30"}})
+	stateData(t, r)
+	body := r.data(t)
+	if msgs, _ := body["messages"].([]any); len(msgs) != 0 {
+		t.Fatalf("messages %v", msgs)
+	}
+	errs, _ := body["errors"].([]any)
+	if len(errs) != 1 || !strings.HasPrefix(errs[0].(string), "Attribute 'seats' expects a number") || !strings.HasSuffix(errs[0].(string), "(attribute 'seats' has dataType: number)") {
+		t.Fatalf("errors %v", errs)
+	}
+	if got := e.attribute(d["contactId"], "seats"); got != "25" {
+		t.Fatalf("seats %q, want the stored 25", got)
 	}
 }

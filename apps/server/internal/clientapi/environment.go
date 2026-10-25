@@ -26,10 +26,10 @@ const (
 	stateCache = "public, s-maxage=60, max-age=60, stale-while-revalidate=60, stale-if-error=60"
 	// stateTTL is how long the server caches a workspace's state, forma2's one minute.
 	stateTTL = time.Minute
-	// stateExpiry is when the SDK is told to fetch the state again.
-	stateExpiry = time.Hour
-	// maxStateSurveys is how many surveys the state lists, newest first.
-	maxStateSurveys = 30
+	// stateExpiry is when the SDK is told to fetch the state again, so a paused survey, a new action or changed targeting reaches returning visitors within about five minutes. forma2 said an hour, which kept them on the old state that long although the server rebuilds it every minute.
+	stateExpiry = 5 * time.Minute
+	// maxStateSurveys is how many surveys the state lists, newest first. When a workspace has more live app surveys, the state says how many it left out under truncated.
+	maxStateSurveys = 100
 
 	// surveyNamePlaceholder and segmentTitlePlaceholder are forma2's PUBLIC_API_SURVEY_NAME_PLACEHOLDER and its segment counterpart: older SDKs decode these fields as required, but their values are internal.
 	surveyNamePlaceholder   = "[deprecated] survey name omitted from public API - will be removed soon"
@@ -134,7 +134,7 @@ type stateLanguage struct {
 	WorkspaceID uuid.UUID
 }
 
-// buildState is forma2's getWorkspaceStateData and the composition around it: the workspace's in-app settings, its action classes and its live app surveys in the shape the SDKs decode, with forma2's back-compat fields (project beside workspace, projectOverwrites beside workspaceOverwrites, placeholder names and segments, legacy language codes) and relative storage URLs made absolute.
+// buildState is forma2's getWorkspaceStateData and the composition around it: the workspace's in-app settings, its action classes and its live app surveys in the shape the SDKs decode, with forma2's back-compat fields (project beside workspace, projectOverwrites beside workspaceOverwrites, placeholder names and segments, legacy language codes) and relative storage URLs made absolute. When the workspace has more live app surveys than maxStateSurveys, truncated counts the ones left out; it is absent otherwise, so the state stays forma2's.
 func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields, error) {
 	db := h.db.WithContext(ctx)
 	var workspaces []stateWorkspace
@@ -166,6 +166,18 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 		WHERE s.workspace_id = ? AND s.type = 'app' AND s.status = 'inProgress' AND s.archived_at IS NULL
 		ORDER BY s.created_at DESC, s.id DESC LIMIT ?`, workspaceID, maxStateSurveys).Scan(&surveys).Error; err != nil {
 		return nil, fmt.Errorf("load state surveys: %w", err)
+	}
+	// truncated is how many live app surveys the cap left out, the oldest ones; the SDK never shows them.
+	truncated := int64(0)
+	if len(surveys) == maxStateSurveys {
+		var total int64
+		if err := db.Raw(`SELECT count(*) FROM surveys WHERE workspace_id = ? AND type = 'app' AND status = 'inProgress' AND archived_at IS NULL`, workspaceID).Scan(&total).Error; err != nil {
+			return nil, fmt.Errorf("count state surveys: %w", err)
+		}
+		truncated = total - maxStateSurveys
+	}
+	if truncated > 0 {
+		h.log.WarnContext(ctx, "workspace state truncated: older live app surveys are left out and never shown", "workspaceId", workspaceID, "limit", maxStateSurveys, "truncated", truncated)
 	}
 	ids := make([]uuid.UUID, len(surveys))
 	for i, s := range surveys {
@@ -281,7 +293,11 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 	if h.cfg.RecaptchaConfigured() {
 		state = append(state, field{"recaptchaSiteKey", h.cfg.RecaptchaSiteKey})
 	}
-	return append(state, field{"project", settings}), nil
+	state = append(state, field{"project", settings})
+	if truncated > 0 {
+		state = append(state, field{"truncated", truncated})
+	}
+	return state, nil
 }
 
 // stateLanguages is a survey's languages as the SDK decodes them: each language with projectId mirroring workspaceId for SDKs from before the rename, and, for a survey with more than one language, an extra entry under every legacy alias of each code (de beside de-DE) no language of the survey already uses, since older SDKs match a user's language by exact code.

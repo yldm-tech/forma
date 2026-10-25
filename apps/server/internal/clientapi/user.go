@@ -25,8 +25,13 @@ const (
 	languagesTTL = time.Minute
 )
 
-// identifyDevice is the device every identify is evaluated for. forma2 derived it from Next.js's userAgent(req).device, which is always an object, so its `device ? "phone" : "desktop"` always chose phone; segment device filters behave as they did.
-const identifyDevice = contact.DevicePhone
+// segmentDevice is the device a segment's device filter is evaluated for on this identify, read from the request's User-Agent: a phone for a mobile User-Agent, a desktop for anything else. Tablets count as desktops for now, as do consoles, TVs, headsets and a missing or unrecognised User-Agent, since the filter offers only phone and desktop. forma2 always chose phone (its `device ? "phone" : "desktop"` tested an object that is never empty), so a desktop visitor matched phone segments and never desktop ones.
+func segmentDevice(userAgent string) string {
+	if deviceType(userAgent) == "mobile" {
+		return contact.DevicePhone
+	}
+	return contact.DeviceDesktop
+}
 
 // existenceRevealingMessages are withheld from the public identify: they would tell anyone holding the public workspace id whether an address or user id is a contact there.
 var existenceRevealingMessages = map[string]bool{"email_already_exists": true, "userid_already_exists": true}
@@ -88,7 +93,7 @@ func (h *Handler) identify(c *gin.Context) {
 		}
 		attrs = kept
 	}
-	state, err := h.updateUser(ctx, ws.ID, userID, attrs)
+	state, err := h.updateUser(ctx, ws.ID, userID, attrs, segmentDevice(c.Request.UserAgent()))
 	if err != nil {
 		h.fail(c, err, msgUserState)
 		return
@@ -96,8 +101,8 @@ func (h *Handler) identify(c *gin.Context) {
 	writeData(c, state, noStore)
 }
 
-// updateUser is forma2's updateUser: it answers {state, messages?, errors?}.
-func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member) (fields, error) {
+// updateUser is forma2's updateUser: it answers {state, messages?, errors?}, the state's segments evaluated for device.
+func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member, device string) (fields, error) {
 	found, err := h.contacts.FindOrCreateByUserID(ctx, workspaceID, userID)
 	if err != nil {
 		return nil, err
@@ -156,7 +161,7 @@ func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID 
 		messages = append(messages, contact.Message{Code: "invalid_language_ignored", Params: map[string]string{"language": *dropped}}.Text())
 	}
 
-	data, err := h.userState(ctx, workspaceID, found.ID, userID)
+	data, err := h.userState(ctx, workspaceID, found.ID, userID, device)
 	if err != nil {
 		return nil, err
 	}
@@ -259,8 +264,8 @@ func (h *Handler) workspaceLanguage(ctx context.Context, workspaceID uuid.UUID, 
 	return "", nil
 }
 
-// userState is the identified contact's targeting data: the segments it is in (none when they cannot be evaluated), its displays newest first, the surveys it responded to, and when it was last shown a survey.
-func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID string) (fields, error) {
+// userState is the identified contact's targeting data: the segments it is in on device (none when they cannot be evaluated), its displays newest first, the surveys it responded to, and when it was last shown a survey.
+func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID, device string) (fields, error) {
 	db := h.db.WithContext(ctx)
 	var displays []contact.DisplayRow
 	if err := db.Raw(`SELECT survey_id, created_at FROM displays WHERE contact_id = ? ORDER BY created_at DESC, id DESC`, contactID).Scan(&displays).Error; err != nil {
@@ -270,7 +275,7 @@ func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUI
 	if err := db.Raw(`SELECT survey_id, created_at, finished FROM responses WHERE contact_id = ? ORDER BY created_at, id`, contactID).Scan(&responses).Error; err != nil {
 		return nil, fmt.Errorf("load contact responses: %w", err)
 	}
-	segments, err := h.segments.SegmentIDsForContact(ctx, workspaceID, contactID, identifyDevice, contact.Interactions{Displays: displays, Responses: responses})
+	segments, err := h.segments.SegmentIDsForContact(ctx, workspaceID, contactID, device, contact.Interactions{Displays: displays, Responses: responses})
 	if err != nil {
 		h.log.WarnContext(ctx, "Failed to get person segment IDs, returning empty array", "workspaceId", workspaceID, "contactId", contactID, "err", err)
 		segments = []uuid.UUID{}
