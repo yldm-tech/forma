@@ -178,8 +178,8 @@ func (s *Service) CreateFromTemplateV3(ctx context.Context, caller Caller, in *T
 	return s.createFromDocument(ctx, caller, in.WorkspaceID, d, createdFrom)
 }
 
-// Templates is the template catalog for the editor's template picker, in the user's dashboard language, behind workspace.read: the custom template, then forma2's templates, with the workspace's name filled in.
-func (s *Service) Templates(ctx context.Context, caller Caller, workspaceID uuid.UUID) ([]*Template, error) {
+// Templates is the template catalog for the editor's template picker, behind workspace.read: the custom template, then forma2's templates, with the workspace's name filled in. Given a survey default language, it renders in that language's template locale exactly as CreateFromTemplateV3 does, so a preview matches the survey created from it; without one, in the user's dashboard language.
+func (s *Service) Templates(ctx context.Context, caller Caller, workspaceID uuid.UUID, surveyLanguage string) ([]*Template, error) {
 	if err := s.authz.Require(ctx, caller.Actor, authz.WorkspaceRead, authz.Workspace(workspaceID)); err != nil {
 		return nil, err
 	}
@@ -188,7 +188,9 @@ func (s *Service) Templates(ctx context.Context, caller Caller, workspaceID uuid
 		return nil, err
 	}
 	locale := defaultLocale
-	if user := caller.userID(); user != nil {
+	if surveyLanguage != "" {
+		locale = surveyLanguage
+	} else if user := caller.userID(); user != nil {
 		if locale, err = s.repo.userLocale(ctx, *user); err != nil {
 			return nil, err
 		}

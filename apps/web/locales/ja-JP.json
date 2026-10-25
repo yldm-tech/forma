@@ -4018,6 +4018,8 @@
         "create_a_new_survey": "新しいフォームを作成",
         "multiple_industries": "複数の業界",
         "no_templates_match": "「{query}」に一致するテンプレートはありません。",
+        "select_a_template_to_preview": "テンプレートを選ぶと、回答者に表示されるとおりにプレビューできます。",
+        "template_preview": "テンプレートのプレビュー",
         "use_this_template": "このテンプレートを使用",
         "uses_branching_logic": "このフォームは分岐ロジックを使用しています。"
       },

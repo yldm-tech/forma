@@ -487,6 +487,19 @@ func TestTemplates(t *testing.T) {
 	if len(out.Templates) != 53 || out.Templates[0].ID != CustomTemplateID || len(out.XMTemplateIDs) != 6 || strings.Contains(string(out.Templates[1].Preset), "{{") {
 		t.Fatalf("templates %d %+v", len(out.Templates), out.Templates[0])
 	}
+	// Asked in a survey's default language, the catalog renders as the survey created from it will, whatever the dashboard's language: a dashboard locale in itself, anything else (a bare runtime code too) in en-US.
+	for language, want := range map[string]string{"zh-Hans-CN": "从零开始", "en-US": "Start from scratch", "ja": "Start from scratch", "de-DE": "Start from scratch"} {
+		var inLanguage struct {
+			Templates []Template `json:"templates"`
+		}
+		e.ok(e.do(owner, http.MethodGet, "/api/app/workspaces/"+ws.String()+"/survey-templates?language="+language, nil), http.StatusOK, &inLanguage)
+		if len(inLanguage.Templates) != len(out.Templates) || inLanguage.Templates[0].Name != want {
+			t.Fatalf("templates in %s: %d, %q", language, len(inLanguage.Templates), inLanguage.Templates[0].Name)
+		}
+	}
+	for _, language := range []string{"", "xx-YY"} {
+		e.fails(e.do(owner, http.MethodGet, "/api/app/workspaces/"+ws.String()+"/survey-templates?language="+language, nil), http.StatusBadRequest, apperr.CodeBadRequest, "Unsupported survey default language")
+	}
 
 	template := func(id, source string) map[string]any {
 		return map[string]any{"workspaceId": ws, "templateId": id, "source": source, "surveyType": "link", "defaultLanguage": "de-DE"}

@@ -4018,6 +4018,8 @@
         "create_a_new_survey": "建立新的問卷",
         "multiple_industries": "多個產業",
         "no_templates_match": "沒有符合「{query}」的範本。",
+        "select_a_template_to_preview": "選擇一個範本，即可按受訪者看到的樣子預覽。",
+        "template_preview": "範本預覽",
         "use_this_template": "使用此範本",
         "uses_branching_logic": "此問卷使用分支邏輯。"
       },

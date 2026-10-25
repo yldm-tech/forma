@@ -151,6 +151,18 @@ export const surveyTemplatesQuery = (workspaceId: string, language: string) =>
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+/** The catalog as "Use this template" renders it for a survey in `surveyLanguage` (the survey's default language, resolveDefaultSurveyLanguage): the server maps it to a template locale exactly as it does when creating the survey, so the gallery's preview shows the draft the template makes, whatever language the dashboard is in. */
+export const surveyTemplatesInLanguageQuery = (workspaceId: string, surveyLanguage: string) =>
+  queryOptions({
+    queryKey: ["workspaces", workspaceId, "survey-templates", "survey-language", surveyLanguage],
+    queryFn: ({ signal }) =>
+      api.get<{ templates: SurveyTemplate[]; xmTemplateIds: string[] }>(
+        `/api/app/workspaces/${workspaceId}/survey-templates?${new URLSearchParams({ language: surveyLanguage }).toString()}`,
+        { signal }
+      ),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
 /** The origin survey links are built on (forma2's getPublicDomain). */
 export const publicDomainQuery = queryOptions({
   queryKey: ["public-domain"],
