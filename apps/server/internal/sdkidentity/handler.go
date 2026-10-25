@@ -97,6 +97,8 @@ func (h *Handler) rotateSecret(c *gin.Context) {
 		httpapi.Fail(c, err)
 		return
 	}
+	// The answer carries the secret in clear, which must not be cached anywhere on its way to the browser.
+	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, v)
 }
 

@@ -190,7 +190,11 @@ func TestSettingsLifecycle(t *testing.T) {
 		t.Fatalf("requiring verification without a secret: %d %s", rec.Code, rec.Body.String())
 	}
 
-	first := decode[SecretView](t, e.do(owner, http.MethodPost, path(ws, "/secret"), nil), http.StatusOK)
+	rec = e.do(owner, http.MethodPost, path(ws, "/secret"), nil)
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("the answer that shows the secret has Cache-Control %q", got)
+	}
+	first := decode[SecretView](t, rec, http.StatusOK)
 	if first.Secret == "" || !first.HasSecret {
 		t.Fatalf("generated %+v", first)
 	}
