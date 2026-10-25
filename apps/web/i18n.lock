@@ -2002,6 +2002,7 @@ checksums:
     workspace/integrations/webhooks/created_by_third_party_no: 8c708225830b06df2d1141c536f2a0d6
     workspace/integrations/webhooks/deliveries/attempts_label: c17e337fe7be198e386cfdfb7a7c4793
     workspace/integrations/webhooks/deliveries/card_failing: 9914c198e858001342d761f03681dc28
+    workspace/integrations/webhooks/deliveries/card_lost: 45965232ebad6dfa697a59fe9c94b9b5
     workspace/integrations/webhooks/deliveries/card_retrying: d22661323ba745e32d61aa371e56b3e3
     workspace/integrations/webhooks/deliveries/delivery_status: b4baa8dff8e026afbb35ac56982eda73
     workspace/integrations/webhooks/deliveries/duration: bf6ed0974fdd4eb9d8bd3f4f8c4bd5ae
@@ -2016,6 +2017,7 @@ checksums:
     workspace/integrations/webhooks/deliveries/first_failure: 01cb687c68780faa9462166ebd853f29
     workspace/integrations/webhooks/deliveries/health_failing: 9f9ccc4955cb6001636d0e1be9e38ad6
     workspace/integrations/webhooks/deliveries/health_healthy: a16896be3f594e1def8245fae1c9d93c
+    workspace/integrations/webhooks/deliveries/health_lost: 9b84a5bf3f59ba0af7b3fbfcbc71ecd0
     workspace/integrations/webhooks/deliveries/health_none: 5f1e6ea9fe822d332baddc4234b95953
     workspace/integrations/webhooks/deliveries/health_retrying: 5ba339b181d4bf39e81826635828adff
     workspace/integrations/webhooks/deliveries/last_attempt: 6ab57ddf5f6f16e249af0c31c547d227
@@ -2023,6 +2025,7 @@ checksums:
     workspace/integrations/webhooks/deliveries/last_error: a0ff525c6db595892f69fd95760b1928
     workspace/integrations/webhooks/deliveries/last_success: f17f209649ba3b084e3ea426df349ae2
     workspace/integrations/webhooks/deliveries/lost_label: 686959256ca2c702ac82bbe0c9765039
+    workspace/integrations/webhooks/deliveries/lost_to_resend: 493ba48819cbf80d1a7644898ae944c4
     workspace/integrations/webhooks/deliveries/message_id: 77edf011f0bbd93a29fb3d6d30d43e5c
     workspace/integrations/webhooks/deliveries/never: 975007d8aae7e3af47897721a6961be8
     workspace/integrations/webhooks/deliveries/next_attempt: f2279abf04af3dd63635a4a5c5757a26

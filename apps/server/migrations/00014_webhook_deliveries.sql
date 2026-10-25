@@ -2,7 +2,7 @@
 --
 -- Until now the outcome of a delivery was only logged: a webhook whose endpoint failed on every event still looked healthy, and an event lost after its retries could not be sent again. Each row is one event delivered to one webhook, one Standard Webhooks message (message_id is its webhook-id header), updated by every attempt: the webhook.deliver job's first attempt and retries, and a resend from the webhooks page. The server keeps the newest rows of each webhook and deletes older ones as it adds a row (webhook.deliveriesKept).
 --
--- status is the message's state after its latest attempt: succeeded, retrying (the job will try again at next_attempt_at) or failed (its retries ran out, or a resend failed after they had). failure is why the latest attempt failed: an answer outside 2xx (status_code holds it), a redirect, no answer in time, no connection, or a URL the SSRF guard refused; failure_message is the reason as the page shows it, never the URL's path or query.
+-- status is the message's state: succeeded once an attempt delivered it (delivered_at is the latest attempt that did, and a later attempt that fails, a resend, does not undo it), otherwise retrying (the job will try again at next_attempt_at) or failed (its retries ran out, or a resend failed after they had). The other columns describe the latest attempt, whatever the status: failure is why it failed, an answer outside 2xx (status_code holds it), a redirect, no answer in time, no connection, or a URL the SSRF guard refused; failure_message is the reason as the page shows it, never the URL's path or query. A message that was not delivered always has a failure.
 --
 -- payload is the event's data as it was sent, kept so that a resend sends the same body. It is the response's data, so the row goes with the response, and with its survey, whose deletion deletes its responses: an erased response is never sent again and does not stay here.
 
@@ -25,12 +25,14 @@ CREATE TABLE webhook_deliveries (
     last_attempted_at timestamptz NOT NULL,
     first_failed_at timestamptz,
     next_attempt_at timestamptz,
+    delivered_at timestamptz,
     status_code integer CHECK (status_code BETWEEN 100 AND 999),
     failure text CHECK (failure IN ('status', 'redirect', 'timeout', 'unreachable', 'refused')),
     failure_message text,
     latency_ms integer NOT NULL CHECK (latency_ms >= 0),
     CHECK ((status = 'retrying') = (next_attempt_at IS NOT NULL)),
-    CHECK ((status = 'succeeded') = (failure IS NULL)),
+    CHECK ((status = 'succeeded') = (delivered_at IS NOT NULL)),
+    CHECK (status = 'succeeded' OR failure IS NOT NULL),
     CHECK ((failure IS NULL) = (failure_message IS NULL)),
     UNIQUE (webhook_id, message_id)
 );

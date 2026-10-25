@@ -36,7 +36,7 @@ interface CardProps {
   disabled: boolean;
   /** The integration cannot be set up on this instance (its OAuth app is not configured); the card then only leads to the page that explains it. */
   unavailable?: boolean;
-  /** Its webhooks' delivery health: red when one lost a delivery, amber while failed deliveries are being retried, instead of the green of a working connection. */
+  /** Its webhooks' delivery health: red when one is failing, amber while failed deliveries are being retried or lost ones wait to be resent, instead of the green of a working connection. */
   alert?: "error" | "warning";
 }
 
@@ -97,7 +97,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
   const webhooks = useQuery(webhooksQuery(workspace.id));
   const counts = webhookCounts(webhooks.data?.webhooks ?? []);
   const alerts = webhookAlerts(webhooks.data?.webhooks ?? []);
-  // A card of webhooks says how many there are, then how many are failing or retrying, and turns red or amber for them.
+  // A card of webhooks says how many there are, then how many are failing, retrying or have lost deliveries to resend, and turns red or amber for them.
   const webhookStatus = (
     count: number,
     noun: "webhook" | "zap" | "integration",
@@ -108,7 +108,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       count > 0
         ? alertsText(t, connectionCountText(t, count, noun), alert)
         : connectionCountText(t, count, noun),
-    alert: alert.failing > 0 ? "error" : alert.retrying > 0 ? "warning" : undefined,
+    alert: alert.failing > 0 ? "error" : alert.retrying > 0 || alert.lost > 0 ? "warning" : undefined,
   });
   const isReadOnly = workspace.access.isReadOnly;
   const base = `/workspaces/${workspace.id}/integrations`;

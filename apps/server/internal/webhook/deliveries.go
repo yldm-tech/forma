@@ -2,7 +2,9 @@ package webhook
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 
 // A delivery's state after its latest attempt, the status column of webhook_deliveries.
 const (
+	// DeliverySucceeded is a delivery an attempt delivered. It stays succeeded when a later attempt, a resend, fails.
 	DeliverySucceeded = "succeeded"
 	// DeliveryRetrying is a failed attempt whose job will try again.
 	DeliveryRetrying = "retrying"
@@ -26,12 +29,14 @@ const (
 
 // A webhook's health on the webhooks and integrations pages, read from its recent deliveries.
 const (
-	// HealthHealthy is a webhook whose latest attempt succeeded.
+	// HealthHealthy is a webhook whose latest attempt succeeded and none of whose kept deliveries was lost.
 	HealthHealthy = "healthy"
-	// HealthRetrying is a webhook whose latest attempt failed while every delivery since its last success is still being retried.
+	// HealthRetrying is a webhook whose latest attempt failed while none of its kept deliveries was lost and one is still being retried.
 	HealthRetrying = "retrying"
-	// HealthFailing is a webhook that lost a delivery since its last success: its retries ran out.
+	// HealthFailing is a webhook whose latest attempt failed while a kept delivery was lost (its retries ran out) or nothing is being retried.
 	HealthFailing = "failing"
+	// HealthLost is a webhook whose latest attempt succeeded, its endpoint working again, while kept deliveries it lost earlier wait to be resent.
+	HealthLost = "lost"
 )
 
 // deliveriesKept is how many deliveries of each webhook are kept, the newest; the delivery log shows them all.
@@ -60,7 +65,7 @@ type DeliveryView struct {
 	LatencyMs      int     `json:"latencyMs"`
 }
 
-// Health is a webhook's delivery health, from its kept deliveries; a webhook nothing was sent to yet has none. Status is HealthHealthy, HealthRetrying or HealthFailing. The latest attempt's outcome is StatusCode, Failure and FailureMessage, and NextAttemptAt is when its delivery is tried again. FailingSince is the first failed attempt after the last success, and FailedCount the deliveries lost since then.
+// Health is a webhook's delivery health, from its kept deliveries; a webhook nothing was sent to yet has none. Status is HealthHealthy, HealthRetrying, HealthFailing or HealthLost. The latest attempt's outcome is StatusCode, Failure and FailureMessage, and NextAttemptAt is when its delivery is tried again. LastSuccessAt is the latest attempt that delivered an event. FailingSince is, while the latest attempt failed, the first failed attempt after the last success. FailedCount is the kept deliveries that were lost and not resent since, however long ago, so a later success does not hide them.
 type Health struct {
 	Status         string  `json:"status"`
 	LastAttemptAt  string  `json:"lastAttemptAt"`
@@ -104,23 +109,31 @@ func attemptColumns(a Attempt) (statusCode *int, failure, message *string, laten
 	return statusCode, failure, message, a.Latency.Milliseconds()
 }
 
-// recordAttempt stores an attempt of the worker's: the delivery's first, which adds its row and trims the webhook's log to deliveriesKept, or a retry, which updates it.
+// recordAttempt stores an attempt of the worker's: the delivery's first, which adds its row and trims the webhook's log to deliveriesKept, or a retry, which updates it. A retry that a resend overtook, one sent after the job found the delivery still undelivered while the resend delivered it, leaves the delivered row alone: it is neither retried nor failed.
 func (r *Repository) recordAttempt(ctx context.Context, rec deliveryRecord) error {
 	code, failure, message, latency := attemptColumns(rec.Attempt)
-	var firstFailedAt *time.Time
-	if !rec.Attempt.OK() {
+	var firstFailedAt, deliveredAt *time.Time
+	if rec.Attempt.OK() {
+		deliveredAt = &rec.At
+	} else {
 		firstFailedAt = &rec.At
 	}
 	var inserted bool
-	if err := r.db.WithContext(ctx).Raw(`INSERT INTO webhook_deliveries AS d (webhook_id, response_id, survey_id, event, message_id, payload, status, attempts,
-			last_attempted_at, first_failed_at, next_attempt_at, status_code, failure, failure_message, latency_ms)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+	err := r.db.WithContext(ctx).Raw(`INSERT INTO webhook_deliveries AS d (webhook_id, response_id, survey_id, event, message_id, payload, status, attempts,
+			last_attempted_at, first_failed_at, next_attempt_at, delivered_at, status_code, failure, failure_message, latency_ms)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (webhook_id, message_id) DO UPDATE SET status = EXCLUDED.status, attempts = d.attempts + 1, last_attempted_at = EXCLUDED.last_attempted_at,
-			first_failed_at = COALESCE(d.first_failed_at, EXCLUDED.first_failed_at), next_attempt_at = EXCLUDED.next_attempt_at, status_code = EXCLUDED.status_code,
-			failure = EXCLUDED.failure, failure_message = EXCLUDED.failure_message, latency_ms = EXCLUDED.latency_ms
+			first_failed_at = COALESCE(d.first_failed_at, EXCLUDED.first_failed_at), next_attempt_at = EXCLUDED.next_attempt_at, delivered_at = EXCLUDED.delivered_at,
+			status_code = EXCLUDED.status_code, failure = EXCLUDED.failure, failure_message = EXCLUDED.failure_message, latency_ms = EXCLUDED.latency_ms
+		WHERE d.status <> 'succeeded'
 		RETURNING xmax = 0`,
 		rec.WebhookID, rec.ResponseID, rec.SurveyID, rec.Event, rec.MessageID, rec.Payload, rec.Status,
-		rec.At, firstFailedAt, rec.NextAttemptAt, code, failure, message, latency).Row().Scan(&inserted); err != nil {
+		rec.At, firstFailedAt, rec.NextAttemptAt, deliveredAt, code, failure, message, latency).Row().Scan(&inserted)
+	if errors.Is(err, sql.ErrNoRows) {
+		// The delivery was delivered already, by a resend.
+		return nil
+	}
+	if err != nil {
 		return fmt.Errorf("record webhook delivery: %w", err)
 	}
 	if !inserted {
@@ -172,15 +185,16 @@ func (r *Repository) storedDelivery(ctx context.Context, webhookID, id uuid.UUID
 	return &found[0], nil
 }
 
-// recordResend stores a resend's attempt. A success settles the delivery, and its job, if it is still waiting to retry, then finds it delivered and stops. A failure leaves a delivery that is still being retried to its job, and marks any other one failed.
+// recordResend stores a resend's attempt. A success settles the delivery, and its job, if it is still waiting to retry, then finds it delivered and stops. A failure leaves a delivery that is still being retried to its job, keeps one that was delivered already delivered, with the failed attempt as its latest, and marks any other one failed.
 func (r *Repository) recordResend(ctx context.Context, id uuid.UUID, at time.Time, a Attempt) error {
 	code, failure, message, latency := attemptColumns(a)
 	if err := r.db.WithContext(ctx).Exec(`UPDATE webhook_deliveries SET attempts = attempts + 1, last_attempted_at = ?,
-			status = CASE WHEN ? THEN 'succeeded' WHEN status = 'retrying' THEN 'retrying' ELSE 'failed' END,
+			status = CASE WHEN ? THEN 'succeeded' WHEN status IN ('succeeded', 'retrying') THEN status ELSE 'failed' END,
 			next_attempt_at = CASE WHEN ? THEN NULL ELSE next_attempt_at END,
+			delivered_at = CASE WHEN ? THEN ? ELSE delivered_at END,
 			first_failed_at = CASE WHEN ? THEN first_failed_at ELSE COALESCE(first_failed_at, ?) END,
 			status_code = ?, failure = ?, failure_message = ?, latency_ms = ?
-		WHERE id = ?`, at, a.OK(), a.OK(), a.OK(), at, code, failure, message, latency, id).Error; err != nil {
+		WHERE id = ?`, at, a.OK(), a.OK(), a.OK(), at, a.OK(), at, code, failure, message, latency, id).Error; err != nil {
 		return fmt.Errorf("record webhook resend: %w", err)
 	}
 	return nil
@@ -252,7 +266,6 @@ func (r *Repository) delivery(ctx context.Context, id uuid.UUID) (*DeliveryView,
 
 type healthRow struct {
 	WebhookID       uuid.UUID
-	Status          string
 	LastAttemptedAt time.Time
 	NextAttemptAt   *time.Time
 	StatusCode      *int
@@ -261,19 +274,22 @@ type healthRow struct {
 	LastSuccessAt   *time.Time
 	FailingSince    *time.Time
 	FailedCount     int
+	Retrying        bool
 }
 
-// health is the delivery health of each of the workspace's webhooks that was sent anything: the latest attempt, the last success, and the deliveries that failed since, of which those whose retries ran out make the webhook failing.
+// health is the delivery health of each of the workspace's webhooks that was sent anything: the latest attempt, the last success, the first failure since, and the kept deliveries that were lost, however long ago.
 func (r *Repository) health(ctx context.Context, workspaceID uuid.UUID) (map[uuid.UUID]*Health, error) {
 	var rows []healthRow
-	if err := r.db.WithContext(ctx).Raw(`SELECT w.id AS webhook_id, latest.status, latest.last_attempted_at, latest.next_attempt_at, latest.status_code, latest.failure, latest.failure_message,
-			ok.at AS last_success_at, bad.since AS failing_since, bad.failed AS failed_count
+	if err := r.db.WithContext(ctx).Raw(`SELECT w.id AS webhook_id, latest.last_attempted_at, latest.next_attempt_at, latest.status_code, latest.failure, latest.failure_message,
+			ok.at AS last_success_at, bad.since AS failing_since, kept.failed AS failed_count, kept.retrying
 		FROM webhooks w
-		JOIN LATERAL (SELECT d.status, d.last_attempted_at, d.next_attempt_at, d.status_code, d.failure, d.failure_message FROM webhook_deliveries d
+		JOIN LATERAL (SELECT d.last_attempted_at, d.next_attempt_at, d.status_code, d.failure, d.failure_message FROM webhook_deliveries d
 			WHERE d.webhook_id = w.id ORDER BY d.last_attempted_at DESC, d.id DESC LIMIT 1) latest ON true
-		LEFT JOIN LATERAL (SELECT max(d.last_attempted_at) AS at FROM webhook_deliveries d WHERE d.webhook_id = w.id AND d.status = 'succeeded') ok ON true
-		LEFT JOIN LATERAL (SELECT min(GREATEST(d.first_failed_at, ok.at)) AS since, count(*) FILTER (WHERE d.status = 'failed') AS failed FROM webhook_deliveries d
+		LEFT JOIN LATERAL (SELECT max(d.delivered_at) AS at FROM webhook_deliveries d WHERE d.webhook_id = w.id) ok ON true
+		LEFT JOIN LATERAL (SELECT min(GREATEST(d.first_failed_at, ok.at)) AS since FROM webhook_deliveries d
 			WHERE d.webhook_id = w.id AND d.status <> 'succeeded' AND (ok.at IS NULL OR d.last_attempted_at > ok.at)) bad ON true
+		LEFT JOIN LATERAL (SELECT count(*) FILTER (WHERE d.status = 'failed') AS failed, bool_or(d.status = 'retrying') AS retrying FROM webhook_deliveries d
+			WHERE d.webhook_id = w.id) kept ON true
 		WHERE w.workspace_id = ?`, workspaceID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load webhook health: %w", err)
 	}
@@ -283,13 +299,16 @@ func (r *Repository) health(ctx context.Context, workspaceID uuid.UUID) (map[uui
 			LastAttemptAt: jsvalue.ISOString(x.LastAttemptedAt), LastSuccessAt: isoString(x.LastSuccessAt), FailingSince: isoString(x.FailingSince),
 			NextAttemptAt: isoString(x.NextAttemptAt), StatusCode: x.StatusCode, Failure: x.Failure, FailureMessage: x.FailureMessage, FailedCount: x.FailedCount,
 		}
+		latestFailed := x.Failure != nil
 		switch {
-		case x.Status == DeliverySucceeded:
-			h.Status, h.FailingSince = HealthHealthy, nil
-		case x.FailedCount > 0:
-			h.Status = HealthFailing
-		default:
+		case latestFailed && x.FailedCount == 0 && x.Retrying:
 			h.Status = HealthRetrying
+		case latestFailed:
+			h.Status = HealthFailing
+		case x.FailedCount > 0:
+			h.Status, h.FailingSince = HealthLost, nil
+		default:
+			h.Status, h.FailingSince = HealthHealthy, nil
 		}
 		out[x.WebhookID] = h
 	}

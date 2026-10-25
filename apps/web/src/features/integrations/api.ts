@@ -251,8 +251,8 @@ export interface Webhook {
   health?: WebhookHealth;
 }
 
-/** healthy: the latest attempt succeeded. retrying: it failed, and every delivery since the last success is still being retried. failing: a delivery since the last success ran out of retries. */
-export type WebhookHealthStatus = "healthy" | "retrying" | "failing";
+/** healthy: the latest attempt succeeded and no kept delivery was lost. lost: the latest attempt succeeded, but deliveries lost earlier wait to be resent. retrying: the latest attempt failed, nothing was lost and a delivery is still being retried. failing: the latest attempt failed while a delivery was lost or nothing is being retried. */
+export type WebhookHealthStatus = "healthy" | "lost" | "retrying" | "failing";
 
 /** Why an attempt failed: an answer outside 2xx, a redirect (never followed), no answer within 5 seconds, no connection, or a URL the server refuses to send to. */
 export type WebhookDeliveryFailure = "status" | "redirect" | "timeout" | "unreachable" | "refused";
@@ -268,11 +268,11 @@ export interface WebhookHealth extends WebhookAttemptOutcome {
   status: WebhookHealthStatus;
   lastAttemptAt: string;
   lastSuccessAt: string | null;
-  /** The first failed attempt after the last success. */
+  /** While the latest attempt failed, the first failed attempt after the last success. */
   failingSince: string | null;
   /** When the latest attempt's delivery is tried again. */
   nextAttemptAt: string | null;
-  /** The deliveries that ran out of retries since the last success. */
+  /** The kept deliveries that ran out of retries and were not resent since, however long ago. */
   failedCount: number;
 }
 
@@ -288,6 +288,7 @@ export interface WebhookDelivery extends WebhookAttemptOutcome {
   surveyName: string | null;
   /** The webhook-id header of every attempt, which receivers deduplicate on. */
   messageId: string;
+  /** succeeded once any attempt delivered it, even when a later resend failed; the outcome fields are the latest attempt's. */
   status: WebhookDeliveryStatus;
   attempts: number;
   lastAttemptAt: string;

@@ -2094,6 +2094,7 @@
         "deliveries": {
           "attempts_label": "試行回数",
           "card_failing": "{count} 件が失敗",
+          "card_lost": "{count} 件に未再送の配信あり",
           "card_retrying": "{count} 件が再試行中",
           "delivery_status": "配信ステータス",
           "duration": "所要時間",
@@ -2108,6 +2109,7 @@
           "first_failure": "最初の失敗: {time}",
           "health_failing": "失敗",
           "health_healthy": "正常",
+          "health_lost": "未再送の配信あり",
           "health_none": "配信なし",
           "health_retrying": "再試行中",
           "last_attempt": "最終試行",
@@ -2115,6 +2117,7 @@
           "last_error": "最新のエラー",
           "last_success": "最終成功",
           "lost_label": "失敗した配信",
+          "lost_to_resend": "配信ログから再送が必要な失敗した配信が {count} 件あります",
           "message_id": "メッセージ ID（webhook-id）",
           "never": "なし",
           "next_attempt": "次回の試行",

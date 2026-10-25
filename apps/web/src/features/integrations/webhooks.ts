@@ -161,6 +161,8 @@ export const webhookHealthBadge = (
       return { type: "gray", label: t("workspace.integrations.webhooks.deliveries.health_none") };
     case "healthy":
       return { type: "success", label: t("workspace.integrations.webhooks.deliveries.health_healthy") };
+    case "lost":
+      return { type: "warning", label: t("workspace.integrations.webhooks.deliveries.health_lost") };
     case "retrying":
       return { type: "warning", label: t("workspace.integrations.webhooks.deliveries.health_retrying") };
     case "failing":
@@ -209,21 +211,24 @@ export const attemptFailureText = (t: TFunction, outcome: WebhookAttemptOutcome)
 export interface WebhookAlerts {
   failing: number;
   retrying: number;
+  /** Webhooks that work again but lost deliveries that were not resent. */
+  lost: number;
 }
 
-/** How many webhooks of each source are failing or retrying, for the integrations page's cards. */
+/** How many webhooks of each source are failing, retrying or have lost deliveries to resend, for the integrations page's cards. */
 export const webhookAlerts = (
   webhooks: readonly Pick<Webhook, "source" | "health">[]
 ): Record<WebhookSource, WebhookAlerts> => {
   const alerts = Object.fromEntries(
     (["user", "zapier", "make", "n8n", "activepieces"] as const).map((source) => [
       source,
-      { failing: 0, retrying: 0 },
+      { failing: 0, retrying: 0, lost: 0 },
     ])
   ) as Record<WebhookSource, WebhookAlerts>;
   for (const webhook of webhooks) {
     if (webhook.health?.status === "failing") alerts[webhook.source].failing += 1;
     if (webhook.health?.status === "retrying") alerts[webhook.source].retrying += 1;
+    if (webhook.health?.status === "lost") alerts[webhook.source].lost += 1;
   }
   return alerts;
 };
@@ -235,5 +240,7 @@ export const alertsText = (t: TFunction, statusText: string, alerts: WebhookAler
     parts.push(t("workspace.integrations.webhooks.deliveries.card_failing", { count: alerts.failing }));
   if (alerts.retrying > 0)
     parts.push(t("workspace.integrations.webhooks.deliveries.card_retrying", { count: alerts.retrying }));
+  if (alerts.lost > 0)
+    parts.push(t("workspace.integrations.webhooks.deliveries.card_lost", { count: alerts.lost }));
   return parts.join(" · ");
 };

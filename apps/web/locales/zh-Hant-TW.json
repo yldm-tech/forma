@@ -2094,6 +2094,7 @@
         "deliveries": {
           "attempts_label": "嘗試次數",
           "card_failing": "{count} 個失敗",
+          "card_lost": "{count} 個有未重送的傳送",
           "card_retrying": "{count} 個重試中",
           "delivery_status": "傳送狀態",
           "duration": "耗時",
@@ -2108,6 +2109,7 @@
           "first_failure": "首次失敗：{time}",
           "health_failing": "失敗",
           "health_healthy": "正常",
+          "health_lost": "有遺失的傳送",
           "health_none": "尚無傳送",
           "health_retrying": "重試中",
           "last_attempt": "最近一次嘗試",
@@ -2115,6 +2117,7 @@
           "last_error": "最近的錯誤",
           "last_success": "最近一次成功",
           "lost_label": "失敗的傳送",
+          "lost_to_resend": "有 {count} 個失敗的傳送需要在傳送紀錄中重新傳送",
           "message_id": "訊息 ID（webhook-id）",
           "never": "從未",
           "next_attempt": "下次嘗試",

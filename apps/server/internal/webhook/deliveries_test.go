@@ -208,6 +208,118 @@ func TestResendSettlesTheRetries(t *testing.T) {
 	}
 }
 
+// A resend of an event that was delivered already, to an endpoint that fails now, does not undo the delivery: the event stays delivered, the webhook keeps its last success and loses nothing, and the failed attempt shows as the latest one, which makes the webhook failing.
+func TestFailedResendKeepsTheDelivery(t *testing.T) {
+	e := newEnv(t, true)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	sv := e.survey(ws)
+	rec := newReceiver(t, http.StatusOK)
+	hook := e.insert(`INSERT INTO webhooks (workspace_id, url, triggers) VALUES (?, ?, '{responseFinished}') RETURNING id`, ws, rec.URL)
+	args := DeliverArgs{WebhookID: hook, JobKey: "job-1", Event: "responseFinished", WorkspaceID: ws, SurveyID: sv, ResponseID: e.response(sv), Data: `{}`}
+	if err := e.work(e.worker(), args, 1); err != nil {
+		t.Fatal(err)
+	}
+	delivered := e.healthOf(owner, ws, hook)
+	if delivered == nil || delivered.Status != HealthHealthy || delivered.LastSuccessAt == nil {
+		t.Fatalf("health after the delivery = %+v", delivered)
+	}
+
+	rec.setStatus(http.StatusServiceUnavailable)
+	d := e.deliveryLog(owner, hook)[0]
+	res := e.do(http.MethodPost, "/api/app/webhooks/"+hook.String()+"/deliveries/"+d.ID.String()+"/resend", asUser(owner), nil)
+	got := decode[DeliveryView](t, res)
+	if res.Code != http.StatusOK || got.Status != DeliverySucceeded || got.Attempts != 2 || got.NextAttemptAt != nil || got.Failure == nil || *got.Failure != FailureStatus || *got.StatusCode != 503 {
+		t.Fatalf("a failed resend of a delivered event = %d %+v", res.Code, got)
+	}
+	h := e.healthOf(owner, ws, hook)
+	if h == nil || h.LastSuccessAt == nil || *h.LastSuccessAt != *delivered.LastSuccessAt || h.FailedCount != 0 || h.Status != HealthFailing || h.Failure == nil {
+		t.Fatalf("health after a failed resend of a delivered event = %+v", h)
+	}
+}
+
+// Deliveries lost during an outage stay counted after the endpoint recovers: a later success makes the webhook lost, not healthy, until each of them is resent.
+func TestLostDeliveriesOutliveALaterSuccess(t *testing.T) {
+	e := newEnv(t, true)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	sv := e.survey(ws)
+	rec := newReceiver(t, http.StatusBadGateway)
+	hook := e.insert(`INSERT INTO webhooks (workspace_id, url, triggers) VALUES (?, ?, '{responseFinished}') RETURNING id`, ws, rec.URL)
+	w := e.worker()
+	for _, key := range []string{"job-1", "job-2"} {
+		args := DeliverArgs{WebhookID: hook, JobKey: key, Event: "responseFinished", WorkspaceID: ws, SurveyID: sv, ResponseID: e.response(sv), Data: `{}`}
+		if err := e.work(w, args, deliveryAttempts); err == nil {
+			t.Fatal("the last attempt must fail")
+		}
+	}
+	if h := e.healthOf(owner, ws, hook); h == nil || h.Status != HealthFailing || h.FailedCount != 2 {
+		t.Fatalf("health after two lost deliveries = %+v", h)
+	}
+
+	rec.setStatus(http.StatusOK)
+	newest := e.deliveryLog(owner, hook)[0]
+	if res := e.do(http.MethodPost, "/api/app/webhooks/"+hook.String()+"/deliveries/"+newest.ID.String()+"/resend", asUser(owner), nil); res.Code != http.StatusOK {
+		t.Fatalf("resend = %d %s", res.Code, res.Body)
+	}
+	h := e.healthOf(owner, ws, hook)
+	if h == nil || h.Status != HealthLost || h.FailedCount != 1 || h.LastSuccessAt == nil || h.FailingSince != nil || h.Failure != nil {
+		t.Fatalf("health with one lost delivery left after a success = %+v", h)
+	}
+
+	oldest := e.deliveryLog(owner, hook)[1]
+	if res := e.do(http.MethodPost, "/api/app/webhooks/"+hook.String()+"/deliveries/"+oldest.ID.String()+"/resend", asUser(owner), nil); res.Code != http.StatusOK {
+		t.Fatalf("resend = %d %s", res.Code, res.Body)
+	}
+	if h := e.healthOf(owner, ws, hook); h == nil || h.Status != HealthHealthy || h.FailedCount != 0 {
+		t.Fatalf("health once every lost delivery was resent = %+v", h)
+	}
+}
+
+// A job attempt that was already on its way when a resend delivered the event does not undo the delivery: the row stays delivered, with no retry scheduled, so the job's next run sends nothing.
+func TestJobAttemptAfterResendKeepsTheDelivery(t *testing.T) {
+	e := newEnv(t, true)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	sv := e.survey(ws)
+	hook := e.insert(`INSERT INTO webhooks (workspace_id, url, triggers) VALUES (?, ?, '{responseFinished}') RETURNING id`, ws, "https://example.com/hook")
+	repo := NewRepository(e.db)
+	now := time.Now().UTC()
+	next := now.Add(time.Minute)
+	rec := deliveryRecord{
+		WebhookID: hook, ResponseID: e.response(sv), SurveyID: sv, Event: "responseFinished", MessageID: "msg-1", Payload: `{}`,
+		Status: DeliveryRetrying, At: now, NextAttemptAt: &next, Attempt: Attempt{StatusCode: 500, Failure: FailureStatus, Message: "Status 500"},
+	}
+	if err := repo.recordAttempt(t.Context(), rec); err != nil {
+		t.Fatal(err)
+	}
+	d := e.deliveryLog(owner, hook)[0]
+	if err := repo.recordResend(t.Context(), d.ID, now.Add(time.Second), Attempt{StatusCode: 200}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, status := range []string{DeliveryRetrying, DeliveryFailed} {
+		late := rec
+		late.At, late.Status = now.Add(2*time.Second), status
+		if status == DeliveryFailed {
+			late.NextAttemptAt = nil
+		}
+		if err := repo.recordAttempt(t.Context(), late); err != nil {
+			t.Fatalf("a %s attempt after the resend: %v", status, err)
+		}
+		got := e.deliveryLog(owner, hook)[0]
+		if got.Status != DeliverySucceeded || got.NextAttemptAt != nil || got.Failure != nil || got.Attempts != 2 {
+			t.Fatalf("after a %s job attempt that a resend overtook = %+v", status, got)
+		}
+	}
+	if done, err := repo.deliveredAlready(t.Context(), hook, "msg-1"); err != nil || !done {
+		t.Fatalf("delivered = %v, %v", done, err)
+	}
+	if h := e.healthOf(owner, ws, hook); h == nil || h.Status != HealthHealthy || h.FailedCount != 0 {
+		t.Fatalf("health = %+v", h)
+	}
+}
+
 // A webhook that stops subscribing while a delivery is being retried ends it as failed instead of leaving it retrying for good; deleting the response deletes its deliveries, payload included; the log keeps the newest deliveries of each webhook.
 func TestDeliveryLogLifecycle(t *testing.T) {
 	e := newEnv(t, true)

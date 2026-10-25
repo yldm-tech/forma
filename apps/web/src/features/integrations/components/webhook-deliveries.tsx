@@ -40,12 +40,15 @@ export const WebhookHealthBadge = ({ health }: { health: WebhookHealth | undefin
   return <Badge type={badge.type} size="tiny" text={badge.label} title={detail} />;
 };
 
-/** One line on a webhook's health: when it started failing and why, or when it last delivered. */
+/** One line on a webhook's health: when it started failing and why, how many lost deliveries wait to be resent, or when it last delivered. */
 const healthDetail = (t: TFunction, health: WebhookHealth, locale: string): string => {
   if (health.status === "healthy") {
     return t("workspace.integrations.webhooks.deliveries.last_delivered", {
       time: timeSince(health.lastAttemptAt, locale),
     });
+  }
+  if (health.status === "lost") {
+    return t("workspace.integrations.webhooks.deliveries.lost_to_resend", { count: health.failedCount });
   }
   const since = health.failingSince ?? health.lastAttemptAt;
   const reason = attemptFailureText(t, health);
@@ -256,7 +259,8 @@ export const WebhookDeliveriesSheet = ({
   const onResend = async (delivery: WebhookDelivery) => {
     try {
       const after = await resend.mutateAsync(delivery.id);
-      if (after.status === "succeeded") {
+      // A delivered event stays delivered when its resend fails, so the resend's own outcome is the latest attempt's.
+      if (after.failure === null) {
         toast.success(t("workspace.integrations.webhooks.deliveries.resend_succeeded"));
       } else {
         toast.error(

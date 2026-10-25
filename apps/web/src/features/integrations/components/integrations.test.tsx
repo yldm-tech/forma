@@ -228,7 +228,7 @@ describe("integrations page", () => {
     expect(card("Slack").getByText(t("common.not_connected"))).toBeTruthy();
   });
 
-  test("a webhooks card turns red for a webhook that lost deliveries and amber for one being retried, and says how many", async () => {
+  test("a webhooks card turns red for a failing webhook and amber for one being retried or with lost deliveries to resend, and says how many", async () => {
     stubServer({
       [`GET ${BASE}`]: () => ({ body: overview([]) }),
       [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
@@ -247,6 +247,11 @@ describe("integrations page", () => {
               source: "make",
               health: { ...failingHealth, status: "healthy", failure: null },
             }),
+            webhook({
+              id: "w6",
+              source: "n8n",
+              health: { ...failingHealth, status: "lost", failure: null, failingSince: null },
+            }),
           ],
           allowInternalUrls: false,
         },
@@ -263,6 +268,8 @@ describe("integrations page", () => {
     expect(dot("Zapier")).toContain("bg-amber-500");
     expect(card("Make.com").getByText("1 integration")).toBeTruthy();
     expect(dot("Make.com")).toContain("bg-green-500");
+    expect(card("n8n").getByText("1 integration · 1 with lost deliveries")).toBeTruthy();
+    expect(dot("n8n")).toContain("bg-amber-500");
   });
 
   test("an integration the instance cannot offer says so and only leads to its explanation; a set-up SDK is managed", async () => {
@@ -993,14 +1000,21 @@ describe("webhooks", () => {
     ]);
   });
 
-  test("a resend that fails again says why; a read-only member sees the log without Resend", async () => {
+  test("a resend that fails says why, even of an event delivered before; a read-only member sees the log without Resend", async () => {
     const existing = webhook({ health: failingHealth });
     stubServer({
       [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
       "GET /api/v3/surveys": surveysList,
       [`GET /api/app/webhooks/${existing.id}/deliveries`]: () => ({ body: { deliveries: [delivery()] } }),
       [`POST /api/app/webhooks/${existing.id}/deliveries/${delivery().id}/resend`]: () => ({
-        body: delivery({ attempts: 9, statusCode: null, failure: "timeout", failureMessage: "No answer" }),
+        // The event stays delivered; the failure is the resend's.
+        body: delivery({
+          status: "succeeded",
+          attempts: 9,
+          statusCode: null,
+          failure: "timeout",
+          failureMessage: "No answer",
+        }),
       }),
     });
     renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);

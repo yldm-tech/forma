@@ -2094,6 +2094,7 @@
         "deliveries": {
           "attempts_label": "Attempts",
           "card_failing": "{count} failing",
+          "card_lost": "{count} with lost deliveries",
           "card_retrying": "{count} retrying",
           "delivery_status": "Delivery status",
           "duration": "Duration",
@@ -2108,6 +2109,7 @@
           "first_failure": "First failure {time}",
           "health_failing": "Failing",
           "health_healthy": "Healthy",
+          "health_lost": "Lost deliveries",
           "health_none": "No deliveries yet",
           "health_retrying": "Retrying",
           "last_attempt": "Last attempt",
@@ -2115,6 +2117,7 @@
           "last_error": "Last error",
           "last_success": "Last success",
           "lost_label": "Failed deliveries",
+          "lost_to_resend": "{count, plural, one {# lost delivery} other {# lost deliveries}} to resend from the delivery log",
           "message_id": "Message ID (webhook-id)",
           "never": "Never",
           "next_attempt": "Next attempt",

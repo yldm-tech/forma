@@ -144,13 +144,17 @@ const health = (overrides: Partial<WebhookHealth> = {}): WebhookHealth => ({
 });
 
 describe("delivery health", () => {
-  test("a webhook is gray until something was sent to it, then green, amber while retrying, red once a delivery is lost", () => {
+  test("a webhook is gray until something was sent to it, then green, amber while retrying or while lost deliveries wait to be resent, red while failing", () => {
     expect(webhookHealthBadge(t, undefined)).toEqual({
       type: "gray",
       label: "workspace.integrations.webhooks.deliveries.health_none",
     });
     expect(webhookHealthBadge(t, health()).type).toBe("success");
     expect(webhookHealthBadge(t, health({ status: "retrying" })).type).toBe("warning");
+    expect(webhookHealthBadge(t, health({ status: "lost" }))).toEqual({
+      type: "warning",
+      label: "workspace.integrations.webhooks.deliveries.health_lost",
+    });
     expect(webhookHealthBadge(t, health({ status: "failing" })).type).toBe("error");
     expect(deliveryStatusBadge(t, "succeeded").type).toBe("success");
     expect(deliveryStatusBadge(t, "retrying").type).toBe("warning");
@@ -179,20 +183,23 @@ describe("delivery health", () => {
     );
   });
 
-  test("the integrations page counts failing and retrying webhooks by source", async () => {
+  test("the integrations page counts failing, retrying and lost webhooks by source", async () => {
     const alerts = webhookAlerts([
       { source: "user", health: health({ status: "failing" }) },
       { source: "user", health: health({ status: "retrying" }) },
       { source: "user", health: health() },
       { source: "user" },
+      { source: "user", health: health({ status: "lost" }) },
       { source: "zapier", health: health({ status: "retrying" }) },
     ]);
-    expect(alerts.user).toEqual({ failing: 1, retrying: 1 });
-    expect(alerts.zapier).toEqual({ failing: 0, retrying: 1 });
-    expect(alerts.make).toEqual({ failing: 0, retrying: 0 });
+    expect(alerts.user).toEqual({ failing: 1, retrying: 1, lost: 1 });
+    expect(alerts.zapier).toEqual({ failing: 0, retrying: 1, lost: 0 });
+    expect(alerts.make).toEqual({ failing: 0, retrying: 0, lost: 0 });
     const i18n = await initI18n("en-US");
     const en = i18n.t;
-    expect(alertsText(en, "4 webhooks", alerts.user)).toBe("4 webhooks · 1 failing · 1 retrying");
+    expect(alertsText(en, "5 webhooks", alerts.user)).toBe(
+      "5 webhooks · 1 failing · 1 retrying · 1 with lost deliveries"
+    );
     expect(alertsText(en, "1 zap", alerts.make)).toBe("1 zap");
   });
 });
