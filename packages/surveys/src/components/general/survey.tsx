@@ -32,7 +32,10 @@ import { FormaBranding } from "@/components/general/forma-branding";
 import { LanguageSwitch } from "@/components/general/language-switch";
 import { ProgressBar } from "@/components/general/progress-bar";
 import { RecaptchaBranding } from "@/components/general/recaptcha-branding";
-import { ResponseErrorComponent } from "@/components/general/response-error-component";
+import {
+  ResponseErrorComponent,
+  ResponseSendingDelayedNotice,
+} from "@/components/general/response-error-component";
 import { Subheader } from "@/components/general/subheader";
 import { SurveyCloseButton } from "@/components/general/survey-close-button";
 import { WelcomeCard } from "@/components/general/welcome-card";
@@ -208,9 +211,26 @@ export function Survey({
     [onResponseCreated]
   );
 
-  const responseQueue = useMemo(() => {
-    if (appUrl && workspaceId && surveyState) {
-      return new ResponseQueue(
+  // The queue's callbacks read the latest props through this ref instead of closing over them, so a host that passes fresh callbacks on every render (an inline arrow) cannot replace the queue under the answers it holds.
+  const queueCallbacksRef = useRef({
+    getSetIsError,
+    getSetIsResponseSendingFinished,
+    persistSurveyStateSnapshot,
+    triggerResponseCreatedOnce,
+  });
+  queueCallbacksRef.current = {
+    getSetIsError,
+    getSetIsResponseSendingFinished,
+    persistSurveyStateSnapshot,
+    triggerResponseCreatedOnce,
+  };
+
+  // One queue per response being collected, created on first use and kept for as long as the survey state is the same. It holds the in-flight request and every answer waiting behind it, and the Retry button acts on it; rebuilding it on a re-render orphaned the answers queued in the old one (R-01).
+  const responseQueueRef = useRef<{ surveyState: SurveyState; queue: ResponseQueue } | null>(null);
+  if (appUrl && workspaceId && surveyState && responseQueueRef.current?.surveyState !== surveyState) {
+    responseQueueRef.current = {
+      surveyState,
+      queue: new ResponseQueue(
         {
           appUrl,
           workspaceId,
@@ -221,18 +241,17 @@ export function Survey({
             setShowError(true);
             setErrorType(errorCode);
 
-            if (getSetIsError) {
-              getSetIsError((_prev) => {});
-            }
+            queueCallbacksRef.current.getSetIsError?.((_prev) => {});
           },
           onResponseSendingFinished: () => {
             setIsResponseSendingFinished(true);
             setShowError(false);
             setErrorType(undefined);
 
-            if (getSetIsResponseSendingFinished) {
-              getSetIsResponseSendingFinished((_prev) => {});
-            }
+            queueCallbacksRef.current.getSetIsResponseSendingFinished?.((_prev) => {});
+          },
+          onResponseSendingDelayedChange: (isDelayed) => {
+            setIsResponseSendingDelayed(isDelayed);
           },
           onQuotaFull: (quotaInfo) => {
             if (quotaInfo.action === "endSurvey") {
@@ -242,9 +261,9 @@ export function Survey({
             }
           },
           onResponseCreated: (responseId) => {
-            void persistSurveyStateSnapshot({ responseId });
+            void queueCallbacksRef.current.persistSurveyStateSnapshot({ responseId });
             try {
-              triggerResponseCreatedOnce(responseId);
+              queueCallbacksRef.current.triggerResponseCreatedOnce(responseId);
             } catch (error) {
               // This runs inside ResponseQueue.sendResponse's try block, and the callback reaches
               // host-supplied code (js-core's event bus → the host page). A throw here would be
@@ -255,21 +274,11 @@ export function Survey({
           },
         },
         surveyState
-      );
-    }
-
-    return null;
-  }, [
-    appUrl,
-    workspaceId,
-    getSetIsError,
-    getSetIsResponseSendingFinished,
-    surveyState,
-    offlinePersistEnabled,
-    persistSurveyStateSnapshot,
-    triggerResponseCreatedOnce,
-    survey.id,
-  ]);
+      ),
+    };
+  }
+  const responseQueue =
+    appUrl && workspaceId && surveyState ? (responseQueueRef.current?.queue ?? null) : null;
 
   const questions = useMemo(() => getElementsFromSurveyBlocks(localSurvey.blocks), [localSurvey.blocks]);
 
@@ -333,6 +342,8 @@ export function Survey({
   const [errorType, setErrorType] = useState<TResponseErrorCodesEnum | undefined>(undefined);
   const [showError, setShowError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  // An answer could not be sent yet and is waiting in the queue; the respondent can carry on.
+  const [isResponseSendingDelayed, setIsResponseSendingDelayed] = useState(false);
   const [isResponseSendingFinished, setIsResponseSendingFinished] = useState(
     !getSetIsResponseSendingFinished
   );
@@ -1524,6 +1535,9 @@ export function Survey({
                   </div>
                 ) : null}
               </div>
+            ) : null}
+            {offset === 0 && isResponseSendingDelayed ? (
+              <ResponseSendingDelayedNotice isOffline={!isOnline} />
             ) : null}
             <div
               ref={contentRef}

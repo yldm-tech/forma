@@ -33,6 +33,15 @@ const LINK_PAGE_CARD_MAX_HEIGHT = "max(60dvh, 100dvh - 12rem)";
 let setBlockId = (_: string) => {};
 let setResponseData = (_: TResponseData) => {};
 
+// Module-level, so the runtime receives the same functions on every render: a new function is a changed prop, and a changed prop renders the survey again.
+const getSetBlockId = (f: (value: string) => void) => {
+  setBlockId = f;
+};
+const getSetResponseData = (f: (value: TResponseData) => void) => {
+  setResponseData = f;
+};
+const getSetIsResponseSendingFinished = (_f: (value: boolean) => void) => {};
+
 /**
  * forma2's SurveyClientWrapper: reads what the URL carries for the survey (prefill, hidden fields, start position, user id, offline mode), keeps the page's language, direction and title in step with the survey, and renders it with the respondent runtime inside the page's chrome.
  */
@@ -106,6 +115,10 @@ export const SurveyClientWrapper = ({
   const verifiedEmailField = useMemo<Record<string, string> | null>(
     () => (survey.isVerifyEmailEnabled && verifiedEmail ? { verifiedEmail } : null),
     [survey.isVerifyEmailEnabled, verifiedEmail]
+  );
+  const surveyHiddenFields = useMemo(
+    () => ({ ...hiddenFieldsRecord, ...verifiedEmailField }),
+    [hiddenFieldsRecord, verifiedEmailField]
   );
 
   // The card the respondent is on, labelled by the runtime in the survey's language.
@@ -215,20 +228,16 @@ export const SurveyClientWrapper = ({
           prefillResponseData={prefillValue}
           skipPrefilled={skipPrefilled}
           responseCount={responseCount ?? undefined}
-          getSetBlockId={(f: (value: string) => void) => {
-            setBlockId = f;
-          }}
-          getSetResponseData={(f: (value: TResponseData) => void) => {
-            setResponseData = f;
-          }}
+          getSetBlockId={getSetBlockId}
+          getSetResponseData={getSetResponseData}
           startAtQuestionId={startAt && isStartAtValid ? startAt : undefined}
           fullSizeCards={isEmbed}
           cardMaxHeight={isEmbed ? undefined : LINK_PAGE_CARD_MAX_HEIGHT}
-          hiddenFieldsRecord={{ ...hiddenFieldsRecord, ...verifiedEmailField }}
+          hiddenFieldsRecord={surveyHiddenFields}
           singleUseId={singleUseId}
           singleUseResponseId={singleUseResponseId}
           pinAuthToken={pinAuthToken}
-          getSetIsResponseSendingFinished={(_f: (value: boolean) => void) => {}}
+          getSetIsResponseSendingFinished={getSetIsResponseSendingFinished}
           contactId={contactId}
           userId={userId}
           recaptchaSiteKey={recaptchaSiteKey}

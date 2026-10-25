@@ -92,7 +92,13 @@ vi.mock("@/components/general/error-component", () => ({
 }));
 
 vi.mock("@/components/general/response-error-component", () => ({
-  ResponseErrorComponent: () => <div>Response Error</div>,
+  ResponseErrorComponent: ({ onRetry }: any) => (
+    <div>
+      Response Error
+      <button onClick={() => onRetry?.()}>Retry</button>
+    </div>
+  ),
+  ResponseSendingDelayedNotice: () => <div>Sending delayed</div>,
 }));
 
 vi.mock("@/components/general/forma-branding", () => ({
@@ -397,5 +403,123 @@ describe("Survey offline restore", () => {
     });
 
     expect(apiClientMocks.getResponseIdByDisplayId).not.toHaveBeenCalled();
+  });
+});
+
+// R-01 and R-02: the answers a respondent gives reach the server even when the host re-renders the survey or the connection drops for a while.
+describe("Survey response delivery", () => {
+  const serverError = {
+    ok: false,
+    error: { code: "internal_server_error", message: "Server error", status: 500 },
+  };
+
+  const surveyElement = (getSetIsResponseSendingFinished: (f: (value: boolean) => void) => void) => (
+    <Survey
+      appUrl="http://localhost:3000"
+      workspaceId="ws1234567890123456789012"
+      survey={baseSurvey}
+      styling={{} as any}
+      isBrandingEnabled={false}
+      languageCode="en"
+      isSpamProtectionEnabled={false}
+      getSetIsResponseSendingFinished={getSetIsResponseSendingFinished}
+    />
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  test("an answer given while the previous one is still being sent is not lost when the host re-renders", async () => {
+    let releaseCreate!: () => void;
+    apiClientMocks.createResponse.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseCreate = () => resolve({ ok: true, data: { id: "response-created" } });
+        })
+    );
+
+    // A host that passes a fresh callback on every render, as the link page did.
+    const { rerender } = render(surveyElement(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalledTimes(1));
+
+    rerender(surveyElement(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    rerender(surveyElement(() => {}));
+
+    releaseCreate();
+
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseId: "response-created",
+          data: { q2: "block-2-answer" },
+          finished: true,
+        })
+      )
+    );
+    expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { q1: "block-1-answer" }, finished: false })
+    );
+  });
+
+  test("a card that cannot be sent shows a notice and lets the respondent carry on", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    apiClientMocks.createResponse.mockResolvedValue(serverError);
+
+    render(surveyElement(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+
+    expect(await screen.findByText("Sending delayed")).toBeTruthy();
+    expect(await screen.findByTestId("submit-block-2")).toBeTruthy();
+
+    // The whole burst of retries fails; the survey still is not replaced by the error card.
+    await vi.advanceTimersByTimeAsync(16_000);
+    expect(screen.queryByText("Response Error")).toBeNull();
+    expect(screen.getByTestId("submit-block-2")).toBeTruthy();
+
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    window.dispatchEvent(new Event("online"));
+
+    await waitFor(() => expect(screen.queryByText("Sending delayed")).toBeNull());
+    expect(apiClientMocks.createResponse).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: { q1: "block-1-answer" } })
+    );
+  });
+
+  test("a final submission that cannot be sent shows the error card, and Retry sends it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(surveyElement(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalledTimes(1));
+
+    apiClientMocks.updateResponse.mockResolvedValue(serverError);
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await vi.advanceTimersByTimeAsync(16_000);
+    expect(await screen.findByText("Response Error")).toBeTruthy();
+
+    apiClientMocks.updateResponse.mockClear();
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    // The ack clears the error card (this file's card stack mock cannot show the ending itself).
+    await waitFor(() => expect(screen.queryByText("Response Error")).toBeNull());
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseId: "response-created",
+        data: { q2: "block-2-answer" },
+        finished: true,
+      })
+    );
   });
 });

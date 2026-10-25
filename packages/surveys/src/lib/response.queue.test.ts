@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { err, ok } from "@forma/types/error-handlers";
 import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
 import { TResponseUpdate } from "@forma/types/responses";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
-import { ResponseQueue, _syncLocks, delay } from "./response-queue";
+import { RECOVERY_BASE_DELAY_MS, ResponseQueue, delay } from "./response-queue";
 import { SurveyState } from "./survey-state";
 
 // Suppress noisy console output from retry logic during tests
@@ -93,7 +93,6 @@ describe("ResponseQueue", () => {
     queue = new ResponseQueue(config, surveyState);
     apiMock = queue.api;
     vi.clearAllMocks();
-    _syncLocks.clear();
   });
 
   test("constructor initializes properties", () => {
@@ -172,7 +171,8 @@ describe("ResponseQueue", () => {
       },
     });
     await queue.processQueue();
-    expect(apiMock.updateResponse).toHaveBeenCalledTimes(config.retryAttempts); // 5xx retried until exhausted
+    // A first attempt, then one retry per backoff step: the last backoff is followed by a last attempt.
+    expect(apiMock.updateResponse).toHaveBeenCalledTimes(config.retryAttempts + 1);
     expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
       responseUpdate,
       TResponseErrorCodesEnum.ResponseSendingError
@@ -275,7 +275,7 @@ describe("ResponseQueue", () => {
 
     await queue.processQueue();
 
-    expect(apiMock.updateResponse).toHaveBeenCalledTimes(config.retryAttempts); // retried, not dropped on first 4xx
+    expect(apiMock.updateResponse).toHaveBeenCalledTimes(config.retryAttempts + 1); // retried, not dropped on first 4xx
     expect(queue.queue).toHaveLength(1);
     expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
       responseUpdate,
@@ -518,7 +518,7 @@ describe("ResponseQueue", () => {
       getSurveyState()
     );
     offlineQueue.queue.push(responseUpdate);
-    _syncLocks.set("s1", true);
+    offlineQueue["isSyncing"] = true;
     const result = await offlineQueue.processQueue();
     expect(result.success).toBe(false);
   });
@@ -563,7 +563,7 @@ describe("ResponseQueue", () => {
     const result = await offlineQueue.processQueue();
     expect(result.success).toBe(false);
     expect(syncSpy).toHaveBeenCalled();
-    expect(_syncLocks.getRequestInProgress("s1")).toBe(false);
+    expect(offlineQueue["isRequestInProgress"]).toBe(false);
   });
 
   test("processQueue logs rejected background sync attempts", async () => {
@@ -590,17 +590,17 @@ describe("ResponseQueue", () => {
 
   test("processQueue bails out if syncPersistedResponses starts during countPendingResponsesStrict await", async () => {
     const { countPendingResponsesStrict } = await import("./offline-storage");
-    // Simulate syncPersistedResponses starting during the async gap
-    vi.mocked(countPendingResponsesStrict).mockImplementation(async () => {
-      // While countPendingResponsesStrict is resolving, isSyncing becomes true
-      _syncLocks.set("s1", true);
-      return 1;
-    });
-
     const offlineQueue = new ResponseQueue(
       getConfig({ persistOffline: true, surveyId: "s1" }),
       getSurveyState()
     );
+    // Simulate syncPersistedResponses starting during the async gap
+    vi.mocked(countPendingResponsesStrict).mockImplementation(async () => {
+      // While countPendingResponsesStrict is resolving, isSyncing becomes true
+      offlineQueue["isSyncing"] = true;
+      return 1;
+    });
+
     offlineQueue.queue.push({ data: { q1: "answer" }, finished: false });
 
     const sendSpy = vi.spyOn(offlineQueue as any, "sendResponseWithRetry");
@@ -680,7 +680,7 @@ describe("ResponseQueue", () => {
 
     expect(result.success).toBe(true);
     expect(offlineQueue["pendingDbIds"].has(responseUpdate)).toBe(true);
-    expect(_syncLocks.getRequestInProgress("s1")).toBe(false);
+    expect(offlineQueue["isRequestInProgress"]).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Forma: Failed to remove sent response from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
@@ -773,30 +773,18 @@ describe("ResponseQueue", () => {
       getConfig({ persistOffline: true, surveyId: "s1" }),
       getSurveyState()
     );
-    _syncLocks.set("s1", true);
+    offlineQueue["isSyncing"] = true;
     const result = await offlineQueue.syncPersistedResponses();
     expect(result).toEqual({ success: false, syncedCount: 0 });
   });
 
   test("syncPersistedResponses returns early when a processQueue request is in flight", async () => {
-    _syncLocks.setRequestInProgress("s1", true);
     const offlineQueue = new ResponseQueue(
       getConfig({ persistOffline: true, surveyId: "s1" }),
       getSurveyState()
     );
+    offlineQueue["isRequestInProgress"] = true;
     const result = await offlineQueue.syncPersistedResponses();
-    expect(result).toEqual({ success: false, syncedCount: 0 });
-  });
-
-  test("syncPersistedResponses on a new instance sees isRequestInProgress from an old instance", async () => {
-    // Simulate instance A having a request in flight (module-level lock)
-    _syncLocks.setRequestInProgress("s1", true);
-    // Instance B is newly created (e.g. React useMemo recomputation)
-    const instanceB = new ResponseQueue(
-      getConfig({ persistOffline: true, surveyId: "s1" }),
-      getSurveyState()
-    );
-    const result = await instanceB.syncPersistedResponses();
     expect(result).toEqual({ success: false, syncedCount: 0 });
   });
 
@@ -813,7 +801,7 @@ describe("ResponseQueue", () => {
     const result = await offlineQueue.syncPersistedResponses();
 
     expect(result).toEqual({ success: false, syncedCount: 0 });
-    expect(_syncLocks.get("s1")).toBe(false);
+    expect(offlineQueue["isSyncing"]).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Forma: Failed to sync persisted responses from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
@@ -851,7 +839,7 @@ describe("ResponseQueue", () => {
     expect(result).toEqual({ success: true, syncedCount: 1 });
     expect(removePendingResponseStrict).toHaveBeenCalledWith(10);
     expect(offlineQueue.queue).toHaveLength(0);
-    expect(_syncLocks.get("s1")).toBe(false);
+    expect(offlineQueue["isSyncing"]).toBe(false);
   });
 
   test("syncPersistedResponses removes synced queue items by IndexedDB id", async () => {
@@ -929,7 +917,7 @@ describe("ResponseQueue", () => {
 
     expect(result).toEqual({ success: false, syncedCount: 0 });
     expect(offlineQueue.queue).toHaveLength(0);
-    expect(_syncLocks.get("s1")).toBe(false);
+    expect(offlineQueue["isSyncing"]).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Forma: Failed to remove synced response from IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
@@ -966,7 +954,7 @@ describe("ResponseQueue", () => {
 
     const result = await offlineQueue.syncPersistedResponses();
     expect(result).toEqual({ success: false, syncedCount: 0 });
-    expect(_syncLocks.get("s1")).toBe(false);
+    expect(offlineQueue["isSyncing"]).toBe(false);
   });
 
   test("syncPersistedResponses retries 404 as createResponse by resetting responseId", async () => {
@@ -1099,6 +1087,169 @@ describe("ResponseQueue", () => {
     expect(removePendingResponseStrict).not.toHaveBeenCalledWith(10);
     expect(offlineQueue.queue).toEqual([responseUpdate]);
     expect(offlineQueue["pendingDbIds"].get(responseUpdate)).toBe(10);
-    expect(_syncLocks.get("s1")).toBe(false);
+    expect(offlineQueue["isSyncing"]).toBe(false);
+  });
+
+  // R-01 and R-02: a survey keeps one queue, and an answer that cannot be sent waits in it instead of being lost or ending the survey.
+  describe("delivery over a slow or broken connection", () => {
+    const serverError = {
+      ok: false,
+      error: { code: "internal_server_error", message: "Server error", status: 500 },
+    };
+    const accepted = { ok: true, data: { quotaFull: false } };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test("a second queue for the same survey is not blocked by the first queue's request in flight", async () => {
+      const stateA = getSurveyState();
+      stateA.responseId = "resp-a";
+      const stateB = getSurveyState();
+      stateB.responseId = "resp-b";
+      const queueA = new ResponseQueue(getConfig({ surveyId: "s1" }), stateA);
+      const queueB = new ResponseQueue(getConfig({ surveyId: "s1" }), stateB);
+      const apiA = queueA.api as any;
+      const apiB = queueB.api as any;
+      let releaseA!: () => void;
+      apiA.updateResponse.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            releaseA = () => resolve(accepted);
+          })
+      );
+      apiB.updateResponse.mockResolvedValue(accepted);
+
+      queueA.add({ data: { q1: "a" }, finished: false });
+      await flushPromises();
+      queueB.add({ data: { q1: "b" }, finished: false });
+      await flushPromises();
+
+      expect(apiB.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "resp-b", data: { q1: "b" } })
+      );
+      expect(queueB.queue).toHaveLength(0);
+
+      releaseA();
+      await flushPromises();
+      expect(queueA.queue).toHaveLength(0);
+    });
+
+    test("answers submitted while a slow request is in flight are all sent, in order", async () => {
+      vi.useFakeTimers();
+      surveyState.responseId = "resp1";
+      apiMock.updateResponse.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(accepted), 1000))
+      );
+
+      queue.add({ data: { q1: "one" }, finished: false });
+      queue.add({ data: { q2: "two" }, finished: false });
+      queue.add({ data: { q3: "three" }, finished: true });
+      await vi.advanceTimersByTimeAsync(3500);
+
+      expect(apiMock.updateResponse.mock.calls.map(([update]: [TResponseUpdate]) => update.data)).toEqual([
+        { q1: "one" },
+        { q2: "two" },
+        { q3: "three" },
+      ]);
+      expect(queue.queue).toHaveLength(0);
+      expect(config.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+      expect(config.onResponseSendingFailed).not.toHaveBeenCalled();
+    });
+
+    test("a card in the middle of the survey that cannot be sent does not fail the survey, and goes out when the browser is back online", async () => {
+      vi.useFakeTimers();
+      surveyState.responseId = "resp1";
+      const onResponseSendingDelayedChange = vi.fn();
+      queue = new ResponseQueue(getConfig({ onResponseSendingDelayedChange }), surveyState);
+      const api = queue.api as any;
+      api.updateResponse.mockResolvedValue(serverError);
+
+      queue.add({ data: { q1: "one" }, finished: false });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onResponseSendingDelayedChange).toHaveBeenLastCalledWith(true);
+
+      // The whole burst (a first attempt and two retries after 1 s and 2 s) fails.
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(api.updateResponse).toHaveBeenCalledTimes(3);
+      expect(queue.config.onResponseSendingFailed).not.toHaveBeenCalled();
+      expect(queue.queue).toHaveLength(1);
+
+      api.updateResponse.mockResolvedValue(accepted);
+      globalThis.window.dispatchEvent(new Event("online"));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(api.updateResponse).toHaveBeenCalledTimes(4);
+      expect(queue.queue).toHaveLength(0);
+      expect(onResponseSendingDelayedChange).toHaveBeenLastCalledWith(false);
+    });
+
+    test("an unsent card keeps being retried in the background on a growing backoff", async () => {
+      vi.useFakeTimers();
+      surveyState.responseId = "resp1";
+      apiMock.updateResponse.mockResolvedValue(serverError);
+
+      queue.add({ data: { q1: "one" }, finished: false });
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(3);
+
+      await vi.advanceTimersByTimeAsync(RECOVERY_BASE_DELAY_MS);
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(4);
+
+      // The next round waits twice as long.
+      await vi.advanceTimersByTimeAsync(RECOVERY_BASE_DELAY_MS);
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(4);
+
+      apiMock.updateResponse.mockResolvedValue(accepted);
+      await vi.advanceTimersByTimeAsync(RECOVERY_BASE_DELAY_MS);
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(5);
+      expect(queue.queue).toHaveLength(0);
+      expect(config.onResponseSendingFailed).not.toHaveBeenCalled();
+    });
+
+    test("coming back online ends the backoff wait of a burst in flight", async () => {
+      vi.useFakeTimers();
+      surveyState.responseId = "resp1";
+      apiMock.updateResponse.mockResolvedValueOnce(serverError).mockResolvedValue(accepted);
+
+      queue.add({ data: { q1: "one" }, finished: false });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(1);
+
+      globalThis.window.dispatchEvent(new Event("online"));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(apiMock.updateResponse).toHaveBeenCalledTimes(2);
+      expect(queue.queue).toHaveLength(0);
+    });
+
+    test("a final submission that cannot be sent is reported, and Retry sends everything still queued", async () => {
+      vi.useFakeTimers();
+      surveyState.responseId = "resp1";
+      apiMock.updateResponse.mockResolvedValue(serverError);
+
+      queue.add({ data: { q1: "one" }, finished: false });
+      queue.add({ data: { q2: "two" }, finished: true });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { q1: "one" } }),
+        TResponseErrorCodesEnum.ResponseSendingError
+      );
+      expect(queue.getUnsentData()).toEqual({ q1: "one", q2: "two" });
+
+      apiMock.updateResponse.mockClear();
+      apiMock.updateResponse.mockResolvedValue(accepted);
+      const result = await queue.processQueue();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(result.success).toBe(true);
+      expect(apiMock.updateResponse.mock.calls.map(([update]: [TResponseUpdate]) => update.data)).toEqual([
+        { q1: "one" },
+        { q2: "two" },
+      ]);
+      expect(queue.queue).toHaveLength(0);
+      expect(config.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+    });
   });
 });
