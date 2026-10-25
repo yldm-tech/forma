@@ -47,7 +47,7 @@ type Webhook struct {
 	Secret      *string
 }
 
-// View is a webhook as forma2's APIs serialized the Prisma row, in its field order, with JavaScript's toISOString timestamps. Secret is present only where forma2 returned it: the response to a create. EnvironmentID is the v1 API's legacy alias of the workspace. AllSurveys is the settings page's explicit scope, which the v1 API never had: there an empty surveyIds is every survey.
+// View is a webhook as forma2's APIs serialized the Prisma row, in its field order, with JavaScript's toISOString timestamps. Secret is present only where forma2 returned it: the response to a create. Health is present only in the settings page's list. EnvironmentID is the v1 API's legacy alias of the workspace. AllSurveys is the settings page's explicit scope, which the v1 API never had: there an empty surveyIds is every survey.
 type View struct {
 	ID            uuid.UUID   `json:"id"`
 	Name          *string     `json:"name"`
@@ -61,6 +61,8 @@ type View struct {
 	AllSurveys    *bool       `json:"allSurveys,omitempty"`
 	Secret        *string     `json:"secret,omitempty"`
 	EnvironmentID *string     `json:"environmentId,omitempty"`
+	// Health is the settings page's delivery health, in its list only, and absent for a webhook nothing was sent to yet.
+	Health *Health `json:"health,omitempty"`
 }
 
 // view is w without its secret.

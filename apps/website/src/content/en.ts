@@ -254,7 +254,7 @@ export const en: SiteContent = {
       },
       webhooks: {
         title: "Webhooks",
-        body: "Get an HTTP request at your endpoint when responses are created, updated or finished.",
+        body: "Get an HTTP request at your endpoint when responses are created, updated or finished. Each webhook shows whether its deliveries succeed, keeps its recent ones and resends any of them.",
       },
       automation: {
         title: "Automation tools",

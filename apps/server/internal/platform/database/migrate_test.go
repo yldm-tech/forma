@@ -182,6 +182,29 @@ func TestSchemaConstraints(t *testing.T) {
 		mustExec(t, db, `INSERT INTO webhooks (workspace_id, url, triggers) VALUES ($1, 'https://example.com', '{responseCreated,responseFinished}')`, workspaceID)
 	})
 
+	t.Run("a webhook delivery's state matches its latest attempt, and it goes with its response", func(t *testing.T) {
+		webhookID := mustScanID(t, db, `INSERT INTO webhooks (workspace_id, url, triggers) VALUES ($1, 'https://example.com/d', '{responseFinished}') RETURNING id`, workspaceID)
+		responseID := mustScanID(t, db, `INSERT INTO responses (survey_id) VALUES ($1) RETURNING id`, surveyID)
+		insert := `INSERT INTO webhook_deliveries (webhook_id, response_id, survey_id, event, message_id, payload, status, attempts, last_attempted_at, next_attempt_at, delivered_at, status_code, failure, failure_message, latency_ms)
+			VALUES ($1, $2, $3, 'responseFinished', $4, '{}', $5, 1, now(), $6::timestamptz, $7::timestamptz, $8::integer, $9, $10, 10)`
+		at := "2026-01-01T00:00:00Z"
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "retrying", nil, nil, 500, "status", "Status 500")
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "succeeded", nil, nil, 200, nil, nil)
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "failed", nil, at, 500, "status", "Status 500")
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "failed", nil, nil, 200, nil, nil)
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "failed", nil, nil, nil, "timeout", nil)
+		wantViolation(t, db, "23514", insert, webhookID, responseID, surveyID, "m1", "succeeded", nil, at, 200, "carrier-pigeon", "lost")
+		// A delivered message whose latest attempt, a resend, failed.
+		mustExec(t, db, insert, webhookID, responseID, surveyID, "m0", "succeeded", nil, at, 503, "status", "Status 503")
+		mustExec(t, db, insert, webhookID, responseID, surveyID, "m1", "retrying", at, nil, 500, "status", "Status 500")
+		wantViolation(t, db, "23505", insert, webhookID, responseID, surveyID, "m1", "succeeded", nil, at, 200, nil, nil)
+		mustExec(t, db, `DELETE FROM responses WHERE id = $1`, responseID)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM webhook_deliveries`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("webhook deliveries left after their response was deleted: %d, %v", left, err)
+		}
+	})
+
 	t.Run("an integration error has both a time and a message or neither", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
 	})

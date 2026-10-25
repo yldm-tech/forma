@@ -2,14 +2,20 @@ import type { TFunction } from "i18next";
 import { describe, expect, test } from "vite-plus/test";
 import { ApiError } from "../../lib/api";
 import { changeLocale, initI18n } from "../../lib/i18n";
+import type { WebhookHealth } from "./api";
 import {
+  alertsText,
+  attemptFailureText,
   connectionCountText,
+  deliveryStatusBadge,
   endpointTestFailure,
   isDiscordWebhook,
   triggersText,
   validWebHookURL,
   webhookCounts,
+  webhookAlerts,
   webhookErrorMessage,
+  webhookHealthBadge,
   webhookSourceLabel,
   webhookSurveyNames,
 } from "./webhooks";
@@ -122,4 +128,78 @@ test("a reason too long for a toast points to the console", () => {
   expect(endpointTestFailure(t, "x".repeat(250))).toBe(
     "workspace.integrations.webhooks.endpoint_pinged_error \n workspace.integrations.webhooks.please_check_console"
   );
+});
+
+const health = (overrides: Partial<WebhookHealth> = {}): WebhookHealth => ({
+  status: "healthy",
+  lastAttemptAt: "2026-10-26T00:00:00.000Z",
+  lastSuccessAt: "2026-10-26T00:00:00.000Z",
+  failingSince: null,
+  nextAttemptAt: null,
+  failedCount: 0,
+  statusCode: 200,
+  failure: null,
+  failureMessage: null,
+  ...overrides,
+});
+
+describe("delivery health", () => {
+  test("a webhook is gray until something was sent to it, then green, amber while retrying or while lost deliveries wait to be resent, red while failing", () => {
+    expect(webhookHealthBadge(t, undefined)).toEqual({
+      type: "gray",
+      label: "workspace.integrations.webhooks.deliveries.health_none",
+    });
+    expect(webhookHealthBadge(t, health()).type).toBe("success");
+    expect(webhookHealthBadge(t, health({ status: "retrying" })).type).toBe("warning");
+    expect(webhookHealthBadge(t, health({ status: "lost" }))).toEqual({
+      type: "warning",
+      label: "workspace.integrations.webhooks.deliveries.health_lost",
+    });
+    expect(webhookHealthBadge(t, health({ status: "failing" })).type).toBe("error");
+    expect(deliveryStatusBadge(t, "succeeded").type).toBe("success");
+    expect(deliveryStatusBadge(t, "retrying").type).toBe("warning");
+    expect(deliveryStatusBadge(t, "failed").type).toBe("error");
+  });
+
+  test("a failed attempt says why in the user's language, with the server's reason where there is one", async () => {
+    const i18n = await initI18n("en-US");
+    const en = i18n.t;
+    expect(attemptFailureText(en, health())).toBeNull();
+    expect(
+      attemptFailureText(en, health({ failure: "status", statusCode: 405, failureMessage: "Status 405" }))
+    ).toBe("The endpoint answered with status 405");
+    expect(
+      attemptFailureText(en, health({ failure: "timeout", statusCode: null, failureMessage: "x" }))
+    ).toBe("No answer within 5 seconds");
+    expect(
+      attemptFailureText(
+        en,
+        health({ failure: "unreachable", statusCode: null, failureMessage: "connection refused" })
+      )
+    ).toBe("Could not reach the endpoint: connection refused");
+    await changeLocale(i18n, "ja-JP");
+    expect(attemptFailureText(i18n.t, health({ failure: "status", statusCode: 503 }))).toBe(
+      "エンドポイントがステータス 503 を返しました"
+    );
+  });
+
+  test("the integrations page counts failing, retrying and lost webhooks by source", async () => {
+    const alerts = webhookAlerts([
+      { source: "user", health: health({ status: "failing" }) },
+      { source: "user", health: health({ status: "retrying" }) },
+      { source: "user", health: health() },
+      { source: "user" },
+      { source: "user", health: health({ status: "lost" }) },
+      { source: "zapier", health: health({ status: "retrying" }) },
+    ]);
+    expect(alerts.user).toEqual({ failing: 1, retrying: 1, lost: 1 });
+    expect(alerts.zapier).toEqual({ failing: 0, retrying: 1, lost: 0 });
+    expect(alerts.make).toEqual({ failing: 0, retrying: 0, lost: 0 });
+    const i18n = await initI18n("en-US");
+    const en = i18n.t;
+    expect(alertsText(en, "5 webhooks", alerts.user)).toBe(
+      "5 webhooks · 1 failing · 1 retrying · 1 with lost deliveries"
+    );
+    expect(alertsText(en, "1 zap", alerts.make)).toBe("1 zap");
+  });
 });
