@@ -566,13 +566,9 @@ var errInvalidPin = apperr.InvalidInput("INVALID_PIN", "INVALID_PIN")
 
 // validatePin is forma2's validateSurveyPinAction. Unlike forma2, which returned any survey to anyone for an id without a PIN, it only answers for a survey the page would put behind its PIN gate: a live, PIN-protected link survey.
 func (s *Service) validatePin(ctx context.Context, rawID, pin string) (pinResult, error) {
-	id, _ := rowid.Parse(rawID)
-	sv, fields, err := s.repo.surveyByID(ctx, id)
+	sv, fields, err := s.pinGatedSurvey(ctx, rawID)
 	if err != nil {
 		return pinResult{}, err
-	}
-	if sv == nil || sv.Type != survey.TypeLink || sv.Status != survey.StatusInProgress || sv.ArchivedAt != nil || sv.Pin == nil || *sv.Pin == "" {
-		return pinResult{}, apperr.NotFound("Survey", "")
 	}
 	if *sv.Pin != pin {
 		return pinResult{}, errInvalidPin
@@ -586,6 +582,38 @@ func (s *Service) validatePin(ctx context.Context, rawID, pin string) (pinResult
 		return pinResult{}, fmt.Errorf("sign pin token: %w", err)
 	}
 	return pinResult{Survey: public, PinAuthToken: token}, nil
+}
+
+// errPinTokenRejected answers a resume whose token no longer opens the survey: expired, issued for another survey, or the survey stopped saving progress. The page asks for the PIN again.
+var errPinTokenRejected = apperr.NotAuthenticated("PIN token is invalid or expired")
+
+// resumePin opens the PIN gate again with the token a correct PIN returned, which the page keeps for the tab's session while the survey saves respondents' progress (isProgressSavingEnabled), so a reload goes on where the respondent left off instead of asking for the PIN again. The token comes back unchanged: it still expires an hour after the PIN was entered, and a survey that no longer saves progress takes the PIN again, so a shared device does not keep it open.
+func (s *Service) resumePin(ctx context.Context, rawID, token string) (pinResult, error) {
+	sv, fields, err := s.pinGatedSurvey(ctx, rawID)
+	if err != nil {
+		return pinResult{}, err
+	}
+	if !sv.IsProgressSavingEnabled || !VerifyPinToken(s.cfg, token, sv.ID, s.now()) {
+		return pinResult{}, errPinTokenRejected
+	}
+	public, err := publicSurvey(sv, fields)
+	if err != nil {
+		return pinResult{}, err
+	}
+	return pinResult{Survey: public, PinAuthToken: token}, nil
+}
+
+// pinGatedSurvey is the survey the page would put behind its PIN gate (a live, PIN-protected link survey) with its Embedded Data fields; any other id is 404 Survey.
+func (s *Service) pinGatedSurvey(ctx context.Context, rawID string) (*survey.Survey, []embeddeddata.LinkedField, error) {
+	id, _ := rowid.Parse(rawID)
+	sv, fields, err := s.repo.surveyByID(ctx, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if sv == nil || sv.Type != survey.TypeLink || sv.Status != survey.StatusInProgress || sv.ArchivedAt != nil || sv.Pin == nil || *sv.Pin == "" {
+		return nil, nil, apperr.NotFound("Survey", "")
+	}
+	return sv, fields, nil
 }
 
 // emailInput is forma2's ZLinkSurveyEmailData without the survey id, which the path carries, and without the logo, which the server reads.

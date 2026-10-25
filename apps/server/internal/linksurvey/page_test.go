@@ -611,6 +611,76 @@ func TestValidatePinRateLimit(t *testing.T) {
 	}
 }
 
+// A PIN token kept by the page opens the gate again after a reload, for as long as it is valid and the survey saves progress.
+func TestResumePin(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) { c.RateLimitingDisabled = false })
+	ws := e.workspace()
+	id := e.survey(ws, "pin", "1234")
+	token, err := NewPinToken(e.cfg, id, e.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := "/s/" + id.String() + "/pin/resume"
+
+	// More resumes than the PIN's attempt limit allows: a reload does not spend PIN attempts.
+	for range 11 {
+		rec := e.request(http.MethodPost, path, map[string]any{"pinAuthToken": token})
+		var ok pinResult
+		decodeBody(t, rec.Body.Bytes(), &ok)
+		if rec.Code != http.StatusOK || ok.PinAuthToken != token || rec.Header().Get("Cache-Control") != "no-store" {
+			t.Fatalf("resume: %d %s", rec.Code, rec.Body)
+		}
+		var sv map[string]any
+		decodeBody(t, ok.Survey, &sv)
+		if sv["id"] != id.String() || sv["pin"] != nil || sv["isProgressSavingEnabled"] != true || len(sv["blocks"].([]any)) != 1 {
+			t.Fatalf("survey %v", sv)
+		}
+	}
+
+	other := e.survey(ws, "pin", "1234")
+	otherToken, err := NewPinToken(e.cfg, other, e.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expired, err := NewPinToken(e.cfg, id, e.now.Add(-2*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, tok := range map[string]string{"another survey's token": otherToken, "an expired token": expired, "a forged token": token + "x"} {
+		rec := e.request(http.MethodPost, path, map[string]any{"pinAuthToken": tok})
+		if rec.Code != http.StatusUnauthorized || strings.Contains(rec.Body.String(), "What do you think") {
+			t.Fatalf("%s: %d %s", name, rec.Code, rec.Body)
+		}
+	}
+	if rec := e.request(http.MethodPost, path, map[string]any{}); rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing token: %d", rec.Code)
+	}
+
+	// A survey that does not save progress asks for the PIN on every visit.
+	shared := e.survey(ws, "pin", "1234", "is_progress_saving_enabled", false)
+	sharedToken, err := NewPinToken(e.cfg, shared, e.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := e.request(http.MethodPost, "/s/"+shared.String()+"/pin/resume", map[string]any{"pinAuthToken": sharedToken}); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("progress saving off: %d %s", rec.Code, rec.Body)
+	}
+
+	// Only a live, PIN-protected link survey answers.
+	paused := e.survey(ws, "pin", "1234", "status", "paused")
+	pausedToken, err := NewPinToken(e.cfg, paused, e.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := e.request(http.MethodPost, "/s/"+paused.String()+"/pin/resume", map[string]any{"pinAuthToken": pausedToken}); rec.Code != http.StatusNotFound {
+		t.Fatalf("paused: %d %s", rec.Code, rec.Body)
+	}
+
+	if rec := e.request(http.MethodPost, path, map[string]any{"pinAuthToken": token}, "Origin", "https://evil.example"); rec.Code != http.StatusForbidden {
+		t.Fatalf("cross-site: %d", rec.Code)
+	}
+}
+
 // jaSubject is emails.verified_link_survey_email_subject in ja-JP.
 const jaSubject = "フォームへの回答準備ができました。"
 

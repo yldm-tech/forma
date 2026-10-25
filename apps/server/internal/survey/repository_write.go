@@ -43,6 +43,7 @@ type record struct {
 	IsAutoProgressingEnabled    bool
 	IsCaptureIPEnabled          bool
 	IsAnonymizeResponsesEnabled bool
+	IsProgressSavingEnabled     bool
 	ShowLanguageSwitch          *bool
 	Pin                         *string
 	Slug                        *string
@@ -58,7 +59,7 @@ func recordOf(s *Survey) record {
 		WorkspaceOverwrites: s.WorkspaceOverwrites, Styling: s.Styling, SingleUse: s.SingleUse, Recaptcha: s.Recaptcha, DisplayOption: s.DisplayOption,
 		RecontactDays: s.RecontactDays, DisplayLimit: s.DisplayLimit, DisplayPercentage: s.DisplayPercentage, AutoClose: s.AutoClose, AutoComplete: s.AutoComplete,
 		Delay: s.Delay, PublishOn: s.PublishOn, CloseOn: s.CloseOn, IsVerifyEmailEnabled: s.IsVerifyEmailEnabled, IsBackButtonHidden: s.IsBackButtonHidden,
-		IsAutoProgressingEnabled: s.IsAutoProgressingEnabled, IsCaptureIPEnabled: s.IsCaptureIPEnabled, IsAnonymizeResponsesEnabled: s.IsAnonymizeResponsesEnabled,
+		IsAutoProgressingEnabled: s.IsAutoProgressingEnabled, IsCaptureIPEnabled: s.IsCaptureIPEnabled, IsAnonymizeResponsesEnabled: s.IsAnonymizeResponsesEnabled, IsProgressSavingEnabled: s.IsProgressSavingEnabled,
 		ShowLanguageSwitch: s.ShowLanguageSwitch, Pin: s.Pin, Slug: s.Slug, CustomHeadScripts: s.CustomHeadScripts, CustomHeadScriptsMode: s.CustomHeadScriptsMode,
 	}
 }
@@ -81,7 +82,7 @@ func (rec *record) columns() ([]string, []string, []any) {
 		{"delay", false, rec.Delay}, {"publish_on", false, rec.PublishOn}, {"close_on", false, rec.CloseOn},
 		{"is_verify_email_enabled", false, rec.IsVerifyEmailEnabled}, {"is_back_button_hidden", false, rec.IsBackButtonHidden},
 		{"is_auto_progressing_enabled", false, rec.IsAutoProgressingEnabled}, {"is_capture_ip_enabled", false, rec.IsCaptureIPEnabled},
-		{"is_anonymize_responses_enabled", false, rec.IsAnonymizeResponsesEnabled}, {"show_language_switch", false, rec.ShowLanguageSwitch},
+		{"is_anonymize_responses_enabled", false, rec.IsAnonymizeResponsesEnabled}, {"is_progress_saving_enabled", false, rec.IsProgressSavingEnabled}, {"show_language_switch", false, rec.ShowLanguageSwitch},
 		{"pin", false, rec.Pin}, {"slug", false, rec.Slug}, {"custom_head_scripts", false, rec.CustomHeadScripts},
 		{"custom_head_scripts_mode", false, rec.CustomHeadScriptsMode},
 	}
