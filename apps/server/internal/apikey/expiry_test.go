@@ -110,6 +110,11 @@ func TestCreateRefusesAnExpiryThatIsNotAFutureTime(t *testing.T) {
 		"not a time":        {"next week", "datetime"},
 		"a number":          {1767225600, "type"},
 		"without an offset": {time.Now().AddDate(0, 1, 0).Format("2006-01-02T15:04:05"), "datetime"},
+		// Year 10000 once in UTC: stored, it would fail every JSON response that carries it.
+		"past year 9999 in UTC": {"9999-12-31T23:59:59-12:00", "max"},
+		// Year 10000 in a server zone ahead of UTC, as pgx reads it back.
+		"in year 9999": {"9999-12-31T23:59:59Z", "max"},
+		"at the bound": {"9999-01-01T00:00:00Z", "max"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			body := createBody("Expiring", readAccess)
@@ -131,6 +136,32 @@ func TestCreateRefusesAnExpiryThatIsNotAFutureTime(t *testing.T) {
 	}
 	if n := e.count(`SELECT count(*) FROM api_keys`); n != 0 {
 		t.Fatalf("%d keys created", n)
+	}
+}
+
+// The latest expiry accepted can be returned and listed even by a server whose zone is as far ahead of UTC as any, since the database driver reads times back in the local zone.
+func TestTheLatestExpiryIsListedInAnyZone(t *testing.T) {
+	local := time.Local
+	time.Local = time.FixedZone("UTC+14", 14*60*60)
+	t.Cleanup(func() { time.Local = local })
+
+	e := newAppEnv(t)
+	org, owner := e.org(), e.user()
+	e.member(org, owner, "owner")
+	e.drain()
+	token := e.session(owner)
+
+	body := createBody("Far future", readAccess)
+	body["expiresAt"] = "9998-12-31T23:59:59.999999Z"
+	res := e.do(http.MethodPost, keysPath(org), token, body)
+	if res.status != http.StatusCreated {
+		t.Fatalf("create = %d %s", res.status, res.body)
+	}
+	var created Created
+	res.decode(t, &created)
+	want := time.Date(9998, time.December, 31, 23, 59, 59, 999999000, time.UTC)
+	if l := e.listed(org, created.ID, token); l.ExpiresAt == nil || !l.ExpiresAt.Equal(want) {
+		t.Fatalf("listed expiresAt = %v, want %v", l.ExpiresAt, want)
 	}
 }
 

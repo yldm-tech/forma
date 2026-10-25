@@ -71,7 +71,10 @@ type permissionRequest struct {
 	Permission  string `json:"permission" binding:"required,oneof=read write manage"`
 }
 
-// input applies forma2's ZApiKeyCreateInput (organization access as its JSON Schema, no workspace twice) and the rules forma2 left to its form: a label that is not blank, and at least one grant of any kind. An expiry must be an RFC 3339 time after now.
+// latestExpiry bounds an expiry from above: before year 9999 in UTC, so that no time zone (at most 14 hours ahead) renders it past year 9999, the last year encoding/json can write a time in. A later one would be stored, then fail the create response and every list of the organization's keys.
+var latestExpiry = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+// input applies forma2's ZApiKeyCreateInput (organization access as its JSON Schema, no workspace twice) and the rules forma2 left to its form: a label that is not blank, and at least one grant of any kind. An expiry must be an RFC 3339 time after now and before latestExpiry.
 func (r *createRequest) input(schemas *jsonschema.Validator, now time.Time) (CreateInput, error) {
 	var fields []apperr.FieldError
 	if strings.TrimSpace(r.Label) == "" {
@@ -85,6 +88,8 @@ func (r *createRequest) input(schemas *jsonschema.Validator, now time.Time) (Cre
 			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "datetime"})
 		case !at.After(now):
 			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "future"})
+		case !at.Before(latestExpiry):
+			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "max"})
 		default:
 			// PostgreSQL keeps microseconds; the view the create returns is read back from the row.
 			at = at.UTC()

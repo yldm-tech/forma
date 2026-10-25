@@ -76,7 +76,10 @@ export const firstCustomExpiryDay = (now: Date = new Date()): string => {
   return `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
 };
 
-/** When a key created now with choice stops working: null for never, now plus the days, or the last second of the custom day in the browser's time zone. undefined when the custom day is missing, malformed or not after today, so the form cannot be sent. */
+/** The latest day the custom expiry may pick, as a date input's max. The server takes an expiry before 9999-01-01 UTC; the end of this day is before that in every time zone, the furthest behind UTC being 12 hours. */
+export const LAST_CUSTOM_EXPIRY_DAY = "9998-12-30";
+
+/** When a key created now with choice stops working: null for never, now plus the days, or the last second of the custom day in the browser's time zone. undefined when the custom day is missing, malformed, not after today or after LAST_CUSTOM_EXPIRY_DAY, so the form cannot be sent. */
 export const apiKeyExpiry = (
   choice: ApiKeyExpiryChoice,
   customDay: string,
@@ -85,7 +88,7 @@ export const apiKeyExpiry = (
   if (choice === "never") return null;
   if (choice !== "custom") return new Date(now.getTime() + Number(choice) * 24 * 60 * 60 * 1000);
   const day = localDay(customDay);
-  if (!day || customDay < firstCustomExpiryDay(now)) return undefined;
+  if (!day || customDay < firstCustomExpiryDay(now) || customDay > LAST_CUSTOM_EXPIRY_DAY) return undefined;
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
 };
 
@@ -104,5 +107,5 @@ export const apiKeyExpiryState = (
   return left <= SOON_MS ? "soon" : "active";
 };
 
-/** A key by its hint, as the list tells keys apart: the prefix every key starts with, an ellipsis, and its last four characters. */
-export const maskedApiKey = (hint: string): string => `fbk_…${hint}`;
+/** A key by its hint, as the list tells keys apart: the prefix every key starts with, an ellipsis, and its last four characters. A dash for a key created before hints were kept, which has none. */
+export const maskedApiKey = (hint: string | null): string => (hint ? `fbk_…${hint}` : "—");

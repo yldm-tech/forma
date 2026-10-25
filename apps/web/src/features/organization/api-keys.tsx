@@ -17,6 +17,7 @@ import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
   API_KEY_EXPIRY_CHOICES,
+  LAST_CUSTOM_EXPIRY_DAY,
   type ApiKeyExpiryChoice,
   type PermissionRow,
   apiKeyExpiry,
@@ -281,11 +282,9 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
                     </button>
                     <KeyStatusBadge apiKey={key} formatDate={formatDate} />
                   </div>
-                  {key.keyHint && (
-                    <span className="block font-mono text-xs font-normal text-slate-500">
-                      {maskedApiKey(key.keyHint)}
-                    </span>
-                  )}
+                  <span className="block font-mono text-xs font-normal text-slate-500">
+                    {maskedApiKey(key.keyHint)}
+                  </span>
                 </TableCell>
                 <TableCell className="hidden text-sm text-slate-600 md:table-cell">
                   {scopeSummary(t, key)}
@@ -615,6 +614,7 @@ const AddApiKeyModal = ({
                 type="date"
                 aria-label={t("workspace.api_keys.expiration_date")}
                 min={firstCustomExpiryDay()}
+                max={LAST_CUSTOM_EXPIRY_DAY}
                 value={customDay}
                 onChange={(e) => setCustomDay(e.target.value)}
               />
@@ -746,12 +746,8 @@ const ViewPermissionModal = ({
             )
           )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            {apiKey.keyHint && (
-              <>
-                <dt className="font-medium text-slate-800">{t("workspace.api_keys.api_key")}</dt>
-                <dd className="font-mono text-slate-600">{maskedApiKey(apiKey.keyHint)}</dd>
-              </>
-            )}
+            <dt className="font-medium text-slate-800">{t("workspace.api_keys.api_key")}</dt>
+            <dd className="font-mono text-slate-600">{maskedApiKey(apiKey.keyHint)}</dd>
             <dt className="font-medium text-slate-800">{t("common.created_by")}</dt>
             <dd>
               <CreatedBy createdBy={apiKey.createdBy} />

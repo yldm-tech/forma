@@ -418,9 +418,21 @@ test("lists each key by its last four characters, when it expires, and which key
   expect(dialog.getByText("fbk_…gone")).toBeTruthy();
 });
 
-test("a key created before hints were kept shows no hint", async () => {
+test("a key created before hints were kept shows a dash for its hint, in the list and in its dialog", async () => {
   stubKeysServer();
   await renderPage(<ApiKeysPage organization={owner} />);
   await screen.findByText("Existing");
   expect(screen.queryByText(/^fbk_…/)).toBeNull();
+  const row = screen.getByText("Existing").closest("tr");
+  if (!row) throw new Error("no row for Existing");
+  expect(within(row).getByText("—")).toBeTruthy();
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: i18n.t("workspace.api_keys.view_permissions_for", { label: "Existing" }),
+    })
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  const term = dialog.getByText(i18n.t("workspace.api_keys.api_key"), { selector: "dt" });
+  expect(term.nextElementSibling?.textContent).toBe("—");
 });

@@ -6,6 +6,7 @@ import {
   canSubmitApiKey,
   effectiveAccess,
   firstCustomExpiryDay,
+  LAST_CUSTOM_EXPIRY_DAY,
   hasDuplicateWorkspace,
   maskedApiKey,
 } from "./api-key-form";
@@ -70,8 +71,21 @@ test("apiKeyExpiry: none, a number of days from now, or the end of a chosen day 
   expect(apiKeyExpiry("365", "2027-01-01", now)?.getTime()).toBe(now.getTime() + 365 * day);
   expect(apiKeyExpiry("custom", "2026-10-27", now)).toEqual(new Date(2026, 9, 27, 23, 59, 59));
   expect(apiKeyExpiry("custom", "2028-02-29", now)).toEqual(new Date(2028, 1, 29, 23, 59, 59));
-  // Missing, malformed, impossible, today or earlier: nothing to send.
-  for (const bad of ["", "2026-13-01", "2027-02-30", "27-01-01", "2026-10-26", "2025-12-31"]) {
+  // The last day offered ends before 9999-01-01 UTC, the server's bound, even 12 hours behind UTC.
+  expect(Date.UTC(9998, 11, 30, 23, 59, 59) + 12 * 60 * 60 * 1000).toBeLessThan(Date.UTC(9999, 0, 1));
+  expect(apiKeyExpiry("custom", LAST_CUSTOM_EXPIRY_DAY, now)).toEqual(new Date(9998, 11, 30, 23, 59, 59));
+  // Missing, malformed, impossible, today or earlier, or later than the server takes: nothing to send.
+  for (const bad of [
+    "",
+    "2026-13-01",
+    "2027-02-30",
+    "27-01-01",
+    "2026-10-26",
+    "2025-12-31",
+    "9998-12-31",
+    "9999-12-31",
+    "10000-01-01",
+  ]) {
     expect(apiKeyExpiry("custom", bad, now)).toBeUndefined();
   }
 });
@@ -94,6 +108,7 @@ test("apiKeyExpiryState: never, active, within a week, or expired from the insta
   expect(apiKeyExpiryState(at(-day), now)).toBe("expired");
 });
 
-test("maskedApiKey shows the prefix and the last four characters", () => {
+test("maskedApiKey shows the prefix and the last four characters, or a dash for a key without a hint", () => {
   expect(maskedApiKey("Ab-_")).toBe("fbk_…Ab-_");
+  expect(maskedApiKey(null)).toBe("—");
 });
