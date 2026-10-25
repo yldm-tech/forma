@@ -31,12 +31,17 @@ describe("resetsCooldownOnEveryPageView", () => {
     expect(resetsCooldownOnEveryPageView(pulse({ displayOption: "displaySome", displayLimit: 3 }))).toBe(
       true
     );
+    // js-core puts no limit on a displaySome survey whose displayLimit is null.
+    expect(resetsCooldownOnEveryPageView(pulse({ displayOption: "displaySome", displayLimit: null }))).toBe(
+      true
+    );
   });
 
   test.each([
     ["it uses the workspace cooldown", { recontactDays: null }],
     ["it has a cooldown of its own", { recontactDays: 7 }],
     ["it shows only once", { displayOption: "displayOnce" }],
+    ["it shows at most once (displaySome, limit 1)", { displayOption: "displaySome", displayLimit: 1 }],
     [
       "its page view is limited to some pages",
       { triggers: [trigger({ type: "pageView", urlFilters: [{ value: "/pricing", rule: "contains" }] })] },
